@@ -40,6 +40,8 @@ struct _GfsMultilevelParams {
   GfsNorm residual_before, residual;
 };
 
+#include "variable.h"
+
 void          gfs_multilevel_params_init      (GfsMultilevelParams * par);
 void          gfs_multilevel_params_write     (GfsMultilevelParams * par, 
 					       FILE * fp);

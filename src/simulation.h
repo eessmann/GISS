@@ -122,27 +122,6 @@ void                 gfs_physical_params_read    (GfsPhysicalParams * p,
 void                 gfs_simulation_run          (GfsSimulation * sim);
 #define              gfs_object_simulation(o)    GFS_SIMULATION(GTS_OBJECT (o)->reserved)
 
-/* GfsVariableTracer: header */
-
-typedef struct _GfsVariableTracer                GfsVariableTracer;
-
-struct _GfsVariableTracer {
-  /*< private >*/
-  GfsVariable parent;
-
-  /*< public >*/
-  GfsAdvectionParams advection;
-  GfsMultilevelParams diffusion;
-};
-
-#define GFS_VARIABLE_TRACER(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsVariableTracer,\
-					           gfs_variable_tracer_class ())
-#define GFS_IS_VARIABLE_TRACER(obj)         (gts_object_is_from_class (obj,\
-					     gfs_variable_tracer_class ()))
-
-GfsVariableClass * gfs_variable_tracer_class  (void);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

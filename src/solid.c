@@ -22,6 +22,7 @@
 #include <string.h>
 #include "solid.h"
 #include "vof.h"
+#include "variable.h"
 
 /**
  * gfs_cell_fluid:

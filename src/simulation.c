@@ -31,41 +31,6 @@
 #include "vof.h"
 #include "tension.h"
 
-/* GfsVariableTracer: object */
-
-static void variable_tracer_init (GfsVariableTracer * v)
-{
-  gfs_advection_params_init (&v->advection);
-  v->advection.gradient = gfs_center_van_leer_gradient;
-  v->advection.flux = gfs_face_advection_flux;
-  v->advection.v = GFS_VARIABLE1 (v);
-  v->advection.fv = gfs_res;
-
-  gfs_multilevel_params_init (&v->diffusion);
-  v->diffusion.tolerance = 1e-6;
-}
-
-GfsVariableClass * gfs_variable_tracer_class (void)
-{
-  static GfsVariableClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_variable_tracer_info = {
-      "GfsVariableTracer",
-      sizeof (GfsVariableTracer),
-      sizeof (GfsVariableClass),
-      (GtsObjectClassInitFunc) NULL,
-      (GtsObjectInitFunc) variable_tracer_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
-				  &gfs_variable_tracer_info);
-  }
-
-  return klass;
-}
-
 /* GfsSimulation: object */
 
 static void simulation_destroy (GtsObject * object)

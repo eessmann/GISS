@@ -19,6 +19,7 @@
 
 #include <math.h>
 #include "vof.h"
+#include "variable.h"
 
 #define THRESHOLD(c) {if ((c) < 0.) c = 0.; else if ((c) > 1.) c = 1.;}
 

@@ -29,6 +29,8 @@ extern "C" {
 
 #include "ftt.h"
 
+typedef struct _GfsVariable        GfsVariable;
+
 typedef struct _GfsStateVector     GfsStateVector;
 typedef struct _GfsSolidVector     GfsSolidVector;
 typedef struct _GfsFaceStateVector GfsFaceStateVector;
@@ -88,57 +90,6 @@ typedef enum {
   GFS_FLAG_DIRICHLET = 1 << (FTT_FLAG_USER + 2),
   GFS_FLAG_USER =            FTT_FLAG_USER + 3 /* user flags start here */
 } GfsFlags;
-
-/* GfsVariable: Header */
-
-typedef struct _GfsVariable                GfsVariable;
-typedef struct _GfsSurfaceGenericBc        GfsSurfaceGenericBc;
-
-typedef void (* GfsVariableDerivedFunc)    (FttCell * cell, GfsVariable * v);
-typedef void (* GfsVariableFineCoarseFunc) (FttCell * cell, GfsVariable * v);
-
-struct _GfsVariable {
-  /*< private >*/
-  GtsObject parent;
-
-  /*< public >*/
-  guint i;
-  gchar * name;
-  gboolean centered;
-  GfsVariableDerivedFunc derived;
-  GfsVariableFineCoarseFunc fine_coarse;
-  GtsContainer * sources;
-  GfsSurfaceGenericBc * surface_bc;
-  GfsVariable * next, * permanent;
-  GtsObject * p;
-};
-
-typedef struct _GfsVariableClass    GfsVariableClass;
-
-struct _GfsVariableClass {
-  /*< private >*/
-  GtsObjectClass parent_class;
-
-  /*< public >*/
-};
-
-#define GFS_VARIABLE1(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsVariable,\
-					         gfs_variable_class ())
-#define GFS_VARIABLE_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
-						 GfsVariableClass,\
-						 gfs_variable_class())
-#define GFS_IS_VARIABLE(obj)         (gts_object_is_from_class (obj,\
-						 gfs_variable_class ()))
-#define gfs_variable_parent(v)         ((v)->p)
-#define gfs_variable_set_parent(v, pa) ((v)->p = GTS_OBJECT (pa))
-
-GfsVariableClass * gfs_variable_class  (void);
-GfsVariable *      gfs_variable_new    (GfsVariableClass * klass,
-					GtsObject * parent,
-					const gchar * name,
-					gboolean centered,
-					guint i);
 
 /* Permanent variables: defined in fluid.c */
 GTS_C_VAR GfsVariable * gfs_div, * gfs_dp, * gfs_res;
@@ -289,15 +240,6 @@ void                  gfs_cell_traverse_cut         (FttCell * root,
 gdouble               gfs_interpolate               (FttCell * cell,
 						     FttVector p,
 						     GfsVariable * v);
-GfsVariable *         gfs_variable_list_copy        (GfsVariable * v,
-						     GtsObject * parent);
-void                  gfs_variable_list_destroy     (GfsVariable * v);
-GfsVariable *         gfs_variable_from_name        (GfsVariable * variables,
-						     const gchar * name);
-GfsVariable *         gfs_variables_from_list       (GfsVariable * variables,
-						     gchar * list,
-						     gchar ** error);
-
 void                  ftt_cell_refine_corners       (FttCell * cell,
 						     FttCellInitFunc init,
 						     gpointer data);

@@ -54,6 +54,7 @@ endif
 GFS_HDS = \
 	ftt.h \
 	fluid.h \
+	variable.h \
 	output.h \
 	solid.h \
 	poisson.h \
@@ -84,6 +85,7 @@ include_HEADERS = \
 SRC = \
 	ftt.c \
 	fluid.c \
+	variable.c \
 	output.c \
 	solid.c \
 	poisson.c \

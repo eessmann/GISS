@@ -24,6 +24,7 @@
 #include "config.h"
 #include "graphic.h"
 #include "solid.h"
+#include "variable.h"
 
 typedef struct {
   GPtrArray * colors;
