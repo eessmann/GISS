@@ -1,0 +1,130 @@
+# Title: Lid-driven cavity at Re=1000
+#
+# Description:
+#
+# The classical lid-driven cavity test case.
+#
+# This example illustrates how to check for the convergence toward a
+# stationary solution of an initially time-dependent problem.
+#
+# The stationary solution obtained is illustrated on Figure \ref{velocity}.
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{velocity.eps}
+# \end{center}
+# \caption{Norm of the velocity for the stationary regime.}
+# \label{velocity}
+# \end{figure}
+#
+# Velocity profiles are generated automatically and compared to the
+# benchmark results of Ghia et al. (J. Comp. Phys. 1982) on
+# Figures \ref{xprof} and \ref{yprof}.
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{xprof.eps}
+# \end{center}
+# \caption{Vertical profile of the $x$-component of the velocity on
+# the centerline of the box.}
+# \label{xprof}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{yprof.eps}
+# \end{center}
+# \caption{Horizontal profile of the $y$-component of the velocity on
+# the centerline of the box.}
+# \label{yprof}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D lid.gfs
+# Version: 0.6.4
+# Required files: xprofile yprofile xprof.ghia yprof.ghia
+# Running time: 70 minutes
+# Generated files: xprof yprof xprof.eps yprof.eps velocity.eps
+#
+# The simulation domain has 1 GfsBox
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+
+  # Stop the simulation at t = 300 if convergence has not been reached before
+  Time { end = 300 }
+
+  # Use an initial refinement of 7 levels (i.e. 2^7=128x128)
+  Refine 7
+
+  # Set a viscosity source term on the velocity vector with x-component U
+  # The Reynolds number is Re = L*U/Nu = 1*1/1e-3 = 1000
+  SourceViscosity {} U 1e-3
+
+  # Writes the time and timestep every 10 timesteps on standard output
+  OutputTime { istep = 10 } stderr
+
+  # Writes info about the convergence of the Poisson solver on standard output
+  OutputProjectionStats { istep = 10 } stderr
+
+  # Stops the simulation if the maximum of the absolute value of the
+  # difference between the current U field and the U field 10 timesteps
+  # before is smaller than 1e-4.
+  #
+  # Stores this difference in the DU field (this can be used for
+  # monitoring the convergence of the simulation).
+  EventStop { istep = 10 } U 1e-4 DU
+
+  # Pipes a bitmap PPM image representation of the velocity field at the end of the simulation
+  # into the ImageMagick converter "convert" to create the
+  # corresponding EPS file
+  OutputPPM { start = end } { convert -colors 256 ppm:- velocity.eps } {
+    v = Velocity
+  }
+
+  # At the end of the simulation, computes the values of the variables
+  # at the locations defined in files xprofile, yprofile and stores the
+  # results in files xprof, yprof
+  OutputLocation { start = end } xprof xprofile
+  OutputLocation { start = end } yprof yprofile
+
+  # At the end of the simulation calls the script generating the EPS
+  # files using gnuplot and files: xprof, yprof, xprof.ghia, yprof.ghia
+  EventScript { start = end } {
+    cat <<EOF | gnuplot
+    set term postscript eps
+    set output 'xprof.eps'
+    set xlabel 'Y'
+    set ylabel 'U'
+    plot [-0.5:0.5]'xprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'xprof' u 3:6 w l title "Gerris"
+    set output 'yprof.eps'
+    set xlabel 'X'
+    set ylabel 'V'
+    plot [-0.5:0.5]'yprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'yprof' u 2:7 w l title "Gerris"
+EOF
+  }
+
+  # Outputs profiling information at the end of the simulation to standard output
+  OutputTiming { start = end } stderr
+}
+GfsBox {
+
+  # Dirichlet boundary conditions for both components of the velocity on all sides:
+  # - non-slip (U = V = 0) on right, left and bottom boundaries
+  # - tangential velocity equal to 1 (U = 1) on top boundary
+
+  top = Boundary {
+    BcDirichlet U 1
+    BcDirichlet V 0
+  }
+  bottom = Boundary {
+    BcDirichlet U 0
+    BcDirichlet V 0
+  }
+  right = Boundary {
+    BcDirichlet U 0
+    BcDirichlet V 0
+  }
+  left = Boundary {
+    BcDirichlet U 0
+    BcDirichlet V 0
+  }
+}

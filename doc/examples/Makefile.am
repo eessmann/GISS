@@ -1,7 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
 EXAMPLES = \
-	cylinder
+	cylinder \
+	lid
 
 EXTRA_DIST = \
 	template.tex \
