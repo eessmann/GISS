@@ -13,10 +13,10 @@ dico = {}
 for f in glob.glob("../reference/*.html"):
     gfs2tex.dictionary(dico,open(f))
 
-for root, dirs, files in os.walk("."):
-    for d in dirs:
-        if (root + "/" + d)[0:10] != "./examples" and d != ".xvpics":
-            example = gfs2tex.Example(root + "/" + d)
+for start in sys.argv[1:]:
+    for root, dirs, files in os.walk(start,topdown=True):
+        if not ".xvpics" in root:
+            example = gfs2tex.Example(root)
             if not os.access("examples/" + example.path,os.F_OK):
-                os.symlink("." + example.path, "examples/" + example.path)
+                os.symlink("../" + example.path, "examples/" + example.path)
             example.write(dico)

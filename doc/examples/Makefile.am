@@ -4,10 +4,10 @@ EXAMPLES = \
 	cylinder
 
 EXTRA_DIST = \
-	$(EXAMPLES) \
 	template.tex \
 	gfs2tex.py \
-	gfs2tex
+	gfs2tex \
+	depend
 
 bin_SCRIPTS = \
 	gfs2doc
@@ -43,5 +43,10 @@ examples.pdf: examples.dvi
 
 examples.tex: template.tex
 	rm -r -f examples
-	./gfs2tex
+	python gfs2tex $(EXAMPLES)
 	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < template.tex > examples.tex
+
+Makefile.deps: $(EXAMPLES)
+	python depend $(EXAMPLES) > Makefile.deps
+
+-include Makefile.deps

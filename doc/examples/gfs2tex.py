@@ -44,9 +44,16 @@ def dictionary(d,file):
 
 class Example:
     def __init__(self,path):
+        if path[0:2] == "./":
+            path = path[2:]
         self.path, self.name = os.path.split(path)
-        self.path += "/" + self.name
-        self.section = ["\\subsection","\\subsubsection"][self.path.count("/")-1]
+        if self.name == "":
+            self.name = self.path
+        elif self.path == "":
+            self.path = self.name
+        else:
+            self.path += "/" + self.name
+        self.section = ["\\subsection","\\subsubsection"][self.path.count("/")]
         name = self.path + "/" + self.name + ".gfs"
         file = open(name)
         lines = file.readlines()
@@ -124,7 +131,7 @@ class Example:
     def colorize(self,dico):
         file = open(self.path + "/" + self.name + ".gfs")
         out = open(self.path + "/" + self.name + ".gfs.html", 'w')
-        path = "../" * (self.path.count("/") + 2) + "reference/"
+        path = "../" * (self.path.count("/") + 3) + "reference/"
         out.write("<html><head><title>\n" + self.name + ".gfs")
         out.write("</title></head><body><tt>\n")
         infile = insthg = 0

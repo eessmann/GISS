@@ -22,7 +22,7 @@ def myexit(s):
     sys.exit(s)
     
 for d in sys.argv[1:]:
-    example = gfs2tex.Example("./" + d)
+    example = gfs2tex.Example(d)
     example.write(dico)
     wdname = tempfile.mkdtemp()
     tex = open(wdname + "/" + example.name + ".tex", "w")
