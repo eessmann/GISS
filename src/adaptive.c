@@ -298,7 +298,7 @@ static void gfs_adapt_init (GfsAdapt * object)
 {
   object->active = FALSE;
   object->minlevel = gfs_function_new (gfs_function_class (), 0);
-  object->maxlevel = gfs_function_new (gfs_function_class (), G_MAXINT);
+  object->maxlevel = gfs_function_new (gfs_function_class (), 5);
   object->mincells = 0;
   object->maxcells = G_MAXINT;
   object->cmax = 0.;
