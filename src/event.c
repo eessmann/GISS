@@ -1791,3 +1791,104 @@ GfsEventClass * gfs_remove_ponds_class (void)
 
   return klass;
 }
+
+/* GfsEventFilter: Object */
+
+static void filter (FttCell * cell, GfsVariable * v)
+{
+  FttDirection d[4*(FTT_DIMENSION - 1)][FTT_DIMENSION] = {
+#if FTT_2D
+    {FTT_RIGHT, FTT_TOP}, {FTT_RIGHT, FTT_BOTTOM}, {FTT_LEFT, FTT_TOP}, {FTT_LEFT, FTT_BOTTOM}
+#else
+    {FTT_RIGHT, FTT_TOP, FTT_FRONT}, {FTT_RIGHT, FTT_BOTTOM, FTT_FRONT}, 
+    {FTT_LEFT, FTT_TOP, FTT_FRONT}, {FTT_LEFT, FTT_BOTTOM, FTT_FRONT},
+    {FTT_RIGHT, FTT_TOP, FTT_BACK}, {FTT_RIGHT, FTT_BOTTOM, FTT_BACK}, 
+    {FTT_LEFT, FTT_TOP, FTT_BACK}, {FTT_LEFT, FTT_BOTTOM, FTT_BACK}
+#endif
+  };
+  guint i;
+  gdouble val = 0.;
+
+  for (i = 0; i < 4*(FTT_DIMENSION - 1); i++)
+    val += gfs_cell_corner_value (cell, d[i], v, -1);
+  GFS_STATE (cell)->div = val/(4*(FTT_DIMENSION - 1));
+}
+
+static void filtered (FttCell * cell, GfsVariable * v)
+{
+  GFS_VARIABLE (cell, v->i) = GFS_STATE (cell)->div;
+}
+
+static gboolean gfs_event_filter_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_filter_class ())->parent_class)->event) 
+      (event, sim)) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) filter, GFS_EVENT_FILTER (event)->v);
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) filtered, GFS_EVENT_FILTER (event)->v);
+    gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, GFS_EVENT_FILTER (event)->v);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_event_filter_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsDomain * domain;
+
+  if (GTS_OBJECT_CLASS (gfs_event_filter_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_event_filter_class ())->parent_class->read) 
+      (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (variable)");
+    return;
+  }
+  domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  if ((GFS_EVENT_FILTER (*o)->v = gfs_variable_from_name (domain->variables, fp->token->str))
+      == NULL) {
+    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+}
+
+static void gfs_event_filter_write (GtsObject * o, FILE * fp)
+{
+  if (GTS_OBJECT_CLASS (gfs_event_filter_class ())->parent_class->write)
+    (* GTS_OBJECT_CLASS (gfs_event_filter_class ())->parent_class->write) 
+      (o, fp);
+  fprintf (fp, " %s", GFS_EVENT_FILTER (o)->v->name);
+}
+
+static void gfs_event_filter_class_init (GfsEventClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = gfs_event_filter_event;
+  GTS_OBJECT_CLASS (klass)->read = gfs_event_filter_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_event_filter_write;
+}
+
+GfsEventClass * gfs_event_filter_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_event_filter_info = {
+      "GfsEventFilter",
+      sizeof (GfsEventFilter),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_event_filter_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
+				  &gfs_event_filter_info);
+  }
+
+  return klass;
+}
+

@@ -298,6 +298,26 @@ struct _GfsRemovePonds {
 
 GfsEventClass * gfs_remove_ponds_class  (void);
 
+/* GfsEventFilter: Header */
+
+typedef struct _GfsEventFilter         GfsEventFilter;
+
+struct _GfsEventFilter {
+  /*< private >*/
+  GfsEvent parent;
+
+  /*< public >*/
+  GfsVariable * v;
+};
+
+#define GFS_EVENT_FILTER(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsEventFilter,\
+					         gfs_event_filter_class ())
+#define GFS_IS_EVENT_FILTER(obj)         (gts_object_is_from_class (obj,\
+						 gfs_event_filter_class ()))
+
+GfsEventClass * gfs_event_filter_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
