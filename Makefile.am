@@ -2,9 +2,11 @@
 
 SUBDIRS = modules src tools test doc
 
+EXTRA_DIST = ChangeLog
+
 dist-hook:
 	$(RM) -r `find $(distdir) -name CVS -type d -print`
 	$(RM) `find $(distdir) -name ".cvsignore" -type f -print`
 
-changelog:
+ChangeLog:
 	darcs changes > ChangeLog
