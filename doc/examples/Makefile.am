@@ -8,7 +8,8 @@ EXTRA_DIST = \
 	gfs2tex.py \
 	gfs2tex \
 	depend.py \
-	test.py
+	test.py \
+	Makefile.deps
 
 TESTS = test.sh
 
@@ -53,7 +54,7 @@ examples.tex: template.tex
 	python gfs2tex $(EXAMPLES)
 	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < template.tex > examples.tex
 
-Makefile.deps: $(EXAMPLES)
+Makefile.deps:
 	python depend.py $(EXAMPLES) > Makefile.deps
 
 -include Makefile.deps
