@@ -202,26 +202,188 @@ void gfs_cell_fluid (FttCell * cell)
   }
 }
 
-static void gfs_cell_solid (FttCell * cell)
+static void bbox_size (GtsBBox * bbox, GtsVector s)
 {
-  g_return_if_fail (cell != NULL);
+  s[0] = bbox->x2 - bbox->x1;
+  s[1] = bbox->y2 - bbox->y1;
+  s[2] = bbox->z2 - bbox->z1;
+}
 
-  if (GFS_STATE (cell)->solid == NULL)
-    GFS_STATE (cell)->solid = g_malloc0 (sizeof (GfsSolidVector));
-  else
-    memset (GFS_STATE (cell)->solid, 0, sizeof (GfsSolidVector));
+#if FTT_2D
+static gdouble segment_triangle_intersection (GtsPoint * E, GtsPoint * D,
+					      GtsTriangle * t,
+					      gboolean * inside)
+{
+  GtsPoint * A, * B, * C;
+  gint ABCE, ABCD, ADCE, ABDE, BCDE;
+  GtsEdge * AB, * BC, * CA;
+  gdouble a, b;
+  gboolean reversed = FALSE;
 
-  if (!FTT_CELL_IS_LEAF (cell)) {
-    FttCellChildren child;
-    guint i;
- 
-    ftt_cell_children (cell, &child);
-    for (i = 0; i < FTT_CELLS; i++)
-      if (child.c[i])
-	gfs_cell_solid (child.c[i]);
+  gts_triangle_vertices_edges (t, NULL, 
+			       (GtsVertex **) &A, 
+			       (GtsVertex **) &B, 
+			       (GtsVertex **) &C, 
+			       &AB, &BC, &CA);
+  ABCE = gts_point_orientation_3d_sos (A, B, C, E);
+  ABCD = gts_point_orientation_3d_sos (A, B, C, D);
+  if (ABCE < 0 || ABCD > 0) {
+    GtsPoint * tmpp;
+    gint tmp;
+
+    tmpp = E; E = D; D = tmpp;
+    tmp = ABCE; ABCE = ABCD; ABCD = tmp;
+    reversed = TRUE;
+  }
+  if (ABCE < 0 || ABCD > 0)
+    return -1.;
+  ADCE = gts_point_orientation_3d_sos (A, D, C, E);
+  if (ADCE < 0)
+    return -1.;
+  ABDE = gts_point_orientation_3d_sos (A, B, D, E);
+  if (ABDE < 0)
+    return -1.;
+  BCDE = gts_point_orientation_3d_sos (B, C, D, E);
+  if (BCDE < 0)
+    return -1.;
+  *inside = reversed ? (ABCD < 0) : (ABCE < 0);
+  a = gts_point_orientation_3d (A, B, C, E);
+  b = gts_point_orientation_3d (A, B, C, D);
+  if (a != b)
+    return reversed ? 1. - a/(a - b) : a/(a - b);
+  /* D and E are contained within ABC */
+  g_assert (a == 0.);
+  return 0.5;
+}
+
+typedef struct {
+  GtsPoint p[4];
+  gdouble x[4];
+  guint n[4];
+  gint inside[4];
+} CellFace;
+
+static void triangle_face_intersection (GtsTriangle * t, CellFace * f)
+{
+  guint i;
+
+  for (i = 0; i < 4; i++) {
+    gboolean ins;
+    gdouble x1 = segment_triangle_intersection (&(f->p[i]), &(f->p[(i + 1) % 4]), t, &ins);
+
+    if (x1 != -1.) {
+      f->x[i] += x1; f->n[i]++;
+      f->inside[i] += ins ? 1 : -1;
+    }
   }
 }
 
+static void set_solid_fractions_from_surface (FttCell * cell,
+					      GtsSurface * s)
+{
+  GfsSolidVector * solid = GFS_STATE (cell)->solid;
+  FttVector p;
+  gdouble h = ftt_cell_size (cell)/2.;
+  CellFace f;
+  guint i, n1 = 0;
+  static guint etod[] = { 3, 0, 2, 1 };
+
+  ftt_cell_pos (cell, &p);
+  f.p[0].x = p.x - h; f.p[0].y = p.y - h; f.p[0].z = 0.;
+  f.p[1].x = p.x + h; f.p[1].y = p.y - h; f.p[1].z = 0.;
+  f.p[2].x = p.x + h; f.p[2].y = p.y + h; f.p[2].z = 0.;
+  f.p[3].x = p.x - h; f.p[3].y = p.y + h; f.p[3].z = 0.;
+  f.x[0] = f.x[1] = f.x[2] = f.x[3] = 0.;
+  f.n[0] = f.n[1] = f.n[2] = f.n[3] = 0;
+  f.inside[0] = f.inside[1] = f.inside[2] = f.inside[3] = 0;
+
+  gts_surface_foreach_face (s, (GtsFunc) triangle_face_intersection, &f);
+
+  for (i = 0; i < 4; i++)
+    if (f.n[i] % 2 != 0) {
+      f.x[i] /= f.n[i];
+      n1++;
+    }
+    else
+      f.n[i] = 0;
+
+  switch (n1) {
+  case 0:
+    if (solid) {
+      g_free (solid);
+      GFS_STATE (cell)->solid = NULL;
+    }
+    break;
+  case 2: case 4: {
+    guint k, m;
+    gboolean ins;
+    guint o = 0;
+    GtsPoint r[2];
+
+    if (!solid)
+      GFS_STATE (cell)->solid = solid = g_malloc0 (sizeof (GfsSolidVector));
+    else {
+      solid->a = 0.;
+      solid->cm.x = solid->cm.y = solid->cm.z = 0.;
+    }
+      
+    for (m = 0; m < 4 && f.n[m] == 0; m++);
+    ins = f.inside[m] < 0;
+    for (k = m; k < m + 4; k++) {
+      guint i = k % 4, i1 = (i + 1) % 4;
+      gdouble x1 = f.p[i].x, y1 = f.p[i].y, x2 = f.p[i1].x, y2 = f.p[i1].y;
+      if (f.n[i] > 0) {
+	g_assert (ins == (f.inside[i] < 0));
+	solid->s[etod[i]] = ins ? f.x[i] : 1. - f.x[i];
+	r[o].x = (1. - f.x[i])*x1 + f.x[i]*x2;
+	r[o].y = (1. - f.x[i])*y1 + f.x[i]*y2;
+	if (ins) {
+	  x2 = r[o].x; y2 = r[o].y;
+	}
+	else {
+	  x1 = r[o].x; y1 = r[o].y;
+	}
+	solid->a += (x1 + x2)*(y2 - y1);
+	solid->cm.x += (x1 - x2)*(2.*(x1*y1 + x2*y2) + x1*y2 + x2*y1);
+	solid->cm.y += (y2 - y1)*(2.*(x1*y1 + x2*y2) + x1*y2 + x2*y1);
+	o++;
+	if (o == 2) {
+	  o = 0;
+	  if (ins) {
+	    x1 = r[1].x; y1 = r[1].y;
+	    x2 = r[0].x; y2 = r[0].y;	    
+	  }
+	  else {
+	    x1 = r[0].x; y1 = r[0].y;
+	    x2 = r[1].x; y2 = r[1].y;	    
+	  }
+	  solid->a += (x1 + x2)*(y2 - y1);
+	  solid->cm.x += (x1 - x2)*(2.*(x1*y1 + x2*y2) + x1*y2 + x2*y1);
+	  solid->cm.y += (y2 - y1)*(2.*(x1*y1 + x2*y2) + x1*y2 + x2*y1);
+	  solid->ca.x = (x1 + x2)/2.;
+	  solid->ca.y = (y1 + y2)/2.;
+	}
+	ins = !ins;
+      }
+      else if (ins) {
+	solid->s[etod[i]] = 1.;
+	solid->a += (x1 + x2)*(y2 - y1);
+	solid->cm.x += (x1 - x2)*(2.*(x1*y1 + x2*y2) + x1*y2 + x2*y1);
+	solid->cm.y += (y2 - y1)*(2.*(x1*y1 + x2*y2) + x1*y2 + x2*y1);
+      }
+      else
+	solid->s[etod[i]] = 0.;
+    }
+    solid->cm.x /= 3.*solid->a;
+    solid->cm.y /= 3.*solid->a;
+    solid->a /= 8.*h*h;
+    break;
+  }
+  default:
+    g_assert_not_reached ();
+  }
+}
+#else /* 3D */
 static void add_surface_fraction (GfsFace * f, GfsSolidVector * solid)
 {
   if (f->dir < FTT_NEIGHBORS)
@@ -264,28 +426,19 @@ static void write_surface_warning (GtsSurfaceInter * si,
   }
 }
 
-static void bbox_size (GtsBBox * bbox, GtsVector s)
-{
-  s[0] = bbox->x2 - bbox->x1;
-  s[1] = bbox->y2 - bbox->y1;
-  s[2] = bbox->z2 - bbox->z1;
-}
-
 static void set_solid_fractions_from_surface (FttCell * cell,
-					      GtsBBox * bbox,
 					      GtsSurface * s,
 					      GNode * stree,
-					      gboolean is_open,
-					      gboolean destroy_solid,
-					      FttCellCleanupFunc cleanup,
-					      gpointer data)
+					      gboolean is_open)
 {
+  GtsBBox * bbox;
   GtsSurface * cs; 
   GNode * ctree;
   GtsSurfaceInter * si;
   GtsVector size;
   gboolean closed = TRUE;
 
+  bbox = bbox_cell (gts_bbox_class (), cell);
   bbox_size (bbox, size);
   cs = gts_surface_new (gts_surface_class (),
 			GTS_FACE_CLASS (gfs_face_class ()),
@@ -294,6 +447,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
   surface_add_box (cs, 
 		   bbox->x1, bbox->y1, bbox->z1,
 		   bbox->x2, bbox->y2, bbox->z2);
+  gts_object_destroy (GTS_OBJECT (bbox));
   ctree = gts_bb_tree_surface (cs);
   si = gts_surface_inter_new (gts_surface_inter_class (),
 			      cs, s, ctree, stree, FALSE, is_open);
@@ -409,6 +563,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
   gts_bb_tree_destroy (ctree, TRUE);
   gts_object_destroy (GTS_OBJECT (cs));
 }
+#endif /* 3D */
 
 static gdouble solid_sa (GfsSolidVector * s)
 {
@@ -573,24 +728,22 @@ typedef struct {
   gpointer data;
 } InitSolidParams;
 
+#if (!FTT_2D)
 static void init_solid_fractions (FttCell * cell, GtsSurface * s, InitSolidParams * p)
 {
-  GtsBBox * bbox;
   GNode * stree;
 
-  bbox = bbox_cell (gts_bbox_class (), cell);
   stree = gts_bb_tree_surface (s);
-  set_solid_fractions_from_surface (cell, bbox, s, stree,
-  				    p->is_open, p->destroy_solid, p->cleanup, p->data);
+  set_solid_fractions_from_surface (cell, s, stree, p->is_open);
   gts_bb_tree_destroy (stree, TRUE);
-  gts_object_destroy (GTS_OBJECT (bbox));
 }
+#endif /* 3D */
 
 static void solid_fractions_from_children (FttCell * cell, InitSolidParams * p)
 {
   if (FTT_CELL_IS_LEAF (cell)) {
     if (p->destroy_solid && GFS_STATE (cell)->div == 1.)
-      ftt_cell_destroy (cell, p->cleanup, p->data);      
+      ftt_cell_destroy (cell, p->cleanup, p->data);
   }
   else {
     FttCellChildren child;
@@ -647,8 +800,13 @@ void gfs_cell_init_solid_fractions (FttCell * root,
   p.destroy_solid = destroy_solid;
   p.cleanup = cleanup;
   p.data = data;
+#if FTT_2D
+  gfs_cell_traverse_cut (root, s, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			 (FttCellTraverseCutFunc) set_solid_fractions_from_surface, NULL);
+#else  /* 3D */
   gfs_cell_traverse_cut (root, s, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			 (FttCellTraverseCutFunc) init_solid_fractions, &p);
+#endif /* 3D */
   ftt_cell_traverse (root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 		     (FttCellTraverseFunc) gfs_cell_reset, gfs_div);
   ftt_cell_traverse (root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
