@@ -278,7 +278,7 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
   gdouble h = ftt_cell_size (cell);
   CellCube cube;
-  FttVector o;
+  FttVector o, ca = {0., 0., 0.};
   guint i, n1 = 0;
   gint inside[8] = {0,0,0,0,0,0,0,0};
 
@@ -300,7 +300,13 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
       guint j = edge1[i][0], k = edge1[i][1];
 
       /* intersection vertex position is the average of all the n[i] intersections */
-      cube.x[i] /= cube.n[i]; 
+      cube.x[i] /= cube.n[i];
+
+      /* average of all intersections */
+      ca.x += (1. - cube.x[i])*cube.p[j].x + cube.x[i]*cube.p[k].x;
+      ca.y += (1. - cube.x[i])*cube.p[j].y + cube.x[i]*cube.p[k].y;
+      ca.z += (1. - cube.x[i])*cube.p[j].z + cube.x[i]*cube.p[k].z;
+
       g_assert (inside[j] == 0 || inside[j] == cube.inside[i]);
       g_assert (inside[k] == 0 || inside[k] == - cube.inside[i]);
       inside[j] = cube.inside[i];
@@ -320,18 +326,19 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
 
   if (!solid)
     GFS_STATE (cell)->solid = solid = g_malloc0 (sizeof (GfsSolidVector));
-  
-  for (i = 0; i < FTT_NEIGHBORS; i++) { /* for each face */
-    CellFace f;
-    guint j;
 
-    n1 = 0;
+  /* compute face fractions */
+  for (i = 0; i < FTT_NEIGHBORS; i++) {
+    CellFace f;
+    guint j, n2;
+
+    n2 = 0;
     for (j = 0; j < 4; j++) { /* initialise face i */
       guint e = face[i][j][0];
 
       f.p[j] = cube.p[face_v[i][j]];
       f.n[j] = cube.n[e];
-      if (f.n[j]) n1++;
+      if (f.n[j]) n2++;
       if (face[i][j][1]) {
 	f.x[j] = 1. - cube.x[e];
 	f.inside[j] = - cube.inside[e];
@@ -342,7 +349,7 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
       }
     }
 
-    switch (n1) {
+    switch (n2) {
     case 0: { /* the face is not cut */
       gint ins = 0;
 
@@ -367,8 +374,31 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
     }
     default:
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
-	     "the solid surface is probably not closed (n1 = %d)", n1);
+	     "the solid surface is probably not closed (n2 = %d)", n2);
     }
+  }
+
+  /* now compute cell fraction, center of area, center of mass */
+  ca.x /= n1; ca.y /= n1; ca.z /= n1;
+  solid->ca = ca;
+  {
+    FttVector m;
+    gdouble alpha, n = 0.;
+    FttComponent c;
+
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      (&ca.x)[c] = ((&ca.x)[c] - (&o.x)[c])/h;
+      (&m.x)[c] = solid->s[2*c + 1] - solid->s[2*c];
+      if ((&m.x)[c] < 0.) {
+	(&m.x)[c] = - (&m.x)[c];
+	(&ca.x)[c] = 1. - (&ca.x)[c];
+      }
+      (&m.x)[c] += 1e-6;
+      n += (&m.x)[c];
+    }
+    m.x /= n; m.y /= n; m.z /= n;
+    alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
+    solid->a = gfs_plane_volume (&m, alpha, 1.);
   }
 }
 #endif /* 3D */

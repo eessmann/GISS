@@ -28,23 +28,6 @@ static FttVector vertex[8] = {
   {0.,0.,0.},{0.,0.,1.},{0.,1.,0.},{0.,1.,1.},
   {1.,0.,0.},{1.,0.,1.},{1.,1.,0.},{1.,1.,1.}
 };
-/* first index is the edge number, second index is the edge orientation 
-   (0 or 1), third index are the edges which this edge may connect to
-   in order and the corresponding face direction */
-static guint connect[12][2][4] = {
-  {{9, 1, 8, FTT_BOTTOM}, {4, 3, 7, FTT_BACK}},   /* 0 */
-  {{6, 2, 5, FTT_FRONT},  {8, 0, 9, FTT_BOTTOM}}, /* 1 */
-  {{10, 3, 11, FTT_TOP},  {5, 1, 6, FTT_FRONT}},  /* 2 */
-  {{7, 0, 4, FTT_BACK},   {11, 2, 10, FTT_TOP}},  /* 3 */
-  {{3, 7, 0, FTT_BACK},   {8, 5, 11, FTT_LEFT}},  /* 4 */
-  {{11, 4, 8, FTT_LEFT},  {1, 6, 2, FTT_FRONT}},  /* 5 */
-  {{2, 5, 1, FTT_FRONT},  {9, 7, 10, FTT_RIGHT}}, /* 6 */
-  {{10, 6, 9, FTT_RIGHT}, {0, 4, 3, FTT_BACK}},   /* 7 */
-  {{5, 11, 4, FTT_LEFT},  {0, 9, 1, FTT_BOTTOM}}, /* 8 */
-  {{1, 8, 0, FTT_BOTTOM}, {7, 10, 6, FTT_RIGHT}}, /* 9 */
-  {{6, 9, 7, FTT_RIGHT},  {3, 11, 2, FTT_TOP}},   /* 10 */
-  {{2, 10, 3, FTT_TOP},   {4, 8, 5, FTT_LEFT}}    /* 11 */
-};
 static guint face[6][4][2] = {
   {{7,0},{10,0},{6,1},{9,1}}, /* right */
   {{4,0},{11,0},{5,1},{8,1}}, /* left */
