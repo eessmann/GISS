@@ -110,9 +110,10 @@ then
   LIBTOOL="$LIBTOOL --silent"
 fi
 
-dnl Fix for MacOSX libtool
+dnl Fix for MacOSX and cygwin libtool
 case "$build" in
   *-apple-darwin*) NO_UNDEFINED="-module" ;;
+  *-pc-cygwin*)    NO_UNDEFINED="" ;;
   *)               NO_UNDEFINED="-no-undefined" ;;
 esac
 AC_SUBST(NO_UNDEFINED)
