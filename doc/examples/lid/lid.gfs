@@ -59,10 +59,10 @@
   # The Reynolds number is Re = L*U/Nu = 1*1/1e-3 = 1000
   SourceViscosity {} U 1e-3
 
-  # Writes the time and timestep every 10 timesteps on standard output
+  # Writes the time and timestep every 10 timesteps on standard error
   OutputTime { istep = 10 } stderr
 
-  # Writes info about the convergence of the Poisson solver on standard output
+  # Writes info about the convergence of the Poisson solver on standard error
   OutputProjectionStats { istep = 10 } stderr
 
   # Stops the simulation if the maximum of the absolute value of the
@@ -102,7 +102,7 @@
 EOF
   }
 
-  # Outputs profiling information at the end of the simulation to standard output
+  # Outputs profiling information at the end of the simulation to standard error
   OutputTiming { start = end } stderr
 }
 GfsBox {
