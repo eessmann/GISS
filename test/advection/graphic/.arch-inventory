@@ -1,4 +1,0 @@
-precious ^report\.ps$
-precious ^report\.tex$
-precious ^test\.sh$
-precious ^timestamp$

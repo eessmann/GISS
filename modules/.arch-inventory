@@ -1,3 +1,0 @@
-precious ^periodic_flow\.c$
-precious ^testing\.c$
-precious ^vorticity_spectrum\.c$
