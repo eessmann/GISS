@@ -197,14 +197,18 @@ FttCell * ftt_cell_child_corner (const FttCell * cell,
 
   g_return_val_if_fail (cell != NULL, NULL);
   g_return_val_if_fail (!FTT_CELL_IS_LEAF (cell), NULL);
+
   g_return_val_if_fail (d[0] < FTT_NEIGHBORS, NULL);
   g_return_val_if_fail (d[1] < FTT_NEIGHBORS, NULL);
-#  if FTT_2D3
-  if (d[0] >= FTT_NEIGHBORS_2D|| d[1] >= FTT_NEIGHBORS_2D)
-    g_assert_not_implemented ();
-#  endif
 
-  i = index[d[0]][d[1]];
+#  if FTT_2D3
+  if (d[0] >= FTT_NEIGHBORS_2D)
+    i = index[d[1]][d[2]];
+  else if (d[1] >= FTT_NEIGHBORS_2D)
+    i = index[d[0]][d[2]];
+  else
+#  endif
+    i = index[d[0]][d[1]];
 #else  /* FTT_3D */
   static gint index[FTT_NEIGHBORS][FTT_NEIGHBORS][FTT_NEIGHBORS] = {
     {{-1,-1,-1,-1,-1,-1},{-1,-1,-1,-1,-1,-1},
@@ -1310,36 +1314,6 @@ static void cell_traverse_level_non_leafs (FttCell * cell,
 	cell_traverse_level_non_leafs (c, max_depth, func, data);
     }
   }
-}
-
-/**
- * ftt_cell_relative_level:
- * @cell: a #FttCell.
- *
- * Returns: the level of @cell relative to the level of the shallowest of
- * its leaf cells, or zero if @cell is a leaf cell.
- */
-guint ftt_cell_relative_level (FttCell * cell)
-{
-  FttOct * children;
-  guint n, level = G_MAXINT/2;
-
-  g_return_val_if_fail (cell != NULL, 0);
-
-  if (FTT_CELL_IS_LEAF (cell))
-    return 0;
-  children = cell->children;
-  for (n = 0; n < FTT_CELLS && level > 0; n++) {
-    FttCell * c = &(children->cell[n]);
-
-    if (!FTT_CELL_IS_DESTROYED (c)) {
-      guint l = ftt_cell_relative_level (c);
-
-      if (l < level)
-	level = l;
-    }      
-  }
-  return level + 1;
 }
 
 /**

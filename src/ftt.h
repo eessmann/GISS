@@ -382,17 +382,17 @@ FttCell * ftt_cell_child_corner (const FttCell * cell,
   g_return_val_if_fail (cell != NULL, NULL);
   g_return_val_if_fail (!FTT_CELL_IS_LEAF (cell), NULL);
 
-  g_assert (d[0] < FTT_NEIGHBORS);
-  g_assert (d[1] < FTT_NEIGHBORS);
-
   g_return_val_if_fail (d[0] < FTT_NEIGHBORS, NULL);
   g_return_val_if_fail (d[1] < FTT_NEIGHBORS, NULL);
-#  if FTT_2D3
-  if (d[0] >= FTT_NEIGHBORS_2D || d[1] >= FTT_NEIGHBORS_2D)
-    g_assert_not_implemented ();
-#  endif
 
-  i = index[d[0]][d[1]];
+#  if FTT_2D3
+  if (d[0] >= FTT_NEIGHBORS_2D)
+    i = index[d[1]][d[2]];
+  else if (d[1] >= FTT_NEIGHBORS_2D)
+    i = index[d[0]][d[2]];
+  else
+#  endif
+    i = index[d[0]][d[1]];
 #else  /* FTT_3D */
   static gint index[FTT_NEIGHBORS][FTT_NEIGHBORS][FTT_NEIGHBORS] = {
     {{-1,-1,-1,-1,-1,-1},{-1,-1,-1,-1,-1,-1},
