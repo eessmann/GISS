@@ -214,6 +214,7 @@ void gfs_init (int * argc, char *** argv)
   /* Instantiates classes before reading any domain or simulation file */
   gfs_simulation_class ();
     gfs_ocean_class ();
+    gfs_advection_class ();
 
   gfs_variable_class ();
     gfs_variable_tracer_class ();

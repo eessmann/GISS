@@ -1036,3 +1036,114 @@ void gfs_simulation_run (GfsSimulation * sim)
   (* GFS_SIMULATION_CLASS (GTS_OBJECT (sim)->klass)->run) (sim);
   g_timer_stop (GFS_DOMAIN (sim)->timer);
 }
+
+/* GfsAdvection: Object */
+
+static void advection_run (GfsSimulation * sim)
+{
+  GfsVariable * v;
+  GfsDomain * domain;
+
+  domain = GFS_DOMAIN (sim);
+
+  gfs_simulation_refine (sim);
+
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
+  gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
+
+  gfs_set_merged (domain);
+  v = domain->variables;
+  while (v) {
+    gfs_event_init (GFS_EVENT (v), sim);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v);
+    v = v->next;
+  }
+
+  while (sim->time.t < sim->time.end &&
+	 sim->time.i < sim->time.iend) {
+    gdouble tstart;
+
+    v = domain->variables;
+    while (v) {
+      gfs_event_do (GFS_EVENT (v), sim);
+      v = v->next;
+    }
+    gfs_domain_cell_traverse (domain,
+			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
+
+    tstart = g_timer_elapsed (domain->timer, NULL);
+
+    gfs_simulation_set_timestep (sim);
+
+    gfs_domain_face_traverse (domain, FTT_XYZ,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity,
+			      NULL);
+    gfs_domain_face_traverse (domain, FTT_XYZ,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, NULL);
+
+    v = domain->variables;
+    while (v) {
+      if (GFS_IS_VARIABLE_TRACER (v)) {
+	GfsVariableTracer * t = GFS_VARIABLE_TRACER (v);
+
+	t->advection.dt = sim->advection_params.dt;
+	switch (t->advection.scheme) {
+	case GFS_GODUNOV:
+	  gfs_tracer_advection_diffusion (domain, &t->advection, &t->diffusion, NULL);
+	  break;
+	case GFS_VOF:
+	  gfs_tracer_vof_advection (domain, &t->advection, NULL);
+	  gfs_domain_variable_centered_sources (domain, v, v, t->advection.dt);
+	  break;
+	case GFS_NONE:
+	  break;
+	}
+      }
+      v = v->next;
+    }
+
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
+
+    gfs_simulation_adapt (sim, NULL);
+
+    sim->time.t = sim->tnext;
+    sim->time.i++;
+
+    gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
+    gts_range_update (&domain->timestep);
+    gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
+    gts_range_update (&domain->size);
+  }
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
+  gts_container_foreach (GTS_CONTAINER (sim->events),
+			 (GtsFunc) gts_object_destroy, NULL);
+}
+
+static void gfs_advection_class_init (GfsSimulationClass * klass)
+{
+  klass->run = advection_run;
+}
+
+GfsSimulationClass * gfs_advection_class (void)
+{
+  static GfsSimulationClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_advection_info = {
+      "GfsAdvection",
+      sizeof (GfsSimulation),
+      sizeof (GfsSimulationClass),
+      (GtsObjectClassInitFunc) gfs_advection_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_simulation_class ()), &gfs_advection_info);
+  }
+
+  return klass;
+}

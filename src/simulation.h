@@ -117,7 +117,11 @@ void                 gfs_physical_params_write   (GfsPhysicalParams * p,
 void                 gfs_physical_params_read    (GfsPhysicalParams * p,
 						  GtsFile * fp);
 void                 gfs_simulation_run          (GfsSimulation * sim);
-#define              gfs_object_simulation(o)    GFS_SIMULATION(GTS_OBJECT (o)->reserved)
+#define              gfs_object_simulation(o)     GFS_SIMULATION(GTS_OBJECT (o)->reserved)
+
+/* GfsAdvection: Header */
+
+GfsSimulationClass * gfs_advection_class          (void);
 
 #ifdef __cplusplus
 }
