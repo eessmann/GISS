@@ -386,7 +386,7 @@ static void match (FttCell * cell, GfsBoundary * boundary)
 	if (c == boundary->d/2) {
 	  FttVector p1, p2;
 	  ftt_cell_pos (cell, &p1);
-	  ftt_cell_pos (cell, &p2);
+	  ftt_cell_pos (neighbor, &p2);
 	  (&t->cm.x)[c] = (&p1.x)[c] + (&p2.x)[c] - (&s->cm.x)[c];
 	  (&t->ca.x)[c] = (&p1.x)[c] + (&p2.x)[c] - (&s->ca.x)[c];
 	}
