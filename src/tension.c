@@ -29,6 +29,7 @@ static void gfs_source_tension_read (GtsObject ** o, GtsFile * fp)
 {
   GfsSourceTension * s = GFS_SOURCE_TENSION (*o);
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  FttComponent c;
 
   (* GTS_OBJECT_CLASS (gfs_source_tension_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
@@ -43,15 +44,12 @@ static void gfs_source_tension_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   gts_file_next_token (fp);
-  
-  if ((s->t[0] = gfs_variable_from_name (domain->variables, "_gfs_source_tension_x")) == NULL) 
-    s->t[0] = gfs_domain_add_variable (domain, "_gfs_source_tension_x");
-  if ((s->t[1] = gfs_variable_from_name (domain->variables, "_gfs_source_tension_y")) == NULL) 
-    s->t[1] = gfs_domain_add_variable (domain, "_gfs_source_tension_y");
-#if (!FTT_2D)
-  if ((s->t[2] = gfs_variable_from_name (domain->variables, "_gfs_source_tension_z")) == NULL) 
-    s->t[2] = gfs_domain_add_variable (domain, "_gfs_source_tension_z");
-#endif /* 3D */
+
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    static gchar * name[3] = {"_Tx", "_Ty", "_Tz"};
+    if ((s->t[c] = gfs_variable_from_name (domain->variables, name[c])) == NULL)
+      s->t[c] = gfs_domain_add_variable (domain, name[c]);
+  }
 
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
     gts_file_error (fp, "expecting a number (sigma)");
