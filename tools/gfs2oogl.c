@@ -371,11 +371,11 @@ static gboolean advect (GfsDomain * domain,
   guint n = 10;
   gdouble h = ds/n;
   gboolean ad = TRUE;
+  GfsVariable * U = gfs_variable_from_name (domain->variables, "U"), * v;
 
   while (n-- > 0 && ad) {
-    for (c = 0; c < 2/*FTT_DIMENSION*/; c++) {
-      ((gdouble *) &u)[c] = 
-	direction*gfs_interpolate (cell, *p, GFS_VELOCITY_INDEX (c));
+    for (c = 0, v = U; c < 2/*FTT_DIMENSION*/; c++, v = v->next) {
+      ((gdouble *) &u)[c] = direction*gfs_interpolate (cell, *p, v);
       nu += ((gdouble *) &u)[c]*((gdouble *) &u)[c];
     }
     if (nu > 0.) {
@@ -386,9 +386,8 @@ static gboolean advect (GfsDomain * domain,
       cell = gfs_domain_locate (domain, ph, -1);
       if (cell != NULL) {
 	nu = 0.;
-	for (c = 0; c < 2/*FTT_DIMENSION*/; c++) {
-	  ((gdouble *) &u)[c] = 
-	    direction*gfs_interpolate (cell, ph, GFS_VELOCITY_INDEX (c));
+	for (c = 0, v = U; c < 2/*FTT_DIMENSION*/; c++, v = v->next) {
+	  ((gdouble *) &u)[c] = direction*gfs_interpolate (cell, ph, v);
 	  nu += ((gdouble *) &u)[c]*((gdouble *) &u)[c];
 	}
 	if (nu > 0.) {
@@ -1054,8 +1053,7 @@ int main (int argc, char * argv[])
       while (fscanf (profile, "%lf %lf %lf", &p.x, &p.y, &p.z) == 3) {
 	FttCell * cell = gfs_domain_locate (domain, p, -1);
 	if (cell)
-	  printf ("%g %g %g %g\n", p.x, p.y, p.z, 
-		  gfs_interpolate (cell, p, var->i));
+	  printf ("%g %g %g %g\n", p.x, p.y, p.z, gfs_interpolate (cell, p, var));
       }
     }
     else if (vector > 0.) {

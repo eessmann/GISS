@@ -1,3 +1,48 @@
+20/10/2004: Release 0.6.0
+
+First the good news:
+
+Diffusion equations with complex boundary conditions can now be solved
+in 3D!
+
+Now the bad news:
+
+Variable density support is broken in this version (use 0.3.0 if you
+need it). The reason is that this part of the code needs to be
+reviewed/generalised to make sure it does the right thing.
+
+The main changes/improvements in this version are:
+
+- Support for diffusion equations in 3D complex geometries
+- Flexible boundary conditions on embedded solid surfaces for
+  diffusion equation in parameter files (see the tutorial)
+- Updated tutorial and reference manual
+- An initial implementation of a shallow-water 2D and 3D hydrostatic
+  ocean model with semi-implicit Coriolis source terms and barotropic
+  equation (multigrid for Helmoltz equation)
+- Support for different types of simulations (ocean and incompressible
+  Euler/NS for the moment)
+- Support for multiple tracers
+- Much improved interpolation of variables
+- New consistent pressure correction formulation (which works with
+  momentum source terms near boundaries)
+- MPI configuration reworked (uses mpicc): tested with mpich and
+  lam-mpi
+- Bounding boxes for PPM output: allows to select a limited area for
+  PPM output
+- Optional binary file format (4 to 5 times faster file read)
+
+Minor bug corrections and improvements:
+
+- pkgconfig support
+- MacOSX support
+- Bug fix for 64 bits machines
+- Relaxed constraints on refinement (still needs work)
+- External library links in GfsFunction
+- Short keyword support
+- Lambda2 criterion of Jeong and Hussain (for vortex detection)
+- etc...
+
 20/05/2004: Release 0.3.0
 
 Quite a lot has happened since 0.2.0. The main changes/improvements are:

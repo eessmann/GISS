@@ -9,7 +9,7 @@ pkglib_LTLIBRARIES = \
 	libtesting2D.la
 
 AM_CFLAGS = -DFTT_2D=1
-AM_LDFLAGS = -no-undefined -version-info 0:0:0 -export-dynamic
+AM_LDFLAGS = $(NO_UNDEFINED) -version-info 0:0:0 -export-dynamic
 
 EXTRA_DIST = \
 	periodic_flow.mod \

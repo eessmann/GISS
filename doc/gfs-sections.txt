@@ -33,6 +33,8 @@ ftt_cell_set_level
 ftt_cell_pos
 ftt_cell_relative_pos
 ftt_cell_set_pos
+ftt_corner_pos
+ftt_corner_relative_pos
 ftt_level_size
 ftt_cell_size
 ftt_cell_volume
@@ -79,6 +81,7 @@ ftt_cell_neighbor
 ftt_cell_neighbor_not_cached
 ftt_cell_set_neighbor
 ftt_cell_set_neighbor_match
+ftt_cell_neighbor_is_brother
 </SECTION>
 
 <SECTION>
@@ -99,8 +102,10 @@ ftt_cell_traverse_rewind
 ftt_cell_traverse_destroy
 <SUBSECTION>
 ftt_cell_write
+ftt_cell_write_binary
 FttCellWriteFunc
 ftt_cell_read
+ftt_cell_read_binary
 FttCellReadFunc
 ftt_cell_draw
 <SUBSECTION>
@@ -183,9 +188,14 @@ gfs_cell_dirichlet_gradient
 gfs_cell_dirichlet_gradient_flux
 gfs_cell_dirichlet_value
 gfs_cell_laplacian
+GfsInterpolator
+gfs_cell_corner_interpolator
+gfs_cell_corner_value
 <SUBSECTION>
 gfs_cell_write
+gfs_cell_write_binary
 gfs_cell_read
+gfs_cell_read_binary
 </SECTION>
 
 <SECTION>
@@ -253,6 +263,9 @@ gfs_predicted_face_velocities
 <TITLE>Volume of Fluid advection</TITLE>
 gfs_plane_alpha
 gfs_plane_volume
+gfs_line_alpha
+gfs_line_area
+gfs_line_center
 gfs_cell_vof_advection
 gfs_tracer_vof_advection
 </SECTION>
@@ -286,6 +299,8 @@ GfsDomain
 <SUBSECTION>
 gfs_domain_class
 gfs_domain_add_variable
+gfs_domain_add_new_variable
+gfs_domain_replace_variable
 gfs_domain_cell_traverse
 gfs_domain_cell_traverse_boundary
 gfs_domain_cell_traverse_box
@@ -308,9 +323,12 @@ gfs_domain_read
 gfs_domain_split
 gfs_domain_variable_sources
 gfs_domain_remove_droplets
+gfs_domain_remove_islands
 gfs_domain_advect_point
 gfs_domain_cfl
 gfs_domain_size
+gfs_domain_timer_start
+gfs_domain_timer_stop
 </SECTION>
 
 <SECTION>

@@ -90,6 +90,7 @@ with
 @maxcells: 
 @cmax: 
 @weight: 
+@c: 
 @cost: 
 
 <!-- ##### FUNCTION gfs_adapt_class ##### -->

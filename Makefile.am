@@ -7,4 +7,4 @@ dist-hook:
 	$(RM) `find $(distdir) -name ".cvsignore" -type f -print`
 
 changelog:
-	cvs2cl.pl --usermap .usermap --prune
+	cvs2cl.pl --usermap .usermap --prune --follow stable

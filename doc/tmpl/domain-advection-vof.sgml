@@ -35,6 +35,38 @@ Volume of Fluid advection
 @Returns: 
 
 
+<!-- ##### FUNCTION gfs_line_alpha ##### -->
+<para>
+
+</para>
+
+@m: 
+@c: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_line_area ##### -->
+<para>
+
+</para>
+
+@m: 
+@alpha: 
+@c1: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_line_center ##### -->
+<para>
+
+</para>
+
+@m: 
+@alpha: 
+@c: 
+@p: 
+
+
 <!-- ##### FUNCTION gfs_cell_vof_advection ##### -->
 <para>
 

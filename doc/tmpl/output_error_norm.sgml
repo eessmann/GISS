@@ -2,11 +2,42 @@
 Error norm output
 
 <!-- ##### SECTION Short_Description ##### -->
-
+Comparing fields with a reference solution
 
 <!-- ##### SECTION Long_Description ##### -->
 <para>
+GfsOutputErrorNorm computes the norms of the difference between a given scalar field and a reference solution and outputs the resulting summary.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsOutputScalar ] { s = [ #GfsFunction ] unbiased = 1 v = Error }
+</programlisting>
+</informalexample>
+with
+<informaltable pgwide="1" frame="none" role="struct">
+<tgroup cols="2">
+<colspec colwidth="2*">
+<colspec colwidth="8*">
+<tbody>
 
+<row>
+<entry><structfield>s</structfield></entry>
+<entry>A #GfsFunction defining the reference solution.</entry>
+</row>
+
+<row>
+<entry><structfield>unbiased</structfield></entry>
+<entry>An optional parameter specifying if the bias between the reference solution and the computed solution should be removed prior to error computation. This is useful for fields which are defined up to an additive constant (pressure for example).</entry>
+</row>
+
+<row>
+<entry><structfield>v</structfield></entry>
+<entry>An optional parameter specifying a new variable used to store the error in each cell. The default is not to store the error.</entry>
+</row>
+
+</tbody></tgroup></informaltable>
 </para>
 
 <!-- ##### SECTION See_Also ##### -->

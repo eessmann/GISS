@@ -23,7 +23,7 @@ Advection scheme
 @dt: 
 @gradient: 
 @use_centered_velocity: 
-@use_centered_upwinding: 
+@upwinding: 
 @flux: 
 @scheme: 
 @rho: 
@@ -70,8 +70,10 @@ Advection scheme
 </para>
 
 @face: 
-@centered_upwinding: 
+@upwinding: 
 @Returns: 
+<!-- # Unused Parameters # -->
+@centered_upwinding: 
 
 
 <!-- ##### FUNCTION gfs_face_advection_flux ##### -->
@@ -107,6 +109,7 @@ Advection scheme
 </para>
 
 @face: 
+@upwinding: 
 
 
 <!-- ##### FUNCTION gfs_face_interpolated_normal_velocity ##### -->

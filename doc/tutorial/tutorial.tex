@@ -1,5 +1,7 @@
 \documentclass[a4paper]{article}
 \usepackage{html}
+\usepackage{color}
+\pagecolor{white}
 \input{pdf.tex}
 
 \oddsidemargin=4mm
@@ -59,6 +61,10 @@ If you are using a Linux system the Glib library is most probably
 already installed on your system. To be sure try this:
 \begin{verbatim}
 % glib-config --version
+\end{verbatim}
+or this
+\begin{verbatim}
+% pkg-config glib-2.0 --modversion
 \end{verbatim}
 If you get a result, you have the Glib library on your system,
 otherwise you will need to install it following the instructions on
@@ -143,7 +149,7 @@ their own directory. Type this at your shell prompt:
 % cd vorticity
 \end{verbatim}
 As a starting point we will use the following simulation file: {\tt
-vorticity.sim}
+vorticity.gfs}
 \begin{verbatim}
 1 2 GfsSimulation GfsBox GfsGEdge {} {
   GfsTime { end = 0 }
@@ -155,7 +161,7 @@ GfsBox {}
 This is a valid simulation file but it does not do much as you can see 
 by typing
 \begin{verbatim}
-% gerris2D vorticity.sim
+% gerris2D vorticity.gfs
 \end{verbatim}
 It is a good starting point however to explain the general structure
 of a simulation file.
@@ -171,7 +177,7 @@ parameter = value
 \end{verbatim}
 where {\tt parameter} is an unique identifier (within this braced
 block). All the other parameters are compulsory parameters.
-For example, in {\tt vorticity.sim} both
+For example, in {\tt vorticity.gfs} both
 \begin{verbatim}
   GfsTime { end = 0 }
 \end{verbatim}
@@ -189,7 +195,7 @@ optional arguments of the form
 \begin{verbatim}
 parameter = value
 \end{verbatim}
-For example, in {\tt vorticity.sim} the following blocks of text are
+For example, in {\tt vorticity.gfs} the following blocks of text are
 all objects:
 \begin{itemize}
 \item
@@ -215,7 +221,7 @@ GfsBox {}
 1 1 top
 \end{verbatim}
 \end{itemize}
-Following this rule, {\tt vorticty.sim} could have been written
+Following this rule, {\tt vorticty.gfs} could have been written
 equivalently as:
 \begin{verbatim}
 1 2 GfsSimulation GfsBox GfsGEdge {} { GfsTime {
@@ -354,7 +360,7 @@ uses dynamically linked {\em modules} which can be loaded at
 runtime. We will see later how to write your own modules. 
 
 For the moment, we will use the default {\tt GfsInit} object. Just add
-the following lines to {\tt vorticity.sim}:
+the following lines to {\tt vorticity.gfs}:
 \begin{verbatim}
 1 2 GfsSimulation GfsBox GfsGEdge {} {
   GfsTime { end = 50 }
@@ -389,7 +395,7 @@ Using this feature, it is possible to define most initial conditions directly in
 
 \subsubsection{Writing results}
 
-The {\tt vorticity.sim} file we have now is all Gerris needs to run the
+The {\tt vorticity.gfs} file we have now is all Gerris needs to run the
 simulation. However, for this run to be any use, we need to specify
 how and when to output the results. This is done by using another
 class of objects: {\tt GfsOutput}, derived from {\tt GfsEvent}. Gerris
@@ -471,7 +477,7 @@ outputs statistics about the projection part of the algorithm.
 
 You can now run the code like this:
 \begin{verbatim}
-% gerris2D vorticity.sim
+% gerris2D vorticity.gfs
 \end{verbatim}
 and you should get an output in your console looking like this (you
 can stop the program using {\tt Ctrl-C}):
@@ -690,7 +696,7 @@ GfsBoundaryInflowConstant} object and the whole right side of the last
 (rightmost) box a {\tt GfsBoundaryOutflow} object. Again, boundary
 conditions objects are all derived from the {\tt GfsBoundary} object
 and, as initial conditions, new objects can be easily written by the
-user.
+user (see also section \ref{morebc}).
 
 We see that {\tt GfsBoundaryInflowConstant} takes one argument which is
 the value of the (constant) normal velocity applied to this
@@ -819,7 +825,7 @@ field.
 
 We can now run the code:
 \begin{verbatim}
-% gerris2D half-cylinder.sim
+% gerris2D half-cylinder.gfs
 \end{verbatim}
 It is going to take a while to complete, but remember that you can
 look at files while they are being generated. The first file which
@@ -863,7 +869,7 @@ simulation at regular intervals for latter post-processing?
 You can do this using the {\tt GfsOutputSimulation} object. Like this
 for example:
 \begin{verbatim}
-GfsOutputSimulation { step = 0.1 } half-cylinder-%3.1f.sim {
+GfsOutputSimulation { step = 0.1 } half-cylinder-%3.1f.gfs {
   variables = U,V,P
 }
 \end{verbatim}
@@ -872,7 +878,7 @@ default all the variables are saved.
 
 If you now re-run the simulation, you will get a new file every 0.1
 time units. This file is a valid simulation file (like {\tt
-half-cylinder.sim}) and you can use it directly to restart the
+half-cylinder.gfs}) and you can use it directly to restart the
 simulation from this point onward. If you edit it, you will see that
 the general structure is the same as usual but for five pretty big
 chunks of data. 
@@ -891,7 +897,72 @@ associated physical data, solid boundary definitions etc...
 You can of course edit this file, add new outputs and so on and
 restart the simulation from where you left it.
 
-\subsection{Some post-processing using {\tt gfs2oogl}}
+\subsection{Visualisation}
+
+Several tools can be used to visualise Gerris simulation files, either
+the standalone GfsView which interfaces directly with Gerris or
+external viewers such as geomview, openDX or MayaVi.
+
+\subsubsection{GfsView}
+
+GfsView is a tool written specifically to visualise Gerris simulation
+files. It is still young but fully usable both for 2D and 3D
+simulations. Its main advantage over other options and the reason for
+its existence is that it makes full use of the adaptive nature of the
+octree representation at the visualisation level. The octree structure
+is used within GfsView to dynamically select the appropriate level of
+refinement depending on the viewpoint, zoom and rendering speed. It is
+also used to efficiently compute complex geometrical entities such as
+isosurfaces or cut-planes.
+
+The more classical viewers such as openDX or MayaVi are designed for
+either regular Cartesian grids or fully-unstructured meshes and do not
+take advantage of the octree representation (worse still, the octree
+representation first needs to be converted to Cartesian or
+fully-unstructured meshes before being imported into these programs).
+
+To install GfsView, you need to have the
+\htmladdnormallinkfoot{Gtk+}{http://www.gtk.org} toolkit installed on
+your system. If you are running a Linux machine, Gtk+ is most probably
+already installed. You will also need the
+\htmladdnormallinkfoot{GtkGlExt}{http://gtkglext.sourceforge.net/}
+OpenGL extension to Gtk+.
+
+If you then download a recent version of GfsView from the Gerris web
+site and do the now classical:
+\begin{verbatim}
+% gunzip gfsview.tar.gz
+% tar xvf gfsview.tar
+% cd gfsview
+% ./configure --prefix=/home/joe/local
+% make
+% make install
+\end{verbatim}
+you will be able to start GfsView using:
+\begin{verbatim}
+% gfsview2D half-cylinder-0.5.gfs
+\end{verbatim}
+Clicking on ``Linear'', ``Vectors'' and ``Solid'' in the toolbar and
+changing the vector length by editing the properties of the
+``Vectors'' object (select the object then choose
+``Edit$\rightarrow$Properties'') you should be able to get something
+looking like figure \ref{gfsview}. You can pan by dragging the right
+mouse button, zoom by dragging the middle button and rotate by
+dragging the left button.
+\begin{figure}[htbp]
+\begin{center}
+\htmlimage{scale=2.0,external,thumbnail=1}
+\includegraphics[width=\hsize]{gfsview.\gfx}
+\end{center}
+\caption{Screenshot of a GfsView session.}
+\label{gfsview}
+\end{figure}
+
+While by no means complete, you can already do many things with
+GfsView. I hope it is fairly user-friendly so just play with it and
+discover for yourself.
+
+\subsubsection{Some post-processing using {\tt gfs2oogl}}
 
 Gerris comes with a utility called {\tt gfs2oogl} which converts
 simulation files to various representations in {\sc OOGL} format. We are
@@ -906,19 +977,19 @@ gfs2oogl} by typing:
 By default {\tt gfs2oogl} will generate the same output as {\tt
 GfsOutputBoundaries} like this:
 \begin{verbatim}
-% gfs2oogl2D < half-cylinder-0.1.sim > boundaries.oogl
+% gfs2oogl2D < half-cylinder-0.1.gfs > boundaries.oogl
 \end{verbatim}
 To generate an {\sc OOGL} representation of a scalar field (a coloured square
 for each discretisation cell) do this:
 \begin{verbatim}
-% gfs2oogl2D -S -z 0 -c Vorticity < half-cylinder-0.5.sim > squares.oogl
+% gfs2oogl2D -S -z 0 -c Vorticity < half-cylinder-0.5.gfs > squares.oogl
 \end{verbatim}
 which tells {\tt gfs2oogl} to do a cross-section for $z = 0$ ({\tt -z
 0}) represented by squares ({\tt -S}) and colored according to the local
 vorticity ({\tt -c Vorticity}).
 To generate a vector field representing the velocity try:
 \begin{verbatim}
-% gfs2oogl2D -V 2 -z 0 < half-cylinder-0.5.sim > vectors.oogl
+% gfs2oogl2D -V 2 -z 0 < half-cylinder-0.5.gfs > vectors.oogl
 \end{verbatim}
 where {\tt -V 2} specifies that the maximum length of the vector is
 twice the dimension of the smallest cell in the domain.
@@ -935,7 +1006,7 @@ gfs2oogl}.}
 \label{gfs2oogl}
 \end{figure}
 
-\subsection{Visualisation with OpenDX}
+\subsubsection{Visualisation with OpenDX}
 
 If you have \htmladdnormallinkfoot{OpenDX}{http://www.opendx.org}
 installed on your system, the installation process described above
@@ -978,7 +1049,7 @@ as a starting point. Typing
 \begin{verbatim}
 % dx -mdf /home/joe/local/lib/gerris/dx2D.mdf -program gfs2D.net
 \end{verbatim}
-in the directory containing your {\tt half-cylinder-0.5.sim} file (you
+in the directory containing your {\tt half-cylinder-0.5.gfs} file (you
 also need to add the path to {\tt gfs2D.net} if it is not contained in
 the same directory) and selecting the Execute$\rightarrow$Execute Once
 menu should bring up windows looking like figure \ref{dx-screen}.
@@ -1045,7 +1116,7 @@ Following this we can modify our simulation file:
   GfsTime { end = 9 }
   GfsRefine 7
   GtsSurfaceFile half-cylinder.gts
-  GfsInitFlowConstant {} { U = 1 }
+  GfsInit {} { U = 1 }
 #  GfsOutputBoundaries {} boundaries
   GfsAdaptVorticity { istep = 1 } { maxlevel = 7 cmax = 1e-2 }
   GfsOutputTime { step = 0.02 } stdout
@@ -1054,7 +1125,7 @@ Following this we can modify our simulation file:
   GfsOutputPPM { step = 0.02 } vorticity.ppm {
     min = -100 max = 100 v = Vorticity
   }
-  GfsOutputSimulation { step = 0.1 } half-cylinder-%3.1f.sim {
+  GfsOutputSimulation { step = 0.1 } half-cylinder-%3.1f.gfs {
     variables = U,V,P
   }
   GfsOutputTiming { start = end } stdout
@@ -1085,7 +1156,7 @@ We can now run this new simulation. If the previous simulation did not
 complete yet, don't be afraid to abort it ({\tt Ctrl-C}), this one is going to
 be better (and faster).
 \begin{verbatim}
-% gerris2D half-cylinder.sim
+% gerris2D half-cylinder.gfs
 \end{verbatim}
 If we now look at the balance summary written by {\tt
 GfsOutputBalance}, we see that initially ({\tt step: 0}) the total
@@ -1095,8 +1166,8 @@ constant resolution of $4\times 2^7\times 2^7=512\times 128$. At step
 computational speed. If we now look at the first simulation file we
 saved, using:
 \begin{verbatim}
-% gfs2oogl2D < half-cylinder-0.1.sim > boundaries
-% gfs2oogl2D -S -z 0 -c Vorticity < half-cylinder-0.1.sim > squares.oogl
+% gfs2oogl2D < half-cylinder-0.1.gfs > boundaries
+% gfs2oogl2D -S -z 0 -c Vorticity < half-cylinder-0.1.gfs > squares.oogl
 \end{verbatim}
 we obtain figure \ref{refined1} showing not only the domain boundaries 
 as usual, but also the boundaries (thin black lines) between different
@@ -1148,6 +1219,136 @@ properly installed on your system you can also try:
 \end{verbatim}
 which will produce a much smaller {\sc MPEG} video file, suitable for
 distribution through the network.
+
+\section{Going further}
+
+\subsection{More on boundary conditions}
+\label{morebc}
+
+Up to now we have only dealt with ``pre-packaged'' boundary conditions
+such as {\tt GfsBoundaryInflowConstant} and {\tt GfsBoundaryOutflow}.
+What if you need more specific boundary conditions?
+
+For most practical problems, boundary conditions can be reduced to two
+main categories: Dirichlet boundary conditions for which the value of
+the variable is set and Neumann boundary conditions for which the
+value of the derivative of the variable is set. As we have seen
+earlier, the default boundary condition in Gerris is Dirichlet (zero)
+for the normal components of the velocity and Neumann (zero) for all
+other variables.
+
+Let us say that we want to impose a Poiseuille (parabolic) profile
+rather than a constant inflow velocity for the half-cylinder problem
+i.e. we want a Dirichlet boundary condition on the normal component of
+the velocity ({\tt U}) with an imposed parabolic profile. This can
+easily be done in Gerris like this:
+\begin{verbatim}
+...
+GfsBox { left = GfsBoundary {
+                  GfsBcDirichlet U { return 1. - 4.*y*y; }
+                  GfsBcDirichlet V 0
+                }
+       }
+GfsBox {}
+GfsBox {}
+GfsBox { right = GfsBoundaryOutflow }
+...
+\end{verbatim}
+Similarly a Neumann boundary condition on variable {\tt X} would use
+{\tt GfsBcNeumann X ...}
+
+\subsection{Adding tracers}
+
+In the half cylinder example, it would be nice to be able to visualise
+the flow using for example a passive tracer injected at the inlet.
+This is very simple, just modify the {\tt half-cylinder.gfs} parameter
+file like this:
+\begin{verbatim}
+4 3 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 9 }
+  GfsRefine 7
+  GtsSurfaceFile half-cylinder.gts
+  GfsVariableTracer T
+  ...
+  GfsOutputPPM { step = 0.02 } tracer.ppm {
+    min = 0 max = 1 v = T
+  }
+  GfsOutputSimulation { step = 0.1 } half-cylinder-%3.1f.gfs {
+    variables = U,V,P,T
+  }
+  ...
+}
+GfsBox { left = GfsBoundary {
+                  GfsBcDirichlet U 1
+                  GfsBcDirichlet V 0
+                  GfsBcDirichlet T { return y > 0. ? 1. : 0.; }
+                } 
+       }
+...
+\end{verbatim}
+which will inject tracer {\tt T} at the inlet only in the upper half
+of the channel.
+
+The adaptive refinement algorithm shoud also take your tracer into account. Try this
+\begin{verbatim}
+  ...
+  GfsAdaptVorticity { istep = 1 } { maxlevel = 7 cmax = 1e-2 }
+  GfsAdaptGradient { istep = 1 } { maxlevel = 7 cmax = 1e-2 } T
+  ...
+\end{verbatim}
+which will adapt using both the gradient of tracer {\tt T} and the vorticity.
+
+You can have any number of tracers you want, they are dynamically
+allocated.
+
+\subsection{Adding diffusion terms}
+
+Up to now, we have only considered inviscid, incompressible flows.
+Without going into the details, this type of problems require the
+solution of two main subproblems: solving a Poisson equation for the
+pressure and an advection equation for the momentum and tracers with
+the corresponding boundary conditions.
+
+Gerris can also solve a third class of subproblems: diffusion
+equations. Diffusion equations are similar to Poisson equations (they
+both involve Laplacian operators) and can be solved efficiently using
+the same multigrid solver we use for the pressure.
+
+In practice adding diffusion to a given tracer is as simple as adding:
+\begin{verbatim}
+  ...
+  GfsSourceDiffusion {} T 0.01
+  ...
+\end{verbatim}
+to the parameter file, where 0.01 is the value of the diffusion
+coefficient.
+
+\subsubsection{Boundary conditions for diffusion terms}
+
+What if we want to modify the tracer example above so that now the
+half-cylinder itself is a (diffusive) source of tracer rather than the
+inlet? We need to be able to impose this boundary condition on the
+embedded solid surface. On embedded solids, the default boundary
+conditions for the diffusion equation is Neumann (zero flux) for
+tracers and Dirichlet (no-slip) for the velocity components. To change
+that use
+\begin{verbatim}
+  ...
+  GfsVariableTracer T
+  GfsSourceDiffusion {} T 0.001
+  GfsSurfaceBc T Dirichlet 1
+  ...
+\end{verbatim}
+and change the inlet boundary condition back to
+\begin{verbatim}
+  ...
+  GfsBox { left = GfsBoundary {
+                  GfsBcDirichlet U 1
+                  GfsBcDirichlet V 0
+                } 
+       }
+  ...
+\end{verbatim}
 
 \section{Writing new objects}
 
@@ -1503,10 +1704,10 @@ parameter $m$ we added. What if we do not specify the right parameter?
 Just try to replace {\tt InitPeriodic \{\} 2} with {\tt InitPeriodic
 \{\} a}. You should get a message like
 \begin{verbatim}
-gerris: file `periodic.sim' is not a valid simulation file
-periodic.sim:5:18: expecting a number (m)
+gerris: file `periodic.gfs' is not a valid simulation file
+periodic.gfs:5:18: expecting a number (m)
 \end{verbatim}
-which tells you where the error occurred (in file {\tt periodic.sim},
+which tells you where the error occurred (in file {\tt periodic.gfs},
 line 5, character 18) together with the error message which we
 specified in the {\tt read} method of our class.
 
@@ -1514,16 +1715,48 @@ specified in the {\tt read} method of our class.
 
 \subsection{Boundary conditions}
 
-\section{More on boundary conditions}
-
 \section{Running Gerris in parallel}
 
 \section{Running the test suite}
 
 \section{Learning more}
 
-While this tutorial should give you a good overview of Gerris, it is by no means a complete description. To learn more you should first consult the \htmladdnormallinkfoot{Gerris reference manual}{http://gfs.sf.net/reference/book1.html} which describes each object and the corresponding file parameters in more detail.
+While this tutorial should give you a good overview of Gerris, it is
+by no means a complete description. To learn more you should first
+consult the \htmladdnormallinkfoot{Gerris reference
+  manual}{http://gfs.sf.net/reference/book1.html} which describes each
+object and the corresponding file parameters in more detail.
 
-If things are still unclear you can ask for help on the \htmladdnormallinkfoot{{\tt gfs-users} mailing list}{http://gfs.sf.net/mailinglists.html}. Please note that you first need to subscribe to the list to be able to post messages.
+If things are still unclear you can ask for help on the
+\htmladdnormallinkfoot{{\tt gfs-users} mailing
+  list}{http://gfs.sf.net/mailinglists.html}. Please note that you
+first need to subscribe to the list to be able to post messages.
+
+\section{Do you want to help?}
+
+The idea behind Gerris and other free software projects is that
+transparency, free exchange of information and cooperation benefit
+individuals but also society as a whole. If you are a scientist, you
+know that these same principles are also keys to the efficiency of
+Science.
+
+Helping with Gerris development can be done in various ways and aside
+from giving you this altruistic, warm fuzzy feeling of helping others
+will also benefit you directly. A few concrete simple ways of helping
+are (in approximate order of difficulty):
+\begin{itemize}
+\item Use the code, comment on the problems you find, what you like, don't like about it.
+\item Share your results with other Gerris users, write a web page
+  about the problem you solved using Gerris etc\dots
+\item If you publish papers using Gerris, send me the reference. It is
+  very useful to be able to show evidence of wider usage when seeking
+  continued funding for the project.
+\item Also, if Gerris capabilities are central to your article feel
+  free to ask me to be a co-author on your paper\dots
+\item Have a look at the Gerris internals (write your own modules) and share them with us.
+\item Think of ways to extend Gerris for your own problems, implement
+  them and share them with us (you can count on my and other
+  developers' help).
+\end{itemize}
 
 \end{document}

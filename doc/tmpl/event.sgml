@@ -93,6 +93,7 @@ with
 
 @parent_class: 
 @event: 
+@event_half: 
 
 <!-- ##### STRUCT GfsEvent ##### -->
 <para>
@@ -110,6 +111,7 @@ with
 @istep: 
 @n: 
 @end_event: 
+@realised: 
 
 <!-- ##### FUNCTION gfs_event_class ##### -->
 <para>

@@ -79,7 +79,7 @@ Evaluates to the child index of @c.
 
 @FTT_X: 
 @FTT_Y: 
-@FTT_XYZ: 
+@FTT_XY: 
 
 <!-- ##### FUNCTION ftt_cell_children_direction ##### -->
 <para>
@@ -89,6 +89,7 @@ Evaluates to the child index of @c.
 @cell: 
 @d: 
 @children: 
+@Returns: 
 
 
 <!-- ##### FUNCTION ftt_cell_child_corner ##### -->
@@ -168,5 +169,15 @@ Evaluates to the child index of @c.
 @d: 
 @init: 
 @init_data: 
+
+
+<!-- ##### FUNCTION ftt_cell_neighbor_is_brother ##### -->
+<para>
+
+</para>
+
+@cell: 
+@d: 
+@Returns: 
 
 

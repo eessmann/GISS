@@ -275,6 +275,26 @@ Evaluates to the level of @c.
 @pos: 
 
 
+<!-- ##### FUNCTION ftt_corner_pos ##### -->
+<para>
+
+</para>
+
+@cell: 
+@d: 
+@pos: 
+
+
+<!-- ##### FUNCTION ftt_corner_relative_pos ##### -->
+<para>
+
+</para>
+
+@cell: 
+@d: 
+@pos: 
+
+
 <!-- ##### FUNCTION ftt_level_size ##### -->
 <para>
 

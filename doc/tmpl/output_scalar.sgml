@@ -76,6 +76,7 @@ If neither max nor min are specified the bounding values are calculated before e
 @min: 
 @max: 
 @maxlevel: 
+@box: 
 
 <!-- ##### FUNCTION gfs_output_scalar_class ##### -->
 <para>

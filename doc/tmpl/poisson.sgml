@@ -23,6 +23,7 @@ Poisson solver
 @nrelax: 
 @minlevel: 
 @nitermax: 
+@dimension: 
 @niter: 
 @residual_before: 
 @residual: 
@@ -59,6 +60,7 @@ Poisson solver
 </para>
 
 @domain: 
+@d: 
 @max_depth: 
 @u: 
 @rhs: 
@@ -73,6 +75,7 @@ Poisson solver
 </para>
 
 @domain: 
+@d: 
 @flags: 
 @max_depth: 
 @u: 
@@ -99,6 +102,7 @@ Poisson solver
 </para>
 
 @domain: 
+@d: 
 @levelmin: 
 @depth: 
 @nrelax: 
@@ -111,6 +115,11 @@ Poisson solver
 
 </para>
 
+@domain: 
+@dimension: 
+@p: 
+@dt: 
+<!-- # Unused Parameters # -->
 @face: 
 @par: 
 

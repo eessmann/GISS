@@ -44,6 +44,7 @@ Simulations
 </para>
 
 @parent_class: 
+@run: 
 
 <!-- ##### STRUCT GfsSimulation ##### -->
 <para>
@@ -57,8 +58,6 @@ Simulations
 @approx_projection_params: 
 @advection_params: 
 @diffusion_params: 
-@tracer_advection_params: 
-@tracer_diffusion_params: 
 @surface: 
 @stree: 
 @is_open: 
@@ -70,6 +69,7 @@ Simulations
 @adapts_stats: 
 @events: 
 @modules: 
+@variables: 
 @tnext: 
 
 <!-- ##### STRUCT GfsTime ##### -->
@@ -83,6 +83,7 @@ Simulations
 @i: 
 @istart: 
 @iend: 
+@dtmax: 
 
 <!-- ##### STRUCT GfsPhysicalParams ##### -->
 <para>
@@ -91,6 +92,7 @@ Simulations
 
 @rho: 
 @sigma: 
+@g: 
 
 <!-- ##### FUNCTION gfs_init ##### -->
 <para>
@@ -123,9 +125,10 @@ Simulations
 
 </para>
 
-@sim: 
 @fp: 
 @Returns: 
+<!-- # Unused Parameters # -->
+@sim: 
 
 
 <!-- ##### FUNCTION gfs_simulation_refine ##### -->

@@ -4,4 +4,4 @@ precious ^gfs-undocumented\.txt$
 precious ^gfs-unused\.txt$
 precious ^html$
 precious ^sgml$
-precious ^tmpl\.stamp$
+precious ^.*\.stamp$

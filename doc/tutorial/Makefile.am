@@ -3,6 +3,12 @@
 EXTRA_DIST=tutorial.ps.gz tutorial.pdf tutorial.tar.gz half-cylinder.gts \
 	gfs2D.net
 
+clean-generic:
+	$(RM) *.dvi *.aux *.log *.toc *.out \
+	boundaries.pdf direction.eps direction.pdf dxscreen.eps dxscreen.pdf \
+	gfs2oogl.pdf half-cylinder.eps half-cylinder.pdf refined1.pdf refined1_cells.pdf \
+	refined2.pdf vorticity.eps vorticity.pdf gfsview.eps tutorial1.tex
+
 tutorial.tar.gz: tutorial.ps.gz
 	rm -r -f tutorial
 	sed 's/input{pdf.tex}/usepackage{graphicx}\\newcommand{\\gfx}{eps}/g' < tutorial.tex | sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" > tutorial1.tex

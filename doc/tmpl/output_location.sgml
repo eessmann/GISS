@@ -2,11 +2,23 @@
 Location output
 
 <!-- ##### SECTION Short_Description ##### -->
-
+Writing the values of variables at a specified location
 
 <!-- ##### SECTION Long_Description ##### -->
 <para>
-
+GfsOutputLocation writes the values of all permanent variables at a given location. The first time GfsOutputLocation is called it writes a comment describing the fields being written.
+</para>
+<para>
+The values are linearly interpolated to the given location using gfs_interpolate().
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsOutput ] X Y Z
+</programlisting>
+</informalexample>
+where X, Y and Z are the coordinates of the location.
 </para>
 
 <!-- ##### SECTION See_Also ##### -->
@@ -36,7 +48,6 @@ Location output
 </para>
 
 @p: 
-@first_call: 
 
 <!-- ##### FUNCTION gfs_output_location_class ##### -->
 <para>

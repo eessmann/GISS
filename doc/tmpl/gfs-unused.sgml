@@ -433,6 +433,16 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @func: 
 @data: 
 
+<!-- ##### FUNCTION gfs_domain_variable_sources ##### -->
+<para>
+
+</para>
+
+@domain: 
+@v: 
+@sv: 
+@dt: 
+
 <!-- ##### FUNCTION gfs_draw_boundaries ##### -->
 <para>
 
@@ -594,6 +604,15 @@ Evaluates to the index of the neighboring direction opposite to @i.
 </para>
 
 @v: 
+
+<!-- ##### FUNCTION gfs_variable_source ##### -->
+<para>
+
+</para>
+
+@v: 
+@cell: 
+@Returns: 
 
 <!-- ##### FUNCTION gfs_velocity_sources ##### -->
 <para>

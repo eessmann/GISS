@@ -12,7 +12,7 @@ GfsOutputSimulation will write a description of the current state of the simulat
 The syntax in parameter files is as follows:
 <informalexample>
 <programlisting>
-[ #GfsOutput ] { depth = 5 variables = U,V,C }
+[ #GfsOutput ] { depth = 5 variables = U,V,C binary = 1 }
 </programlisting>
 </informalexample>
 with
@@ -30,6 +30,11 @@ with
 <row>
 <entry><structfield>variables</structfield></entry>
 <entry>A comma-separated list of the names of the variables which will be written. The default is all the simulation permanent variables.</entry>
+</row>
+
+<row>
+<entry><structfield>binary</structfield></entry>
+<entry>An optional parameter specifying if a binary format should be used. Binary files allow faster reading of simulation files. The default is a more portable ASCII format.</entry>
 </row>
 
 </tbody></tgroup></informaltable>
@@ -72,6 +77,7 @@ with
 @parent: 
 @max_depth: 
 @var: 
+@binary: 
 
 <!-- ##### FUNCTION gfs_output_simulation_class ##### -->
 <para>

@@ -160,6 +160,18 @@ This functions is called by ftt_cell_traverse() for each of the visited cells.
 @data: 
 
 
+<!-- ##### FUNCTION ftt_cell_write_binary ##### -->
+<para>
+
+</para>
+
+@root: 
+@max_depth: 
+@fp: 
+@write: 
+@data: 
+
+
 <!-- ##### USER_FUNCTION FttCellWriteFunc ##### -->
 <para>
 Writes in @fp any user data associated with @cell. It is important that this function does not output any newline caracter ('\n').
@@ -181,6 +193,17 @@ Writes in @fp any user data associated with @cell. It is important that this fun
 @Returns: 
 <!-- # Unused Parameters # -->
 @line: 
+
+
+<!-- ##### FUNCTION ftt_cell_read_binary ##### -->
+<para>
+
+</para>
+
+@fp: 
+@read: 
+@data: 
+@Returns: 
 
 
 <!-- ##### USER_FUNCTION FttCellReadFunc ##### -->

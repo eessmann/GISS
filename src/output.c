@@ -1795,8 +1795,7 @@ static void output_error_norm_destroy (GtsObject * o)
 {
   gts_object_destroy (GTS_OBJECT (GFS_OUTPUT_ERROR_NORM (o)->s));
 
-  (* GTS_OBJECT_CLASS (gfs_output_error_norm_class ())->parent_class->destroy) 
-    (o);
+  (* GTS_OBJECT_CLASS (gfs_output_error_norm_class ())->parent_class->destroy) (o);
 }
 
 static void output_error_norm_read (GtsObject ** o, GtsFile * fp)
@@ -1804,8 +1803,7 @@ static void output_error_norm_read (GtsObject ** o, GtsFile * fp)
   GfsOutputErrorNorm * n;
 
   if (GTS_OBJECT_CLASS (gfs_output_error_norm_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_output_error_norm_class ())->parent_class->read) 
-      (o, fp);
+    (* GTS_OBJECT_CLASS (gfs_output_error_norm_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
@@ -1921,7 +1919,8 @@ static void remove_bias (FttCell * cell, gpointer * data)
 static gboolean gfs_output_error_norm_event (GfsEvent * event, 
 					     GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_error_norm_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_error_norm_class ())->parent_class)->event)
+      (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
     GfsVariable * v = GFS_OUTPUT_ERROR_NORM (event)->v;
     GfsNorm norm;

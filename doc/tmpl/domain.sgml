@@ -44,6 +44,7 @@ Fluid domain
 </para>
 
 @parent_class: 
+@post_read: 
 
 <!-- ##### STRUCT GfsDomain ##### -->
 <para>
@@ -53,17 +54,9 @@ Fluid domain
 @parent: 
 @pid: 
 @timer: 
-@mac_projection: 
-@approximate_projection: 
-@centered_velocity_advection: 
-@tracer_advection: 
-@predicted_face_velocities: 
-@adapt: 
+@timers: 
 @timestep: 
 @size: 
-@bc: 
-@face_bc: 
-@match: 
 @profile_bc: 
 @mpi_messages: 
 @mpi_wait: 
@@ -73,6 +66,7 @@ Fluid domain
 @variables: 
 @variables_size: 
 @variables_io: 
+@binary: 
 @max_depth_write: 
 
 <!-- ##### FUNCTION gfs_domain_class ##### -->
@@ -91,6 +85,25 @@ Fluid domain
 @domain: 
 @name: 
 @Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_add_new_variable ##### -->
+<para>
+
+</para>
+
+@domain: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_domain_replace_variable ##### -->
+<para>
+
+</para>
+
+@domain: 
+@v: 
+@with: 
 
 
 <!-- ##### FUNCTION gfs_domain_cell_traverse ##### -->
@@ -140,6 +153,8 @@ Fluid domain
 </para>
 
 @domain: 
+@order: 
+@flags: 
 @func: 
 @data: 
 
@@ -298,9 +313,10 @@ Fluid domain
 
 </para>
 
-@domain: 
 @fp: 
 @Returns: 
+<!-- # Unused Parameters # -->
+@domain: 
 
 
 <!-- ##### FUNCTION gfs_domain_split ##### -->
@@ -312,17 +328,6 @@ Fluid domain
 @one_box_per_pe: 
 
 
-<!-- ##### FUNCTION gfs_domain_variable_sources ##### -->
-<para>
-
-</para>
-
-@domain: 
-@v: 
-@sv: 
-@dt: 
-
-
 <!-- ##### FUNCTION gfs_domain_remove_droplets ##### -->
 <para>
 
@@ -331,6 +336,17 @@ Fluid domain
 @domain: 
 @c: 
 @min: 
+
+
+<!-- ##### FUNCTION gfs_domain_remove_islands ##### -->
+<para>
+
+</para>
+
+@domain: 
+@min: 
+@cleanup: 
+@data: 
 
 
 <!-- ##### FUNCTION gfs_domain_advect_point ##### -->
@@ -363,5 +379,23 @@ Fluid domain
 @flags: 
 @max_depth: 
 @Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_timer_start ##### -->
+<para>
+
+</para>
+
+@domain: 
+@name: 
+
+
+<!-- ##### FUNCTION gfs_domain_timer_stop ##### -->
+<para>
+
+</para>
+
+@domain: 
+@name: 
 
 

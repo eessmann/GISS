@@ -2,4 +2,4 @@
 
 TESTS = geo.sh waves.sh
 
-EXTRA_DIST = basin.gts
+EXTRA_DIST = $(TESTS) basin.gts

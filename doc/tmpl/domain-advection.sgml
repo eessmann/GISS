@@ -66,6 +66,7 @@ Advection
 </para>
 
 @domain: 
+@dimension: 
 @par: 
 @dpar: 
 
@@ -87,6 +88,7 @@ Advection
 </para>
 
 @domain: 
+@d: 
 @par: 
 
 

@@ -2485,7 +2485,7 @@ static void remove_small_box (GfsBox * box, gpointer * data)
  * @data: user data to pass to @cleanup.
  *
  * Removes all the fluid "islands" of @domain smaller than @min cells
- * if @min is positive, or all the islands but the -$min largest ones
+ * if @min is positive, or all the islands but the -@min largest ones
  * if @min is negative.
  */
 void gfs_domain_remove_islands (GfsDomain * domain, 

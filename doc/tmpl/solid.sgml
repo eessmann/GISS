@@ -45,7 +45,6 @@ Contains the surface and volume fractions of the cell not contained in the solid
 
 @s: 
 @a: 
-@sa: 
 @v: 
 @fv: 
 @merged: 
@@ -113,6 +112,8 @@ Contains the surface and volume fractions of the cell not contained in the solid
 </para>
 
 @root: 
+@order: 
+@flags: 
 @func: 
 @data: 
 
