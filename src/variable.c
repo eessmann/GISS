@@ -239,6 +239,34 @@ GfsVariable * gfs_variables_from_list (GfsVariable * variables,
 
 /* GfsVariableTracer: object */
 
+static void variable_tracer_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_tracer_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type == '{')
+    gfs_advection_params_read (&GFS_VARIABLE_TRACER (*o)->advection, fp);
+  if (fp->type == '{')
+    gfs_multilevel_params_read (&GFS_VARIABLE_TRACER (*o)->diffusion, fp);
+}
+
+static void variable_tracer_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_tracer_class ())->parent_class->write) (o, fp);
+
+  fputc (' ', fp);
+  gfs_advection_params_write (&GFS_VARIABLE_TRACER (o)->advection, fp);
+  fputc (' ', fp);
+  gfs_multilevel_params_write (&GFS_VARIABLE_TRACER (o)->diffusion, fp);
+}
+
+static void variable_tracer_class_init (GtsObjectClass * klass)
+{
+  klass->read = variable_tracer_read;
+  klass->write = variable_tracer_write;
+}
+
 static void variable_tracer_init (GfsVariableTracer * v)
 {
   gfs_advection_params_init (&v->advection);
@@ -260,7 +288,7 @@ GfsVariableClass * gfs_variable_tracer_class (void)
       "GfsVariableTracer",
       sizeof (GfsVariableTracer),
       sizeof (GfsVariableClass),
-      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectClassInitFunc) variable_tracer_class_init,
       (GtsObjectInitFunc) variable_tracer_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
