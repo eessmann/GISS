@@ -819,6 +819,7 @@ static gboolean face_bilinear (const FttCellFace * face,
     (*cell_pos) (n[i + 1], &cm);
     cm.x = (cm.x - o->x)/size;
     cm.y = (cm.y - o->y)/size;
+    g_assert (fabs (cm.x) <= 5./2. && fabs (cm.y) <= 5./2.);
     m[i][0] = cm.x;
     m[i][1] = cm.y; 
     m[i][2] = cm.x*cm.y;
@@ -870,6 +871,8 @@ static gboolean face_bilinear (const FttCellFace * face,
     cm.x = (cm.x - o->x)/size;
     cm.y = (cm.y - o->y)/size;
     cm.z = (cm.z - o->z)/size;
+    if (fabs (cm.x) > 4. || fabs (cm.y) > 4. || fabs (cm.z) > 4.)
+      output_error_mesh (n);
     m[i][0] = cm.x;
     m[i][1] = cm.y; 
     m[i][2] = cm.z;
@@ -2446,6 +2449,7 @@ void gfs_cell_corner_interpolator (FttCell * cell,
 	gdouble a;
 	FttVector cm;
 	(*cell_pos) (n[i], &cm);
+	/* fixme: what about periodic boundaries? */
 	a = 1./((cm.x - c.x)*(cm.x - c.x) + (cm.y - c.y)*(cm.y - c.y)
 #if (!FTT_2D)
 		+ (cm.z - c.z)*(cm.z - c.z)
