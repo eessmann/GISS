@@ -394,8 +394,10 @@ Makefile
 src/Makefile
 src/gfs-config
 src/gerris2D.pc
+src/gerris2D3.pc
 src/gerris3D.pc
 src/dx2D.mdf
+src/dx2D3.mdf
 src/dx3D.mdf
 tools/Makefile
 test/Makefile

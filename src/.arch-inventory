@@ -1,10 +1,13 @@
 precious ^dx2D\.c$
 precious ^dx2D\.mdf$
+precious ^dx2D3\.c$
+precious ^dx2D3\.mdf$
 precious ^dx3D\.c$
 precious ^dx3D\.mdf$
 precious ^gerris2D$
 precious ^gerris2D\.pc$
 precious ^gerris2D3$
+precious ^gerris2D3\.pc$
 precious ^gerris2D_dir$
 precious ^gerris3D$
 precious ^gerris3D\.pc$

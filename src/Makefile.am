@@ -7,21 +7,24 @@ bin_SCRIPTS=gfs-config
 
 gfs-config: gfs-config.in
 gerris2D.pc: gerris2D.pc.in
+gerris2D3.pc: gerris2D3.pc.in
 gerris3D.pc: gerris3D.pc.in
 dx2D.mdf: dx2D.mdf.in
+dx2D3.mdf: dx2D3.mdf.in
 dx3D.mdf: dx3D.mdf.in
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = gerris2D.pc gerris3D.pc
+pkgconfig_DATA = gerris2D.pc gerris3D.pc gerris2D3.pc
 
 lib_LTLIBRARIES = libgfs2D.la libgfs3D.la libgfs2D3.la
 
 if HAVE_DX
-DX_MODS = libdx2D.la libdx3D.la 
-DX_MDF = dx2D.mdf dx3D.mdf
+DX_MODS = libdx2D.la libdx3D.la libdx2D3.la
+DX_MDF = dx2D.mdf dx3D.mdf dx2D3.mdf
 DX_2DSRC = dx.c dx2D.c
+DX_2D3SRC = dx.c dx2D3.c
 DX_3DSRC = dx.c dx3D.c
-DX_BUILT_SRC = dx2D.c dx3D.c
+DX_BUILT_SRC = dx2D.c dx3D.c dx2D3.c
 MDF2C = $(DX_PATH)/bin/mdf2c
 else
 DX_MODS = 
@@ -35,8 +38,10 @@ endif
 BUILT_SOURCES= \
 	gfs-config  \
 	gerris2D.pc \
+	gerris2D3.pc \
 	gerris3D.pc \
 	dx2D.mdf    \
+	dx2D3.mdf   \
 	dx3D.mdf    \
 	$(DX_BUILT_SRC)
 
@@ -166,3 +171,9 @@ libdx2D_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
 libdx2D_la_SOURCES = $(DX_2DSRC)
 libdx2D_la_CFLAGS = $(AM_CFLAGS) $(DX_CFLAGS) -DFTT_2D=1
 libdx2D_la_LIBADD = $(GFS2D_LIBS)
+
+libdx2D3_la_LDFLAGS = -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
+	-release $(LT_RELEASE)
+libdx2D3_la_SOURCES = $(DX_2D3SRC)
+libdx2D3_la_CFLAGS = $(AM_CFLAGS) $(DX_CFLAGS) -DFTT_2D3=1
+libdx2D3_la_LIBADD = $(GFS2D3_LIBS)
