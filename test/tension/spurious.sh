@@ -1,4 +1,4 @@
-# !/bin/sh
+#!/bin/sh
 
 if test -f circle.gts; then
     :
@@ -28,9 +28,9 @@ for La in 12000 1200 120; do
   SourceDiffusion {} V $mu
   InitFraction {} T circle.gts
   EventStop { istep = 1 } U $du
-  OutputScalarStats {istep = 1} log-$La { v = P }
-  OutputScalarNorm {istep = 1} log-$La { v = Velocity }
-  OutputScalarSum { istep = 1 } log-$La { v = T }
+  OutputScalarStats {istep = 1} spurious-$La { v = P }
+  OutputScalarNorm {istep = 1} spurious-$La { v = Velocity }
+  OutputScalarSum { istep = 1 } spurious-$La { v = T }
 }
 GfsBox {}
 1 1 right 
@@ -41,7 +41,7 @@ EOF
       printf ("Laplace number: %6g max(U)*mu/sigma: %g\n", La, max1*mu);
       if (max1*mu > 2.5e-3)
         exit 1;
-    }' < log-$La; then
+    }' < spurious-$La; then
 	:
     else
 	rm -f $param
