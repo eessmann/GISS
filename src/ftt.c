@@ -1698,13 +1698,8 @@ void ftt_cell_destroy (FttCell * cell,
 	g_assert (opneighbor == cell);
 	FTT_ROOT_CELL (neighbor.c[i])->neighbors.c[od] = NULL;
       }
-      if (!FTT_CELL_IS_LEAF (neighbor.c[i])) {
-	FttOct * children = neighbor.c[i]->children;
-	FttCell * opneighbor = children->neighbors.c[od];
-	
-	/* g_assert (opneighbor == NULL || opneighbor == cell); */
-	children->neighbors.c[od] = NULL;
-      }
+      if (!FTT_CELL_IS_LEAF (neighbor.c[i]))
+	neighbor.c[i]->children->neighbors.c[od] = NULL;
     }
   
   if (FTT_CELL_IS_ROOT (cell))
@@ -1984,6 +1979,48 @@ void ftt_cell_write (const FttCell * root,
   }
 }
 
+/**
+ * ftt_cell_write_binary:
+ * @root: a #FttCell.
+ * @max_depth: the maximum depth at which to stop writing (-1 means no limit).
+ * @fp: a file pointer.
+ * @write: a #FttCellWriteFunc function or %NULL.
+ * @data: user data to pass to @write.
+ *
+ * Writes in the file pointed to by @fp a binary representation of the
+ * cell tree starting at @root. If not %NULL, the user-defined
+ * function @write is used to write the extra user data associated
+ * with each cell.  
+ */
+void ftt_cell_write_binary (const FttCell * root,
+			    gint max_depth,
+			    FILE * fp,
+			    FttCellWriteFunc write,
+			    gpointer data)
+{
+  guint flags;
+
+  g_return_if_fail (root != NULL);
+  g_return_if_fail (fp != NULL);
+
+  flags = root->flags;
+  if (FTT_CELL_IS_LEAF (root) || ftt_cell_level (root) == max_depth)
+    flags |= FTT_FLAG_LEAF;
+
+  fwrite (&flags, sizeof (guint), 1, fp);
+  if (write && !FTT_CELL_IS_DESTROYED (root))
+    (* write) (root, fp, data);
+
+  if ((flags & FTT_FLAG_LEAF) == 0) {
+    FttOct * oct;
+    guint i;
+
+    oct = root->children;
+    for (i = 0; i < FTT_CELLS; i++)
+      ftt_cell_write_binary (&(oct->cell[i]), max_depth, fp, write, data);
+  }
+}
+
 #define FTT_CELL_IS_FLAGGED_LEAF(cell) (((cell)->flags & FTT_FLAG_LEAF) != 0)
 
 static gboolean oct_read (FttCell * parent, 
@@ -2083,6 +2120,105 @@ FttCell * ftt_cell_read (GtsFile * fp,
 
   root = ftt_cell_new (NULL, NULL);
   cell_read (root, fp, read, data);
+
+  depth = ftt_cell_depth (root);
+  for (l = 0; l < depth; l++)
+    ftt_cell_traverse (root, FTT_PRE_ORDER, 
+		       FTT_TRAVERSE_LEVEL|FTT_TRAVERSE_NON_LEAFS, l, 
+		       (FttCellTraverseFunc) set_neighbors, NULL);
+
+  return root;
+}
+
+static gboolean oct_read_binary (FttCell * parent, 
+				 GtsFile * fp,
+				 FttCellReadFunc read,
+				 gpointer data);
+
+static gboolean cell_read_binary (FttCell * cell, 
+				  GtsFile * fp,
+				  FttCellReadFunc read,
+				  gpointer data)
+{
+  guint flags;
+
+  if (gts_file_read (fp, &flags, sizeof (guint), 1) != 1) {
+    gts_file_error (fp, "expecting an integer (flags)");
+    return FALSE;
+  }
+  if (FTT_CELL_ID (cell) != (flags & FTT_FLAG_ID)) {
+    gts_file_error (fp, "flags `%d' != (flags & FTT_FLAG_ID) `%d'",
+		    flags, (flags & FTT_FLAG_ID));
+    return FALSE;
+  }
+  cell->flags = flags;
+
+  if (read && !FTT_CELL_IS_DESTROYED (cell))
+    (* read) (cell, fp, data);
+  if (fp->type == GTS_ERROR)
+    return FALSE;
+
+  if (!FTT_CELL_IS_DESTROYED (cell) && !FTT_CELL_IS_FLAGGED_LEAF (cell))
+    return oct_read_binary (cell, fp, read, data);
+
+  cell->flags &= ~FTT_FLAG_LEAF;
+  return TRUE;
+}
+
+static gboolean oct_read_binary (FttCell * parent,
+				 GtsFile * fp,
+				 FttCellReadFunc read,
+				 gpointer data)
+{
+  FttOct * oct;
+  guint n;
+
+  oct = g_malloc0 (sizeof (FttOct));
+  oct->level = ftt_cell_level (parent);
+  oct->parent = parent;
+#ifdef FTT_2D3
+  oct->dz = ftt_cell_dz (parent);
+#endif
+  parent->children = oct;
+  ftt_cell_pos (parent, &(oct->pos));
+  
+  for (n = 0; n < FTT_CELLS; n++) {
+    oct->cell[n].parent = oct;
+    oct->cell[n].flags = n;
+  }
+
+  for (n = 0; n < FTT_CELLS; n++)
+    if (!cell_read_binary (&(oct->cell[n]), fp, read, data))
+      return FALSE;
+  
+  return TRUE;
+}
+
+/**
+ * ftt_cell_read_binary:
+ * @fp: a #GtsFile.
+ * @read: a #FttCellReadFunc function or %NULL.
+ * @data: user data to pass to @read.
+ *
+ * If an error occurs (i.e. corrupted file or file format incorrect),
+ * the @error field of @fp is set. A possibly incomplete tree is then
+ * returned.
+ *
+ * Returns: the root cell of the tree contained in the file pointed to
+ * by @fp. If not %NULL, the user-defined function @read is used to
+ * read the extra user data associated with each cell.  
+ */
+FttCell * ftt_cell_read_binary (GtsFile * fp,
+				FttCellReadFunc read,
+				gpointer data)
+{
+  FttCell * root;
+  guint l, depth;
+
+  g_return_val_if_fail (fp != NULL, NULL);
+
+  root = ftt_cell_new (NULL, NULL);
+  cell_read_binary (root, fp, read, data);
 
   depth = ftt_cell_depth (root);
   for (l = 0; l < depth; l++)

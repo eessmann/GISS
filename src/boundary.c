@@ -1019,9 +1019,12 @@ static void gfs_box_write (GtsObject * object, FILE * fp)
   fputs (" }", fp);
   if (domain != NULL && domain->max_depth_write > -2) {
     fputs (" {\n", fp);
-    ftt_cell_write (box->root, domain->max_depth_write, fp, 
-		    (FttCellWriteFunc) gfs_cell_write, 
-		    domain->variables_io);
+    if (domain->binary)
+      ftt_cell_write_binary (box->root, domain->max_depth_write, fp, 
+			     (FttCellWriteFunc) gfs_cell_write_binary, domain->variables_io);
+    else
+      ftt_cell_write (box->root, domain->max_depth_write, fp, 
+		      (FttCellWriteFunc) gfs_cell_write, domain->variables_io);
     fputc ('}', fp);
   }
 }
@@ -1110,8 +1113,20 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
 
     ftt_cell_destroy (b->root, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
     fp->scope_max++;
-    gts_file_first_token_after (fp, '\n');
-    b->root = ftt_cell_read (fp, (FttCellReadFunc) gfs_cell_read, domain);
+    if (domain->binary) {
+      if (gts_file_getc (fp) != '\n') {
+      	gts_file_error (fp, "expecting a newline");
+      	return;
+      }
+      b->root = ftt_cell_read_binary (fp, (FttCellReadFunc) gfs_cell_read_binary, domain);
+      if (fp->type == GTS_ERROR)
+	return;
+      gts_file_next_token (fp);
+    }
+    else {
+      gts_file_first_token_after (fp, '\n');
+      b->root = ftt_cell_read (fp, (FttCellReadFunc) gfs_cell_read, domain);
+    }
     fp->scope_max--;
     if (fp->type == GTS_ERROR)
       return;

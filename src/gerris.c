@@ -120,7 +120,7 @@ int main (int argc, char * argv[])
     return 1; /* failure */
   }
 
-  fptr = fopen (argv[optind], "rt");
+  fptr = fopen (argv[optind], "r");
   if (fptr == NULL) {
     fprintf (stderr, "gerris: unable to open file `%s'\n", argv[optind]);
     return 1;

@@ -176,6 +176,15 @@ void         gfs_cell_copy                    (const FttCell * from,
 void         gfs_cell_read                    (FttCell * cell, 
 					       GtsFile * fp,
 					       GfsDomain * domain);
+void         gfs_cell_write                   (const FttCell * cell, 
+					       FILE * fp,
+					       GfsVariable * variables);
+void         gfs_cell_read_binary             (FttCell * cell, 
+					       GtsFile * fp,
+					       GfsDomain * domain);
+void         gfs_cell_write_binary            (const FttCell * cell, 
+					       FILE * fp,
+					       GfsVariable * variables);
 void         gfs_domain_replace_variable      (GfsDomain * domain,
 					       GfsVariable * v,
 					       GfsVariable * with);

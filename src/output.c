@@ -1162,12 +1162,15 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsVariable * var = domain->variables_io;
+    gboolean binary = domain->binary;
 
     domain->variables_io = GFS_OUTPUT_SIMULATION (event)->var;
-    gfs_simulation_write (sim, 
-			 GFS_OUTPUT_SIMULATION (event)->max_depth,
-			 GFS_OUTPUT (event)->file->fp);
+    domain->binary = GFS_OUTPUT_SIMULATION (event)->binary;
+    gfs_simulation_write (sim,
+			  GFS_OUTPUT_SIMULATION (event)->max_depth,
+			  GFS_OUTPUT (event)->file->fp);
     domain->variables_io = var;
+    domain->binary = binary;
     fflush (GFS_OUTPUT (event)->file->fp);
     return TRUE;
   }
@@ -1179,8 +1182,7 @@ static void output_simulation_write (GtsObject * o, FILE * fp)
   GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (o);
   GfsVariable * v = output->var;
 
-  (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->write) 
-    (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->write) (o, fp);
 
   fputs (" {", fp);
   if (output->max_depth != -1)
@@ -1194,14 +1196,17 @@ static void output_simulation_write (GtsObject * o, FILE * fp)
       v = v->next;
     }
   }
+  if (output->binary)
+    fputs (" binary = 1", fp);
   fputs (" }", fp);
 }
 
 static void output_simulation_read (GtsObject ** o, GtsFile * fp)
 {
   GtsFileVariable var[] = {
-    {GTS_INT,    "depth", TRUE},
+    {GTS_INT,    "depth",     TRUE},
     {GTS_STRING, "variables", TRUE},
+    {GTS_INT,    "binary",    TRUE},
     {GTS_NONE}
   };
   gchar * variables = NULL;
@@ -1215,6 +1220,7 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
 
   var[0].data = &output->max_depth;
   var[1].data = &variables;
+  var[2].data = &output->binary;
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR) {
     g_free (variables);

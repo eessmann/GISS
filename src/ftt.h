@@ -711,10 +711,18 @@ void                 ftt_cell_write                  (const FttCell * root,
 						      FILE * fp,
 						      FttCellWriteFunc write,
 						      gpointer data);
+void                 ftt_cell_write_binary           (const FttCell * root,
+						      gint max_depth,
+						      FILE * fp,
+						      FttCellWriteFunc write,
+						      gpointer data);
 typedef void      (* FttCellReadFunc)                (FttCell * cell,
 						      GtsFile * fp,
 						      gpointer data);
 FttCell *            ftt_cell_read                   (GtsFile * fp,
+						      FttCellReadFunc read,
+						      gpointer data);
+FttCell *            ftt_cell_read_binary            (GtsFile * fp,
 						      FttCellReadFunc read,
 						      gpointer data);
 typedef void      (* FttCellCleanupFunc)             (FttCell * cell,

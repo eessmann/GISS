@@ -1865,6 +1865,42 @@ void gfs_cell_copy (const FttCell * from,
 }
 
 /**
+ * gfs_cell_write:
+ * @cell: a #FttCell.
+ * @fp: a file pointer.
+ * @variables: the #GfsVariable to be written.
+ *
+ * Writes in @fp the fluid data associated with @cell and described by
+ * @variables. This function is generally used in association with
+ * ftt_cell_write().  
+ */
+void gfs_cell_write (const FttCell * cell, FILE * fp,
+		     GfsVariable * variables)
+{
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (fp != NULL);
+
+  if (GFS_IS_MIXED (cell)) {
+    GfsStateVector * s = GFS_STATE (cell);
+    guint i;
+
+    for (i = 0; i < FTT_NEIGHBORS; i++)
+      fprintf (fp, " %g", s->solid->s[i]);
+    fprintf (fp, " %g", s->solid->a);
+    for (i = 0; i < FTT_DIMENSION; i++)
+      fprintf (fp, " %g", (&s->solid->cm.x)[i]);
+  }
+  else
+    fputs (" -1", fp);
+  
+  while (variables) {
+    if (variables->name)
+      fprintf (fp, " %g", GFS_VARIABLE (cell, variables->i));
+    variables = variables->next;
+  }
+}
+
+/**
  * gfs_cell_read:
  * @cell: a #FttCell.
  * @fp: a #GtsFile.
@@ -1931,6 +1967,103 @@ void gfs_cell_read (FttCell * cell, GtsFile * fp, GfsDomain * domain)
     }
     GFS_VARIABLE (cell, v->i) = atof (fp->token->str);
     gts_file_next_token (fp);
+    v = v->next;
+  }
+}
+
+/**
+ * gfs_cell_write_binary:
+ * @cell: a #FttCell.
+ * @fp: a file pointer.
+ * @variables: the #GfsVariable to be written.
+ *
+ * Writes in @fp the fluid data associated with @cell and described by
+ * @variables. This function is generally used in association with
+ * ftt_cell_write_binary().
+ */
+void gfs_cell_write_binary (const FttCell * cell, FILE * fp,
+			    GfsVariable * variables)
+{
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (fp != NULL);
+
+  if (GFS_IS_MIXED (cell)) {
+    GfsStateVector * s = GFS_STATE (cell);
+
+    fwrite (s->solid->s, sizeof (gdouble), FTT_NEIGHBORS, fp);
+    fwrite (&s->solid->a, sizeof (gdouble), 1, fp);
+    fwrite (&s->solid->cm.x, sizeof (gdouble), FTT_DIMENSION, fp);
+  }
+  else {
+    gdouble a = -1.;
+    fwrite (&a, sizeof (gdouble), 1, fp);
+  }
+  
+  while (variables) {
+    if (variables->name) {
+      gdouble a = GFS_VARIABLE (cell, variables->i);
+      fwrite (&a, sizeof (gdouble), 1, fp);
+    }
+    variables = variables->next;
+  }
+}
+
+/**
+ * gfs_cell_read_binary:
+ * @cell: a #FttCell.
+ * @fp: a #GtsFile.
+ * @domain: the #GfsDomain containing @cell.
+ *
+ * Reads from @fp the fluid data associated with @cell and described
+ * by @domain->variables_io. This function is generally used in
+ * association with ftt_cell_read_binary().
+ */
+void gfs_cell_read_binary (FttCell * cell, GtsFile * fp, GfsDomain * domain)
+{
+  gdouble s0;
+  GfsStateVector * s;
+  GfsVariable * v;
+
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (fp != NULL);
+  g_return_if_fail (domain != NULL);
+
+  if (gts_file_read (fp, &s0, sizeof (gdouble), 1) != 1) {
+    gts_file_error (fp, "expecting a number (solid->s[0])");
+    return;
+  }
+
+  gfs_cell_init (cell, domain);
+  s = cell->data;
+  if (s0 >= 0.) {
+    guint i;
+
+    s->solid = g_malloc0 (sizeof (GfsSolidVector));
+    s->solid->s[0] = s0;
+    
+    if (gts_file_read (fp, &s->solid->s[1], sizeof (gdouble), FTT_NEIGHBORS - 1) != FTT_NEIGHBORS - 1) {
+      gts_file_error (fp, "expecting numbers (solid->s[1..%d])", FTT_NEIGHBORS - 1);
+      return;
+    }
+    if (gts_file_read (fp, &s->solid->a, sizeof (gdouble), 1) != 1) {
+      gts_file_error (fp, "expecting a number (solid->a)");
+      return;
+    }
+    if (gts_file_read (fp, &s->solid->cm.x, sizeof (gdouble), FTT_DIMENSION) != FTT_DIMENSION) {
+      gts_file_error (fp, "expecting numbers (solid->cm[0..%d])", FTT_DIMENSION - 1);
+      return;
+    }
+  }
+
+  v = domain->variables_io;
+  while (v) {
+    gdouble a;
+
+    if (gts_file_read (fp, &a, sizeof (gdouble), 1) != 1) {
+      gts_file_error (fp, "expecting a number (%s)", v->name);
+      return;
+    }
+    GFS_VARIABLE (cell, v->i) = a;
     v = v->next;
   }
 }

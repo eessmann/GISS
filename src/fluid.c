@@ -819,7 +819,7 @@ static gboolean face_bilinear (const FttCellFace * face,
     (*cell_pos) (n[i + 1], &cm);
     cm.x = (cm.x - o->x)/size;
     cm.y = (cm.y - o->y)/size;
-    g_assert (fabs (cm.x) <= 5./2. && fabs (cm.y) <= 5./2.);
+    g_assert (fabs (cm.x) <= 4. && fabs (cm.y) <= 4.);
     m[i][0] = cm.x;
     m[i][1] = cm.y; 
     m[i][2] = cm.x*cm.y;
@@ -1790,42 +1790,6 @@ void gfs_cell_traverse_mixed (FttCell * root,
   g_return_if_fail (func != NULL);
 
   cell_traverse_mixed (root, order, flags, func, data);
-}
-
-/**
- * gfs_cell_write:
- * @cell: a #FttCell.
- * @fp: a file pointer.
- * @variables: the #GfsVariable to be written.
- *
- * Writes in @fp the fluid data associated with @cell and described by
- * @variables. This function is generally used in association with
- * ftt_cell_write().  
- */
-void gfs_cell_write (const FttCell * cell, FILE * fp, 
-		     GfsVariable * variables)
-{
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (fp != NULL);
-
-  if (GFS_IS_MIXED (cell)) {
-    GfsStateVector * s = GFS_STATE (cell);
-    guint i;
-
-    for (i = 0; i < FTT_NEIGHBORS; i++)
-      fprintf (fp, " %g", s->solid->s[i]);
-    fprintf (fp, " %g", s->solid->a);
-    for (i = 0; i < FTT_DIMENSION; i++)
-      fprintf (fp, " %g", (&s->solid->cm.x)[i]);
-  }
-  else
-    fputs (" -1", fp);
-  
-  while (variables) {
-    if (variables->name)
-      fprintf (fp, " %g", GFS_VARIABLE (cell, variables->i));
-    variables = variables->next;
-  }
 }
 
 /**

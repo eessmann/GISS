@@ -183,9 +183,6 @@ GTS_C_VAR GfsVariable * gfs_derived_first, * gfs_derived_last;
 void                  gfs_cell_cleanup              (FttCell * cell);
 void                  gfs_cell_reset                (FttCell * cell, 
 						     GfsVariable * v);
-void                  gfs_cell_write                (const FttCell * cell, 
-						     FILE * fp,
-						     GfsVariable * variables);
 void                  gfs_get_from_above            (FttCell * cell, 
 						     const GfsVariable * v);
 void                  gfs_get_from_below_intensive  (FttCell * cell, 
