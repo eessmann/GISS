@@ -420,8 +420,7 @@ void gfs_approximate_projection (GfsDomain * domain,
 
   /* compute MAC divergence */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_normal_divergence, 
-			    NULL);
+			    (FttCellTraverseFunc) gfs_normal_divergence, NULL);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
   			    (FttCellTraverseFunc) scale_divergence, &apar->dt);
   

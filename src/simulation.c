@@ -886,6 +886,8 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
     sim->advection_params.dt = sim->time.end - t;
     sim->tnext = sim->time.end;
   }
+  if (sim->advection_params.dt < 1e-9)
+    sim->advection_params.dt = 1e-9;
 }
 
 /**
