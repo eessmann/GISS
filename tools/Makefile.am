@@ -17,6 +17,10 @@ bin_PROGRAMS = \
 	gfs2vtk2D \
 	gfs2vtk3D
 
+bin_SCRIPTS = \
+	darcs2dist \
+	bat2gts
+
 gfs2oogl2D_SOURCES = gfs2oogl.c
 gfs2oogl2D3_SOURCES = gfs2oogl.c
 gfs2oogl3D_SOURCES = gfs2oogl.c
