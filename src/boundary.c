@@ -154,7 +154,7 @@ static void bc_value_read (GtsObject ** o, GtsFile * fp)
     return;
   if (bc->val == NULL)
     bc->val = gfs_function_new (gfs_function_class (), 0.);
-  gfs_function_read (GFS_BC_VALUE (*o)->val, gfs_object_simulation (*o), fp);
+  gfs_function_read (GFS_BC_VALUE (*o)->val, gfs_box_domain (GFS_BC (bc)->b->box), fp);
 }
 
 static void bc_value_destroy (GtsObject * o)
