@@ -204,7 +204,7 @@ void         gfs_domain_solid_force           (GfsDomain * domain,
 void         gfs_domain_remove_droplets       (GfsDomain * domain,
 					       GfsVariable * c,
 					       gint min);
-void         gfs_domain_remove_islands        (GfsDomain * domain, 
+void         gfs_domain_remove_ponds          (GfsDomain * domain, 
 					       gint min,
 					       FttCellCleanupFunc cleanup,
 					       gpointer data);

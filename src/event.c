@@ -551,7 +551,8 @@ static void init_f (GfsVariable * v, GfsFunction * f, GfsDomain * domain)
 
 static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_class ())->parent_class)->event) 
+      (event, sim)) {
     g_hash_table_foreach (GFS_INIT (event)->f, (GHFunc) init_f, sim);
     return TRUE;
   }
@@ -1301,7 +1302,8 @@ GfsInitFractionClass * gfs_init_fraction_class (void)
 
 static gboolean gfs_remove_droplets_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_remove_droplets_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_remove_droplets_class ())->parent_class)->event) 
+      (event, sim)) {
     gfs_domain_remove_droplets (GFS_DOMAIN (sim), 
 				GFS_REMOVE_DROPLETS (event)->c, 
 				GFS_REMOVE_DROPLETS (event)->min);
@@ -1371,6 +1373,70 @@ GfsEventClass * gfs_remove_droplets_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
 				  &gfs_remove_droplets_info);
+  }
+
+  return klass;
+}
+
+/* GfsRemovePonds: Object */
+
+static gboolean gfs_remove_ponds_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_remove_ponds_class ())->parent_class)->event) 
+      (event, sim)) {
+    gfs_domain_remove_ponds (GFS_DOMAIN (sim), GFS_REMOVE_PONDS (event)->min,
+			     (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_remove_ponds_read (GtsObject ** o, GtsFile * fp)
+{
+  if (GTS_OBJECT_CLASS (gfs_remove_ponds_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_remove_ponds_class ())->parent_class->read) 
+      (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_INT) {
+    gts_file_error (fp, "expecting an integer (min)");
+    return;
+  }
+  GFS_REMOVE_PONDS (*o)->min = atoi (fp->token->str);
+  gts_file_next_token (fp);
+}
+
+static void gfs_remove_ponds_write (GtsObject * o, FILE * fp)
+{
+  if (GTS_OBJECT_CLASS (gfs_remove_ponds_class ())->parent_class->write)
+    (* GTS_OBJECT_CLASS (gfs_remove_ponds_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %d", GFS_REMOVE_PONDS (o)->min);
+}
+
+static void gfs_remove_ponds_class_init (GfsEventClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = gfs_remove_ponds_event;
+  GTS_OBJECT_CLASS (klass)->read = gfs_remove_ponds_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_remove_ponds_write;
+}
+
+GfsEventClass * gfs_remove_ponds_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_remove_ponds_info = {
+      "GfsRemovePonds",
+      sizeof (GfsRemovePonds),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_remove_ponds_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_init_class ()),
+				  &gfs_remove_ponds_info);
   }
 
   return klass;

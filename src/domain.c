@@ -2523,20 +2523,20 @@ static void remove_small_box (GfsBox * box, gpointer * data)
 }
 
 /**
- * gfs_domain_remove_islands:
+ * gfs_domain_remove_ponds:
  * @domain: a #GfsDomain.
- * @min: the minimum size (in cells) of the islands.
+ * @min: the minimum size (in cells) of the ponds.
  * @cleanup: a #FttCellCleanupFunc or %NULL.
  * @data: user data to pass to @cleanup.
  *
- * Removes all the fluid "islands" of @domain smaller than @min cells
- * if @min is positive, or all the islands but the -@min largest ones
+ * Removes all the fluid "ponds" of @domain smaller than @min cells
+ * if @min is positive, or all the ponds but the -@min largest ones
  * if @min is negative.
  */
-void gfs_domain_remove_islands (GfsDomain * domain, 
-				gint min,
-				FttCellCleanupFunc cleanup,
-				gpointer data)
+void gfs_domain_remove_ponds (GfsDomain * domain, 
+			      gint min,
+			      FttCellCleanupFunc cleanup,
+			      gpointer data)
 {
   GArray * sizes;
   gpointer dat[4];

@@ -252,6 +252,26 @@ struct _GfsRemoveDroplets {
 
 GfsEventClass * gfs_remove_droplets_class  (void);
 
+/* GfsRemovePonds: Header */
+
+typedef struct _GfsRemovePonds         GfsRemovePonds;
+
+struct _GfsRemovePonds {
+  /*< private >*/
+  GfsGenericInit parent;
+
+  /*< public >*/
+  gint min;
+};
+
+#define GFS_REMOVE_PONDS(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsRemovePonds,\
+					         gfs_remove_ponds_class ())
+#define GFS_IS_REMOVE_PONDS(obj)         (gts_object_is_from_class (obj,\
+						 gfs_remove_ponds_class ()))
+
+GfsEventClass * gfs_remove_ponds_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
