@@ -1,3 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = poisson advection euler mpi ocean tension
+TESTS = spurious.sh
+
+EXTRA_DIST = $(TESTS)
