@@ -1592,20 +1592,22 @@ void gfs_normal_divergence_2D (FttCell * cell)
 /**
  * gfs_divergence:
  * @cell: a #FttCell.
+ * @v: a #GfsVariable.
  *
- * Fills variable %GFS_DIV of @cell with the divergence of the
+ * Fills variable @v of @cell with the divergence of the
  * (centered) velocity field in this cell.  
  */
-void gfs_divergence (FttCell * cell)
+void gfs_divergence (FttCell * cell, GfsVariable * v)
 {
   FttComponent c;
   gdouble div = 0.;
 
   g_return_if_fail (cell != NULL);
+  g_return_if_fail (v != NULL);
 
   for (c = 0; c < FTT_DIMENSION; c++)
     div += gfs_center_gradient (cell, c, GFS_VELOCITY_INDEX (c));
-  GFS_STATE (cell)->div = div/ftt_cell_size (cell);
+  GFS_VARIABLE (cell, v->i) = div/ftt_cell_size (cell);
 }
 
 /**
