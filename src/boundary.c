@@ -348,7 +348,10 @@ static void match (FttCell * cell, GfsBoundary * boundary)
 
   cell->flags |= GFS_FLAG_BOUNDARY;
   if (neighbor == NULL || ftt_cell_level (neighbor) < level) {
-    g_assert (!FTT_CELL_IS_ROOT (cell));
+    if (FTT_CELL_IS_ROOT (cell))
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
+	     "root cell is entirely outside of the fluid domain\n"
+	     "the solid surface orientation may be incorrect");
     ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
     boundary->changed = TRUE;
     return;
@@ -357,7 +360,10 @@ static void match (FttCell * cell, GfsBoundary * boundary)
     GfsSolidVector * s = GFS_STATE (neighbor)->solid;
 
     if (s && s->s[FTT_OPPOSITE_DIRECTION (boundary->d)] == 0.) {
-      g_assert (!FTT_CELL_IS_ROOT (cell));
+      if (FTT_CELL_IS_ROOT (cell))
+	g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
+	       "root cell is entirely outside of the fluid domain\n"
+	       "the solid surface orientation may be incorrect");
       ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
       boundary->changed = TRUE;
       return;
