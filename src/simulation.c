@@ -731,22 +731,6 @@ GfsSimulation * gfs_simulation_new (GfsSimulationClass * klass)
   return object;
 }
 
-static void box_init_solid_fractions (GfsBox * box, GfsSimulation * sim)
-{
-  gfs_cell_init_solid_fractions (box->root, sim->surface, TRUE, 
-				 (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
-  if (FTT_CELL_IS_DESTROYED (box->root)) {
-    FttVector p;
-
-    ftt_cell_pos (box->root, &p);
-    g_warning ("%s centered at (%g,%g,%g) is entirely filled by a solid.\n"
-	       "Aborting...\n", 
-	       GTS_OBJECT (box)->klass->info.name,
-	       p.x, p.y, p.z);
-    exit (1);
-  }
-}
-
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {
   if (ftt_refine_corner (cell))
@@ -816,7 +800,8 @@ void gfs_simulation_refine (GfsSimulation * sim)
 
   if (sim->surface) {
     gfs_domain_timer_start (domain, "solid_fractions");
-    gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) box_init_solid_fractions, sim);
+    gfs_domain_init_solid_fractions (domain, sim->surface, TRUE,
+				     (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
     gfs_domain_match (domain);
     gfs_domain_timer_stop (domain, "solid_fractions");
   }

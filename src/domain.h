@@ -102,6 +102,12 @@ void         gfs_domain_traverse_mixed        (GfsDomain * domain,
 					       FttTraverseFlags flags,
 					       FttCellTraverseFunc func,
 					       gpointer data);
+void         gfs_domain_traverse_cut          (GfsDomain * domain,
+					       GtsSurface * s,
+					       FttTraverseType order,
+					       FttTraverseFlags flags,
+					       FttCellTraverseCutFunc func,
+					       gpointer data);
 void         gfs_domain_face_traverse         (GfsDomain * domain,
 					       FttComponent c,
 					       FttTraverseType order,
