@@ -77,6 +77,8 @@ GtsObjectClass *   gfs_object_class_from_name (const gchar * name);
 void               gfs_eigenvalues          (gdouble a[FTT_DIMENSION][FTT_DIMENSION],
 					     gdouble d[FTT_DIMENSION],
 					     gdouble v[FTT_DIMENSION][FTT_DIMENSION]);
+gboolean           gfs_matrix_inverse       (gdouble ** m, 
+					     guint n);
 
 #ifdef __cplusplus
 }

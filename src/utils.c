@@ -466,3 +466,76 @@ void gfs_eigenvalues (gdouble a[FTT_DIMENSION][FTT_DIMENSION],
   }
   g_assert_not_reached ();
 }
+
+/**
+ * gfs_matrix_inverse:
+ * @m: a square matrix.
+ * @n: size of the matrix.
+ *
+ * Replaces @m with its inverse.
+ *
+ * Returns: %FALSE if @m is non-invertible, %TRUE otherwise.
+ */
+gboolean gfs_matrix_inverse (gdouble ** m, guint n)
+{
+  gint * indxc, * indxr, * ipiv;
+  gint i, icol = 0, irow = 0, j, k, l, ll;
+  gdouble big, dum, pivinv, temp;
+
+  g_return_val_if_fail (m != NULL, FALSE);
+
+  indxc = g_malloc (sizeof (gint)*n);
+  indxr = g_malloc (sizeof (gint)*n);
+  ipiv = g_malloc (sizeof (gint)*n);
+  
+#define SWAP(a,b) {temp=(a);(a)=(b);(b)=temp;}
+
+  for (j = 0; j < n; j++)
+    ipiv[j] = -1;
+
+  for (i = 0; i < n; i++) {
+    big = 0.0;
+    for (j = 0; j < n; j++)
+      if (ipiv[j] != 0)
+	for (k = 0; k < n; k++) {
+	  if (ipiv[k] == -1) {
+	    if (fabs (m[j][k]) >= big) {
+	      big = fabs (m[j][k]);
+	      irow = j;
+	      icol = k;
+	    }
+	  }
+	}
+    ipiv[icol]++;
+    if (irow != icol)
+      for (l = 0; l < n; l++) 
+	SWAP (m[irow][l], m[icol][l]);
+    indxr[i] = irow;
+    indxc[i] = icol;
+    if (m[icol][icol] == 0.) {
+      g_free (indxc);
+      g_free (indxr);
+      g_free (ipiv);
+      return FALSE;
+    }
+    pivinv = 1.0/m[icol][icol];
+    m[icol][icol] = 1.0;
+    for (l = 0; l < n; l++) m[icol][l] *= pivinv;
+    for (ll = 0; ll < n; ll++)
+      if (ll != icol) {
+	dum = m[ll][icol];
+	m[ll][icol] = 0.0;
+	for (l = 0; l < n; l++)
+	  m[ll][l] -= m[icol][l]*dum;
+      }
+  }
+  for (l = n - 1; l >= 0; l--) {
+    if (indxr[l] != indxc[l])
+      for (k = 0; k < n; k++)
+	SWAP (m[k][indxr[l]], m[k][indxc[l]]);
+  }
+  g_free (indxc);
+  g_free (indxr);
+  g_free (ipiv);
+  return TRUE;
+}
