@@ -2,7 +2,8 @@
 
 EXAMPLES = \
 	cylinder \
-	lid
+	lid \
+	shear
 
 EXTRA_DIST = \
 	template.tex \
