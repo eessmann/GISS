@@ -422,7 +422,7 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
       n += (&m.x)[c];
     }
     if (n > 0.) {
-      m.x = m.x/n + 1e-6; m.y = m.y/n + 1e-6; m.z = m.z/n + 1e-6;
+      m.x /= n; m.y /= n; m.z /= n;
       alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
       solid->a = gfs_plane_volume (&m, alpha, 1.);
       gfs_plane_center (&m, alpha, solid->a, &solid->cm);
@@ -950,8 +950,8 @@ void gfs_face_ca (const FttCellFace * face, FttVector * ca)
     m.y = s->s[2*c2 + 1] - s->s[2*c2];
     s1 = (m.x < 0.);
     s2 = (m.y < 0.);
-    m.x = fabs (m.x) + 1e-6;
-    m.y = fabs (m.y) + 1e-6;
+    m.x = fabs (m.x);
+    m.y = fabs (m.y);
     n = m.x + m.y;
     m.x /= n;
     m.y /= n;

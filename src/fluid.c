@@ -775,6 +775,40 @@ static void draw_cell (FttCell * cell, gdouble r, gdouble g, gdouble b,
 	   r, g, b,
 	   r, g, b,
 	   r, g, b);
+  gfs_cell_cm (cell, &p);
+  size /= 8.;
+  fprintf (stderr,
+	   "(geometry \"cm %s\" = OFF 8 6 12\n"
+	   "%g %g %g\n"
+	   "%g %g %g\n"
+	   "%g %g %g\n"
+	   "%g %g %g\n"
+	   "%g %g %g\n"
+	   "%g %g %g\n"
+	   "%g %g %g\n"
+	   "%g %g %g\n"
+	   "4 3 2 1 0 %g %g %g\n"
+	   "4 4 5 6 7 %g %g %g\n"
+	   "4 2 3 7 6 %g %g %g\n"
+	   "4 0 1 5 4 %g %g %g\n"
+	   "4 0 4 7 3 %g %g %g\n"
+	   "4 1 2 6 5 %g %g %g\n"
+	   ")\n",
+	   name,
+	   p.x - size, p.y - size, p.z - size,
+	   p.x + size, p.y - size, p.z - size,
+	   p.x + size, p.y + size, p.z - size,
+	   p.x - size, p.y + size, p.z - size,
+	   p.x - size, p.y - size, p.z + size,
+	   p.x + size, p.y - size, p.z + size,
+	   p.x + size, p.y + size, p.z + size,
+	   p.x - size, p.y + size, p.z + size,
+	   r, g, b,
+	   r, g, b,
+	   r, g, b,
+	   r, g, b,
+	   r, g, b,
+	   r, g, b);
 }
 
 static void output_error_mesh (FttCell ** n)

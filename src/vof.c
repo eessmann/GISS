@@ -34,9 +34,11 @@
  */
 gdouble gfs_line_area (FttVector * m, gdouble alpha, gdouble c1)
 {
+  FttVector n;
   gdouble a, v;
 
   g_return_val_if_fail (m != NULL, 0.);
+  g_return_val_if_fail (m->x >= 0. && m->y >= 0., 0.);
 
   if (alpha <= 0.)
     return 0.;
@@ -44,19 +46,19 @@ gdouble gfs_line_area (FttVector * m, gdouble alpha, gdouble c1)
   if (alpha >= m->x*c1 + m->y || c1 == 0.)
     return c1;
 
-  g_assert (m->x >= 1e-9 && m->y >= 1e-9);
+  n = *m; n.x += 1e-4; n.y += 1e-4;
 
   v = alpha*alpha;
 
-  a = alpha - m->x*c1;
+  a = alpha - n.x*c1;
   if (a > 0.)
     v -= a*a;
 
-  a = alpha - m->y;
+  a = alpha - n.y;
   if (a > 0.)
     v -= a*a;
 
-  return v/(2.*m->x*m->y);
+  return v/(2.*n.x*n.y);
 }
 
 /**
@@ -71,11 +73,13 @@ gdouble gfs_line_area (FttVector * m, gdouble alpha, gdouble c1)
  */
 void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 {
+  FttVector n;
   gdouble b;
 
   g_return_if_fail (m != NULL);
   g_return_if_fail (p != NULL);
   g_return_if_fail (a > 0. && a < 1.);
+  g_return_if_fail (m->x >= 0. && m->y >= 0.);
 
   if (alpha <= 0.) {
     p->x = p->y = 0.;
@@ -87,24 +91,24 @@ void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
     return;
   }
 
-  g_assert (m->x >= 1e-9 && m->y >= 1e-9);
+  n = *m; n.x += 1e-4; n.y += 1e-4;
 
   p->x = p->y = alpha*alpha*alpha;
 
-  b = alpha - m->x;
+  b = alpha - n.x;
   if (b > 0.) {
-    p->x -= b*b*(alpha + 2.*m->x);
+    p->x -= b*b*(alpha + 2.*n.x);
     p->y -= b*b*b;
   }
 
-  b = alpha - m->y;
+  b = alpha - n.y;
   if (b > 0.) {
-    p->y -= b*b*(alpha + 2.*m->y);
+    p->y -= b*b*(alpha + 2.*n.y);
     p->x -= b*b*b;
   }
   
-  p->x /= 6.*m->x*m->x*m->y*a;
-  p->y /= 6.*m->x*m->y*m->y*a;
+  p->x /= 6.*n.x*n.x*n.y*a;
+  p->y /= 6.*n.x*n.y*n.y*a;
 }
 
 #if (!FTT_2D)
@@ -119,25 +123,27 @@ void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
  */
 gdouble gfs_plane_volume (FttVector * m, gdouble alpha, gdouble c1)
 {
+  FttVector n;
   gdouble a, amax, v;
   gdouble * md;
   guint j;
 
   g_return_val_if_fail (m != NULL, 0.);
+  g_return_val_if_fail (m->x >= 0. && m->y >= 0. && m->z >= 0., 0.);
   
   if (alpha <= 0.)
     return 0.;
 
-  amax = m->x*c1 + m->y + m->z;
-  if (alpha >= amax || c1 == 0.)
+  if (alpha >= m->x*c1 + m->y + m->z || c1 == 0.)
     return c1;
 
-  g_assert (m->x >= 1e-9 && m->y >= 1e-9 && m->z >= 1e-9);
+  n = *m; n.x += 1e-4; n.y += 1e-4; n.z += 1e-4;
+  amax = n.x*c1 + n.y + n.z;
 
-  md = &m->x;
+  md = &n.x;
   v = alpha*alpha*alpha;
 
-  a = alpha - m->x*c1;
+  a = alpha - n.x*c1;
   if (a > 0.)
     v -= a*a*a;
   for (j = 1; j < 3; j++) {
@@ -147,7 +153,7 @@ gdouble gfs_plane_volume (FttVector * m, gdouble alpha, gdouble c1)
   }
 
   amax = alpha - amax;
-  a = amax + m->x*c1;
+  a = amax + n.x*c1;
   if (a > 0.)
     v += a*a*a;
   for (j = 1; j < 3; j++) {
@@ -156,7 +162,7 @@ gdouble gfs_plane_volume (FttVector * m, gdouble alpha, gdouble c1)
       v += a*a*a;
   }
 
-  return v/(6.*m->x*m->y*m->z);
+  return v/(6.*n.x*n.y*n.z);
 }
 
 /**
@@ -171,71 +177,70 @@ gdouble gfs_plane_volume (FttVector * m, gdouble alpha, gdouble c1)
  */
 void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 {
+  FttVector n;
   gdouble b, amax;
 
   g_return_if_fail (m != NULL);
   g_return_if_fail (a > 0. && a < 1.);
   g_return_if_fail (p != NULL);
+  g_return_if_fail (m->x >= 0. && m->y >= 0. && m->z >= 0.);
 
   if (alpha <= 0.) {
     p->x = p->y = p->z = 0.;
     return;
   }
 
-  amax = m->x + m->y + m->z;
-  if (alpha >= amax) {
+  if (alpha >= m->x + m->y + m->z) {
     p->x = p->y = p->z = 0.5;
     return;
   }
 
-  g_assert (m->x >= 1e-9 && m->y >= 1e-9 && m->z >= 1e-9);
+  n = *m; n.x += 1e-4; n.y += 1e-4; n.z += 1e-4;
 
-  p->x = p->y = p->z = alpha*alpha*alpha;
-  p->x *= alpha/m->x;
-  p->y *= alpha/m->y;
-  p->z *= alpha/m->z;
+  amax = n.x + n.y + n.z;
+  p->x = p->y = p->z = alpha*alpha*alpha*alpha;
 
-  b = alpha - m->x;
+  b = alpha - n.x;
   if (b > 0.) {
-    p->x -= b*b*b*(3. + alpha/m->x);
-    p->y -= b*b*b*b/m->y;
-    p->z -= b*b*b*b/m->z;
+    p->x -= b*b*b*(3.*n.x + alpha);
+    p->y -= b*b*b*b;
+    p->z -= b*b*b*b;
   }
-  b = alpha - m->y;
+  b = alpha - n.y;
   if (b > 0.) {
-    p->y -= b*b*b*(3. + alpha/m->y);
-    p->x -= b*b*b*b/m->x;
-    p->z -= b*b*b*b/m->z;
+    p->y -= b*b*b*(3.*n.y + alpha);
+    p->x -= b*b*b*b;
+    p->z -= b*b*b*b;
   }
-  b = alpha - m->z;
+  b = alpha - n.z;
   if (b > 0.) {
-    p->z -= b*b*b*(3. + alpha/m->z);
-    p->x -= b*b*b*b/m->x;
-    p->y -= b*b*b*b/m->y;
+    p->z -= b*b*b*(3.*n.z + alpha);
+    p->x -= b*b*b*b;
+    p->y -= b*b*b*b;
   }
 
   amax = alpha - amax;
-  b = amax + m->x;
+  b = amax + n.x;
   if (b > 0.) {
-    p->y += b*b*b*(3. + (alpha - m->z)/m->y);
-    p->z += b*b*b*(3. + (alpha - m->y)/m->z);
-    p->x += b*b*b*b/m->x;
+    p->y += b*b*b*(3.*n.y + alpha - n.z);
+    p->z += b*b*b*(3.*n.z + alpha - n.y);
+    p->x += b*b*b*b;
   }
-  b = amax + m->y;
+  b = amax + n.y;
   if (b > 0.) {
-    p->x += b*b*b*(3. + (alpha - m->z)/m->x);
-    p->z += b*b*b*(3. + (alpha - m->x)/m->z);
-    p->y += b*b*b*b/m->y;
+    p->x += b*b*b*(3.*n.x + alpha - n.z);
+    p->z += b*b*b*(3.*n.z + alpha - n.x);
+    p->y += b*b*b*b;
   }
-  b = amax + m->z;
+  b = amax + n.z;
   if (b > 0.) {
-    p->x += b*b*b*(3. + (alpha - m->y)/m->x);
-    p->y += b*b*b*(3. + (alpha - m->x)/m->y);
-    p->z += b*b*b*b/m->z;
+    p->x += b*b*b*(3.*n.x + alpha - n.y);
+    p->y += b*b*b*(3.*n.y + alpha - n.x);
+    p->z += b*b*b*b;
   }
 
-  b = 24.*m->x*m->y*m->z*a;
-  p->x /= b; p->y /= b; p->z /= b;
+  b = 24.*n.x*n.y*n.z*a;
+  p->x /= b*n.x; p->y /= b*n.y; p->z /= b*n.z;
 }
 #endif /* 3D */
 
@@ -410,7 +415,7 @@ static void gfs_cell_vof_advected_face_values (FttCell * cell,
     /* normalize */
     n = 0.;
     for (i = 0; i < FTT_DIMENSION; i++) {
-      (&m.x)[i] = fabs ((&m.x)[i]) + 1e-6;
+      (&m.x)[i] = fabs ((&m.x)[i]);
       n += (&m.x)[i];
     }
     for (i = 0; i < FTT_DIMENSION; i++)
