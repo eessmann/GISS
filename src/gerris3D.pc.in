@@ -6,5 +6,6 @@ includedir=@includedir@
 Name: Gerris3D
 Description: Gerris Flow Solver Library (3D)
 Version: @VERSION@
+Requires: gts >= 0.7.3
 Libs: -L${libdir} -lgfs3D -lgts -lm
 Cflags: -I${includedir}

@@ -6,5 +6,6 @@ includedir=@includedir@
 Name: Gerris2D3
 Description: Gerris Flow Solver Library (2D3)
 Version: @VERSION@
+Requires: gts >= 0.7.3
 Libs: -L${libdir} -lgfs2D3 -lgts -lm
 Cflags: -I${includedir} -DFTT_2D3=1
