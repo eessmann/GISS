@@ -831,6 +831,20 @@ void gfs_simulation_write (GfsSimulation * sim,
   domain->max_depth_write = depth;
 }
 
+static gdouble min_cfl (GfsSimulation * sim)
+{
+  gdouble cfl = sim->advection_params.cfl;
+  GfsVariable * v = GFS_DOMAIN (sim)->variables;
+  
+  while (v) {
+    if (GFS_IS_VARIABLE_TRACER (v) && GFS_VARIABLE_TRACER (v)->advection.cfl < cfl)
+      cfl = GFS_VARIABLE_TRACER (v)->advection.cfl;
+    v = v->next;
+  }
+
+  return cfl;
+}
+
 /**
  * gfs_simulation_set_timestep:
  * @sim: a #GfsSimulation.
@@ -852,7 +866,7 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
 
   t = sim->time.t;
   sim->advection_params.dt =
-    sim->advection_params.cfl*gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
+    min_cfl (sim)*gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
   if (sim->advection_params.dt > sim->time.dtmax)
     sim->advection_params.dt = sim->time.dtmax;
   sim->tnext = t + sim->advection_params.dt;
