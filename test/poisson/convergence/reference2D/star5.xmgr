@@ -1,22 +1,35 @@
 # Grace project file
 #
-@version 50110
+@version 50114
 @page size 792, 612
 @description "../shapes -n 12 star | transform -t 0.1 -u 0.1 -s 0.75 | ../poisson -v -s - 6 10 4"
 @page scroll 5%
 @page inout 5%
 @link page off
-@map font 0 to "Times-Roman", "Times-Roman"
-@map font 2 to "Times-Italic", "Times-Italic"
-@map font 1 to "Times-Bold", "Times-Bold"
-@map font 3 to "Times-BoldItalic", "Times-BoldItalic"
-@map font 4 to "Helvetica", "Helvetica"
-@map font 6 to "Helvetica-Oblique", "Helvetica-Oblique"
-@map font 5 to "Helvetica-Bold", "Helvetica-Bold"
-@map font 7 to "Helvetica-BoldOblique", "Helvetica-BoldOblique"
 @map font 10 to "Courier-Bold", "Courier-Bold"
 @map font 11 to "Courier-BoldOblique", "Courier-BoldOblique"
+@map font 4 to "Helvetica", "Helvetica"
+@map font 5 to "Helvetica-Bold", "Helvetica-Bold"
+@map font 7 to "Helvetica-BoldOblique", "Helvetica-BoldOblique"
+@map font 15 to "Helvetica-Narrow", "Helvetica-Narrow"
+@map font 16 to "Helvetica-Narrow-Bold", "Helvetica-Narrow-Bold"
+@map font 17 to "Helvetica-Narrow-BoldOblique", "Helvetica-Narrow-BoldOblique"
+@map font 18 to "Helvetica-Narrow-Oblique", "Helvetica-Narrow-Oblique"
+@map font 6 to "Helvetica-Oblique", "Helvetica-Oblique"
+@map font 20 to "NewCenturySchlbk-Bold", "NewCenturySchlbk-Bold"
+@map font 21 to "NewCenturySchlbk-BoldItalic", "NewCenturySchlbk-BoldItalic"
+@map font 22 to "NewCenturySchlbk-Italic", "NewCenturySchlbk-Italic"
+@map font 23 to "NewCenturySchlbk-Roman", "NewCenturySchlbk-Roman"
+@map font 24 to "Palatino-Bold", "Palatino-Bold"
+@map font 25 to "Palatino-BoldItalic", "Palatino-BoldItalic"
+@map font 26 to "Palatino-Italic", "Palatino-Italic"
+@map font 27 to "Palatino-Roman", "Palatino-Roman"
 @map font 8 to "Symbol", "Symbol"
+@map font 1 to "Times-Bold", "Times-Bold"
+@map font 3 to "Times-BoldItalic", "Times-BoldItalic"
+@map font 2 to "Times-Italic", "Times-Italic"
+@map font 0 to "Times-Roman", "Times-Roman"
+@map font 33 to "ZapfChancery-MediumItalic", "ZapfChancery-MediumItalic"
 @map font 9 to "ZapfDingbats", "ZapfDingbats"
 @map color 0 to (255, 255, 255), "white"
 @map color 1 to (0, 0, 0), "black"
@@ -53,7 +66,7 @@
 @timestamp rot 0
 @timestamp font 4
 @timestamp char size 1.000000
-@timestamp def "Thu Mar 20 12:14:50 2003"
+@timestamp def "Tue Jan 18 04:35:36 2005"
 @r0 off
 @link r0 to g0
 @r0 type above
@@ -408,7 +421,7 @@
 @g1 fixedpoint prec 6, 6
 @with g1
 @    world xmin 0
-@    world xmax 0.2
+@    world xmax 0.09
 @    world ymin 0.001
 @    world ymax 1000
 @    stack world 0, 0, 0, 0
@@ -444,7 +457,7 @@
 @    xaxis  label color 1
 @    xaxis  label place normal
 @    xaxis  tick on
-@    xaxis  tick major 0.05
+@    xaxis  tick major 0.02
 @    xaxis  tick minor ticks 1
 @    xaxis  tick default 6
 @    xaxis  tick place rounded true
@@ -717,7 +730,7 @@
 @    world xmin 0
 @    world xmax 10
 @    world ymin 0
-@    world ymax 10
+@    world ymax 20
 @    stack world 0, 0, 0, 0
 @    znorm 1
 @    view xmin 0.737149
@@ -802,7 +815,7 @@
 @    yaxis  label color 1
 @    yaxis  label place normal
 @    yaxis  tick on
-@    yaxis  tick major 2
+@    yaxis  tick major 5
 @    yaxis  tick minor ticks 1
 @    yaxis  tick default 6
 @    yaxis  tick place rounded true
@@ -1172,124 +1185,124 @@
 @    frame background pattern 0
 @target G0.S0
 @type xy
-0 69.6458
-1 7.09202
-2 2.40172
-3 1.097
-4 0.51954
-5 0.250183
-6 0.122255
-7 0.0605135
-8 0.0302969
-9 0.0153528
-10 0.00789358
+0 69.8093
+1 6.91158
+2 2.2393
+3 0.999772
+4 0.466212
+5 0.22119
+6 0.10653
+7 0.0520456
+8 0.0258368
+9 0.0130629
+10 0.00663046
 &
 @target G0.S1
 @type xy
-0 86.8814
-1 12.9319
-2 4.76477
-3 2.13518
-4 0.998906
-5 0.484482
-6 0.24087
-7 0.121639
-8 0.0620049
-9 0.031777
-10 0.016334
+0 86.9997
+1 12.1169
+2 4.29124
+3 1.88314
+4 0.871807
+5 0.41754
+6 0.204525
+7 0.101622
+8 0.0509513
+9 0.0256903
+10 0.0129978
 &
 @target G0.S2
 @type xy
-0 181.689
-1 161.734
-2 45.9233
-3 16.864
-4 7.12789
-5 3.62616
-6 1.88226
-7 1.00143
-8 0.529007
-9 0.278022
-10 0.14557
+0 181.753
+1 123.764
+2 28.3666
+3 11.929
+4 5.89444
+5 3.14102
+6 1.64583
+7 0.852829
+8 0.43885
+9 0.224829
+10 0.114853
 &
 @target G1.S0
 @type xy
-6e-06 69.6458
-0.020062 7.09202
-0.039837 2.40172
-0.060006 1.097
-0.079817 0.51954
-0.099125 0.250183
-0.118736 0.122255
-0.138842 0.0605135
-0.158554 0.0302969
-0.178008 0.0153528
-0.197515 0.00789358
+3e-06 69.8093
+0.008443 6.91158
+0.01684 2.2393
+0.025218 0.999772
+0.033562 0.466212
+0.041915 0.22119
+0.050213 0.10653
+0.058516 0.0520456
+0.066903 0.0258368
+0.075276 0.0130629
+0.083658 0.00663046
 &
 @target G1.S1
 @type xy
-6e-06 86.8814
-0.020062 12.9319
-0.039837 4.76477
-0.060006 2.13518
-0.079817 0.998906
-0.099125 0.484482
-0.118736 0.24087
-0.138842 0.121639
-0.158554 0.0620049
-0.178008 0.031777
-0.197515 0.016334
+3e-06 86.9997
+0.008443 12.1169
+0.01684 4.29124
+0.025218 1.88314
+0.033562 0.871807
+0.041915 0.41754
+0.050213 0.204525
+0.058516 0.101622
+0.066903 0.0509513
+0.075276 0.0256903
+0.083658 0.0129978
 &
 @target G1.S2
 @type xy
-6e-06 181.689
-0.020062 161.734
-0.039837 45.9233
-0.060006 16.864
-0.079817 7.12789
-0.099125 3.62616
-0.118736 1.88226
-0.138842 1.00143
-0.158554 0.529007
-0.178008 0.278022
-0.197515 0.14557
+3e-06 181.753
+0.008443 123.764
+0.01684 28.3666
+0.025218 11.929
+0.033562 5.89444
+0.041915 3.14102
+0.050213 1.64583
+0.058516 0.852829
+0.066903 0.43885
+0.075276 0.224829
+0.083658 0.114853
 &
 @target G2.S0
 @type xy
-1 9.82031
-2 5.38501
-3 3.98929
-4 3.40266
-5 3.08267
-6 2.8792
-7 2.73711
-8 2.6314
-9 2.54859
-10 2.48063
+1 10.1003
+2 5.58342
+3 4.11785
+4 3.4981
+5 3.16104
+6 2.94718
+7 2.79763
+8 2.68509
+9 2.59542
+10 2.52486
 &
 @target G2.S1
 @type xy
-1 6.71838
-2 4.27014
-3 3.43952
-4 3.05387
-5 2.82312
-6 2.66803
-7 2.55678
-8 2.4735
-9 2.40917
-10 2.35822
+1 7.18003
+2 4.50264
+3 3.58821
+4 3.16064
+5 2.90914
+6 2.74239
+7 2.62381
+8 2.53539
+9 2.46714
+10 2.41304
 &
 @target G2.S2
 @type xy
-1 1.12338
-2 1.98906
-3 2.20863
-4 2.24694
-5 2.18764
-6 2.14178
-7 2.10219
-8 2.07483
-9 2.05497
-10 2.03998
+1 1.46854
+2 2.53126
+3 2.47909
+4 2.35646
+5 2.25155
+6 2.19036
+7 2.1511
+8 2.12396
+9 2.10412
+10 2.08898
 &

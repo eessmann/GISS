@@ -1,22 +1,35 @@
 # Grace project file
 #
-@version 50110
+@version 50114
 @page size 792, 612
 @description "../shapes star | ../poisson -v -s - -r 8 6 10 4"
 @page scroll 5%
 @page inout 5%
 @link page off
-@map font 0 to "Times-Roman", "Times-Roman"
-@map font 2 to "Times-Italic", "Times-Italic"
-@map font 1 to "Times-Bold", "Times-Bold"
-@map font 3 to "Times-BoldItalic", "Times-BoldItalic"
-@map font 4 to "Helvetica", "Helvetica"
-@map font 6 to "Helvetica-Oblique", "Helvetica-Oblique"
-@map font 5 to "Helvetica-Bold", "Helvetica-Bold"
-@map font 7 to "Helvetica-BoldOblique", "Helvetica-BoldOblique"
 @map font 10 to "Courier-Bold", "Courier-Bold"
 @map font 11 to "Courier-BoldOblique", "Courier-BoldOblique"
+@map font 4 to "Helvetica", "Helvetica"
+@map font 5 to "Helvetica-Bold", "Helvetica-Bold"
+@map font 7 to "Helvetica-BoldOblique", "Helvetica-BoldOblique"
+@map font 15 to "Helvetica-Narrow", "Helvetica-Narrow"
+@map font 16 to "Helvetica-Narrow-Bold", "Helvetica-Narrow-Bold"
+@map font 17 to "Helvetica-Narrow-BoldOblique", "Helvetica-Narrow-BoldOblique"
+@map font 18 to "Helvetica-Narrow-Oblique", "Helvetica-Narrow-Oblique"
+@map font 6 to "Helvetica-Oblique", "Helvetica-Oblique"
+@map font 20 to "NewCenturySchlbk-Bold", "NewCenturySchlbk-Bold"
+@map font 21 to "NewCenturySchlbk-BoldItalic", "NewCenturySchlbk-BoldItalic"
+@map font 22 to "NewCenturySchlbk-Italic", "NewCenturySchlbk-Italic"
+@map font 23 to "NewCenturySchlbk-Roman", "NewCenturySchlbk-Roman"
+@map font 24 to "Palatino-Bold", "Palatino-Bold"
+@map font 25 to "Palatino-BoldItalic", "Palatino-BoldItalic"
+@map font 26 to "Palatino-Italic", "Palatino-Italic"
+@map font 27 to "Palatino-Roman", "Palatino-Roman"
 @map font 8 to "Symbol", "Symbol"
+@map font 1 to "Times-Bold", "Times-Bold"
+@map font 3 to "Times-BoldItalic", "Times-BoldItalic"
+@map font 2 to "Times-Italic", "Times-Italic"
+@map font 0 to "Times-Roman", "Times-Roman"
+@map font 33 to "ZapfChancery-MediumItalic", "ZapfChancery-MediumItalic"
 @map font 9 to "ZapfDingbats", "ZapfDingbats"
 @map color 0 to (255, 255, 255), "white"
 @map color 1 to (0, 0, 0), "black"
@@ -53,7 +66,7 @@
 @timestamp rot 0
 @timestamp font 4
 @timestamp char size 1.000000
-@timestamp def "Thu Mar 20 12:14:50 2003"
+@timestamp def "Tue Jan 18 04:35:35 2005"
 @r0 off
 @link r0 to g0
 @r0 type above
@@ -408,7 +421,7 @@
 @g1 fixedpoint prec 6, 6
 @with g1
 @    world xmin 0
-@    world xmax 0.7
+@    world xmax 0.4
 @    world ymin 0.01
 @    world ymax 1000
 @    stack world 0, 0, 0, 0
@@ -1172,124 +1185,124 @@
 @    frame background pattern 0
 @target G0.S0
 @type xy
-0 63.312
-1 10.2644
-2 2.76433
-3 0.944687
-4 0.331121
-5 0.123143
-6 0.0641276
-7 0.039139
-8 0.0303853
-9 0.0216455
-10 0.0163765
+0 63.3179
+1 10.2627
+2 2.76387
+3 0.944529
+4 0.331065
+5 0.123122
+6 0.064116
+7 0.0391322
+8 0.0303799
+9 0.0216418
+10 0.0163737
 &
 @target G0.S1
 @type xy
-0 81.424
-1 20.3536
-2 5.01089
-3 1.69232
-4 0.60473
-5 0.272264
-6 0.156362
-7 0.108302
-8 0.079139
-9 0.0584701
-10 0.0434935
+0 81.4282
+1 20.3525
+2 5.01016
+3 1.69205
+4 0.604627
+5 0.272217
+6 0.156335
+7 0.108283
+8 0.0791252
+9 0.05846
+10 0.0434859
 &
 @target G0.S2
 @type xy
 0 177.118
-1 324.229
-2 102.721
-3 31.9398
-4 14.2726
-5 6.30724
-6 4.3188
-7 2.34476
-8 1.95881
-9 1.33094
-10 1.03133
+1 324.248
+2 102.708
+3 31.9352
+4 14.2702
+5 6.30618
+6 4.31806
+7 2.34435
+8 1.95847
+9 1.3307
+10 1.03115
 &
 @target G1.S0
 @type xy
-7e-06 63.312
-0.063164 10.2644
-0.125726 2.76433
-0.188685 0.944687
-0.251862 0.331121
-0.314595 0.123143
-0.376985 0.0641276
-0.439778 0.039139
-0.503671 0.0303853
-0.565983 0.0216455
-0.62923 0.0163765
+3e-06 63.3179
+0.0305 10.2627
+0.060996 2.76387
+0.091344 0.944529
+0.122029 0.331065
+0.153882 0.123122
+0.184277 0.064116
+0.214694 0.0391322
+0.245196 0.0303799
+0.278558 0.0216418
+0.309045 0.0163737
 &
 @target G1.S1
 @type xy
-7e-06 81.424
-0.063164 20.3536
-0.125726 5.01089
-0.188685 1.69232
-0.251862 0.60473
-0.314595 0.272264
-0.376985 0.156362
-0.439778 0.108302
-0.503671 0.079139
-0.565983 0.0584701
-0.62923 0.0434935
+3e-06 81.4282
+0.0305 20.3525
+0.060996 5.01016
+0.091344 1.69205
+0.122029 0.604627
+0.153882 0.272217
+0.184277 0.156335
+0.214694 0.108283
+0.245196 0.0791252
+0.278558 0.05846
+0.309045 0.0434859
 &
 @target G1.S2
 @type xy
-7e-06 177.118
-0.063164 324.229
-0.125726 102.721
-0.188685 31.9398
-0.251862 14.2726
-0.314595 6.30724
-0.376985 4.3188
-0.439778 2.34476
-0.503671 1.95881
-0.565983 1.33094
-0.62923 1.03133
+3e-06 177.118
+0.0305 324.248
+0.060996 102.708
+0.091344 31.9352
+0.122029 14.2702
+0.153882 6.30618
+0.184277 4.31806
+0.214694 2.34435
+0.245196 1.95847
+0.278558 1.3307
+0.309045 1.03115
 &
 @target G2.S0
 @type xy
-1 6.16812
-2 4.78573
-3 4.06193
-4 3.71856
-5 3.4851
-6 3.15554
-7 2.8735
-8 2.59928
-9 2.4273
-10 2.28416
+1 6.16971
+2 4.78635
+3 4.06229
+4 3.7188
+5 3.48528
+6 3.15568
+7 2.87361
+8 2.59937
+9 2.42738
+10 2.28422
 &
 @target G2.S1
 @type xy
-1 4.00047
-2 4.03106
-3 3.63711
-4 3.40642
-5 3.12718
-6 2.83642
-7 2.57557
-8 2.37983
-9 2.23518
-10 2.12438
+1 4.00089
+2 4.03145
+3 3.63737
+4 3.40661
+5 3.12732
+6 2.83652
+7 2.57566
+8 2.37989
+9 2.23524
+10 2.12443
 &
 @target G2.S2
 @type xy
-1 0.546274
-2 1.31311
-3 1.77001
-4 1.87689
-5 1.94843
-6 1.85702
-7 1.85485
-8 1.75604
-9 1.72191
-10 1.67296
+1 0.546242
+2 1.31319
+3 1.7701
+4 1.87697
+5 1.94849
+6 1.85707
+7 1.8549
+8 1.75608
+9 1.72195
+10 1.67299
 &
