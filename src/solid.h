@@ -36,7 +36,6 @@ void         gfs_domain_init_solid_fractions             (GfsDomain * domain,
 							  gpointer data);
 void         gfs_cell_init_solid_fractions_from_children (FttCell * cell);
 gboolean     gfs_cell_check_solid_fractions              (FttCell * root);
-gboolean     gfs_refine_mixed                            (const FttCell * cell);
 void         gfs_domain_init_fraction                    (GfsDomain * domain,
 							  GtsSurface * s,
 							  GfsVariable * c);

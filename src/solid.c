@@ -525,12 +525,8 @@ void gfs_cell_init_solid_fractions_from_children (FttCell * cell)
       for (j = 0; j < n; j++) {
 	FttCell * c = child.c[j];
 
-	if (c) {
-	  if (GFS_IS_FLUID (c))
-	    w += 1.;
-	  else
-	    w += GFS_STATE (c)->solid->s[i];
-	}
+	if (c)
+	  w += GFS_IS_FLUID (c) ? 1. : GFS_STATE (c)->solid->s[i];
       }
       solid->s[i] = w/n;
     }
@@ -588,14 +584,27 @@ static void paint_mixed_leaf (FttCell * cell)
     GtsFifo * fifo;
     FttCell * n;
     FttDirection i;
-    
+
     fifo = gts_fifo_new ();
     for (i = 0; i < FTT_NEIGHBORS; i++)
-      if ((solid->s[i] == 0. || solid->s[i] == 1.) &&
-	  (n = ftt_cell_neighbor (cell, i)) &&
-	  !GFS_CELL_IS_BOUNDARY (n)) {
-	push_leaf (fifo, n, i, solid->s[i] + 1.);
-	paint_leaf (fifo, solid->s[i] + 1.);
+      if ((n = ftt_cell_neighbor (cell, i)) && !GFS_CELL_IS_BOUNDARY (n)) {
+	if (solid->s[i] == 0. || solid->s[i] == 1.) {
+	  push_leaf (fifo, n, i, solid->s[i] + 1.);
+	  paint_leaf (fifo, solid->s[i] + 1.);
+	}
+	else if (!FTT_CELL_IS_LEAF (n)) {
+	  FttCellChildren child;
+	  guint j, k;
+	  gdouble w = 0.;
+
+	  k = ftt_cell_children_direction (n, FTT_OPPOSITE_DIRECTION (i), &child);
+	  for (j = 0; j < k; j++)
+	    if (child.c[j])
+	      w += GFS_IS_FLUID (child.c[j]) ? 1. : 
+		GFS_STATE (child.c[j])->solid->s[FTT_OPPOSITE_DIRECTION (i)];
+	  solid->s[i] = w/k;
+	  g_assert (solid->s[i] > 0. && solid->s[i] < 1.);
+	}
       }
     gts_fifo_destroy (fifo);
   }
@@ -703,8 +712,11 @@ static gboolean check_area_fractions (const FttCell * root)
 	if (GFS_IS_FLUID (root)) {
 	  if (!GFS_IS_FLUID (neighbor.c[i]) && 
 	      1. - nsolid->s[FTT_OPPOSITE_DIRECTION (i)] >= 1e-10) {
-	    g_warning ("file %s: line %d (%s): s[%d]: %g",
+	    FttVector p;
+	    ftt_cell_pos (root, &p);
+	    g_warning ("file %s: line %d (%s): (%g,%g,%g): s[%d]: %g",		       
 		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		       p.x, p.y, p.z,
 		       FTT_OPPOSITE_DIRECTION (i),
 		       nsolid->s[FTT_OPPOSITE_DIRECTION (i)]);
 	    ret = FALSE;
@@ -714,8 +726,11 @@ static gboolean check_area_fractions (const FttCell * root)
 	else if (GFS_IS_MIXED (neighbor.c[i])) {
 	  if (fabs (solid->s[i] - 
 		    nsolid->s[FTT_OPPOSITE_DIRECTION (i)]) >= 1e-10) {
-	    g_warning ("file %s: line %d (%s): s[%d]: %g neighbor->s[%d]: %g",
+	    FttVector p;
+	    ftt_cell_pos (root, &p);
+	    g_warning ("file %s: line %d (%s): (%g,%g,%g): s[%d]: %g neighbor->s[%d]: %g",
 		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		       p.x, p.y, p.z,
 		       i, solid->s[i],		       
 		       FTT_OPPOSITE_DIRECTION (i),
 		       nsolid->s[FTT_OPPOSITE_DIRECTION (i)]);
@@ -724,8 +739,11 @@ static gboolean check_area_fractions (const FttCell * root)
 	  }
 	}
 	else if (1. - solid->s[i] >= 1e-10) {
-	  g_warning ("file %s: line %d (%s): s[%d]: %g",
+	  FttVector p;
+	  ftt_cell_pos (root, &p);
+	  g_warning ("file %s: line %d (%s): (%g,%g,%g): s[%d]: %g",		     
 		     __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		     p.x, p.y, p.z,
 		     i, solid->s[i]);
 	  ret = FALSE;
 	  solid->s[i] = 1.;
@@ -734,8 +752,11 @@ static gboolean check_area_fractions (const FttCell * root)
       else { /* fine/coarse boundary */
 	g_assert (ftt_cell_level (neighbor.c[i]) == level - 1);
 	if (GFS_IS_FLUID (neighbor.c[i]) && GFS_IS_MIXED (root) && 1. - solid->s[i] >= 1e-10) {
-	  g_warning ("file %s: line %d (%s): s[%d]: %g",
+	  FttVector p;
+	  ftt_cell_pos (root, &p);
+	  g_warning ("file %s: line %d (%s): (%g,%g,%g): s[%d]: %g",
 		     __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		     p.x, p.y, p.z,
 		     i, solid->s[i]);
 	  ret = FALSE;
 	  solid->s[i] = 1.;
@@ -809,32 +830,6 @@ gboolean gfs_cell_check_solid_fractions (FttCell * root)
   ftt_cell_traverse (root, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 		     (FttCellTraverseFunc) check_solid_fractions, &ret);
   return ret & check_area_fractions (root);
-}
-
-/**
- * gfs_refine_mixed:
- * @cell: a #FttCell.
- *
- * Returns: %TRUE if @cell is a mixed leaf cell and any of its
- * neighbors is not a leaf cell, %FALSE otherwise (see figure
- * topology.fig).  
- */
-gboolean gfs_refine_mixed (const FttCell * cell)
-{
-  FttCellNeighbors neighbor;
-  guint i;
-
-  g_return_val_if_fail (cell != NULL, FALSE);
-
-  if (!GFS_IS_MIXED (cell) || !FTT_CELL_IS_LEAF (cell))
-    return FALSE;
-
-  ftt_cell_neighbors (cell, &neighbor);
-  for (i = 0; i < FTT_NEIGHBORS; i++)
-    if (neighbor.c[i] && !FTT_CELL_IS_LEAF (neighbor.c[i]))
-      return TRUE;
-  
-  return FALSE;
 }
 
 static void save_solid (FttCell * cell, GfsVariable * c)
