@@ -324,17 +324,20 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa,
 /**
  * gfs_function_read:
  * @f: a #GfsFunction.
+ * @domain: a #GfsDomain.
  * @fp: a #GtsFile.
  *
  * Calls the read() method of @f.
  */
-void gfs_function_read (GfsFunction * f, GtsFile * fp)
+void gfs_function_read (GfsFunction * f, gpointer domain, GtsFile * fp)
 {
   GtsObject * o = (GtsObject *) f;
 
   g_return_if_fail (f != NULL);
+  g_return_if_fail (domain != NULL);
   g_return_if_fail (fp != NULL);
 
+  GTS_OBJECT (f)->reserved = domain;
   (* GTS_OBJECT (f)->klass->read) (&o, fp);
 }
 

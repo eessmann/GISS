@@ -70,6 +70,7 @@ gdouble            gfs_function_value       (GfsFunction * f,
 					     FttVector * p,
 					     gdouble t);
 void               gfs_function_read        (GfsFunction * f, 
+					     gpointer domain,
 					     GtsFile * fp);
 void               gfs_function_write       (GfsFunction * f, 
 					     FILE * fp);

@@ -275,8 +275,7 @@ static void source_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GFS_SOURCE (*o)->intensity = gfs_function_new (gfs_function_class (), 0.);
-  gfs_object_simulation (GFS_SOURCE (*o)->intensity) = gfs_object_simulation (*o);
-  gfs_function_read (GFS_SOURCE (*o)->intensity, fp);
+  gfs_function_read (GFS_SOURCE (*o)->intensity, gfs_object_simulation (*o), fp);
 }
 
 static void source_write (GtsObject * o, FILE * fp)
@@ -865,8 +864,7 @@ static void gfs_source_coriolis_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GFS_SOURCE_CORIOLIS (*o)->omegaz = gfs_function_new (gfs_function_class (), 0.);
-  gfs_object_simulation (GFS_SOURCE_CORIOLIS (*o)->omegaz) = gfs_object_simulation (*o);
-  gfs_function_read (GFS_SOURCE_CORIOLIS (*o)->omegaz, fp);
+  gfs_function_read (GFS_SOURCE_CORIOLIS (*o)->omegaz, gfs_object_simulation (*o), fp);
 
   v = GFS_SOURCE_GENERIC (*o)->v->next;
   for (c = 1; c < 2; c++, v = v->next) {

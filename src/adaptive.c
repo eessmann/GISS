@@ -144,7 +144,7 @@ static void gfs_adapt_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
       gts_file_next_token (fp);
-      gfs_function_read (a->minlevel, fp);
+      gfs_function_read (a->minlevel, gfs_object_simulation (*o), fp);
     }
     else if (!strcmp (fp->token->str, "maxlevel")) {
       gts_file_next_token (fp);
@@ -153,7 +153,7 @@ static void gfs_adapt_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
       gts_file_next_token (fp);
-      gfs_function_read (a->maxlevel, fp);
+      gfs_function_read (a->maxlevel, gfs_object_simulation (*o), fp);
     }
     else if (!strcmp (fp->token->str, "mincells")) {
       gts_file_next_token (fp);
@@ -425,8 +425,7 @@ static void gfs_adapt_function_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  gfs_object_simulation (GFS_ADAPT_FUNCTION (*o)->f) = gfs_object_simulation (*o);
-  gfs_function_read (GFS_ADAPT_FUNCTION (*o)->f, fp);
+  gfs_function_read (GFS_ADAPT_FUNCTION (*o)->f, gfs_object_simulation (*o), fp);
 }
 
 static void gfs_adapt_function_write (GtsObject * o, FILE * fp)

@@ -154,7 +154,7 @@ static void bc_value_read (GtsObject ** o, GtsFile * fp)
     return;
   if (bc->val == NULL)
     bc->val = gfs_function_new (gfs_function_class (), 0.);
-  gfs_function_read (GFS_BC_VALUE (*o)->val, fp);
+  gfs_function_read (GFS_BC_VALUE (*o)->val, gfs_object_simulation (*o), fp);
 }
 
 static void bc_value_destroy (GtsObject * o)
@@ -757,7 +757,7 @@ static void inflow_constant_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  gfs_function_read (un, fp);
+  gfs_function_read (un, gfs_box_domain (b->box), fp);
 
   v = gfs_variable_from_name (gfs_box_domain (b->box)->variables, "U");
   for (c = 0; c < FTT_DIMENSION; c++, v = v->next)

@@ -842,13 +842,11 @@ static void gfs_surface_bc_read (GtsObject ** o, GtsFile * fp)
     gts_file_next_token (fp);
   }
   else {
-    gfs_object_simulation (bc->type) = gfs_object_simulation (bc);
-    gfs_function_read (bc->type, fp);
+    gfs_function_read (bc->type, gfs_object_simulation (bc), fp);
     if (fp->type == GTS_ERROR)
       return;
   }
-  gfs_object_simulation (bc->val) = gfs_object_simulation (bc);
-  gfs_function_read (bc->val, fp);
+  gfs_function_read (bc->val, gfs_object_simulation (bc), fp);
 }
 
 static void gfs_surface_bc_write (GtsObject * o, FILE * fp)

@@ -84,7 +84,7 @@ static void gfs_refine_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
-  gfs_function_read (refine->maxlevel, fp);
+  gfs_function_read (refine->maxlevel, gfs_object_simulation (refine), fp);
   if (fp->type == GTS_ERROR)
     return;
 

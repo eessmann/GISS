@@ -1850,7 +1850,7 @@ static void output_error_norm_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
       gts_file_next_token (fp);
-      gfs_function_read (n->s, fp);
+      gfs_function_read (n->s, gfs_object_simulation (*o), fp);
       if (fp->type == GTS_ERROR)
 	return;
     }
