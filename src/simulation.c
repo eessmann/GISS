@@ -605,15 +605,16 @@ static void simulation_run (GfsSimulation * sim)
       			      &sim->approx_projection_params,
       			      &sim->advection_params);
 
-  gts_range_init (&domain->mpi_wait);
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
+    gdouble tstart;
+
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gfs_simulation_event (sim, sim->events->items);
 
-    g_timer_start (domain->timer);
+    tstart = g_timer_elapsed (domain->timer, NULL);
 
     gfs_simulation_set_timestep (sim);
 
@@ -660,12 +661,9 @@ static void simulation_run (GfsSimulation * sim)
     sim->time.t = sim->tnext;
     sim->time.i++;
 
-    g_timer_stop (domain->timer);
-    gts_range_add_value (&domain->timestep,
-			 g_timer_elapsed (domain->timer, NULL));
+    gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
     gts_range_update (&domain->timestep);
-    gts_range_add_value (&domain->size, 
-			 gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
+    gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
     gts_range_update (&domain->size);
   }
   gfs_simulation_event (sim, sim->events->items);
@@ -808,9 +806,13 @@ void gfs_simulation_refine (GfsSimulation * sim)
   guint depth, nf = 0;
   gint l;
   gpointer data[2];
+  GfsDomain * domain;
 
   g_return_if_fail (sim != NULL);
 
+  domain = GFS_DOMAIN (sim);
+
+  gfs_domain_timer_start (domain, "simulation_refine");
   i = sim->refines->items;
   while (i) {
     GfsRefine * refine = i->data;
@@ -821,17 +823,20 @@ void gfs_simulation_refine (GfsSimulation * sim)
     i = next;
   }
 
-  depth = gfs_domain_depth (GFS_DOMAIN (sim));
+  depth = gfs_domain_depth (domain);
   for (l = depth - 2; l >= 0; l--)
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+    gfs_domain_cell_traverse (domain,
 			     FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
 			     (FttCellTraverseFunc) refine_cell_corner, 
-			      GFS_DOMAIN (sim));
-  gfs_domain_match (GFS_DOMAIN (sim));
+			      domain);
+  gfs_domain_match (domain);
+  gfs_domain_timer_stop (domain, "simulation_refine");
 
   if (sim->surface) {
+    gfs_domain_timer_start (domain, "solid_fractions");
     gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) box_init_solid_fractions, sim);
-    gfs_domain_match (GFS_DOMAIN (sim));
+    gfs_domain_match (domain);
+    gfs_domain_timer_stop (domain, "solid_fractions");
   }
   data[0] = sim;
   data[1] = &nf;
@@ -1187,5 +1192,8 @@ void gfs_simulation_run (GfsSimulation * sim)
 {
   g_return_if_fail (sim != NULL);
 
+  g_timer_start (GFS_DOMAIN (sim)->timer);
+  gts_range_init (&GFS_DOMAIN (sim)->mpi_wait);
   (* GFS_SIMULATION_CLASS (GTS_OBJECT (sim)->klass)->run) (sim);
+  g_timer_stop (GFS_DOMAIN (sim)->timer);
 }

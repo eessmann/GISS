@@ -359,9 +359,9 @@ static void ocean_run (GfsSimulation * sim)
   div = gfs_variable_from_name (domain->variables, "Div");
   g_assert (div);
 
-  gts_range_init (&domain->mpi_wait);
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
+    gdouble tstart;
     gboolean implicit;
 
     gfs_domain_cell_traverse (domain,
@@ -369,7 +369,7 @@ static void ocean_run (GfsSimulation * sim)
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gfs_simulation_event (sim, sim->events->items);
 
-    g_timer_start (domain->timer);
+    tstart = g_timer_elapsed (domain->timer, NULL);
 
     gfs_simulation_set_timestep (sim);
 
@@ -445,12 +445,9 @@ static void ocean_run (GfsSimulation * sim)
     sim->time.t = sim->tnext;
     sim->time.i++;
 
-    g_timer_stop (domain->timer);
-    gts_range_add_value (&domain->timestep,
-			 g_timer_elapsed (domain->timer, NULL));
+    gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
     gts_range_update (&domain->timestep);
-    gts_range_add_value (&domain->size, 
-			 gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
+    gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
     gts_range_update (&domain->size);
   }
   gfs_simulation_event (sim, sim->events->items);
