@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include "refine.h"
 #include "solid.h"
+#include "adaptive.h"
 
 /* GfsRefine: Object */
 
@@ -35,7 +36,7 @@ static void refine_box (GfsBox * box, GfsFunction * maxlevel)
 {
   ftt_cell_refine (box->root, 
 		   (FttCellRefineFunc) refine_maxlevel, maxlevel,
-		   (FttCellInitFunc) gfs_cell_init, gfs_box_domain (box));
+		   (FttCellInitFunc) gfs_cell_fine_init, gfs_box_domain (box));
 }
 
 static void gfs_refine_refine (GfsRefine * refine, GfsSimulation * sim)
@@ -146,7 +147,7 @@ static void refine_cut_cell (FttCell * cell, GtsSurface * s, gpointer * data)
 
   ftt_cell_pos (cell, &p);
   if (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, &p, 0.))
-    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_init, domain);
+    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
 }
 
 static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
@@ -155,7 +156,7 @@ static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
     gpointer data[2];
 
     data[0] = refine;
-    data[1] = sim;
+    data[1] = sim;    
     gfs_domain_traverse_cut (GFS_DOMAIN (sim), sim->surface, 
 			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			     (FttCellTraverseCutFunc) refine_cut_cell, data);
@@ -264,7 +265,7 @@ static void refine_surface_read (GtsObject ** o, GtsFile * fp)
 static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
 {
   gpointer data[2];
-  
+
   data[0] = refine;
   data[1] = sim;
   gfs_domain_traverse_cut (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
@@ -348,7 +349,7 @@ static void refine_distance (GfsBox * box, gpointer data)
 {
   ftt_cell_refine (box->root, 
 		   (FttCellRefineFunc) refine_distance_maxlevel, data,
-		   (FttCellInitFunc) gfs_cell_init, gfs_box_domain (box));
+		   (FttCellInitFunc) gfs_cell_fine_init, gfs_box_domain (box));
 }
 
 static void refine_distance_refine (GfsRefine * refine, GfsSimulation * sim)
@@ -447,7 +448,7 @@ static void refine_height (GfsBox * box, gpointer data)
   datum[1] = &guess;
   ftt_cell_refine (box->root, 
 		   (FttCellRefineFunc) refine_height_maxlevel, datum,
-		   (FttCellInitFunc) gfs_cell_init, gfs_box_domain (box));
+		   (FttCellInitFunc) gfs_cell_fine_init, gfs_box_domain (box));
 }
 
 static void refine_height_refine (GfsRefine * refine, GfsSimulation * sim)

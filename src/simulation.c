@@ -381,7 +381,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 	gchar * name, * path;
 	GModule * module;
 
-	name = g_strconcat (fp->token->str, FTT_DIMENSION == 2 ? "2D" : "3D");
+	name = g_strconcat (fp->token->str, FTT_DIMENSION == 2 ? "2D" : "3D", NULL);
 	path = g_module_build_path (GFS_MODULES_DIR, name);
 	g_free (name);
 	module = g_module_open (path, 0);
@@ -691,7 +691,7 @@ GfsSimulation * gfs_simulation_new (GfsSimulationClass * klass)
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {
   if (ftt_refine_corner (cell))
-    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_init, domain);
+    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
 }
 
 static void check_face (FttCellFace * f, guint * nf)

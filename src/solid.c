@@ -492,7 +492,7 @@ void gfs_cell_init_solid_fractions_from_children (FttCell * cell)
       }
       else {
 	GfsSolidVector * solid = GFS_STATE (child.c[i])->solid;
-	gdouble sa = solid_sa (solid);
+	gdouble sa = solid_sa (solid) + 1e-9;
 
 	w += solid->a; wa += sa;
 	cm.x += solid->cm.x*solid->a;

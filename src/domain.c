@@ -226,6 +226,8 @@ static void domain_post_read (GfsDomain * domain, GtsFile * fp)
     g_slist_free (removed);
   }
 #endif /* HAVE_MPI */
+
+  gfs_domain_match (domain);
 }
 
 static void free_pair (gpointer key, gpointer value)
