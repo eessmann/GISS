@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <signal.h>
 #include <math.h>
 #include "utils.h"
 #include "solid.h"
