@@ -24,7 +24,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include "simulation.h"
+#include <gts.h>
 
 typedef struct _GfsEvent                GfsEvent;
 typedef struct _GfsEventClass           GfsEventClass;
@@ -39,12 +39,16 @@ struct _GfsEvent {
   gboolean end_event, realised;
 };
 
+typedef struct _GfsSimulation           GfsSimulation;
+
 struct _GfsEventClass {
   GtsSListContaineeClass parent_class;
 
   gboolean (* event)      (GfsEvent * event, GfsSimulation * sim);
   void     (* event_half) (GfsEvent * event, GfsSimulation * sim);
 };
+
+#include "simulation.h"
 
 #define GFS_EVENT(obj)            GTS_OBJECT_CAST (obj,\
 					           GfsEvent,\
@@ -63,6 +67,12 @@ void            gfs_event_set         (GfsEvent * e,
 				       gint istart, 
 				       gint iend, 
 				       gint istep);
+void            gfs_event_init        (GfsEvent * event,
+				       GfsSimulation * sim);
+void            gfs_event_do          (GfsEvent * event, 
+				       GfsSimulation * sim);
+void            gfs_event_half_do     (GfsEvent * event, 
+				       GfsSimulation * sim);
 
 /* GfsGenericInit: Header */
 

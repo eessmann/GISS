@@ -26,8 +26,8 @@ extern "C" {
 
 typedef struct _GfsSurfaceGenericBc        GfsSurfaceGenericBc;
 
-#include "advection.h"
 #include "timestep.h"
+#include "event.h"
 
 /* GfsVariable: Header */
 
@@ -36,7 +36,7 @@ typedef void (* GfsVariableFineCoarseFunc) (FttCell * cell, GfsVariable * v);
 
 struct _GfsVariable {
   /*< private >*/
-  GtsObject parent;
+  GfsEvent parent;
 
   /*< public >*/
   guint i;
@@ -54,7 +54,7 @@ typedef struct _GfsVariableClass    GfsVariableClass;
 
 struct _GfsVariableClass {
   /*< private >*/
-  GtsObjectClass parent_class;
+  GfsEventClass parent_class;
 
   /*< public >*/
 };
@@ -105,6 +105,13 @@ struct _GfsVariableTracer {
 					     gfs_variable_tracer_class ()))
 
 GfsVariableClass * gfs_variable_tracer_class  (void);
+
+/* GfsVariableResidual: header */
+
+#define GFS_IS_VARIABLE_RESIDUAL(obj)         (gts_object_is_from_class (obj,\
+					       gfs_variable_residual_class ()))
+
+GfsVariableClass * gfs_variable_residual_class  (void);
 
 #ifdef __cplusplus
 }

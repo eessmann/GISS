@@ -23,12 +23,18 @@
 
 static void gfs_variable_read (GtsObject ** o, GtsFile * fp)
 {
-  if (fp->type != GTS_STRING) {
-    gts_file_error (fp, "expecting a string (GfsVariableClass)");
+  GfsEvent * e;
+
+  if (GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  e = GFS_EVENT (*o);
+  if (e->end < G_MAXDOUBLE || e->iend < G_MAXINT || e->end_event) {
+    gts_file_error (fp, "a GfsVariable event cannot end");
     return;
   }
-  gts_file_next_token (fp);
-
   if (fp->type != GTS_STRING) {
     gts_file_error (fp, "expecting a string (name)");
     return;
@@ -39,7 +45,9 @@ static void gfs_variable_read (GtsObject ** o, GtsFile * fp)
 
 static void gfs_variable_write (GtsObject * o, FILE * fp)
 {
-  fprintf (fp, "%s %s", o->klass->info.name, GFS_VARIABLE1 (o)->name);
+  if (GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->write)
+    (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %s", GFS_VARIABLE1 (o)->name);
 }
 
 static void gfs_variable_destroy (GtsObject * object)
@@ -52,8 +60,7 @@ static void gfs_variable_destroy (GtsObject * object)
   if (v->surface_bc)
     gts_object_destroy (GTS_OBJECT (v->surface_bc));
 
-  (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->destroy) 
-    (object);
+  (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->destroy) (object);
 }
 
 static void gfs_variable_clone (GtsObject * clone, GtsObject * object)
@@ -78,6 +85,7 @@ static void gfs_variable_class_init (GfsVariableClass * klass)
 
 static void gfs_variable_init (GfsVariable * v)
 {
+  GFS_EVENT (v)->istep = 1;
   v->fine_coarse = (GfsVariableFineCoarseFunc) gfs_get_from_below_intensive;
 }
 
@@ -95,7 +103,7 @@ GfsVariableClass * gfs_variable_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_object_class ()), &gfs_variable_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()), &gfs_variable_info);
   }
 
   return klass;
@@ -259,6 +267,51 @@ GfsVariableClass * gfs_variable_tracer_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
 				  &gfs_variable_tracer_info);
+  }
+
+  return klass;
+}
+
+/* GfsVariableResidual: Object */
+
+static void scale_residual (FttCell * cell, GfsVariable * res)
+{
+  gdouble size = ftt_cell_size (cell);
+  gdouble dt = GFS_SIMULATION (gfs_variable_parent (res))->advection_params.dt;
+  GFS_VARIABLE (cell, res->i) = dt*GFS_STATE (cell)->res/(size*size);
+}
+
+static gboolean variable_residual_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (gfs_variable_class ())->event) (event, sim)) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) scale_residual, event);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void variable_residual_class_init (GfsEventClass * klass)
+{
+  klass->event = variable_residual_event;
+}
+
+GfsVariableClass * gfs_variable_residual_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_residual_info = {
+      "GfsVariableResidual",
+      sizeof (GfsVariable),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_residual_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
+				  &gfs_variable_residual_info);
   }
 
   return klass;

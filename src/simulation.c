@@ -446,7 +446,6 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       if (klass == NULL ||
 	  (!gts_object_class_is_from_class (klass, gfs_refine_class ()) &&
 	   !gts_object_class_is_from_class (klass, gfs_event_class ()) &&
-	   !gts_object_class_is_from_class (klass, gfs_variable_class ()) &&
 	   !gts_object_class_is_from_class (klass, gfs_surface_generic_bc_class ()))) {
 	gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
 	return;
@@ -468,9 +467,6 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       else if (GFS_IS_ADAPT (object))
 	gts_container_add (GTS_CONTAINER (sim->adapts),
 			   GTS_CONTAINEE (object));
-      else if (GFS_IS_EVENT (object))
-	gts_container_add (GTS_CONTAINER (sim->events), 
-			   GTS_CONTAINEE (object));
       else if (GFS_IS_VARIABLE (object)) {
 	GfsVariable * v = GFS_VARIABLE1 (object);
 	GfsVariable * old = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, v->name);
@@ -484,6 +480,9 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 	}
 	sim->variables = g_slist_append (sim->variables, v);
       }
+      else if (GFS_IS_EVENT (object))
+	gts_container_add (GTS_CONTAINER (sim->events), 
+			   GTS_CONTAINEE (object));
       else if (GFS_IS_SURFACE_GENERIC_BC (object))
 	;
       else
@@ -521,12 +520,13 @@ static void simulation_run (GfsSimulation * sim)
 
   gfs_simulation_refine (sim);
 
-  gfs_simulation_event_init (sim, sim->events->items);
-  gfs_simulation_event_init (sim, sim->adapts->items);
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
+  gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
 
   gfs_set_merged (domain);
   v = domain->variables;
   while (v) {
+    gfs_event_init (GFS_EVENT (v), sim);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v);
     v = v->next;
   }
@@ -544,10 +544,15 @@ static void simulation_run (GfsSimulation * sim)
 	 sim->time.i < sim->time.iend) {
     gdouble tstart;
 
+    v = domain->variables;
+    while (v) {
+      gfs_event_do (GFS_EVENT (v), sim);
+      v = v->next;
+    }
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
-    gfs_simulation_event (sim, sim->events->items);
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
     tstart = g_timer_elapsed (domain->timer, NULL);
 
@@ -581,7 +586,7 @@ static void simulation_run (GfsSimulation * sim)
       v = v->next;
     }
 
-    gfs_simulation_event_half (sim, sim->events->items);
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
     sim->advection_params.c = ch;
     gfs_centered_velocity_advection_diffusion (domain,
@@ -601,7 +606,7 @@ static void simulation_run (GfsSimulation * sim)
     gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
     gts_range_update (&domain->size);
   }
-  gfs_simulation_event (sim, sim->events->items);
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
   gts_container_foreach (GTS_CONTAINER (sim->events),
 			 (GtsFunc) gts_object_destroy, NULL);
 }
@@ -865,99 +870,6 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
   if (sim->tnext > sim->time.end) {
     sim->advection_params.dt = sim->time.end - t;
     sim->tnext = sim->time.end;
-  }
-}
-
-/**
- * gfs_simulation_event:
- * @sim: a #GfsSimulation.
- * @events: a list of #GfsEvent.
- * 
- * Checks if any event associated with @sim must be activated and
- * activates it if necessary.
- */
-void gfs_simulation_event (GfsSimulation * sim,
-			   GSList * events)
-{
-  g_return_if_fail (sim != NULL);
-
-  while (events) {
-    GfsEvent * event = events->data;
-    GSList * next = events->next;
-
-    g_assert (GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event);
-    (* GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event) (event, sim);
-    
-    events = next;
-  }
-}
-
-/**
- * gfs_simulation_event_half:
- * @sim: a #GfsSimulation.
- * @events: a list of #GfsEvent.
- * 
- * Checks if any half-timestep event associated with @sim must be
- * activated and activates it if necessary.
- */
-void gfs_simulation_event_half (GfsSimulation * sim,
-				GSList * events)
-{
-  g_return_if_fail (sim != NULL);
-
-  while (events) {
-    GfsEvent * event = events->data;
-    GSList * next = events->next;
-
-    if (event->realised && GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event_half)
-      (* GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event_half) (event, sim);
-    
-    events = next;
-  }
-}
-
-/**
- * gfs_simulation_event_init:
- * @sim: a #GfsSimulation.
- * @events: a list of #GfsEvent.
- *
- * Initalizes the events associated with @sim. In particular, all the
- * "init" events are activated by this function.
- */
-void gfs_simulation_event_init (GfsSimulation * sim,
-				GSList * events)
-{
-  g_return_if_fail (sim != NULL);
-
-  while (events) {
-    GfsEvent * event = events->data;
-    GSList * next = events->next;
-
-    if (GFS_DOMAIN (sim)->pid > 0 &&
-	GFS_IS_OUTPUT (event) && 
-	(!strcmp (GFS_OUTPUT (event)->format, "stderr") ||
-	 !strcmp (GFS_OUTPUT (event)->format, "stdout")))
-      gfs_output_mute (GFS_OUTPUT (event));
-
-    if (event->start < 0.) { /* "init" event */
-      g_assert (GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event);
-      (* GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event) (event, sim);
-    }
-    else if (event->end_event)
-      event->t = event->start = G_MAXDOUBLE/2.;
-    else {
-      if (event->istep < G_MAXINT)
-	while (event->i < sim->time.i) {
-	  event->n++;
-	  event->i += event->istep;
-	}
-      else
-	while (event->t < sim->time.t) {
-	  event->n++;
-	  event->t = event->start + event->n*event->step;
-	}
-    }
-    events = next;
   }
 }
 

@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include "event.h"
 #include "solid.h"
+#include "output.h"
 
 static gboolean gfs_event_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -98,7 +99,7 @@ static void gfs_event_write (GtsObject * object, FILE * fp)
   fputc ('}', fp);
 }
 
-static void gfs_event_init (GfsEvent * object)
+static void event_init (GfsEvent * object)
 {
   object->t      = 0.;
   object->start  = 0.;
@@ -265,7 +266,7 @@ GfsEventClass * gfs_event_class (void)
       sizeof (GfsEvent),
       sizeof (GfsEventClass),
       (GtsObjectClassInitFunc) gfs_event_class_init,
-      (GtsObjectInitFunc) gfs_event_init,
+      (GtsObjectInitFunc) event_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -303,7 +304,7 @@ GfsEvent * gfs_event_new (GfsEventClass * klass)
  * If any of the arguments is negative, the corresponding value in @e
  * is unchanged.
  */
-void gfs_event_set (GfsEvent * e, 
+void gfs_event_set (GfsEvent * e,
 		    gdouble start, gdouble end, gdouble step,
 		    gint istart, gint iend, gint istep)
 {
@@ -327,6 +328,78 @@ void gfs_event_set (GfsEvent * e,
     e->i = e->istart;
   else
     e->i = e->istart = G_MAXINT/2;
+}
+
+/**
+ * gfs_event_init:
+ * @event: a #GfsEvent.
+ * @sim: a #GfsSimulation.
+ *
+ * Initalizes @event associated with @sim. In particular, if @event is
+ * an "init" event it is activated by this function.
+ */
+void gfs_event_init (GfsEvent * event,
+		     GfsSimulation * sim)
+{
+  g_return_if_fail (event != NULL);
+  g_return_if_fail (sim != NULL);
+
+  if (GFS_DOMAIN (sim)->pid > 0 &&
+      GFS_IS_OUTPUT (event) && 
+      (!strcmp (GFS_OUTPUT (event)->format, "stderr") ||
+       !strcmp (GFS_OUTPUT (event)->format, "stdout")))
+    gfs_output_mute (GFS_OUTPUT (event));
+  
+  if (event->start < 0.) { /* "init" event */
+    g_assert (GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event);
+    (* GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event) (event, sim);
+  }
+  else if (event->end_event)
+    event->t = event->start = G_MAXDOUBLE/2.;
+  else {
+    if (event->istep < G_MAXINT)
+      while (event->i < sim->time.i) {
+	event->n++;
+	event->i += event->istep;
+      }
+    else
+      while (event->t < sim->time.t) {
+	event->n++;
+	event->t = event->start + event->n*event->step;
+      }
+  }
+}
+
+/**
+ * gfs_event_do:
+ * @event: a #GfsEvent:
+ * @sim: a #GfsSimulation.
+ * 
+ * Realises the event if active.
+ */
+void gfs_event_do (GfsEvent * event, GfsSimulation * sim)
+{
+  g_return_if_fail (event != NULL);
+  g_return_if_fail (sim != NULL);
+
+  g_assert (GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event);
+  (* GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event) (event, sim);
+}
+
+/**
+ * gfs_event_half_do:
+ * @event: a #GfsEvent:
+ * @sim: a #GfsSimulation.
+ * 
+ * Realises the half-event if active.
+ */
+void gfs_event_half_do (GfsEvent * event, GfsSimulation * sim)
+{
+  g_return_if_fail (event != NULL);
+  g_return_if_fail (sim != NULL);
+
+  if (event->realised && GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event_half)
+    (* GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event_half) (event, sim);
 }
 
 /* GfsGenericInit: Object */

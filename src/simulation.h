@@ -27,7 +27,9 @@ extern "C" {
 #include "domain.h"
 #include "timestep.h"
 
-typedef struct _GfsSimulation         GfsSimulation;
+#ifndef __EVENT_H__
+  typedef struct _GfsSimulation         GfsSimulation;
+#endif
 typedef struct _GfsSimulationClass    GfsSimulationClass;
 typedef struct _GfsTime               GfsTime;
 typedef struct _GfsPhysicalParams     GfsPhysicalParams;
@@ -103,12 +105,6 @@ void                 gfs_simulation_write        (GfsSimulation * sim,
 GfsSimulation *      gfs_simulation_read         (GtsFile * fp);
 void                 gfs_simulation_refine       (GfsSimulation * sim);
 void                 gfs_simulation_set_timestep (GfsSimulation * sim);
-void                 gfs_simulation_event        (GfsSimulation * sim,
-						  GSList * events);
-void                 gfs_simulation_event_half   (GfsSimulation * sim,
-						  GSList * events);
-void                 gfs_simulation_event_init   (GfsSimulation * sim,
-						  GSList * events);
 void                 gfs_time_init               (GfsTime * t);
 void                 gfs_time_write              (GfsTime * t, 
 						  FILE * fp);

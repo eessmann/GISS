@@ -345,12 +345,13 @@ static void ocean_run (GfsSimulation * sim)
 
   gfs_simulation_refine (sim);
 
-  gfs_simulation_event_init (sim, sim->events->items);
-  gfs_simulation_event_init (sim, sim->adapts->items);
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
+  gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
 
   gfs_set_merged (domain);
   v = domain->variables;
   while (v) {
+    gfs_event_init (GFS_EVENT (v), sim);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v);
     v = v->next;
   }
@@ -364,10 +365,15 @@ static void ocean_run (GfsSimulation * sim)
     gdouble tstart;
     gboolean implicit;
 
+    v = domain->variables;
+    while (v) {
+      gfs_event_do (GFS_EVENT (v), sim);
+      v = v->next;
+    }
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
-    gfs_simulation_event (sim, sim->events->items);
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
     tstart = g_timer_elapsed (domain->timer, NULL);
 
@@ -411,7 +417,7 @@ static void ocean_run (GfsSimulation * sim)
       v = v->next;
     }
 
-    gfs_simulation_event_half (sim, sim->events->items);
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
     gfs_centered_velocity_advection_diffusion (domain, 2,
 					       &sim->advection_params,
@@ -450,7 +456,7 @@ static void ocean_run (GfsSimulation * sim)
     gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
     gts_range_update (&domain->size);
   }
-  gfs_simulation_event (sim, sim->events->items);
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
   gts_container_foreach (GTS_CONTAINER (sim->events),
 			 (GtsFunc) gts_object_destroy, NULL);
 }
