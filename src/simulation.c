@@ -188,7 +188,14 @@ static void simulation_write (GtsObject * object, FILE * fp)
 
   if (sim->surface) {
     fputs ("  GtsSurface { ", fp);
-    gts_surface_write (sim->surface, fp);
+    if (GFS_DOMAIN (sim)->binary) {
+      gboolean binary = GTS_POINT_CLASS (sim->surface->vertex_class)->binary;
+      GTS_POINT_CLASS (sim->surface->vertex_class)->binary = TRUE;
+      gts_surface_write (sim->surface, fp);
+      GTS_POINT_CLASS (sim->surface->vertex_class)->binary = binary;
+    }
+    else
+      gts_surface_write (sim->surface, fp);
     fputs ("}\n", fp);
   }
 #if 1
