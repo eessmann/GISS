@@ -911,9 +911,12 @@ static void gfs_event_harmonic_destroy (GtsObject * o)
 {
   GfsEventHarmonic * s = GFS_EVENT_HARMONIC (o);
 
-  gfs_matrix_free (s->Mn);
-  gfs_matrix_free (s->M);
-  gfs_matrix_free (s->iM);
+  if (s->Mn)
+    gfs_matrix_free (s->Mn);
+  if (s->M)
+    gfs_matrix_free (s->M);
+  if (s->iM)
+    gfs_matrix_free (s->iM);
 
   g_free (s->A);
   g_free (s->B);
@@ -1071,16 +1074,19 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
 
 static void add_xsin_xcos (FttCell * cell, GfsEventHarmonic * h)
 {
+  gdouble x = GFS_VARIABLE (cell, h->v->i);
   guint i;
 
   for (i = 0; i < h->omega->len; i++) {
-    GFS_VARIABLE (cell, h->A[i]->i) += GFS_VARIABLE (cell, h->v->i)*h->vcos[i];
-    GFS_VARIABLE (cell, h->B[i]->i) += GFS_VARIABLE (cell, h->v->i)*h->vsin[i];
+    GFS_VARIABLE (cell, h->A[i]->i) += x*h->vcos[i];
+    GFS_VARIABLE (cell, h->B[i]->i) += x*h->vsin[i];
   }
+  GFS_VARIABLE (cell, h->z->i) += x;
 }
 
 static void update_A_B_Z (FttCell * cell, GfsEventHarmonic * h)
 {
+  gdouble x = GFS_VARIABLE (cell, h->v->i);
   guint n = h->omega->len;
   guint i, j;
 
@@ -1092,7 +1098,7 @@ static void update_A_B_Z (FttCell * cell, GfsEventHarmonic * h)
   h->a[2*n] = GFS_VARIABLE (cell, h->z->i);
 
   /* X^n = M^n.A^n */
-  for (i = 0; i < 2*n; i++) {
+  for (i = 0; i < 2*n + 1; i++) {
     h->x[i] = 0.;
     for (j = 0; j < 2*n + 1; j++)
       h->x[i] += h->Mn[i][j]*h->a[j];
@@ -1100,10 +1106,10 @@ static void update_A_B_Z (FttCell * cell, GfsEventHarmonic * h)
   
   /* X^n+1 = X^n + Delta^n */
   for (i = 0; i < n; i++) {
-    h->x[i]     += GFS_VARIABLE (cell, h->v->i)*h->vcos[i];
-    h->x[i + n] += GFS_VARIABLE (cell, h->v->i)*h->vsin[i];
+    h->x[i]     += x*h->vcos[i];
+    h->x[i + n] += x*h->vsin[i];
   }
-  h->x[2*n] = 0.;
+  h->x[2*n] += x;
 
   /* A^n+1 = (M^n+1)^-1.X^n+1 */
   for (i = 0; i < 2*n + 1; i++) {
