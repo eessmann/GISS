@@ -2462,13 +2462,10 @@ static void tag_cell (FttCell * cell, guint tag, guint * size)
       else {
 	FttCellChildren child;
 	FttDirection od = FTT_OPPOSITE_DIRECTION (d);
-	guint i;
+	guint i, j;
 	
-#if FTT_2D3
-	g_assert_not_implemented ();
-#endif	
-	ftt_cell_children_direction (n.c[d], od, &child);
-	for (i = 0; i < FTT_CELLS/2; i++)
+	j = ftt_cell_children_direction (n.c[d], od, &child);
+	for (i = 0; i < j; i++)
 	  if (child.c[i] && GFS_STATE (child.c[i])->div == 0. &&
 	      (!GFS_IS_MIXED (child.c[i]) || GFS_STATE (child.c[i])->solid->s[od] > 0.))
 	    tag_cell (child.c[i], tag, size);
@@ -2494,7 +2491,10 @@ static gboolean remove_small (FttCell * cell, gpointer * data)
 
     g_assert (GFS_STATE (cell)->div > 0.);
     if (g_array_index (sizes, guint, i) < *min) {
-      ftt_cell_destroy (cell, data[2], data[3]);
+      if (FTT_CELL_IS_ROOT (cell))
+	g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR, "root cell belongs to a pond");
+      else
+	ftt_cell_destroy (cell, data[2], data[3]);
       return TRUE;
     }
     return FALSE;
@@ -2508,9 +2508,13 @@ static gboolean remove_small (FttCell * cell, gpointer * data)
     for (i = 0; i < FTT_CELLS; i++)
       if (child.c[i] && remove_small (child.c[i], data))
 	changed = TRUE;
-    if (FTT_CELL_IS_LEAF (cell))
-      /* all the children have been destroyed i.e. the cell belongs to a small island */
-      ftt_cell_destroy (cell, data[2], data[3]);
+    if (FTT_CELL_IS_LEAF (cell)) {
+      /* all the children have been destroyed i.e. the cell belongs to a small pond */
+      if (FTT_CELL_IS_ROOT (cell))
+	g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR, "root cell belongs to a pond");
+      else
+	ftt_cell_destroy (cell, data[2], data[3]);
+    }
     else if (changed)
       gfs_cell_init_solid_fractions_from_children (cell);
     return changed;
@@ -2519,7 +2523,10 @@ static gboolean remove_small (FttCell * cell, gpointer * data)
 
 static void remove_small_box (GfsBox * box, gpointer * data)
 {
-  remove_small (box->root, data);
+  gboolean * changed = data[4];
+
+  if (remove_small (box->root, data))
+    *changed = TRUE;
 }
 
 /**
@@ -2532,6 +2539,9 @@ static void remove_small_box (GfsBox * box, gpointer * data)
  * Removes all the fluid "ponds" of @domain smaller than @min cells
  * if @min is positive, or all the ponds but the -@min largest ones
  * if @min is negative.
+ *
+ * If the domain is modified its boundaries are re"matched" using
+ * gfs_domain_match().
  */
 void gfs_domain_remove_ponds (GfsDomain * domain, 
 			      gint min,
@@ -2539,8 +2549,9 @@ void gfs_domain_remove_ponds (GfsDomain * domain,
 			      gpointer data)
 {
   GArray * sizes;
-  gpointer dat[4];
+  gpointer dat[5];
   guint minsize;
+  gboolean changed = FALSE;
 
   g_return_if_fail (domain != NULL);
 
@@ -2565,8 +2576,11 @@ void gfs_domain_remove_ponds (GfsDomain * domain,
   dat[1] = &minsize;
   dat[2] = cleanup;
   dat[3] = data;
+  dat[4] = &changed;
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) remove_small_box, dat);
   g_array_free (sizes, TRUE);
+  if (changed)
+    gfs_domain_match (domain);
 }
 
 static gboolean tag_speck (FttCell * cell)
@@ -2630,6 +2644,8 @@ static void fill_speck (FttCell * cell, gboolean * changed)
  *
  * Removes all the solid "specks" of @domain. Solid specks are islands
  * which do not contain any empty cell.
+ *
+ * Note that the domain's boundaries are not "matched" automatically.
  */
 void gfs_domain_remove_specks (GfsDomain * domain)
 {
@@ -2647,6 +2663,7 @@ void gfs_domain_remove_specks (GfsDomain * domain)
     gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_init_solid_fractions_from_children, 
 			      NULL);
+    
 }
 
 /**
