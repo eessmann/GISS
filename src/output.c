@@ -1138,10 +1138,10 @@ static gboolean gfs_output_location_event (GfsEvent * event,
       (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsOutputLocation * location = GFS_OUTPUT_LOCATION (event);
+    FILE * fp = GFS_OUTPUT (event)->file->fp;
     guint i;
 
     if (GFS_OUTPUT (event)->first_call) {
-      FILE * fp = GFS_OUTPUT (event)->file->fp;
       GfsVariable * v = domain->variables;
       guint nv = 5;
 
@@ -1158,7 +1158,6 @@ static gboolean gfs_output_location_event (GfsEvent * event,
       FttCell * cell = gfs_domain_locate (domain, p, -1);
       
       if (cell != NULL) {
-	FILE * fp = GFS_OUTPUT (event)->file->fp;
 	GfsVariable * v = domain->variables;
 	
 	fprintf (fp, "%g %g %g %g", sim->time.t, p.x, p.y, p.z);
@@ -1170,6 +1169,7 @@ static gboolean gfs_output_location_event (GfsEvent * event,
 	fputc ('\n', fp);
       }
     }
+    fflush (fp);
     return TRUE;
   }
   return FALSE;
