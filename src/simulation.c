@@ -75,8 +75,6 @@ static void simulation_destroy (GtsObject * object)
 
   if (sim->surface)
     gts_object_destroy (GTS_OBJECT (sim->surface));
-  if (sim->stree)
-    gts_bb_tree_destroy (sim->stree, TRUE);
 
   gts_container_foreach (GTS_CONTAINER (sim->refines),
 			 (GtsFunc) gts_object_destroy, NULL);
@@ -556,13 +554,8 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   fp->scope_max--;
   gts_file_next_token (fp);
 
-  if (sim->surface) {
-    if (sim->stree)
-      gts_bb_tree_destroy (sim->stree, TRUE);
-    sim->stree = gts_bb_tree_surface (sim->surface);
-    if (gts_surface_volume (sim->surface) < 0.)
-      sim->is_open = TRUE;
-  }
+  if (sim->surface && gts_surface_volume (sim->surface) < 0.)
+    sim->is_open = TRUE;
   if (sim->interface) {
     if (sim->itree)
       gts_bb_tree_destroy (sim->itree, TRUE);
@@ -695,7 +688,6 @@ static void gfs_simulation_init (GfsSimulation * object)
   gfs_multilevel_params_init (&object->approx_projection_params);
 
   object->surface = NULL;
-  object->stree = NULL;
   object->is_open = FALSE;
 
   object->interface = NULL;
@@ -752,7 +744,7 @@ GfsSimulation * gfs_simulation_new (GfsSimulationClass * klass)
 static void box_init_solid_fractions (GfsBox * box, GfsSimulation * sim)
 {
   gfs_cell_init_solid_fractions (box->root, 
-				 sim->surface, sim->stree, sim->is_open,
+				 sim->surface, sim->is_open,
 				 TRUE, (FttCellCleanupFunc) gfs_cell_cleanup,
 				 NULL);
   if (FTT_CELL_IS_DESTROYED (box->root)) {
@@ -787,7 +779,7 @@ static void check_solid_fractions (GfsBox * box, gpointer * data)
   guint * nf = data[1];
   FttDirection d;
 
-  gfs_cell_check_solid_fractions (box->root, sim->surface, sim->stree, sim->is_open);
+  gfs_cell_check_solid_fractions (box->root, sim->surface, sim->is_open);
   for (d = 0; d < FTT_NEIGHBORS; d++)
     ftt_face_traverse_boundary (box->root, d, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttFaceTraverseFunc) check_face, nf);

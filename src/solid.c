@@ -222,35 +222,6 @@ static void gfs_cell_solid (FttCell * cell)
   }
 }
 
-static void set_solid_or_fluid (FttCell * cell,
-				GNode * tree,
-				gboolean is_open,
-				gboolean destroy_solid,
-				FttCellCleanupFunc cleanup,
-				gpointer data)
-{
-  FttVector pos;
-  GtsPoint * p;
-
-  ftt_cell_pos (cell, &pos);
-  p = gts_point_new (gts_point_class (), pos.x, pos.y, pos.z);
-  if (gts_point_is_inside_surface (p, tree, is_open))
-    gfs_cell_fluid (cell);
-  else {
-    if (destroy_solid) {
-      if (FTT_CELL_IS_ROOT (cell))
-	g_log (G_LOG_DOMAIN,
-	       G_LOG_LEVEL_ERROR,
-	       "root cell is entirely outside of the fluid domain\n"
-	       "the solid surface orientation may be incorrect\n");
-      ftt_cell_destroy (cell, cleanup, data);
-    }
-    else
-      gfs_cell_solid (cell);
-  }
-  gts_object_destroy (GTS_OBJECT (p));
-}
-
 static void add_surface_fraction (GfsFace * f, GfsSolidVector * solid)
 {
   if (f->dir < FTT_NEIGHBORS)
@@ -347,9 +318,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
     g_return_if_fail (!gts_surface_inter_check (si, &closed));
   }
 #endif
-  if (si->edges == NULL)
-    set_solid_or_fluid (cell, stree, is_open, destroy_solid, cleanup, data);
-  else {
+  if (si->edges != NULL) {
     GtsSurface * inter = gts_surface_new (gts_surface_class (),
 					  gts_face_class (),
 					  gts_edge_class (),
@@ -541,11 +510,115 @@ void gfs_cell_init_solid_fractions_from_children (FttCell * cell)
   }
 }
 
+static void push_leaf (GtsFifo * fifo, FttCell * cell, FttDirection d, gdouble a)
+{
+  if (FTT_CELL_IS_LEAF (cell)) {
+    if (!GFS_IS_MIXED (cell) && GFS_STATE (cell)->div == 0.) {
+      GFS_STATE (cell)->div = a;
+      gts_fifo_push (fifo, cell);
+    }
+  }
+  else {
+    FttCellChildren child;
+    guint i, n;
+    
+    n = ftt_cell_children_direction (cell, FTT_OPPOSITE_DIRECTION (d), &child);
+    for (i = 0; i < n; i++)
+      if (child.c[i] && !GFS_IS_MIXED (child.c[i]) && GFS_STATE (child.c[i])->div == 0.) {
+	g_assert (FTT_CELL_IS_LEAF (child.c[i]));
+	GFS_STATE (child.c[i])->div = a;
+	gts_fifo_push (fifo, child.c[i]);
+      }
+  }  
+}
+
+static void paint_leaf (GtsFifo * fifo, gdouble a)
+{
+  FttCell * cell;
+
+  while ((cell = gts_fifo_pop (fifo))) {
+    FttDirection i;
+    FttCellNeighbors n;
+    
+    ftt_cell_neighbors (cell, &n);
+    for (i = 0; i < FTT_NEIGHBORS; i++)
+      if (n.c[i])
+	push_leaf (fifo, n.c[i], i, a);
+  }
+}
+
+static void paint_mixed_leaf (FttCell * cell)
+{
+  if (GFS_IS_MIXED (cell)) {
+    GfsSolidVector * solid = GFS_STATE (cell)->solid;
+    GtsFifo * fifo;
+    FttCell * n;
+    FttDirection i;
+    
+    fifo = gts_fifo_new ();
+    for (i = 0; i < FTT_NEIGHBORS; i++)
+      if ((solid->s[i] == 0. || solid->s[i] == 1.) &&
+	  (n = ftt_cell_neighbor (cell, i))) {
+	push_leaf (fifo, n, i, solid->s[i] + 1.);
+	paint_leaf (fifo, solid->s[i] + 1.);
+      }
+    gts_fifo_destroy (fifo);
+  }
+}
+
+
+typedef struct {
+  gboolean is_open, destroy_solid;
+  FttCellCleanupFunc cleanup;
+  gpointer data;
+} InitSolidParams;
+
+static void init_solid_fractions (FttCell * cell, GtsSurface * s, InitSolidParams * p)
+{
+  GtsBBox * bbox;
+  GNode * stree;
+
+  bbox = bbox_cell (gts_bbox_class (), cell);
+  stree = gts_bb_tree_surface (s);
+  set_solid_fractions_from_surface (cell, bbox, s, stree,
+  				    p->is_open, p->destroy_solid, p->cleanup, p->data);
+  gts_bb_tree_destroy (stree, TRUE);
+  gts_object_destroy (GTS_OBJECT (bbox));
+}
+
+static void solid_fractions_from_children (FttCell * cell, InitSolidParams * p)
+{
+  if (FTT_CELL_IS_LEAF (cell)) {
+    if (p->destroy_solid && GFS_STATE (cell)->div == 1.)
+      ftt_cell_destroy (cell, p->cleanup, p->data);      
+  }
+  else {
+    FttCellChildren child;
+    guint i;
+    
+    ftt_cell_children (cell, &child);
+    for (i = 0; i < FTT_CELLS; i++)
+      if (child.c[i])
+	solid_fractions_from_children (child.c[i], p);
+    if (FTT_CELL_IS_LEAF (cell)) {
+      /* all the children have been destroyed i.e. the cell is solid */
+      if (FTT_CELL_IS_ROOT (cell))
+	g_log (G_LOG_DOMAIN,
+	       G_LOG_LEVEL_ERROR,
+	       "root cell is entirely outside of the fluid domain\n"
+	       "the solid surface orientation may be incorrect\n");
+      else
+	ftt_cell_destroy (cell, p->cleanup, p->data);
+    }
+    else
+      gfs_cell_init_solid_fractions_from_children (cell);
+  }
+}
+
 /**
  * gfs_cell_init_solid_fractions:
  * @root: the root #FttCell of the cell tree.
  * @s: a closed, orientable surface defining the solid boundary.
- * @stree: a bounding box tree of the faces of @s.
  * @is_open: %TRUE if @s is an "open" boundary i.e. the signed volume
  * enclosed by @s is negative, %FALSE otherwise.
  * @destroy_solid: controls what to do with solid cells.
@@ -558,53 +631,29 @@ void gfs_cell_init_solid_fractions_from_children (FttCell * cell)
  * If @destroy_solid is set to %TRUE, the cells entirely contained in
  * the solid are destroyed using @cleanup as cleanup function.  
  */
-void gfs_cell_init_solid_fractions (FttCell * root, 
+void gfs_cell_init_solid_fractions (FttCell * root,
 				    GtsSurface * s,
-				    GNode * stree,
 				    gboolean is_open,
 				    gboolean destroy_solid,
 				    FttCellCleanupFunc cleanup,
 				    gpointer data)
 {
-  GtsBBox * bbox;
+  InitSolidParams p;
 
   g_return_if_fail (root != NULL);
   g_return_if_fail (s != NULL);
-  g_return_if_fail (stree != NULL);
 
-  bbox = bbox_cell (gts_bbox_class (), root);
-  if (!gts_bb_tree_is_overlapping (stree, bbox))
-    set_solid_or_fluid (root, stree, is_open, destroy_solid, cleanup, data);
-  else {
-    if (FTT_CELL_IS_LEAF (root))
-      set_solid_fractions_from_surface (root, bbox, 
-					s, stree, is_open,
-					destroy_solid, cleanup, data);
-    else { /* !FTT_CELL_IS_LEAF (root) */
-      FttCellChildren child;
-      guint i;
-
-      ftt_cell_children (root, &child);
-      for (i = 0; i < FTT_CELLS; i++)
-	if (child.c[i])
-	  gfs_cell_init_solid_fractions (child.c[i],
-					s, stree, is_open,
-					destroy_solid, cleanup, data);
-      if (FTT_CELL_IS_LEAF (root)) {
-	/* all the children have been destroyed i.e. the cell is solid */
-	if (FTT_CELL_IS_ROOT (root))
-	  g_log (G_LOG_DOMAIN,
-		 G_LOG_LEVEL_ERROR,
-		 "root cell is entirely outside of the fluid domain\n"
-		 "the solid surface orientation may be incorrect\n");
-	ftt_cell_destroy (root, cleanup, data);
-      }
-      else
-	gfs_cell_init_solid_fractions_from_children (root);
-    }
-  }
-
-  gts_object_destroy (GTS_OBJECT (bbox));
+  p.is_open = is_open;
+  p.destroy_solid = destroy_solid;
+  p.cleanup = cleanup;
+  p.data = data;
+  gfs_cell_traverse_cut (root, s, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			 (FttCellTraverseCutFunc) init_solid_fractions, &p);
+  ftt_cell_traverse (root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		     (FttCellTraverseFunc) gfs_cell_reset, gfs_div);
+  ftt_cell_traverse (root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		     (FttCellTraverseFunc) paint_mixed_leaf, NULL);
+  solid_fractions_from_children (root, &p);
 }
 
 static gboolean check_area_fractions (const FttCell * root)
@@ -720,32 +769,28 @@ static void check_solid_fractions (FttCell * cell, gboolean * ret)
  * gfs_cell_check_solid_fractions:
  * @root: the root #FttCell of the cell tree to check.
  * @solid: a closed, orientable surface defining the solid boundary or %NULL.
- * @stree: a bounding box tree of the faces of @solid or %NULL (only if @solid
- * is also %NULL).
  * @is_open: %TRUE if @solid is an "open" surface.
  * 
  * Checks the consistency of the solid fractions of each cell of the
  * cell tree relative to the neighboring solid fractions and to the
  * solid geometry they represent (if @solid is not %NULL).
  *
- * Returns: %TRUE if the solid fractions are consistent, %FALSE otherwise.  
+ * Returns: %TRUE if the solid fractions are consistent, %FALSE otherwise.
  */
 gboolean gfs_cell_check_solid_fractions (FttCell * root,
 					 GtsSurface * solid,
-					 GNode * stree,
 					 gboolean is_open)
 {
   gboolean ret = TRUE;
 
   g_return_val_if_fail (root != NULL, FALSE);
-  g_return_val_if_fail (solid == NULL || stree != NULL, FALSE);
 
 #if (!FTT_2D)
   if (solid) {
     /* check that the total volume of the union of the solid with the
        domain is equal to the volume fraction of the root cell */
     GtsSurface * domain; 
-    GNode * dtree; 
+    GNode * dtree, * stree;
     GtsSurfaceInter * si;
     FttVector p;
     GtsVector size;
@@ -761,8 +806,10 @@ gboolean gfs_cell_check_solid_fractions (FttCell * root,
 		     p.x - size[0]/2., p.y - size[1]/2., p.z - size[2]/2., 
 		     p.x + size[0]/2., p.y + size[1]/2., p.z + size[2]/2.);
     dtree = gts_bb_tree_surface (domain);
+    stree = gts_bb_tree_surface (solid);
     si = gts_surface_inter_new (gts_surface_inter_class (),
 				domain, solid, dtree, stree, FALSE, is_open);
+    gts_bb_tree_destroy (stree, TRUE);
     gts_bb_tree_destroy (dtree, TRUE);
     g_assert (gts_surface_inter_check (si, &closed));
     

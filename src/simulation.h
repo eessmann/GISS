@@ -63,7 +63,6 @@ struct _GfsSimulation {
   GfsMultilevelParams diffusion_params;
 
   GtsSurface * surface;
-  GNode * stree;
   gboolean is_open;
 
   GtsSurface * interface;

@@ -138,41 +138,23 @@ GfsRefine * gfs_refine_new (GfsRefineClass * klass)
 
 /* GfsRefineSolid: Object */
 
-static gboolean refine_solid_maxlevel (FttCell * cell, GfsRefine * refine)
+static void refine_cut_cell (FttCell * cell, GtsSurface * s, gpointer * data)
 {
-  if (GFS_IS_MIXED (cell)) {
-    FttVector p;
+  GfsRefine * refine = data[0];
+  GfsDomain * domain = data[1];
+  FttVector p;
 
-    gfs_cell_cm (cell, &p);
-    return (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, &p, 0.));
-  }
-  return FALSE;
-}
-
-static void refine_solid_fractions (FttCell * cell, GfsSimulation * sim)
-{
-  gfs_cell_init (cell, GFS_DOMAIN (sim));
-  if (GFS_CELL_IS_BOUNDARY (ftt_cell_parent (cell)))
-    cell->flags |= GFS_FLAG_BOUNDARY;
-  else
-    gfs_cell_init_solid_fractions (cell, sim->surface, sim->stree, sim->is_open,
-				   TRUE, (FttCellCleanupFunc) gfs_cell_cleanup,
-				   NULL);
+  ftt_cell_pos (cell, &p);
+  if (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, &p, 0.))
+    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_init, domain);
 }
 
 static void refine_solid (GfsBox * box, gpointer * data)
 {
-  GfsRefine * refine = data[0];
   GfsSimulation * sim = data[1];
 
-  gfs_cell_init_solid_fractions (box->root, 
-  				 sim->surface, sim->stree, sim->is_open, 
-  				 TRUE, (FttCellCleanupFunc) gfs_cell_cleanup,
-  				 NULL);
-g_assert (!FTT_CELL_IS_DESTROYED (box->root));
-  ftt_cell_refine (box->root, 
-		   (FttCellRefineFunc) refine_solid_maxlevel, refine,
-		   (FttCellInitFunc) refine_solid_fractions, sim);
+  gfs_cell_traverse_cut (box->root, sim->surface, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			 (FttCellTraverseCutFunc) refine_cut_cell, data);
 }
 
 static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
