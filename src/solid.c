@@ -558,7 +558,7 @@ static void solid_fractions_from_children (FttCell * cell, InitSolidParams * p)
     if (FTT_CELL_IS_ROOT (cell))
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
 	     "root cell is entirely outside of the fluid domain\n"
-	     "the solid surface orientation may be incorrect\n");
+	     "the solid surface orientation may be incorrect");
     else
       ftt_cell_destroy (cell, p->cleanup, p->data);
   }

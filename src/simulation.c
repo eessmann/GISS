@@ -265,15 +265,8 @@ static GtsSurface * read_surface_file (GtsFile * fp, GtsSurface * surface)
   }
   
   if (surface) {
-    GtsSurface * self;
-    
     gts_surface_merge (surface, s);
     gts_object_destroy (GTS_OBJECT (s));
-    if ((self = gts_surface_is_self_intersecting (surface))) {
-      gts_object_destroy (GTS_OBJECT (self));
-      gts_file_error (fp, "merged surface is self-intersecting");
-      return NULL;
-    }
     return surface;
   }
   return s;
@@ -314,15 +307,8 @@ static GtsSurface * read_surface (GtsFile * fp, GtsSurface * surface)
   }
   
   if (surface) {
-    GtsSurface * self;
-    
     gts_surface_merge (surface, s);
     gts_object_destroy (GTS_OBJECT (s));
-    if ((self = gts_surface_is_self_intersecting (surface))) {
-      gts_object_destroy (GTS_OBJECT (self));
-      gts_file_error (fp, "merged surface is self-intersecting");
-      return NULL;
-    }
     return surface;
   }
   return s;
