@@ -1222,6 +1222,8 @@ static void gfs_event_stop_write (GtsObject * o, FILE * fp)
       (o, fp);
 
   fprintf (fp, " %s %g", s->v->name, s->max);
+  if (s->diff)
+    fprintf (fp, " %s", s->diff->name);
 }
 
 static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
@@ -1250,10 +1252,19 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   s->max = atof (fp->token->str);
-  gts_file_next_token (fp);
-
   s->oldv = gfs_domain_add_variable (domain, NULL);
   s->oldv->fine_coarse = s->v->fine_coarse;
+
+  if (fp->next_token != '\n') {
+    gts_file_next_token (fp);
+    if (fp->type != GTS_STRING) {
+      gts_file_error (fp, "expecting a string (diff)");
+      return;
+    }
+    if (!(s->diff = gfs_variable_from_name (domain->variables, fp->token->str)))
+      s->diff = gfs_domain_add_variable (domain, fp->token->str);
+    s->diff->fine_coarse = s->v->fine_coarse;
+  }
   gts_file_next_token (fp);
 }
 
@@ -1265,6 +1276,11 @@ static void diff (FttCell * cell, GfsEventStop * s)
 static void copy (FttCell * cell, GfsEventStop * s)
 {
   GFS_VARIABLE (cell, s->oldv->i) = GFS_VARIABLE (cell, s->v->i);
+}
+
+static void copy_diff (FttCell * cell, GfsEventStop * s)
+{
+  GFS_VARIABLE (cell, s->diff->i) = GFS_VARIABLE (cell, s->oldv->i);
 }
 
 static gboolean gfs_event_stop_event (GfsEvent * event, GfsSimulation * sim)
@@ -1279,8 +1295,13 @@ static gboolean gfs_event_stop_event (GfsEvent * event, GfsSimulation * sim)
       gfs_domain_cell_traverse (GFS_DOMAIN (sim),
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) diff, s);
-      n = gfs_domain_norm_variable (GFS_DOMAIN (sim), s->oldv,
-				    FTT_TRAVERSE_LEAFS, -1);
+      if (s->diff) {
+	gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				  (FttCellTraverseFunc) copy_diff, s);
+	gfs_domain_copy_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, s->v, s->diff);
+      }
+      n = gfs_domain_norm_variable (GFS_DOMAIN (sim), s->oldv, FTT_TRAVERSE_LEAFS, -1);
       if (n.infty <= s->max)
 	sim->time.end = sim->time.t;
     }

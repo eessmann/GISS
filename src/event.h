@@ -190,7 +190,7 @@ typedef struct _GfsEventStop         GfsEventStop;
 struct _GfsEventStop {
   GfsEvent parent;
 
-  GfsVariable * v, * oldv;
+  GfsVariable * v, * oldv, * diff;
   gdouble last, max;
 };
 
