@@ -112,7 +112,7 @@ struct _GfsOutputLocation {
   GfsOutput parent;
 
   /*< public >*/
-  FttVector p;
+  GArray * p;
 };
 
 #define GFS_OUTPUT_LOCATION(obj)            GTS_OBJECT_CAST (obj,\

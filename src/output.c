@@ -1023,6 +1023,38 @@ GfsOutputClass * gfs_output_solid_force_class (void)
 
 /* GfsOutputLocation: Object */
 
+static void gfs_output_location_destroy (GtsObject * object)
+{
+  g_array_free (GFS_OUTPUT_LOCATION (object)->p, TRUE);
+
+  (* GTS_OBJECT_CLASS (gfs_output_location_class ())->parent_class->destroy) (object);
+}
+
+static gboolean vector_read (GtsFile * fp, FttVector * p)
+{
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (p.x)");
+    return FALSE;
+  }
+  p->x = atof (fp->token->str);
+  gts_file_next_token (fp);
+
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (p.y)");
+    return FALSE;
+  }
+  p->y = atof (fp->token->str);
+  gts_file_next_token (fp);
+
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (p.z)");
+    return FALSE;
+  }
+  p->z = atof (fp->token->str);
+  gts_file_next_token (fp);
+  return TRUE;
+}
+
 static void gfs_output_location_read (GtsObject ** o, GtsFile * fp)
 {
   GfsOutputLocation * l = GFS_OUTPUT_LOCATION (*o);
@@ -1033,36 +1065,70 @@ static void gfs_output_location_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (p.x)");
-    return;
-  }
-  l->p.x = atof (fp->token->str);
-  gts_file_next_token (fp);
+  if (fp->type == GTS_STRING) {
+    FILE * fptr = fopen (fp->token->str, "r");
+    GtsFile * fp1;
 
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (p.y)");
-    return;
+    if (fptr == NULL) {
+      gts_file_error (fp, "cannot open file `%s'", fp->token->str);
+      return;
+    }
+    fp1 = gts_file_new (fptr);
+    while (fp1->type != GTS_NONE) {
+      FttVector p;
+      if (!vector_read (fp1, &p)) {
+	gts_file_error (fp, "%s:%d:%d: %s", fp->token->str, fp1->line, fp1->pos, fp1->error);
+	return;
+      }
+      g_array_append_val (l->p, p);
+      while (fp1->type == '\n')
+	gts_file_next_token (fp1);
+    }
+    gts_file_destroy (fp1);
+    fclose (fptr);
+    gts_file_next_token (fp);
   }
-  l->p.y = atof (fp->token->str);
-  gts_file_next_token (fp);
-
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (p.z)");
-    return;
+  else if (fp->type == '{') {
+    fp->scope_max++;
+    do
+      gts_file_next_token (fp);
+    while (fp->type == '\n');
+    while (fp->type != GTS_NONE && fp->type != '}') {
+      FttVector p;
+      if (!vector_read (fp, &p))
+	return;
+      g_array_append_val (l->p, p);
+      while (fp->type == '\n')
+	gts_file_next_token (fp);
+    }
+    if (fp->type != '}') {
+      gts_file_error (fp, "expecting a closing brace");
+      return;
+    }
+    fp->scope_max--;
+    gts_file_next_token (fp);
   }
-  l->p.z = atof (fp->token->str);
-  gts_file_next_token (fp);  
+  else {
+    FttVector p;
+    if (!vector_read (fp, &p))
+      return;
+    g_array_append_val (l->p, p);
+  }
 }
 
 static void gfs_output_location_write (GtsObject * o, FILE * fp)
 {
   GfsOutputLocation * l = GFS_OUTPUT_LOCATION (o);
+  guint i;
 
-  if (GTS_OBJECT_CLASS (gfs_output_location_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_output_location_class ())->parent_class->write) 
-      (o, fp);
-  fprintf (fp, " %g %g %g", l->p.x, l->p.y, l->p.z);
+  (* GTS_OBJECT_CLASS (gfs_output_location_class ())->parent_class->write) (o, fp);
+
+  fputs (" {\n", fp);
+  for (i = 0; i < l->p->len; i++) {
+    FttVector p = g_array_index (l->p, FttVector, i);
+    fprintf (fp, "%g %g %g\n", p.x, p.y, p.z);
+  }
+  fputc ('}', fp);
 }
 
 static gboolean gfs_output_location_event (GfsEvent * event, 
@@ -1072,7 +1138,7 @@ static gboolean gfs_output_location_event (GfsEvent * event,
       (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsOutputLocation * location = GFS_OUTPUT_LOCATION (event);
-    FttCell * cell = gfs_domain_locate (domain, location->p, -1);
+    guint i;
 
     if (GFS_OUTPUT (event)->first_call) {
       FILE * fp = GFS_OUTPUT (event)->file->fp;
@@ -1087,19 +1153,22 @@ static gboolean gfs_output_location_event (GfsEvent * event,
       }
       fputc ('\n', fp);
     }
-    if (cell != NULL) {
-      FILE * fp = GFS_OUTPUT (event)->file->fp;
-      GfsVariable * v = domain->variables;
-   
-      fprintf (fp, "%g %g %g %g", 
-	       sim->time.t,
-	       location->p.x, location->p.y, location->p.z);
-      while (v) {
-	if (v->name)
-	  fprintf (fp, " %g", gfs_interpolate (cell, location->p, v));
-	v = v->next;
+    for (i = 0; i < location->p->len; i++) {
+      FttVector p = g_array_index (location->p, FttVector, i);
+      FttCell * cell = gfs_domain_locate (domain, p, -1);
+      
+      if (cell != NULL) {
+	FILE * fp = GFS_OUTPUT (event)->file->fp;
+	GfsVariable * v = domain->variables;
+	
+	fprintf (fp, "%g %g %g %g", sim->time.t, p.x, p.y, p.z);
+	while (v) {
+	  if (v->name)
+	    fprintf (fp, " %g", gfs_interpolate (cell, p, v));
+	  v = v->next;
+	}
+	fputc ('\n', fp);
       }
-      fputc ('\n', fp);
     }
     return TRUE;
   }
@@ -1109,13 +1178,14 @@ static gboolean gfs_output_location_event (GfsEvent * event,
 static void gfs_output_location_class_init (GfsOutputClass * klass)
 {
   GFS_EVENT_CLASS (klass)->event = gfs_output_location_event;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_output_location_destroy;
   GTS_OBJECT_CLASS (klass)->read = gfs_output_location_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_output_location_write;
 }
 
 static void gfs_output_location_init (GfsOutputLocation * object)
 {
-  object->p.x = object->p.y = object->p.z = 0.;
+  object->p = g_array_new (FALSE, FALSE, sizeof (FttVector));
 }
 
 GfsOutputClass * gfs_output_location_class (void)
