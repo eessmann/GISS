@@ -360,6 +360,37 @@ gdouble gfs_plane_alpha (FttVector * m, gdouble c)
 }
 #endif /* 3D */
 
+static gdouble avg (FttCell * cell, FttDirection d, GfsVariable * v)
+{
+  FttDirection d1[2*(FTT_DIMENSION - 1)][FTT_DIMENSION];
+  FttComponent c = FTT_ORTHOGONAL_COMPONENT (d/2);
+  gdouble v1 = 0.;
+  guint i;
+
+#if FTT_2D
+  d1[0][0] = d1[1][0] = d;
+  d1[0][1] = 2*c;
+  d1[1][1] = 2*c + 1;
+#else  /* 3D */
+  FttComponent c1 = FTT_ORTHOGONAL_COMPONENT (c);
+
+  d1[0][0] = d1[1][0] = d1[2][0] = d1[3][0] = d;
+  d1[0][1] = 2*c;     d1[0][2] = 2*c1;
+  d1[1][1] = 2*c;     d1[1][2] = 2*c1 + 1;
+  d1[2][1] = 2*c + 1; d1[2][2] = 2*c1;
+  d1[3][1] = 2*c + 1; d1[3][2] = 2*c1 + 1;
+#endif /* 3D */
+  
+  for (i = 0; i < 2*(FTT_DIMENSION - 1); i++)
+    v1 += gfs_cell_corner_value (cell, d1[i], v, -1);
+  return v1/(2*(FTT_DIMENSION - 1));
+}
+
+static gdouble gfs_youngs_gradient (FttCell * cell, FttComponent c, GfsVariable * v)
+{
+  return avg (cell, 2*c, v) - avg (cell, 2*c + 1, v);
+}
+
 static void gfs_cell_vof_advected_face_values (FttCell * cell,
 					       FttComponent c,
 					       GfsAdvectionParams * par)
@@ -401,9 +432,9 @@ static void gfs_cell_vof_advected_face_values (FttCell * cell,
     };
     guint i;
 
-    m.x = - gfs_center_gradient (cell, c, par->v->i);
+    m.x = - gfs_youngs_gradient (cell, c, par->v);
     for (i = 0; i < FTT_DIMENSION - 1; i++)
-      (&m.x)[i + 1] = - gfs_center_gradient (cell, d[c][i], par->v->i);
+      (&m.x)[i + 1] = - gfs_youngs_gradient (cell, d[c][i], par->v);
     
     if (m.x < 0.) {
       n = - u_left; u_left = - u_right; u_right = n;
