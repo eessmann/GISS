@@ -1102,7 +1102,7 @@ static gboolean gfs_output_location_event (GfsEvent * event,
 	       location->p.x, location->p.y, location->p.z);
       while (v) {
 	if (v->name)
-	  fprintf (fp, " %g", gfs_interpolate (cell, location->p, v->i));
+	  fprintf (fp, " %g", gfs_interpolate (cell, location->p, v));
 	v = v->next;
       }
       fputc ('\n', fp);

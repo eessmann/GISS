@@ -531,7 +531,7 @@ static void iso_func (gdouble ** a, GtsCartesianGrid g, guint k,
       if (cell == NULL)
 	a[i][j] = 0.;
       else
-	a[i][j] = gfs_interpolate (cell, p, v->i);
+	a[i][j] = gfs_interpolate (cell, p, v);
     }
 }
 
@@ -1290,7 +1290,7 @@ static GtsColor variable_color (GtsObject * o)
 
   cell = gfs_domain_locate (domain, pos, -1);
   if (cell) {
-    val = gfs_interpolate (cell, pos, v->i);
+    val = gfs_interpolate (cell, pos, v);
     c = colormap_color (colormap, (val - *min)/(*max - *min));
   }
   else
@@ -1827,6 +1827,7 @@ static GSList * grow_curve (GfsDomain * domain,
   guint nstep = 0, nmax = 10000;
   GtsPointClass * path_class = gfs_vertex_class ();
   Colormap * colormap = NULL;
+  GfsVariable * U;
 
   if (min < max)
     colormap = colormap_jet ();
@@ -1848,11 +1849,13 @@ static GSList * grow_curve (GfsDomain * domain,
   }
 #endif /* 3D */  
 
+  U = gfs_variable_from_name (domain->variables, "U");
   p1 = p2 = p;
   while ((cell = gfs_domain_locate (domain, p, -1)) != NULL && nmax--) {
     gdouble h = delta*ftt_cell_size (cell);
     FttVector u;
     FttComponent c;
+    GfsVariable * v;
     gdouble nu = 0.;
 
     cost += curve_cost (p1, p2, p);
@@ -1861,7 +1864,7 @@ static GSList * grow_curve (GfsDomain * domain,
     if (oldp == NULL || cost > maxcost) {
       oldp = gts_point_new (path_class, p.x, p.y, p.z);
       if (var)
-	GFS_VERTEX (oldp)->v = gfs_interpolate (cell, p, var->i);
+	GFS_VERTEX (oldp)->v = gfs_interpolate (cell, p, var);
       if (colormap)
 	GTS_COLORED_VERTEX (oldp)->c = 
 	  colormap_color (colormap, (GFS_VERTEX (oldp)->v - min)/(max - min));
@@ -1872,9 +1875,8 @@ static GSList * grow_curve (GfsDomain * domain,
       nstep = 0;
     }
 
-    for (c = 0; c < FTT_DIMENSION; c++) {
-      ((gdouble *) &u)[c] = 
-	direction*gfs_interpolate (cell, p, GFS_VELOCITY_INDEX (c));
+    for (c = 0, v = U; c < FTT_DIMENSION; c++, v = v->next) {
+      ((gdouble *) &u)[c] = direction*gfs_interpolate (cell, p, v);
       nu += ((gdouble *) &u)[c]*((gdouble *) &u)[c];
     }
     if (nu > 0. && nstep++ < nmax) {
@@ -1890,8 +1892,8 @@ static GSList * grow_curve (GfsDomain * domain,
 	GtsVector dx;
 
 	dx[0] = p1.x - p.x; dx[1] = p1.y - p.y; dx[2] = p1.z - p.z;
-	for (c = 0; c < FTT_DIMENSION; c++)
-	  rot[c] = gfs_interpolate (cell, p1, GFS_GRADIENT_INDEX (c));
+	for (c = 0, v = gfs_gx; c < FTT_DIMENSION; c++, v = v->next)
+	  rot[c] = gfs_interpolate (cell, p1, v);
 	theta += gts_vector_scalar (rot, dx)/nu;
       }
 #endif /* 3D */
@@ -1904,7 +1906,7 @@ static GSList * grow_curve (GfsDomain * domain,
     if (cell) {
       oldp = gts_point_new (path_class, p2.x, p2.y, p2.z);
       if (var)
-	GFS_VERTEX (oldp)->v = gfs_interpolate (cell, p2, var->i);
+	GFS_VERTEX (oldp)->v = gfs_interpolate (cell, p2, var);
       if (twist)
 	GFS_TWISTED_VERTEX (oldp)->theta = theta;
       path = g_slist_prepend (path, oldp);

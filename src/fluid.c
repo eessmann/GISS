@@ -19,6 +19,8 @@
 
 #include <math.h>
 
+#include <stdlib.h>
+
 #include "fluid.h"
 #include "domain.h"
 #include "solid.h"
@@ -731,6 +733,7 @@ static gboolean inverse (gdouble mi[N_CELLS - 1][N_CELLS - 1])
 #endif /* 3D */
   return TRUE;
 }
+
 #if (!FTT_2D)
 static void draw_cell (FttCell * cell, gdouble r, gdouble g, gdouble b,
 		       const gchar * name)
@@ -1796,64 +1799,84 @@ void gfs_cell_traverse_mixed (FttCell * root,
  * gfs_interpolate:
  * @cell: a #FttCell containing location @p.
  * @p: the location at which to interpolate.
- * @v: a #GfsVariable index.
+ * @v: a #GfsVariable.
  *
  * Interpolates the @v variable of @cell, at location @p. Linear
  * interpolation is used and the boundaries of the domain are treated
  * as planes of symmetry for all variables.
  *
- * Note that to work correctly this function needs a domain where the
- * values of variable @v are defined on all levels.
- * 
  * Returns: the interpolated value of variable @v at location @p.
  */
 gdouble gfs_interpolate (FttCell * cell,
 			 FttVector p,
-			 guint v)
+			 GfsVariable * v)
 {
-  gboolean leveled;
   FttVector o;
-  gdouble f[FTT_DIMENSION], size, v0, val;
-  FttComponent c;
+  FttDirection e[FTT_DIMENSION];
+  gdouble size;
 
   g_return_val_if_fail (cell != NULL, 0.);
 
-  do {
-    guint level;
+  ftt_cell_pos (cell, &o);
+  size = ftt_cell_size (cell)/2.;
+  p.x = (p.x - o.x)/size;
+  p.y = (p.y - o.y)/size;
+#if FTT_2D
+  {
+    gdouble f[4], a, b, c, d;
+    
+    e[0] = FTT_LEFT; e[1] = FTT_BOTTOM;
+    f[0] = gfs_cell_corner_value (cell, e, v, -1);
+    e[0] = FTT_RIGHT; e[1] = FTT_BOTTOM;
+    f[1] = gfs_cell_corner_value (cell, e, v, -1);
+    e[0] = FTT_RIGHT; e[1] = FTT_TOP;
+    f[2] = gfs_cell_corner_value (cell, e, v, -1);
+    e[0] = FTT_LEFT; e[1] = FTT_TOP;
+    f[3] = gfs_cell_corner_value (cell, e, v, -1);
+    a = f[1] + f[2] - f[0] - f[3];
+    b = f[2] + f[3] - f[0] - f[1];
+    c = f[0] - f[1] + f[2] - f[3];
+    d = f[0] + f[1] + f[2] + f[3];
+    return (a*p.x + b*p.y + c*p.x*p.y + d)/4.;
+  }
+#else  /* 3D */
+  {
+    gdouble f[8], c[8];
+    
+    p.z = (p.z - o.z)/size;
+    e[0] = FTT_LEFT; e[1] = FTT_BOTTOM; e[2] = FTT_FRONT;
+    f[0] = gfs_cell_corner_value (cell, e, v, -1);
+    e[0] = FTT_RIGHT; e[1] = FTT_BOTTOM;
+    f[1] = gfs_cell_corner_value (cell, e, v, -1);
+    e[0] = FTT_RIGHT; e[1] = FTT_TOP;
+    f[2] = gfs_cell_corner_value (cell, e, v, -1);
+    e[0] = FTT_LEFT; e[1] = FTT_TOP;
+    f[3] = gfs_cell_corner_value (cell, e, v, -1);
+    
+    e[0] = FTT_LEFT; e[1] = FTT_BOTTOM; e[2] = FTT_BACK;
+    f[4] = gfs_cell_corner_value (cell, e, v, -1);
+    e[0] = FTT_RIGHT; e[1] = FTT_BOTTOM;
+    f[5] = gfs_cell_corner_value (cell, e, v, -1);
+    e[0] = FTT_RIGHT; e[1] = FTT_TOP;
+    f[6] = gfs_cell_corner_value (cell, e, v, -1);
+    e[0] = FTT_LEFT; e[1] = FTT_TOP;
+    f[7] = gfs_cell_corner_value (cell, e, v, -1);
 
-    ftt_cell_pos (cell, &o);
-    level = ftt_cell_level (cell);
-    leveled = TRUE;
+    c[0] = - f[0] + f[1] + f[2] - f[3] - f[4] + f[5] + f[6] - f[7];
+    c[1] = - f[0] - f[1] + f[2] + f[3] - f[4] - f[5] + f[6] + f[7];
+    c[2] =   f[0] + f[1] + f[2] + f[3] - f[4] - f[5] - f[6] - f[7];
+    c[3] =   f[0] - f[1] + f[2] - f[3] + f[4] - f[5] + f[6] - f[7];
+    c[4] = - f[0] + f[1] + f[2] - f[3] + f[4] - f[5] - f[6] + f[7];
+    c[5] = - f[0] - f[1] + f[2] + f[3] + f[4] + f[5] - f[6] - f[7];
+    c[6] =   f[0] - f[1] + f[2] - f[3] - f[4] + f[5] - f[6] + f[7];
+    c[7] =   f[0] + f[1] + f[2] + f[3] + f[4] + f[5] + f[6] + f[7];
 
-    for (c = 0; c < FTT_DIMENSION && leveled; c++) {
-      FttCell * neighbor;
-
-      if (((gdouble *) &p)[c] >= ((gdouble *) &o)[c])
-	neighbor = ftt_cell_neighbor (cell, 2*c);
-      else
-	neighbor = ftt_cell_neighbor (cell, 2*c + 1);
-
-      if (neighbor) {
-	if (ftt_cell_level (neighbor) != level)
-	  leveled = FALSE;
-	else
-	  f[c] = GFS_VARIABLE (neighbor, v);
-      }
-      else /* symmetry conditions */
-	f[c] = GFS_VARIABLE (cell, v);
-    }
-    if (!leveled) {
-      cell = ftt_cell_parent (cell);
-      g_assert (cell);
-    }
-  } while (!leveled);
-
-  size = ftt_cell_size (cell);
-  val = v0 = GFS_VARIABLE (cell, v);
-  for (c = 0; c < FTT_DIMENSION; c++)
-    val += fabs (((gdouble *) &p)[c] - ((gdouble *) &o)[c])*(f[c] - v0)/size;
-
-  return val;
+    return (c[0]*p.x + c[1]*p.y + c[2]*p.z + 
+	    c[3]*p.x*p.y + c[4]*p.x*p.z + c[5]*p.y*p.z + 
+	    c[6]*p.x*p.y*p.z + 
+	    c[7])/8.;
+  }
+#endif /* 3D */
 }
 
 /* GfsVariable: Object */

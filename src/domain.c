@@ -1684,12 +1684,13 @@ FttCell * gfs_domain_locate (GfsDomain * domain,
  * If @p is not contained within @domain, the coordinates are unchanged.
  */
 void gfs_domain_advect_point (GfsDomain * domain, 
-			     GtsPoint * p,
-			     gdouble dt)
+			      GtsPoint * p,
+			      gdouble dt)
 {
   FttCell * cell;
   FttVector p0, p1;
   FttComponent c;
+  GfsVariable * v1, * v;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (p != NULL);
@@ -1700,13 +1701,15 @@ void gfs_domain_advect_point (GfsDomain * domain,
   cell = gfs_domain_locate (domain, p0, -1);
   if (cell == NULL)
     return;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    (&p1.x)[c] += dt*gfs_interpolate (cell, p0, GFS_VELOCITY_INDEX (c))/2.;
+  v1 = v = gfs_variable_from_name (domain->variables, "U");
+  for (c = 0; c < FTT_DIMENSION; c++, v = v->next)
+    (&p1.x)[c] += dt*gfs_interpolate (cell, p0, v)/2.;
   cell = gfs_domain_locate (domain, p1, -1);
   if (cell == NULL)
     return;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    (&p->x)[c] += dt*gfs_interpolate (cell, p1, GFS_VELOCITY_INDEX (c));
+  v = v1;
+  for (c = 0; c < FTT_DIMENSION; c++, v = v->next)
+    (&p->x)[c] += dt*gfs_interpolate (cell, p1, v);
 }
 
 static void count (FttCell * cell, guint * n)
@@ -2036,8 +2039,6 @@ void gfs_cell_read_binary (FttCell * cell, GtsFile * fp, GfsDomain * domain)
   gfs_cell_init (cell, domain);
   s = cell->data;
   if (s0 >= 0.) {
-    guint i;
-
     s->solid = g_malloc0 (sizeof (GfsSolidVector));
     s->solid->s[0] = s0;
     

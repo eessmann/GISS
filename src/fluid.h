@@ -279,7 +279,7 @@ void                  gfs_cell_traverse_mixed       (FttCell * root,
 						     gpointer data);
 gdouble               gfs_interpolate               (FttCell * cell,
 						     FttVector p,
-						     guint v);
+						     GfsVariable * v);
 GfsVariable *         gfs_variable_list_copy        (GfsVariable * v,
 						     GtsObject * parent);
 void                  gfs_variable_list_destroy     (GfsVariable * v);
