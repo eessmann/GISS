@@ -277,6 +277,15 @@ void                  gfs_cell_traverse_mixed       (FttCell * root,
 						     FttTraverseFlags flags,
 						     FttCellTraverseFunc func,
 						     gpointer data);
+typedef void       (* FttCellTraverseCutFunc)       (FttCell * cell,
+						     GtsSurface * s,
+						     gpointer data);
+void                  gfs_cell_traverse_cut         (FttCell * root,
+						     GtsSurface * s,
+						     FttTraverseType order,
+						     FttTraverseFlags flags,
+						     FttCellTraverseCutFunc func,
+						     gpointer data);
 gdouble               gfs_interpolate               (FttCell * cell,
 						     FttVector p,
 						     GfsVariable * v);

@@ -1795,6 +1795,105 @@ void gfs_cell_traverse_mixed (FttCell * root,
   cell_traverse_mixed (root, order, flags, func, data);
 }
 
+static void face_overlaps_box (GtsTriangle * t, gpointer * data)
+{
+  GtsBBox * bb = data[0];
+  GtsSurface ** s1 = data[1];
+
+  if (gts_bbox_overlaps_triangle (bb, t)) {
+    if (*s1 == NULL)
+      *s1 = gts_surface_new (gts_surface_class (),
+			     gts_face_class (),
+			     gts_edge_class (),
+			     gts_vertex_class ());
+    gts_surface_add_face (*s1, GTS_FACE (t));
+  }
+}
+
+static GtsSurface * cell_is_cut (FttCell * cell, GtsSurface * s)
+{
+  GtsSurface * s1 = NULL;
+  gpointer data[2];
+  GtsBBox bb;
+  FttVector p;
+  gdouble h = ftt_cell_size (cell)/1.99999;
+
+  ftt_cell_pos (cell, &p);
+  bb.x1 = p.x - h; bb.y1 = p.y - h;
+  bb.x2 = p.x + h; bb.y2 = p.y + h; 
+#if FTT_2D3
+  bb.z1 = p.z - 1./1.99999; bb.z2 = p.z + 1./1.99999;
+#else  /* 2D or 3D */
+  bb.z1 = p.z - h; bb.z2 = p.z + h;
+#endif /* 2D or 3D */
+  data[0] = &bb;
+  data[1] = &s1;
+  gts_surface_foreach_face (s, (GtsFunc) face_overlaps_box, data);
+  return s1;
+}
+
+static void cell_traverse_cut (FttCell * cell,
+			       GtsSurface * s,
+			       FttTraverseType order,
+			       FttTraverseFlags flags,
+			       FttCellTraverseCutFunc func,
+			       gpointer data)
+{
+  GtsSurface * s1 = cell_is_cut (cell, s);
+
+  if (s1 == NULL)
+    return;
+  if (order == FTT_PRE_ORDER &&
+      (flags == FTT_TRAVERSE_ALL ||
+       ((flags & FTT_TRAVERSE_LEAFS) != 0 && FTT_CELL_IS_LEAF (cell)) ||
+       ((flags & FTT_TRAVERSE_NON_LEAFS) != 0 && !FTT_CELL_IS_LEAF (cell))))
+    (* func) (cell, s1, data);
+  if (!FTT_CELL_IS_LEAF (cell)) {
+    struct _FttOct * children = cell->children;
+    guint n;
+
+    for (n = 0; n < FTT_CELLS; n++) {
+      FttCell * c = &(children->cell[n]);
+
+      if (!FTT_CELL_IS_DESTROYED (c))
+	cell_traverse_cut (c, s1, order, flags, func, data);
+    }
+  }
+  if (order == FTT_POST_ORDER &&
+      (flags == FTT_TRAVERSE_ALL ||
+       ((flags & FTT_TRAVERSE_LEAFS) != 0 && FTT_CELL_IS_LEAF (cell)) ||
+       ((flags & FTT_TRAVERSE_NON_LEAFS) != 0 && !FTT_CELL_IS_LEAF (cell))))
+    (* func) (cell, s1, data);
+  gts_object_destroy (GTS_OBJECT (s1));
+}
+
+/**
+ * gfs_cell_traverse_cut:
+ * @root: the root #FttCell of the tree to traverse.
+ * @s: a #GtsSurface.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ * 
+ * Traverses a cell tree starting at the given root #FttCell. Calls
+ * the given function for each cell cut by @s.
+ */
+void gfs_cell_traverse_cut (FttCell * root,
+			    GtsSurface * s,
+			    FttTraverseType order,
+			    FttTraverseFlags flags,
+			    FttCellTraverseCutFunc func,
+			    gpointer data)
+{
+  g_return_if_fail (root != NULL);
+  g_return_if_fail (s != NULL);
+  g_return_if_fail (func != NULL);
+
+  cell_traverse_cut (root, s, order, flags, func, data);
+}
+
 /**
  * gfs_interpolate:
  * @cell: a #FttCell containing location @p.
