@@ -707,7 +707,8 @@ GfsOutputClass * gfs_output_diffusion_stats_class (void)
 static gboolean gfs_output_solid_stats_event (GfsEvent * event, 
 					     GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_solid_stats_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_solid_stats_class ())->parent_class)->event)
+      (event, sim)) {
     GtsRange stats = gfs_domain_stats_solid (GFS_DOMAIN (sim));
     GtsRange ma, mn;
 
@@ -758,7 +759,8 @@ GfsOutputClass * gfs_output_solid_stats_class (void)
 static gboolean gfs_output_adapt_stats_event (GfsEvent * event, 
 					      GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_adapt_stats_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_adapt_stats_class ())->parent_class)->event)
+      (event, sim)) {
     gfs_adapt_stats_update (&sim->adapts_stats);
     fprintf (GFS_OUTPUT (event)->file->fp,
 	     "Adaptive mesh refinement statistics\n"
@@ -832,15 +834,6 @@ static void timing_print (GtsRange * r, gdouble total, FILE * fp)
 	   r->mean, total > 0. ? 100.*r->sum/total : 0.,
 	   r->stddev, 
 	   r->max);	   
-}
-
-static void timing_bc_print (GtsRange * r, gdouble total, guint n, FILE * fp)
-{
-  fprintf (fp,
-	   "      calls: %7d avg: %9.3f (%4.1f%%)\n",
-	   r->n,
-	   n > 0 ? r->sum/n : 0.,
-	   total > 0. ? 100.*r->sum/total : 0.);
 }
 
 static void timer_print (gchar * name, GfsTimer * t, gpointer * data)
@@ -923,7 +916,8 @@ GfsOutputClass * gfs_output_timing_class (void)
 static gboolean gfs_output_balance_event (GfsEvent * event, 
 					  GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_balance_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_balance_class ())->parent_class)->event)
+      (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
     FILE * fp = GFS_OUTPUT (event)->file->fp;
     GtsRange size, boundary, mpiwait;
@@ -1153,24 +1147,27 @@ static void output_simulation_destroy (GtsObject * object)
 
   gfs_variable_list_destroy (output->var);
 
-  (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->destroy) 
-    (object);
+  (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->destroy) (object);
 }
 
 static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
+    GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (event);
     GfsVariable * var = domain->variables_io;
     gboolean binary = domain->binary;
+    gboolean surface = sim->output_surface;
 
-    domain->variables_io = GFS_OUTPUT_SIMULATION (event)->var;
-    domain->binary = GFS_OUTPUT_SIMULATION (event)->binary;
+    domain->variables_io = output->var;
+    domain->binary =       output->binary;
+    sim->output_surface =  output->surface;
     gfs_simulation_write (sim,
-			  GFS_OUTPUT_SIMULATION (event)->max_depth,
+			  output->max_depth,
 			  GFS_OUTPUT (event)->file->fp);
     domain->variables_io = var;
-    domain->binary = binary;
+    domain->binary =       binary;
+    sim->output_surface =  surface;
     fflush (GFS_OUTPUT (event)->file->fp);
     return TRUE;
   }
@@ -1198,15 +1195,18 @@ static void output_simulation_write (GtsObject * o, FILE * fp)
   }
   if (output->binary)
     fputs (" binary = 1", fp);
+  if (!output->surface)
+    fputs (" surface = 0", fp);
   fputs (" }", fp);
 }
 
 static void output_simulation_read (GtsObject ** o, GtsFile * fp)
 {
   GtsFileVariable var[] = {
-    {GTS_INT,    "depth",     TRUE},
-    {GTS_STRING, "variables", TRUE},
-    {GTS_INT,    "binary",    TRUE},
+    {GTS_INT,    "depth",    TRUE},
+    {GTS_STRING, "variables",TRUE},
+    {GTS_INT,    "binary",   TRUE},
+    {GTS_INT,    "surface",  TRUE},
     {GTS_NONE}
   };
   gchar * variables = NULL;
@@ -1221,6 +1221,7 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
   var[0].data = &output->max_depth;
   var[1].data = &variables;
   var[2].data = &output->binary;
+  var[3].data = &output->surface;
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR) {
     g_free (variables);
@@ -1260,6 +1261,8 @@ static void gfs_output_simulation_init (GfsOutputSimulation * object)
 {
   object->max_depth = -1;
   object->var = NULL;
+  object->binary = 0;
+  object->surface = 1;
 }
 
 GfsOutputClass * gfs_output_simulation_class (void)
@@ -1567,7 +1570,8 @@ GfsOutputClass * gfs_output_scalar_class (void)
 static gboolean gfs_output_scalar_norm_event (GfsEvent * event, 
 					      GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_norm_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_norm_class ())->parent_class)->event)
+      (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
     GfsNorm norm = gfs_domain_norm_variable (GFS_DOMAIN (sim), 
 					     output->v,
@@ -1615,7 +1619,8 @@ GfsOutputClass * gfs_output_scalar_norm_class (void)
 static gboolean gfs_output_scalar_stats_event (GfsEvent * event, 
 					     GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_stats_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_stats_class ())->parent_class)->event)
+      (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
     GtsRange stats = gfs_domain_stats_variable (GFS_DOMAIN (sim), 
 						output->v,
@@ -1673,7 +1678,8 @@ static void add (FttCell * cell, gpointer * data)
 static gboolean gfs_output_scalar_sum_event (GfsEvent * event, 
 					     GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_sum_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_sum_class ())->parent_class)->event)
+      (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
     gpointer data[2];
     gdouble sum = 0.;
@@ -2083,7 +2089,8 @@ GfsOutputClass * gfs_output_correlation_class (void)
 
 static gboolean gfs_output_squares_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_squares_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_squares_class ())->parent_class)->event)
+      (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
     
     gfs_write_squares (GFS_DOMAIN (sim), 
@@ -2170,7 +2177,8 @@ static void gfs_output_streamline_write (GtsObject * o, FILE * fp)
 static gboolean gfs_output_streamline_event (GfsEvent * event, 
 					    GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_streamline_class ())->parent_class)->event) (event,sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_streamline_class ())->parent_class)->event)
+      (event,sim)) {
     GSList * stream = gfs_streamline_new (GFS_DOMAIN (sim),
 					  GFS_OUTPUT_STREAMLINE (event)->p,
 					  GFS_OUTPUT_SCALAR (event)->v,

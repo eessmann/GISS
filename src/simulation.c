@@ -149,7 +149,7 @@ static void simulation_write (GtsObject * object, FILE * fp)
     i = i->next;
   }
 
-  if (sim->surface) {
+  if (sim->surface && sim->output_surface) {
     fputs ("  GtsSurface { ", fp);
     if (GFS_DOMAIN (sim)->binary) {
       gboolean binary = GTS_POINT_CLASS (sim->surface->vertex_class)->binary;
@@ -635,6 +635,7 @@ static void gfs_simulation_init (GfsSimulation * object)
   gfs_multilevel_params_init (&object->approx_projection_params);
 
   object->surface = NULL;
+  object->output_surface = TRUE;
 
   object->interface = NULL;
   object->itree = NULL;

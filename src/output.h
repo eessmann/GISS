@@ -132,7 +132,7 @@ struct _GfsOutputSimulation {
 
   gint max_depth;
   GfsVariable * var;
-  gboolean binary;
+  gboolean binary, surface;
 };
 
 #define GFS_OUTPUT_SIMULATION(obj)            GTS_OBJECT_CAST (obj,\

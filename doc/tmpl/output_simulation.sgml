@@ -12,7 +12,7 @@ GfsOutputSimulation will write a description of the current state of the simulat
 The syntax in parameter files is as follows:
 <informalexample>
 <programlisting>
-[ #GfsOutput ] { depth = 5 variables = U,V,C binary = 1 }
+[ #GfsOutput ] { depth = 5 variables = U,V,C binary = 1 surface = 0 }
 </programlisting>
 </informalexample>
 with
@@ -35,6 +35,11 @@ with
 <row>
 <entry><structfield>binary</structfield></entry>
 <entry>An optional parameter specifying if a binary format should be used. Binary files allow faster reading of simulation files. The default is a more portable ASCII format.</entry>
+</row>
+
+<row>
+<entry><structfield>surface</structfield></entry>
+<entry>An optional parameter specifying if the surface describing solid boundaries should be included in the simulation file. The default is to include the solid surface.</entry>
 </row>
 
 </tbody></tgroup></informaltable>
