@@ -22,6 +22,8 @@
 #include <unistd.h>
 #include <math.h>
 #include "utils.h"
+#include "solid.h"
+#include "simulation.h"
 
 /* GfsFunction: Object */
 
@@ -51,8 +53,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
   GfsFunction * f = GFS_FUNCTION (*o);
 
   if (GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read) 
-      (o, fp);
+    (* GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
@@ -79,8 +80,14 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     else {
-      gchar cccommand[] = "gcc -fPIC -shared -x c";
-      gchar finname[] = "/tmp/gfsXXXXXX";
+#if FTT_2D
+      gchar cccommand[] = "gcc `pkg-config gerris2D --cflags --libs` -O -fPIC -shared -x c";
+#elif FTT_2D3
+      gchar cccommand[] = "gcc `pkg-config gerris2D3 --cflags --libs` -O -fPIC -shared -x c";
+#else /* 3D */
+      gchar cccommand[] = "gcc `pkg-config gerris3D --cflags --libs` -O -fPIC -shared -x c";
+#endif 
+     gchar finname[] = "/tmp/gfsXXXXXX";
       gchar foutname[] = "/tmp/gfsXXXXXX";
       gchar ferrname[] = "/tmp/gfsXXXXXX";
       gchar ftmpname[] = "/tmp/gfsXXXXXX";
@@ -89,6 +96,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       guint scope;
       gchar * cc;
       gint status, c;
+      GfsVariable * v;
 
       find = mkstemp (finname);
       if (find < 0) {
@@ -96,15 +104,29 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
       fin = fdopen (find, "w");
-      fprintf (fin,
-               "#include <stdlib.h>\n"
-               "#include <stdio.h>\n"
-	       "#include <math.h>\n"
-	       "static double Dirichlet = 1.;\n"
-               "static double Neumann = 0.;\n"
-	       "double f (double x, double y, double z, double t) {\n"
-	       "#line %d \"GfsFunction\"\n",
-	       fp->line);
+      fputs ("#include <stdlib.h>\n"
+	     "#include <stdio.h>\n"
+	     "#include <math.h>\n"
+	     "#include <gfs.h>\n"
+	     "static double Dirichlet = 1.;\n"
+	     "static double Neumann = 0.;\n"
+	     "double f (FttCell * cell, double x, double y, double z, double t) {\n"
+	     "  double ",
+	     fin);
+      v = GFS_DOMAIN (gfs_object_simulation (*o))->variables;
+      fprintf (fin, "%s", v->name);
+      while ((v = v->next)) {
+	if (v->name)
+	  fprintf (fin, ", %s", v->name);
+      }
+      fputs (";\n  if (cell) {\n", fin);
+      v = GFS_DOMAIN (gfs_object_simulation (*o))->variables;
+      while (v) {
+	if (v->name)
+	  fprintf (fin, "    %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
+	v = v->next;
+      }
+      fprintf (fin, "  }\n#line %d \"GfsFunction\"\n", fp->line);
       f->expr = g_string_new ("{");
       scope = fp->scope_max;
       c = gts_file_getc (fp);
@@ -256,18 +278,19 @@ GfsFunction * gfs_function_new (GfsFunctionClass * klass,
 /**
  * gfs_function_value:
  * @f: a #GfsFunction.
+ * @cell: a #FttCell or %NULL.
  * @p: a #FttVector.
  * @t: the time.
  *
- * Returns: the value of function @f at location @p.
+ * Returns: the value of function @f at location @p of @cell.
  */
-gdouble gfs_function_value (GfsFunction * f, FttVector * p, gdouble t)
+gdouble gfs_function_value (GfsFunction * f, FttCell * cell, FttVector * p, gdouble t)
 {
   g_return_val_if_fail (f != NULL, 0.);
 
   if (f->f) {
     g_return_val_if_fail (p != NULL, 0.);
-    return (* f->f) (p->x, p->y, p->z, t);
+    return (* f->f) (cell, p->x, p->y, p->z, t);
   }
   else
     return f->val;
@@ -292,7 +315,7 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa,
     g_return_val_if_fail (fa != NULL, 0.);
     
     ftt_face_pos (fa, &p);
-    return (* f->f) (p.x, p.y, p.z, t);
+    return (* f->f) (NULL, p.x, p.y, p.z, t);
   }
   else
     return f->val;
@@ -307,10 +330,12 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa,
  */
 void gfs_function_read (GfsFunction * f, GtsFile * fp)
 {
+  GtsObject * o = (GtsObject *) f;
+
   g_return_if_fail (f != NULL);
   g_return_if_fail (fp != NULL);
 
-  (* GTS_OBJECT (f)->klass->read) ((GtsObject **) &f, fp);
+  (* GTS_OBJECT (f)->klass->read) (&o, fp);
 }
 
 /**

@@ -1912,7 +1912,7 @@ static void compute_error (FttCell * cell, GfsOutputScalar * o)
   else
     gfs_cell_cm (cell, &p);
   GFS_VARIABLE (cell, GFS_OUTPUT_ERROR_NORM (o)->v->i) = GFS_VARIABLE (cell, o->v->i) -
-    gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, &p, sim->time.t); 
+    gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, NULL, &p, sim->time.t); 
 }
 
 static void remove_bias (FttCell * cell, gpointer * data)
@@ -2011,7 +2011,7 @@ static void compute_correlation (FttCell * cell, gpointer * data)
     ftt_cell_pos (cell, &p);
   else
     gfs_cell_cm (cell, &p);
-  ref = gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, &p, sim->time.t);
+  ref = gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, NULL, &p, sim->time.t);
   v = GFS_VARIABLE (cell, o->v->i) - *bias;
   w = ftt_cell_volume (cell)*(GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.);
   *sumref += ref*ref*w;

@@ -724,7 +724,7 @@ static guint minlevel (FttCell * cell, GfsSimulation * sim)
     GfsAdapt * a = i->data;
     guint l;
     
-    if (a->active && (l = gfs_function_value (a->minlevel, &p, sim->time.t)) > minlevel)
+    if (a->active && (l = gfs_function_value (a->minlevel, NULL, &p, sim->time.t)) > minlevel)
       minlevel = l;
     i = i->next;
   }
@@ -742,7 +742,7 @@ static guint maxlevel (FttCell * cell, GfsSimulation * sim)
     GfsAdapt * a = i->data;
     guint l;
 
-    if (a->active && (l = gfs_function_value (a->maxlevel, &p, sim->time.t)) < maxlevel)
+    if (a->active && (l = gfs_function_value (a->maxlevel, NULL, &p, sim->time.t)) < maxlevel)
       maxlevel = l;
     i = i->next;
   }

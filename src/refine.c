@@ -29,7 +29,7 @@ static gboolean refine_maxlevel (FttCell * cell, GfsFunction * maxlevel)
   FttVector p;
 
   ftt_cell_pos (cell, &p);
-  return (ftt_cell_level (cell) < gfs_function_value (maxlevel, &p, 0.));
+  return (ftt_cell_level (cell) < gfs_function_value (maxlevel, cell, &p, 0.));
 }
 
 static void refine_box (GfsBox * box, GfsFunction * maxlevel)
@@ -146,7 +146,7 @@ static void refine_cut_cell (FttCell * cell, GtsSurface * s, gpointer * data)
   FttVector p;
 
   ftt_cell_pos (cell, &p);
-  if (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, &p, 0.))
+  if (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, cell, &p, 0.))
     ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
 }
 
@@ -342,7 +342,7 @@ static gboolean refine_distance_maxlevel (FttCell * cell, GfsRefine * refine)
   p.x = pos.x; p.y = pos.y; p.z = pos.z;
   d = gts_bb_tree_point_distance (GFS_REFINE_DISTANCE (refine)->stree, &p,
 				  (GtsBBoxDistFunc) gts_point_triangle_distance, NULL);
-  return (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, &pos, d));
+  return (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, cell, &pos, d));
 }
 
 static void refine_distance (GfsBox * box, gpointer data)
@@ -409,7 +409,7 @@ static gboolean height_maxlevel (GtsPoint * p, guint level, GfsRefine * refine, 
     *guess = f;
     gts_triangle_interpolate_height (GTS_TRIANGLE (f), p);
     pos.x = p->x; pos.y = p->y; pos.z = p->z;
-    return (level < gfs_function_value (refine->maxlevel, &pos, p->z));
+    return (level < gfs_function_value (refine->maxlevel, NULL, &pos, p->z));
   }
   return FALSE;
 }

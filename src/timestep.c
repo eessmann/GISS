@@ -868,9 +868,9 @@ static void gfs_surface_bc_bc (FttCell * cell, GfsSurfaceGenericBc * b)
 {
   GfsSurfaceBc * bc = GFS_SURFACE_BC (b);
   gdouble t = gfs_object_simulation (bc)->time.t;
-  gdouble val = gfs_function_value (bc->val, &GFS_STATE (cell)->solid->ca, t);
+  gdouble val = gfs_function_value (bc->val, cell, &GFS_STATE (cell)->solid->ca, t);
 
-  if (gfs_function_value (bc->type, &GFS_STATE (cell)->solid->ca, t) > 0.) {
+  if (gfs_function_value (bc->type, cell, &GFS_STATE (cell)->solid->ca, t) > 0.) {
     cell->flags |= GFS_FLAG_DIRICHLET;
     GFS_STATE (cell)->solid->fv = val;
   }

@@ -38,7 +38,7 @@ struct _GfsFunction {
   GtsObject parent;
   GModule * module;
   GString * expr;
-  gdouble (* f) (gdouble x, gdouble y, gdouble z, gdouble t);
+  gdouble (* f) (FttCell *, gdouble x, gdouble y, gdouble z, gdouble t);
   gdouble val;
 
   /*< public >*/
@@ -62,10 +62,11 @@ struct _GfsFunctionClass {
 GfsFunctionClass * gfs_function_class       (void);
 GfsFunction *      gfs_function_new         (GfsFunctionClass * klass,
 					     gdouble val);
-gdouble            gfs_function_face_value  (GfsFunction * f, 
+gdouble            gfs_function_face_value  (GfsFunction * f,
 					     FttCellFace * fa,
 					     gdouble t);
-gdouble            gfs_function_value       (GfsFunction * f, 
+gdouble            gfs_function_value       (GfsFunction * f,
+					     FttCell * cell,
 					     FttVector * p,
 					     gdouble t);
 void               gfs_function_read        (GfsFunction * f, 

@@ -297,7 +297,7 @@ static gdouble source_value (GfsSourceGeneric * s,
     ftt_cell_pos (cell, &p);
   else
     gfs_cell_cm (cell, &p);
-  return gfs_function_value (GFS_SOURCE (s)->intensity, &p,
+  return gfs_function_value (GFS_SOURCE (s)->intensity, cell, &p,
 			     gfs_object_simulation (s)->time.t);
 }
 
@@ -901,7 +901,8 @@ static gdouble gfs_source_coriolis_mac_value (GfsSourceGeneric * s,
   gdouble f;
 
   gfs_cell_cm (cell, &p);
-  f = gfs_function_value (GFS_SOURCE_CORIOLIS (s)->omegaz, &p, gfs_object_simulation (s)->time.t);
+  f = gfs_function_value (GFS_SOURCE_CORIOLIS (s)->omegaz, NULL, &p, 
+			  gfs_object_simulation (s)->time.t);
   switch (GFS_VELOCITY_COMPONENT (v->i)) {
   case FTT_X: return   f*GFS_STATE (cell)->v;
   case FTT_Y: return - f*GFS_STATE (cell)->u;
@@ -917,7 +918,7 @@ static void save_coriolis (FttCell * cell, GfsSourceCoriolis * s)
   gdouble f;
 
   gfs_cell_cm (cell, &p);
-  f = gfs_function_value (s->omegaz, &p, gfs_object_simulation (s)->time.t)/2.;
+  f = gfs_function_value (s->omegaz, NULL, &p, gfs_object_simulation (s)->time.t)/2.;
   for (c = 0; c < 2; c++)
     GFS_VARIABLE (cell, s->u[c]->i) = c == FTT_X ? f*GFS_STATE (cell)->v : -f*GFS_STATE (cell)->u;
 }
@@ -981,7 +982,7 @@ static void implicit_coriolis (FttCell * cell, GfsSourceCoriolis * s)
   GfsSimulation * sim = gfs_object_simulation (s);
 
   gfs_cell_cm (cell, &p);
-  c = sim->advection_params.dt*gfs_function_value (s->omegaz, &p, sim->time.t)/2.;
+  c = sim->advection_params.dt*gfs_function_value (s->omegaz, NULL, &p, sim->time.t)/2.;
   u = GFS_STATE (cell)->u;
   v = GFS_STATE (cell)->v;
   GFS_STATE (cell)->u = (u + c*v)/(1. + c*c);
