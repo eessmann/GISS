@@ -103,7 +103,7 @@ cat <<EOF
 # command line: $command
 # reference depth: $H m
 EOF
-mapproject -C $proj $area |\
+mapproject -Dc -C $proj $area |\
   awk -v H=$H -v coast=$coast '{
     if ($1 < 0.71 && $1 > -0.71 && $2 < 0.71 && $2 > -0.71)
       print $1 " " $2 " " (coast - $3)/H;
@@ -112,7 +112,7 @@ mapproject -C $proj $area |\
 transform --rz $angle | transform --revert --tz 0.5
 
 cat <<EOF > lolat2xy
-mapproject -C $proj $area | awk '
+mapproject -Dc -C $proj $area | awk '
 BEGIN {
   angle = $angle * 3.14159265359/180.;
   cosa = cos (angle);
@@ -147,6 +147,6 @@ BEGIN {
   }
   else
     print \$0;
-}' | mapproject -I -C $proj $area
+}' | mapproject -Dc -I -C $proj $area
 EOF
 chmod +x xy2lolat
