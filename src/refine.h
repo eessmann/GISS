@@ -98,6 +98,13 @@ struct _GfsRefineDistance {
      
 GfsRefineClass * gfs_refine_distance_class  (void);
 
+/* GfsRefineHeight: Header */
+
+#define GFS_IS_REFINE_HEIGHT(obj)         (gts_object_is_from_class (obj,\
+						  gfs_refine_height_class ()))
+     
+GfsRefineClass * gfs_refine_height_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

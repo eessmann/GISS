@@ -384,3 +384,77 @@ GfsRefineClass * gfs_refine_distance_class (void)
 
   return klass;
 }
+
+/* GfsRefineHeight: Object */
+
+static void refine_height_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  
+  if (gts_surface_volume (GFS_REFINE_SURFACE (*o)->surface) < 0.)
+    gts_surface_foreach_face (GFS_REFINE_SURFACE (*o)->surface, 
+			      (GtsFunc) gts_triangle_revert, NULL);
+}
+
+static gboolean refine_height_maxlevel (FttCell * cell, gpointer * data)
+{
+  GfsRefine * refine = data[0];
+  GtsFace * f, ** guess = data[1];
+  FttVector pos;
+  GtsPoint p;
+
+  ftt_cell_pos (cell, &pos);
+  p.x = pos.x; p.y = pos.y;
+  if ((f = gts_point_locate (&p, GFS_REFINE_SURFACE (refine)->surface, NULL))) {
+    *guess = f;
+    gts_triangle_interpolate_height (GTS_TRIANGLE (f), &p);
+    return (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, &pos, p.z));
+  }
+  return FALSE;
+}
+
+static void refine_height (GfsBox * box, gpointer data)
+{
+  gpointer datum[2];
+  GtsFace * guess = NULL;
+
+  datum[0] = data;
+  datum[1] = &guess;
+  ftt_cell_refine (box->root, 
+		   (FttCellRefineFunc) refine_height_maxlevel, datum,
+		   (FttCellInitFunc) gfs_cell_init, gfs_box_domain (box));
+}
+
+static void refine_height_refine (GfsRefine * refine, GfsSimulation * sim)
+{
+  gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) refine_height, refine);
+}
+
+static void gfs_refine_height_class_init (GfsRefineClass * klass)
+{
+  klass->refine = refine_height_refine;
+  GTS_OBJECT_CLASS (klass)->read = refine_height_read;
+}
+
+GfsRefineClass * gfs_refine_height_class (void)
+{
+  static GfsRefineClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_refine_height_info = {
+      "GfsRefineHeight",
+      sizeof (GfsRefineSurface),
+      sizeof (GfsRefineClass),
+      (GtsObjectClassInitFunc) gfs_refine_height_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_refine_surface_class ()),
+				  &gfs_refine_height_info);
+  }
+
+  return klass;
+}
