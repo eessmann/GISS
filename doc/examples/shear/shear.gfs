@@ -12,6 +12,9 @@
 # Figure \ref{error} illustrates the error between the initial and final shapes. The
 # corresponding error norms are given in Table \ref{norms}.
 #
+# Adaptive refinement is used with the gradient of the volume fraction as criterion.
+# Eight levels of refinement are used on the interfaces and six away from the interface.
+#
 # \begin{figure}[htbp]
 # \begin{center}
 # \begin{tabular}{ccc}
@@ -29,7 +32,7 @@
 # \begin{center}
 # \includegraphics[width=0.4\hsize]{dt-5.eps}
 # \end{center}
-# \caption{Difference between the initial and final volume fraction field.}
+# \caption{Difference between the initial and final volume fraction fields.}
 # \label{error}
 # \end{figure}
 #
@@ -40,7 +43,7 @@
 # \input{norms.tex}
 # \end{tabular}
 # \end{center}
-# \caption{Norms of the error between the initial and final field.}
+# \caption{Norms of the error between the initial and final fields.}
 # \label{norms}
 # \end{table}
 #
@@ -48,7 +51,7 @@
 # Command: gerris2D shear.gfs
 # Version: 0.6.4
 # Required files: circle.gts
-# Running time: 6 minutes
+# Running time: 2 minutes
 # Generated files: t-0.eps t-2.5.eps t-5.eps dt-5.eps norms.tex
 #
 # The type of the simulation is GfsAdvection which only solves the advection
@@ -57,7 +60,8 @@
   Time { end = 5 }
   Refine 8
 
-  # Add tracer T, using a VOF advection scheme
+  # Add tracer T, using a VOF advection scheme.
+  # The default scheme is a Van-Leer limited, second-order upwind scheme.
   VariableTracer {} T { scheme = vof }
 
   # Initialize T as the volume fraction of each cell contained inside the
@@ -66,35 +70,16 @@
 
   # Initialize U and V with the vortical shear flow field
   Init {} {
-    U = {
-      x = (x + 0.5)*M_PI;
-      y = (y + 0.5)*M_PI;
-      return sin(x)*cos(y);
-    }
-    V = {
-      x = (x + 0.5)*M_PI;
-      y = (y + 0.5)*M_PI;
-      return -cos(x)*sin(y);
-    }
+    U = sin((x + 0.5)*M_PI)*cos((y + 0.5)*M_PI) 
+    V = -cos((x + 0.5)*M_PI)*sin((y + 0.5)*M_PI)
   }
 
   # At t = 2.5 re-initialize U and V with the reversed flow field
-  Init { start = 2.5 } {
-    U = {
-      x = (x + 0.5)*M_PI;
-      y = (y + 0.5)*M_PI;
-      return -sin(x)*cos(y);
-    }
-    V = {
-      x = (x + 0.5)*M_PI;
-      y = (y + 0.5)*M_PI;
-      return cos(x)*sin(y);
-    }
-  }
+  Init { start = 2.5 } { U = -U V = -V }
  
   # Adapt the mesh dynamically so that at any time the maximum of the gradient
   # of T is less than 1e-2 per cell length
-  AdaptGradient { istep = 1 } { cmax = 1e-2 maxlevel = 8 minlevel = 7 } T
+  AdaptGradient { istep = 1 } { cmax = 1e-2 maxlevel = 8 minlevel = 6 } T
  
   # Output progress report on standard error
   OutputProgress { istep = 1 } stderr
@@ -112,7 +97,7 @@
   # Output the norms of the difference between T and Tref, stores that into
   # new variable DT
   OutputErrorNorm { start = end } { awk '{print $5 " & " $7 " & " $9}' > norms.tex } { v = T } {
-    s = { return Tref; } v = DT
+    s = Tref v = DT
   }
 
   OutputPPM { start = end } { convert -colors 256 ppm:- dt-5.eps } { v = DT }
