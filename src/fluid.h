@@ -228,6 +228,8 @@ void                  gfs_cell_traverse_mixed       (FttCell * root,
 						     FttTraverseFlags flags,
 						     FttCellTraverseFunc func,
 						     gpointer data);
+GtsSurface *          gfs_cell_is_cut               (FttCell * cell,
+						     GtsSurface * s);
 typedef void       (* FttCellTraverseCutFunc)       (FttCell * cell,
 						     GtsSurface * s,
 						     gpointer data);

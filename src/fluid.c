@@ -1811,14 +1811,26 @@ static void face_overlaps_box (GtsTriangle * t, gpointer * data)
   }
 }
 
-static GtsSurface * cell_is_cut (FttCell * cell, GtsSurface * s)
+/**
+ * gfs_cell_is_cut:
+ * @cell: a #FttCell.
+ * @s: a #GtsSurface.
+ *
+ * Returns: a new #GtsSurface containing the faces of @s which may
+ * intersect @cell or %NULL if no faces of @s intersects @cell.
+ */
+GtsSurface * gfs_cell_is_cut (FttCell * cell, GtsSurface * s)
 {
   GtsSurface * s1 = NULL;
   gpointer data[2];
   GtsBBox bb;
   FttVector p;
-  gdouble h = ftt_cell_size (cell)/1.99999;
+  gdouble h;
 
+  g_return_val_if_fail (cell != NULL, NULL);
+  g_return_val_if_fail (s != NULL, NULL);
+
+  h = ftt_cell_size (cell)/1.99999;
   ftt_cell_pos (cell, &p);
   bb.x1 = p.x - h; bb.y1 = p.y - h;
   bb.x2 = p.x + h; bb.y2 = p.y + h; 
@@ -1842,7 +1854,7 @@ static void cell_traverse_cut (FttCell * cell,
 			       FttCellTraverseCutFunc func,
 			       gpointer data)
 {
-  GtsSurface * s1 = cell_is_cut (cell, s);
+  GtsSurface * s1 = gfs_cell_is_cut (cell, s);
 
   if (s1 == NULL)
     return;
