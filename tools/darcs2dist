@@ -3,7 +3,7 @@
 usage()
 {
 	cat <<EOF
-Usage: darcs2dist [OPTIONS] PACKAGE REPOSITORY
+Usage: darcs2dist [OPTIONS] PACKAGE REPOSITORY URL
 
 Updates a SourceForge snapshot using the given darcs repository.
 
@@ -11,12 +11,13 @@ EOF
 	exit $1
 }
 
-if test $# -lt 2; then
+if test $# -lt 3; then
 	usage 1 1>&2
 fi
 
 package=$1
 repo=$2
+url=$3
 
 curdir=`pwd`
 wrkdir=`mktemp -d /tmp/darcs2dist.XXXXXX`
@@ -46,7 +47,7 @@ if make -k >> msg 2>&1; then
         mv -f `echo $package-*.tar.gz | sed 's/.tar.gz//'` $package-`date +%y-%m-%d`
         tar cf $package-snapshot.tar $package-`date +%y-%m-%d`
         gzip -f --best $package-snapshot.tar
-	scp -q $package-snapshot.tar.gz popinet@gfs.sourceforge.net:/home/groups/g/gf/gfs/htdocs/$package-snapshot.tar.gz
+	scp -q $package-snapshot.tar.gz $url/$package-snapshot.tar.gz
     else
 	cat msg
     fi
