@@ -20,22 +20,22 @@ for level in 3 4 5 6 7; do
     rm -f wave-$level
     cat <<EOF > $param
 1 1 GfsSimulation GfsBox GfsGEdge {} {
-  GfsTime {
+  Time {
     end = 2.2426211256
     dtmax = 1.01430173026e-3
   }
-  GfsApproxProjectionParams { tolerance = 1e-6 }
-  GfsProjectionParams { tolerance = 1e-6 }
-  GfsRefine $level
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
+  Refine $level
   VariableTracer {} T { scheme = vof }
   SourceTension {} U V T 1
   AdvectionParams { scheme = none }
-  GfsSourceDiffusion {} U 0.0182571749236
-  GfsSourceDiffusion {} V 0.0182571749236
-  GfsInitFraction {} T wave.gts
+  SourceDiffusion {} U 0.0182571749236
+  SourceDiffusion {} V 0.0182571749236
+  InitFraction {} T wave.gts
   OutputProgress { istep = 1 } stdout
-  GfsOutputSimulation { istep = 3 } $param-%ld.gfs { binary = 1 }
-  GfsEventScript { istep = 3 } {
+  OutputSimulation { istep = 3 } $param-%ld.gfs { binary = 1 }
+  EventScript { istep = 3 } {
     echo \$GfsTime | awk -v level=$level '{printf ("%g ", \$1*11.1366559937) >> ("wave-" level) }'
     gfs2oogl2D -g -c T < $param-\$GfsIter.gfs | sort -n +1 -2 | awk -v level=$level 'BEGIN {
       n = exp (level*log (2.));
