@@ -31,6 +31,7 @@
 #include "graphic.h"
 #include "domain.h"
 #include "init.h"
+#include "variable.h"
 
 #if 1
 static gboolean refine (FttCell * cell, guint * maxlevel)
