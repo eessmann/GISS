@@ -2,7 +2,7 @@
 
 SUBDIRS = modules src tools test doc
 
-EXTRA_DIST = ChangeLog
+EXTRA_DIST = ChangeLog autogen.sh
 
 dist-hook:
 	$(RM) -r `find $(distdir) -name CVS -type d -print`
