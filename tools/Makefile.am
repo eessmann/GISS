@@ -21,6 +21,8 @@ bin_SCRIPTS = \
 	darcs2dist \
 	bat2gts
 
+EXTRA_DIST = $(bin_SCRIPTS)
+
 gfs2oogl2D_SOURCES = gfs2oogl.c
 gfs2oogl2D3_SOURCES = gfs2oogl.c
 gfs2oogl3D_SOURCES = gfs2oogl.c
