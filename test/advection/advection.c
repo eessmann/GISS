@@ -81,14 +81,6 @@ static gboolean refine_box (FttCell * cell, guint * maxlevel)
   return FALSE;
 }
 
-static void copy_fraction (FttCell * cell)
-{
-  if (GFS_IS_FLUID (cell))
-    GFS_STATE (cell)->p = 1.;
-  else
-    GFS_STATE (cell)->p = GFS_STATE (cell)->solid->a;
-}
-
 static void smooth_gaussian (FttCell * cell)
 {
   FttVector pos;
@@ -340,8 +332,6 @@ int main (int argc, char * argv[])
 
   if (!smooth) {
     GtsSurface * interface;
-    GNode * itree;
-    gboolean is_open;
     GtsFile * fp = gts_file_new (stdin);
 
     /* read GTS surface */
@@ -358,21 +348,7 @@ int main (int argc, char * argv[])
     }
     
     /* compute solid fractions using surface */
-    itree = gts_bb_tree_surface (interface);
-    is_open = gts_surface_volume (interface) < 0. ? TRUE : FALSE;
-    gfs_cell_init_solid_fractions (box->root, interface, itree, is_open,
-				   FALSE, NULL, NULL);
-    if (leftrefine == 0 && rightrefine == 0 && boxrefine == 0)
-      g_assert (gfs_cell_check_solid_fractions (box->root, 
-						interface, itree, is_open));
-    gts_bb_tree_destroy (itree, TRUE);
-
-    /* save solid fraction */
-    ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-		       (FttCellTraverseFunc) copy_fraction, NULL);
-
-    /* reset all cells to fluid */
-    gfs_cell_fluid (box->root);
+    gfs_domain_init_fraction (domain, interface, gfs_p);
   }
   else
     ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
