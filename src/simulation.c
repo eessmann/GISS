@@ -861,13 +861,13 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
     GfsEvent * event = i->data;
     GSList * next = i->next;
 
-    if (t < event->t && sim->tnext > event->t) {
+    if (t < event->t && sim->tnext > event->t - 1e-9) {
       sim->advection_params.dt = event->t - t;
       sim->tnext = event->t;
     }
     i = next;
   }
-  if (sim->tnext > sim->time.end) {
+  if (sim->tnext > sim->time.end - 1e-9) {
     sim->advection_params.dt = sim->time.end - t;
     sim->tnext = sim->time.end;
   }
