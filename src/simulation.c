@@ -785,6 +785,11 @@ static void check_solid_fractions (GfsBox * box, gpointer * data)
 				(FttFaceTraverseFunc) check_face, nf);
 }
 
+static void is_diffusion (GfsSource * s, gboolean * diffusion)
+{
+  *diffusion = (GFS_IS_SOURCE_DIFFUSION (s) != NULL);
+}
+
 /**
  * gfs_simulation_refine:
  * @sim: a #GfsSimulation.
@@ -833,9 +838,19 @@ void gfs_simulation_refine (GfsSimulation * sim)
   data[0] = sim;
   data[1] = &nf;
   gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) check_solid_fractions, data);
-  if (nf > 0)
-    g_warning ("the solid surface cuts %d boundary cells,\n"
-	       "this may cause errors for diffusion terms\n", nf);
+  if (nf > 0) {
+    GfsVariable * v = domain->variables;
+    gboolean diffusion = FALSE;
+    
+    while (v && !diffusion) {
+      if (v->sources)
+	gts_container_foreach (v->sources, (GtsFunc) is_diffusion, &diffusion);
+      v = v->next;
+    }
+    if (diffusion)
+      g_warning ("the solid surface cuts %d boundary cells,\n"
+		 "this may cause errors for diffusion terms\n", nf);
+  }
 }
 
 /**
