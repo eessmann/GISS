@@ -619,7 +619,7 @@ GfsAdaptNotBox * gfs_adapt_not_box_new (GfsEventClass * klass,
 
 #define CELL_COST(cell) (GFS_STATE (cell)->div)
 #define CELL_HCOARSE(c) (GFS_DOUBLE_TO_POINTER (GFS_STATE (c)->dp))
-#define CELL_HFINE(c)   (GFS_DOUBLE_TO_POINTER (GFS_STATE (c)->res))
+#define CELL_HFINE(c)   (GFS_DOUBLE_TO_POINTER (GFS_STATE (c)->g[0]))
 
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {
@@ -642,10 +642,10 @@ static FttCell * remove_top_coarse (GtsEHeap * h, gdouble * cost)
 static FttCell * remove_top_fine (GtsEHeap * h, gdouble * cost)
 {
   FttCell * cell = gts_eheap_remove_top (h, cost);
-  if (cell) GFS_STATE (cell)->res = 0.;
+  if (cell) GFS_STATE (cell)->g[0] = 0.;
   while (cell && ftt_cell_depth (cell) - ftt_cell_level (cell) != 1) {
     cell = gts_eheap_remove_top (h, cost);
-    if (cell) GFS_STATE (cell)->res = 0.;
+    if (cell) GFS_STATE (cell)->g[0] = 0.;
   }
   return cell;
 }
@@ -680,7 +680,7 @@ static void compute_cost (FttCell * cell, gpointer * data)
   if (!GFS_IS_MIXED (cell)) {
     gdouble cost = refine_cost (cell, data[0]);
 
-    GFS_STATE (cell)->dp = GFS_STATE (cell)->res = 0.;
+    GFS_STATE (cell)->dp = GFS_STATE (cell)->g[0] = 0.;
     if (FTT_CELL_IS_LEAF (cell)) {
       CELL_COST (cell) = cost;
     }
@@ -761,9 +761,9 @@ static void fill_heaps (FttCell * cell, gpointer * data)
     if (level < maxlevel (cell, sim))
       GFS_DOUBLE_TO_POINTER (GFS_STATE (cell)->dp) = 
 	gts_eheap_insert_with_key (hcoarse, cell, - CELL_COST (cell));
-    if (parent && GFS_STATE (parent)->res == 0. && !GFS_IS_MIXED (parent) && 
+    if (parent && GFS_STATE (parent)->g[0] == 0. && !GFS_IS_MIXED (parent) && 
 	level > minlevel (parent, sim))
-      GFS_DOUBLE_TO_POINTER (GFS_STATE (parent)->res) = 
+      GFS_DOUBLE_TO_POINTER (GFS_STATE (parent)->g[0]) = 
 	gts_eheap_insert_with_key (hfine, parent, CELL_COST (parent));
   }
 }
