@@ -83,6 +83,7 @@ with
 @max_depth: 
 @var: 
 @binary: 
+@surface: 
 
 <!-- ##### FUNCTION gfs_output_simulation_class ##### -->
 <para>

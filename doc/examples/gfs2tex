@@ -1,0 +1,22 @@
+#!/usr/bin/python
+
+import sys
+import os
+import os.path
+import glob
+import gfs2tex
+
+if not os.access("examples",os.F_OK):
+    os.mkdir("examples")
+
+dico = {}
+for f in glob.glob("../html/*.html"):
+    gfs2tex.dictionary(dico,"file:/home/popinet/adds/src/gerris-stable/doc/html",open(f))
+
+for root, dirs, files in os.walk("."):
+    for d in dirs:
+        if (root + "/" + d)[0:10] != "./examples" and d != ".xvpics":
+            example = gfs2tex.Example(root + "/" + d)
+            if not os.access("examples/" + example.path,os.F_OK):
+                os.symlink("." + example.path, "examples/" + example.path)
+            example.write(dico)

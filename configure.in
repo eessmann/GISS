@@ -415,4 +415,5 @@ test/ocean/Makefile
 test/tension/Makefile
 doc/Makefile
 doc/tutorial/Makefile
+doc/examples/Makefile
 ])

@@ -59,6 +59,7 @@ Simulations
 @advection_params: 
 @diffusion_params: 
 @surface: 
+@output_surface: 
 @interface: 
 @itree: 
 @i_is_open: 
@@ -137,30 +138,12 @@ Simulations
 @sim: 
 
 
-<!-- ##### FUNCTION gfs_simulation_event_init ##### -->
-<para>
-
-</para>
-
-@sim: 
-@events: 
-
-
 <!-- ##### FUNCTION gfs_simulation_set_timestep ##### -->
 <para>
 
 </para>
 
 @sim: 
-
-
-<!-- ##### FUNCTION gfs_simulation_event ##### -->
-<para>
-
-</para>
-
-@sim: 
-@events: 
 
 
 <!-- ##### FUNCTION gfs_simulation_adapt ##### -->

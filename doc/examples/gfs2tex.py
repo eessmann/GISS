@@ -1,0 +1,159 @@
+import sys
+import os
+import os.path
+import re
+
+def generated(lines):
+    for line in lines:
+        record = line.split()
+        if len(record) > 3 and \
+               record[0] == "#" and record[1] == "Generated" and record[2] == "files:":
+            return record[3:]
+    return []
+
+def dictionary(d,path,file):
+    instruct = 0
+    for line in file:
+        record = line.split()
+        if len(record) == 2 and record[0] == "struct" and record[1] == "<A":
+            instruct = 1
+        elif len(record) == 1 and record[0] == ">;":
+            instruct = 0
+        elif instruct:
+            if line[0:5] == "HREF=":
+                val = path + "/" + line[6:-2]
+            elif line[0] == ">" and line[-4:] == "</A\n":
+                d[line[1:-4]] = val
+
+class Example:
+    def __init__(self,path):
+        self.path, self.name = os.path.split(path)
+        self.path += "/" + self.name
+        self.section = ["\\subsection","\\subsubsection"][self.path.count("/")-1]
+        name = self.path + "/" + self.name + ".gfs"
+        file = open(name)
+        lines = file.readlines()
+        self.generated = generated(lines)
+        p = re.compile(r"\\label\{[a-zA-Z0-9_\-]*\}")
+        labels = []
+        for line in lines:
+            for l in re.findall(p,line):
+                labels.append(l[7:-1])
+
+        # adds the full path to references to generated files and makes labels absolute
+        lines1 = []
+        path = self.path[2:].replace("/", "-")
+        for line in lines:
+            for gen in self.generated:
+                line = line.replace("{" + gen + "}", "{" + self.path + "/" + gen + "}")
+            for l in labels:
+                line = line.replace("{" + l + "}", "{" + path + "-" + l + "}")
+            lines1.append(line)
+        lines = lines1
+
+        self.title = []
+        self.description = []
+
+        insthg = None
+        for line in lines:
+            record = line.split()
+            if len(record) > 0 and record[0] == "#":
+                if len(record) > 1:
+                    if record[1] == "Title:":
+                        self.title.append(" ".join(record[2:]))
+                        insthg = self.title
+                    elif record[1] == "Description:":
+                        insthg = self.description
+                    elif record[1] == "Required" and record[2] == "files:":
+                        self.required = record[3:]
+                        insthg = None
+                    elif record[1] == "Command:":
+                        self.command = " ".join(record[2:])
+                        insthg = None
+                    elif record[1] == "Author:":
+                        self.author = " ".join(record[2:])
+                        insthg = None
+                    elif record[1] == "Running" and record[2] == "time:":
+                        self.time = " ".join(record[3:])
+                        insthg = None
+                    elif record[1] == "Version:":
+                        self.version = " ".join(record[2:])
+                        insthg = None
+                    elif not insthg == None:
+                        insthg.append(" ".join(record[1:]))
+                elif not insthg == None:
+                    insthg.append(" ".join(record[1:]))
+            
+    def write(self,dico,file=None):
+        if file == None:
+            file = open(self.path + "/" + self.name + ".tex", 'w')
+        file.write(self.section + "{" + "\n".join(self.title) + "}\n")
+        file.write("\\begin{description}\n")
+        file.write("\\item[Author]" + self.author + "\n")
+        file.write("\\item[Command]" + "{\\tt " + self.command + "}\n")
+        file.write("\\item[Version]" + self.version + "\n")
+        required = ""
+        for f in self.required:
+            if f[-4:] == ".gfs":
+                required += " " + f + \
+                            " \\htmladdnormallinkfoot{(view)}{" + self.path + "/" + f + ".html}" +\
+                            " \\htmladdnormallinkfoot{(download)}{" + self.path + "/" + f + "}\\\\"
+            else:
+                required += " \\htmladdnormallinkfoot{" + f + "}{" + self.path + "/" + f + "}"
+        file.write("\\item[Required files]" + required + "\n")
+        file.write("\\item[Running time]" + self.time + "\n")
+        file.write("\\end{description}\n")
+        file.write("\n".join(self.description))
+        self.colorize(dico)
+
+    def colorize(self,dico):
+        file = open(self.path + "/" + self.name + ".gfs")
+        out = open(self.path + "/" + self.name + ".gfs.html", 'w')
+        out.write("<html>\n<body>\n")
+        infile = insthg = 0
+        for line in file:
+            l = ""
+            first = 1
+            comment = 0
+            for c in line:
+                if c == " " and first:
+                    l += "&nbsp; "
+                else:
+                    if first and c == "#":
+                        comment = 1
+                    first = 0
+                    if c == '<':
+                        l += "&lt"
+                    elif c == '>':
+                        l += "&gt"
+                    elif c == '&':
+                        l += "&amp"
+                    else:
+                        l += c
+            if comment:
+                if infile:
+                    record = line.split()
+                    if insthg or len(record) > 1:
+                        out.write("<font color=\"#5285B4\">")
+                        out.write(l)
+                        out.write("</font><br>")
+                        insthg = 1
+                else:
+                    record = line.split()
+                    if len(record) > 2 and record[1] == "Generated" and record[2] == "files:":
+                        infile = 1
+                        insthg = 0
+            elif insthg:
+                record = l.split()
+                for r in record:
+                    key = None
+                    if dico.has_key(r):
+                        key = r
+                    elif dico.has_key("Gfs" + r):
+                        key = "Gfs" + r
+                    if key != None:
+                        out.write("<a href=\"" + dico[key] + "\">" + r + "</a> ")
+                    else:
+                        out.write(r + " ")
+                out.write("<br>\n")
+        out.write("</body>\n</html>\n")

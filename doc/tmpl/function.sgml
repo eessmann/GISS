@@ -105,6 +105,7 @@ or a C function
 </para>
 
 @f: 
+@cell: 
 @p: 
 @t: 
 @Returns: 
@@ -116,6 +117,7 @@ or a C function
 </para>
 
 @f: 
+@domain: 
 @fp: 
 
 

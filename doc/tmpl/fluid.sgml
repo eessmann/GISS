@@ -415,6 +415,7 @@ The fluid variables associated with a fluid cell.
 </para>
 
 @cell: 
+@v: 
 
 
 <!-- ##### FUNCTION gfs_normal_divergence ##### -->

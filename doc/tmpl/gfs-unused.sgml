@@ -491,6 +491,16 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @max_depth: 
 @p: 
 
+<!-- ##### FUNCTION gfs_domain_remove_islands ##### -->
+<para>
+
+</para>
+
+@domain: 
+@min: 
+@cleanup: 
+@data: 
+
 <!-- ##### FUNCTION gfs_domain_traversed_merged ##### -->
 <para>
 
@@ -615,6 +625,14 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @variables: 
 @Returns: 
 
+<!-- ##### FUNCTION gfs_refine_mixed ##### -->
+<para>
+
+</para>
+
+@cell: 
+@Returns: 
+
 <!-- ##### FUNCTION gfs_relax_level ##### -->
 <para>
 
@@ -632,6 +650,22 @@ Evaluates to the index of the neighboring direction opposite to @i.
 
 @cell: 
 @v: 
+
+<!-- ##### FUNCTION gfs_simulation_event ##### -->
+<para>
+
+</para>
+
+@sim: 
+@events: 
+
+<!-- ##### FUNCTION gfs_simulation_event_init ##### -->
+<para>
+
+</para>
+
+@sim: 
+@events: 
 
 <!-- ##### FUNCTION gfs_solid_stats ##### -->
 <para>

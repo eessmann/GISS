@@ -348,7 +348,7 @@ Fluid domain
 @min: 
 
 
-<!-- ##### FUNCTION gfs_domain_remove_islands ##### -->
+<!-- ##### FUNCTION gfs_domain_remove_ponds ##### -->
 <para>
 
 </para>
@@ -357,6 +357,14 @@ Fluid domain
 @min: 
 @cleanup: 
 @data: 
+
+
+<!-- ##### FUNCTION gfs_domain_remove_specks ##### -->
+<para>
+
+</para>
+
+@domain: 
 
 
 <!-- ##### FUNCTION gfs_domain_advect_point ##### -->
