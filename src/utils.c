@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <math.h>
+#include "config.h"
 #include "utils.h"
 #include "solid.h"
 #include "simulation.h"
@@ -101,8 +102,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     /* fall through */
 
     /* compile C expression */
-  case '{':
-    if (!g_module_supported ()) {
+  case '(': case '{':
+    if (!HAVE_PKG_CONFIG) {
       gts_file_error (fp, "expecting a number (val)");
       return;
     }
@@ -154,9 +155,21 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       }
       fprintf (fin, "  }\n#line %d \"GfsFunction\"\n", fp->line);
 
-      if (type == GTS_STRING) {
+      if (type == '(' || type == GTS_STRING) {
 	f->expr = g_string_new (fp->token->str);
-	fprintf (fin, "return %s;\n", fp->token->str);
+	if (type == '(' || fp->next_token != '\0') {
+	  gint c, scope = type == '(' ? 1 : 0;
+	  if (fp->next_token != '\0')
+	    g_string_append_c (f->expr, fp->next_token);
+	  c = gts_file_getc (fp);
+	  while (c != EOF && (scope > 0 || (c != ' ' && c != '\n'))) {
+	    if (c == '(') scope++;
+	    if (c == ')') scope--;
+	    g_string_append_c (f->expr, c);
+	    c = gts_file_getc (fp);
+	  }
+	}
+	fprintf (fin, "return %s;\n", f->expr->str);
 	fputs ("}\n", fin);
 	fclose (fin);
       }
@@ -235,8 +248,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       remove (foutname);
       close (ferrd);
       remove (ferrname);
-      if (type == GTS_STRING)
-	gts_file_next_token (fp);
+      if ((type == '(' || type == GTS_STRING) && fp->next_token != '\0')
+      	gts_file_next_token (fp);
     }
     break;
 

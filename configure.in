@@ -226,6 +226,19 @@ AC_MSG_RESULT($have_gmodule)
 CFLAGS=$OLD_CFLAGS
 LIBS=$OLD_LIBS
 
+# checks for pkg-config
+if test "$have_gmodule" = "yes"; then
+  AC_CHECK_PROG(have_pkg_config, pkg-config, yes, no)
+  if test "$have_pkg_config" = "no"; then
+    AC_MSG_WARN([pkg-config is required for functions in parameter files.])
+  fi
+fi
+if test x"$have_pkg_config" = x"yes"; then
+  AC_DEFINE(HAVE_PKG_CONFIG, 1, [Define to 1 if GModule are supported and if you have pkg-config.])
+else
+  AC_DEFINE(HAVE_PKG_CONFIG, 0)
+fi
+
 # check if module support is disabled
 AC_ARG_ENABLE(modules,
 [  --disable-modules       link modules statically with the executables],
