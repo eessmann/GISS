@@ -138,12 +138,10 @@ The fluid variables associated with a fluid cell.
 @i: 
 @name: 
 @centered: 
-@temporary: 
 @derived: 
 @fine_coarse: 
 @sources: 
 @surface_bc: 
-@next: 
 @p: 
 
 <!-- ##### ENUM GfsPermanentVariable ##### -->
@@ -391,18 +389,6 @@ The fluid variables associated with a fluid cell.
 @domain: 
 <!-- # Unused Parameters # -->
 @variables: 
-
-
-<!-- ##### FUNCTION gfs_cell_init_fraction ##### -->
-<para>
-
-</para>
-
-@root: 
-@s: 
-@stree: 
-@is_open: 
-@c: 
 
 
 <!-- ##### FUNCTION gfs_velocity_norm ##### -->

@@ -57,55 +57,46 @@ GfsRefine *      gfs_refine_new    (GfsRefineClass * klass);
 
 /* GfsRefineSolid: Header */
 
-typedef struct _GfsRefineSolid         GfsRefineSolid;
-typedef struct _GfsRefineSolidClass    GfsRefineSolidClass;
-
-struct _GfsRefineSolid {
-  GfsRefine parent;
-};
-
-struct _GfsRefineSolidClass {
-  GfsRefineClass parent_class;
-};
-
-#define GFS_REFINE_SOLID(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsRefineSolid,\
-					           gfs_refine_solid_class ())
-#define GFS_REFINE_SOLID_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
-						   GfsRefineSolidClass,\
-						   gfs_refine_solid_class())
 #define GFS_IS_REFINE_SOLID(obj)         (gts_object_is_from_class (obj,\
 						   gfs_refine_solid_class ()))
      
-GfsRefineSolidClass * gfs_refine_solid_class  (void);
+GfsRefineClass * gfs_refine_solid_class  (void);
+
+/* GfsRefineSurface: Header */
+
+typedef struct _GfsRefineSurface         GfsRefineSurface;
+
+struct _GfsRefineSurface {
+  GfsRefine parent;
+
+  GtsSurface * surface;
+};
+
+#define GFS_REFINE_SURFACE(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsRefineSurface,\
+					           gfs_refine_surface_class ())
+#define GFS_IS_REFINE_SURFACE(obj)         (gts_object_is_from_class (obj,\
+						   gfs_refine_surface_class ()))
+     
+GfsRefineClass * gfs_refine_surface_class  (void);
 
 /* GfsRefineDistance: Header */
 
 typedef struct _GfsRefineDistance         GfsRefineDistance;
-typedef struct _GfsRefineDistanceClass    GfsRefineDistanceClass;
 
 struct _GfsRefineDistance {
-  GfsRefine parent;
+  GfsRefineSurface parent;
 
-  GtsSurface * surface;
   GNode * stree;
-};
-
-struct _GfsRefineDistanceClass {
-  GfsRefineClass parent_class;
 };
 
 #define GFS_REFINE_DISTANCE(obj)            GTS_OBJECT_CAST (obj,\
 					          GfsRefineDistance,\
 					          gfs_refine_distance_class ())
-#define GFS_REFINE_DISTANCE_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
-						  GfsRefineDistanceClass,\
-						  gfs_refine_distance_class())
 #define GFS_IS_REFINE_DISTANCE(obj)         (gts_object_is_from_class (obj,\
 						  gfs_refine_distance_class ()))
      
-GfsRefineDistanceClass * gfs_refine_distance_class  (void);
-GfsRefineDistance *      gfs_refine_distance_new (GfsRefineDistanceClass * klass);
+GfsRefineClass * gfs_refine_distance_class  (void);
 
 #ifdef __cplusplus
 }

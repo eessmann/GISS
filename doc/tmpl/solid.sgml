@@ -59,22 +59,6 @@ Contains the surface and volume fractions of the cell not contained in the solid
 @cell: 
 
 
-<!-- ##### FUNCTION gfs_cell_init_solid_fractions ##### -->
-<para>
-
-</para>
-
-@root: 
-@s: 
-@stree: 
-@is_open: 
-@destroy_solid: 
-@cleanup: 
-@data: 
-<!-- # Unused Parameters # -->
-@Param2: 
-
-
 <!-- ##### FUNCTION gfs_cell_init_solid_fractions_from_children ##### -->
 <para>
 
@@ -89,11 +73,11 @@ Contains the surface and volume fractions of the cell not contained in the solid
 </para>
 
 @root: 
+@Returns: 
+<!-- # Unused Parameters # -->
 @solid: 
 @stree: 
 @is_open: 
-@Returns: 
-<!-- # Unused Parameters # -->
 @s: 
 
 

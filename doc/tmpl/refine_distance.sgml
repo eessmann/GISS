@@ -1,5 +1,5 @@
 <!-- ##### SECTION Title ##### -->
-Solid distance refinement
+Surface distance refinement
 
 <!-- ##### SECTION Short_Description ##### -->
 Refining cells as a function of the distance to a surface
@@ -12,7 +12,7 @@ For each candidate cell, GfsRefineDistance computes the distance from the cell c
 The syntax in parameter files is as follows:
 <informalexample>
 <programlisting>
-[ #GfsRefine ] surface.gts
+[ #GfsRefineSurface ]
 </programlisting>
 </informalexample>
 </para>
@@ -20,14 +20,6 @@ The syntax in parameter files is as follows:
 <!-- ##### SECTION See_Also ##### -->
 <para>
 </para>
-
-<!-- ##### MACRO GFS_REFINE_DISTANCE_CLASS ##### -->
-<para>
-
-</para>
-
-@klass: 
-
 
 <!-- ##### MACRO GFS_REFINE_DISTANCE ##### -->
 <para>
@@ -45,20 +37,12 @@ The syntax in parameter files is as follows:
 @obj: 
 
 
-<!-- ##### STRUCT GfsRefineDistanceClass ##### -->
-<para>
-
-</para>
-
-@parent_class: 
-
 <!-- ##### STRUCT GfsRefineDistance ##### -->
 <para>
 
 </para>
 
 @parent: 
-@surface: 
 @stree: 
 
 <!-- ##### FUNCTION gfs_refine_distance_class ##### -->

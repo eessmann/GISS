@@ -51,6 +51,7 @@
 <!entity gfs-output-ppm SYSTEM "sgml/output_ppm.sgml">
 <!entity gfs-refine SYSTEM "sgml/refine.sgml">
 <!entity gfs-refine-solid SYSTEM "sgml/refine_solid.sgml">
+<!entity gfs-refine-surface SYSTEM "sgml/refine_surface.sgml">
 <!entity gfs-refine-distance SYSTEM "sgml/refine_distance.sgml">
 <!entity gfs-simulation SYSTEM "sgml/simulation.sgml">
 <!entity gfs-source-generic SYSTEM "sgml/source_generic.sgml">
@@ -116,6 +117,7 @@
         <title>Refinements</title>
         &gfs-refine;
         &gfs-refine-solid;
+        &gfs-refine-surface;
         &gfs-refine-distance;
       </sect1>
       <sect1>

@@ -236,7 +236,8 @@ void gfs_init (int * argc, char *** argv)
 
   gfs_refine_class ();
     gfs_refine_solid_class ();
-    gfs_refine_distance_class ();
+    gfs_refine_surface_class ();
+      gfs_refine_distance_class ();
 
   gfs_event_class ();
     gfs_init_class ();

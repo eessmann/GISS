@@ -252,6 +252,27 @@ Evaluates to the index of the neighboring direction opposite to @i.
 
 @obj: 
 
+<!-- ##### MACRO GFS_REFINE_DISTANCE_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+<!-- ##### MACRO GFS_REFINE_SOLID ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO GFS_REFINE_SOLID_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
 <!-- ##### MACRO GFS_SOURCE_CLASS ##### -->
 <para>
 
@@ -322,6 +343,27 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @residual_before: 
 @residual: 
 
+<!-- ##### STRUCT GfsRefineDistanceClass ##### -->
+<para>
+
+</para>
+
+@parent_class: 
+
+<!-- ##### STRUCT GfsRefineSolid ##### -->
+<para>
+
+</para>
+
+@parent: 
+
+<!-- ##### STRUCT GfsRefineSolidClass ##### -->
+<para>
+
+</para>
+
+@parent_class: 
+
 <!-- ##### STRUCT GfsSourceClass ##### -->
 <para>
 
@@ -362,6 +404,31 @@ Evaluates to the index of the neighboring direction opposite to @i.
 </para>
 
 @Returns: 
+
+<!-- ##### FUNCTION gfs_cell_init_fraction ##### -->
+<para>
+
+</para>
+
+@root: 
+@s: 
+@stree: 
+@is_open: 
+@c: 
+
+<!-- ##### FUNCTION gfs_cell_init_solid_fractions ##### -->
+<para>
+
+</para>
+
+@root: 
+@s: 
+@stree: 
+@is_open: 
+@destroy_solid: 
+@cleanup: 
+@data: 
+@Param2: 
 
 <!-- ##### FUNCTION gfs_centered_velocity_advection ##### -->
 <para>

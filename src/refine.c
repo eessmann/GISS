@@ -149,14 +149,6 @@ static void refine_cut_cell (FttCell * cell, GtsSurface * s, gpointer * data)
     ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_init, domain);
 }
 
-static void refine_solid (GfsBox * box, gpointer * data)
-{
-  GfsSimulation * sim = data[1];
-
-  gfs_cell_traverse_cut (box->root, sim->surface, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			 (FttCellTraverseCutFunc) refine_cut_cell, data);
-}
-
 static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
 {
   if (sim->surface) {
@@ -164,24 +156,26 @@ static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
 
     data[0] = refine;
     data[1] = sim;
-    gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) refine_solid, data);
+    gfs_domain_traverse_cut (GFS_DOMAIN (sim), sim->surface, 
+			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			     (FttCellTraverseCutFunc) refine_cut_cell, data);
   }
 }
 
-static void gfs_refine_solid_class_init (GfsRefineSolidClass * klass)
+static void gfs_refine_solid_class_init (GfsRefineClass * klass)
 {
-  GFS_REFINE_CLASS (klass)->refine = gfs_refine_solid_refine;
+  klass->refine = gfs_refine_solid_refine;
 }
 
-GfsRefineSolidClass * gfs_refine_solid_class (void)
+GfsRefineClass * gfs_refine_solid_class (void)
 {
-  static GfsRefineSolidClass * klass = NULL;
+  static GfsRefineClass * klass = NULL;
 
   if (klass == NULL) {
     GtsObjectClassInfo gfs_refine_solid_info = {
       "GfsRefineSolid",
-      sizeof (GfsRefineSolid),
-      sizeof (GfsRefineSolidClass),
+      sizeof (GfsRefine),
+      sizeof (GfsRefineClass),
       (GtsObjectClassInitFunc) gfs_refine_solid_class_init,
       (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
@@ -194,40 +188,37 @@ GfsRefineSolidClass * gfs_refine_solid_class (void)
   return klass;
 }
 
-/* GfsRefineDistance: Object */
+/* GfsRefineSurface: Object */
 
-static void refine_distance_destroy (GtsObject * object)
+static void refine_surface_destroy (GtsObject * object)
 {
-  GfsRefineDistance * d = GFS_REFINE_DISTANCE (object);
+  GfsRefineSurface * d = GFS_REFINE_SURFACE (object);
 
   if (d->surface)
     gts_object_destroy (GTS_OBJECT (d->surface));
-  if (d->stree)
-    gts_bb_tree_destroy (d->stree, TRUE);  
 
-  (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->destroy) 
-    (object);
+  (* GTS_OBJECT_CLASS (gfs_refine_surface_class ())->parent_class->destroy) (object);
 }
 
-static void refine_distance_write (GtsObject * o, FILE * fp)
+static void refine_surface_write (GtsObject * o, FILE * fp)
 {
-  GfsRefineDistance * d = GFS_REFINE_DISTANCE (o);
+  GfsRefineSurface * d = GFS_REFINE_SURFACE (o);
   
-  (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->write) (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_refine_surface_class ())->parent_class->write) (o, fp);
   fprintf (fp, " { ");
   gts_surface_write (d->surface, fp);
   fputs ("}\n", fp);
 }
 
-static void refine_distance_read (GtsObject ** o, GtsFile * fp)
+static void refine_surface_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsRefineDistance * refine;
+  GfsRefineSurface * refine;
 
-  (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->read) (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_refine_surface_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
-  refine = GFS_REFINE_DISTANCE (*o);
+  refine = GFS_REFINE_SURFACE (*o);
   if (fp->type != '{') {
     FILE * f;
     GtsFile * gf;
@@ -266,9 +257,78 @@ static void refine_distance_read (GtsObject ** o, GtsFile * fp)
     }
     fp->scope_max--;
   }
-  refine->stree = gts_bb_tree_surface (refine->surface);
 
   gts_file_next_token (fp);
+}
+
+static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
+{
+  gpointer data[2];
+  
+  data[0] = refine;
+  data[1] = sim;
+  gfs_domain_traverse_cut (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
+			   FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			   (FttCellTraverseCutFunc) refine_cut_cell, data);
+}
+
+static void gfs_refine_surface_class_init (GfsRefineClass * klass)
+{
+  klass->refine = gfs_refine_surface_refine;
+
+  GTS_OBJECT_CLASS (klass)->destroy = refine_surface_destroy;
+  GTS_OBJECT_CLASS (klass)->write = refine_surface_write;
+  GTS_OBJECT_CLASS (klass)->read = refine_surface_read;
+}
+
+static void refine_surface_init (GfsRefineSurface * r)
+{
+  r->surface = gts_surface_new (gts_surface_class (), 
+				gts_face_class (), 
+				gts_edge_class (), 
+				gts_vertex_class ());
+}
+
+GfsRefineClass * gfs_refine_surface_class (void)
+{
+  static GfsRefineClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_refine_surface_info = {
+      "GfsRefineSurface",
+      sizeof (GfsRefineSurface),
+      sizeof (GfsRefineClass),
+      (GtsObjectClassInitFunc) gfs_refine_surface_class_init,
+      (GtsObjectInitFunc) refine_surface_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_refine_class ()),
+				  &gfs_refine_surface_info);
+  }
+
+  return klass;
+}
+
+/* GfsRefineDistance: Object */
+
+static void refine_distance_destroy (GtsObject * object)
+{
+  GfsRefineDistance * d = GFS_REFINE_DISTANCE (object);
+
+  if (d->stree)
+    gts_bb_tree_destroy (d->stree, TRUE);  
+
+  (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->destroy) (object);
+}
+
+static void refine_distance_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GFS_REFINE_DISTANCE (*o)->stree = gts_bb_tree_surface (GFS_REFINE_SURFACE (*o)->surface);
 }
 
 static gboolean refine_distance_maxlevel (FttCell * cell, GfsRefine * refine)
@@ -293,43 +353,32 @@ static void refine_distance (GfsBox * box, gpointer data)
 
 static void refine_distance_refine (GfsRefine * refine, GfsSimulation * sim)
 {
-  if (GFS_REFINE_DISTANCE (refine)->surface)
-    gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) refine_distance, 
-			   refine);
+  gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) refine_distance, refine);
 }
 
-static void gfs_refine_distance_class_init (GfsRefineDistanceClass * klass)
+static void gfs_refine_distance_class_init (GfsRefineClass * klass)
 {
-  GFS_REFINE_CLASS (klass)->refine = refine_distance_refine;
+  klass->refine = refine_distance_refine;
   
   GTS_OBJECT_CLASS (klass)->destroy = refine_distance_destroy;
-  GTS_OBJECT_CLASS (klass)->write = refine_distance_write;
   GTS_OBJECT_CLASS (klass)->read = refine_distance_read;
 }
 
-static void gfs_refine_distance_init (GfsRefineDistance * d)
+GfsRefineClass * gfs_refine_distance_class (void)
 {
-  d->surface = gts_surface_new (gts_surface_class (),
-				gts_face_class (),
-				gts_edge_class (),
-				gts_vertex_class ());
-}
-
-GfsRefineDistanceClass * gfs_refine_distance_class (void)
-{
-  static GfsRefineDistanceClass * klass = NULL;
+  static GfsRefineClass * klass = NULL;
 
   if (klass == NULL) {
     GtsObjectClassInfo gfs_refine_distance_info = {
       "GfsRefineDistance",
       sizeof (GfsRefineDistance),
-      sizeof (GfsRefineDistanceClass),
+      sizeof (GfsRefineClass),
       (GtsObjectClassInitFunc) gfs_refine_distance_class_init,
-      (GtsObjectInitFunc) gfs_refine_distance_init,
+      (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_refine_class ()),
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_refine_surface_class ()),
 				  &gfs_refine_distance_info);
   }
 

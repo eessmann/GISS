@@ -59,8 +59,6 @@ Simulations
 @advection_params: 
 @diffusion_params: 
 @surface: 
-@stree: 
-@is_open: 
 @interface: 
 @itree: 
 @i_is_open: 

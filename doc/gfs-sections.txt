@@ -762,24 +762,30 @@ gfs_refine_class
 <SECTION>
 <FILE>refine_solid</FILE>
 <TITLE>Solid refinement</TITLE>
-GFS_REFINE_SOLID_CLASS
-GFS_REFINE_SOLID
 GFS_IS_REFINE_SOLID
 <SUBSECTION>
-GfsRefineSolidClass
 GfsRefineSolid
 <SUBSECTION>
 gfs_refine_solid_class
 </SECTION>
 
 <SECTION>
+<FILE>refine_surface</FILE>
+<TITLE>Surface refinement</TITLE>
+GFS_REFINE_SURFACE
+GFS_IS_REFINE_SURFACE
+<SUBSECTION>
+GfsRefineSurface
+<SUBSECTION>
+gfs_refine_surface_class
+</SECTION>
+
+<SECTION>
 <FILE>refine_distance</FILE>
-<TITLE>Solid distance refinement</TITLE>
-GFS_REFINE_DISTANCE_CLASS
+<TITLE>Surface distance refinement</TITLE>
 GFS_REFINE_DISTANCE
 GFS_IS_REFINE_DISTANCE
 <SUBSECTION>
-GfsRefineDistanceClass
 GfsRefineDistance
 <SUBSECTION>
 gfs_refine_distance_class

@@ -2,7 +2,7 @@
 Solid refinement
 
 <!-- ##### SECTION Short_Description ##### -->
-Refining cells close to a solid boundary
+Refining cells cut by solid boundary
 
 <!-- ##### SECTION Long_Description ##### -->
 <para>
@@ -22,22 +22,6 @@ The syntax in parameter files is as follows:
 
 </para>
 
-<!-- ##### MACRO GFS_REFINE_SOLID_CLASS ##### -->
-<para>
-
-</para>
-
-@klass: 
-
-
-<!-- ##### MACRO GFS_REFINE_SOLID ##### -->
-<para>
-
-</para>
-
-@obj: 
-
-
 <!-- ##### MACRO GFS_IS_REFINE_SOLID ##### -->
 <para>
 
@@ -45,20 +29,6 @@ The syntax in parameter files is as follows:
 
 @obj: 
 
-
-<!-- ##### STRUCT GfsRefineSolidClass ##### -->
-<para>
-
-</para>
-
-@parent_class: 
-
-<!-- ##### STRUCT GfsRefineSolid ##### -->
-<para>
-
-</para>
-
-@parent: 
 
 <!-- ##### FUNCTION gfs_refine_solid_class ##### -->
 <para>

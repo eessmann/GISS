@@ -308,6 +308,16 @@ Fluid domain
 @vf: 
 
 
+<!-- ##### FUNCTION gfs_domain_init_fraction ##### -->
+<para>
+
+</para>
+
+@domain: 
+@s: 
+@c: 
+
+
 <!-- ##### FUNCTION gfs_domain_read ##### -->
 <para>
 
