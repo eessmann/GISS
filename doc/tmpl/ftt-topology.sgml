@@ -1,0 +1,172 @@
+<!-- ##### SECTION Title ##### -->
+Topological relationships
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO FTT_CELLS ##### -->
+<para>
+Evaluates to the maximum number of children of a #FttCell (4 in 2D, 8 in 3D).
+</para>
+
+
+
+<!-- ##### MACRO FTT_CELL_ID ##### -->
+<para>
+Evaluates to the child index of @c.
+</para>
+
+@c: a #FttCell.
+
+
+<!-- ##### MACRO FTT_OPPOSITE_DIRECTION ##### -->
+<para>
+
+</para>
+
+@d: 
+
+
+<!-- ##### MACRO FTT_ORTHOGONAL_COMPONENT ##### -->
+<para>
+
+</para>
+
+@c: 
+
+
+<!-- ##### FUNCTION ftt_cell_children ##### -->
+<para>
+
+</para>
+
+@cell: 
+@children: 
+
+
+<!-- ##### STRUCT FttCellChildren ##### -->
+<para>
+
+</para>
+
+@c: 
+
+<!-- ##### ENUM FttDirection ##### -->
+<para>
+
+</para>
+
+@FTT_RIGHT: 
+@FTT_LEFT: 
+@FTT_TOP: 
+@FTT_BOTTOM: 
+@FTT_BACK: 
+
+<!-- ##### ENUM FttComponent ##### -->
+<para>
+
+</para>
+
+@FTT_X: 
+@FTT_Y: 
+@FTT_XYZ: 
+
+<!-- ##### FUNCTION ftt_cell_children_direction ##### -->
+<para>
+
+</para>
+
+@cell: 
+@d: 
+@children: 
+
+
+<!-- ##### FUNCTION ftt_cell_child_corner ##### -->
+<para>
+
+</para>
+
+@cell: 
+@Param2: 
+@Returns: 
+
+
+<!-- ##### FUNCTION ftt_cell_neighbors ##### -->
+<para>
+
+</para>
+
+@cell: 
+@neighbors: 
+
+
+<!-- ##### FUNCTION ftt_cell_neighbors_not_cached ##### -->
+<para>
+
+</para>
+
+@cell: 
+@neighbors: 
+
+
+<!-- ##### STRUCT FttCellNeighbors ##### -->
+<para>
+
+</para>
+
+@c: 
+
+<!-- ##### FUNCTION ftt_cell_neighbor ##### -->
+<para>
+
+</para>
+
+@cell: 
+@d: 
+@Returns: 
+
+
+<!-- ##### FUNCTION ftt_cell_neighbor_not_cached ##### -->
+<para>
+
+</para>
+
+@cell: 
+@d: 
+@Returns: 
+
+
+<!-- ##### FUNCTION ftt_cell_set_neighbor ##### -->
+<para>
+
+</para>
+
+@root: 
+@neighbor: 
+@d: 
+@init: 
+@init_data: 
+
+
+<!-- ##### FUNCTION ftt_cell_set_neighbor_match ##### -->
+<para>
+
+</para>
+
+@root: 
+@neighbor: 
+@d: 
+@init: 
+@init_data: 
+
+

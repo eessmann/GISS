@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: Gerris3D
+Description: Gerris Flow Solver Library (3D)
+Version: @VERSION@
+Libs: -L${libdir} -lgfs3D -lgts -lm
+Cflags: -I${includedir}

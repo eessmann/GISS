@@ -1,0 +1,1529 @@
+\documentclass[a4paper]{article}
+\usepackage{html}
+\input{pdf.tex}
+
+\oddsidemargin=4mm
+\evensidemargin=-1mm
+\topmargin=-7mm
+\textwidth=15.42cm
+\textheight=23.2cm
+
+\begin{document}
+
+\mbox{}\vspace{1cm}
+\begin{center}
+{\huge The Gerris Tutorial}\\
+{\large Version GFS_VERSION}\\
+\vspace{5mm}
+{\large St\'ephane Popinet\\
+{\tt s.popinet@niwa.cri.nz}\\
+\vspace{5mm}
+\today}
+\vspace{1cm}
+\end{center}
+
+\tableofcontents 
+
+\section{Introduction}
+
+This tutorial is a step-by-step introduction to the different concepts
+necessary to use Gerris. It is specifically designed for a end-user
+and is not a technical description of the numerical techniques used
+within Gerris. If you are interested by that, you should consult the
+bibliography section on the \htmladdnormallinkfoot{Gerris web
+site}{http://gfs.sf.net}.
+
+Various versions of this tutorial are available:
+\begin{itemize}
+\item Printable formats: both \htmladdnormallinkfoot{compressed Postscript}{http://gfs.sf.net/tutorial.ps.gz} and \htmladdnormallinkfoot{PDF}{http://gfs.sf.net/tutorial.pdf}.
+\item HTML: \htmladdnormallinkfoot{direct link}{http://gfs.sf.net/tutorial/tutorial1.html} or
+\htmladdnormallinkfoot{compressed archive}{http://gfs.sf.net/tutorial.tar.gz}.
+\end{itemize}
+
+In this tutorial I will assume that you are familiar with the Unix
+shell (and that you are running some version of a Unix system). Some
+knowledge of C programming would also be very helpful if you intend to 
+extend Gerris with your own objects.
+
+\subsection{Installing and compiling Gerris}
+
+Gerris is written in C and uses two other C libraries which you need
+to install on your system first: the \htmladdnormallinkfoot{Glib
+library}{http://www.gtk.org} and the \htmladdnormallinkfoot{{\sc GTS}
+library}{http://gts.sf.net}. If you want to run the parallel version
+of Gerris, you will also need some implementation of the {\sc MPI}
+(Message Passing Interface) library. If you are using a parallel
+machine, {\sc MPI} is very likely to be already on your machine.
+
+If you are using a Linux system the Glib library is most probably
+already installed on your system. To be sure try this:
+\begin{verbatim}
+% glib-config --version
+\end{verbatim}
+If you get a result, you have the Glib library on your system,
+otherwise you will need to install it following the instructions on
+the Glib web site.
+
+You now need to install the {\sc GNU} Triangulated Surface Library
+({\sc GTS}). To do that, go on the \htmladdnormallink{{\sc GTS}
+web site}{http://gts.sf.net} and download a recent source file
+package. Move it to your preferred location for unpacking source files
+and type:
+\begin{verbatim}
+% gunzip gts.tar.gz
+% tar xvf gts.tar
+% cd gts
+\end{verbatim}
+You now need to decide where you want to install the library, if you
+have access to the root account, you can simply type:
+\begin{verbatim}
+% ./configure
+% make
+% su
+% make install
+% exit
+\end{verbatim}
+which will install everything in {\tt /usr/local} by default.
+
+If you don't have access to the root password or want to install the
+library somewhere else like {\tt /home/joe/local} for example, you can 
+type instead:
+\begin{verbatim}
+% ./configure --prefix=/home/joe/local
+% make
+% make install
+\end{verbatim}
+You probably want to add {\tt /home/joe/local/bin} to your {\tt
+PATH} and {\tt /home/joe/local/lib} to your {\tt LD}\_{\tt
+LIBRARY}\_{\tt PATH}.
+
+The next step is installing Gerris itself, do the same, go to the
+\htmladdnormallinkfoot{Gerris web site}{http://gfs.sf.net} download a recent source file
+package and type:
+\begin{verbatim}
+% gunzip gerris.tar.gz
+% tar xvf gerris.tar
+% cd gerris
+% ./configure --prefix=/home/joe/local
+% make
+% make install
+\end{verbatim}
+Both the 2D and 3D versions of the code are built. In this tutorial,
+we will for convenience only work with 2D simulations. However, all we
+will learn can be applied directly to 3D simulations.
+
+We are now ready to start. Just to check that everything is okay try:
+\begin{verbatim}
+% gerris2D -V
+\end{verbatim}
+
+\subsection{Simulation file}
+
+Gerris is a console-based program. It takes a {\em parameter} or {\em
+simulation} file as input and produces various types of files as output.
+Everything needed to run the simulation is specified in the parameter
+file, this includes:
+\begin{itemize}
+\item Layout of the simulation domain
+\item Initial conditions
+\item Boundary conditions
+\item Solid boundaries
+\item What to output (and when)
+\item Control parameters for the numerical schemes
+\end{itemize}
+
+\section{A simple simulation file}
+
+In this section we will see how to write a simulation file for the
+{\em initial random vorticity} example in the Gerris web site
+gallery. First of all, it is always a good idea to run simulations in
+their own directory. Type this at your shell prompt:
+\begin{verbatim}
+% mkdir vorticity
+% cd vorticity
+\end{verbatim}
+As a starting point we will use the following simulation file: {\tt
+vorticity.sim}
+\begin{verbatim}
+1 2 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 0 }
+}
+GfsBox {}
+1 1 right
+1 1 top
+\end{verbatim}
+This is a valid simulation file but it does not do much as you can see 
+by typing
+\begin{verbatim}
+% gerris2D vorticity.sim
+\end{verbatim}
+It is a good starting point however to explain the general structure
+of a simulation file.
+
+\subsection{A few comments on syntax}
+
+First of all, there are two types of parameters in a simulation file:
+{\em compulsory} and {\em optional} parameters. Optional parameters
+are always specified within a {\em braced} block (i.e. a block of text 
+delimited by braces ({\tt \{ like this \}}). They also often take the form
+\begin{verbatim}
+parameter = value
+\end{verbatim}
+where {\tt parameter} is an unique identifier (within this braced
+block). All the other parameters are compulsory parameters.
+For example, in {\tt vorticity.sim} both
+\begin{verbatim}
+  GfsTime { end = 0 }
+\end{verbatim}
+and
+\begin{verbatim}
+end = 0
+\end{verbatim}
+are optional parameters.
+
+The second important syntax point regards the way various fields are
+delimited. Newline (or ``carriage return'') characters are generally used to
+delimitate different ``objects'' in the simulation file. The only
+case where this rule does not apply is within braced blocks defining
+optional arguments of the form
+\begin{verbatim}
+parameter = value
+\end{verbatim}
+For example, in {\tt vorticity.sim} the following blocks of text are
+all objects:
+\begin{itemize}
+\item
+\begin{verbatim}
+1 2 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 0 }
+}
+\end{verbatim}
+\item
+\begin{verbatim}
+  GfsTime { end = 0 }
+\end{verbatim}
+\item
+\begin{verbatim}
+GfsBox {}
+\end{verbatim}
+\item
+\begin{verbatim}
+1 1 right
+\end{verbatim}
+\item
+\begin{verbatim}
+1 1 top
+\end{verbatim}
+\end{itemize}
+Following this rule, {\tt vorticty.sim} could have been written
+equivalently as:
+\begin{verbatim}
+1 2 GfsSimulation GfsBox GfsGEdge {} { GfsTime {
+  end = 0 }
+}
+GfsBox {}
+1 1 right
+1 1 top
+\end{verbatim}
+
+\subsection{Topology description of the simulation domain}
+
+Ok, so what are all these ``objects'' for?  The first line of the
+simulation file defines a {\em graph} representing the general layout
+of the simulation domain and follows this syntax:
+\begin{description}
+\item[1st field] number of nodes in the graph ({\tt 1})
+\item[2nd field] number of edges connecting the nodes ({\tt 2})
+\item[3rd field] object type for the graph ({\tt GfsSimulation})
+\item[4th field] default object type for the nodes ({\tt GfsBox})
+\item[5th field] object type for the edges ({\tt GfsGEdge})
+\item[6th field] 1st optional parameters (braced block)
+\item[7th field] 2nd optional parameters (braced block)
+\end{description}
+We then jump to the end of the 2nd optional parameters to line
+\begin{verbatim}
+GfsBox {}
+\end{verbatim}
+which describes the first (and unique in this case) node of the
+graph. The first field is the object type of the node ({\tt GfsBox}),
+the second field contains optional parameters.
+The following two lines 
+\begin{verbatim}
+1 1 right
+1 1 top
+\end{verbatim}
+define the edges of the graph as follows:
+\begin{description}
+\item[1st field] index of the starting node ({\tt 1})
+\item[2nd field] index of the ending node   ({\tt 1})
+\item[3rd field] spatial direction in which the two nodes are
+connected ({\tt right} and {\tt top})
+\end{description}
+The nodes are always indexed starting from one. The spatial directions 
+are defined on figure \ref{direction}.
+From this, we see that this file defines a simulation domain
+containing one node (a {\tt GfsBox}) connected with itself in both the
+horizontal ({\tt right}) and vertical ({\tt top}) directions.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=0.4\hsize]{direction.\gfx}
+\end{center}
+\caption{Definition of spatial directions}
+\label{direction}
+\end{figure}
+By default, a {\tt GfsBox} is a square (in 2D) or a cube (in 3D) of
+size unity. The first node of the graph is always centered on the
+origin and is used as the reference to position the other nodes.  We
+have consequently defined a square simulation domain of size unity,
+centered on the origin and using periodic boundary conditions.
+
+\subsection{Controlling the simulation}
+
+Now that we have defined the simulation domain and the boundary
+conditions, we need to specify the initial conditions, numerical
+schemes parameters and so on. This is all done within the second
+optional parameters block of the graph definition.
+
+In our file we have for the moment only one object in this block:
+\begin{verbatim}
+  GfsTime { end = 0 }
+\end{verbatim}
+As its name indicate, this object defines the physical and the
+computational time. By ``computational time'' I mean the number of
+time steps performed. By default both the physical time and the time
+step number are zero when the program starts. It is possible to set
+different values using for example
+\begin{verbatim}
+  GfsTime { t = 1.4 i = 32 end = 0 }
+\end{verbatim}
+where {\tt i} is the time step number and {\tt t} is the physical
+time. The {\tt end} identifier specifies that the simulation should
+stop when the physical time reaches the given value. It is also
+possible to stop the simulation when a specified number of time steps
+is reached, using the {\tt iend} identifier. If both {\tt end} and
+{\tt iend} are specified, the simulation stops when either of these
+are reached. By default, both {\tt end} and {\tt iend} values are
+infinite.
+
+Ok, let's then change this object to
+\begin{verbatim}
+  GfsTime { end = 50 }
+\end{verbatim}
+
+\subsubsection{Spatial discretisation}
+
+The next step is to specify what spatial resolution we want for the
+discretisation. For the moment, the only thing we have defined is the
+root of the quad/octree. The whole domain is thus discretised with
+only one grid point\dots
+
+We need to specify how we want to refine this initial root cell. This
+is done by using an {\tt GfsRefine} object. We can do this by adding
+the line
+\begin{verbatim}
+  GfsRefine 6
+\end{verbatim}
+to the second optional parameter block. This is the simplest possible
+way to refine the initial root cell. We tell the program that we want
+to keep refining the cell tree (by dividing each cell in four children
+cells (in 2D, eight in 3D)) until the {\em level} of the cell is equal
+to five. The level of the root cell is zero, the level of all its
+children cells is one and so on recursively. After this refinement
+process completes we have created a regular Cartesian grid with
+$2^6=64$ cells in each dimension on the finest level ($6$).
+
+\subsubsection{Initial conditions}
+
+We now need to specify the initial conditions and the various actions
+(such as writing results, information messages etc\dots) we want to
+perform when the simulation is running. All these things are treated
+by Gerris as various types of {\em events}, all represented by objects
+derived from the same parent object {\tt GfsEvent}.
+
+Initial conditions are a particular type of event happening only once
+and before any other type of event, they are all derived from the same 
+parent object {\tt GfsInit}.
+
+Gerris comes with a few different objects describing various initial
+conditions. As there is no way Gerris could provide all the different
+initial conditions users could think of, Gerris makes it easy for
+users to create their own initialisation objects by extending the {\tt
+GfsInit} object class. In order not to have to recompile (or more
+exactly re-link) the whole code everytime a new class is added, Gerris
+uses dynamically linked {\em modules} which can be loaded at
+runtime. We will see later how to write your own modules. 
+
+For the moment, we will use the default {\tt GfsInit} object. Just add
+the following lines to {\tt vorticity.sim}:
+\begin{verbatim}
+1 2 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 50 }
+  GfsRefine 6
+  GfsInit {} {
+    U = { return 0.5 - rand()/(double)RAND_MAX; }
+    V = { return 0.5 - rand()/(double)RAND_MAX; }
+  }
+}
+GfsBox {}
+1 1 right
+1 1 top
+\end{verbatim}
+Using {\tt GfsInit} it is possible to set the initial value of each of
+the simulation variables. By default all variables are set to zero
+initially. In our case we tell Gerris to define the two components of
+the velocity field {\tt U} and {\tt V} as C functions. The standard
+{\tt rand{}} function of the C library returns a (pseudo)-random
+number between 0 and {\tt RAND\_MAX}. The two functions we defined
+thus set the components of the velocities in each cell as random
+numbers between -0.5 and 0.5.
+
+This is a powerful feature of the parameter file. In most cases where Gerris requires a number (such as the {\tt GfsRefine 6} line, a function of space and time can be used instead. For example, a valid parameter file could include:
+\begin{verbatim}
+...
+  GfsRefine { return 6.*(1. - sqrt (x*x + y*y)); }
+...
+\end{verbatim}
+which would define a mesh refined in concentric circles.
+
+Using this feature, it is possible to define most initial conditions directly in the parameter file.
+
+\subsubsection{Writing results}
+
+The {\tt vorticity.sim} file we have now is all Gerris needs to run the
+simulation. However, for this run to be any use, we need to specify
+how and when to output the results. This is done by using another
+class of objects: {\tt GfsOutput}, derived from {\tt GfsEvent}. Gerris
+comes with a number of these objects allowing to output various
+aspects of the simulation.
+
+The general syntax for an {\tt GfsEvent} object is as follows:
+\begin{verbatim}
+GfsEvent {
+          start = 0.5 step = 1e-2 end = 3.4
+          istart = 10 iend = 46
+        }
+\end{verbatim}
+this defines an event:
+\begin{itemize}
+\item starting whenever the physical time is larger
+than (or equal to) 0.5 or the time step number is larger than (or
+equal to) 10,
+\item ending whenever the physical time is strictly larger than 3.4 or 
+the time step number is strictly larger than 46,
+\item and occurring every $10^{-2}$ physical time units.
+\end{itemize}
+It is also possible to specify an event step as a number of time steps 
+using the {\tt istep} identifier. Note, however, that you cannot
+specify both {\tt step} and {\tt istep} for the same event. By
+default, {\tt start} and {\tt istart} are zero and {\tt end}, {\tt
+iend}, {\tt step} and {\tt istep} are infinite.
+
+An {\tt GfsOutput} object is derived from {\tt GfsEvent} and follows this 
+syntax:
+\begin{verbatim}
+GfsOutput {} filename-%d-%f-%ld
+\end{verbatim}
+The first part of the line {\tt GfsOutput \{\}} defines the {\tt
+GfsEvent} part of {\tt GfsOutput} and follows the syntax above. In the
+remainder of this tutorial, I will use the following notation to
+express this inheritance of syntax:
+\begin{verbatim}
+[GfsEvent] filename-%d-%f-%ld
+\end{verbatim}
+to avoid repeating the whole thing for every derived objects.
+
+The second part {\tt filename-\%d-\%f-\%ld} specifies where to output
+things. The {\tt \%d}, {\tt \%f} and {\tt \%ld} characters are
+formatting strings which follow the C language syntax and will be
+replaced every time the event takes place according to:
+\begin{description}
+\item[{\tt \%d}] integer replaced with the current process number (used when
+running the parallel version of Gerris).
+\item[{\tt \%f}] floating-point number replaced with the current
+physical time.
+\item[{\tt \%ld}] (long) integer replaced with the current time step number.
+\end{description}
+Of course, you are free not to specify any of these, in which case the 
+output will just be appended to the same file every time the event
+takes place. There are also two filenames which have a special
+meaning: {\tt stdout} and {\tt stderr}, for the standard output and
+standard error of the shell respectively.
+
+We now add the following to our simulation file:
+\begin{verbatim}
+1 2 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 50 }
+  GfsRefine 6
+  GfsInit {} {
+    U = { return 0.5 - rand()/(double)RAND_MAX; }
+    V = { return 0.5 - rand()/(double)RAND_MAX; }
+  }  
+  GfsOutputTime            { istep = 10 } stdout
+  GfsOutputProjectionStats { istep = 10 } stdout
+}
+GfsBox {}
+1 1 right
+1 1 top
+\end{verbatim}
+The first line we added tells the program to output information about
+the time every 10 time steps on the standard output. The second line
+outputs statistics about the projection part of the algorithm.
+
+You can now run the code like this:
+\begin{verbatim}
+% gerris2D vorticity.sim
+\end{verbatim}
+and you should get an output in your console looking like this (you
+can stop the program using {\tt Ctrl-C}):
+\begin{verbatim}
+step:       0 t:      0.00000000 dt:  0.000000e+00
+MAC projection        before     after       rate
+    niter:    0
+    residual.bias:    0.000e+00  0.000e+00
+    residual.first:   0.000e+00  0.000e+00   0.0
+    residual.second:  0.000e+00  0.000e+00   0.0
+    residual.infty:   0.000e+00  0.000e+00   0.0
+Approximate projection
+    niter:    0
+    residual.bias:    0.000e+00  0.000e+00
+    residual.first:   1.050e-14  1.050e-14   0.0
+    residual.second:  1.612e-14  1.612e-14   0.0
+    residual.infty:   7.105e-14  7.105e-14   0.0
+step:      10 t:      0.02190704 dt:  2.801016e-03
+MAC projection        before     after       rate
+    niter:    5
+    residual.bias:   -3.053e-16  1.403e-16
+    residual.first:   3.365e+01  2.949e-05  16.3
+    residual.second:  4.274e+01  4.676e-05  15.6
+    residual.infty:   1.954e+02  3.285e-04  14.3
+Approximate projection
+    niter:    5
+    residual.bias:    9.714e-17  2.874e-16
+    residual.first:   3.322e+01  2.548e-05  16.7
+    residual.second:  4.250e+01  4.062e-05  16.0
+    residual.infty:   1.880e+02  3.380e-04  14.1
+step:      20 t:      0.05278371 dt:  3.531551e-03
+MAC projection        before     after       rate
+    niter:    5
+...
+\end{verbatim}
+The lines starting with {\tt step:} are written by {\tt
+GfsOutputTime}. They give the time step number, corresponding physical
+time and the time step used for the previous iteration.
+
+The other lines are written by {\tt GfsOutputProjectionStats} and give
+you an idea of the divergence errors and convergence rate of the two
+projection steps (MAC and approximate) performed during the previous
+iteration. The various norms of the residual of the solution of the
+Poisson equation are given before and after the projection step. The
+{\tt rate} column gives the average amount by which the divergence is
+reduced by each iteration of the multigrid solver.
+
+Well, numbers are great but what about some images? What we want to 
+do, for example, is output some graphical representation of a given
+scalar field. In 2D, a simple way to do that is to create an image
+where each pixel is coloured according to the local value of the
+scalar. Gerris provides an object to do just that: {\tt GfsOutputPPM}
+which will create a {\sc PPM} (Portable PixMap) image. This object is
+derived from a more general class used to deal with scalar fields:
+{\tt GfsOutputScalar} following this syntax:
+\begin{verbatim}
+[GfsOutput] { v = U min = -1 max = 2.5 }
+\end{verbatim}
+where as before the square brackets express inheritance from the
+parent class. The {\tt v} identifier specifies what scalar field we
+are dealing with, one of:
+\begin{description}
+\item[{\tt U}, {\tt V} (and {\tt W} in 3D)]: components of the velocity.
+\item[{\tt P}]: pressure.
+\item[{\tt C}]: passive tracer.
+\item[{\tt Vorticity}]: vorticity (norm of the vorticity vector in 3D).
+\item[{\tt Velocity}]: norm of the velocity.
+\end{description}
+The {\tt min} and {\tt max} values specify the minimum and maximum
+values this scalar can take. If they are not given, they are computed
+every time the event takes place.
+
+We can now use this in our simulation file:
+\begin{verbatim}
+1 2 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 50 }
+  GfsRefine 6
+  GfsInit {} {
+    U = { return 0.5 - rand()/(double)RAND_MAX; }
+    V = { return 0.5 - rand()/(double)RAND_MAX; }
+  }  
+  GfsOutputTime            { istep = 10  } stdout
+  GfsOutputProjectionStats { istep = 10  } stdout
+  GfsOutputPPM             { step = 1 } vorticity-%4.1f.ppm { v = Vorticity }
+}
+GfsBox {}
+1 1 right
+1 1 top
+\end{verbatim}
+The code will output every 1 time units a {\sc PPM} image
+representing the vorticity field. The result will be written in files 
+named: {\tt vorticity-00.0.ppm}, {\tt vorticity-01.0.ppm}\dots (if the 
+{\tt \%4.1f} thing is not familiar, consult a C book or try {\tt \% man 
+3 printf}).
+
+If you re-run the program using this new simulation file, you will get
+a number of {\sc PPM} files (51 to be precise) you can then visualise
+with any image editing or viewing tool. I would recommend the very
+good \htmladdnormallinkfoot{ImageMagick toolbox}{http://www.imagemagick.org}. If you
+run a Linux box, these tools are very likely to be already installed
+on your system. Try typing this in your working directory:
+\begin{verbatim}
+% display *.ppm
+\end{verbatim}
+If it works, you should see a small (64x64) image representing the
+initial vorticity field. If you click on it, a menu will
+appear. Select File$\rightarrow$Next and look at the evolution of the
+vorticity field with time (you can also use the space bar and
+backspace key to change back and forth). You might also want to try
+the {\tt animate *.ppm} command. Read the man pages of ImageMagick if
+you want to know more. Note that you can use these tools also while
+Gerris is running (and creating new images). With a bit of patience
+you will get the image on figure \ref{vorticity} at $t=18$ (resolution
+has been increased to $128\times 128$).
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.4\hsize]{vorticity.\gfx}
+\end{center}
+\caption{Vorticity field for the initial random vorticity problem at
+$t=18$.}
+\label{vorticity}
+\end{figure}
+
+Before we carry on, we are going to make two modifications to the
+simulation file. First of all, it is not really handy to generate one
+file for every image generated. ImageMagick (and most other programs)
+can deal with multiple {\sc PPM} images contained within the same
+file. Secondly, in the sequence of images we generate, a given value
+of the vorticity does not always correspond to the same colour
+(because the minimum and maximum values of the vorticity can vary in
+time). We can fix that like this:
+\begin{verbatim}
+1 2 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 50 }
+  GfsRefine 6
+  GfsInit {} {
+    U = { return 0.5 - rand()/(double)RAND_MAX; }
+    V = { return 0.5 - rand()/(double)RAND_MAX; }
+  }  
+  GfsOutputTime            { istep = 10   } stdout
+  GfsOutputProjectionStats { istep = 10   } stdout
+  GfsOutputScalarStats     { istep = 10   } stdout { v = Vorticity }
+  GfsOutputPPM             { step = 0.1 } vorticity.ppm {
+    v = Vorticity 
+    min = -10
+    max =  10
+  }
+}
+GfsBox {}
+1 1 right
+1 1 top
+\end{verbatim}
+We have now specified fixed bounds for the vorticity (using the {\tt
+min} and {\tt max} identifiers). Each {\sc PPM} image will be appended to
+the same file: {\tt vorticity.ppm}.
+
+How did I choose the minimum and maximum values for the vorticity? The 
+line {\tt GfsOutputScalarStats \{ istep = 10 \} stdout \{ v = Vorticity
+\}}, writes the minimum, average, standard deviation and maximum
+values of the vorticity. By re-running the simulation and looking at
+these values it is easy to find a suitable range.
+
+\section{A more complex example with solid boundaries}
+
+In this section we will see how to set up a simulation for the flow past 
+a solid body (a half-cylinder) in a narrow channel. While doing that
+we will also encounter new ways of displaying simulation results.
+
+\subsection{Domain geometry and boundary conditions}
+
+What we want is a narrow channel ($4\times 1$ for example). From the
+previous example, we know that we can build it like this:
+\begin{verbatim}
+4 3 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 0 }
+}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+GfsBox {}
+1 2 right
+2 3 right
+3 4 right
+\end{verbatim}
+i.e. four boxes, box 1 connected to box 2 horizontally (to the right),
+box 2 connected to box 3 horizontally and box 3 connected to box 4
+horizontally. Box 1 is centered on the origin and is of size one. All
+the other boxes are positioned accordingly. We now have our $4\times
+1$ rectangular domain.
+
+\subsubsection{Boundary conditions}
+
+What about boundary conditions? By default Gerris assumes that
+boundaries are solid walls with slip conditions for the velocity
+(i.e. the tangential stress on the wall is zero). For the moment we
+then have defined a rectangular box closed on all sides by solid
+walls.
+
+What we really want is to specify an input velocity on the left side
+of the box and some sort of output condition on the right side. We can
+do that like this:
+\begin{verbatim}
+4 3 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 0 }
+}
+GfsBox { left = GfsBoundaryInflowConstant 1 }
+GfsBox {}
+GfsBox {}
+GfsBox { right = GfsBoundaryOutflow }
+1 2 right
+2 3 right
+3 4 right
+\end{verbatim}
+The whole left side of the first (leftmost) box is now defined to be a {\tt
+GfsBoundaryInflowConstant} object and the whole right side of the last
+(rightmost) box a {\tt GfsBoundaryOutflow} object. Again, boundary
+conditions objects are all derived from the {\tt GfsBoundary} object
+and, as initial conditions, new objects can be easily written by the
+user.
+
+We see that {\tt GfsBoundaryInflowConstant} takes one argument which is
+the value of the (constant) normal velocity applied to this
+boundary. All the other variables (pressure, tracer concentration
+etc...) follow a zero gradient condition.
+
+{\tt GfsBoundaryOutflow} implements a simple outflow boundary condition 
+where the pressure is set to zero as well as the gradient of all other quantities.
+
+\subsubsection{Solid boundaries}
+
+We now have an empty ``wind tunnel'' with a constant inlet velocity of
+norm unity. Gerris can deal with arbitrarily complex solid boundaries
+embedded in the quad/octree mesh. The geometry of the solid boundaries
+is described using {\sc GTS} triangulated surfaces. In 2D, using 3D
+triangulated surfaces seems overkill, as 2D curves would be
+enough. However, Gerris being both a 2D and 3D code it deals with 2D
+solid boundaries exactly as with 3D ones, even if the simulation is
+done only on a 2D cross-section.
+
+Creating 3D polygonal surfaces is not an easy job and is clearly
+outside the scope of this tutorial. There are a number of utilities
+you can use to do that, including big commercial {\sc CAD}
+packages. In general, once you have created a polygonal surface with
+one of these tools it should be relatively easy to convert it to the
+file format used by {\sc GTS}. In particular, most {\sc CAD} packages
+can export to the {\sc STL} (stereolithography) format which is easily
+converted to the {\sc GTS} file format using the {\tt stl2gts} utility
+which comes with the library.
+
+This tutorial comes (handily) with one such file:
+\htmladdnormallinkfoot{{\tt half-cylinder.gts}}
+{http://gfs.sf.net/half-cylinder.gts}. You can
+visualise the surface it describes using a program
+called
+\htmladdnormallinkfoot{Geomview}{http://www.geomview.org}. To do this,
+you first need to convert the {\sc GTS} file to a format Geomview
+understands. This can be done using the {\tt gts2oogl} utility like
+this:
+\begin{verbatim}
+% gts2oogl < half-cylinder.gts > half-cylinder.oogl
+\end{verbatim}
+({\sc OOGL} is the file format used by Geomview). {\tt gts2oogl} has a
+number of options. You can have a short explanation of what they do by 
+typing:
+\begin{verbatim}
+% gts2oogl -h
+\end{verbatim}
+If you now start geomview like this:
+\begin{verbatim}
+% geomview half-cylinder.oogl
+\end{verbatim}
+and play around with the pan/rotate/zoom functions of Geomview (read the
+manual for details), you should see something like the image on figure 
+\ref{half-cylinder}.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=0.3\hsize]{half-cylinder.\gfx}
+\end{center}
+\caption{Geomview representation of {\tt half-cylinder.gts}}
+\label{half-cylinder}
+\end{figure}
+You can notice that this is a proper 3D object, even if we are only
+going to simulate the flow in a 2D cross-section. It is also important 
+that the object is ``tall'' enough so that it spans the entire
+``height'' of the 2D domain, as if we were going to simulate the flow
+around it in a proper 3D channel with a square cross-section. The
+orientation of the surface is also important to define what is inside
+(the solid) and what is outside (the fluid).
+
+We can now insert this object in the simulation domain like this:
+\begin{verbatim}
+4 3 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 0 }
+  GtsSurfaceFile half-cylinder.gts
+}
+GfsBox { left = GfsBoundaryInflowConstant 1 }
+GfsBox {}
+GfsBox {}
+GfsBox { right = GfsBoundaryOutflow }
+1 2 right
+2 3 right
+3 4 right
+\end{verbatim}
+add what mesh refinement we want and a few things to output:
+\begin{verbatim}
+4 3 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 9 }
+  GfsRefine 6
+  GtsSurfaceFile half-cylinder.gts
+  GfsInit {} { U = 1 }
+  GfsOutputBoundaries {} boundaries
+  GfsOutputTime { step = 0.02 } stdout
+  GfsOutputProjectionStats { step = 0.02 } stdout
+  GfsOutputPPM { step = 0.02 } vorticity.ppm { 
+    min = -100 max = 100 v = Vorticity 
+  }
+  GfsOutputTiming { start = end } stdout
+}
+GfsBox { left = GfsBoundaryInflowConstant 1 }
+GfsBox {}
+GfsBox {}
+GfsBox { right = GfsBoundaryOutflow }
+1 2 right
+2 3 right
+3 4 right
+\end{verbatim}
+I have added a new {\tt GfsOutput} object we haven't seen yet: {\tt
+GfsOutputTiming}. This object writes a summary of the time taken by
+various parts of the solver. You might also have noticed the unusual
+{\tt start = end} bit ; this just specifies that this event will only
+happen once at the end of the simulation.
+
+Another new output object is {\tt GfsOutputBoundaries}. This object
+writes a geometrical summary (in {\sc OOGL}/Geomview format) of the mesh
+used, including boundary conditions, solid boundaries and so on.
+
+We also initialise the velocity field on the whole domain
+to a constant value (1,0,0). We could have left the
+velocity field to its default value of (0,0,0) but, given that we
+impose inflow boundary conditions, it would have meant that the
+initial velocity would have been strongly divergent. Gerris always
+starts a simulation by a projection step (to fix problems like this)
+but it is always a good idea to start with the best possible velocity
+field.
+
+We can now run the code:
+\begin{verbatim}
+% gerris2D half-cylinder.sim
+\end{verbatim}
+It is going to take a while to complete, but remember that you can
+look at files while they are being generated. The first file which
+will be generated is {\tt boundaries}. If you load it in Geomview, you
+should get something like figure \ref{boundaries} (you probably want
+to disable automatic normalization in Geomview by selecting
+Inspect$\rightarrow$Appearance$\rightarrow$Normalize$\rightarrow$None).
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[angle=90,width=0.8\hsize]{boundaries.\gfx}
+\end{center}
+\caption{Representation of boundary conditions and solid boundaries}
+\label{boundaries}
+\end{figure}
+The black lines represent the boundaries between solid cells and fluid 
+cells. If you zoom in on the half-cylinder, you will see that it is
+represented by lines following the grid (it is ``lego-looking''). This 
+does not mean that the ``real'' (i.e. computational) solid boundary is 
+also lego-looking because fluid cells can be cut by the solid
+boundaries, in which case the algorithm properly takes into account
+the corresponding cell geometry.
+
+Each {\tt GfsBoundary} object is colour-coded. From the colours in the
+picture we see that we have indeed an inflow boundary condition on the
+left side (blue) and an outflow boundary condition on the right side
+(green).
+
+You can also load in the full half-cylinder geometry we created
+before: {\tt half-cylinder.oogl} or visualise the {\sc PPM} files using {\tt 
+animate} and {\tt display} as in the previous example. By the way, a
+useful feature of {\tt display} is that you can zoom in by clicking on
+the middle button in the image being displayed.
+
+\subsection{Saving the whole simulation}
+
+Hmm, this simulation is taking quite a while\dots What if we want to
+stop the simulation, make some modifications to the simulation file
+and restart where we left from? Or equivalently, save the whole
+simulation at regular intervals for latter post-processing?
+
+You can do this using the {\tt GfsOutputSimulation} object. Like this
+for example:
+\begin{verbatim}
+GfsOutputSimulation { step = 0.1 } half-cylinder-%3.1f.sim {
+  variables = U,V,P
+}
+\end{verbatim}
+where {\tt variables} defines which variables you want to save. By
+default all the variables are saved.
+
+If you now re-run the simulation, you will get a new file every 0.1
+time units. This file is a valid simulation file (like {\tt
+half-cylinder.sim}) and you can use it directly to restart the
+simulation from this point onward. If you edit it, you will see that
+the general structure is the same as usual but for five pretty big
+chunks of data. 
+
+The first chunk starts with {\tt GtsSurface} and is
+just the data contained in {\tt half-cylinder.gts} but this time
+embedded directly (by using {\tt GtsSurface} rather than {\tt
+GtsSurfaceFile}) into the simulation file. The goal there is to have
+fully self-contained simulations files which you can just move around
+without having to keep track of twenty different files.
+
+The four other chunks are each associated with a {\tt GfsBox} and
+contain both the topology of the corresponding cell tree but also the
+associated physical data, solid boundary definitions etc...
+
+You can of course edit this file, add new outputs and so on and
+restart the simulation from where you left it.
+
+\subsection{Some post-processing using {\tt gfs2oogl}}
+
+Gerris comes with a utility called {\tt gfs2oogl} which converts
+simulation files to various representations in {\sc OOGL} format. We are
+just going to look at two types of representations {\tt gfs2oogl} can
+do: scalar field cross-sections and vector fields.
+
+First of all, you can access a small summary of the options of {\tt
+gfs2oogl} by typing:
+\begin{verbatim}
+% gfs2oogl2D -h
+\end{verbatim}
+By default {\tt gfs2oogl} will generate the same output as {\tt
+GfsOutputBoundaries} like this:
+\begin{verbatim}
+% gfs2oogl2D < half-cylinder-0.1.sim > boundaries.oogl
+\end{verbatim}
+To generate an {\sc OOGL} representation of a scalar field (a coloured square
+for each discretisation cell) do this:
+\begin{verbatim}
+% gfs2oogl2D -S -z 0 -c Vorticity < half-cylinder-0.5.sim > squares.oogl
+\end{verbatim}
+which tells {\tt gfs2oogl} to do a cross-section for $z = 0$ ({\tt -z
+0}) represented by squares ({\tt -S}) and colored according to the local
+vorticity ({\tt -c Vorticity}).
+To generate a vector field representing the velocity try:
+\begin{verbatim}
+% gfs2oogl2D -V 2 -z 0 < half-cylinder-0.5.sim > vectors.oogl
+\end{verbatim}
+where {\tt -V 2} specifies that the maximum length of the vector is
+twice the dimension of the smallest cell in the domain.
+
+If you now load all these files in Geomview and do a bit of panning
+and zooming around (and possibly tune things like face shading) you
+should get an image looking like figure \ref{gfs2oogl}.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[angle=90,width=0.6\hsize]{gfs2oogl.\gfx}
+\end{center}
+\caption{Scalar and vector representation generated using {\tt
+gfs2oogl}.}
+\label{gfs2oogl}
+\end{figure}
+
+\subsection{Visualisation with OpenDX}
+
+If you have \htmladdnormallinkfoot{OpenDX}{http://www.opendx.org}
+installed on your system, the installation process described above
+should have compiled and installed an OpenDX module which allows
+direct import of Gerris simulation files into an OpenDX visual
+program.
+
+In order to be able to use this module you need to start OpenDX with a
+command line looking like:
+\begin{verbatim}
+% dx -mdf /home/joe/local/lib/gerris/dx2D.mdf
+\end{verbatim}
+if you want to import a 2D simulation file or
+\begin{verbatim}
+% dx -mdf /home/joe/local/lib/gerris/dx3D.mdf
+\end{verbatim}
+for a 3D simulation file (where {\tt /home/joe/local} should be
+replaced with the proper installation directory). This tells OpenDX to
+load the module described by the given {\em Module Description File}.
+
+If everything went correctly, within the OpenDX Visual Program Editor
+you should be able to select a tool named ``ImportGfs2D''
+(resp. ``ImportGfs3D'') belonging to the ``Import and Export''
+category. As its name suggests this tool reads a Gerris Flow Solver
+simulation file and produces a group containing named fields. A field
+called ``solid'' contains the geometry of the solid boundaries. The
+other fields represent the scalar or vector data contained in the
+simulation file. Vector fields are constructed from the velocity
+components (the resulting vector field is called ``U'' in OpenDX) and
+from any three components with names ending in ``x'', ``y'' or ``z''
+and with a common root. This common root is used as the OpenDX field
+name. All the remaining fields are considered as scalar fields.
+
+If you are not familiar with OpenDX, you should read the available
+\htmladdnormallinkfoot{documentation}{http://www.opendx.org/support.html\#docs}
+and go through the integrated tutorial. You can use the visual program
+called \htmladdnormallinkfoot{{\tt
+gfs2D.net}}{http://gfs.sf.net/gfs2D.net} provided with this tutorial
+as a starting point. Typing
+\begin{verbatim}
+% dx -mdf /home/joe/local/lib/gerris/dx2D.mdf -program gfs2D.net
+\end{verbatim}
+in the directory containing your {\tt half-cylinder-0.5.sim} file (you
+also need to add the path to {\tt gfs2D.net} if it is not contained in
+the same directory) and selecting the Execute$\rightarrow$Execute Once
+menu should bring up windows looking like figure \ref{dx-screen}.
+\begin{figure}[htbp]
+\begin{center}
+\htmlimage{scale=2.0,external,thumbnail=1}
+\includegraphics[width=\hsize]{dxscreen.\gfx}
+\end{center}
+\caption{Screenshot of an OpenDX session using the ImportGfs2D module.}
+\label{dx-screen}
+\end{figure}
+
+\subsection{Using dynamic adaptive mesh refinement}
+
+For the moment our simulation is not very well resolved. We could always 
+change the {\tt GfsRefine 6} line to something bigger but it would not
+make really good use of the quadtree approach used in Gerris. A code
+using a simple regular Cartesian grid approach would be faster and
+would produce the same results. Instead we are going to use {\em
+dynamic adaptive mesh refinement}, where the quadtree structure of the 
+discretisation is used to adaptively follow the small structures of
+the flow, thus concentrating the computational effort on the area
+where it is most needed. 
+
+This is done using yet another object class: {\tt GfsAdapt}, also derived 
+from {\tt GfsEvent}. Various criteria can be used to determine where
+refinement is needed. In practice, each criterium will be defined
+through a different object derived from {\tt GfsAdapt}. If several {\tt 
+GfsAdapt} objects are specified in the same simulation file, refinement 
+will occur whenever at least one of the criteria is verified.
+
+For this first example, we will use a simple criterium based on the
+local value of the vorticity. A cell will be refined whenever
+$$
+{|\nabla\times{\bf v}|\Delta x\over\max|{\bf v}|} > \delta,
+$$
+where $\Delta x$ is the size of the cell and $\delta$ is a
+user-defined threshold which can be interpreted as the maximum angular 
+deviation (caused by the local vorticity) of a particle traveling at 
+speed $\max|{\bf v}|$ across the cell. This criterium is implemented
+by the {\tt GfsAdaptVorticity} object.
+
+The general syntax for an {\tt GfsAdapt} object is:
+\begin{verbatim}
+[GfsEvent] { mincells = 1 maxcells = 100000 minlevel = 1 maxlevel = 10 cmax = 1e-2 }
+\end{verbatim}
+where {\tt mincells} specifies the minimum number of cells in the
+domain, {\tt maxcells} the maximum number of cells, {\tt minlevel} the
+level below which it is not possible to coarsen a cell, {\tt maxlevel}
+the level above which it is not possible to refine a cell and {\tt
+  cmax} the maximum cell cost. The default values are 0 for {\tt
+  minlevel} and {\tt mincells} and infinite for {\tt maxlevel} and
+{\tt maxcells}. An important point is that, for the moment, it is not
+possible to dynamically refine solid boundaries. A simple solution to
+this restriction is to always refine the solid boundary with the
+maximum resolution at the start of the simulation and to restrict the
+refinement using the {\tt maxlevel} identifier in {\tt GfsAdapt}.
+
+What happens if the maximum number of cells is reached? The refinement algorithm will keep the number of cells fixed but will minimize the maximum cost over all the cells. This can be used for example to run a constant-size simulation where the cells are optimally distributed across the simulation domain. This would be done by setting {\tt maxcells} to the desired number and {\tt cmax} to zero.
+
+Following this we can modify our simulation file:
+\begin{verbatim}
+4 3 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 9 }
+  GfsRefine 7
+  GtsSurfaceFile half-cylinder.gts
+  GfsInitFlowConstant {} { U = 1 }
+#  GfsOutputBoundaries {} boundaries
+  GfsAdaptVorticity { istep = 1 } { maxlevel = 7 cmax = 1e-2 }
+  GfsOutputTime { step = 0.02 } stdout
+  GfsOutputBalance { step = 0.02 } stdout
+  GfsOutputProjectionStats { step = 0.02 } stdout
+  GfsOutputPPM { step = 0.02 } vorticity.ppm {
+    min = -100 max = 100 v = Vorticity
+  }
+  GfsOutputSimulation { step = 0.1 } half-cylinder-%3.1f.sim {
+    variables = U,V,P
+  }
+  GfsOutputTiming { start = end } stdout
+}
+GfsBox { left = GfsBoundaryInflowConstant 1 }
+GfsBox {}
+GfsBox {}
+GfsBox { right = GfsBoundaryOutflow }
+1 2 right
+2 3 right
+3 4 right
+\end{verbatim}
+We have added two lines and commented out (using {\tt \#}) the line
+outputting the boundaries (we don't need that anymore, we have the
+simulation files).
+
+The first line we added says that we want to refine dynamically the
+mesh through the {\tt GfsAdaptVorticity} object applied every timestep
+({\tt istep = 1}). The $\delta$ parameter ({\tt cmax}) is set to $10^{-2}$.
+
+The second line we added is a new {\tt GfsOutput} object which displays 
+the ``balance'' of the domain sizes across the different processes
+(when Gerris is ran in parallel). We will use this to monitor how the
+number of cells evolves with time as the simulation refines or
+coarsens the mesh according to our vorticity criterium.
+
+We can now run this new simulation. If the previous simulation did not
+complete yet, don't be afraid to abort it ({\tt Ctrl-C}), this one is going to
+be better (and faster).
+\begin{verbatim}
+% gerris2D half-cylinder.sim
+\end{verbatim}
+If we now look at the balance summary written by {\tt
+GfsOutputBalance}, we see that initially ({\tt step: 0}) the total
+number of cells (on all levels) is 86966, which corresponds to a
+constant resolution of $4\times 2^7\times 2^7=512\times 128$. At step
+10 the number of cells is down to 990 with a corresponding increase in 
+computational speed. If we now look at the first simulation file we
+saved, using:
+\begin{verbatim}
+% gfs2oogl2D < half-cylinder-0.1.sim > boundaries
+% gfs2oogl2D -S -z 0 -c Vorticity < half-cylinder-0.1.sim > squares.oogl
+\end{verbatim}
+we obtain figure \ref{refined1} showing not only the domain boundaries 
+as usual, but also the boundaries (thin black lines) between different
+levels of refinement.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[angle=90,width=0.6\hsize]{refined1.\gfx}
+\end{center}
+\caption{Dynamic adaptive mesh refinement $t=0.1$}
+\label{refined1}
+\end{figure}
+We see that the mesh is very refined around the solid and around the
+two vortices developing at the trailing edge and very coarse (one cell
+per box only) on the downstream part of the domain. If you are not
+sure what these thin black lines represent, just switch on the edge
+representation in Geomview (using the Inspect$\rightarrow$Appearance menu). You
+will get a picture looking like figure \ref{refined1-cells}, showing
+all the cells used for the discretisation.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[angle=90,width=0.6\hsize]{refined1_cells.\gfx}
+\end{center}
+\caption{Dynamic adaptive mesh refinement $t=0.1$. Detail of the cells.}
+\label{refined1-cells}
+\end{figure}
+As the simulation goes on, you can see the number of cells in the
+domain increase as the trailing vortices develop. With a bit of
+patience you will get to figure \ref{refined2} showing the fully
+developed Von Karman vortex street with patches of increased
+resolution following each vortex. Even when the flow is fully
+developed using adaptive mesh refinement still saves a factor of \~{}6 in
+time and memory use. The advantage of adaptive mesh refinement is even
+more obvious in situations where it is necessary to use very large
+domains to avoid any contamination of the solution by the boundary
+conditions.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[angle=90,width=0.8\hsize]{refined2.\gfx}
+\end{center}
+\caption{Dynamic adaptive mesh refinement $t=9$.}
+\label{refined2}
+\end{figure}
+You should also try to {\tt animate vorticity.ppm} which by now should 
+give you a nice animation of the developing trailing vortices becoming 
+unstable and generating the Von Karman street. If ImageMagick is
+properly installed on your system you can also try:
+\begin{verbatim}
+% convert vorticity.ppm vorticity.mpg
+\end{verbatim}
+which will produce a much smaller {\sc MPEG} video file, suitable for
+distribution through the network.
+
+\section{Writing new objects}
+
+If you want to implement your own boundary conditions, initial
+conditions, outputs, criterium for adaptive mesh refinement etc\dots
+you will need to learn how to write new objects within the gerris
+framework. As gerris is written in C, a basic knowledge of C
+programming will help a lot.
+
+Gerris uses the object-oriented framework provided by {\sc GTS}. This is
+essentially a set of structures and functions implementing the
+fundamental concepts of object-oriented programming (essentially data
+and methods inheritance and overloading) using C. Of course, as C is
+not an object-oriented language, it does not provide direct
+(syntaxical) support for this and consequently, as we will see, the
+expression of these concepts is rather more verbose than in, say, C++,
+python, smalltalk or Java.
+
+So, why use C and not an object-oriented language? An exhaustive
+discussion would be too long for this tutorial. In short, the
+strongest case for this approach is that C is the smallest common
+denominator between most of the languages out there: it is possible to
+use the gerris library with any one of C++, Fortran 90, Java, Perl,
+python, ruby etc\dots but it would not be the case if gerris was written
+in any of these other languages.
+
+\subsection{A template for new object classes}
+
+{\sc GTS} comes with a simple script called {\tt gtstemplate} which will
+generate a C code template for the new class you want to create. For a 
+summary of its syntax just type:
+\begin{verbatim}
+% gtstemplate
+Usage: gtstemplate [OPTIONS] Class ParentClass
+Options:
+        [--no-extra-data]
+        [--no-extra-method]
+        [--overload=METHOD]
+\end{verbatim}
+As an example we are going to try and create a template for a new
+initial condition class called {\tt InitPeriodic}. Just type:
+\begin{verbatim}
+% gtstemplate --overload=read --overload=write --overload=event \
+InitPeriodic GfsInit > init_periodic.c
+\end{verbatim}
+We have just created a template for a new class called {\tt
+InitPeriodic} derived from {\tt GfsInit} and where the {\tt read},
+{\tt write} and {\tt event} methods are overloaded. Fire up your
+favourite editor and have a look at the file generated: {\tt
+init}\_{\tt periodic.c}. The first thing you see is that the file is divided
+in two sections starting with
+\begin{verbatim}
+/* InitPeriodic: Header */
+\end{verbatim}
+and
+\begin{verbatim}
+/* InitPeriodic: Object */
+\end{verbatim}
+As their names indicate these sections correspond respectively to the
+declaration of the structures and functions (header part) and to the
+corresponding definitions (object part). If we were to use these
+functions and structures in a library, these two parts would be in
+separate files (a {\tt .h} and a corresponding {\tt .c} file). For
+what we are interested in (a gerris {\em module}) they are fine
+staying in the same file. There is a function we will not need: {\tt
+init}\_{\tt periodic}\_{\tt new}, just remove the lines declaring and
+defining it in the header and object sections. We are left with only
+one function: {\tt init}\_{\tt periodic}\_{\tt class}. This function
+essentially registers our new class and its associated
+attributes. Things like:
+\begin{itemize}
+\item the name of the class: {\tt "InitPeriodic"},
+\item the sizes of the object and class structures: 
+{\tt sizeof (InitPeriodic)} and {\tt sizeof (InitPeriodicClass)},
+\item function to call to initialize the class: {\tt
+init}\_{\tt periodic}\_{\tt class}\_{\tt init},
+\item function to call to initialize a new object: {\tt
+init}\_{\tt periodic}\_{\tt init},
+\item as well as which class is the ancestor of this new class: {\tt
+gfs}\_{\tt init}\_{\tt class ()}.
+\end{itemize}
+If we now look at what the {\tt init}\_{\tt periodic}\_{\tt
+class}\_{\tt init} function does, we see that it indeed overloads the
+{\tt event}, {\tt read} and {\tt write} methods of our class with
+locally defined functions. The {\tt GFS}\_{\tt EVENT}\_{\tt CLASS} and
+{\tt GTS}\_{\tt OBJECT}\_{\tt CLASS} macro calls are casting operators
+which change the type of our new class ({\tt InitPeriodicClass}) to
+the types of one of its parent class. {\tt GtsObjectClass} is the
+ancestor of all object classes and we see that the {\tt read} and {\tt
+write} methods are thus defined for all objects. The {\tt GfsInit}
+class is also a descendant of the {\tt GfsEvent} class (as we have
+seen before it is a special type of event occurring once at the start
+of the simulation) which has and associated {\tt event} method.
+
+\subsection{Initial conditions}
+
+With this preliminary overall understanding of what the template does, 
+we are ready to define our new initialisation class. What we want to
+do is initialise the 2D velocity field using the following functions:
+\begin{eqnarray}
+u(x,y) &=& - \cos(2m\pi x)\sin(2m\pi y)\\
+v(x,y) &=& \sin(2m\pi x)\cos(2m\pi y)
+\end{eqnarray}
+where $m$ is a parameter. This is an exact stationary solution of the
+2D Euler equations with periodic boundary conditions.
+
+We need to store the value of $m$ somewhere. A clean way to do that is 
+to add $m$ as a data associated with our {\tt InitPeriodic}
+object. To do this just modify the definition of the structure in the
+header part of the file, like this:
+\begin{verbatim}
+struct _InitPeriodic {
+  /*< private >*/
+  GfsInit parent;
+
+  /*< public >*/
+  gdouble m;
+};
+\end{verbatim}
+Note that the {\tt GfsInit parent;} data {\em must be the first} data
+in the structure. The whole object-inheritance mechanism in C relies
+on this data alignment.
+
+We now need to specify the value of $m$. The first value we want to
+assign is the default value of $m$ for an object newly created. We can
+do that using the initialisation function {\tt init}\_{\tt periodic}\_{\tt init}
+which is called everytime a new {\tt InitPeriodic} object is created
+(it is the {\em constructor} function of the {\tt
+InitPeriodicClass}). Just add:
+\begin{verbatim}
+static void init_periodic_init (InitPeriodic * object)
+{
+  object->m = 1.;
+}
+\end{verbatim}
+Our default value for $m$ is now one. What we really want is being
+able to specify the value of $m$ in the parameter file used by
+gerris. We can do that by using the {\tt read} and {\tt write}
+methods. We will start with the {\tt write} method: {\tt
+init}\_{\tt periodic}\_{\tt write}. This function first calls the {\tt write} method 
+of the parent class of our object:
+\begin{verbatim}
+  /* call write method of parent */
+  if (GTS_OBJECT_CLASS (init_periodic_class ())->parent_class->write)
+    (* GTS_OBJECT_CLASS (init_periodic_class ())->parent_class->write) 
+      (o, fp);
+\end{verbatim}
+The parent class is given by the
+{\tt parent}\_{\tt class} field of any {\tt GtsObjectClass}. The {\tt write}
+method might not be defined for the parent class, so it is always a
+good (safe) idea to first test that it is indeed defined.
+
+Now that we have written the data associated with the parent class, we 
+can write our own data like this:
+\begin{verbatim}
+static void init_periodic_write (GtsObject * o, FILE * fp)
+{
+  /* call write method of parent */
+  if (GTS_OBJECT_CLASS (init_periodic_class ())->parent_class->write)
+    (* GTS_OBJECT_CLASS (init_periodic_class ())->parent_class->write) 
+      (o, fp);
+
+  fprintf (fp, " %g", INIT_PERIODIC (o)->m);
+}
+\end{verbatim}
+Note that we used a space to separate this new data from the data of
+the parent class and that we didn't add anything after our own data
+(no space or newline). This is so that we can eventually extend
+(through inheritance) this class by adding more data in exactly the
+same way.
+
+We now need to define a ``symmetrical'' {\tt read} method which will
+read the value of $m$ from the parameter file. In the {\tt init}\_{\tt
+periodic}\_{\tt read} method, we first read the parameters associated
+with the parent class. The line:
+\begin{verbatim}
+  if (fp->type == GTS_ERROR)
+    return;
+\end{verbatim}
+just checks if an error occurred while reading parameters for the
+parent class, in which case the method returns prematurely. To read
+our parameter we are going to use functions associated with the {\tt
+GtsFile} data type (have a look at the \htmladdnormallinkfoot{{\sc GTS} reference manual}{http://gts.sf.net/reference/book1.html} for
+details):
+\begin{verbatim}
+static void init_periodic_read (GtsObject ** o, GtsFile * fp)
+{
+  /* call read method of parent */
+  if (GTS_OBJECT_CLASS (init_periodic_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (init_periodic_class ())->parent_class->read) 
+      (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (m)");
+    return;
+  }
+  INIT_PERIODIC (*o)->m = atof (fp->token->str);
+
+  /* do not forget to prepare for next read */
+  gts_file_next_token (fp);
+}
+\end{verbatim}
+We first check that the current token is an integer ({\tt
+GTS}\_{\tt INT}) or a floating point number ({\tt GTS}\_{\tt FLOAT}). If it is not
+we set an error message describing the problem and return
+prematurely. If it is, we convert the string describing the current
+token ({\tt fp->token->str}) into a floating point number (using the
+standard C {\tt atof} function) and assign it to $m$. Note that we
+need to use the type conversion macro {\tt INIT}\_{\tt PERIODIC}
+because the argument passed to {\tt init}\_{\tt periodic}\_{\tt read} is a generic
+{\tt GtsObject}. As we are dealing with a method of our {\tt
+InitPeriodicClass} we know that this {\tt GtsObject} is also a {\tt
+InitPeriodic} object and the type conversion is then legitimate.
+
+We can now create, read and write our new object. However we are not doing
+anything with it yet. Like for any other {\tt GfsEvent}, the action
+performed is controlled by the {\tt event} method. If we look at the
+{\tt init}\_{\tt periodic}\_{\tt event} function, we see that it returns a {\tt
+gboolean}. If {\tt TRUE} this return value means that the event took
+place. We then call the event method of the parent class and check its 
+return value. If {\tt TRUE} we do something and return {\tt TRUE}. We
+know that the parent class is {\tt GfsInit}, an event which takes
+place once at the start of the simulation. What we want to do is
+initialise the velocity field using our formula. We can do that like this:
+\begin{verbatim}
+static void init_velocity (FttCell * cell,
+                           InitPeriodic * init)
+{
+  FttVector pos;
+
+  ftt_cell_pos (cell, &pos);
+  GFS_STATE (cell)->u = 
+    - cos (2.*init->m*M_PI*pos.x)*sin (2.*init->m*M_PI*pos.y);
+  GFS_STATE (cell)->v =   
+    sin (2.*init->m*M_PI*pos.x)*cos (2.*init->m*M_PI*pos.y);
+}
+
+static gboolean init_periodic_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (init_periodic_class ())\
+         ->parent_class)->event) (event, sim)) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
+                              FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+                              (FttCellTraverseFunc) init_velocity,
+                              event);
+    return TRUE;
+  }
+  return FALSE;
+}
+\end{verbatim}
+The {\tt gfs}\_{\tt domain}\_{\tt cell}\_{\tt traverse} function traverses the cell tree
+and calls the {\tt init}\_{\tt velocity} function for each leaf cell ({\tt
+FTT}\_{\tt TRAVERSE}\_{\tt LEAFS}). A {\tt GfsSimulation} is an object derived from
+{\tt GfsDomain} which justifies the {\tt GFS}\_{\tt DOMAIN (sim)} type
+casting. Have a look in the \htmladdnormallinkfoot{reference manual}{http://gfs.sf.net/reference/book1.html} if you want to know more
+about these structures and functions.
+
+We also pass an extra parameter to {\tt init}\_{\tt velocity}: {\tt
+event}. If you now look at {\tt init}\_{\tt velocity} you see that this extra 
+argument is our object: {\tt InitPeriodic * init}. What we have done
+here is an implicit cast of {\tt GfsEvent * event} to {\tt
+InitPeriodic * init}. We know it is valid because {\tt
+init}\_{\tt periodic}\_{\tt event} is a method of our object class.
+
+What happens in {\tt init}\_{\tt velocity} is straightforward. We first get
+the position of the center of the cell using {\tt ftt}\_{\tt cell}\_{\tt pos} and
+then assign the values of the two components of the velocities using
+our formula and the $m$ parameter defined in {\tt init}.
+
+\subsubsection{Creating a module}
+
+We have now almost all that is needed for our new object. How do we
+use this new piece of code with gerris? What we want to do is to
+create a dynamically loadable {\tt module}. First of all we need to
+check that we can compile the code. There are a few missing headers we
+need to add (at the top of the file):
+\begin{verbatim}
+#include <math.h>
+#include <stdlib.h>
+#include <gfs.h>
+
+\end{verbatim}
+The {\tt gfs.h} header contains all the function declarations for the
+gerris library. We can now try to compile using for example:
+\begin{verbatim}
+% cc `gfs-config --2D --cflags` -Wall -g -O2 -c init_periodic.c
+\end{verbatim}
+where {\tt gfs-config --2D --cflags} (quoted using inverted quotes)
+defines the compilation flags needed to use the 2D version of the
+gerris library.
+
+To make a proper module we also need to add the following at the end
+of the file:
+\begin{verbatim}
+/* Initialize module */
+
+const gchar * g_module_check_init (void);
+
+const gchar * g_module_check_init (void)
+{
+  init_periodic_class ();
+  return NULL;
+}
+\end{verbatim}
+This just tells gerris how to initialise the module after it has been
+loaded. The {\tt g}\_{\tt module}\_{\tt check}\_{\tt init} function
+will be called. In our case, it does only one thing which is to {\em
+instantiate} our new class: this is necessary so that gerris registers
+how to handle it.
+
+We are now all set to create our new module. Sadly, dynamically
+loadable module creation is not a standardised process and the
+command-line arguments vary from compiler to compiler and from system
+to system. In the following, I will assume that you use {\tt gcc} on a
+linux box. If you are using another system supporting dynamically
+loadable modules, you will need to read your local manual. On a linux
+box:
+\begin{verbatim}
+% cc `gfs-config --2D --cflags` -Wall -g -O2 -c -fPIC init_periodic.c
+% cc -shared init_periodic.o -lc -o libinit_periodic2D.so
+\end{verbatim}
+should work. Note that we add the {\tt 2D} extension to indicate that
+this module uses the 2D gerris library. We could have built both a 2D
+and a 3D version of the same module. At runtime the gerris executable
+uses this extension to check which version to load.
+
+Our module is now ready to use. We just need to install it in a
+directory where it will be found by gerris. If you installed gerris in 
+{\tt /home/joe/local} just type:
+\begin{verbatim}
+% cp libinit_periodic2D.so /home/joe/local/lib/gerris
+\end{verbatim}
+We can now use it directly in a parameter file, for example:
+\begin{verbatim}
+1 2 GfsSimulation GfsBox GfsGEdge {} {
+  GfsTime { end = 50 }
+  GfsRefine 6
+  GModule init_periodic
+  InitPeriodic {} 2
+  GfsOutputTime            { istep = 10 } stdout
+  GfsOutputProjectionStats { istep = 10 } stdout
+  GfsOutputPPM             { step = 0.1 } vorticity-%4.2f.ppm { v = Vorticity }
+}
+GfsBox {}
+1 1 right
+1 1 top
+\end{verbatim}
+The first part of the object definition: {\tt InitPeriodic \{\}} is the
+generic {\tt GfsEvent} definition, the second part: {\tt 2} is the
+parameter $m$ we added. What if we do not specify the right parameter?
+Just try to replace {\tt InitPeriodic \{\} 2} with {\tt InitPeriodic
+\{\} a}. You should get a message like
+\begin{verbatim}
+gerris: file `periodic.sim' is not a valid simulation file
+periodic.sim:5:18: expecting a number (m)
+\end{verbatim}
+which tells you where the error occurred (in file {\tt periodic.sim},
+line 5, character 18) together with the error message which we
+specified in the {\tt read} method of our class.
+
+\subsection{Outputs}
+
+\subsection{Boundary conditions}
+
+\section{More on boundary conditions}
+
+\section{Running Gerris in parallel}
+
+\section{Running the test suite}
+
+\section{Learning more}
+
+While this tutorial should give you a good overview of Gerris, it is by no means a complete description. To learn more you should first consult the \htmladdnormallinkfoot{Gerris reference manual}{http://gfs.sf.net/reference/book1.html} which describes each object and the corresponding file parameters in more detail.
+
+If things are still unclear you can ask for help on the \htmladdnormallinkfoot{{\tt gfs-users} mailing list}{http://gfs.sf.net/mailinglists.html}. Please note that you first need to subscribe to the list to be able to post messages.
+
+\end{document}

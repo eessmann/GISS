@@ -1,0 +1,104 @@
+<!-- ##### SECTION Title ##### -->
+Fluid box
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_BOX_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+
+<!-- ##### MACRO GFS_BOX ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_BOX ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsBoxClass ##### -->
+<para>
+
+</para>
+
+@parent_class: 
+
+<!-- ##### STRUCT GfsBox ##### -->
+<para>
+
+</para>
+
+@parent: 
+@root: 
+@neighbor: 
+@id: 
+@pid: 
+@size: 
+
+<!-- ##### FUNCTION gfs_box_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_box_new ##### -->
+<para>
+
+</para>
+
+@klass: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_box_set_pos ##### -->
+<para>
+
+</para>
+
+@box: 
+@pos: 
+
+
+<!-- ##### FUNCTION gfs_box_set_relative_pos ##### -->
+<para>
+
+</para>
+
+@box: 
+@reference: 
+@d: 
+
+
+<!-- ##### FUNCTION gfs_box_domain ##### -->
+<para>
+
+</para>
+
+@box: 
+@Returns: 
+
+

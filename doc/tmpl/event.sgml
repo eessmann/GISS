@@ -1,0 +1,144 @@
+<!-- ##### SECTION Title ##### -->
+Generic event
+
+<!-- ##### SECTION Short_Description ##### -->
+Any action to be performed at a given time
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+Events are used to control any action which needs to be performed at a
+given time during a simulation. This includes one off actions as well
+as periodically repeated actions.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+#GfsEvent { start = 0.1 istart = 10 ( step = 1.2 | istep = 10 ) end = 0.4 iend = 123 }
+</programlisting>
+</informalexample>
+with
+<informaltable pgwide="1" frame="none" role="struct">
+<tgroup cols="2">
+<colspec colwidth="2*">
+<colspec colwidth="8*">
+<tbody>
+
+<row>
+<entry><structfield>start</structfield></entry>
+<entry>Physical starting time (default is zero). The <structfield>end</structfield> keyword can be used to indicate the end of the simulation.</entry>
+</row>
+
+<row>
+<entry><structfield>istart</structfield></entry>
+<entry>Time step starting time (default is zero).</entry>
+</row>
+
+<row>
+<entry><structfield>step</structfield></entry>
+<entry>Repeat every step physical time units (default is infinity).</entry>
+</row>
+
+<row>
+<entry><structfield>istep</structfield></entry>
+<entry>Repeat every istep time steps (default is infinity).</entry>
+</row>
+
+<row>
+<entry><structfield>end</structfield></entry>
+<entry>Stop at or before this physical time (default is infinity).</entry>
+</row>
+
+<row>
+<entry><structfield>iend</structfield></entry>
+<entry>Stop at or before this number of time steps (default is infinity).</entry>
+</row>
+
+</tbody></tgroup></informaltable>
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_EVENT_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+
+<!-- ##### MACRO GFS_EVENT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_EVENT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsEventClass ##### -->
+<para>
+
+</para>
+
+@parent_class: 
+@event: 
+
+<!-- ##### STRUCT GfsEvent ##### -->
+<para>
+
+</para>
+
+@parent: 
+@t: 
+@start: 
+@end: 
+@step: 
+@i: 
+@istart: 
+@iend: 
+@istep: 
+@n: 
+@end_event: 
+
+<!-- ##### FUNCTION gfs_event_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_event_new ##### -->
+<para>
+
+</para>
+
+@klass: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_event_set ##### -->
+<para>
+
+</para>
+
+@e: 
+@start: 
+@end: 
+@step: 
+@istart: 
+@iend: 
+@istep: 
+
+

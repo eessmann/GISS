@@ -1,0 +1,251 @@
+<!-- ##### SECTION Title ##### -->
+Simulations
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_SIMULATION_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+
+<!-- ##### MACRO GFS_SIMULATION ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_SIMULATION ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsSimulationClass ##### -->
+<para>
+
+</para>
+
+@parent_class: 
+
+<!-- ##### STRUCT GfsSimulation ##### -->
+<para>
+
+</para>
+
+@parent: 
+@time: 
+@physical_params: 
+@projection_params: 
+@approx_projection_params: 
+@advection_params: 
+@diffusion_params: 
+@tracer_advection_params: 
+@tracer_diffusion_params: 
+@surface: 
+@stree: 
+@is_open: 
+@interface: 
+@itree: 
+@i_is_open: 
+@refines: 
+@adapts: 
+@adapts_stats: 
+@events: 
+@modules: 
+@tnext: 
+
+<!-- ##### STRUCT GfsTime ##### -->
+<para>
+
+</para>
+
+@t: 
+@start: 
+@end: 
+@i: 
+@istart: 
+@iend: 
+
+<!-- ##### STRUCT GfsPhysicalParams ##### -->
+<para>
+
+</para>
+
+@rho: 
+@sigma: 
+
+<!-- ##### FUNCTION gfs_init ##### -->
+<para>
+
+</para>
+
+@argc: 
+@argv: 
+
+
+<!-- ##### FUNCTION gfs_simulation_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_simulation_new ##### -->
+<para>
+
+</para>
+
+@klass: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_simulation_read ##### -->
+<para>
+
+</para>
+
+@sim: 
+@fp: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_simulation_refine ##### -->
+<para>
+
+</para>
+
+@sim: 
+
+
+<!-- ##### FUNCTION gfs_simulation_event_init ##### -->
+<para>
+
+</para>
+
+@sim: 
+@events: 
+
+
+<!-- ##### FUNCTION gfs_simulation_set_timestep ##### -->
+<para>
+
+</para>
+
+@sim: 
+
+
+<!-- ##### FUNCTION gfs_simulation_event ##### -->
+<para>
+
+</para>
+
+@sim: 
+@events: 
+
+
+<!-- ##### FUNCTION gfs_simulation_adapt ##### -->
+<para>
+
+</para>
+
+@simulation: 
+@s: 
+
+
+<!-- ##### FUNCTION gfs_simulation_write ##### -->
+<para>
+
+</para>
+
+@sim: 
+@max_depth: 
+@fp: 
+
+
+<!-- ##### FUNCTION gfs_simulation_run ##### -->
+<para>
+
+</para>
+
+@sim: 
+
+
+<!-- ##### MACRO gfs_object_simulation ##### -->
+<para>
+
+</para>
+
+@o: 
+
+
+<!-- ##### FUNCTION gfs_time_init ##### -->
+<para>
+
+</para>
+
+@t: 
+
+
+<!-- ##### FUNCTION gfs_time_read ##### -->
+<para>
+
+</para>
+
+@t: 
+@fp: 
+
+
+<!-- ##### FUNCTION gfs_time_write ##### -->
+<para>
+
+</para>
+
+@t: 
+@fp: 
+
+
+<!-- ##### FUNCTION gfs_physical_params_init ##### -->
+<para>
+
+</para>
+
+@p: 
+
+
+<!-- ##### FUNCTION gfs_physical_params_read ##### -->
+<para>
+
+</para>
+
+@p: 
+@fp: 
+
+
+<!-- ##### FUNCTION gfs_physical_params_write ##### -->
+<para>
+
+</para>
+
+@p: 
+@fp: 
+
+

@@ -1,0 +1,251 @@
+/* Gerris - The GNU Flow Solver
+ * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.  
+ */
+
+#ifndef __EVENT_H__
+#define __EVENT_H__
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+#include "simulation.h"
+
+typedef struct _GfsEvent                GfsEvent;
+typedef struct _GfsEventClass           GfsEventClass;
+
+struct _GfsEvent {
+  GtsSListContainee parent;
+
+  gdouble t, start, end, step;
+  guint i, istart, iend, istep;
+  
+  guint n;
+  gboolean end_event, realised;
+};
+
+struct _GfsEventClass {
+  GtsSListContaineeClass parent_class;
+
+  gboolean (* event)      (GfsEvent * event, GfsSimulation * sim);
+  void     (* event_half) (GfsEvent * event, GfsSimulation * sim);
+};
+
+#define GFS_EVENT(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsEvent,\
+					           gfs_event_class ())
+#define GFS_EVENT_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
+						   GfsEventClass,\
+						   gfs_event_class())
+#define GFS_IS_EVENT(obj)         (gts_object_is_from_class (obj,\
+						   gfs_event_class ()))
+GfsEventClass * gfs_event_class       (void);
+GfsEvent *      gfs_event_new         (GfsEventClass * klass);
+void            gfs_event_set         (GfsEvent * e, 
+				       gdouble start, 
+				       gdouble end, 
+				       gdouble step,
+				       gint istart, 
+				       gint iend, 
+				       gint istep);
+
+/* GfsGenericInit: Header */
+
+typedef struct _GfsEvent      GfsGenericInit;
+typedef struct _GfsEventClass GfsGenericInitClass;
+
+#define GFS_IS_GENERIC_INIT(obj)         (gts_object_is_from_class (obj,\
+						 gfs_generic_init_class ()))
+
+GfsEventClass * gfs_generic_init_class         (void);
+
+/* GfsInit: Header */
+
+typedef struct _GfsInit         GfsInit;
+
+struct _GfsInit {
+  /*< private >*/
+  GfsGenericInit parent;
+  GHashTable * f;
+};
+
+#define GFS_INIT(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsInit,\
+					         gfs_init_class ())
+#define GFS_IS_INIT(obj)         (gts_object_is_from_class (obj,\
+						 gfs_init_class ()))
+
+GfsGenericInitClass * gfs_init_class  (void);
+
+/* GfsInitFlowConstant: Header */
+
+GfsEventClass * gfs_init_flow_constant_class  (void);
+
+#if FTT_2D
+
+/* GfsInitVorticity: Header */
+
+typedef struct _GfsInitVorticity         GfsInitVorticity;
+
+struct _GfsInitVorticity {
+  /*< private >*/
+  GfsGenericInit parent;
+};
+
+typedef struct _GfsInitVorticityClass    GfsInitVorticityClass;
+
+struct _GfsInitVorticityClass {
+  /*< private >*/
+  GfsGenericInitClass parent_class;
+};
+
+#define GFS_INIT_VORTICITY(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsInitVorticity,\
+					         gfs_init_vorticity_class ())
+#define GFS_INIT_VORTICITY_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
+						 GfsInitVorticityClass,\
+						 gfs_init_vorticity_class())
+#define GFS_IS_INIT_VORTICITY(obj)         (gts_object_is_from_class (obj,\
+						 gfs_init_vorticity_class ()))
+
+GfsInitVorticityClass * gfs_init_vorticity_class  (void);
+
+#endif /* FTT_2D */
+
+/* GfsEventSum: Header */
+
+typedef struct _GfsEventSum         GfsEventSum;
+
+struct _GfsEventSum {
+  GfsEvent parent;
+
+  GfsVariable * v, * sv;
+  FttCellTraverseFunc sum;
+  gdouble last, dt;
+};
+
+#define GFS_EVENT_SUM(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsEventSum,\
+					         gfs_event_sum_class ())
+#define GFS_IS_EVENT_SUM(obj)         (gts_object_is_from_class (obj,\
+						 gfs_event_sum_class ()))
+
+GfsEventClass * gfs_event_sum_class  (void);
+
+/* GfsEventSum2: Header */
+
+GfsEventClass * gfs_event_sum2_class (void);
+
+/* GfsEventStop: Header */
+
+typedef struct _GfsEventStop         GfsEventStop;
+
+struct _GfsEventStop {
+  GfsEvent parent;
+
+  GfsVariable * v, * oldv;
+  gdouble last, max;
+};
+
+#define GFS_EVENT_STOP(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsEventStop,\
+					         gfs_event_stop_class ())
+#define GFS_IS_EVENT_STOP(obj)         (gts_object_is_from_class (obj,\
+						 gfs_event_stop_class ()))
+
+GfsEventClass * gfs_event_stop_class  (void);
+
+/* GfsEventScript: Header */
+
+typedef struct _GfsEventScript         GfsEventScript;
+
+struct _GfsEventScript {
+  GfsEvent parent;
+
+  GString * script;
+};
+
+#define GFS_EVENT_SCRIPT(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsEventScript,\
+					         gfs_event_script_class ())
+#define GFS_IS_EVENT_SCRIPT(obj)         (gts_object_is_from_class (obj,\
+						 gfs_event_script_class ()))
+#define GFS_EVENT_SCRIPT_STOP            64
+
+GfsEventClass * gfs_event_script_class  (void);
+
+/* GfsInitFraction: Header */
+
+typedef struct _GfsInitFraction         GfsInitFraction;
+
+struct _GfsInitFraction {
+  /*< private >*/
+  GfsGenericInit parent;
+
+  GfsVariable * c;
+  GtsSurface * surface;
+  GNode * stree;
+  gboolean is_open;
+};
+
+typedef struct _GfsInitFractionClass    GfsInitFractionClass;
+
+struct _GfsInitFractionClass {
+  /*< private >*/
+  GfsGenericInitClass parent_class;
+
+  /*< public >*/
+};
+
+#define GFS_INIT_FRACTION(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsInitFraction,\
+					         gfs_init_fraction_class ())
+#define GFS_INIT_FRACTION_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
+						 GfsInitFractionClass,\
+						 gfs_init_fraction_class())
+#define GFS_IS_INIT_FRACTION(obj)         (gts_object_is_from_class (obj,\
+						 gfs_init_fraction_class ()))
+
+GfsInitFractionClass * gfs_init_fraction_class  (void);
+
+/* GfsRemoveDroplets: Header */
+
+typedef struct _GfsRemoveDroplets         GfsRemoveDroplets;
+
+struct _GfsRemoveDroplets {
+  /*< private >*/
+  GfsEvent parent;
+
+  /*< public >*/
+  GfsVariable * c;
+  gint min;
+};
+
+#define GFS_REMOVE_DROPLETS(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsRemoveDroplets,\
+					         gfs_remove_droplets_class ())
+#define GFS_IS_REMOVE_DROPLETS(obj)         (gts_object_is_from_class (obj,\
+						 gfs_remove_droplets_class ()))
+
+GfsEventClass * gfs_remove_droplets_class  (void);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* __EVENT_H__ */

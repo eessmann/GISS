@@ -1,0 +1,56 @@
+<!-- ##### SECTION Title ##### -->
+Diffusion solver
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### FUNCTION gfs_diffusion_rhs ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_diffusion_residual ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_diffusion_coefficients ##### -->
+<para>
+
+</para>
+
+@domain: 
+@d: 
+@dt: 
+
+
+<!-- ##### FUNCTION gfs_diffusion_cycle ##### -->
+<para>
+
+</para>
+
+@domain: 
+@levelmin: 
+@depth: 
+@nrelax: 
+@u: 
+
+

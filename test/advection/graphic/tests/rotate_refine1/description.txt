@@ -1,0 +1,2 @@
+command: shapes star | transform -i -s 0.9 | advection -l 5 -v -b 2
+caption: Rotation of a sharp field (``star''), van Leer limiter, CFL of 0.5, two levels of refinement in a square centered box.

@@ -1,0 +1,61 @@
+<!-- ##### SECTION Title ##### -->
+Simple statistics
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### STRUCT GfsNorm ##### -->
+<para>
+Contains simple norm statistics.
+</para>
+
+@bias: 
+@first: 
+@second: 
+@infty: 
+@w: 
+
+<!-- ##### FUNCTION gfs_norm_init ##### -->
+<para>
+
+</para>
+
+@n: 
+
+
+<!-- ##### FUNCTION gfs_norm_add ##### -->
+<para>
+
+</para>
+
+@n: 
+@val: 
+@weight: 
+
+
+<!-- ##### FUNCTION gfs_norm_update ##### -->
+<para>
+
+</para>
+
+@n: 
+
+
+<!-- ##### FUNCTION gfs_norm_reset ##### -->
+<para>
+
+</para>
+
+@n: 
+
+

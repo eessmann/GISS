@@ -1,0 +1,32 @@
+<!-- ##### SECTION Title ##### -->
+Diffusion statistics output
+
+<!-- ##### SECTION Short_Description ##### -->
+Information about the convergence of the diffusion solver
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+GfsOutputDiffusionStats writes a summary of the convergence properties of the diffusion solve during the last time step. The convergence rate given is the average factor by which the residual is reduced for each multigrid iteration.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsOutput ]
+</programlisting>
+</informalexample>
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### FUNCTION gfs_output_diffusion_stats_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

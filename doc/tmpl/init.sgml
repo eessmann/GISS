@@ -1,0 +1,47 @@
+<!-- ##### SECTION Title ##### -->
+Initialisation event
+
+<!-- ##### SECTION Short_Description ##### -->
+Used for initial conditions
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+GfsInit can be used to set initial conditions for each primitive variable. The initial conditions can be either constants or functions of space.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsGenericInit ] { V1 = [ #GfsFunction ] V2 = [ #GfsFunction ] ... }
+</programlisting>
+</informalexample>
+where V1, V2, ... are variable names.
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_IS_INIT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsInit ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### FUNCTION gfs_init_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

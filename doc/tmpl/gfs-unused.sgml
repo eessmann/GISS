@@ -1,0 +1,614 @@
+<!-- ##### SECTION ./tmpl/ftt.sgml:Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/ftt.sgml:See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/ftt.sgml:Short_Description ##### -->
+
+
+
+<!-- ##### SECTION ./tmpl/ftt.sgml:Title ##### -->
+Fully threaded tree
+
+
+<!-- ##### SECTION ./tmpl/inflow.sgml:Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/inflow.sgml:See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/inflow.sgml:Short_Description ##### -->
+
+
+
+<!-- ##### SECTION ./tmpl/inflow.sgml:Title ##### -->
+Inflow boundary
+
+
+<!-- ##### SECTION ./tmpl/inflow_constant_tracer.sgml:Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/inflow_constant_tracer.sgml:See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/inflow_constant_tracer.sgml:Short_Description ##### -->
+
+
+
+<!-- ##### SECTION ./tmpl/inflow_constant_tracer.sgml:Title ##### -->
+Constant inflow tracer boundary
+
+
+<!-- ##### SECTION ./tmpl/init_constant.sgml:Long_Description ##### -->
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsInit ] { U = 1.2 V = -0.1 W = -5.4 }
+</programlisting>
+</informalexample>
+with
+<informaltable pgwide="1" frame="none" role="struct">
+<tgroup cols="2">
+<colspec colwidth="2*">
+<colspec colwidth="8*">
+<tbody>
+
+<row>
+<entry><structfield>U</structfield></entry>
+<entry>X component of the velocity vector (default is zero).</entry>
+</row>
+
+<row>
+<entry><structfield>V</structfield></entry>
+<entry>Y component of the velocity vector (default is zero).</entry>
+</row>
+
+<row>
+<entry><structfield>W</structfield></entry>
+<entry>Z component of the velocity vector (default is zero).</entry>
+</row>
+
+</tbody></tgroup></informaltable>
+</para>
+
+
+<!-- ##### SECTION ./tmpl/init_constant.sgml:See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/init_constant.sgml:Short_Description ##### -->
+Initialising a uniform initial velocity field
+
+
+<!-- ##### SECTION ./tmpl/init_constant.sgml:Title ##### -->
+Constant velocity initialisation
+
+
+<!-- ##### SECTION ./tmpl/outflow_source.sgml:Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/outflow_source.sgml:See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/outflow_source.sgml:Short_Description ##### -->
+
+
+
+<!-- ##### SECTION ./tmpl/outflow_source.sgml:Title ##### -->
+Outflow boundary with source
+
+
+<!-- ##### SECTION ./tmpl/solid.sgml.sgml:Long_Description ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/solid.sgml.sgml:See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/solid.sgml.sgml:Short_Description ##### -->
+
+
+
+<!-- ##### SECTION ./tmpl/solid.sgml.sgml:Title ##### -->
+solid.sgml
+
+
+<!-- ##### SECTION ./tmpl/source_constant.sgml:Long_Description ##### -->
+<para>
+GfsSourceConstant adds a constant source term to a given variable.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsSource ] VALUE
+</programlisting>
+</informalexample>
+where VALUE is the strength of the source.
+</para>
+<para>
+To add the acceleration of gravity in the vertical direction in a 2D simulation one would use:
+<informalexample>
+<programlisting>
+GfsSourceConstant {} V -9.81
+</programlisting>
+</informalexample>
+</para>
+
+
+<!-- ##### SECTION ./tmpl/source_constant.sgml:See_Also ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### SECTION ./tmpl/source_constant.sgml:Short_Description ##### -->
+Like gravity for velocity variables
+
+
+<!-- ##### SECTION ./tmpl/source_constant.sgml:Title ##### -->
+Constant source term
+
+
+<!-- ##### MACRO FTT_NEIGHBORS ##### -->
+<para>
+Evaluates to the maximum number of neighbors of a #FttCell (4 in 2D, 6 in 3D).
+</para>
+
+
+<!-- ##### MACRO FTT_OPPOSITE_INDEX ##### -->
+<para>
+Evaluates to the index of the neighboring direction opposite to @i.
+</para>
+
+@i: a neighboring direction index.
+
+<!-- ##### MACRO GFS_BOUNDARY_INFLOW_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+<!-- ##### MACRO GFS_BOUNDARY_INFLOW_CONSTANT_TRACER ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO GFS_GRADIENT ##### -->
+<para>
+
+</para>
+
+@component: 
+
+<!-- ##### MACRO GFS_INIT_FLOW_CONSTANT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO GFS_IS_BOUNDARY_INFLOW ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO GFS_IS_BOUNDARY_OUTFLOW_SOURCE ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO GFS_IS_INIT_FLOW_CONSTANT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO GFS_IS_SOURCE_CONSTANT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO GFS_SOURCE_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+<!-- ##### MACRO GFS_SOURCE_CONSTANT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO GFS_VELOCITY ##### -->
+<para>
+
+</para>
+
+@component: 
+
+<!-- ##### STRUCT GfsBoundaryInflowClass ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### STRUCT GfsBoundaryInflowConstantTracer ##### -->
+<para>
+
+</para>
+
+@width: 
+
+<!-- ##### STRUCT GfsBoundaryOutflowSource ##### -->
+<para>
+
+</para>
+
+@intensity: 
+
+<!-- ##### ENUM GfsBoundaryVariable ##### -->
+<para>
+
+</para>
+
+@GFS_BOUNDARY_FACE_VARIABLE: 
+@GFS_BOUNDARY_MATCH_VARIABLE: 
+@GFS_BOUNDARY_VARIABLE_NUMBER: 
+
+<!-- ##### STRUCT GfsInitFlowConstant ##### -->
+<para>
+
+</para>
+
+@u: 
+
+<!-- ##### STRUCT GfsProjectionParams ##### -->
+<para>
+
+</para>
+
+@tolerance: 
+@nrelax: 
+@minlevel: 
+@nitermax: 
+@niter: 
+@residual_before: 
+@residual: 
+
+<!-- ##### STRUCT GfsSourceClass ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### STRUCT GfsSourceConstant ##### -->
+<para>
+
+</para>
+
+@intensity: 
+
+<!-- ##### FUNCTION gfs_boundary_inflow_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+<!-- ##### FUNCTION gfs_boundary_inflow_constant_tracer_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+<!-- ##### FUNCTION gfs_boundary_match ##### -->
+<para>
+
+</para>
+
+@boundary: 
+
+<!-- ##### FUNCTION gfs_boundary_outflow_source_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+<!-- ##### FUNCTION gfs_centered_velocity_advection ##### -->
+<para>
+
+</para>
+
+@domain: 
+@par: 
+@flux: 
+
+<!-- ##### FUNCTION gfs_cleanup ##### -->
+<para>
+
+</para>
+
+@cell: 
+
+<!-- ##### FUNCTION gfs_copy ##### -->
+<para>
+
+</para>
+
+@from: 
+@to: 
+
+<!-- ##### FUNCTION gfs_correct_centered_velocity ##### -->
+<para>
+
+</para>
+
+@face: 
+@par: 
+
+<!-- ##### FUNCTION gfs_domain_adapt ##### -->
+<para>
+
+</para>
+
+@domain: 
+@minlevel: 
+@maxlevel: 
+@refine: 
+@refine_data: 
+
+<!-- ##### FUNCTION gfs_domain_center_bc ##### -->
+<para>
+
+</para>
+
+@domain: 
+@v: 
+
+<!-- ##### FUNCTION gfs_domain_pressure_bc ##### -->
+<para>
+
+</para>
+
+@domain: 
+@flags: 
+@max_depth: 
+@p: 
+
+<!-- ##### FUNCTION gfs_domain_traversed_merged ##### -->
+<para>
+
+</para>
+
+@domain: 
+@func: 
+@data: 
+
+<!-- ##### FUNCTION gfs_draw_boundaries ##### -->
+<para>
+
+</para>
+
+@root: 
+@fp: 
+
+<!-- ##### FUNCTION gfs_gradient ##### -->
+<para>
+
+</para>
+
+@cell: 
+@neighbor: 
+@d: 
+@v: 
+@max_level: 
+@Returns: 
+
+<!-- ##### FUNCTION gfs_init_flow_constant_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+<!-- ##### FUNCTION gfs_norm_residual ##### -->
+<para>
+
+</para>
+
+@domain: 
+@flags: 
+@max_depth: 
+@Returns: 
+@root: 
+@level: 
+
+<!-- ##### FUNCTION gfs_norm_velocity ##### -->
+<para>
+
+</para>
+
+@root: 
+@flags: 
+@max_depth: 
+@Returns: 
+
+<!-- ##### FUNCTION gfs_output_scalar_name ##### -->
+<para>
+
+</para>
+
+@output: 
+@Returns: 
+
+<!-- ##### FUNCTION gfs_poisson ##### -->
+<para>
+
+</para>
+
+@domain: 
+@levelmin: 
+@depth: 
+@nrelax: 
+@u: 
+@rhs: 
+@root: 
+@cell: 
+@level: 
+
+<!-- ##### FUNCTION gfs_projection_params_init ##### -->
+<para>
+
+</para>
+
+@par: 
+
+<!-- ##### FUNCTION gfs_projection_params_read ##### -->
+<para>
+
+</para>
+
+@par: 
+@fp: 
+
+<!-- ##### FUNCTION gfs_projection_params_write ##### -->
+<para>
+
+</para>
+
+@par: 
+@fp: 
+
+<!-- ##### FUNCTION gfs_read ##### -->
+<para>
+
+</para>
+
+@cell: 
+@fp: 
+@variables: 
+@Returns: 
+
+<!-- ##### FUNCTION gfs_relax_level ##### -->
+<para>
+
+</para>
+
+@root: 
+@level: 
+@u: 
+@rhs: 
+
+<!-- ##### FUNCTION gfs_reset ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+<!-- ##### FUNCTION gfs_solid_stats ##### -->
+<para>
+
+</para>
+
+@root: 
+@Returns: 
+
+<!-- ##### FUNCTION gfs_source_constant_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+<!-- ##### FUNCTION gfs_tracer_advection ##### -->
+<para>
+
+</para>
+
+@domain: 
+@par: 
+@half: 
+
+<!-- ##### FUNCTION gfs_variable_copy ##### -->
+<para>
+
+</para>
+
+@v: 
+@Returns: 
+
+<!-- ##### FUNCTION gfs_variable_destroy ##### -->
+<para>
+
+</para>
+
+@v: 
+
+<!-- ##### FUNCTION gfs_velocity_sources ##### -->
+<para>
+
+</para>
+
+@domain: 
+@par: 
+
+<!-- ##### FUNCTION gfs_write ##### -->
+<para>
+
+</para>
+
+@cell: 
+@fp: 
+@variables: 
+

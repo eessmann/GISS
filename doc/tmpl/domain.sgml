@@ -1,0 +1,367 @@
+<!-- ##### SECTION Title ##### -->
+Fluid domain
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_DOMAIN_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+
+<!-- ##### MACRO GFS_DOMAIN ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_DOMAIN ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsDomainClass ##### -->
+<para>
+
+</para>
+
+@parent_class: 
+
+<!-- ##### STRUCT GfsDomain ##### -->
+<para>
+
+</para>
+
+@parent: 
+@pid: 
+@timer: 
+@mac_projection: 
+@approximate_projection: 
+@centered_velocity_advection: 
+@tracer_advection: 
+@predicted_face_velocities: 
+@adapt: 
+@timestep: 
+@size: 
+@bc: 
+@face_bc: 
+@match: 
+@profile_bc: 
+@mpi_messages: 
+@mpi_wait: 
+@rootlevel: 
+@refpos: 
+@lambda: 
+@variables: 
+@variables_size: 
+@variables_io: 
+@max_depth_write: 
+
+<!-- ##### FUNCTION gfs_domain_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_add_variable ##### -->
+<para>
+
+</para>
+
+@domain: 
+@name: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_cell_traverse ##### -->
+<para>
+
+</para>
+
+@domain: 
+@order: 
+@flags: 
+@max_depth: 
+@func: 
+@data: 
+
+
+<!-- ##### FUNCTION gfs_domain_cell_traverse_boundary ##### -->
+<para>
+
+</para>
+
+@domain: 
+@d: 
+@order: 
+@flags: 
+@max_depth: 
+@func: 
+@data: 
+
+
+<!-- ##### FUNCTION gfs_domain_cell_traverse_box ##### -->
+<para>
+
+</para>
+
+@domain: 
+@box: 
+@order: 
+@flags: 
+@max_depth: 
+@func: 
+@data: 
+
+
+<!-- ##### FUNCTION gfs_domain_traverse_mixed ##### -->
+<para>
+
+</para>
+
+@domain: 
+@func: 
+@data: 
+
+
+<!-- ##### FUNCTION gfs_domain_face_traverse ##### -->
+<para>
+
+</para>
+
+@domain: 
+@c: 
+@order: 
+@flags: 
+@max_depth: 
+@func: 
+@data: 
+
+
+<!-- ##### FUNCTION gfs_domain_locate ##### -->
+<para>
+
+</para>
+
+@domain: 
+@target: 
+@max_depth: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_bc ##### -->
+<para>
+
+</para>
+
+@domain: 
+@flags: 
+@max_depth: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_domain_homogeneous_bc ##### -->
+<para>
+
+</para>
+
+@domain: 
+@flags: 
+@max_depth: 
+@ov: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_domain_face_bc ##### -->
+<para>
+
+</para>
+
+@domain: 
+@c: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_domain_surface_bc ##### -->
+<para>
+
+</para>
+
+@domain: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_domain_match ##### -->
+<para>
+
+</para>
+
+@domain: 
+
+
+<!-- ##### FUNCTION gfs_domain_depth ##### -->
+<para>
+
+</para>
+
+@domain: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_stats_variable ##### -->
+<para>
+
+</para>
+
+@domain: 
+@v: 
+@flags: 
+@max_depth: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_norm_variable ##### -->
+<para>
+
+</para>
+
+@domain: 
+@v: 
+@flags: 
+@max_depth: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_norm_velocity ##### -->
+<para>
+
+</para>
+
+@domain: 
+@flags: 
+@max_depth: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_stats_balance ##### -->
+<para>
+
+</para>
+
+@domain: 
+@size: 
+@boundary: 
+@mpiwait: 
+
+
+<!-- ##### FUNCTION gfs_domain_stats_solid ##### -->
+<para>
+
+</para>
+
+@domain: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_solid_force ##### -->
+<para>
+
+</para>
+
+@domain: 
+@pf: 
+@vf: 
+
+
+<!-- ##### FUNCTION gfs_domain_read ##### -->
+<para>
+
+</para>
+
+@domain: 
+@fp: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_split ##### -->
+<para>
+
+</para>
+
+@domain: 
+@one_box_per_pe: 
+
+
+<!-- ##### FUNCTION gfs_domain_variable_sources ##### -->
+<para>
+
+</para>
+
+@domain: 
+@v: 
+@sv: 
+@dt: 
+
+
+<!-- ##### FUNCTION gfs_domain_remove_droplets ##### -->
+<para>
+
+</para>
+
+@domain: 
+@c: 
+@min: 
+
+
+<!-- ##### FUNCTION gfs_domain_advect_point ##### -->
+<para>
+
+</para>
+
+@domain: 
+@p: 
+@dt: 
+
+
+<!-- ##### FUNCTION gfs_domain_cfl ##### -->
+<para>
+
+</para>
+
+@domain: 
+@flags: 
+@max_depth: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_size ##### -->
+<para>
+
+</para>
+
+@domain: 
+@flags: 
+@max_depth: 
+@Returns: 
+
+

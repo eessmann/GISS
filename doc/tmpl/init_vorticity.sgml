@@ -1,0 +1,60 @@
+<!-- ##### SECTION Title ##### -->
+Vorticity initialisation
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_INIT_VORTICITY ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_INIT_VORTICITY_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+
+<!-- ##### MACRO GFS_IS_INIT_VORTICITY ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsInitVorticity ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### STRUCT GfsInitVorticityClass ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### FUNCTION gfs_init_vorticity_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

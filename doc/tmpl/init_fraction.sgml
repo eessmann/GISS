@@ -1,0 +1,69 @@
+<!-- ##### SECTION Title ##### -->
+Fraction initialisation
+
+<!-- ##### SECTION Short_Description ##### -->
+Initialise volume fraction from surface
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+GfsInitFraction computes the intersection of each cell with a given surface and sets the corresponding volume fraction.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsGenericInit ] C surface.gts
+</programlisting>
+</informalexample>
+where C is a variable name and surface.gts is a closed, manifold surface.
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_INIT_FRACTION_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+
+<!-- ##### MACRO GFS_INIT_FRACTION ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_INIT_FRACTION ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsInitFractionClass ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### STRUCT GfsInitFraction ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### FUNCTION gfs_init_fraction_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

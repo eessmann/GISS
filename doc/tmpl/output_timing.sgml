@@ -1,0 +1,32 @@
+<!-- ##### SECTION Title ##### -->
+Timing statistics output
+
+<!-- ##### SECTION Short_Description ##### -->
+For profiling of the solver
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+GfsOutputTiming writes a description of the measured (real) time spent (up to now) in the various parts of the solver as well as a summary of the overall performance.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsOutput ]
+</programlisting>
+</informalexample>
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### FUNCTION gfs_output_timing_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

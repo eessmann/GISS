@@ -1,0 +1,52 @@
+## Process this file with automake to produce Makefile.in
+
+INCLUDES = -I$(top_srcdir)/src -I$(includedir) -DG_LOG_DOMAIN=\"Gfs-tools\"\
+            $(GTS_CFLAGS)
+
+bin_PROGRAMS = \
+	gfs2oogl2D \
+	gfs2oogl2D3 \
+	gfs2oogl3D \
+	streamanime \
+	ppmcombine \
+	gfscompare2D \
+	gfscompare2D3 \
+	gfscompare3D \
+	gfs2other2D \
+	gfs2other3D \
+	gfs2vtk2D \
+	gfs2vtk3D
+
+gfs2oogl2D_SOURCES = gfs2oogl.c
+gfs2oogl2D3_SOURCES = gfs2oogl.c
+gfs2oogl3D_SOURCES = gfs2oogl.c
+gfscompare2D_SOURCES = gfscompare.c
+gfscompare2D3_SOURCES = gfscompare.c
+gfscompare3D_SOURCES = gfscompare.c
+gfs2other2D_SOURCES = gfs2other.c
+gfs2other3D_SOURCES = gfs2other.c
+gfs2vtk2D_SOURCES = gfs2vtk.c
+gfs2vtk3D_SOURCES = gfs2vtk.c
+
+gfs2oogl2D_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+gfs2oogl2D3_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
+gfs2oogl2D_LDADD = $(GFS2D_LIBS)
+gfs2oogl2D3_LDADD = $(GFS2D3_LIBS)
+gfs2oogl3D_LDADD = $(GFS3D_LIBS)
+gfscompare2D_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+gfscompare2D3_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
+gfscompare2D_LDADD = $(GFS2D_LIBS)
+gfscompare2D3_LDADD = $(GFS2D3_LIBS)
+gfscompare3D_LDADD = $(GFS3D_LIBS)
+gfs2other2D_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+gfs2other2D_LDADD = $(GFS2D_LIBS)
+gfs2other3D_LDADD = $(GFS3D_LIBS)
+gfs2vtk2D_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+gfs2vtk2D_LDADD = $(GFS2D_LIBS)
+gfs2vtk3D_CFLAGS = $(AM_CFLAGS)
+gfs2vtk3D_LDADD = $(GFS3D_LIBS)
+
+ppmcombine_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+ppmcombine_LDADD = $(GFS2D_LIBS)
+
+streamanime_LDADD = $(GFS3D_LIBS)

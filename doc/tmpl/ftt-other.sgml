@@ -1,0 +1,206 @@
+<!-- ##### SECTION Title ##### -->
+Other operations
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### FUNCTION ftt_direction_from_name ##### -->
+<para>
+
+</para>
+
+@name: 
+@Returns: 
+
+
+<!-- ##### FUNCTION ftt_cell_locate ##### -->
+<para>
+
+</para>
+
+@root: 
+@target: 
+@max_depth: 
+@Returns: 
+
+
+<!-- ##### ENUM FttTraverseType ##### -->
+<para>
+Controls the sequence in which the traversal is performed.
+</para>
+
+@FTT_PRE_ORDER: Visits the parent cell and then its children.
+@FTT_POST_ORDER: Visits each children and then their parent.
+
+<!-- ##### ENUM FttTraverseFlags ##### -->
+<para>
+Controls the type of cell to visit.
+</para>
+
+@FTT_TRAVERSE_LEAFS: Visits only the cells which are leaves of the cell tree.
+@FTT_TRAVERSE_NON_LEAFS: Visits only the cells which are not leaves of the cell tree.
+@FTT_TRAVERSE_LEVEL: If %FTT_TRAVERSE_LEAFS is also set, visit the leafs of the cell tree and all the cells at level @max_depth. If %FTT_TRAVERSE_NON_LEAFS is also set, visits only the non-leaf cells at level @max_depth. Otherwise, visits all the cells at level @max_depth.
+@FTT_TRAVERSE_BOUNDARY_FACES: 
+@FTT_TRAVERSE_ALL: Visits all the cells of the cell tree.
+
+<!-- ##### USER_FUNCTION FttCellTraverseFunc ##### -->
+<para>
+This functions is called by ftt_cell_traverse() for each of the visited cells.
+</para>
+
+@cell: a #FttCell.
+@data: user-data passed to the function.
+
+
+<!-- ##### FUNCTION ftt_cell_traverse ##### -->
+<para>
+
+</para>
+
+@root: 
+@order: 
+@flags: 
+@max_depth: 
+@func: 
+@data: 
+
+
+<!-- ##### FUNCTION ftt_cell_traverse_boundary ##### -->
+<para>
+
+</para>
+
+@root: 
+@d: 
+@order: 
+@flags: 
+@max_depth: 
+@func: 
+@data: 
+
+
+<!-- ##### FUNCTION ftt_cell_traverse_box ##### -->
+<para>
+
+</para>
+
+@root: 
+@box: 
+@order: 
+@flags: 
+@max_depth: 
+@func: 
+@data: 
+
+
+<!-- ##### STRUCT FttCellTraverse ##### -->
+<para>
+
+</para>
+
+@cells: 
+@current: 
+
+<!-- ##### FUNCTION ftt_cell_traverse_new ##### -->
+<para>
+
+</para>
+
+@root: 
+@order: 
+@flags: 
+@max_depth: 
+@Returns: 
+
+
+<!-- ##### FUNCTION ftt_cell_traverse_next ##### -->
+<para>
+
+</para>
+
+@t: 
+@Returns: 
+
+
+<!-- ##### FUNCTION ftt_cell_traverse_rewind ##### -->
+<para>
+
+</para>
+
+@t: 
+
+
+<!-- ##### FUNCTION ftt_cell_traverse_destroy ##### -->
+<para>
+
+</para>
+
+@t: 
+
+
+<!-- ##### FUNCTION ftt_cell_write ##### -->
+<para>
+
+</para>
+
+@root: 
+@max_depth: 
+@fp: 
+@write: 
+@data: 
+
+
+<!-- ##### USER_FUNCTION FttCellWriteFunc ##### -->
+<para>
+Writes in @fp any user data associated with @cell. It is important that this function does not output any newline caracter ('\n').
+</para>
+
+@cell: a #FttCell.
+@fp: a file pointer.
+@data: 
+
+
+<!-- ##### FUNCTION ftt_cell_read ##### -->
+<para>
+
+</para>
+
+@fp: 
+@read: 
+@data: 
+@Returns: 
+<!-- # Unused Parameters # -->
+@line: 
+
+
+<!-- ##### USER_FUNCTION FttCellReadFunc ##### -->
+<para>
+Reads in any user data associated with @cell from file @fp and initializes the corresponding fields.
+</para>
+
+@cell: a #FttCell.
+@fp: a file pointer.
+@data: 
+<!-- # Unused Parameters # -->
+@Returns: the last caracter read from @fp.
+
+
+<!-- ##### FUNCTION ftt_cell_draw ##### -->
+<para>
+
+</para>
+
+@cell: 
+@fp: 
+
+

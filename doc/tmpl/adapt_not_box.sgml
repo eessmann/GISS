@@ -1,0 +1,57 @@
+<!-- ##### SECTION Title ##### -->
+Non-adaptive fluid box node
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_ADAPT_NOT_BOX ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_ADAPT_NOT_BOX ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsAdaptNotBox ##### -->
+<para>
+
+</para>
+
+@box: 
+
+<!-- ##### FUNCTION gfs_adapt_not_box_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_adapt_not_box_new ##### -->
+<para>
+
+</para>
+
+@klass: 
+@box: 
+@Returns: 
+
+

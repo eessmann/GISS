@@ -1,0 +1,135 @@
+20/05/2004: Release 0.3.0
+
+Quite a lot has happened since 0.2.0. The main changes/improvements are:
+
+- On systems supporting dynamic linking, functions of space and time
+can be used instead of constants for most objects which require a
+numerical argument. This is particularly useful for initialisation
+(each field can be set using functions of space and time) where almost
+any mathematical description of the initial conditions can be written
+directly in the parameter file (no need to create a custom module
+etc...). The same mechanism can also be used to define the initial
+refinement of the grid (i.e. specify the mesh density as a
+mathematical function directly in the parameter file) or variable
+source terms.
+
+- The boundary condition subsystem has been entirely revamped. It is
+now possible to define complex boundary conditions by combining
+independent boundary conditions (Dirichlet, Neumann etc...) for each
+variable. Dynamic functions can be used within this framework which
+allows for variable in space (e.g. profiles) and in time boundary
+conditions.
+
+- The code now includes a multigrid semi-implicit diffusion solver. It
+can work together with embedded solid boundaries in 2D but not yet in
+3D. It is possible to accurately specify the boundary conditions
+(Dirichlet or Neumann) for the diffused variable on the solid
+boundaries. All this allows for the solution of advection-diffusion
+equations such as incompressible Navier-Stokes. Due to the stability
+of the semi-implicit scheme it is also possible to solve pure Stokes
+flows with no restriction on the time step.
+
+- The adaptive engine has been rewritten. It is now possible to
+control the maximum size of the simulation. When this maximum size is
+reached, the algorithm will optimally distribute this maximum number
+of cells so that the adaptive criterion is minimized.
+
+- Note that the parameter file arguments of several objects have
+changed (GfsAdapt in particular), so that full parameter file
+compatibility with 0.2.0 is not guaranteed.
+
+- Volume of Fluid or standard Godunov advection schemes can now be
+selected in parameter files.
+
+- New object outputs the pressure and viscous forces exerted on the
+embedded solid boundary.
+
+- The pressure is now properly scaled.
+
+- Plus a large number of bug fixes, small improvements etc...
+
+Have a look at the ChangeLog for details.
+
+08/01/2003: Release 0.2.0
+
+This new release of Gerris includes a number of new features as well
+as some major code restructuring. 
+
+The GTS library version 0.7.1 is required. It includes major
+improvements for boolean operations between surfaces which greatly
+improve the robustness of the treatment of solid boundaries within
+Gerris.
+
+The major changes are listed below. For a detailed summary see the
+ChangeLog.
+
+New features:
+
+- Support for the variable density incompressible Euler equations.
+
+- Support for user-defined source terms for any variable. Gaussian
+  tracer source terms and constant source terms (e.g. acceleration of
+  gravity in momentum equation) are provided.
+
+- Base domain does not have to be cubic anymore. Independent length
+  scales can be provided for each dimension.
+
+- Module for OpenDX allowing direct import of Gerris simulation files.
+
+- Updated documentation and tutorial: section about user-defined
+  extension modules for initial conditions.
+
+- Support for dynamic allocation of additional cell variables
+  i.e. extension modules can dynamically add additional variables if
+  needed.
+
+- Automatic compilation and installation of 2D and 3D versions. 
+
+- Preliminary implementation of a second-order Volume Of Fluid (VOF)
+  advection scheme.
+
+- A new GfsAdaptNotBox class can be used to specify parts of the
+  domain which do not need to be refined. This is particularly useful
+  for implementing absorbing outflow conditions.
+
+Improvements and restructuring:
+
+- Improved adaptive refinement algorithm.
+
+- Restructuring of the test suite.
+
+19/06/2002: Release 0.1.0
+
+Hi all,
+
+I am glad to announce the first "official" release of Gerris.
+
+It needs the latest version of GTS (0.6.0) to compile.
+
+A major change since last month is the addition of "dynamic adaptive
+mesh refinement" i.e. the distribution of cells changes according to
+what is happening to the solution. Have a look at the gallery on the
+web site for a graphical illustration.
+
+here:
+
+http://gfs.sourceforge.net/gallery.html
+
+and here (at the bottom of the page):
+
+http://gfs.sourceforge.net/tangaroa.html
+
+I also wrote a short tutorial which should help you get started with
+the code (available online and in the distribution in doc/tutorial).
+
+http://gfs.sourceforge.net/tutorial/tutorial1.html
+
+Any feedback is of course welcome,
+
+Enjoy,
+
+Stephane
+
+11/12/2001: Inital CVS checkin
+01/08/2001: Initial setup
+ LocalWords:  GfsAdaptNotBox

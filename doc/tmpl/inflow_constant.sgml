@@ -1,0 +1,63 @@
+<!-- ##### SECTION Title ##### -->
+Constant inflow boundary
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_BOUNDARY_INFLOW_CONSTANT_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+
+<!-- ##### MACRO GFS_BOUNDARY_INFLOW_CONSTANT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_BOUNDARY_INFLOW_CONSTANT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsBoundaryInflowConstantClass ##### -->
+<para>
+
+</para>
+
+@parent_class: 
+
+<!-- ##### STRUCT GfsBoundaryInflowConstant ##### -->
+<para>
+
+</para>
+
+@parent: 
+@un: 
+
+<!-- ##### FUNCTION gfs_boundary_inflow_constant_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

@@ -1,0 +1,634 @@
+<!-- ##### SECTION Title ##### -->
+Fluid cell
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_VARIABLE ##### -->
+<para>
+Evaluates to the value of variable @index in @cell.
+</para>
+
+@cell: a #FttCell.
+@index: a #GfsVariable.
+
+
+<!-- ##### MACRO GFS_STATE ##### -->
+<para>
+
+</para>
+
+@cell: 
+
+
+<!-- ##### MACRO GFS_VELOCITY_COMPONENT ##### -->
+<para>
+
+</para>
+
+@index: 
+<!-- # Unused Parameters # -->
+@variable: 
+
+
+<!-- ##### MACRO GFS_VELOCITY_INDEX ##### -->
+<para>
+
+</para>
+
+@component: 
+
+
+<!-- ##### MACRO GFS_GRADIENT_COMPONENT ##### -->
+<para>
+
+</para>
+
+@index: 
+<!-- # Unused Parameters # -->
+@variable: 
+
+
+<!-- ##### MACRO GFS_GRADIENT_INDEX ##### -->
+<para>
+
+</para>
+
+@component: 
+
+
+<!-- ##### MACRO GFS_FACE_NORMAL_VELOCITY_RIGHT ##### -->
+<para>
+
+</para>
+
+@fa: 
+
+
+<!-- ##### MACRO GFS_FACE_NORMAL_VELOCITY_LEFT ##### -->
+<para>
+
+</para>
+
+@fa: 
+
+
+<!-- ##### MACRO GFS_FACE_NORMAL_VELOCITY ##### -->
+<para>
+
+</para>
+
+@fa: 
+
+
+<!-- ##### MACRO GFS_IS_SMALL ##### -->
+<para>
+
+</para>
+
+@cell: 
+
+
+<!-- ##### MACRO GFS_CELL_IS_BOUNDARY ##### -->
+<para>
+
+</para>
+
+@cell: 
+
+
+<!-- ##### STRUCT GfsStateVector ##### -->
+<para>
+The fluid variables describing the state of the cell.
+</para>
+
+@f: 
+@solid: 
+@div: 
+@dp: 
+@res: 
+@g: 
+@p: 
+@u: 
+@v: 
+
+<!-- ##### STRUCT GfsFaceStateVector ##### -->
+<para>
+
+</para>
+
+@un: 
+@v: 
+
+<!-- ##### STRUCT GfsVariable ##### -->
+<para>
+The fluid variables associated with a fluid cell.
+</para>
+
+@i: 
+@name: 
+@centered: 
+@temporary: 
+@derived: 
+@fine_coarse: 
+@sources: 
+@next: 
+@p: 
+
+<!-- ##### ENUM GfsPermanentVariable ##### -->
+<para>
+
+</para>
+
+@GFS_DIV: 
+@GFS_DP: 
+@GFS_RES: 
+@GFS_GX: 
+@GFS_GY: 
+@GFS_U: 
+@GFS_V: 
+
+<!-- ##### STRUCT GfsVariableClass ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### USER_FUNCTION GfsVariableDerivedFunc ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### USER_FUNCTION GfsVariableFineCoarseFunc ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### ENUM GfsFlags ##### -->
+<para>
+
+</para>
+
+@GFS_FLAG_USED: 
+@GFS_FLAG_BOUNDARY: 
+@GFS_FLAG_DIRICHLET: 
+@GFS_FLAG_USER: 
+
+<!-- ##### FUNCTION gfs_cell_init ##### -->
+<para>
+
+</para>
+
+@cell: 
+@domain: 
+
+
+<!-- ##### FUNCTION gfs_cell_reset ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_cell_cleanup ##### -->
+<para>
+
+</para>
+
+@cell: 
+
+
+<!-- ##### FUNCTION gfs_cell_copy ##### -->
+<para>
+
+</para>
+
+@from: 
+@to: 
+@domain: 
+
+
+<!-- ##### FUNCTION gfs_cell_cm ##### -->
+<para>
+
+</para>
+
+@cell: 
+@cm: 
+
+
+<!-- ##### FUNCTION gfs_face_ca ##### -->
+<para>
+
+</para>
+
+@face: 
+@ca: 
+
+
+<!-- ##### FUNCTION gfs_variable_new ##### -->
+<para>
+
+</para>
+
+@klass: 
+@parent: 
+@name: 
+@centered: 
+@i: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_variable_list_copy ##### -->
+<para>
+
+</para>
+
+@v: 
+@parent: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_variable_list_destroy ##### -->
+<para>
+
+</para>
+
+@v: 
+
+
+<!-- ##### FUNCTION gfs_variable_source ##### -->
+<para>
+
+</para>
+
+@v: 
+@cell: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_variable_from_name ##### -->
+<para>
+
+</para>
+
+@variables: 
+@name: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_variables_from_list ##### -->
+<para>
+
+</para>
+
+@variables: 
+@list: 
+@error: 
+@Returns: 
+
+
+<!-- ##### MACRO gfs_variable_parent ##### -->
+<para>
+
+</para>
+
+@v: 
+
+
+<!-- ##### MACRO gfs_variable_set_parent ##### -->
+<para>
+
+</para>
+
+@v: 
+@pa: 
+
+
+<!-- ##### FUNCTION gfs_stats_variable ##### -->
+<para>
+
+</para>
+
+@root: 
+@v: 
+@flags: 
+@max_depth: 
+@Returns: 
+<!-- # Unused Parameters # -->
+@level: 
+
+
+<!-- ##### FUNCTION gfs_norm_variable ##### -->
+<para>
+
+</para>
+
+@root: 
+@v: 
+@flags: 
+@max_depth: 
+@Returns: 
+<!-- # Unused Parameters # -->
+@level: 
+
+
+<!-- ##### FUNCTION gfs_get_from_below_intensive ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_get_from_below_extensive ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_get_from_above ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_cell_coarse_init ##### -->
+<para>
+
+</para>
+
+@cell: 
+@domain: 
+<!-- # Unused Parameters # -->
+@variables: 
+
+
+<!-- ##### FUNCTION gfs_cell_fine_init ##### -->
+<para>
+
+</para>
+
+@cell: 
+@domain: 
+<!-- # Unused Parameters # -->
+@variables: 
+
+
+<!-- ##### FUNCTION gfs_cell_init_fraction ##### -->
+<para>
+
+</para>
+
+@root: 
+@s: 
+@stree: 
+@is_open: 
+@c: 
+
+
+<!-- ##### FUNCTION gfs_velocity_norm ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_velocity_norm2 ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_divergence ##### -->
+<para>
+
+</para>
+
+@cell: 
+
+
+<!-- ##### FUNCTION gfs_normal_divergence ##### -->
+<para>
+
+</para>
+
+@cell: 
+
+
+<!-- ##### FUNCTION gfs_vorticity ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+
+<!-- ##### FUNCTION gfs_face_interpolated_value ##### -->
+<para>
+
+</para>
+
+@face: 
+@v: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_interpolate ##### -->
+<para>
+
+</para>
+
+@cell: 
+@p: 
+@v: 
+@Returns: 
+
+
+<!-- ##### STRUCT GfsGradient ##### -->
+<para>
+Defines the (second-order accurate) gradient of a variable @v in a given direction as: @a*GFS_VARIABLE (cell, @v) + @b.
+</para>
+
+@a: 
+@b: 
+
+<!-- ##### FUNCTION gfs_face_gradient ##### -->
+<para>
+
+</para>
+
+@face: 
+@g: 
+@v: 
+@max_level: 
+<!-- # Unused Parameters # -->
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_face_weighted_gradient ##### -->
+<para>
+
+</para>
+
+@face: 
+@g: 
+@v: 
+@max_level: 
+
+
+<!-- ##### FUNCTION gfs_face_gradient_flux ##### -->
+<para>
+
+</para>
+
+@face: 
+@g: 
+@v: 
+@max_level: 
+
+
+<!-- ##### FUNCTION gfs_face_gradient_flux_centered ##### -->
+<para>
+
+</para>
+
+@face: 
+@g: 
+@v: 
+@max_level: 
+
+
+<!-- ##### USER_FUNCTION GfsCenterGradient ##### -->
+<para>
+
+</para>
+
+@cell: 
+@c: 
+@v: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_center_gradient ##### -->
+<para>
+
+</para>
+
+@cell: 
+@c: 
+@v: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_center_van_leer_gradient ##### -->
+<para>
+
+</para>
+
+@cell: 
+@c: 
+@v: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_cell_dirichlet_gradient ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+@max_level: 
+@v0: 
+@grad: 
+
+
+<!-- ##### FUNCTION gfs_cell_dirichlet_gradient_flux ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+@max_level: 
+@v0: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_cell_dirichlet_value ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+@max_level: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_cell_laplacian ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_cell_write ##### -->
+<para>
+
+</para>
+
+@cell: 
+@fp: 
+@variables: 
+
+
+<!-- ##### FUNCTION gfs_cell_read ##### -->
+<para>
+
+</para>
+
+@cell: 
+@fp: 
+@domain: 
+<!-- # Unused Parameters # -->
+@variables: 
+
+

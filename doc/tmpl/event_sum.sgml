@@ -1,0 +1,67 @@
+<!-- ##### SECTION Title ##### -->
+Sum events
+
+<!-- ##### SECTION Short_Description ##### -->
+Computing time-integrated fields
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+GfsEventSum and GfsEventSum2 can be used to compute and store the sum and squared sum of a time-varying variable.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsEvent ] V SV
+</programlisting>
+</informalexample>
+where V is an existing variable name and SV is a (possibly new) variable name where the sum will be stored.
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_EVENT_SUM ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_EVENT_SUM ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsEventSum ##### -->
+<para>
+
+</para>
+
+@parent: 
+@sum: 
+@last: 
+@dt: 
+
+<!-- ##### FUNCTION gfs_event_sum_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_event_sum2_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

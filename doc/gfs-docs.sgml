@@ -1,0 +1,169 @@
+<!doctype book PUBLIC "-//Davenport//DTD DocBook V3.0//EN" [
+<!entity gfs-ftt-basic SYSTEM "sgml/ftt-basic.sgml">
+<!entity gfs-ftt-topology SYSTEM "sgml/ftt-topology.sgml">
+<!entity gfs-ftt-other SYSTEM "sgml/ftt-other.sgml">
+<!entity gfs-ftt-face SYSTEM "sgml/ftt-face.sgml">
+<!entity gfs-fluid SYSTEM "sgml/fluid.sgml">
+<!entity gfs-poisson SYSTEM "sgml/poisson.sgml">
+<!entity gfs-diffusion SYSTEM "sgml/diffusion.sgml">
+<!entity gfs-solid SYSTEM "sgml/solid.sgml">
+<!entity gfs-stats SYSTEM "sgml/stats.sgml">
+<!entity gfs-function SYSTEM "sgml/function.sgml">
+<!entity gfs-domain SYSTEM "sgml/domain.sgml">
+<!entity gfs-boundary SYSTEM "sgml/boundary.sgml">
+<!entity gfs-boundary-inflow-constant SYSTEM "sgml/inflow_constant.sgml">
+<!entity gfs-boundary-outflow SYSTEM "sgml/outflow.sgml">
+<!entity gfs-boundary-mpi SYSTEM "sgml/mpi.sgml">
+<!entity gfs-box SYSTEM "sgml/box.sgml">
+<!entity gfs-adapt-not-box SYSTEM "sgml/adapt_not_box.sgml">
+<!entity gfs-domain-advection SYSTEM "sgml/domain-advection.sgml">
+<!entity gfs-domain-advection-vof SYSTEM "sgml/domain-advection-vof.sgml">
+<!entity gfs-advection SYSTEM "sgml/advection.sgml">
+<!entity gfs-adapt SYSTEM "sgml/adapt.sgml">
+<!entity gfs-adapt-vorticity SYSTEM "sgml/adapt_vorticity.sgml">
+<!entity gfs-adapt-gradient SYSTEM "sgml/adapt_gradient.sgml">
+<!entity gfs-event SYSTEM "sgml/event.sgml">
+<!entity gfs-event-script SYSTEM "sgml/event_script.sgml">
+<!entity gfs-event-stop SYSTEM "sgml/event_stop.sgml">
+<!entity gfs-event-sum SYSTEM "sgml/event_sum.sgml">
+<!entity gfs-generic-init SYSTEM "sgml/generic_init.sgml">
+<!entity gfs-init SYSTEM "sgml/init.sgml">
+<!entity gfs-init-vorticity SYSTEM "sgml/init_vorticity.sgml">
+<!entity gfs-init-fraction SYSTEM "sgml/init_fraction.sgml">
+<!entity gfs-output SYSTEM "sgml/output.sgml">
+<!entity gfs-output-time SYSTEM "sgml/output_time.sgml">
+<!entity gfs-output-projections SYSTEM "sgml/output_projections.sgml">
+<!entity gfs-output-diffusion SYSTEM "sgml/output_diffusion.sgml">
+<!entity gfs-output-adapts SYSTEM "sgml/output_adapts.sgml">
+<!entity gfs-output-timing SYSTEM "sgml/output_timing.sgml">
+<!entity gfs-output-balance SYSTEM "sgml/output_balance.sgml">
+<!entity gfs-output-solid SYSTEM "sgml/output_solid.sgml">
+<!entity gfs-output-solid-force SYSTEM "sgml/output_solid_force.sgml">
+<!entity gfs-output-simulation SYSTEM "sgml/output_simulation.sgml">
+<!entity gfs-output-boundaries SYSTEM "sgml/output_boundaries.sgml">
+<!entity gfs-output-location SYSTEM "sgml/output_location.sgml">
+<!entity gfs-output-scalar SYSTEM "sgml/output_scalar.sgml">
+<!entity gfs-output-scalar-norm SYSTEM "sgml/output_scalar_norm.sgml">
+<!entity gfs-output-scalar-stats SYSTEM "sgml/output_scalar_stats.sgml">
+<!entity gfs-output-scalar-sum SYSTEM "sgml/output_scalar_sum.sgml">
+<!entity gfs-output-error-norm SYSTEM "sgml/output_error_norm.sgml">
+<!entity gfs-output-squares SYSTEM "sgml/output_squares.sgml">
+<!entity gfs-output-ppm SYSTEM "sgml/output_ppm.sgml">
+<!entity gfs-refine SYSTEM "sgml/refine.sgml">
+<!entity gfs-refine-solid SYSTEM "sgml/refine_solid.sgml">
+<!entity gfs-refine-distance SYSTEM "sgml/refine_distance.sgml">
+<!entity gfs-simulation SYSTEM "sgml/simulation.sgml">
+<!entity gfs-source-generic SYSTEM "sgml/source_generic.sgml">
+<!entity gfs-source SYSTEM "sgml/source.sgml">
+]>
+
+<book>
+  <bookinfo>
+    <title>Gerris Flow Solver Reference Manual</title>
+  </bookinfo>
+
+  <chapter>
+    <title>Support functions</title>
+      &gfs-stats;
+      &gfs-function;
+  </chapter>
+  <chapter>
+    <title>Fully threaded tree</title>
+      &gfs-ftt-basic;
+      &gfs-ftt-topology;
+      &gfs-ftt-face;
+      &gfs-ftt-other;
+  </chapter>
+  <chapter>
+    <title>Flow solver</title>
+      <sect1>
+        <title>Fluid cells</title>
+        &gfs-fluid;
+        &gfs-solid;
+      </sect1>
+      <sect1>
+        <title> Fluid cells operators</title>
+        &gfs-advection;  
+      </sect1>
+      <sect1>
+        <title>Fluid domains</title>
+        &gfs-box;
+        &gfs-adapt-not-box;
+        &gfs-domain;
+      </sect1>
+      <sect1>
+        <title>Fluid box boundaries</title>
+        &gfs-boundary;
+        &gfs-boundary-inflow-constant;
+        &gfs-boundary-outflow;
+        &gfs-boundary-mpi;
+      </sect1>
+      <sect1>
+        <title>Fluid domains operators</title>
+        &gfs-domain-advection;
+        &gfs-domain-advection-vof;
+        &gfs-poisson;
+        &gfs-diffusion;
+      </sect1>
+  </chapter>
+  <chapter>
+    <title>Simulations, initialisations, events</title>
+      <sect1>
+        <title>Simulations</title>
+        &gfs-simulation;
+      </sect1>
+      <sect1>
+        <title>Refinements</title>
+        &gfs-refine;
+        &gfs-refine-solid;
+        &gfs-refine-distance;
+      </sect1>
+      <sect1>
+        <title>Source terms</title>
+        &gfs-source-generic;
+        &gfs-source;
+      </sect1>
+      <sect1>
+        <title>Events</title>
+        &gfs-event;
+        &gfs-event-script;
+        &gfs-event-stop;
+        &gfs-event-sum;
+      </sect1>
+      <sect1>
+        <title>Initialisation</title>
+        &gfs-generic-init;
+        &gfs-init;
+        &gfs-init-vorticity;
+        &gfs-init-fraction;
+      </sect1>
+      <sect1>
+        <title>Outputs</title>
+        &gfs-output;
+        &gfs-output-time;
+        &gfs-output-projections;
+        &gfs-output-diffusion;
+        &gfs-output-adapts;
+        &gfs-output-timing;
+        &gfs-output-balance;
+        &gfs-output-solid;
+        &gfs-output-solid-force;
+        &gfs-output-location;
+        &gfs-output-simulation;
+        &gfs-output-boundaries;
+        &gfs-output-scalar;
+        &gfs-output-scalar-norm;
+        &gfs-output-scalar-stats;
+        &gfs-output-scalar-sum;
+        &gfs-output-error-norm;
+        &gfs-output-squares;
+        &gfs-output-ppm;
+      </sect1>
+      <sect1>
+        <title>Adaptive mesh refinement</title>
+        &gfs-adapt;    
+        &gfs-adapt-vorticity;
+        &gfs-adapt-gradient;
+      </sect1>
+  </chapter>
+</book>

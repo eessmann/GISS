@@ -1,0 +1,14 @@
+6 7 FlDomain FlBox FlGEdge {} {}
+FlBox {id=1 pid=0} NULL FlBoundaryInflow NULL NULL
+FlBox {id=2 pid=0} NULL NULL NULL NULL
+FlBox {id=3 pid=1} NULL NULL NULL NULL
+FlBox {id=4 pid=1} NULL NULL NULL NULL
+FlBox {id=5 pid=2} NULL NULL NULL NULL
+FlBox {id=6 pid=2} NULL NULL NULL NULL
+2 1 2
+2 3 0
+3 4 0
+5 4 3
+5 6 1
+1 6 0
+3 6 2

@@ -1,0 +1,83 @@
+<!-- ##### SECTION Title ##### -->
+Simulation output
+
+<!-- ##### SECTION Short_Description ##### -->
+Saving the whole simulation
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+GfsOutputSimulation will write a description of the current state of the simulation which contains both standard simulation parameters, layout of the cell hierarchy and associated variable values.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsOutput ] { depth = 5 variables = U,V,C }
+</programlisting>
+</informalexample>
+with
+<informaltable pgwide="1" frame="none" role="struct">
+<tgroup cols="2">
+<colspec colwidth="2*">
+<colspec colwidth="8*">
+<tbody>
+
+<row>
+<entry><structfield>depth</structfield></entry>
+<entry>An optional parameter setting the maximum depth which will be considered (the default is infinity).</entry>
+</row>
+
+<row>
+<entry><structfield>variables</structfield></entry>
+<entry>A comma-separated list of the names of the variables which will be written. The default is all the simulation permanent variables.</entry>
+</row>
+
+</tbody></tgroup></informaltable>
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_OUTPUT_SIMULATION_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+
+<!-- ##### MACRO GFS_OUTPUT_SIMULATION ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_OUTPUT_SIMULATION ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsOutputSimulation ##### -->
+<para>
+
+</para>
+
+@parent: 
+@max_depth: 
+@var: 
+
+<!-- ##### FUNCTION gfs_output_simulation_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

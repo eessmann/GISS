@@ -1,0 +1,123 @@
+<!-- ##### SECTION Title ##### -->
+Cell faces operations
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO FTT_FACE_DIRECT ##### -->
+<para>
+
+</para>
+
+@f: 
+
+
+<!-- ##### MACRO FTT_FACE_REVERSE ##### -->
+<para>
+
+</para>
+
+@dst: 
+@src: 
+
+
+<!-- ##### STRUCT FttCellFace ##### -->
+<para>
+
+</para>
+
+@d: 
+
+<!-- ##### FUNCTION ftt_cell_face ##### -->
+<para>
+
+</para>
+
+@cell: 
+@d: 
+@Returns: 
+
+
+<!-- ##### FUNCTION ftt_face_type ##### -->
+<para>
+
+</para>
+
+@face: 
+@Returns: 
+
+
+<!-- ##### ENUM FttFaceType ##### -->
+<para>
+
+</para>
+
+@FTT_BOUNDARY: 
+@FTT_FINE_FINE: 
+@FTT_FINE_COARSE: 
+
+<!-- ##### FUNCTION ftt_face_pos ##### -->
+<para>
+
+</para>
+
+@face: 
+@pos: 
+
+
+<!-- ##### FUNCTION ftt_face_traverse ##### -->
+<para>
+
+</para>
+
+@root: 
+@c: 
+@order: 
+@flags: 
+@max_depth: 
+@func: 
+@data: 
+
+
+<!-- ##### USER_FUNCTION FttFaceTraverseFunc ##### -->
+<para>
+
+</para>
+
+@face: 
+@data: 
+
+
+<!-- ##### FUNCTION ftt_face_traverse_boundary ##### -->
+<para>
+
+</para>
+
+@root: 
+@d: 
+@order: 
+@flags: 
+@max_depth: 
+@func: 
+@data: 
+
+
+<!-- ##### FUNCTION ftt_face_draw ##### -->
+<para>
+
+</para>
+
+@face: 
+@fp: 
+
+

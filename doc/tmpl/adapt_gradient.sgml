@@ -1,0 +1,56 @@
+<!-- ##### SECTION Title ##### -->
+Gradient-based refinement
+
+<!-- ##### SECTION Short_Description ##### -->
+Adapting cells depending on the local gradient of a variable
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+GfsAdaptGradient computes the "adaptive cell cost" as the norm of the local gradient of a given variable multiplied by the cell size.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsAdapt ] V
+</programlisting>
+</informalexample>
+where V is the variable name.
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_ADAPT_GRADIENT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_ADAPT_GRADIENT ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsAdaptGradient ##### -->
+<para>
+
+</para>
+
+@v: 
+
+<!-- ##### FUNCTION gfs_adapt_gradient_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

@@ -1,0 +1,32 @@
+<!-- ##### SECTION Title ##### -->
+Adaptation statistics output
+
+<!-- ##### SECTION Short_Description ##### -->
+Information about the mesh adaptation
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+GfsOutputAdaptStats writes a summary of the adaptation process during the last time step.
+</para>
+<para>
+The syntax in parameter files is as follows:
+<informalexample>
+<programlisting>
+[ #GfsOutput ]
+</programlisting>
+</informalexample>
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### FUNCTION gfs_output_adapt_stats_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+

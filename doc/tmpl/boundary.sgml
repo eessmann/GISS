@@ -1,0 +1,143 @@
+<!-- ##### SECTION Title ##### -->
+Generic boundary
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_BOUNDARY_CLASS ##### -->
+<para>
+
+</para>
+
+@klass: 
+
+
+<!-- ##### MACRO GFS_BOUNDARY ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_BOUNDARY ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsBoundaryClass ##### -->
+<para>
+
+</para>
+
+@parent_class: 
+@match: 
+@send: 
+@receive: 
+@synchronize: 
+
+<!-- ##### STRUCT GfsBoundary ##### -->
+<para>
+
+</para>
+
+@v: 
+@type: 
+@bc: 
+
+<!-- ##### ENUM GfsBoundaryVariableType ##### -->
+<para>
+
+</para>
+
+@GFS_BOUNDARY_CENTER_VARIABLE: 
+@GFS_BOUNDARY_FACE_VARIABLE: 
+@GFS_BOUNDARY_MATCH_VARIABLE: 
+@GFS_BOUNDARY_VARIABLE_NUMBER: 
+
+<!-- ##### FUNCTION gfs_boundary_new ##### -->
+<para>
+
+</para>
+
+@klass: 
+@box: 
+@d: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_boundary_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_boundary_send ##### -->
+<para>
+
+</para>
+
+@boundary: 
+
+
+<!-- ##### FUNCTION gfs_boundary_receive ##### -->
+<para>
+
+</para>
+
+@boundary: 
+@flags: 
+@max_depth: 
+
+
+<!-- ##### FUNCTION gfs_boundary_synchronize ##### -->
+<para>
+
+</para>
+
+@boundary: 
+
+
+<!-- ##### FUNCTION gfs_boundary_add_bc ##### -->
+<para>
+
+</para>
+
+@b: 
+@bc: 
+
+
+<!-- ##### FUNCTION gfs_boundary_lookup_bc ##### -->
+<para>
+
+</para>
+
+@b: 
+@v: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_boundary_set_default_bc ##### -->
+<para>
+
+</para>
+
+@b: 
+@bc: 
+
+

@@ -1,0 +1,6 @@
+MODULE ImportGfs3D
+CATEGORY Import and Export 
+DESCRIPTION Imports a Gerris Flow Solver 3D simulation file
+LOADABLE "@prefix@/lib/gerris/libdx3D.so"
+INPUT name; string; (none); file name
+OUTPUT result; field; imported field

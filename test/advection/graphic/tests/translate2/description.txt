@@ -1,0 +1,2 @@
+command: advection -l 6 -s -v -t -p
+caption: Translation of a smooth field (``gaussian''), periodic boundary conditions, van Leer limiter, CFL of 0.5.

@@ -1,0 +1,20 @@
+\newif\ifpdf
+\ifx\pdfoutput\undefined
+   \pdffalse
+\else
+   \pdfoutput=1
+   \pdftrue
+\fi  
+
+\ifpdf
+  \usepackage[pdftex]{graphicx}
+  \pdfcompresslevel=9
+  \pdfpageheight = 297truemm
+  \pdfpagewidth = 210truemm
+  \pdfhorigin=1truein     % default value(?), but doesn't work without
+  \pdfvorigin=1truein     % default value(?), but doesn't work without
+  \newcommand{\gfx}{pdf}
+\else
+  \usepackage{graphicx}
+  \newcommand{\gfx}{eps}
+\fi

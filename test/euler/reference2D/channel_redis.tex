@@ -1,0 +1,28 @@
+% command: channel.sh
+% legend: Channel using advection redistribution of J.J. Quirk.
+
+\begin{table}[htbp]
+\begin{center}
+\begin{tabular}{||l|c|c|c||c|c|c||} \hline
+           & \multicolumn{3}{c||}{All cells} & \multicolumn{3}{c||}{Full 128 cells} \\ \hline
+           & 128-256  & Rate & 256-512  & 128-256  & Rate & 256-512  \\ \hline
+$L_1$      & 6.76e-04 & 0.93 & 3.54e-04 & 3.89e-04 & 1.20 & 1.69e-04 \\
+$L_2$      & 2.20e-03 & 0.74 & 1.32e-03 & 1.01e-03 & 1.04 & 4.92e-04 \\
+$L_\infty$ & 2.38e-02 & 0.57 & 1.60e-02 & 9.84e-03 & 0.28 & 8.13e-03 \\ \hline
+\end{tabular}
+\end{center}
+\caption{Errors and convergence rates for the $x$-component of the velocity.}
+\end{table}
+
+\begin{table}[htbp]
+\begin{center}
+\begin{tabular}{||l|c|c|c||c|c|c||} \hline
+           & \multicolumn{3}{c||}{All cells} & \multicolumn{3}{c||}{Full 128 cells} \\ \hline
+           & 128-256  & Rate & 256-512  & 128-256  & Rate & 256-512  \\ \hline
+$L_1$      & 1.45e-04 & 1.22 & 6.21e-05 & 1.18e-04 & 1.38 & 4.53e-05 \\
+$L_2$      & 3.26e-04 & 0.94 & 1.70e-04 & 2.55e-04 & 1.24 & 1.08e-04 \\
+$L_\infty$ & 2.68e-03 & 0.32 & 2.14e-03 & 2.18e-03 & 0.53 & 1.51e-03 \\ \hline
+\end{tabular}
+\end{center}
+\caption{Errors and convergence rates for the $y$-component of the velocity.}
+\end{table}

@@ -1,0 +1,3810 @@
+2004-05-20 11:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/Makefile.am: Uses the correct local gerris2D to get
+	the current version.
+
+2004-05-20 11:50  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/cvs2dist: Fixed for new sourceforge CVS repository address.
+
+2004-05-20 11:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Cosmetics.
+
+2004-05-20 11:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: Fixed gfs_domain_split(). The clone method used to
+	replicate boundary conditions did not work for the new boundary
+	condition implementation. We now use a temporary file and the
+	read() and write() methods which should be safe for any type of
+	object.
+
+2004-05-20 11:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Fixed boundary_match(),
+	gfs_boundary_new(), gfs_box_read() and gfs_box_domain(), so that
+	domain splitting works again (more specifically the previous
+	version of the new boundary_match implementation did not work when
+	the rootlevels where larger than 0).
+
+2004-05-20 11:21  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: New version 0.3.0.
+
+2004-05-17 11:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* RELEASE, doc/tutorial/README.latex2html: Updated.
+
+2004-05-17 11:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/l2hconf.pm: file l2hconf.pm was initially added on
+	branch stable.
+
+2004-05-17 11:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/l2hconf.pm: Initial revision.
+
+2004-05-16 21:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/gfs-docs.sgml, doc/gfs-sections.txt,
+	doc/tutorial/tutorial.tex, src/boundary.c, src/output.c, src/vof.c:
+	Updated docs.
+
+2004-05-16 21:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/README.latex2html: file README.latex2html was
+	initially added on branch stable.
+
+2004-05-16 21:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/README.latex2html: Comments about latex2html config
+	stuff.
+
+2004-05-16 21:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/sgml_not_in_sections.sh: file sgml_not_in_sections.sh was
+	initially added on branch stable.
+
+2004-05-16 21:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/sgml_not_in_docs.sh: file sgml_not_in_docs.sh was initially
+	added on branch stable.
+
+2004-05-16 21:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/: sgml_not_in_docs.sh, sgml_not_in_sections.sh: Helper
+	scripts for doc generation.
+
+2004-05-16 21:27  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/: adapt.sgml, adapt_gradient.sgml, adapt_vorticity.sgml,
+	advection.sgml, boundary.sgml, box.sgml, domain-advection-vof.sgml,
+	domain-advection.sgml, domain.sgml, event.sgml, fluid.sgml,
+	ftt-basic.sgml, gedge.sgml, gfs-unused.sgml, inflow_constant.sgml,
+	init.sgml, init_vorticity.sgml, mpi.sgml, outflow.sgml,
+	output.sgml, output_location.sgml, output_projections.sgml,
+	output_scalar.sgml, output_simulation.sgml, poisson.sgml,
+	refine.sgml, refine_distance.sgml, refine_solid.sgml,
+	simulation.sgml, solid.sgml, source.sgml: Updated.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/: adapt_not_box.sgml, diffusion.sgml, event_script.sgml,
+	event_stop.sgml, event_sum.sgml, function.sgml, generic_init.sgml,
+	init_fraction.sgml, output_adapts.sgml, output_diffusion.sgml,
+	output_error_norm.sgml, output_solid_force.sgml,
+	source_generic.sgml: Docs for new objects.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/diffusion.sgml: file diffusion.sgml was initially added
+	on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/event_sum.sgml: file event_sum.sgml was initially added
+	on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/generic_init.sgml: file generic_init.sgml was initially
+	added on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/adapt_not_box.sgml: file adapt_not_box.sgml was
+	initially added on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/source_generic.sgml: file source_generic.sgml was
+	initially added on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/event_script.sgml: file event_script.sgml was initially
+	added on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/function.sgml: file function.sgml was initially added on
+	branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/init_fraction.sgml: file init_fraction.sgml was
+	initially added on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/event_stop.sgml: file event_stop.sgml was initially
+	added on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/output_adapts.sgml: file output_adapts.sgml was
+	initially added on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/output_diffusion.sgml: file output_diffusion.sgml was
+	initially added on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/output_error_norm.sgml: file output_error_norm.sgml was
+	initially added on branch stable.
+
+2004-05-16 21:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/output_solid_force.sgml: file output_solid_force.sgml
+	was initially added on branch stable.
+
+2004-05-16 21:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/: inflow.sgml, inflow_constant_tracer.sgml,
+	init_constant.sgml, outflow_source.sgml, source_constant.sgml:
+	Removed because obsolete.
+
+2004-05-14 17:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: init.c, fluid.h: Added "temporary" flag to GfsVariable
+	(necessary for gfsview) Added new "Level" derived variable.
+
+2004-04-29 16:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* TODO: Updated.
+
+2004-04-29 16:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, timestep.c: Cosmetics.
+
+2004-04-28 17:23  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: Only outputs error messages on PE 0.
+
+2004-04-28 17:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: Checks that the parameter file is used with the
+	correct number of PE.
+
+2004-04-28 16:39  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Fix to display of MPI stats.
+
+2004-04-28 16:38  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: Cell initialisation/destruction is done with
+	gfs_cell_fine_init / gfs_cell_cleanup for boundary matching. The
+	"changed" field of boundaries is also updated.	All this makes
+	adaptive parallel simulations work properly.
+
+2004-04-28 16:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: Boundary matching is now done repeatedly until no
+	further modification occurs. The previous implementation did not
+	work for fairly simple parallel computations.
+
+2004-04-28 16:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: A "changed" field has been added to
+	keep track of whether boundary matching changed the boundary
+	layout.
+	
+	New cells created/destroyed by matching are now initialised/cleaned
+	using gfs_cell_fine_init()/gfs_cell_cleanup().
+
+2004-04-27 16:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: MPI profiling info is not displayed if not
+	computed.
+
+2004-04-27 16:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: mpi_boundary.c, init.c: Necessary to be able to read
+	per-process parallel simulation files.	The bizarre read() method
+	just makes sure that MPI boundaries are ignored in simulation
+	files.
+
+2004-04-27 15:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/match.c: Modified to compile with new functions (but
+	probably obsolete anyway).
+
+2004-04-27 15:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Added "maxafter" debugging stuff.
+
+2004-04-27 15:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: Merged from ocean branch.
+
+2004-04-27 15:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: Modified to work with new (per variable)
+	boundary condition implementation.
+
+2004-04-27 15:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: Missing reset of boundary type messed up MPI
+	boundaries.
+
+2004-04-27 13:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Required for linking using mpicc.
+
+2004-04-07 10:37  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: Checks that coarsenable cell has parent.
+
+2004-04-07 10:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h, ftt.h: Global variables should now be
+	properly defined.
+
+2004-04-07 10:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: simulation.c, utils.c: Module name creation now uses the
+	portable g_module_build_path() function. This should fix problems
+	on MACOSX.
+
+2004-03-15 13:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h, init.c: New GfsRemoveDroplets object.
+
+2004-03-15 12:44  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Calls new gfs_simulation_adapt.
+
+2004-03-12 17:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* .cvsignore: Updated.
+
+2004-03-12 15:21  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: fine_cell_coarsenable now checks that the level
+	of the cell is not smaller than the local minlevel.
+
+2004-03-12 13:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: adaptive.c, adaptive.h: GfsAdapt now uses functions for
+	minlevel and maxlevel. gfs_domain_adapt has been removed.
+
+2004-03-12 13:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: refine.c, refine.h: GfsRefine and its descendants now takes
+	a function as maxlevel.  GfsRefineDistance no longer takes extra
+	slope etc... arguments but uses "t" as the parameter for the
+	distance in the maxlevel function.
+
+2004-03-12 13:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: New function
+	gfs_domain_remove_droplets.
+
+2003-11-04 18:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c: Fixed calls to
+	gfs_domain_norm_residual().
+
+2003-11-04 15:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h: GfsEventScript can now stop the
+	simulation.
+
+2003-11-03 15:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Removed testing stuff for interpolation of MAC
+	velocities at the center of area of faces (for faces cut by a solid
+	boundary).
+
+2003-11-03 13:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Changed the way "color" variables are read so
+	that "non-standard" variables included in the simulation file are
+	recognised.
+
+2003-11-03 13:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/event.c: Temporary variables name should be set as NULL not
+	"".
+
+2003-11-03 13:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: advection.c, advection.h: Added testing stuff and support
+	for advection scheme selection (Godunov or VOF).
+
+2003-10-29 19:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Variable viscosity.
+
+2003-10-29 19:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, source.c, source.h: Variable diffusion
+	coefficients associated with each phase.  Variable viscosity.
+
+2003-10-29 19:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: poisson.c, poisson.h: Added support for diffusion of
+	velocity (viscosity). For variable density an additional centered
+	coefficient needs to be used (density).
+
+2003-10-29 19:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Changed rate formatting for multigrid.
+
+2003-10-29 19:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added new classes.
+
+2003-10-29 19:09  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.c: gfs_face_interpolated_value now works even for a
+	boundary face (assumes zero gradient).
+
+2003-10-17 05:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Cosmetics.
+
+2003-10-17 05:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/cvs2dist: Changed versioning technique (to keep consistent
+	version number).
+
+2003-10-17 05:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: poisson.c, poisson.h, source.c, source.h, timestep.c:
+	Support for variable diffusion coefficient (for scalars only).
+
+2003-10-17 05:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: GfsBc has stored in GfsBoundary using name as
+	hash table key (not pointer). Name is unique but pointer is not.
+
+2003-10-17 05:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.c: Fixed bug when solid surface is intersecting with
+	boundary.
+
+2003-10-17 05:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: Viscous force on solid is not
+	implemented in 3D.
+
+2003-10-17 05:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: simulation.c, simulation.h: Preliminary marker surface
+	tension calculation.  Pressure is now scaled automatically in
+	Poisson solver.  Selection of VOF or standard tracer advection
+	scheme.
+
+2003-10-07 06:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h, event.c, timestep.c: Pressure scaling
+	is now performed in the pressure solution routines (rather than in
+	simulation_run). It is necessary for generic boundary conditions.
+	It seems to also improve performance.
+
+2003-10-07 03:52  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: adaptive.c, output.c: Added type casts for
+	gfs_object_simulation() calls.
+
+2003-10-07 03:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: utils.c, utils.h: gfs_function_value takes time as extra
+	argument.
+
+2003-10-07 03:50  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: tension.c, tension.h: GfsSource replaced with
+	GfsSourceGeneric.
+
+2003-10-07 03:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: source.c, source.h: GfsSourceConstant has been replaced
+	with GfsSource and GfsSource with GfsSourceGeneric (the source does
+	not need to be constant anymore hence the change). 
+	GfsSourceGaussian has been removed (obsolete).
+
+2003-10-07 03:46  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: GfsSourceConstant has been replaced with GfsSource
+	and GfsSource with GfsSourceGeneric (the source does not need to be
+	constant anymore hence the change).
+
+2003-10-07 03:44  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/event.c: Time is passed to GfsFunction.
+
+2003-10-07 03:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Time is passed to GfsFunction. 
+	Fixed problem with Dirichlet conditions for face values (they are
+	now set on both sides of the face).
+
+2003-10-07 03:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Needs GTS 0.7.2 (i.e. devel version).
+
+2003-10-01 20:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/cvs2dist: Proper temporary directory creation + changelog
+	update.
+
+2003-10-01 20:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/direction.fig: Changed orientation to portrait.
+
+2003-10-01 06:37  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/cvs2dist: Added versioning, file transfer and final
+	cleanup.
+
+2003-10-01 06:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/cvs2dist: Automatic distribution snapshot creation from
+	CVS.
+
+2003-10-01 06:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: For whatever reason automake/conf insisted in
+	creating dx2D.c and dx3D.c even when DX was not installed. This
+	should fix the problem.
+
+2003-10-01 06:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/.cvsignore: Updated.
+
+2003-10-01 06:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/: Makefile.deps, depend.awk: Automatic dependencies.
+
+2003-10-01 06:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/Makefile.am: Do not use pdflatex anymore (ps2pdf
+	instead). + Changes for entirely automatic document generation (not
+	perfect yet).
+
+2003-10-01 03:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Removed test/diffusion makefile (temporarily). This
+	should fix build problems from CVS.
+
+2003-10-01 03:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: refine.c, refine.h: GfsRefineDistance now takes a
+	GtsSurface as extra argument. This allows for initial refinement
+	near interfaces.
+
+2003-10-01 03:05  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.c: Diffusion should work for 3D problems without solid
+	boundaries.
+
+2003-10-01 03:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/event.c: GfsEventScript "error messages" are not filtered
+	anymore.
+
+2003-09-25 15:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c, src/graphic.h, tools/gfs2oogl.c: Added isosurface
+	computation (slow).
+
+2003-09-24 22:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h, init.c: Added new GfsEventScript class.
+
+2003-09-24 21:59  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Changed back to average value (always stable)
+	instead of volume-weighted.
+
+2003-09-23 17:21  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: New implementation of adaptive engine. Previous
+	implementation of coarsen_cost() was very slow.
+
+2003-09-23 17:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: Fixed bug linked to new GTS matrix
+	implementation.  Added new gfs_vorticity_value() function.
+
+2003-09-23 17:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Added option to draw "true" streamlines (in 3D)
+	and option to output only a given level (works for squares and
+	gnuplot only at the moment).
+
+2003-09-17 11:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: adaptive.c, output.c: Fixed memory leaks.
+
+2003-09-17 10:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: Fixed problem when only coarse or fine cells are
+	present in the mesh to be adapted.
+
+2003-09-15 12:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c, tools/gfs2vtk.c, tools/gfscompare.c,
+	src/adaptive.c, src/adaptive.h, src/boundary.c, src/boundary.h,
+	src/domain.c, src/domain.h, src/dx.c, src/event.c, src/event.h,
+	src/fluid.c, src/fluid.h, src/ftt.c, src/ftt.h, src/gerris_dir.c,
+	src/graphic.c, src/graphic.h, src/init.c, src/output.c,
+	src/output.h, src/poisson.c, src/poisson.h, src/refine.c,
+	src/simulation.c, src/simulation.h, src/solid.c, src/solid.h,
+	src/source.c, src/source.h, src/tension.c, src/tension.h,
+	src/timestep.c, src/timestep.h, src/utils.c, src/utils.h,
+	src/vof.c, test/advection/advection.c, test/mpi/match.c,
+	test/mpi/read.c, test/poisson/poisson.c, test/poisson/shapes.c,
+	test/poisson/order/orderfig.par, test/poisson/order/orderfig.sh,
+	test/poisson/order/report.sh,
+	test/poisson/order/reference2D/annulus.xmgr,
+	test/poisson/order/reference2D/day_refined.xmgr, tools/.cvsignore,
+	tools/Makefile.am, configure.in, modules/Makefile.am,
+	modules/periodic_flow.mod, modules/testing.mod,
+	modules/vorticity_spectrum.mod, src/Makefile.am: Merged from branch
+	cm-pressure.
+
+2003-07-21 14:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/tension.c: file tension.c was initially added on branch
+	cm-pressure.
+
+2003-07-21 14:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/tension.h: file tension.h was initially added on branch
+	cm-pressure.
+
+2003-06-13 10:42  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2vtk.c: file gfs2vtk.c was initially added on branch
+	cm-pressure.
+
+2003-05-20 17:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/utils.h: file utils.h was initially added on branch
+	cm-pressure.
+
+2003-05-20 17:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/utils.c: file utils.c was initially added on branch
+	cm-pressure.
+
+2003-05-16 13:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/order/reference2D/day_refined.xmgr: file
+	day_refined.xmgr was initially added on branch cm-pressure.
+
+2003-05-16 13:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/order/reference2D/annulus.xmgr: file annulus.xmgr
+	was initially added on branch cm-pressure.
+
+2003-03-21 10:48  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/convergence/reference2D/: triangle1.xmgr,
+	star4.xmgr, star5.xmgr, star_refined.xmgr, triangle.xmgr,
+	istar.xmgr, istar1.xmgr, istar2.xmgr, simple.xmgr, simple1.xmgr,
+	simple2.xmgr, square.xmgr, star.xmgr, star1.xmgr, star2.xmgr,
+	star3.xmgr, circle3.xmgr, circle_refined.xmgr, diamond.xmgr,
+	diamond1.xmgr, diamond2.xmgr, diamond3.xmgr, ellipse.xmgr,
+	ellipse1.xmgr, ellipse2.xmgr, ellipse3.xmgr, icircle.xmgr,
+	icircle1.xmgr, icircle_refined.xmgr, 4ellipses.xmgr,
+	4ellipses1.xmgr, 4ellipses2.xmgr, 4ellipses_refined.xmgr,
+	circle.xmgr, circle1.xmgr, circle2.xmgr: Updated.
+
+2003-03-21 10:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/convergence/: avgrate.awk, divfig.par, divfig.sh,
+	report.sh: Modified for use with xmgrace (instead of old xmgr).
+
+2003-03-21 10:46  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/convergence/check.sh: Improved "failed" message.
+
+2003-03-21 10:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/convergence/Makefile.am: Added option to generate
+	reference from current tests (and associated scripts).
+
+2003-03-21 10:42  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/: speed.sh, convergence/makeref.sh,
+	convergence/makeref: Initial revision.
+
+2003-03-21 10:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c: Cosmetics.
+
+2003-03-21 10:39  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/poisson.c: Added parameter checks.
+
+2003-03-12 13:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Added new option to draw boundaries of merged
+	cells.
+
+2003-03-12 13:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c: Divergence is now initialised at the
+	center of mass of cells as should be.
+
+2003-03-12 13:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/solid.h: Added gfs_cell_cm() function.
+
+2003-03-12 13:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/solid.c: Added center of mass calculation + cleanup of
+	warning messages.
+
+2003-03-12 12:59  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/poisson.c: Cosmetics.
+
+2003-03-12 12:58  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.h: Added center of mass solid variable.
+
+2003-03-12 12:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Fixed Quirk merged cells advection scheme.
+
+2003-03-12 12:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Added no-undefined link option (for cygwin
+	build).
+
+2003-03-12 12:50  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/testing.mod: New GfsInitGaussian object.
+
+2003-03-12 12:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/Makefile.am: Changed CFLAGS to AM_CFLAGS.
+
+2003-03-12 12:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Added win32 libtool stuff.
+
+2003-03-12 12:48  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* RELEASE: Initial revision.
+
+2003-03-12 12:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* NEWS, README: Updated.
+
+2003-03-12 12:46  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* AUTHORS: Added Marcello for debian packages.
+
+2003-02-17 17:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Added proper pressure scaling (using timestep).
+
+2003-01-27 13:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfscompare.c: Added option for error calculation of
+	cell-centered variables (i.e. pressure) The standard error
+	calculation assumes that the value is defined at the center of mass
+	of the (cut) cell.
+
+2003-01-27 11:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: More explicit message for boxes entirely filled
+	by a solid.
+
+2003-01-24 16:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Added checks for self-intersecting "merged"
+	surface.
+
+2003-01-23 13:50  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gfs-config.in: Fixed library ordering.
+
+2003-01-08 14:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Requires GTS 0.7.1.
+
+2003-01-08 14:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* NEWS: Updated.
+
+2003-01-08 13:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/Makefile.am: Updated options for latex2html.
+
+2003-01-08 10:31  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* ChangeLog, TODO: Updated.
+
+2003-01-08 10:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Added "gnuplot" output.
+
+2003-01-08 10:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: Now refines cells with a level smaller than
+	minlevel.
+
+2002-12-19 12:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/dx.c: Fix (crappy) for periodic domains (to avoid wrap-around
+	of tetrahedral elements).
+
+2002-12-16 12:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/dx.c: Apply boundary conditions after loading.
+
+2002-12-11 15:46  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/: gfs2oogl.c, gfs2other.c: Derived variables need to have
+	their parent domain set.
+
+2002-12-11 15:45  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/testing.mod: Minor changes in GfsBoundaryWave. 
+	GfsRefineBox and GfsRefineSphere use the new initialisation for
+	cells (with dynamically allocated variables).
+
+2002-12-11 15:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/vof.c: Cleanup of test functions.
+	
+	The advection algorithm is now similar to the Godunov algorithm
+	(e.g. expressed in terms of fluxes). This makes the overall VOF
+	advection scheme compatible with solid boundaries (and with custom
+	boundary conditions).
+	
+	Works in 2D and 3D.
+	
+	The spatial resolution of the interface does not have to be the
+	same everywhere but interfacial fluxes at coarse/fine boundaries
+	are treated by simple averaging which could (and should) be
+	improved.
+	
+	Interface normal computation is simple (but crude) and should be
+	improved.
+
+2002-12-11 15:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: gfs_domain_adapt() uses new algorithm where cells
+	are marked as refinable in a first pass. This avoids using cells
+	which have just been refined (and the associated interpolated
+	values) i.e. only the current data is used to compute the
+	refinement criteria.
+
+2002-12-11 15:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: PPM output allow size control through the
+	"maxlevel" parameter.
+
+2002-12-11 15:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/solid.c: Added tolerances on volume fraction checks.
+
+2002-12-11 15:31  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: GfsOutputScalar now takes an extra
+	"maxlevel" argument. Other derived classes have been adapted to use
+	this parameter.
+
+2002-12-11 15:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/event.c: Changed GfsInitFlowConstant (volume fraction is
+	inverted).
+
+2002-12-11 15:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/dx.c: Load U, V, W as independent scalars if they are not all
+	present.
+
+2002-12-09 15:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Extrapolations for coarse-fine interpolation of
+	upwinded values (gfs_face_upwinded_value()) used undefined (usually
+	null) values for the face values v in boundary cells: fixed.
+
+2002-12-06 11:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/vof.c: Takes into account boundary fluxes.
+
+2002-12-05 17:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/source.c: Fixed bug in gfs_source_gaussian_value().
+
+2002-12-05 16:31  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added new object class.
+
+2002-12-05 16:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Added sources for tracer.
+
+2002-12-05 16:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: source.c, source.h: New GfsSourceGaussian object.  New
+	function gfs_variable_sources().
+
+2002-12-03 11:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Updated doc.
+
+2002-12-03 11:05  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, init.c, output.c: Uses new GfsVariable.
+
+2002-12-03 11:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: Vorticity is scaled properly according to
+	the lambda[] dimensions of the domain.	GfsVariable takes a new
+	"parent" (the domain they are associated with).
+
+2002-12-03 11:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: Uses new scaled vorticity.  GfsAdaptGradient
+	scales gradient properly and takes the norm2 of the gradient.
+
+2002-12-02 18:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Added support for non-uniform spatial dimensions
+	(PPM output only).
+
+2002-12-02 18:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h, dx.c, poisson.c: Added support for
+	non-uniform spatial dimensions.
+
+2002-12-02 14:57  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.c: Doc spelling.
+
+2002-11-29 16:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/: gfs-docs.sgml, gfs-sections.txt, tmpl/advection.sgml,
+	tmpl/boundary.sgml, tmpl/domain-advection.sgml, tmpl/domain.sgml,
+	tmpl/event.sgml, tmpl/fluid.sgml, tmpl/ftt-basic.sgml,
+	tmpl/ftt-other.sgml, tmpl/gfs-unused.sgml, tmpl/init.sgml,
+	tmpl/init_constant.sgml, tmpl/output.sgml, tmpl/output_ppm.sgml,
+	tmpl/output_projections.sgml, tmpl/output_scalar.sgml,
+	tmpl/output_time.sgml, tmpl/output_timing.sgml, tmpl/poisson.sgml,
+	tmpl/simulation.sgml, tmpl/solid.sgml, tmpl/stats.sgml: Updated.
+
+2002-11-29 15:42  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/Makefile.am: Added gfs2D.net to distribution.
+
+2002-11-29 15:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/tutorial.tex: Added latex2html screenshot link.
+
+2002-11-29 15:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/pre_fix.sh: Added cludge for latex2html screenshot.
+
+2002-11-29 15:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/dxscreen.png: Improved.
+
+2002-11-29 15:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/dx.c: Uses variables_io to output only the fields saved in
+	the simulation file.
+
+2002-11-29 11:21  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added new classes.
+
+2002-11-29 11:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h: New function gfs_event_set().
+
+2002-11-29 11:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Fixed problem with inherited read
+	method for GfsBox.  Added new GfsBoxNotAdapt object.
+
+2002-11-29 11:18  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: GfsAdaptNotBox destroys itself if not associated
+	to a box.  It is initialized with istep = 1.
+
+2002-11-28 22:50  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: adaptive.c, adaptive.h: Added support for "not" adaptation
+	criteria.  Added new class GfsAdaptNotBox.
+
+2002-11-28 18:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/.cvsignore: Updated.
+
+2002-11-28 18:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/tutorial.tex: Added section about OpenDX import.
+
+2002-11-28 18:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/: gfs2D.net, dxscreen.png: Initial revision.
+
+2002-11-28 16:05  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/advection.c, test/poisson/poisson.c,
+	tools/gfs2other.c: Added function cast.
+
+2002-11-28 15:50  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/advection.c, test/poisson/poisson.c,
+	tools/gfs2other.c: Added initialization of GfsBox->root.
+
+2002-11-28 15:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2other.c: Adapted for new gfs_cell_read() interface.
+
+2002-11-28 15:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/advection.c, src/init.c: Added new classes
+	instantiation.	gfs_init() quietly returns if it has already been
+	called.
+
+2002-11-28 15:00  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h: Obsolete TIME_AVERAGE stuff removed.	New
+	GfsEventSum and GfsEventSum2 classes using the new dynamic
+	allocation of variables.
+
+2002-11-28 14:59  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Adapted for new gfs_cell_init() taking domain
+	as parameter.  Obsolete TIME_AVERAGE stuff removed.
+
+2002-11-28 14:58  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/refine.c: Adapted for new gfs_cell_init() taking domain as
+	parameter.
+
+2002-11-28 14:57  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Adapted for to use variables_io variable list.
+
+2002-11-28 14:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Adapted for new gfs_cell_init() taking domain as
+	argument.  GfsBox->root is not initialized by default anymore.
+
+2002-11-28 14:55  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: adaptive.c, adaptive.h, mpi_boundary.c: Adapted for new
+	gfs_cell_init() taking domain as argument.
+
+2002-11-28 14:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Interface for ftt_cell_copy() has been
+	changed to allow for user parameter in FttCellCopyFunc.
+
+2002-11-28 14:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: gfs_cell_init(), read() and copy() moved
+	to domain.c.
+
+2002-11-28 14:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: Added support for dynamic allocation of
+	variables.
+	
+	gfs_cell_init(), read() and copy() now take domain as an argument
+	to allocate the correct number of variables.
+	
+	Extra variables are allocated through the "variables" parameter of
+	simulation files or through the new function
+	gfs_domain_add_variable().
+
+2002-11-27 17:00  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Added missing center() method for
+	GfsBoundaryInflowConstantTracer.
+
+2002-11-27 13:38  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/.cvsignore: Updated.
+
+2002-11-27 13:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Tests that MPI has not been already initialized. 
+	gfs_init() can now be called with NULL argc and argv parameters.
+
+2002-11-27 13:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/dx.c: Now imports all the 2D or 3D scalar and vector fields.
+
+2002-11-27 13:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Added 2D OpenDX module.
+
+2002-11-26 17:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/.cvsignore: Updated.
+
+2002-11-26 17:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Added OpenDX module support.
+
+2002-11-26 17:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: dx.c, dx2D.mdf.in, dx3D.mdf.in: Initial revision.
+
+2002-11-26 17:42  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* .cvsignore: Updated.
+
+2002-11-26 17:42  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Added support for OpenDX modules.
+
+2002-11-26 17:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* acinclude.m4: Added OpenDX path check.
+
+2002-11-14 09:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Uses new gts_surface_refine() interface
+	(requires GTS 0.7.1).
+
+2002-11-14 09:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/shapes.c: Close FILE.
+
+2002-11-14 09:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added check for definition of IEEE floating point CPU
+	control bits (should fix compilation on non 386 architectures).
+
+2002-11-13 13:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/shapes.c: Added option to generate prismatic solids
+	from a list of vertices.
+
+2002-11-13 10:39  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/: order.sh, time.sh: Uses new "domain" and
+	"refined" stats syntax.
+
+2002-11-13 10:38  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/shapes.c: Fixed channel shape (was not orientable).
+
+2002-11-13 10:38  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/channel.sh: Fixed to match fixed channel
+	shape.
+
+2002-11-13 10:37  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/reference2D/: stationary1.xmgr, stationary4.xmgr,
+	stationary4_convective.xmgr, stationary4box1.xmgr, timebox1.xmgr:
+	Fixed inconsistent simulation file description.
+
+2002-11-12 15:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/graphic/tests/: translate1/.cvsignore,
+	translate2/.cvsignore, translate3/.cvsignore,
+	translate6/.cvsignore, translate_refine1/.cvsignore: Initial
+	revision.
+
+2002-11-12 15:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c: Updated for new poisson solver
+	interfaces.
+
+2002-11-12 15:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/: boundaries.sh, channel.sh, order.sh,
+	report.sh, stationary.sh, time.sh: Changes gerris to gerris2D.
+
+2002-11-12 15:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/merging.sh: Now uses gerris2D.
+
+2002-11-12 15:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/reference2D/: merging.xmgr, merging_convective.xmgr:
+	Uses new merging.sh script.
+
+2002-11-12 15:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/Makefile.am: Removed periodic code.
+
+2002-11-12 15:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/vof.c: Now works together with adaptive refinement (provided
+	the interface is everywhere at the same level of refinement).
+
+2002-11-12 15:27  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Updated function doc.
+
+2002-11-12 15:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Experimental switch for VOF advection (default
+	is normal advection).
+
+2002-11-12 15:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: The default GfsBoundary imposes symmetric
+	(mirror) conditions. This used when defining GfsBoundaryInflow.
+
+2002-11-12 15:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Cosmetics.
+
+2002-11-12 15:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: Updated function doc.
+
+2002-11-12 15:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/testing.mod: Added GfsBoundaryWave and GfsInitBubble.
+
+2002-11-12 15:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/: domain-advection-vof.sgml, init_vorticity.sgml,
+	outflow_source.sgml, source.sgml, source_constant.sgml: Initial
+	revision.
+
+2002-11-12 15:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/Makefile.am: Added sorting of unused and undocumented
+	functions.
+
+2002-10-15 13:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfscompare.c: Added option to do "periodic" comparisons.
+
+2002-10-15 13:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: vof.c, vof.h: Initial VOF implementation (pretty messy).
+
+2002-10-15 13:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: apar->dt is defined earlier so that boundary
+	conditions have access to the proper value of dt (i.e. dt or dt/2)
+	if they need it.
+
+2002-10-15 13:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added new classes instantiation.
+
+2002-10-15 13:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gfs.h: Added vof.h.
+
+2002-10-15 13:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/event.c: InitFlowConstant now half fills the domain with
+	tracer (y-coordinate).
+
+2002-10-15 13:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Inflow now imposes zero gradient on
+	all quantities but the normal velocity.  New outflow conditions for
+	a constant momentum source term (i.e. gravity).
+
+2002-10-15 12:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Added vof.c and vof.h.
+
+2002-10-15 12:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/testing.mod: New "Rayleigh-Taylor" initial condition.
+
+2002-10-15 12:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/periodic_flow.mod: New periodic shear layer and finite
+	depth wave initial conditions.
+
+2002-10-04 15:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.c: Added special treatment of centered gradient in case
+	of periodic cell (the previous version would fail when initialising
+	refined coarsest periodic levels in gfs_cell_fine_init()).
+
+2002-10-04 09:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/Makefile.am: Fixed problem with CFLAGS (didnt get the
+	default warning flags setup by configure).
+
+2002-10-03 17:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Uncommented initial approximate projection
+	(which had been commented out for debugging the variable density
+	projection).
+
+2002-10-03 14:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Normal velocities are corrected using the
+	weighted pressure gradient and the centered average of the (face)
+	weighted pressure gradients is computed.
+	
+	Similarly for centered velocity pressure corrections.
+	
+	gfs_poisson_coefficients() is now called within the projection
+	functions.
+
+2002-10-03 14:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: solid.c, solid.h: New function gfs_cell_init_fraction() to
+	initialize volume fraction from a GTS surface.
+
+2002-10-03 14:48  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: gfs_poisson_coefficients() is now called within
+	the projection functions, using advection_params->c and ->rho as
+	parameters.
+
+2002-10-03 14:46  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/shapes.c: Added "Rayleigh-Taylor" shape and fixed
+	bug for "witch" shape.
+
+2002-10-03 14:45  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: poisson.c, poisson.h: Coefficients weighted gradients are
+	now directly obtained through gfs_face_weighted_gradient() (which
+	gives the correct consistent fluxes at coarse/fine boundaries
+	contrary to what was done before).
+	
+	gfs_residual() takes the standard extra arguments for cell
+	traversal selection.
+	
+	The volume fraction is forced to be between 0 and 1 when computing
+	coefficients.
+
+2002-10-03 14:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Cosmetics.
+
+2002-10-03 14:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added new GfsInitFraction object.
+
+2002-10-03 14:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Fixed orientation of the pixmaps produced by
+	gfs_write_ppm().
+
+2002-10-03 14:39  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: New gfs_face_weighted_gradient() function
+	+ fixed a bug in gfs_variable_copy().
+
+2002-10-03 14:38  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h: New GfsInitFraction object + change of
+	interface call to gfs_residual().
+
+2002-10-03 14:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: advection.c, advection.h: Added rho and c to
+	GfsAdvectionParams (possibly unused with the current version of
+	variable density).
+
+2002-09-23 13:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Commented out debugging stuff.
+
+2002-09-23 13:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt_internal.c: Fixed bug introduced by new "boundary face"
+	option.
+
+2002-09-23 13:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Cosmetics.
+
+2002-09-23 12:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.c: Checks that data is not NULL in gfs_cell_cleanup.
+
+2002-09-23 11:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: source.c, source.h, init.c: Changed GfsConstantSource to
+	GfsSourceConstant for consistency.
+
+2002-09-23 11:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/vorticity_spectrum.mod: Updated for new variable scheme.
+
+2002-09-23 11:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/read.c, tools/gfs2other.c: Updated for new variable
+	scheme.
+
+2002-09-23 11:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.h: Projections need advection params to take into
+	account source terms at boundaries.
+
+2002-09-23 11:18  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Back to version 1.16 but with source terms added
+	at boundaries.
+
+2002-09-23 11:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Projections need advection parameters to take
+	into account momentum source terms at boundaries.
+
+2002-09-23 11:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Cosmetics.
+
+2002-09-23 11:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, ftt.c, ftt.h, ftt_internal.c: Added option to
+	traverse "boundary" faces.
+
+2002-09-23 11:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Fixed sign error in src term for advected face
+	values.
+
+2002-09-20 14:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Fixed bug in source term for face values.
+
+2002-09-19 17:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Changed the way pressure corrections are computed
+	(both for MAC and centered velocities). This should be (as
+	confirmed by limited testing) strictly equivalent to the previous
+	formulation.
+
+2002-09-19 16:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Updated variable use.
+
+2002-09-19 16:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/source.c: GfsSource events are active at every timestep by
+	default.
+
+2002-09-19 16:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Uses new CFL function to compute timestep.
+
+2002-09-19 16:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: New function to compute CFL on a domain
+	based on both velocity and acceleration (source terms).
+
+2002-09-19 12:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: timestep.c, timestep.h: Updated variable use.
+	gfs_tracer_advection() optionally saves the half timestep value of
+	the tracer.
+
+2002-09-19 12:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: source.c, source.h: Generic source terms. Initial revision.
+
+2002-09-19 12:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.h: New GfsPhysicalParams defines relative density.
+
+2002-09-19 12:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: New GfsPhysicalParams defines relative density.
+	Updated variable usage. gfs_simulation_run() deals with variable
+	density flows.
+
+2002-09-19 12:31  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: poisson.c, poisson.h: Face coefficients for the relaxation
+	operator are now precomputed (using gfs_poisson_coefficients()).
+	This permits to deal transparently with constant or variable
+	density equation (and possibly others with the same form).
+
+2002-09-19 12:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: init.c, output.c: Reorganized variables.
+
+2002-09-19 12:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Gradient is now accessed through gfs_gx list.
+
+2002-09-19 12:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gfs.h: Added source.h.
+
+2002-09-19 12:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.h: Reorganized variables. Only temporary variables are
+	directly accessible now (and pressure). All the other must be
+	accessed through the variables field of a #GfsDomain.
+
+2002-09-19 12:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.c: Changed interface for gfs_face_gradient() (for a 5%
+	gain in speed) + new function gfs_variable_copy().
+
+2002-09-19 12:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/event.c: Added poisson coefficients calculation in
+	streamfunction evaluation.
+
+2002-09-19 12:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: Reorganized domain variables.
+
+2002-09-19 12:23  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Less strict variable type checking for some of
+	the boundary conditions (inflow and outflow).
+
+2002-09-19 12:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.h: Cosmetics.
+
+2002-09-19 12:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Source terms are taken into account for face
+	values extrapolations.
+
+2002-09-19 12:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: Each variable can now have its own fine to coarse
+	interpolation technique (as for the volume fraction for example).
+
+2002-09-19 12:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Added source.c (generic source term definition).
+
+2002-09-18 11:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c, src/adaptive.h, src/advection.c, src/advection.h,
+	src/boundary.c, src/boundary.h, src/domain.c, src/domain.h,
+	src/event.c, src/fluid.c, src/fluid.h, src/graphic.c,
+	src/graphic.h, src/init.c, src/mpi_boundary.c, src/output.c,
+	src/output.h, src/poisson.c, src/poisson.h, src/simulation.c,
+	src/simulation.h, src/timestep.c, test/advection/advection.c,
+	test/mpi/match.c, test/mpi/read.c, test/poisson/poisson.c,
+	tools/gfs2oogl.c, tools/gfs2other.c, tools/gfscompare.c:
+	GfsVariable is now a structure which contains information about a
+	given variable, in particular: - index in the cell state vector -
+	name - is it a derived variable?
+	
+	All the functions which previously took an integer index now take a
+	pointer on a GfsVariable.
+
+2002-09-17 12:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/: convergence/.cvsignore, order/.cvsignore: Updated.
+
+2002-09-17 12:55  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gfs.h: Removed obsolete common.h.
+
+2002-09-17 12:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/init_periodic.c, doc/tutorial/tutorial.tex,
+	modules/periodic_flow.mod, modules/testing.mod,
+	modules/vorticity_spectrum.mod, src/Makefile.am, src/adaptive.c,
+	src/advection.c, src/boundary.c, src/domain.c, src/event.c,
+	src/fluid.c, src/fluid.h, src/ftt.c, src/ftt.h, src/graphic.c,
+	src/mpi_boundary.c, src/output.c, src/poisson.c, src/refine.c,
+	src/simulation.c, src/solid.c, src/timestep.c,
+	test/advection/advection.c, test/mpi/match.c, test/mpi/read.c,
+	test/poisson/poisson.c, tools/gfs2oogl.c, tools/gfs2other.c,
+	tools/gfscompare.c: The GfsStateVector is now allocated
+	dynamically. This is the first step toward a flexible number of
+	variables. This required some changes in the way the values of
+	variables are accessed (now through a GFS_STATE() macro).
+
+2002-09-17 12:48  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Requires GTS 0.7.0.
+
+2002-09-16 13:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Builds shared libraries.
+
+2002-09-16 13:31  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/tutorial.tex: Updated for new 2D/3D executables,
+	gfs-config script and global header.
+
+2002-09-16 13:31  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/init_periodic.c: Updated for new global header.
+
+2002-09-16 13:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/Makefile.am: Updated for 2D/3D executables.
+
+2002-09-16 13:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Uses shared libraries.
+
+2002-09-13 17:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gfs-config.in: Added 2D/3D option.
+
+2002-09-13 17:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/: advection/Makefile.am, euler/Makefile.am, mpi/Makefile.am,
+	poisson/Makefile.am: Fixed CFLAGS definition.
+
+2002-09-13 17:21  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* .cvsignore, modules/.cvsignore, src/.cvsignore, tools/.cvsignore:
+	Updated for 2D/3D build.
+
+2002-09-13 17:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Added 2D/3D file versioning.
+
+2002-09-13 17:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris_dir.c: Initial revision. Runs several simulations in
+	different directories under MPI control. Useful only to bypass
+	crappy Cray UNICOS. All this in a much nicer way using shell
+	scripts on a proper OS.
+
+2002-09-13 17:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: gfs.h, gfs-config.in: Initial revision.
+
+2002-09-13 17:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/Makefile.am, src/Makefile.am, test/advection/Makefile.am,
+	test/euler/Makefile.am, test/mpi/Makefile.am,
+	test/poisson/Makefile.am, test/poisson/convergence/Makefile.am,
+	test/poisson/order/Makefile.am, tools/Makefile.am: Use new 2D/3D
+	build.
+
+2002-09-13 17:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Use automake 1.6.3 and autoconf 2.53.
+
+2002-09-13 11:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c, src/simulation.c, test/mpi/read.c,
+	test/poisson/poisson.c, tools/gfs2oogl.c, tools/gfs2other.c,
+	tools/gfscompare.c, tools/streamanime.c: Changed gts_file_close()
+	to gts_file_destroy().
+
+2002-09-12 15:48  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/: advection/advection.c, poisson/poisson.c: Uses new
+	gfs_cell_check_solid_fractions() interface.
+
+2002-09-12 15:27  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Cosmetics.
+
+2002-09-12 15:27  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfscompare.c: New "histogram" option.
+
+2002-09-12 15:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/simple.c: New multigrid cycle.
+
+2002-09-12 15:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/shapes.c: New "witch of Agnesi" shape.
+
+2002-09-12 15:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c: New option for cell error histogram.
+
+2002-09-12 15:23  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/: periodic_flow.mod, testing.mod, vorticity_spectrum.mod:
+	Uses M_PI instead of PI.
+
+2002-09-12 15:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Cosmetics.
+
+2002-09-12 15:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/solid.h: New interfaces (due to new gts_surface_inter_new()
+	interface).
+
+2002-09-12 15:21  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/solid.c: Uses new gts_surface_inter_new() interface. New
+	debugging stuff.
+
+2002-09-12 15:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.h: New function gfs_simulation_run().
+
+2002-09-12 15:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Checks that input solid surface is orientable
+	and closed.  New function gfs_simulation_run().
+
+2002-09-12 15:18  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: gfs_init_vorticity_class() is defined only in 2D.
+
+2002-09-12 15:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Uses M_PI instead of PI.
+
+2002-09-12 15:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: Uses new gs_simulation_run() function.
+
+2002-09-12 15:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.h: Cosmetics.
+
+2002-09-12 15:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Added option for (preliminary) D. Calhoun
+	approach to small cell problem.
+
+2002-07-25 16:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfscompare.c: Should now work for any file combination
+	(i.e. no requirement that the second file be more refined than the
+	first one everywhere anymore).
+
+2002-07-25 16:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Cosmetics.
+
+2002-07-25 16:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added new class.
+
+2002-07-25 16:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Removed definition of PI (now defined in
+	common.h).
+
+2002-07-25 16:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.c: gfs_center_gradient does not use Neumann boundary
+	conditions anymore but extrapolates from the fluid side.
+
+2002-07-25 16:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h: New object GfsInitVorticity in 2D
+	initializes the velocity field from a vorticity field (through
+	streamfunction).
+
+2002-07-25 16:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: gfs_domain_size return the global mesh size (in
+	parallel mode).
+
+2002-07-25 16:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: adaptive.c, adaptive.h: Newly created cells interpolated
+	values now use non-limited centered gradient. Creation of new cells
+	is not recursive anymore (i.e. only one level is added at a time).
+
+2002-07-25 15:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/testing.mod: New objects to refine inside a sphere and to
+	initialise Gaussian and "Almgren" vortices.
+
+2002-07-25 15:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/periodic_flow.mod: Now displays errors for domain and
+	refined patch.
+
+2002-06-28 15:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Added min, max color scaling.
+
+2002-06-28 15:18  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c, tools/gfscompare.c: Uses new weighted
+	norm.
+
+2002-06-28 15:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/: boundaries.sh, channel.sh: Now use gerris +
+	parameter files.
+
+2002-06-28 15:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/Makefile.am: Removed boundaries (obsolete).
+
+2002-06-28 15:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/advection.c: Uses new weighted norm.
+
+2002-06-28 15:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Changed timing summary. Now properly computes the
+	average speed using domain size statistics.
+
+2002-06-28 15:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: init.c, refine.c, refine.h: Removed obsolete RefineFlatten
+	class.
+
+2002-06-28 15:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: Added domain size statistics.
+
+2002-06-28 15:05  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: New weighted norm calculation.
+
+2002-06-28 15:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/event.h: Added GfsInit type definitions to be used with
+	gtstemplate.
+
+2002-06-28 15:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: Added domain size statistics + use of
+	new weighted norm.
+
+2002-06-28 14:55  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/adaptive.c: Cosmetics.
+
+2002-06-28 14:55  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/periodic_flow.mod: Fixed for use with new weighted norm.
+
+2002-06-28 14:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/tutorial.tex: Added part on how to write a new
+	initialisation object.
+
+2002-06-28 14:52  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* TODO: Updated.
+
+2002-06-28 14:52  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* THANKS, doc/tutorial/init_periodic.c: Initial revision.
+
+2002-06-27 10:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/: periodic_flow.mod, vorticity_spectrum.mod: Fixed typo
+	on value of PI (thanks to R Sai Kiran).
+
+2002-06-25 10:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/shapes.c: Added missing header (thanks to Dan
+	Kelley) + licensing stuff.
+
+2002-06-20 10:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* ChangeLog, NEWS, README: Updated.
+
+2002-06-20 10:48  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/tutorial.tex: Added link to half-cylinder.gts.
+
+2002-06-20 10:48  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/half-cylinder.gts: Initial revision.
+
+2002-06-20 10:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/Makefile.am: Added half-cylinder.gts.
+
+2002-06-19 11:37  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/pre_fix.sh: Removes space after <TT> tag.
+
+2002-06-19 11:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/tutorial.tex: Spell-checked.
+
+2002-06-18 15:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* ChangeLog, ISSUES, TODO: Updated.
+
+2002-06-18 15:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/gfs-sections.txt, doc/tmpl/adapt.sgml,
+	doc/tmpl/adapt_gradient.sgml, doc/tmpl/adapt_vorticity.sgml,
+	doc/tmpl/advection.sgml, doc/tmpl/boundary.sgml, doc/tmpl/box.sgml,
+	doc/tmpl/domain-advection.sgml, doc/tmpl/domain.sgml,
+	doc/tmpl/event.sgml, doc/tmpl/fluid.sgml, doc/tmpl/ftt-basic.sgml,
+	doc/tmpl/ftt-face.sgml, doc/tmpl/ftt-other.sgml,
+	doc/tmpl/ftt-topology.sgml, doc/tmpl/gedge.sgml,
+	doc/tmpl/gfs-unused.sgml, doc/tmpl/inflow.sgml,
+	doc/tmpl/inflow_constant.sgml,
+	doc/tmpl/inflow_constant_tracer.sgml, doc/tmpl/init.sgml,
+	doc/tmpl/init_constant.sgml, doc/tmpl/mpi.sgml,
+	doc/tmpl/outflow.sgml, doc/tmpl/output.sgml,
+	doc/tmpl/output_balance.sgml, doc/tmpl/output_boundaries.sgml,
+	doc/tmpl/output_location.sgml, doc/tmpl/output_ppm.sgml,
+	doc/tmpl/output_projections.sgml, doc/tmpl/output_scalar.sgml,
+	doc/tmpl/output_scalar_norm.sgml,
+	doc/tmpl/output_scalar_stats.sgml, doc/tmpl/output_scalar_sum.sgml,
+	doc/tmpl/output_simulation.sgml, doc/tmpl/output_solid.sgml,
+	doc/tmpl/output_squares.sgml, doc/tmpl/output_time.sgml,
+	doc/tmpl/output_timing.sgml, doc/tmpl/poisson.sgml,
+	doc/tmpl/refine.sgml, doc/tmpl/refine_distance.sgml,
+	doc/tmpl/refine_solid.sgml, doc/tmpl/simulation.sgml,
+	doc/tmpl/solid.sgml, doc/tmpl/stats.sgml,
+	modules/periodic_flow.mod, modules/testing.mod,
+	modules/vorticity_spectrum.mod, src/adaptive.c, src/adaptive.h,
+	src/advection.c, src/advection.h, src/boundary.c, src/boundary.h,
+	src/domain.c, src/domain.h, src/event.c, src/event.h, src/fluid.c,
+	src/fluid.h, src/ftt.c, src/ftt.h, src/gerris.c, src/graphic.c,
+	src/graphic.h, src/init.c, src/mpi_boundary.c, src/mpi_boundary.h,
+	src/output.c, src/output.h, src/poisson.c, src/poisson.h,
+	src/refine.c, src/refine.h, src/simulation.c, src/simulation.h,
+	src/solid.c, src/solid.h, src/timestep.c, src/timestep.h,
+	test/advection/advection.c, test/euler/reference2D/periodic.xmgr,
+	test/euler/reference2D/periodic_convective.xmgr,
+	test/euler/reference2D/periodic_refined1.xmgr,
+	test/euler/reference2D/periodic_refined1_convective.xmgr,
+	test/euler/reference2D/periodic_refined2.xmgr,
+	test/euler/reference2D/periodic_refined2_convective.xmgr,
+	test/euler/reference2D/stationary2.xmgr,
+	test/euler/reference2D/stationary4.xmgr,
+	test/euler/reference2D/stationary4_convective.xmgr,
+	test/euler/reference2D/stationary4box1.xmgr,
+	test/euler/reference2D/time.xmgr,
+	test/euler/reference2D/timebox1.xmgr, test/euler/scripts/order.sh,
+	test/euler/scripts/stationary.sh, test/euler/scripts/time.sh,
+	test/mpi/match.c, test/mpi/read.c, test/poisson/poisson.c,
+	tools/gfs2oogl.c, tools/gfs2other.c, tools/gfscompare.c,
+	tools/ppmcombine.c, tools/streamanime.c: Changed "fl_" namespace to
+	"gfs_" everywhere.
+
+2002-06-18 15:18  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/: Makefile.am, tutorial.tex: Added versioning info.
+
+2002-06-18 15:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/.cvsignore: Updated.
+
+2002-06-18 15:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Added doc/tutorial directory.
+
+2002-06-18 14:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* Makefile.am: Removed "examples/" directory.
+
+2002-06-18 14:46  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/graphic/report.sh: Removed "CVS" from list of
+	valid directories.
+
+2002-06-17 17:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/Makefile.am: Added tutorial directory.
+
+2002-06-17 17:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Properly matches boundaries and applies
+	boundary conditions now.
+
+2002-06-17 17:23  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfscompare.c: Do not use old gfs simulation format anymore.
+	Works with current simulation files (=> some tests will not work
+	anymore).
+
+2002-06-17 17:21  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Checks that the root cell is not destroyed by
+	solid definition.
+
+2002-06-17 17:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Allows NULL argument for box in fl_write_gts (in
+	2D only).
+
+2002-06-17 17:18  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Added direction symbolic names + access
+	functions.
+
+2002-06-17 17:18  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/event.c: Changed velocity components names in
+	fl_init_flow_constant() for consistency.
+
+2002-06-17 17:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Changed syntax for box links directions (use
+	symbolic names now).  Changed syntax for box boundary conditions
+	specifications (use optional symbolic names now).  Added check for
+	non-destruction of root cell when matching.
+
+2002-06-17 14:44  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/: tutorial.tex, .cvsignore: Updated.
+
+2002-06-17 14:44  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/direction.fig: Changed text size.
+
+2002-06-17 14:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/: Makefile.am, boundaries.eps, gfs2oogl.eps,
+	half-cylinder.png, pdf.tex, pre_fix.sh, refined1.eps,
+	refined1_cells.eps, refined2.eps, vorticity.png: Initial revision.
+
+2002-06-15 19:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/: gfs-docs.sgml, gfs-sections.txt, tmpl/advection.sgml,
+	tmpl/boundary.sgml, tmpl/box.sgml, tmpl/domain-advection.sgml,
+	tmpl/domain.sgml, tmpl/fluid.sgml, tmpl/ftt-basic.sgml,
+	tmpl/ftt-face.sgml, tmpl/ftt-other.sgml, tmpl/ftt-topology.sgml,
+	tmpl/gedge.sgml, tmpl/gfs-unused.sgml, tmpl/poisson.sgml,
+	tmpl/solid.sgml, tmpl/stats.sgml: Updated.
+
+2002-06-15 19:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tmpl/: adapt.sgml, adapt_gradient.sgml, adapt_vorticity.sgml,
+	event.sgml, inflow_constant.sgml, inflow_constant_tracer.sgml,
+	init.sgml, init_constant.sgml, output.sgml, output_balance.sgml,
+	output_boundaries.sgml, output_location.sgml, output_ppm.sgml,
+	output_projections.sgml, output_scalar.sgml,
+	output_scalar_norm.sgml, output_scalar_stats.sgml,
+	output_scalar_sum.sgml, output_simulation.sgml, output_solid.sgml,
+	output_squares.sgml, output_time.sgml, output_timing.sgml,
+	refine.sgml, refine_distance.sgml, refine_solid.sgml,
+	simulation.sgml: Initial revision.
+
+2002-06-14 17:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/tutorial.tex: Added new sections, title, new figures
+	etc...
+
+2002-06-13 18:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/tutorial/: boundaries.ps, direction.fig, epsbbox.sh,
+	gfs2oogl.ps, refined1.ps, refined1_cells.ps, tutorial.tex,
+	.cvsignore: Initial revision.
+
+2002-06-12 22:27  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/reference2D/: periodic.xmgr, periodic_convective.xmgr,
+	periodic_refined1.xmgr, periodic_refined1_convective.xmgr,
+	periodic_refined2.xmgr, periodic_refined2_convective.xmgr,
+	stationary2.xmgr, stationary4.xmgr, stationary4_convective.xmgr,
+	stationary4box1.xmgr, time.xmgr, timebox1.xmgr: Updated embedded
+	parameter files (new syntax for edge graph directions).
+
+2002-06-12 22:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Added first implementation of
+	FttCellTraverse.
+
+2002-06-09 20:46  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/reference2D/: periodic.xmgr, periodic_convective.xmgr,
+	periodic_refined1.xmgr, periodic_refined1_convective.xmgr,
+	periodic_refined2.xmgr, periodic_refined2_convective.xmgr,
+	stationary1.xmgr, stationary2.xmgr, stationary4.xmgr,
+	stationary4_convective.xmgr, stationary4box1.xmgr, time.xmgr,
+	timebox1.xmgr: Changed parameter file (for time step iteration).
+
+2002-06-09 20:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Added module name lookup in default module
+	directory.
+
+2002-06-09 20:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Added modules directory to gfsconfig.h.
+
+2002-06-07 15:39  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: timestep.c, timestep.h: Saves residual info before
+	projection (used to display convergence rates).
+
+2002-06-07 15:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Added convergence rate info in
+	FlOutputProjectionStats.
+
+2002-06-07 13:37  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Uses gts_container_foreach() and
+	gts_object_destroy() to destroy lists of events, refines, adapts.
+	
+	FlRefine's get written in the simulation file only if no other grid
+	info is specified (i.e. max_depth write level is strictly smaller
+	than -1).
+
+2002-06-06 17:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/ppmcombine.c: An executable (doing nothing) can be compiled
+	in 3D. Pretty crappy fix really, should find sthg else.
+
+2002-06-06 17:55  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: New option to draw squares. Streamlines in 2D.
+
+2002-06-06 17:52  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/compare.sh: Changed minimum dividing value.
+
+2002-06-06 17:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/: test.dom, restart.sh, stationary.sh: Updated for new
+	parameter file format.
+
+2002-06-06 17:50  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/: restartbox.sh, stationary1.sh, stationary2.sh: Initial
+	revision.
+
+2002-06-06 17:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/Makefile.am: Added new tests for the fl_domain_split()
+	function (one or two splits) and for restarting a refined
+	simulation.
+
+2002-06-06 17:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/xmgrmerge.sh: Initial revision.
+
+2002-06-06 17:46  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/report.sh: Uses the "gerris" executable to get
+	version info.
+
+2002-06-06 17:45  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/check.sh: Support for the new scripts.
+
+2002-06-06 17:44  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/: order.sh, stationary.sh, time.sh: Use the
+	new parameter file system and runs the "gerris" executable.
+
+2002-06-06 17:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/merging.sh: Duration is now controlled by
+	parameter "tmax".
+
+2002-06-06 17:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/parameters/: stationary.par, time.par: Updated xmgr
+	parameter files.
+
+2002-06-06 17:39  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/reference2D/: merging.xmgr, merging_convective.xmgr,
+	periodic.xmgr, periodic_convective.xmgr, periodic_refined1.xmgr,
+	periodic_refined1_convective.xmgr, periodic_refined2.xmgr,
+	periodic_refined2_convective.xmgr, stationary1.xmgr,
+	stationary2.xmgr, stationary4.xmgr, stationary4_convective.xmgr,
+	stationary4box1.xmgr, time.xmgr, timebox1.xmgr: Updated for the
+	current version. All the tests do at least as well as the previous
+	version and usually better (see in particular stationary4box1.xmgr)
+	due to the improved advection scheme.
+	
+	The tests also use the new parameter file format.
+
+2002-06-06 17:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/.cvsignore: Added testing garbage.
+
+2002-06-06 17:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/figures/corner.fig: Initial revision.
+
+2002-06-06 17:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* Makefile.am: Added target "changelog" for automatic changelog
+	generation.
+
+2002-06-06 17:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added instantiation of new classes.
+
+2002-06-06 17:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: Added adaptive mesh refinement. The variables on
+	all levels are synchronized before calling any event (should fix
+	bugs in events using the fl_interpolate() function).
+
+2002-06-06 17:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: simulation.c, simulation.h: Deals with the new adaptive
+	mesh refinement classes. Modified the way the corner refinement
+	criterium is enforced (the previous implementation was not robust.
+	see figure corner.fig).
+
+2002-06-06 17:27  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: New class to output scalar statistics
+	and streaklines. Added timing stats for adaptive mesh refinement.
+
+2002-06-06 17:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: graphic.c, graphic.h: Drawing squares now takes into
+	account bounding box. Fixes for streamline functions.
+
+2002-06-06 17:23  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Added new function returning the relative
+	coordinates of a children cell (used for initialising refined
+	cells).
+
+2002-06-06 17:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: New function to refine corners violating
+	the corner refinement criterium (used for adaptive mesh
+	refinement).
+
+2002-06-06 17:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: New function fl_domain_advect_point().
+
+2002-06-06 17:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Added boundary condition for
+	constant tracer injection.
+
+2002-06-06 17:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Added adaptive mesh refinement.
+
+2002-06-06 17:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: adaptive.c, adaptive.h: Initial revision.
+
+2002-06-04 17:09  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Cleanup of balance stats message.
+
+2002-05-30 16:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Traversal functions have been reverted back to version
+	1.25 (the mods in 1.26 would have imposed mods on all the user
+	functions). But assertions have been added to check for references
+	to deallocated memory. An other workaround has been found for
+	match() in boundary.c.
+
+2002-05-30 16:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Modified match() function (again)
+	which is now used by level by level traversals (to avoid the
+	previous situation of reference to unallocated memory).
+
+2002-05-30 13:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: The traversal functions have been modified in
+	order to ensure that a cell destroyed by the traversal function
+	cannot be reaccessed. In order for this mechanism to work, the user
+	function MUST return TRUE if it has destroyed the cell.
+
+2002-05-30 12:59  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Modified match() function so that a destroyed
+	cell can not be reaccessed. Also uses the new convention for
+	FttCellTraverseFunc (which now must return TRUE is the cell is
+	destroyed within the function).
+
+2002-05-26 19:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Changed semantic of coarsening function.
+
+2002-05-25 22:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Changed interface for cell tree coarsening.
+
+2002-05-24 22:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Added functions for coarsening a cell tree.
+
+2002-05-24 15:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt_internal.c: Added check for mixed cell refinement
+	violation.
+
+2002-05-24 15:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, ftt.c, ftt.h: ftt_cell_set_neighbor() does not
+	"match" boundaries of cells anymore. ftt_cell_set_neighbor_match()
+	does that. This matching is only necessary for boundary conditions,
+	not for contiguous FlBoxes, hence the change (this fixes the
+	problem when restarting a simulation for which the boundary between
+	FlBoxes are not matched).
+
+2002-05-24 12:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h, gerris.c, output.c, simulation.c,
+	simulation.h: Events can now accept a mixture of iteration and/or
+	time start, end, step. The "type" field has been removed and new
+	"istart", "iend", "istep" fields have been added.
+
+2002-05-24 12:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Fixed ftt_cell_set_neighbor() by adding new
+	functions recalculating neighborhood information and not using
+	cached values (ftt_cell_neighbor_not_cached() ...).
+
+2002-05-16 13:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Added centered (MAC predicted velocities) or edge
+	(centered velocity) advection selection.
+
+2002-05-16 13:05  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: "flux" field of advection parameters now needs
+	to be initialized explicitly.
+
+2002-05-16 13:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.h: Changed small cell definition back to sthg correct.
+
+2002-05-16 13:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: Removed unnecessary gts_range_add_value() call (bug
+	in GTS has been fixed).
+
+2002-05-16 13:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: advection.c, advection.h: Improved advection scheme:
+	changes include - upwinding of transverse advection terms
+	(increased stability) - velocity advection uses a centered velocity
+	computed as the average of the corresponding  edge velocities at t
+	+ dt/2 (more accurate apparently) - velocity advection fluxes do
+	not reuse the edge velocities but recomputes advected edge values
+	(the former is apparently unstable for flows around a corner)
+	
+	All these changes are selectable through #if's macros.
+
+2002-05-15 15:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/Makefile.am: Added streamanime.
+
+2002-05-15 15:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/streamanime.c: Initial revision.
+
+2002-05-15 15:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/: gfs2other.c, gfscompare.c: Updated to be compatible with
+	the current library.
+
+2002-05-15 15:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/.cvsignore: Updated.
+
+2002-05-15 15:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: New function for squared norm of the
+	velocity.
+
+2002-05-15 15:05  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Removed forced use of
+	fl_face_velocity_advection_flux as velocity flux function.
+
+2002-05-15 15:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h, init.c: New classes for output of norm
+	and sum of a given scalar.
+
+2002-05-15 15:00  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/periodic_flow.mod: Stationnary periodic solution has been
+	reverted to the dimensional form.
+
+2002-05-15 15:00  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/Makefile.am: Added testing module.
+
+2002-05-15 14:59  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/testing.mod: Initial revision.
+
+2002-05-13 15:42  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: New functions for cross sections.
+
+2002-05-13 15:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Added debugging stuff.
+
+2002-05-13 15:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Support for time-averaged simulations. Forced
+	the flux function for velocity advection params to
+	fl_face_velocity_advection_flux.
+
+2002-05-13 15:37  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: Output file "muting" has been changed
+	(uses "/dev/null"). New classes to output streamlines and balance
+	stats.
+
+2002-05-13 15:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: Optional profiling of wait time in MPI calls.
+
+2002-05-13 15:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: New classes added.
+
+2002-05-13 15:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: graphic.c, graphic.h: GTS surface output now allows
+	cross-sections in 3D. Streamline code has been restructured (new
+	FlStreamline object).
+
+2002-05-13 15:31  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: New MPI waiting stats.
+
+2002-05-13 15:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: read and write functions now take user data.
+	New function to traverse a "boxed" sub-domain of a cell tree.
+
+2002-05-13 15:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: Modified read and write functions to take
+	into account a variable number of cell variables. New functions to
+	obtain the index of a variable from its name.
+
+2002-05-13 15:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h: New event for time averaging of
+	simulation.
+
+2002-05-13 15:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: It is now possible to select which
+	variables are written when writing a FlDomain. New functions for
+	traversing a boxed subset of a domain and for statistics about the
+	balance of a parallel computation.
+
+2002-05-13 15:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: It is now possible to select which variables are
+	written when writing a FlBox.
+
+2002-05-13 15:21  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* .usermap, ChangeLog: Changelog is now generated automatically
+	using cvs2cl.pl.
+
+2002-05-02 16:58  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: Changed way to compute tags for messages.
+	Lower tag values are constructed which is important for machines
+	with low limits on maximum tag values (i.e. Cray). It is still not
+	optimal though.
+
+2002-05-02 16:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: solid.c, solid.h: Changed conflicting const declaration +
+	check that the global surface/cell intersection is closed and
+	orientable.
+
+2002-05-02 16:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Added muting of stderr, stdout channels for
+	parallel codes.
+
+2002-05-02 16:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/refine.c: Added assertion to check that root cell of boxes is
+	not destroyed by refinement call.
+
+2002-05-02 16:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: Added "muting" flag (to deal with
+	stderr pointer in parallel codes).
+
+2002-04-23 17:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Added identifier for "vector" geomview object.
+
+2002-04-23 17:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/solid.c: Added hierarchical solid fractions check and
+	improved somewhat error reporting.
+
+2002-04-23 17:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Removed crappy solid testing, just recomputes
+	the solid fractions every time.
+
+2002-04-23 17:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/refine.h: Cosmetics.
+
+2002-04-23 17:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/poisson.c: Changed number of relaxations on highest level
+	(somewhat helps for tough initial conditions on splitted domains).
+
+2002-04-23 17:09  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added log message PE identification and removed
+	crappy stderr, stdout closing stuff.
+
+2002-04-23 17:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Fixed bug for ftt_cell_set_neighbor() (the root cells
+	neighboring relationships were not updated correctly due to the
+	change in the root cell structure).
+	
+	Commented out assertion which was sort of too strict in
+	ftt_cell_destroy(). What happened is that cell refinement
+	immediately followed by the destruction of some of the new cells
+	created violated this assertion.
+
+2002-04-23 16:58  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: Send and receive are now performed in alternate
+	(matching) order.
+
+2002-04-23 16:57  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/figures/topology.fig: Fixed spelling error.
+
+2002-04-23 14:48  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: Added FlOutputLocation class.
+
+2002-04-18 17:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/.cvsignore: Updated.
+
+2002-04-18 17:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/Makefile.am: Added gfs2oogl.
+
+2002-04-18 17:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2oogl.c: Initial revision of this graphic filter for
+	gerris simulation files.
+
+2002-04-18 17:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Added fflush() calls and now uses a temporary (~
+	file) for testing if a file name can be opened (for FlOutputClass),
+	to avoid erasing a previously written file.
+
+2002-04-18 17:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: graphic.c, graphic.h: Added functions to draw stream
+	cylinders, ribbons and general extrusion of profiles along a path
+	(stuff which belongs to GTS really).
+
+2002-04-18 17:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: Fixed a bug in fl_read() and added
+	fl_interpolate() function.
+
+2002-04-18 17:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Fixed a "bug" in ftt_cell_neighbors() which
+	caused ftt_cell_read() not to update properly the neighorhood
+	properties after reading.
+
+2002-04-18 17:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: Added new function for point location.
+
+2002-04-12 13:05  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.h: New FL_FLAG_BOUNDARY and FL_CELL_IS_BOUNDARY macro.
+
+2002-04-12 13:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h, output.c: Stats for merged cells now
+	included the number of cells merged per merged cell.
+
+2002-04-12 13:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Boundary cells are noew tagged with
+	FL_FLAG_BOUNDARY.
+
+2002-04-12 13:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Restrict cell merging only to non-boundary
+	cells.
+
+2002-04-12 12:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Fixed bug in centered velocities pressure
+	correction when both surface fractions are zero.
+
+2002-04-12 12:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Assertion replaced by nothing for solid
+	fractions check.
+
+2002-04-12 12:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: solid.c, solid.h: Assertions replaced by warnings in
+	check() function.
+
+2002-04-12 11:59  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: refine.c, refine.h: New FlRefineFlatten object (might be
+	advantageously replaced by/associated with a "split" function).
+
+2002-04-12 11:58  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: New class for solid and merged cells
+	stats.
+
+2002-04-12 11:57  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added new classes instantiation.
+
+2002-04-12 11:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Destroy function checks that neighboring root cells
+	are at the same level before updating.
+
+2002-04-12 11:55  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: New stats functions for solid and
+	merged cells.
+
+2002-04-12 11:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: advection.c, advection.h: Fixed spelling mistake
+	"fl_traverseD_merged". Added warning for unmerged small cells.
+
+2002-04-11 15:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Corrected "fl_traverseD_merged" spelling.
+
+2002-04-09 10:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: Added "profile" option.
+
+2002-04-09 10:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: Removed "dummy" stuff.
+
+2002-04-09 10:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Boundary conditions profiling is now optional in
+	FlOutputTiming.
+
+2002-04-09 10:23  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Fixed stupid bug in ppm_combine + "transparency"
+	of undefined pixels.
+
+2002-04-09 10:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: Added flag to switch boundary
+	conditions profiling on or off.
+
+2002-04-06 23:38  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: "split" option now direcly outputs simulation.
+
+2002-04-06 23:37  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: DUMMY_MPI stuff.
+
+2002-04-06 23:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h, output.c: Added timing stats for
+	boundary conditions.
+
+2002-04-06 16:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h, mpi_boundary.c: Added stats support for
+	MPI messages.
+
+2002-04-06 15:38  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h, domain.h: Uses new function
+	fl_box_domain().
+
+2002-04-06 14:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: Added "DUMMY_MPI" stuff for parallel
+	profiling purposes.
+
+2002-04-06 14:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: Moved send calls to optimize overlap of
+	communications.
+
+2002-04-05 17:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* Makefile.am: Cleanup files before distrib (using dist-hook).
+
+2002-04-05 17:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/Makefile.am: Fixed bug for dist-hook.
+
+2002-04-05 17:39  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/graphic/Makefile.am: Removed dist-hook.
+
+2002-04-05 17:38  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/.cvsignore: Added ppmcombine.
+
+2002-04-05 17:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/Makefile.am: Added ppmcombine.
+
+2002-04-05 17:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/ppmcombine.c: Initial revision.
+
+2002-04-05 17:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/vorticity_spectrum.mod: Added srand() calls for "true"
+	random initialization in the case of multi PE simulation.
+
+2002-04-05 17:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: graphic.c, graphic.h: Changed Color structure to guchar
+	arrays for PPM. Allows to create proper PPM binary files without
+	worrying about structure padding (i.e. CRAY).
+
+2002-04-05 17:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: gerris.c, simulation.c, simulation.h: Added "iteration"
+	option in FlTime structure (allows to stop the calculation after a
+	given number of iterations, not an absolute time).
+
+2002-04-05 17:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/event.c: Changed error reporting messages.
+
+2002-04-05 17:01  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: Fixed bug in reduce functions for GtsRange using
+	new GtsRange structure.
+
+2002-04-05 10:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Added version information comment and fixed bug in
+	PPM stuff.
+
+2002-04-04 15:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: fl_box_set_pos() recursion should now create a
+	compact representation for periodic domains.
+
+2002-04-04 15:18  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Fixed g_strconcat() bug. Forgot to append NULL to
+	the list of strings.
+
+2002-04-04 09:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.h, event.c, fluid.h, ftt.h, gerris.c, graphic.h,
+	init.c, mpi_boundary.c, mpi_boundary.h, poisson.c, poisson.h,
+	solid.c, solid.h, timestep.h: Cleanup copyright stuff.
+
+2002-04-04 09:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: refine.c, refine.h: FlRefineDistance now takes an extra
+	argument (minlevel).
+
+2002-04-04 09:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Boundaries between boxes assigned to different PE
+	are drawn.
+
+2002-04-03 16:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Fixed stupid bug.
+
+2002-04-03 13:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Commented out the requirement that boundaries are
+	always FINE/FINE (caused problem with graph partition output).
+	
+	The ftt_cell_destroy() function now updates correctly neighborhood
+	information for root cells.
+
+2002-04-03 12:09  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/vorticity_spectrum.mod: Added random vorticity
+	initialization.
+
+2002-04-02 13:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: FlBox read() method updates graph weight (so that
+	the end graph (FlDomain) weight is really the sum of the weights of
+	its nodes (FlBox)).
+
+2002-03-08 00:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, domain.c, fluid.c, output.c, poisson.c,
+	simulation.c: Updated docs.
+
+2002-03-07 19:05  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/graphic/tests/: rotate1/.cvsignore,
+	rotate2/.cvsignore, rotate3/.cvsignore, rotate_refine1/.cvsignore:
+	Initial revision.
+
+2002-03-07 19:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/graphic/.cvsignore: Updated.
+
+2002-03-07 19:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Added configure option to compile using GTS check
+	casts.
+
+2002-03-07 19:00  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* Makefile.am: Added examples/ simulation directory.
+
+2002-03-07 18:58  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c: Output modified to use FlDomain.
+
+2002-03-07 18:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/graphic/Makefile.am: Modified to avoid CVS
+	directory.
+
+2002-03-07 18:55  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/advection.c: Modified to use FlBox.
+
+2002-03-07 18:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Use domain->rootlevel for highest level of
+	iteration in fl_poisson().
+
+2002-03-07 18:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/solid.c: Output coordinates of the location of the warning.
+
+2002-03-07 18:52  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Fixed bug in write and read.
+
+2002-03-07 18:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: FlOutputPPM is only defined in 2D.
+
+2002-03-07 18:50  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: init.c, init.h: Removed usuless functions for setting
+	"parallel mode".
+
+2002-03-07 18:50  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/graphic.c: Corrected bug for 3D compilation. PPM exports
+	fixed to take into account variable root level. Solid boundaries
+	are now drawn with thick lines (in 2D).
+
+2002-03-07 18:48  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: Option -p is now for "partition", parallel is taken
+	care of automatically by knowing the number of PE.
+
+2002-03-07 18:46  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Changes to accomodate for variable root level in
+	ftt_cell_destroy_root().
+
+2002-03-07 18:45  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h: Added FlInitFlowConstant.
+
+2002-03-07 18:44  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: Domain writes and reads in (optionally)
+	position of reference cell, and root level. Changed made to
+	fl_domain_split() to accomodate for variable root level.
+	fl_domain_depth() is now global (i.e. returns the depth maximized
+	over all the processors).
+
+2002-03-07 18:41  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Box does not output root level
+	anymore but reads that in from the domain it belongs to. It now
+	outputs size (number of leaf cells) too.
+
+2002-03-06 21:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Added test for levels of neighboring root cells.
+
+2002-03-06 21:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Set level of boundary root cell to the level of
+	its box. Boxes read and writes their root level.
+
+2002-03-06 21:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Added function to set level of root cell.
+
+2002-03-06 18:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Support for non-unit size root cells (for
+	relative positioning).
+
+2002-03-06 18:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: New structure for root cells (allows to set
+	position and level even on root and leaf cells).
+
+2002-02-26 18:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: If velocity norm is zero, dt is set to one.
+
+2002-02-26 18:03  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h, gerris.c: Added option to generate
+	graph with one PE per node.
+
+2002-02-25 18:23  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/Makefile.am: Removes build sources before distribution.
+
+2002-02-25 18:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: Uses new fl_domain_split() function (option).
+
+2002-02-25 18:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: New fl_domain_split() function.
+
+2002-02-25 18:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Minor modif to destroy functions of boundary and
+	box.
+
+2002-02-25 18:21  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Neighbor functions use the pre-computed
+	children->neighbors if available (should be faster).  New function
+	ftt_cell_destroy_root (needs the above mod to work properly).
+
+2002-02-22 17:52  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: Removed events from timing.
+
+2002-02-22 17:50  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/.cvsignore: Added modules stuff.
+
+2002-02-22 17:49  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/.cvsignore: Initial revision.
+
+2002-02-22 16:39  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* modules/: Makefile.am, periodic_flow.mod, vorticity_spectrum.mod:
+	Initial revision.
+
+2002-02-22 16:38  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Added support for static "modules".
+
+2002-02-22 16:37  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* acconfig.h: Added fpu_control.h flag.
+
+2002-02-22 16:37  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* Makefile.am: Added examples directory to distribution.
+
+2002-02-22 16:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/simulation.c: Added stuff for "end_event" FlEvent.
+
+2002-02-22 16:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/output.c: Added test for pathological calls (total time = 0).
+
+2002-02-22 16:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Added stuff for static "modules".
+
+2002-02-22 16:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added stuff for static "modules" + floating point
+	exceptions trapping.
+
+2002-02-22 16:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h: Added FlInit derived object. Added "end"
+	keyword for "start" parameter.
+
+2002-02-21 15:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added new classes.
+
+2002-02-21 15:19  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: Cleaned.
+
+2002-02-21 15:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: graphic.c, graphic.h: Added fl_write_ppm() function.
+
+2002-02-21 15:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: Added FlOutputPPM class.
+
+2002-02-21 11:45  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/Makefile.am: Added new tests.
+
+2002-02-21 11:45  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/: compare.sh, restart.sh, stationary.sh: Initial
+	revision.
+
+2002-02-21 11:42  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added new classes instantiation.
+
+2002-02-21 11:42  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: graphic.c, graphic.h: Changed Color to GtsColor. Ifdef for
+	2D specific functions. fl_write_squares() does not do autoscale
+	anymore (it is done by FlOutputScalar).
+
+2002-02-21 11:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: Added FlOutputScalar and
+	FlOutputSquares classes.
+
+2002-02-21 11:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: Added fl_variable_name global array.
+
+2002-02-21 10:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: MPI_Isend is MUCH faster than MPI_Issend on a
+	linux machine using mpich chp4 through loopback (why? I suppose the
+	"synchro" bit involves more message passing etc... anyway the
+	synchro does not need to be done explicitly).
+
+2002-02-20 11:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: simulation.c, simulation.h: Corrected bug in event
+	initialization + new fl_simulation_write() function.
+
+2002-02-20 11:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: Added max_depth_write internal
+	parameter.
+
+2002-02-20 11:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/init.c: Added new objects classes.
+
+2002-02-20 11:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: Corrected bug in format string parsing
+	+ new objects FlOutputSimulation and FlOutputBoundaries.
+
+2002-02-20 11:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: fl_read() and fl_write() are here now.
+
+2002-02-20 11:27  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: Added color() information.
+
+2002-02-20 11:27  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: graphic.c, graphic.h: New function to write boundary
+	conditions + moved fl_read() and fl_write() to fluid.c.
+
+2002-02-20 11:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Added color() information + box now reads in data
+	if present.
+
+2002-02-19 10:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/.cvsignore: Updated.
+
+2002-02-19 10:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c: Uses new I/O functions and new domain
+	functions.
+
+2002-02-19 10:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/: advection/advection.c, mpi/match.c, mpi/read.c: Uses new
+	I/O functions.
+
+2002-02-19 10:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Added "gmodule" to glib-config flags.  New
+	generated file gfsconfig.h for system specific configs. For the
+	moment used to store #pragma directives for CRAY compiler inlining.
+
+2002-02-19 10:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* TODO: Updated.
+
+2002-02-19 10:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Added new files.
+
+2002-02-19 10:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c: All new objects definition moved in various files
+	(refine.c, output.c etc...).
+
+2002-02-19 10:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/solid.c: Replaced assertion with warning.
+
+2002-02-19 10:09  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: I/O functions use new GTS parsing
+	functions.  Cleaned norm_reduce() type MPI operations.	"New"
+	functions fl_domain_norm_residual() etc...
+
+2002-02-19 10:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: timestep.c, timestep.h: I/O functions for projection
+	parameters.  Timers in the various routines.  New function
+	fl_predicted_face_velocities().
+
+2002-02-19 10:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: poisson.c, poisson.h: fl_norm_residual() moved to domain.c.
+
+2002-02-19 10:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: init.c, init.h: Closes stderr, stdout for "non-master"
+	parallel nodes.
+
+2002-02-19 09:59  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: fl_norm_velocity() moved to domain.c.
+
+2002-02-19 09:58  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, ftt.c, ftt.h: I/O functions use new GTS parsing
+	functions.
+
+2002-02-19 09:57  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: advection.c, advection.h: Added i/o functions for advection
+	parameters.
+
+2002-02-19 09:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: output.c, output.h: Initial revision for the FlOutput
+	objects.  The old output.c, output.h files have been renamed
+	graphic.c, graphic.h.
+
+2002-02-19 09:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: graphic.c, graphic.h: The old output.c, output.h files have
+	been renamed graphic.c, graphic.h.
+
+2002-02-19 09:51  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: event.c, event.h, refine.c, refine.h, simulation.c,
+	simulation.h: Initial revision.
+
+2002-02-12 11:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.h: Parallel fl_domain_norm_residual.
+
+2002-02-12 11:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: Free MPI op reduce. Uses init.h functions for
+	parallel mode. Parallel fl_domain_norm_residual.
+
+2002-02-12 10:31  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Fixed fl_set_box_pos() to avoid infinite
+	recursion in the case of looped domain graphs.
+
+2002-02-12 10:05  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Added FlBoundaryInflowConstant
+	class.
+
+2002-02-11 13:25  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c: Updated copyright.
+
+2002-02-11 13:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c, src/ftt_internal.c, test/mpi/match.c: Added casts for
+	gpointer to other (for picky C compilers i.e. CRAY).
+
+2002-02-11 12:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Added casts for gpointer to other (for picky C
+	compilers i.e. CRAY).
+
+2002-02-11 12:55  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h, domain.c, mpi_boundary.c,
+	mpi_boundary.h: The correct behaviour (i.e. no deadlock) of
+	FlBoundaryMpi does not rely on MPI buffered mode communication
+	anymore. A synchronize() method has been added to FlBoundaryClass
+	and together with MPI synchronous non-blocking sends, this
+	(hopefully) allows for correct behaviour.
+
+2002-02-08 18:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfs2other.c: Changed non ansi array assigments and removed
+	call to output function (temporary fix only).
+
+2002-02-08 18:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/Makefile.am: Added MPI library link.
+
+2002-02-08 18:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/Makefile.am: Added path for scripts.
+
+2002-02-08 18:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: The buffered non-blocking send is necessary
+	to avoid deadlocks (as seen on the CRAY).
+
+2002-02-08 14:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfscompare.c: Changed non-ansi arrays assigments.
+
+2002-02-08 14:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: Changed non-ansi array allocations.
+
+2002-02-08 14:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.c: Changed conflicting const declarations.
+
+2002-02-08 14:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/.cvsignore: Updated.
+
+2002-02-08 14:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h: Removed conflicting const declarations.
+
+2002-02-07 10:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c: Updated 3D version for use of temporary storage
+	of advected face values (as for 2D in version 1.2).
+
+2002-02-05 14:36  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/: .cvsignore, gfs-docs.sgml, gfs-sections.txt,
+	tmpl/fluid.sgml, tmpl/ftt-basic.sgml, tmpl/ftt-other.sgml,
+	tmpl/ftt-topology.sgml, tmpl/gfs-unused.sgml, tmpl/poisson.sgml,
+	tmpl/solid.sgml: Updated.
+
+2002-02-05 14:35  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Changed fl_cell_traverse_merged() to
+	fl_domain_traverse_merged().
+
+2002-02-05 14:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, output.c: Updated doc.
+
+2002-02-05 14:34  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/gerris.c, src/init.c, src/init.h, doc/tmpl/advection.sgml,
+	doc/tmpl/boundary.sgml, doc/tmpl/box.sgml,
+	doc/tmpl/domain-advection.sgml, doc/tmpl/domain.sgml,
+	doc/tmpl/ftt-face.sgml, doc/tmpl/gedge.sgml, doc/tmpl/inflow.sgml,
+	doc/tmpl/mpi.sgml, doc/tmpl/outflow.sgml: Initial revision.
+
+2002-02-05 14:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c, src/mpi_boundary.c, src/mpi_boundary.h,
+	test/mpi/match.c, test/mpi/read.c: Changed FlMpiBoundary to
+	FlBoundaryMpi.
+
+2002-02-05 14:31  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Updated doc.
+
+2002-02-05 13:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: advection.c, advection.h: Updated doc.
+
+2002-02-05 13:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Removed irrelevant include.
+
+2002-02-05 13:00  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* acconfig.h: Removed irrelevant licence.
+
+2002-01-15 17:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/read.c: Added limited testing of parallel reduce
+	operations (stats, norm...)
+
+2002-01-15 17:43  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: Definitions of parallel reduce
+	operations (stats, norm etc...)
+
+2002-01-15 17:42  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* TODO: New section on possible optimizations.
+
+2002-01-15 15:55  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: mpi_boundary.h, mpi_boundary.c: All the MPI requests are
+	now checked for completion (as is proper) => fixes memory leaks and
+	other potential problems.
+
+2002-01-15 15:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/read.c: File writing commented out.
+
+2002-01-15 15:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/.cvsignore: Updated.
+
+2002-01-15 15:53  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/test.dom: Initial revision.
+
+2002-01-15 14:59  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/Makefile.am: Added read test.
+
+2002-01-15 14:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: mpi_boundary.c, mpi_boundary.h: Uses new tagging taking
+	into account box identifiers (the previous tagging worked only for
+	single-box domains).
+
+2002-01-15 14:48  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c, test/mpi/match.c: Uses new tagging of MPI
+	boundaries.
+
+2002-01-15 14:47  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.h: Corrected FlBoundaryVariable declaration.
+
+2002-01-15 13:18  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.c: New function for reading domains.
+
+2002-01-15 13:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/.cvsignore: Updated.
+
+2002-01-15 13:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/read.c: Initial revision.
+
+2002-01-15 13:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/match.c: Cyclic MPI boundaries now.
+
+2002-01-15 13:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/Makefile.am: Added read.c.
+
+2002-01-15 13:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Bug in ftt_cell_destroy() fixed. More stringent test
+	for ftt_face_traverse_boundary() (does not allow inconsistent
+	boundaries anymore).
+
+2002-01-15 13:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/domain.h: New functions for input and output of domains.
+
+2002-01-15 13:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: New read(), write() and destroy()
+	methods for boundaries and boxes.
+
+2002-01-15 13:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/figures/match.fig: Initial revision.
+
+2002-01-15 13:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Cleaned old glib stuff.
+
+2002-01-11 13:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/advection.c, src/advection.h, src/mpi_boundary.c,
+	src/mpi_boundary.h, src/poisson.c, src/poisson.h, src/timestep.c,
+	src/timestep.h, test/mpi/match.c, test/poisson/poisson.c: Modified
+	to reflect changes from FlDomainGraph to FlDomain, FlDomain to
+	FlBox etc...
+
+2002-01-11 13:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Uses domain.c instead of domaingraph.c
+
+2002-01-11 13:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: FlDomain has been replaced by FlBox
+	and is simpler.
+
+2002-01-11 13:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: domain.c, domain.h: Redefinition of FlDomain class.
+
+2002-01-10 18:29  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/match.c: Now uses FlDomainGraph functions.
+
+2002-01-10 18:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c: fl_domain_graph_new() does not exist
+	anymore, use gts_graph_new() instead.
+
+2002-01-10 18:27  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: mpi_boundary.c, mpi_boundary.h: Corrected for generic
+	FlBoundary send() and receive() methods.
+
+2002-01-10 18:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: send() and receive() methods have
+	been moved here. No dependence on MPI anymore.
+
+2002-01-10 15:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/.cvsignore: Updated.
+
+2002-01-10 15:09  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* doc/gfs-docs.sgml: Changed title.
+
+2002-01-10 15:09  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.c: Added doc.
+
+2002-01-10 15:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/mpi_boundary.c: Definition of match() method.
+
+2002-01-10 15:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h: Added ftt_cell_refine_single() function.
+
+2002-01-10 15:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Added match() methods for
+	boundaries and domains.
+
+2002-01-10 15:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/mpi/: .cvsignore, Makefile.am, match.c: Initial revision.
+
+2002-01-10 15:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in, test/Makefile.am: Added mpi testing directory.
+
+2002-01-08 15:09  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Corrected 3D face drawing.
+
+2001-12-21 11:33  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* ISSUES, TODO, doc/gfs-docs.sgml, doc/tmpl/fluid.sgml,
+	doc/tmpl/ftt-basic.sgml, doc/tmpl/ftt-topology.sgml,
+	doc/tmpl/gfs-unused.sgml, doc/tmpl/poisson.sgml,
+	doc/tmpl/solid.sgml: Updated.
+
+2001-12-19 17:18  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/.cvsignore: Ignores built executables.
+
+2001-12-19 17:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/mpi.sh: Initial revision.
+
+2001-12-19 17:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/channel.sh: Cleaned up executable paths etc...
+
+2001-12-19 17:16  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/convergence/.cvsignore: Ignores reports and others.
+
+2001-12-19 17:15  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/.cvsignore, tools/.cvsignore: Ignores built
+	executables.
+
+2001-12-19 17:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/Makefile.am: Removed reference3D.
+
+2001-12-19 17:12  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/poisson.c: Changed for new domain graph interface
+	for Poisson solver.
+
+2001-12-19 17:11  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/Makefile.am: Added needed MPI libraries linking.
+
+2001-12-19 17:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/Makefile.am: Support for domaingraph.c and timestep.c added.
+
+2001-12-19 17:09  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/timestep.h: Initial revision.
+
+2001-12-19 17:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: solid.c, solid.h: Some const declarations removed.
+
+2001-12-19 17:07  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: poisson.c, poisson.h: All the functions now operate on
+	domain graphs.
+
+2001-12-19 17:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt_internal.c, timestep.c: Initial revision.
+
+2001-12-19 17:05  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Part of the (internal) functions for face traversal
+	moved to ftt_internal.c.  Removal of const declarations for some
+	functions.
+
+2001-12-19 17:04  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: fluid.c, fluid.h, ftt.h: Removal of const declarations for
+	some functions.
+
+2001-12-19 17:02  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Neighbors of a domain can now be
+	either a FlBoundary or another FlDomain.
+
+2001-12-19 17:00  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: advection.c, advection.h: Merged cells functions now
+	operates on domain graphs.
+
+2001-12-17 15:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/merging.sh: Bug fixed using "refined" option
+	of gfscompare.
+
+2001-12-17 15:32  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/: poisson/Makefile.am, euler/Makefile.am: Added MPI_LIBS
+	libraries.
+
+2001-12-17 15:31  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/poisson/: order/Makefile.am, convergence/Makefile.am: Added
+	timestamp dependency for report.ps.
+
+2001-12-17 15:30  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* tools/gfscompare.c: New option for displaying error on finest
+	grid.
+
+2001-12-17 15:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/: advection/graphic/report.sh, advection/order/report.sh,
+	poisson/convergence/report.sh, poisson/order/report.sh: Print total
+	running time on title page.
+
+2001-12-17 15:26  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/: advection/graphic/check.sh, advection/order/check.sh,
+	poisson/convergence/check.sh, poisson/order/check.sh: Timestamp now
+	contains the total running time.
+
+2001-12-17 15:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: mpi_boundary.c, mpi_boundary.h: Initial revision.
+
+2001-12-17 15:24  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.h: Cosmetic changes + New face variable macro.
+
+2001-12-17 15:22  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/boundary.c: Added support for MPI boundary conditions.
+
+2001-12-17 15:20  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* acconfig.h, configure.in, src/Makefile.am: Added MPI config
+	support.
+
+2001-12-13 17:00  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/report.sh: Display total running time and
+	check for unrun (.tex) tests.
+
+2001-12-13 16:59  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/check.sh: timestamp stores duration of run.
+
+2001-12-13 16:57  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/advection/advection.c: Updated for new flux calculation
+	(using temporary storage).
+
+2001-12-13 16:56  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/ftt.c: Flatten function now flattens down to one layer of
+	cells (instead of two).
+
+2001-12-13 16:55  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.h: Added consistent macros for gradient variables.
+
+2001-12-13 16:54  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: boundary.c, boundary.h: Modified for new flux calculations
+	(using temporary storage).
+
+2001-12-13 09:14  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/merging.sh: Now logs runs stderr outputs.
+
+2001-12-13 09:13  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/cleanup.sh: Removed superfluous deletes.
+
+2001-12-13 09:10  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: ftt.c, ftt.h, output.c: Face traversal now requires
+	component argument.
+
+2001-12-13 09:09  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/fluid.h: Added temporary face variable and extra macros.
+
+2001-12-13 09:08  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/: advection.c, advection.h: Now uses temporary storage of
+	face values of the advected variable.
+
+2001-12-13 09:06  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* configure.in: Updated version.
+
+2001-12-12 14:28  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/merging.sh: Fixed gfs files name format bug.
+
+2001-12-12 14:27  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/scripts/: check.sh, report.sh: Fixed command parsing
+	bug.
+
+2001-12-12 10:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/parameters/stationary.par: Updated.
+
+2001-12-12 10:17  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* test/euler/.cvsignore: Added merging directory.
+
+2001-12-11 17:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* src/parabola.awk, test/.cvsignore,
+	test/advection/graphic/cleanup.sh,
+	test/advection/graphic/figures.sh,
+	test/advection/graphic/tests/rotate1/description.txt,
+	test/advection/graphic/tests/rotate2/description.txt,
+	test/advection/graphic/tests/rotate3/description.txt,
+	test/advection/graphic/tests/rotate_refine1/description.txt,
+	test/advection/graphic/tests/translate1/description.txt,
+	test/advection/graphic/tests/translate2/description.txt,
+	test/advection/graphic/tests/translate3/description.txt,
+	test/advection/graphic/tests/translate6/description.txt,
+	test/advection/graphic/tests/translate_refine1/description.txt,
+	test/advection/order/.cvsignore, test/advection/order/Makefile.am,
+	test/advection/order/avgorder.awk,
+	test/advection/order/checkorder.awk,
+	test/advection/order/order.par, test/advection/order/order.sh,
+	test/advection/order/reference/rotate_smooth.xmgr,
+	test/advection/order/reference/translate_periodic.xmgr,
+	test/advection/order/reference/translate_smooth.xmgr,
+	test/euler/parameters/merging.par,
+	test/euler/parameters/monitor.par, test/euler/parameters/order.par,
+	test/euler/parameters/unknown.par,
+	test/euler/reference2D/boundaries.tex,
+	test/euler/reference2D/channel.tex,
+	test/euler/reference2D/channel_redis.tex,
+	test/euler/scripts/animate.sh, test/euler/scripts/figures.sh,
+	test/euler/scripts/monitor.sh, test/euler/scripts/test.sh,
+	test/poisson/command.awk, test/poisson/options.awk,
+	test/poisson/order/avgorder.awk, test/poisson/order/checkorder.awk,
+	test/poisson/order/order.awk, test/poisson/order/order1.awk,
+	test/poisson/order/runcomp.sh, test/poisson/order/runorderfig.sh,
+	test/poisson/order/reference2D/ellipse1.xmgr,
+	test/poisson/order/reference2D/ellipse2.xmgr,
+	test/poisson/order/reference2D/iellipse1.xmgr,
+	test/poisson/order/reference2D/iellipse2.xmgr,
+	test/poisson/order/reference2D/isquare1.xmgr,
+	test/poisson/order/reference2D/simple.xmgr,
+	test/poisson/order/reference2D/square1.xmgr,
+	test/poisson/order/reference2D/square2.xmgr,
+	test/poisson/order/reference2D/star1.xmgr,
+	test/poisson/order/reference2D/star2.xmgr,
+	test/poisson/order/reference2D/tsquare1.xmgr,
+	test/poisson/order/reference2D/tsquare2.xmgr,
+	test/poisson/order/reference3D/cube.xmgr,
+	test/poisson/order/reference3D/simple.xmgr,
+	test/poisson/order/reference3D/simple1.xmgr,
+	test/poisson/order/reference3D/sphere1.xmgr,
+	test/poisson/order/reference3D/sphere11.xmgr,
+	test/poisson/order/reference3D/sphere2.xmgr,
+	test/poisson/convergence/checkrate.awk,
+	test/poisson/convergence/divergence.awk,
+	test/poisson/convergence/divergence_rate.awk,
+	test/poisson/convergence/runcomp.sh,
+	test/poisson/convergence/runfig.sh, test/poisson/misc/circlescale,
+	test/poisson/misc/circlescale.sh, test/poisson/misc/diamondscale,
+	test/poisson/misc/diamondscale.sh, test/poisson/misc/ellipse4pos,
+	test/poisson/misc/ellipse4pos.sh, test/poisson/misc/icirclepos,
+	test/poisson/misc/icirclepos.sh, test/poisson/misc/istarpos,
+	test/poisson/misc/istarpos.sh, test/poisson/misc/starradius,
+	test/poisson/misc/starradius.sh, test/poisson/models/cube.gts,
+	test/poisson/models/sphere5.gts,
+	test/poisson/order/reference2D/4ellipses.xmgr,
+	test/poisson/order/reference2D/4ellipses1.xmgr,
+	test/poisson/order/reference2D/ellipse3.xmgr,
+	test/poisson/order/reference2D/ellipse4.xmgr,
+	test/poisson/order/reference2D/isquare2.xmgr,
+	test/poisson/order/reference2D/random1.xmgr,
+	test/poisson/order/reference2D/random2.xmgr,
+	test/poisson/order/reference2D/simple1.xmgr,
+	test/poisson/order/reference2D/square.xmgr,
+	test/poisson/order/reference2D/square3.xmgr,
+	test/poisson/order/reference2D/square4.xmgr,
+	test/poisson/order/reference2D/star3.xmgr, doc/figures/.cvsignore,
+	doc/figures/indices.fig, doc/figures/interpolate_2D.fig,
+	doc/figures/parabola.fig, doc/tmpl/ftt.sgml,
+	test/poisson/convergence/reference3D/cube.xmgr,
+	test/poisson/convergence/reference3D/cube1.xmgr,
+	test/poisson/convergence/reference3D/icube.xmgr,
+	test/poisson/convergence/reference3D/icube1.xmgr,
+	test/poisson/convergence/reference3D/simple.xmgr,
+	test/poisson/convergence/reference3D/simple1.xmgr,
+	test/poisson/convergence/reference3D/sphere.xmgr,
+	test/poisson/convergence/reference3D/sphere1.xmgr: Imported sources
+
+2001-12-11 17:40  Stéphane Popinet <popinet@users.sourceforge.net>;
+
+	* .cvsignore, AUTHORS, ChangeLog, ISSUES, Makefile.am, NEWS,
+	README, TODO, acconfig.h, acinclude.m4, configure.in,
+	src/Makefile.am, src/fluid.c, src/fluid.h, src/ftt.c, src/ftt.h,
+	src/poisson.c, src/.cvsignore, src/advection.c, src/advection.h,
+	src/boundary.c, src/boundary.h, src/output.c, src/output.h,
+	src/poisson.h, src/solid.c, src/solid.h, test/Makefile.am,
+	test/advection/.cvsignore, test/advection/Makefile.am,
+	test/advection/advection.c, test/advection/graphic/.cvsignore,
+	test/advection/graphic/Makefile.am,
+	test/advection/graphic/check.sh, test/advection/graphic/report.sh,
+	test/advection/order/check.sh, test/advection/order/report.sh,
+	test/euler/.cvsignore, test/euler/Makefile.am,
+	test/euler/reference2D/periodic.xmgr,
+	test/euler/reference2D/time.xmgr,
+	test/euler/reference2D/stationary1.xmgr,
+	test/euler/reference2D/stationary2.xmgr,
+	test/euler/reference2D/stationary4.xmgr,
+	test/euler/reference2D/periodic_refined1.xmgr,
+	test/euler/reference2D/periodic_refined2.xmgr,
+	test/euler/reference2D/stationary4box1.xmgr,
+	test/euler/parameters/stationary.par,
+	test/euler/parameters/time.par,
+	test/euler/reference2D/merging.xmgr,
+	test/euler/reference2D/merging_convective.xmgr,
+	test/euler/reference2D/periodic_convective.xmgr,
+	test/euler/reference2D/periodic_refined1_convective.xmgr,
+	test/euler/reference2D/periodic_refined2_convective.xmgr,
+	test/euler/reference2D/stationary4_convective.xmgr,
+	test/euler/reference2D/timebox1.xmgr, test/euler/scripts/check.sh,
+	test/euler/scripts/report.sh, test/euler/scripts/boundaries.sh,
+	test/euler/scripts/channel.sh, test/euler/scripts/cleanup.sh,
+	test/euler/scripts/merging.sh, test/euler/scripts/order.sh,
+	test/euler/scripts/stationary.sh, test/euler/scripts/time.sh,
+	test/poisson/.cvsignore, test/poisson/Makefile.am,
+	test/poisson/poisson.c, test/poisson/shapes.c,
+	test/poisson/simple.c, test/poisson/order/.cvsignore,
+	test/poisson/order/Makefile.am, test/poisson/order/check.sh,
+	test/poisson/order/orderfig.par, test/poisson/order/orderfig.sh,
+	test/poisson/order/report.sh, test/poisson/convergence/.cvsignore,
+	test/poisson/convergence/Makefile.am,
+	test/poisson/convergence/avgrate.awk,
+	test/poisson/convergence/check.sh,
+	test/poisson/convergence/divfig.par,
+	test/poisson/convergence/divfig.sh,
+	test/poisson/convergence/report.sh,
+	test/poisson/convergence/reference2D/4ellipses.xmgr,
+	test/poisson/convergence/reference2D/4ellipses1.xmgr,
+	test/poisson/convergence/reference2D/circle.xmgr,
+	test/poisson/convergence/reference2D/circle1.xmgr,
+	test/poisson/convergence/reference2D/circle2.xmgr,
+	test/poisson/convergence/reference2D/circle3.xmgr,
+	test/poisson/convergence/reference2D/diamond.xmgr,
+	test/poisson/convergence/reference2D/diamond1.xmgr,
+	test/poisson/convergence/reference2D/diamond2.xmgr,
+	test/poisson/convergence/reference2D/ellipse.xmgr,
+	test/poisson/convergence/reference2D/ellipse1.xmgr,
+	test/poisson/convergence/reference2D/icircle.xmgr,
+	test/poisson/convergence/reference2D/icircle1.xmgr,
+	test/poisson/convergence/reference2D/istar.xmgr,
+	test/poisson/convergence/reference2D/istar1.xmgr,
+	test/poisson/convergence/reference2D/simple.xmgr,
+	test/poisson/convergence/reference2D/simple1.xmgr,
+	test/poisson/convergence/reference2D/star.xmgr,
+	test/poisson/convergence/reference2D/star1.xmgr,
+	test/poisson/convergence/reference2D/star2.xmgr,
+	test/poisson/convergence/reference2D/triangle.xmgr,
+	test/poisson/convergence/reference2D/4ellipses2.xmgr,
+	test/poisson/convergence/reference2D/4ellipses_refined.xmgr,
+	test/poisson/convergence/reference2D/circle_refined.xmgr,
+	test/poisson/convergence/reference2D/diamond3.xmgr,
+	test/poisson/convergence/reference2D/ellipse2.xmgr,
+	test/poisson/convergence/reference2D/ellipse3.xmgr,
+	test/poisson/convergence/reference2D/icircle_refined.xmgr,
+	test/poisson/convergence/reference2D/istar2.xmgr,
+	test/poisson/convergence/reference2D/simple2.xmgr,
+	test/poisson/convergence/reference2D/square.xmgr,
+	test/poisson/convergence/reference2D/star3.xmgr,
+	test/poisson/convergence/reference2D/star4.xmgr,
+	test/poisson/convergence/reference2D/star5.xmgr,
+	test/poisson/convergence/reference2D/star_refined.xmgr,
+	doc/.cvsignore, doc/Makefile.am, doc/gfs-docs.sgml,
+	doc/gfs-sections.txt, doc/figures/topology.fig,
+	doc/tmpl/fluid.sgml, doc/tmpl/ftt-basic.sgml,
+	doc/tmpl/ftt-other.sgml, doc/tmpl/ftt-topology.sgml,
+	doc/tmpl/gfs-unused.sgml, doc/tmpl/poisson.sgml,
+	doc/tmpl/solid.sgml, doc/tmpl/stats.sgml,
+	test/poisson/convergence/reference2D/triangle1.xmgr,
+	tools/.cvsignore, tools/Makefile.am, tools/gfs2other.c,
+	tools/gfscompare.c: Initial revision
+

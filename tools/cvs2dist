@@ -1,0 +1,37 @@
+curdir=`pwd`
+wrkdir=`mktemp -d /tmp/cvs2dist.XXXXXX`
+cd $wrkdir
+
+if cvs -d popinet@cvs.sourceforge.net:/cvsroot/gfs checkout -r stable gerris > msg 2>&1; then
+    :
+else
+    cat msg
+    rm -f msg
+    exit 1
+fi
+
+rm -f msg
+cd gerris
+libtoolize > msg 2>&1
+aclocal >> msg 2>&1
+autoheader >> msg 2>&1
+automake -a >> msg 2>&1
+autoconf >> msg 2>&1
+./configure --without-mpi >> msg 2>&1
+make changelog >> msg 2>&1
+if make -k >> msg 2>&1; then
+    if make dist >> msg 2>&1; then
+	tar xzf gerris-*.tar.gz
+        mv -f gerris-?.?.? gerris-`date +%y-%m-%d`
+        tar cf gerris-snapshot.tar gerris-`date +%y-%m-%d`
+        gzip -f --best gerris-snapshot.tar
+	scp -q gerris-snapshot.tar.gz popinet@gfs.sourceforge.net:/home/groups/g/gf/gfs/htdocs/gerris-snapshot.tar.gz
+    else
+	cat msg
+    fi
+else
+    cat msg
+fi
+rm -f msg
+cd $curdir
+rm -r -f $wrkdir

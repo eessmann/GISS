@@ -1,0 +1,48 @@
+<!-- ##### SECTION Title ##### -->
+Location output
+
+<!-- ##### SECTION Short_Description ##### -->
+
+
+<!-- ##### SECTION Long_Description ##### -->
+<para>
+
+</para>
+
+<!-- ##### SECTION See_Also ##### -->
+<para>
+
+</para>
+
+<!-- ##### MACRO GFS_OUTPUT_LOCATION ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### MACRO GFS_IS_OUTPUT_LOCATION ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+
+<!-- ##### STRUCT GfsOutputLocation ##### -->
+<para>
+
+</para>
+
+@p: 
+@first_call: 
+
+<!-- ##### FUNCTION gfs_output_location_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
+
+
