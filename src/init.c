@@ -159,23 +159,23 @@ void gfs_init (int * argc, char *** argv)
 
   /* Initialize permanent variables */
   gfs_div = v = gfs_variable_new (gfs_variable_class (), NULL, NULL, FALSE, i++);
-  v->temporary = TRUE;
+  v->permanent = NULL;
   g_assert (v->i == GFS_DIV);
   gfs_dp = v = v->next = gfs_variable_new (gfs_variable_class (), NULL, NULL, TRUE, i++);
-  v->temporary = TRUE;
+  v->permanent = NULL;
   g_assert (v->i  == GFS_DP);
   gfs_res = v = v->next = gfs_variable_new (gfs_variable_class (), NULL, NULL, FALSE, i++);
-  v->temporary = TRUE;
+  v->permanent = NULL;
   g_assert (v->i == GFS_RES);
   gfs_gx = v = v->next = gfs_variable_new (gfs_variable_class (), NULL, NULL, FALSE, i++);
-  v->temporary = TRUE;
+  v->permanent = NULL;
   g_assert (v->i  == GFS_GX);
   gfs_gy = v = v->next = gfs_variable_new (gfs_variable_class (), NULL, NULL, FALSE, i++);
-  v->temporary = TRUE;
+  v->permanent = NULL;
   g_assert (v->i  == GFS_GY);
 #if (!FTT_2D)
   gfs_gz = v = v->next = gfs_variable_new (gfs_variable_class (), NULL, NULL, FALSE, i++);
-  v->temporary = TRUE;
+  v->permanent = NULL;
   g_assert (v->i  == GFS_GZ);
 #endif /* FTT_3D */
   gfs_centered_variables = gfs_p = v = v->next = 

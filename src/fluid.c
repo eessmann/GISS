@@ -2072,7 +2072,7 @@ GfsVariableClass * gfs_variable_class (void)
  */
 GfsVariable * gfs_variable_new (GfsVariableClass * klass,
 				GtsObject * parent,
-				const gchar * name, 
+				const gchar * name,
 				gboolean centered,
 				guint i)
 {
@@ -2084,6 +2084,7 @@ GfsVariable * gfs_variable_new (GfsVariableClass * klass,
   v->i = i;
   v->centered = centered;
   v->p = parent;
+  v->permanent = v;
 
   return v;
 }

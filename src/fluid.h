@@ -104,12 +104,12 @@ struct _GfsVariable {
   /*< public >*/
   guint i;
   gchar * name;
-  gboolean centered, temporary;
+  gboolean centered;
   GfsVariableDerivedFunc derived;
   GfsVariableFineCoarseFunc fine_coarse;
   GtsContainer * sources;
   GfsSurfaceGenericBc * surface_bc;
-  GfsVariable * next;
+  GfsVariable * next, * permanent;
   GtsObject * p;
 };
 
