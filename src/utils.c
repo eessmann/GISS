@@ -471,18 +471,22 @@ void gfs_eigenvalues (gdouble a[FTT_DIMENSION][FTT_DIMENSION],
  * gfs_matrix_inverse:
  * @m: a square matrix.
  * @n: size of the matrix.
+ * @pivmin: the minimum value of the pivoting coefficient.
  *
  * Replaces @m with its inverse.
  *
- * Returns: %FALSE if @m is non-invertible, %TRUE otherwise.
+ * Returns: %FALSE if the inversion encounters a pivot coefficient
+ * smaller than or equal to @pivmin (i.e. @m is non-invertible), %TRUE
+ * otherwise.
  */
-gboolean gfs_matrix_inverse (gdouble ** m, guint n)
+gboolean gfs_matrix_inverse (gdouble ** m, guint n, gdouble pivmin)
 {
   gint * indxc, * indxr, * ipiv;
   gint i, icol = 0, irow = 0, j, k, l, ll;
   gdouble big, dum, pivinv, temp;
 
   g_return_val_if_fail (m != NULL, FALSE);
+  g_return_val_if_fail (pivmin >= 0., FALSE);
 
   indxc = g_malloc (sizeof (gint)*n);
   indxr = g_malloc (sizeof (gint)*n);
@@ -512,7 +516,7 @@ gboolean gfs_matrix_inverse (gdouble ** m, guint n)
 	SWAP (m[irow][l], m[icol][l]);
     indxr[i] = irow;
     indxc[i] = icol;
-    if (m[icol][icol] == 0.) {
+    if (fabs (m[icol][icol]) <= pivmin) {
       g_free (indxc);
       g_free (indxr);
       g_free (ipiv);
@@ -538,4 +542,42 @@ gboolean gfs_matrix_inverse (gdouble ** m, guint n)
   g_free (indxr);
   g_free (ipiv);
   return TRUE;
+}
+
+/**
+ * gfs_matrix_new:
+ * @n: the size of the matrix.
+ * @size: the size of the matrix elements.
+ *
+ * The matrix elements are initialised to zero.
+ *
+ * Returns: a newly allocated matrix.
+ */
+gpointer gfs_matrix_new (guint n, guint size)
+{
+  guint i;
+  gpointer * m, a;
+  
+  g_return_val_if_fail (n > 0, NULL);
+  g_return_val_if_fail (size > 0, NULL);
+
+  m = g_malloc (n*sizeof (gpointer));
+  a = g_malloc0 (n*n*size);
+  for (i = 0; i < n; i++)
+    m[i] = GUINT_TO_POINTER (GPOINTER_TO_UINT (a) + i*n*size);
+  return m;
+}
+
+/**
+ * gfs_matrix_free:
+ * @m: a matrix allocated with gfs_matrix_new().
+ *
+ * Frees the memory occupied by @m.
+ */
+void gfs_matrix_free (gpointer m)
+{
+  g_return_if_fail (m != NULL);
+
+  g_free (((gpointer *) m)[0]);
+  g_free (m);
 }

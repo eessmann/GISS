@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <math.h>
 #include "event.h"
 #include "solid.h"
 #include "output.h"
@@ -456,7 +457,8 @@ static void gfs_init_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     else {
-      GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (gfs_object_simulation (*o))->variables, fp->token->str);
+      GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (gfs_object_simulation (*o))->variables,
+						fp->token->str);
       GfsFunction * f;
 
       if (!v) {
@@ -720,7 +722,8 @@ static void init_from_streamfunction (FttCell * cell)
 static gboolean gfs_init_vorticity_event (GfsEvent * event, 
 					  GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class)->event) 
+      (event, sim)) {
     stream_from_vorticity (GFS_DOMAIN (sim), gfs_gx, gfs_div, 1e-9);
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -808,7 +811,8 @@ static void gfs_event_sum_read (GtsObject ** o, GtsFile * fp)
 
 static gboolean gfs_event_sum_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class)->event) 
+      (event, sim)) {
     GfsEventSum * s = GFS_EVENT_SUM (event);
 
     if (s->last < 0.)
@@ -901,6 +905,306 @@ GfsEventClass * gfs_event_sum2_class (void)
   return klass;
 }
 
+/* GfsEventHarmonic: Object */
+
+static void gfs_event_harmonic_destroy (GtsObject * o)
+{
+  GfsEventHarmonic * s = GFS_EVENT_HARMONIC (o);
+
+  gfs_matrix_free (s->Mn);
+  gfs_matrix_free (s->M);
+  gfs_matrix_free (s->iM);
+
+  g_free (s->A);
+  g_free (s->B);
+  g_free (s->vsin);
+  g_free (s->vcos);
+  g_free (s->x);
+  g_free (s->a);
+
+  g_free (s->Aname);
+  g_free (s->Bname);
+
+  g_array_free (s->omega, TRUE);
+
+  (* GTS_OBJECT_CLASS (gfs_event_harmonic_class ())->parent_class->destroy) (o);
+}
+
+static void gfs_event_harmonic_write (GtsObject * o, FILE * fp)
+{
+  GfsEventHarmonic * s = GFS_EVENT_HARMONIC (o);
+  guint i, j;
+
+  (* GTS_OBJECT_CLASS (gfs_event_harmonic_class ())->parent_class->write) (o, fp);
+
+  fprintf (fp, " %s %s %s %s", s->v->name, s->Aname, s->Bname, s->z->name);
+  for (i = 0; i < s->omega->len; i++)
+    fprintf (fp, " %.12lf", g_array_index (s->omega, gdouble, i));
+  fprintf (fp, " { %d", s->invertible);
+  for (i = 0; i < 2*s->omega->len + 1; i++)
+    for (j = 0; j < 2*s->omega->len + 1; j++)
+      fprintf (fp, " %.12lf", s->M[i][j]);
+  fputs (" }", fp);
+}
+
+static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsEventHarmonic * s = GFS_EVENT_HARMONIC (*o);
+  GfsDomain * domain =  GFS_DOMAIN (gfs_object_simulation (s));
+  guint i;
+
+  (* GTS_OBJECT_CLASS (gfs_event_harmonic_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (v)");
+    return;
+  }
+  if (!(s->v = gfs_variable_from_name (domain->variables, fp->token->str))) {
+    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (A)");
+    return;
+  }
+  s->Aname = g_strdup (fp->token->str);  
+  gts_file_next_token (fp);
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (B)");
+    return;
+  }
+  s->Bname = g_strdup (fp->token->str);
+  gts_file_next_token (fp);
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (Z)");
+    return;
+  }
+  if (!(s->z = gfs_variable_from_name (domain->variables, fp->token->str))) {
+    s->z = gfs_domain_add_variable (domain, fp->token->str);
+    g_assert (s->z);
+  }
+  gts_file_next_token (fp);
+
+  do {
+    gdouble omega;
+
+    if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+      gts_file_error (fp, "expecting a number (omega[%d])", s->omega->len);
+      return;
+    }
+    omega = atof (fp->token->str);
+    g_array_append_val (s->omega, omega);
+    gts_file_next_token (fp);
+  } while (fp->type != '\n' && fp->type != '{');
+
+  s->Mn = gfs_matrix_new (2*s->omega->len + 1, sizeof (gdouble));
+  for (i = 0; i < 2*s->omega->len + 1; i++)
+    s->Mn[i][i] = 1.;
+
+  s->M  = gfs_matrix_new (2*s->omega->len + 1, sizeof (gdouble));
+  s->iM = gfs_matrix_new (2*s->omega->len + 1, sizeof (gdouble));
+
+  s->A =    g_malloc (sizeof (GfsVariable *)*s->omega->len);
+  s->B =    g_malloc (sizeof (GfsVariable *)*s->omega->len);
+  s->vsin = g_malloc (sizeof (gdouble)*s->omega->len);
+  s->vcos = g_malloc (sizeof (gdouble)*s->omega->len);
+  s->x    = g_malloc (sizeof (gdouble)*(2*s->omega->len + 1));
+  s->a    = g_malloc (sizeof (gdouble)*(2*s->omega->len + 1));
+
+  for (i = 0; i < s->omega->len; i++) {
+    gchar * u;
+    
+    u = g_strdup_printf ("%s%d", s->Aname, i);
+    if (!(s->A[i] = gfs_variable_from_name (domain->variables, u))) {
+      s->A[i] = gfs_domain_add_variable (domain, u);
+      g_assert (s->A[i]);
+    }
+    g_free (u);
+    u = g_strdup_printf ("%s%d", s->Bname, i);
+    if (!(s->B[i] = gfs_variable_from_name (domain->variables, u))) {
+      s->B[i] = gfs_domain_add_variable (domain, u);
+      g_assert (s->B[i]);
+    }
+  }
+
+  if (fp->type == '{') {
+    guint n = 2*s->omega->len + 1;
+    guint j;
+
+    fp->scope_max++;
+    gts_file_next_token (fp);
+    if (fp->type != GTS_INT) {
+      gts_file_error (fp, "expecting a number (invertible)");
+      return;
+    }
+    s->invertible = atoi (fp->token->str);
+    gts_file_next_token (fp);
+    for (i = 0; i < n; i++)
+      for (j = 0; j < n; j++)
+	if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+	  gts_file_error (fp, "expecting a number (M[%d][%d])", i, j);
+	  return;
+	}
+	else {
+	  s->M[i][j] = atof (fp->token->str);
+	  gts_file_next_token (fp);
+	}
+    if (fp->type != '}') {
+      gts_file_error (fp, "expecting a closing brace");
+      return;
+    }
+    gts_file_next_token (fp);
+    fp->scope_max--;
+
+    if (s->invertible)
+      for (i = 0; i < n; i++)
+	for (j = 0; j < n; j++)
+	  s->Mn[i][j] = s->M[i][j];
+  }
+}
+
+static void add_xsin_xcos (FttCell * cell, GfsEventHarmonic * h)
+{
+  guint i;
+
+  for (i = 0; i < h->omega->len; i++) {
+    GFS_VARIABLE (cell, h->A[i]->i) += GFS_VARIABLE (cell, h->v->i)*h->vcos[i];
+    GFS_VARIABLE (cell, h->B[i]->i) += GFS_VARIABLE (cell, h->v->i)*h->vsin[i];
+  }
+}
+
+static void update_A_B_Z (FttCell * cell, GfsEventHarmonic * h)
+{
+  guint n = h->omega->len;
+  guint i, j;
+
+  /* A^n */
+  for (i = 0; i < n; i++) {
+    h->a[i] =     GFS_VARIABLE (cell, h->A[i]->i);
+    h->a[i + n] = GFS_VARIABLE (cell, h->B[i]->i);
+  }
+  h->a[2*n] = GFS_VARIABLE (cell, h->z->i);
+
+  /* X^n = M^n.A^n */
+  for (i = 0; i < 2*n; i++) {
+    h->x[i] = 0.;
+    for (j = 0; j < 2*n + 1; j++)
+      h->x[i] += h->Mn[i][j]*h->a[j];
+  }
+  
+  /* X^n+1 = X^n + Delta^n */
+  for (i = 0; i < n; i++) {
+    h->x[i]     += GFS_VARIABLE (cell, h->v->i)*h->vcos[i];
+    h->x[i + n] += GFS_VARIABLE (cell, h->v->i)*h->vsin[i];
+  }
+  h->x[2*n] = 0.;
+
+  /* A^n+1 = (M^n+1)^-1.X^n+1 */
+  for (i = 0; i < 2*n + 1; i++) {
+    h->a[i] = 0.;
+    for (j = 0; j < 2*n + 1; j++)
+      h->a[i] += h->iM[i][j]*h->x[j];
+  }
+
+  for (i = 0; i < n; i++) {
+    GFS_VARIABLE (cell, h->A[i]->i) = h->a[i];
+    GFS_VARIABLE (cell, h->B[i]->i) = h->a[i + n];
+  }
+  GFS_VARIABLE (cell, h->z->i) = h->a[2*n];
+}
+
+static gboolean gfs_event_harmonic_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_harmonic_class ())->parent_class)->event) 
+      (event, sim)) {
+    GfsEventHarmonic * h = GFS_EVENT_HARMONIC (event);
+    gdouble ** M = h->M, * vsin = h->vsin, * vcos = h->vcos;
+    gdouble ** iM = h->iM, ** Mn = h->Mn;
+    guint i, j, n = h->omega->len;
+
+    for (i = 0; i < n; i++) {
+      vsin[i] = sin (g_array_index (h->omega, gdouble, i)*sim->time.t);
+      vcos[i] = cos (g_array_index (h->omega, gdouble, i)*sim->time.t);
+    }
+
+    for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++) {
+        M[i][j]         += vcos[j]*vcos[i];
+	M[i][n + j]     += vsin[j]*vcos[i];
+        M[n + i][j]     += vcos[j]*vsin[i];
+	M[n + i][n + j] += vsin[j]*vsin[i];
+      }
+      M[i][2*n]     += vcos[i];
+      M[n + i][2*n] += vsin[i];
+    }
+    for (j = 0; j < n; j++) {
+      M[2*n][j]     += vcos[j];
+      M[2*n][n + j] += vsin[j];
+    }
+    M[2*n][2*n] += 1.;
+
+    for (i = 0; i < 2*n + 1; i++)
+      for (j = 0; j < 2*n + 1; j++)
+	iM[i][j] = M[i][j];
+
+    if (!gfs_matrix_inverse (iM, 2*n + 1, 1e-6)) {
+      g_assert (!h->invertible);
+      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) add_xsin_xcos, h);
+    }
+    else {
+      h->invertible = TRUE;
+      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) update_A_B_Z, h);
+      for (i = 0; i < 2*n + 1; i++)
+	for (j = 0; j < 2*n + 1; j++)
+	  Mn[i][j] = M[i][j];
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_event_harmonic_class_init (GtsObjectClass * klass)
+{
+  klass->destroy = gfs_event_harmonic_destroy;
+  klass->read = gfs_event_harmonic_read;
+  klass->write = gfs_event_harmonic_write;
+  GFS_EVENT_CLASS (klass)->event = gfs_event_harmonic_event;
+}
+
+static void gfs_event_harmonic_init (GfsEventHarmonic * object)
+{
+  object->omega = g_array_new (FALSE, FALSE, sizeof (gdouble));
+}
+
+GfsEventClass * gfs_event_harmonic_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_event_harmonic_info = {
+      "GfsEventHarmonic",
+      sizeof (GfsEventHarmonic),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_event_harmonic_class_init,
+      (GtsObjectInitFunc) gfs_event_harmonic_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
+				  &gfs_event_harmonic_info);
+  }
+
+  return klass;
+}
+
 /* GfsEventStop: Object */
 
 static void gfs_event_stop_write (GtsObject * o, FILE * fp)
@@ -959,7 +1263,8 @@ static void copy (FttCell * cell, GfsEventStop * s)
 
 static gboolean gfs_event_stop_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_stop_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_stop_class ())->parent_class)->event) 
+      (event, sim)) {
     GfsEventStop * s = GFS_EVENT_STOP (event);
 
     if (s->last >= 0.) {

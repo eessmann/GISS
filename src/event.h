@@ -161,6 +161,28 @@ GfsEventClass * gfs_event_sum_class  (void);
 
 GfsEventClass * gfs_event_sum2_class (void);
 
+/* GfsEventHarmonic: Header */
+
+typedef struct _GfsEventHarmonic         GfsEventHarmonic;
+
+struct _GfsEventHarmonic {
+  GfsEvent parent;
+
+  GArray * omega;
+  GfsVariable * v, * z, ** A, ** B;
+  gdouble * vsin, * vcos, ** M, ** iM, ** Mn, * x, * a;
+  gchar * Aname, * Bname;
+  gboolean invertible;
+};
+
+#define GFS_EVENT_HARMONIC(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsEventHarmonic,\
+					         gfs_event_harmonic_class ())
+#define GFS_IS_EVENT_HARMONIC(obj)         (gts_object_is_from_class (obj,\
+						 gfs_event_harmonic_class ()))
+
+GfsEventClass * gfs_event_harmonic_class  (void);
+
 /* GfsEventStop: Header */
 
 typedef struct _GfsEventStop         GfsEventStop;

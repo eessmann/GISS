@@ -78,7 +78,11 @@ void               gfs_eigenvalues          (gdouble a[FTT_DIMENSION][FTT_DIMENS
 					     gdouble d[FTT_DIMENSION],
 					     gdouble v[FTT_DIMENSION][FTT_DIMENSION]);
 gboolean           gfs_matrix_inverse       (gdouble ** m, 
-					     guint n);
+					     guint n,
+					     gdouble pivmin);
+gpointer           gfs_matrix_new           (guint n, 
+					     guint size);
+void               gfs_matrix_free          (gpointer m);
 
 #ifdef __cplusplus
 }
