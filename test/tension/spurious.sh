@@ -8,7 +8,7 @@ fi
 
 param=`mktemp /tmp/spurious.XXXXXX`
 
-for adapt in "" "AdaptFunction { istep = 1 } { cmax = 0.1 maxlevel = 5 } { return _Tx*_Tx + _Ty*_Ty; }"; do
+for adapt in "AdaptFunction { istep = 1 } { cmax = 0.1 maxlevel = 5 } _Tx*_Tx+_Ty*_Ty"; do
   if test "$adapt"; then
     echo "Adaptive refinement"
   else

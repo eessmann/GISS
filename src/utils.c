@@ -74,35 +74,30 @@ static gboolean load_module (GfsFunction * f, GtsFile * fp, gchar * mname)
 static void function_read (GtsObject ** o, GtsFile * fp)
 {
   GfsFunction * f = GFS_FUNCTION (*o);
+  GtsTokenType type;
 
   if (GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
-  switch (fp->type) {
+  type = fp->type;
+  switch (type) {
     /* constant value */
   case GTS_INT: case GTS_FLOAT:
     f->val = atof (fp->token->str);
     break;
 
-    /* load GTS file or module */
+    /* load GTS file */
   case GTS_STRING:
     if (strlen (fp->token->str) > 3 &&
 	!strcmp (&(fp->token->str[strlen (fp->token->str) - 4]), ".gts")) {
       if ((f->s = read_surface (fp->token->str, fp)) == NULL)
 	return;
       f->sname = g_strdup (fp->token->str);
+      break;
     }
-    else {
-      if (!g_module_supported ()) {
-	gts_file_error (fp, "expecting a number (val)");
-	return;
-      }
-      else
-	load_module (f, fp, fp->token->str);
-    }
-    break;
+    /* fall through */
 
     /* compile C expression */
   case '{':
@@ -118,16 +113,15 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 #else /* 3D */
       gchar cccommand[] = "gcc `pkg-config gerris3D --cflags --libs` -O -fPIC -shared -x c";
 #endif 
-     gchar finname[] = "/tmp/gfsXXXXXX";
+      gchar finname[] = "/tmp/gfsXXXXXX";
       gchar foutname[] = "/tmp/gfsXXXXXX";
       gchar ferrname[] = "/tmp/gfsXXXXXX";
       gchar ftmpname[] = "/tmp/gfsXXXXXX";
       gint find, foutd, ferrd, ftmpd;
       FILE * fin;
-      guint scope;
-      gchar * cc;
-      gint status, c;
       GfsVariable * v;
+      gchar * cc;
+      gint c, status;
 
       find = mkstemp (finname);
       if (find < 0) {
@@ -158,23 +152,33 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	v = v->next;
       }
       fprintf (fin, "  }\n#line %d \"GfsFunction\"\n", fp->line);
-      f->expr = g_string_new ("{");
-      scope = fp->scope_max;
-      c = gts_file_getc (fp);
-      while (c != EOF && fp->scope > scope) {
-	fputc (c, fin);
-	g_string_append_c (f->expr, c);
-	c = gts_file_getc (fp);
+
+      if (type == GTS_STRING) {
+	f->expr = g_string_new (fp->token->str);
+	fprintf (fin, "return %s;\n", fp->token->str);
+	fputs ("}\n", fin);
+	fclose (fin);
       }
-      fputs ("}\n", fin);
-      g_string_append_c (f->expr, '}');
-      fclose (fin);
-      
-      if (fp->scope != scope) {
-	gts_file_error (fp, "parse error");
-	close (find);
-	remove (finname);
-	return;
+      else {
+	guint scope;
+
+	f->expr = g_string_new ("{");
+	scope = fp->scope_max;
+	c = gts_file_getc (fp);
+	while (c != EOF && fp->scope > scope) {
+	  fputc (c, fin);
+	  g_string_append_c (f->expr, c);
+	  c = gts_file_getc (fp);
+	}
+	fputs ("}\n", fin);
+	g_string_append_c (f->expr, '}');
+	fclose (fin);      
+	if (fp->scope != scope) {
+	  gts_file_error (fp, "parse error");
+	  close (find);
+	  remove (finname);
+	  return;
+	}
       }
 
       foutd = mkstemp (foutname);
@@ -230,6 +234,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       remove (foutname);
       close (ferrd);
       remove (ferrname);
+      if (type == GTS_STRING)
+	gts_file_next_token (fp);
     }
     break;
 
