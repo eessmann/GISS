@@ -1,0 +1,5 @@
+precious ^match$
+precious ^match\.sh$
+precious ^read$
+precious ^read\.sh$
+precious ^timestamp$
