@@ -1775,7 +1775,7 @@ static void cell_traverse_mixed (FttCell * cell,
  * @data: user data to pass to @func.
  * 
  * Traverses a cell tree starting at the given root #FttCell. Calls
- * the given function for each leaf cell which is also a mixed cell.
+ * the given function for each mixed cell.
  */
 void gfs_cell_traverse_mixed (FttCell * root,
 			      FttTraverseType order,
@@ -1919,6 +1919,8 @@ static void gfs_variable_destroy (GtsObject * object)
   g_free (v->name);
   if (v->sources)
     gts_object_destroy (GTS_OBJECT (v->sources));
+  if (v->surface_bc)
+    gts_object_destroy (GTS_OBJECT (v->surface_bc));
 
   (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->destroy) 
     (object);

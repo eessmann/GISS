@@ -106,6 +106,7 @@ static void simulation_write (GtsObject * object, FILE * fp)
 {
   GfsSimulation * sim = GFS_SIMULATION (object);
   GSList * i;
+  GfsVariable * v;
 
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->write)
     (object, fp);
@@ -135,6 +136,16 @@ static void simulation_write (GtsObject * object, FILE * fp)
   while (i) {
     fprintf (fp, "  GModule %s\n", g_module_name (i->data));
     i = i->next;
+  }
+
+  v = GFS_DOMAIN (sim)->variables;
+  while (v) {
+    if (v->surface_bc) {
+      fputs ("  ", fp);
+      (* GTS_OBJECT (v->surface_bc)->klass->write) (GTS_OBJECT (v->surface_bc), fp);
+      fputc ('\n', fp);
+    }
+    v = v->next;
   }
 
   if (GFS_DOMAIN (sim)->max_depth_write < -1) {
@@ -486,7 +497,8 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       if (klass == NULL ||
 	  (!gts_object_class_is_from_class (klass, gfs_refine_class ()) &&
 	   !gts_object_class_is_from_class (klass, gfs_event_class ()) &&
-	   !gts_object_class_is_from_class (klass, gfs_variable_class ()))) {
+	   !gts_object_class_is_from_class (klass, gfs_variable_class ()) &&
+	   !gts_object_class_is_from_class (klass, gfs_surface_generic_bc_class ()))) {
 	gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
 	return;
       }
@@ -523,6 +535,8 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 	}
 	sim->variables = g_slist_append (sim->variables, v);
       }
+      else if (GFS_IS_SURFACE_GENERIC_BC (object))
+	;
       else
 	g_assert_not_reached ();
     }

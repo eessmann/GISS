@@ -100,6 +100,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
                "#include <stdlib.h>\n"
                "#include <stdio.h>\n"
 	       "#include <math.h>\n"
+	       "static double Dirichlet = 1.;\n"
+               "static double Neumann = 0.;\n"
 	       "double f (double x, double y, double z, double t) {\n"
 	       "#line %d \"GfsFunction\"\n",
 	       fp->line);

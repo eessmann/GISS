@@ -456,6 +456,57 @@ void gfs_approximate_projection (GfsDomain * domain,
 }
 
 /**
+ * gfs_predicted_face_velocities:
+ * @domain: a #GfsDomain.
+ * @d: the number of dimensions (2 or 3).
+ * @par: the advection parameters.
+ *
+ * Fills the face (MAC) normal velocities of each leaf cell of @domain
+ * with the predicted values at time t + dt/2 using a godunov type
+ * advection scheme.  
+ */
+void gfs_predicted_face_velocities (GfsDomain * domain,
+				    guint d,
+				    GfsAdvectionParams * par)
+{
+  FttComponent c;
+  FttCellTraverseFunc face_values;
+  GfsUpwinding upwinding;
+
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (par != NULL);
+
+  gfs_domain_timer_start (domain, "predicted_face_velocities");
+
+  gfs_domain_face_traverse (domain, d == 2 ? FTT_XY : FTT_XYZ,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, 
+			    NULL);
+  par->use_centered_velocity = TRUE;
+  if (par->scheme == GFS_NONE) {
+    face_values = (FttCellTraverseFunc) gfs_cell_non_advected_face_values;
+    upwinding = GFS_NO_UPWINDING;
+  }
+  else {
+    face_values = (FttCellTraverseFunc) gfs_cell_advected_face_values;
+    upwinding = GFS_CENTERED_UPWINDING;
+  }
+  par->v = gfs_variable_from_name (domain->variables, "U");
+  for (c = 0; c < d; c++, par->v = par->v->next) {
+    gfs_domain_cell_traverse (domain, 
+    			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+    			      face_values, par);
+    gfs_domain_face_bc (domain, c, par->v);
+    gfs_domain_face_traverse (domain, c,
+    			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) gfs_face_advected_normal_velocity, 
+			      &upwinding);
+  }
+
+  gfs_domain_timer_stop (domain, "predicted_face_velocities");
+}
+
+/**
  * gfs_diffusion:
  * @domain: a #GfsDomain.
  * @par: the multilevel parameters.
@@ -678,53 +729,181 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
   gfs_domain_timer_stop (domain, "tracer_advection_diffusion");
 }
 
-/**
- * gfs_predicted_face_velocities:
- * @domain: a #GfsDomain.
- * @d: the number of dimensions (2 or 3).
- * @par: the advection parameters.
- *
- * Fills the face (MAC) normal velocities of each leaf cell of @domain
- * with the predicted values at time t + dt/2 using a godunov type
- * advection scheme.  
- */
-void gfs_predicted_face_velocities (GfsDomain * domain,
-				    guint d,
-				    GfsAdvectionParams * par)
+/* GfsSurfaceGenericBc: Object */
+
+static void gfs_surface_generic_bc_read (GtsObject ** o, GtsFile * fp)
 {
-  FttComponent c;
-  FttCellTraverseFunc face_values;
-  GfsUpwinding upwinding;
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  GfsSurfaceGenericBc * bc = GFS_SURFACE_GENERIC_BC (*o);
+  GtsObjectClass * klass;
 
-  g_return_if_fail (domain != NULL);
-  g_return_if_fail (par != NULL);
+  if (GTS_OBJECT_CLASS (gfs_surface_generic_bc_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_surface_generic_bc_class ())->parent_class->read) 
+      (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a class name");
+    return;
+  }
+  if (!(klass = gfs_object_class_from_name (fp->token->str))) {
+    gts_file_error (fp, "unknown class `%s'", fp->token->str);
+    return;
+  }
+  if (!gts_object_class_is_from_class (klass, gfs_surface_generic_bc_class ())) {
+    gts_file_error (fp, "class `%s' is not a GfsSurfaceGenericClass", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a variable name");
+    return;
+  }
+  bc->v = gfs_variable_from_name (domain->variables, fp->token->str);
+  if (!bc->v) {
+    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+    return;
+  }
+  if (bc->v->surface_bc) {
+    gts_file_error (fp, "variable `%s' already has a surface boundary condition", 
+		    fp->token->str);
+    return;
+  }
+  bc->v->surface_bc = bc;
+  gts_file_next_token (fp);
+}
 
-  gfs_domain_timer_start (domain, "predicted_face_velocities");
+static void gfs_surface_generic_bc_write (GtsObject * o, FILE * fp)
+{
+  if (GTS_OBJECT_CLASS (gfs_surface_generic_bc_class ())->parent_class->write)
+    (* GTS_OBJECT_CLASS (gfs_surface_generic_bc_class ())->parent_class->write) 
+      (o, fp);
+  fprintf (fp, "%s %s", o->klass->info.name, GFS_SURFACE_GENERIC_BC (o)->v->name);
+}
 
-  gfs_domain_face_traverse (domain, d == 2 ? FTT_XY : FTT_XYZ,
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, 
-			    NULL);
-  par->use_centered_velocity = TRUE;
-  if (par->scheme == GFS_NONE) {
-    face_values = (FttCellTraverseFunc) gfs_cell_non_advected_face_values;
-    upwinding = GFS_NO_UPWINDING;
+static void gfs_surface_generic_bc_class_init (GfsSurfaceGenericBcClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = gfs_surface_generic_bc_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_surface_generic_bc_write;
+}
+
+GfsSurfaceGenericBcClass * gfs_surface_generic_bc_class (void)
+{
+  static GfsSurfaceGenericBcClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_surface_generic_bc_info = {
+      "GfsSurfaceGenericBc",
+      sizeof (GfsSurfaceGenericBc),
+      sizeof (GfsSurfaceGenericBcClass),
+      (GtsObjectClassInitFunc) gfs_surface_generic_bc_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_object_class ()),
+				  &gfs_surface_generic_bc_info);
+  }
+
+  return klass;
+}
+
+/* GfsSurfaceBc: Object */
+
+static void gfs_surface_bc_destroy (GtsObject * object)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_SURFACE_BC (object)->type));
+  gts_object_destroy (GTS_OBJECT (GFS_SURFACE_BC (object)->val));
+
+  (* GTS_OBJECT_CLASS (gfs_surface_bc_class ())->parent_class->destroy) (object);
+}
+
+static void gfs_surface_bc_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsSurfaceBc * bc = GFS_SURFACE_BC (*o);
+
+  if (GTS_OBJECT_CLASS (gfs_surface_bc_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_surface_bc_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  if (!strcmp (fp->token->str, "Neumann")) {
+    bc->type->val = 0.;
+    gts_file_next_token (fp);
+  }
+  else if (!strcmp (fp->token->str, "Dirichlet")) {
+    bc->type->val = 1.;
+    gts_file_next_token (fp);
   }
   else {
-    face_values = (FttCellTraverseFunc) gfs_cell_advected_face_values;
-    upwinding = GFS_CENTERED_UPWINDING;
+    gfs_object_simulation (bc->type) = gfs_object_simulation (bc);
+    gfs_function_read (bc->type, fp);
+    if (fp->type == GTS_ERROR)
+      return;
   }
-  par->v = gfs_variable_from_name (domain->variables, "U");
-  for (c = 0; c < d; c++, par->v = par->v->next) {
-    gfs_domain_cell_traverse (domain, 
-    			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-    			      face_values, par);
-    gfs_domain_face_bc (domain, c, par->v);
-    gfs_domain_face_traverse (domain, c,
-    			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_advected_normal_velocity, 
-			      &upwinding);
+  gfs_object_simulation (bc->val) = gfs_object_simulation (bc);
+  gfs_function_read (bc->val, fp);
+}
+
+static void gfs_surface_bc_write (GtsObject * o, FILE * fp)
+{
+  GfsSurfaceBc * bc = GFS_SURFACE_BC (o);
+
+  if (GTS_OBJECT_CLASS (gfs_surface_bc_class ())->parent_class->write)
+    (* GTS_OBJECT_CLASS (gfs_surface_bc_class ())->parent_class->write) (o, fp);
+  if (!bc->type->f)
+    fprintf (fp, " %s", bc->type->val ? "Dirichlet" : "Neumann");
+  else
+    gfs_function_write (bc->type, fp);
+  gfs_function_write (bc->val, fp);
+}
+
+static void gfs_surface_bc_bc (FttCell * cell, GfsSurfaceGenericBc * b)
+{
+  GfsSurfaceBc * bc = GFS_SURFACE_BC (b);
+  gdouble t = gfs_object_simulation (bc)->time.t;
+  gdouble val = gfs_function_value (bc->val, &GFS_STATE (cell)->solid->ca, t);
+
+  if (gfs_function_value (bc->type, &GFS_STATE (cell)->solid->ca, t) > 0.) {
+    cell->flags |= GFS_FLAG_DIRICHLET;
+    GFS_STATE (cell)->solid->fv = val;
+  }
+  else {
+    cell->flags &= ~GFS_FLAG_DIRICHLET;
+    GFS_STATE (cell)->solid->fv = val; /* fixme: scaling is probably wrong */
+  }
+}
+
+static void gfs_surface_bc_class_init (GfsSurfaceGenericBcClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = gfs_surface_bc_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_surface_bc_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_surface_bc_destroy;
+  klass->bc = gfs_surface_bc_bc;
+}
+
+static void gfs_surface_bc_init (GfsSurfaceBc * object)
+{
+  object->type = gfs_function_new (gfs_function_class (), 0.);
+  object->val  = gfs_function_new (gfs_function_class (), 0.);
+}
+
+GfsSurfaceGenericBcClass * gfs_surface_bc_class (void)
+{
+  static GfsSurfaceGenericBcClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_surface_bc_info = {
+      "GfsSurfaceBc",
+      sizeof (GfsSurfaceBc),
+      sizeof (GfsSurfaceGenericBcClass),
+      (GtsObjectClassInitFunc) gfs_surface_bc_class_init,
+      (GtsObjectInitFunc) gfs_surface_bc_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_surface_generic_bc_class ()),
+				  &gfs_surface_bc_info);
   }
 
-  gfs_domain_timer_stop (domain, "predicted_face_velocities");
+  return klass;
 }

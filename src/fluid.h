@@ -77,7 +77,7 @@ typedef enum {
 
 struct _GfsSolidVector {
   gdouble s[FTT_NEIGHBORS];
-  gdouble a, sa, v, fv;
+  gdouble a, v, fv;
   FttCell * merged;
   FttVector cm, ca;
 };
@@ -92,6 +92,8 @@ typedef enum {
 /* GfsVariable: Header */
 
 typedef struct _GfsVariable                GfsVariable;
+typedef struct _GfsSurfaceGenericBc        GfsSurfaceGenericBc;
+
 typedef void (* GfsVariableDerivedFunc)    (FttCell * cell, GfsVariable * v);
 typedef void (* GfsVariableFineCoarseFunc) (FttCell * cell, GfsVariable * v);
 
@@ -106,6 +108,7 @@ struct _GfsVariable {
   GfsVariableDerivedFunc derived;
   GfsVariableFineCoarseFunc fine_coarse;
   GtsContainer * sources;
+  GfsSurfaceGenericBc * surface_bc;
   GfsVariable * next;
   GtsObject * p;
 };

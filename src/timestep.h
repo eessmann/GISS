@@ -58,6 +58,10 @@ void          gfs_correct_centered_velocities (GfsDomain * domain,
 void          gfs_approximate_projection      (GfsDomain * domain,
 					       GfsMultilevelParams * par,
 					       GfsAdvectionParams * apar);
+void          gfs_predicted_face_velocities   (GfsDomain * domain,
+					       guint d,
+					       GfsAdvectionParams * par);
+
 void          gfs_diffusion                   (GfsDomain * domain,
 					       GfsMultilevelParams * par,
 					       GfsVariable * v);
@@ -69,9 +73,57 @@ void          gfs_tracer_advection_diffusion  (GfsDomain * domain,
 					       GfsAdvectionParams * par,
 					       GfsMultilevelParams * dpar,
 					       GfsVariable * half);
-void          gfs_predicted_face_velocities   (GfsDomain * domain,
-					       guint d,
-					       GfsAdvectionParams * par);
+
+/* GfsSurfaceGenericBc: Header */
+
+struct _GfsSurfaceGenericBc {
+  /*< private >*/
+  GtsObject parent;
+
+  /*< public >*/
+  GfsVariable * v;  
+};
+
+typedef struct _GfsSurfaceGenericBcClass    GfsSurfaceGenericBcClass;
+
+struct _GfsSurfaceGenericBcClass {
+  /*< private >*/
+  GtsObjectClass parent_class;
+
+  /*< public >*/
+  void (* bc) (FttCell *, GfsSurfaceGenericBc *);
+};
+
+#define GFS_SURFACE_GENERIC_BC(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSurfaceGenericBc,\
+					         gfs_surface_generic_bc_class ())
+#define GFS_SURFACE_GENERIC_BC_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
+						 GfsSurfaceGenericBcClass,\
+						 gfs_surface_generic_bc_class())
+#define GFS_IS_SURFACE_GENERIC_BC(obj)         (gts_object_is_from_class (obj,\
+						 gfs_surface_generic_bc_class ()))
+
+GfsSurfaceGenericBcClass * gfs_surface_generic_bc_class  (void);
+
+/* GfsSurfaceBc: Header */
+
+typedef struct _GfsSurfaceBc         GfsSurfaceBc;
+
+struct _GfsSurfaceBc {
+  /*< private >*/
+  GfsSurfaceGenericBc parent;
+
+  /*< public >*/
+  GfsFunction * type, * val;
+};
+
+#define GFS_SURFACE_BC(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSurfaceBc,\
+					         gfs_surface_bc_class ())
+#define GFS_IS_SURFACE_BC(obj)         (gts_object_is_from_class (obj,\
+						 gfs_surface_bc_class ()))
+
+GfsSurfaceGenericBcClass * gfs_surface_bc_class  (void);
 
 #ifdef __cplusplus
 }

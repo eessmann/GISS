@@ -663,8 +663,7 @@ void gfs_diffusion_rhs (FttCell * cell, GfsVariable * v)
   if (GFS_IS_MIXED (cell)) {
     a = GFS_STATE (cell)->solid->a*GFS_STATE (cell)->g[0];
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-      f = gfs_cell_dirichlet_gradient_flux (cell, v->i, -1, 
-					    GFS_STATE (cell)->solid->fv);
+      f = gfs_cell_dirichlet_gradient_flux (cell, v->i, -1, GFS_STATE (cell)->solid->fv);
     else
       f = GFS_STATE (cell)->solid->fv;
   }

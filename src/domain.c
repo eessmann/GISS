@@ -654,18 +654,14 @@ void gfs_domain_match (GfsDomain * domain)
 
 static void dirichlet_bc (FttCell * cell)
 {
-  if (GFS_IS_MIXED (cell)) {
-    cell->flags |= GFS_FLAG_DIRICHLET;
-    GFS_STATE (cell)->solid->fv = 0.;
-  }
+  cell->flags |= GFS_FLAG_DIRICHLET;
+  GFS_STATE (cell)->solid->fv = 0.;
 }
 
 static void neumann_bc (FttCell * cell)
 {
-  if (GFS_IS_MIXED (cell)) {
-    cell->flags &= ~GFS_FLAG_DIRICHLET;
-    GFS_STATE (cell)->solid->fv = 0.;
-  }
+  cell->flags &= ~GFS_FLAG_DIRICHLET;
+  GFS_STATE (cell)->solid->fv = 0.;
 }
 
 /**
@@ -681,15 +677,18 @@ void gfs_domain_surface_bc (GfsDomain * domain,
   g_return_if_fail (domain != NULL);
   g_return_if_fail (v != NULL);
 
-  /* for the moment conditions are always Dirichlet u = v = w = 0 for
-     the component of the velocity and Neumann f = 0 for all the other
-     variables */
-  if (GFS_VELOCITY_COMPONENT (v->i) < FTT_DIMENSION)
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			      (FttCellTraverseFunc) dirichlet_bc, NULL);
-  else
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			      (FttCellTraverseFunc) neumann_bc, NULL);
+  if (v->surface_bc)
+    gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
+      (FttCellTraverseFunc) GFS_SURFACE_GENERIC_BC_CLASS (GTS_OBJECT (v->surface_bc)->klass)->bc, 
+			       v->surface_bc);
+  else {
+    if (GFS_VELOCITY_COMPONENT (v->i) < FTT_DIMENSION)
+      gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
+				 (FttCellTraverseFunc) dirichlet_bc, NULL);
+    else
+      gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
+				 (FttCellTraverseFunc) neumann_bc, NULL);
+  }
 }
 
 static void box_traverse (GfsBox * box, gpointer * datum)
@@ -813,7 +812,7 @@ static void traverse_mixed (GfsBox * box, gpointer * datum)
  * @func: the function to call for each visited #FttCell.
  * @data: user data to pass to @func.
  *
- * Calls @func for each leaf mixed cell of @domain.
+ * Calls @func for each mixed cell of @domain.
  */
 void gfs_domain_traverse_mixed (GfsDomain * domain,
 				FttTraverseType order,

@@ -288,8 +288,8 @@ static void source_write (GtsObject * o, FILE * fp)
 }
 
 static gdouble source_value (GfsSourceGeneric * s, 
-				 FttCell * cell, 
-				 GfsVariable * v)
+			     FttCell * cell, 
+			     GfsVariable * v)
 {
   FttVector p;
 

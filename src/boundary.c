@@ -371,7 +371,6 @@ static void match (FttCell * cell, GfsBoundary * boundary)
 	GFS_STATE (cell)->solid = g_malloc0 (sizeof (GfsSolidVector));
       t = GFS_STATE (cell)->solid;
       t->a = s->a;
-      t->sa = s->sa;
       for (d = 0; d < FTT_NEIGHBORS; d++)
 	if (d/2 == boundary->d/2)
 	  t->s[d] = s->s[FTT_OPPOSITE_DIRECTION (d)];

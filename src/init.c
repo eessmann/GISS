@@ -218,6 +218,8 @@ void gfs_init (int * argc, char *** argv)
   gfs_variable_class ();
     gfs_variable_tracer_class ();
 
+  gfs_surface_bc_class ();
+
   gfs_box_class ();
     gfs_box_not_adapt_class ();
   gfs_gedge_class ();
