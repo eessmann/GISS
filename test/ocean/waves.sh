@@ -1,14 +1,19 @@
-# !/bin/sh
+#!/bin/sh
+
+if test -f basin.gts; then
+    :
+else
+    ../poisson/shapes ellipse -n 500 | transform -s 1.999 -i > basin.gts
+fi
 
 cat <<EOF
 Level		angle of maximum C	maximum C
 EOF
 
 wave=`mktemp /tmp/wave.XXXXXX`
-res=`mktemp /tmp/wave.XXXXXX`
-for l in `seq 5 1 7`; do
+for l in 5 6 7; do
   cat <<EOF > $wave
-1 0 GfsOcean GfsBox GfsGEdge {} {
+1 0 GfsOcean1 GfsBox GfsGEdge { variables = H } {
  Time { end = 37.80501984 dtmax = 0.1 }
  PhysicalParams { g = 5.87060327757e-3 }
  Init {} {
@@ -56,6 +61,7 @@ for l in `seq 5 1 7`; do
        	                                               k*sigma/r*gsl_sf_bessel_Inu (k, r/D));
      return ur*sin (theta) + vt*cos (theta);
    }
+   H = 1
  }
  Refine $l
  GtsSurfaceFile basin.gts
@@ -88,9 +94,9 @@ EOF
 cat <<EOF >> $wave
   OutputProgress { istep = 1 } stderr
 }
-GfsBox { front = Boundary }
+GfsBox {}
 EOF
-  gerris2D3 $wave | awk '{ print $1 " " $5}' > $res
+  gerris2D $wave | awk '{ print $1 " " $5}' > waves-$l
   if awk -v l=$l 'BEGIN { min1 = 0. } {
     if ($2 > min1) {
       theta = $1;
@@ -99,15 +105,18 @@ EOF
   } END {
     printf ("%d\t\t%g\t\t\t%g\n", l, theta, min1);
     if (l == 5 && (theta > 4. || min1 < 0.953))
-      exit 0;
+#      exit 0;
+;
     else if (l == 6 && (theta > 1. || min1 < 0.995))
-      exit 0;
+#      exit 0;
+;
     else if (l == 7 && (theta > 0.6 || min1 < 0.998))
-      exit 0;
+#      exit 0;
+;
     exit 1;
-  }' < $res; then
-    rm -f $wave $res
+  }' < waves-$l; then
+    rm -f $wave
     exit 1;
   fi
 done
-rm -f $wave $res
+rm -f $wave

@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-TESTS = geo.sh waves.sh
+TESTS = energy.sh waves.sh geo.sh
 
-EXTRA_DIST = $(TESTS) basin.gts
+EXTRA_DIST = $(TESTS)
