@@ -102,7 +102,7 @@ typedef struct {
   gint inside[4];
 } CellFace;
 
-static void face_fractions (CellFace * f, GfsSolidVector * solid, gdouble h)
+static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
 {
   static guint etod[] = { 3, 0, 2, 1 };
   guint k, m;
@@ -162,7 +162,7 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, gdouble h)
   }
   solid->cm.x /= 3.*solid->a;
   solid->cm.y /= 3.*solid->a;
-  solid->a /= 2.*h*h;
+  solid->a /= 2.*h->x*h->y;
 }
 
 #if FTT_2D
@@ -185,16 +185,17 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 					      GtsSurface * s)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
-  gdouble h = ftt_cell_size (cell)/2.;
+  FttVector h;
   FttVector p;
   CellFace f;
   guint i, n1 = 0;
 
   ftt_cell_pos (cell, &p);
-  f.p[0].x = p.x - h; f.p[0].y = p.y - h; f.p[0].z = 0.;
-  f.p[1].x = p.x + h; f.p[1].y = p.y - h; f.p[1].z = 0.;
-  f.p[2].x = p.x + h; f.p[2].y = p.y + h; f.p[2].z = 0.;
-  f.p[3].x = p.x - h; f.p[3].y = p.y + h; f.p[3].z = 0.;
+  h.x = h.y = ftt_cell_size (cell);
+  f.p[0].x = p.x - h.x/2.; f.p[0].y = p.y - h.y/2.; f.p[0].z = 0.;
+  f.p[1].x = p.x + h.x/2.; f.p[1].y = p.y - h.y/2.; f.p[1].z = 0.;
+  f.p[2].x = p.x + h.x/2.; f.p[2].y = p.y + h.y/2.; f.p[2].z = 0.;
+  f.p[3].x = p.x - h.x/2.; f.p[3].y = p.y + h.y/2.; f.p[3].z = 0.;
   f.x[0] = f.x[1] = f.x[2] = f.x[3] = 0.;
   f.n[0] = f.n[1] = f.n[2] = f.n[3] = 0;
   f.inside[0] = f.inside[1] = f.inside[2] = f.inside[3] = 0;
@@ -219,7 +220,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
   case 2: case 4: {
     if (!solid)
       GFS_STATE (cell)->solid = solid = g_malloc (sizeof (GfsSolidVector));
-    face_fractions (&f, solid, 2.*h);
+    face_fractions (&f, solid, &h);
     break;
   }
   default:
@@ -227,7 +228,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 	   "the surface is probably not closed (n1 = %d)", n1);
   }
 }
-#else /* 3D */
+#else /* 2D3 or 3D */
 #include "isocube.h"
 
 typedef struct {
@@ -252,7 +253,7 @@ static void triangle_cube_intersection (GtsTriangle * t, CellCube * cube)
   }
 }
 
-static void rotate (CellFace * f, FttComponent c)
+static void rotate (CellFace * f, FttVector * h, FttComponent c)
 {
   guint i;
 
@@ -261,10 +262,12 @@ static void rotate (CellFace * f, FttComponent c)
     for (i = 0; i < 4; i++) {
       f->p[i].x = f->p[i].y; f->p[i].y = f->p[i].z;
     }
+    h->x = h->y; h->y = h->z;
     break;
   case FTT_Y:
     for (i = 0; i < 4; i++)
       f->p[i].y = f->p[i].z;
+    h->y = h->z;
     break;
   case FTT_Z:
     break;
@@ -273,24 +276,35 @@ static void rotate (CellFace * f, FttComponent c)
   }
 }
 
+static void cell_size (FttCell * cell, FttVector * h)
+{
+  h->x = h->y = ftt_cell_size (cell);
+#if FTT_2D3
+  h->z = 1.;
+#else  /* 3D */
+  h->z = h->x;
+#endif /* 3D */
+}
+
 static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
-  gdouble h = ftt_cell_size (cell);
   CellCube cube;
-  FttVector o, ca = {0., 0., 0.};
+  FttVector o, ca = {0., 0., 0.}, h;
   guint i, n1 = 0;
   gint inside[8] = {0,0,0,0,0,0,0,0};
 
   ftt_cell_pos (cell, &o);
-  o.x -= h/2.; o.y -= h/2.; o.z -= h/2.;
+  cell_size (cell, &h);
+  for (i = 0; i < FTT_DIMENSION; i++)
+    (&o.x)[i] -= (&h.x)[i]/2.;
   for (i = 0; i < 12; i++) {
     cube.x[i] = 0.; cube.n[i] = 0; cube.inside[i] = 0;
   }
   for (i = 0; i < 8; i++) { /* for each vertex of the cube */
-    cube.p[i].x = o.x + h*vertex[i].x;
-    cube.p[i].y = o.y + h*vertex[i].y;
-    cube.p[i].z = o.z + h*vertex[i].z;
+    cube.p[i].x = o.x + h.x*vertex[i].x;
+    cube.p[i].y = o.y + h.y*vertex[i].y;
+    cube.p[i].z = o.z + h.z*vertex[i].z;
   }
 
   gts_surface_foreach_face (s, (GtsFunc) triangle_cube_intersection, &cube);
@@ -367,8 +381,11 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
     }
     case 2: case 4: { /* the face is cut 2 or 4 times */
       GfsSolidVector sol;
-      rotate (&f, i/2);
-      face_fractions (&f, &sol, h);
+      FttVector h1;
+
+      h1 = h;
+      rotate (&f, &h1, i/2);
+      face_fractions (&f, &sol, &h1);
       solid->s[i] = sol.a;
       break;
     }
@@ -392,7 +409,7 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
     FttComponent c;
 
     for (c = 0; c < FTT_DIMENSION; c++) {
-      (&ca.x)[c] = ((&ca.x)[c] - (&o.x)[c])/h;
+      (&ca.x)[c] = ((&ca.x)[c] - (&o.x)[c])/(&h.x)[c];
       (&m.x)[c] = solid->s[2*c + 1] - solid->s[2*c];
       if ((&m.x)[c] < 0.) {
 	(&m.x)[c] = - (&m.x)[c];
@@ -409,7 +426,8 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
       solid->a = gfs_plane_volume (&m, alpha, 1.);
       gfs_plane_center (&m, alpha, solid->a, &solid->cm);
       for (c = 0; c < FTT_DIMENSION; c++)
-	(&solid->cm.x)[c] = (&o.x)[c] + (sym[c] ? 1. - (&solid->cm.x)[c] : (&solid->cm.x)[c])*h;
+	(&solid->cm.x)[c] = (&o.x)[c] + 
+	  (sym[c] ? 1. - (&solid->cm.x)[c] : (&solid->cm.x)[c])*(&h.x)[c];
     }
     else { /* degenerate intersections */
       solid->a = 0.;
@@ -423,7 +441,7 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
     }
   }
 }
-#endif /* 3D */
+#endif /* 2D3 or 3D */
 
 static gdouble solid_sa (GfsSolidVector * s)
 {
