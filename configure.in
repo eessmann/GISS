@@ -416,4 +416,5 @@ test/tension/Makefile
 doc/Makefile
 doc/tutorial/Makefile
 doc/examples/Makefile
+doc/examples/gfs2doc
 ])

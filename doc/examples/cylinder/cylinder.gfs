@@ -36,7 +36,7 @@
 # Author: St\'ephane Popinet
 # Command: gerris2D cylinder.gfs
 # Version: 0.6.4
-# Required files: cylinder.gfs cylinder.gts
+# Required files: cylinder.gts
 # Running time: 32 minutes
 # Generated files: t.mpg vort.mpg t.eps vort.eps
 #

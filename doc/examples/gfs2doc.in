@@ -1,0 +1,73 @@
+#!/usr/bin/python
+
+import sys
+import os
+import stat
+import glob
+import tempfile
+
+sys.path.append("@prefix@/lib/gerris")
+import gfs2tex
+
+if len(sys.argv) < 2:
+    print "usage: gfs2doc DIR1 DIR2..."
+    sys.exit(1)
+
+dico = {}
+for f in glob.glob("@abs_top_srcdir@/doc/reference/*.html"):
+    gfs2tex.dictionary(dico,open(f))
+    
+for d in sys.argv[1:]:
+    example = gfs2tex.Example("./" + d)
+    example.write(dico)
+    wdname = tempfile.mkdtemp()
+    tex = open(wdname + "/" + example.name + ".tex", "w")
+    tex.write(r"""
+    \documentclass[a4paper]{article}
+    \usepackage{html}
+    \usepackage{color}
+    \usepackage{graphicx}
+    \pagecolor{white}
+    
+    \oddsidemargin=4mm
+    \evensidemargin=-1mm
+    \topmargin=-7mm
+    \textwidth=15.42cm
+    \textheight=23.2cm
+    
+    \begin{document}
+    \section{Examples}
+    """)
+    tex.write(r"\input{" + example.name + "/" + example.name + ".tex" + "}\n")
+    tex.write("\\end{document}\n")
+    tex.close()
+    os.symlink(os.getcwd() + "/" + example.name, wdname + "/" + example.name)
+    if not os.system("rm -r -f " + example.name + ".pdf " + example.name + "_html" +\
+              "&& cd " + wdname + \
+              "&& latex -interaction=nonstopmode > /dev/null 2>&1 " + example.name + ".tex" +\
+              "&& latex -interaction=nonstopmode " + example.name + ".tex") and \
+       not os.system("cd " + wdname + \
+              "&& dvips -Ppdf -G0 " + example.name + ".dvi -o " + example.name + ".ps" +\
+              "&& ps2pdf -sPAPERSIZE=a4 -dMaxSubsetPct=100 -dCompatibilityLevel=1.2 -dSubsetFonts=true -dEmbedAllFonts=true " + example.name + ".ps " + example.name + ".pdf" +\
+              "&& mv " + example.name + ".pdf " + os.getcwd()):
+        print "\n\nSuccessfully generated file: " + example.name + ".pdf"
+        hname = wdname + "/" + example.name + "_html"
+        os.mkdir(hname)
+        os.symlink("../" + example.name, hname + "/" + example.name)
+        if not os.system("cd " + wdname + \
+                  "&& latex2html -dir " + hname + " -no_math -html_version 3.2,math -address \"\" -info \"\" -split 0 -no_navigation -t \"Example " + example.name + "\" -white " + \
+                         example.name + ".tex" + \
+                  "&& mv " + hname + " " + os.getcwd()):
+            print "\n\nSuccessfully generated directory: " + example.name + "_html"
+            files = example.name + "/" + example.name + ".gfs"
+            for f in example.required:
+                files += " " + example.name + "/" + f
+            if not os.system("tar czf " + example.name + ".tgz " + files):
+                print "Successfully generated file: " + example.name + ".tgz"
+            else:
+                print "Errors occured while generating file: " + example.name + ".tgz"
+        else:
+            print "\n\nErrors occured while generating directory: " + example.name + "_html"
+    else:
+        print "\n\nErrors occured while generating file: " + example.name + ".pdf"
+    os.system("rm -r -f " + wdname)

@@ -9,13 +9,23 @@ EXTRA_DIST = \
 	gfs2tex.py \
 	gfs2tex
 
+bin_SCRIPTS = \
+	gfs2doc
+
+BUILT_SOURCES= \
+	gfs2doc
+
+CLEANFILES = $(BUILT_SOURCES)
+
+dist_pkglib_DATA = gfs2tex.py
+
+gfs2doc: gfs2doc.in
+
 clean-generic:
 	$(RM) *.dvi *.aux *.log *.toc *.out examples.tex *.pyc
 
-examples.tar.gz: examples.ps.gz
+examples: examples.ps.gz
 	latex2html -no_math -html_version 3.2,math -address "" -info "" -split +3 -show_section_numbers -toc_depth 5 -t "Gerris Examples" -local_icons -white examples.tex
-	tar cf examples.tar examples
-	gzip -f --best examples.tar
 
 examples.dvi: examples.tex
 	latex -interaction=nonstopmode examples.tex > /dev/null 2>&1

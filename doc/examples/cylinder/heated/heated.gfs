@@ -21,7 +21,7 @@
 # Author: St\'ephane Popinet
 # Command: gerris2D heated.gfs
 # Version: 0.6.4
-# Required files: heated.gfs ../cylinder.gts
+# Required files: ../cylinder.gts
 # Running time: 22 minutes
 # Generated files: t.mpg t.eps
 #

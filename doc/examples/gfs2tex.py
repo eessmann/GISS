@@ -11,19 +11,36 @@ def generated(lines):
             return record[3:]
     return []
 
-def dictionary(d,path,file):
+def dictionary(d,file):
+    p = re.compile(r">\w*_class</A\n")
     instruct = 0
     for line in file:
         record = line.split()
-        if len(record) == 2 and record[0] == "struct" and record[1] == "<A":
+        if re.match(p,line) != None:
+            klass = ""
+            cap = 1
+            for c in line[1:-9]:
+                if c == "_":
+                    cap = 1
+                elif cap:
+                    klass += c.capitalize()
+                    cap = 0
+                else:
+                    klass += c
+            if klass == "GfsOutputPpm":
+                klass = "GfsOutputPPM"
+            d[klass] = href
+        elif len(record) == 2 and record[0] == "struct" and record[1] == "<A":
             instruct = 1
         elif len(record) == 1 and record[0] == ">;":
             instruct = 0
         elif instruct:
             if line[0:5] == "HREF=":
-                val = path + "/" + line[6:-2]
+                val = line[6:-2]
             elif line[0] == ">" and line[-4:] == "</A\n":
                 d[line[1:-4]] = val
+        elif line[0:5] == "HREF=":
+            href = line[6:line.find("#")]
 
 class Example:
     def __init__(self,path):
@@ -92,14 +109,12 @@ class Example:
         file.write("\\item[Author]" + self.author + "\n")
         file.write("\\item[Command]" + "{\\tt " + self.command + "}\n")
         file.write("\\item[Version]" + self.version + "\n")
-        required = ""
+        f = self.name + ".gfs"
+        required = " " + f + \
+                   " \\htmladdnormallinkfoot{(view)}{" + self.path + "/" + f + ".html}" +\
+                   " \\htmladdnormallinkfoot{(download)}{" + self.path + "/" + f + "}\\\\"
         for f in self.required:
-            if f[-4:] == ".gfs":
-                required += " " + f + \
-                            " \\htmladdnormallinkfoot{(view)}{" + self.path + "/" + f + ".html}" +\
-                            " \\htmladdnormallinkfoot{(download)}{" + self.path + "/" + f + "}\\\\"
-            else:
-                required += " \\htmladdnormallinkfoot{" + f + "}{" + self.path + "/" + f + "}"
+            required += " \\htmladdnormallinkfoot{" + f + "}{" + self.path + "/" + f + "}"
         file.write("\\item[Required files]" + required + "\n")
         file.write("\\item[Running time]" + self.time + "\n")
         file.write("\\end{description}\n")
@@ -109,7 +124,9 @@ class Example:
     def colorize(self,dico):
         file = open(self.path + "/" + self.name + ".gfs")
         out = open(self.path + "/" + self.name + ".gfs.html", 'w')
-        out.write("<html>\n<body>\n")
+        path = "../" * (self.path.count("/") + 2) + "reference/"
+        out.write("<html><head><title>\n" + self.name + ".gfs")
+        out.write("</title></head><body><tt>\n")
         infile = insthg = 0
         for line in file:
             l = ""
@@ -152,8 +169,8 @@ class Example:
                     elif dico.has_key("Gfs" + r):
                         key = "Gfs" + r
                     if key != None:
-                        out.write("<a href=\"" + dico[key] + "\">" + r + "</a> ")
+                        out.write("<a href=\"" + path + dico[key] + "\">" + r + "</a> ")
                     else:
                         out.write(r + " ")
                 out.write("<br>\n")
-        out.write("</body>\n</html>\n")
+        out.write("</tt></body>\n</html>\n")
