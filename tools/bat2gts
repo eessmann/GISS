@@ -108,7 +108,7 @@ mapproject -Dc -C $proj $area |\
     if ($1 < 0.71 && $1 > -0.71 && $2 < 0.71 && $2 > -0.71)
       print $1 " " $2 " " (coast - $3)/H;
   }
-' | sort | uniq | happrox -f $verbose -C -r `awk -v H=$H 'BEGIN{print 1./H}'` -c $relative |\
+' | sort | uniq | happrox -f $verbose -r `awk -v H=$H 'BEGIN{print 1./H}'` -c $relative |\
 transform --rz $angle | transform --revert --tz 0.5
 
 cat <<EOF > lolat2xy
