@@ -167,7 +167,6 @@ gfs_get_from_below_extensive
 gfs_get_from_above
 gfs_cell_coarse_init
 gfs_cell_fine_init
-gfs_cell_init_fraction
 gfs_velocity_norm
 gfs_velocity_norm2
 gfs_divergence
@@ -319,6 +318,7 @@ gfs_domain_norm_velocity
 gfs_domain_stats_balance
 gfs_domain_stats_solid
 gfs_domain_solid_force
+gfs_domain_init_fraction
 gfs_domain_read
 gfs_domain_split
 gfs_domain_variable_sources

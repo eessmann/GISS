@@ -15,7 +15,7 @@ The syntax in parameter files is as follows:
 [ #GfsGenericInit ] C surface.gts
 </programlisting>
 </informalexample>
-where C is a variable name and surface.gts is a closed, manifold surface.
+where C is a variable name and surface.gts is an orientable surface.
 </para>
 
 <!-- ##### SECTION See_Also ##### -->

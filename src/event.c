@@ -1087,8 +1087,6 @@ static void gfs_init_fraction_destroy (GtsObject * object)
 
   if (init->surface)
     gts_object_destroy (GTS_OBJECT (init->surface));
-  if (init->stree)
-    gts_bb_tree_destroy (init->stree, TRUE);  
 
   (* GTS_OBJECT_CLASS (gfs_init_fraction_class ())->parent_class->destroy) 
     (object);
@@ -1098,7 +1096,6 @@ static void gfs_init_fraction_read (GtsObject ** o, GtsFile * fp)
 {
   GfsInitFraction * init;
   GfsDomain * domain;
-  GtsSurface * self;
 
   if (GTS_OBJECT_CLASS (gfs_init_fraction_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_init_fraction_class ())->parent_class->read) 
@@ -1162,20 +1159,7 @@ static void gfs_init_fraction_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "surface is not orientable");
     return;
   }
-  if (!gts_surface_is_closed (init->surface)) {
-    gts_file_error (fp, "surface is not closed");
-    return;
-  }
-  if ((self = gts_surface_is_self_intersecting (init->surface))) {
-    gts_object_destroy (GTS_OBJECT (self));
-    gts_file_error (fp, "surface is self-intersecting");
-    return;
-  }
   
-  init->stree = gts_bb_tree_surface (init->surface);
-  if (gts_surface_volume (init->surface) < 0.)
-    init->is_open = TRUE;
-
   gts_file_next_token (fp);
 }
 
@@ -1191,18 +1175,13 @@ static void gfs_init_fraction_write (GtsObject * o, FILE * fp)
   fputs ("}\n", fp);
 }
 
-static void box_init_fraction (GfsBox * box, GfsInitFraction * init)
-{
-  gfs_cell_init_fraction (box->root, 
-			  init->surface, init->stree, init->is_open,
-			  init->c);
-}
-
 static gboolean gfs_init_fraction_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_fraction_class ())->parent_class)->event) (event, sim)) {
-    gts_container_foreach (GTS_CONTAINER (sim),
-			   (GtsFunc) box_init_fraction, event);
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_fraction_class ())->parent_class)->event) 
+      (event, sim)) {
+    gfs_domain_init_fraction (GFS_DOMAIN (sim), 
+			      GFS_INIT_FRACTION (event)->surface,
+			      GFS_INIT_FRACTION (event)->c);
     return TRUE;
   }
   return FALSE;

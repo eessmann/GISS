@@ -199,8 +199,6 @@ struct _GfsInitFraction {
 
   GfsVariable * c;
   GtsSurface * surface;
-  GNode * stree;
-  gboolean is_open;
 };
 
 typedef struct _GfsInitFractionClass    GfsInitFractionClass;

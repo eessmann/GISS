@@ -224,7 +224,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
   }
   default:
     g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
-	   "the solid surface is probably not closed (n1 = %d)", n1);
+	   "the surface is probably not closed (n1 = %d)", n1);
   }
 }
 #else /* 3D */
@@ -374,7 +374,7 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
     }
     default:
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
-	     "the solid surface is probably not closed (n2 = %d)", n2);
+	     "the surface is probably not closed (n2 = %d)", n2);
     }
   }
 
@@ -603,10 +603,18 @@ static void solid_fractions_from_children (FttCell * cell, InitSolidParams * p)
       GFS_STATE (cell)->div = 1.;
     else {
       gfs_cell_init_solid_fractions_from_children (cell);
-      GFS_STATE (cell)->div = 0.;
+      if (p->destroy_solid)
+	GFS_STATE (cell)->div = 0.;
+      else if (!GFS_IS_MIXED (cell)) {
+	ftt_cell_children (cell, &child);
+	GFS_STATE (cell)->div = 1.;
+	for (i = 0; i < FTT_CELLS; i++)
+	  if (child.c[i] && GFS_STATE (child.c[i])->div == 2.)
+	    GFS_STATE (cell)->div = 2.;
+      }
     }
   }
-  if (GFS_STATE (cell)->div == 1.) {
+  if (p->destroy_solid && GFS_STATE (cell)->div == 1.) {
     if (FTT_CELL_IS_ROOT (cell))
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
 	     "root cell is entirely outside of the fluid domain\n"
@@ -812,294 +820,62 @@ gboolean gfs_refine_mixed (const FttCell * cell)
   return FALSE;
 }
 
-/* GfsFace: Header */
-
-typedef struct _GfsFace         GfsFace;
-typedef struct _GfsFaceClass    GfsFaceClass;
-
-struct _GfsFace {
-  GtsFace parent;
-
-  FttDirection dir;
-};
-
-struct _GfsFaceClass {
-  GtsFaceClass parent_class;
-};
-
-#define GFS_FACE(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsFace,\
-					           gfs_face_class ())
-#define GFS_FACE_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
-						         GfsFaceClass,\
-						         gfs_face_class())
-#define GFS_IS_FACE(obj)         (gts_object_is_from_class (obj,\
-						   gfs_face_class ()))
-     
-static GfsFaceClass * gfs_face_class              (void);
-static GfsFace *      gfs_face_new                (GfsFaceClass * klass,
-						   GtsEdge * e1,
-						   GtsEdge * e2,
-						   GtsEdge * e3,
-						   guint dir);
-
-/* GfsFace: Object */
-
-static void gfs_face_link (GtsObject * object, GtsObject * with)
+static void save_solid (FttCell * cell, GfsVariable * c)
 {
-  GFS_FACE (object)->dir = GFS_FACE (with)->dir;
+  GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, c->i)) = GFS_STATE (cell)->solid;
+  GFS_STATE (cell)->solid = NULL;
 }
 
-static void gfs_face_class_init (GfsFaceClass * klass)
+static void restore_solid (FttCell * cell, gpointer * data)
 {
-  GTS_OBJECT_CLASS (klass)->attributes = gfs_face_link;
-}
+  GfsVariable * c = data[0];
+  gboolean * not_cut = data[1];
+  GfsSolidVector * solid = GFS_STATE (cell)->solid;
 
-static void gfs_face_init (GfsFace * f)
-{
-  f->dir = 0;
-}
-
-static GfsFaceClass * gfs_face_class (void)
-{
-  static GfsFaceClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_face_info = {
-      "GfsFace",
-      sizeof (GfsFace),
-      sizeof (GfsFaceClass),
-      (GtsObjectClassInitFunc) gfs_face_class_init,
-      (GtsObjectInitFunc) gfs_face_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_face_class ()),
-				  &gfs_face_info);
+  GFS_STATE (cell)->solid = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, c->i));
+  if (solid) {
+    GFS_VARIABLE (cell, c->i) = solid->a;
+    g_free (solid);
+    *not_cut = FALSE;
   }
-
-  return klass;
-}
-
-static GfsFace * gfs_face_new (GfsFaceClass * klass,
-			     GtsEdge * e1,
-			     GtsEdge * e2,
-			     GtsEdge * e3,
-			     guint dir)
-{
-  GfsFace * f = GFS_FACE (gts_face_new (GTS_FACE_CLASS (klass), e1, e2, e3));
-
-  f->dir = dir;
-  return f;
-}
-
-static void surface_add_box (GtsSurface * s,
-			     gdouble x1, gdouble y1, gdouble z1,
-			     gdouble x2, gdouble y2, gdouble z2)
-{
-  GtsVertex * v0 = gts_vertex_new (s->vertex_class, x1, y1, z1);
-  GtsVertex * v1 = gts_vertex_new (s->vertex_class, x1, y1, z2);
-  GtsVertex * v2 = gts_vertex_new (s->vertex_class, x1, y2, z2);
-  GtsVertex * v3 = gts_vertex_new (s->vertex_class, x1, y2, z1);
-  GtsVertex * v4 = gts_vertex_new (s->vertex_class, x2, y1, z1);
-  GtsVertex * v5 = gts_vertex_new (s->vertex_class, x2, y1, z2);
-  GtsVertex * v6 = gts_vertex_new (s->vertex_class, x2, y2, z2);
-  GtsVertex * v7 = gts_vertex_new (s->vertex_class, x2, y2, z1);
-
-  GtsEdge * e1 = gts_edge_new (s->edge_class, v0, v1);
-  GtsEdge * e2 = gts_edge_new (s->edge_class, v1, v2);
-  GtsEdge * e3 = gts_edge_new (s->edge_class, v2, v3);
-  GtsEdge * e4 = gts_edge_new (s->edge_class, v3, v0);
-  GtsEdge * e5 = gts_edge_new (s->edge_class, v0, v2);
-
-  GtsEdge * e6 = gts_edge_new (s->edge_class, v4, v5);
-  GtsEdge * e7 = gts_edge_new (s->edge_class, v5, v6);
-  GtsEdge * e8 = gts_edge_new (s->edge_class, v6, v7);
-  GtsEdge * e9 = gts_edge_new (s->edge_class, v7, v4);
-  GtsEdge * e10 = gts_edge_new (s->edge_class, v4, v6);
-  
-  GtsEdge * e11 = gts_edge_new (s->edge_class, v3, v7);
-  GtsEdge * e12 = gts_edge_new (s->edge_class, v2, v6);
-  GtsEdge * e13 = gts_edge_new (s->edge_class, v1, v5);
-  GtsEdge * e14 = gts_edge_new (s->edge_class, v0, v4);
-
-  GtsEdge * e15 = gts_edge_new (s->edge_class, v1, v6);
-  GtsEdge * e16 = gts_edge_new (s->edge_class, v2, v7);
-  GtsEdge * e17 = gts_edge_new (s->edge_class, v3, v4);
-  GtsEdge * e18 = gts_edge_new (s->edge_class, v0, v5);
-
-  GfsFaceClass * klass = gfs_face_class ();
-
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e1, e2, e5, 1)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e5, e3, e4, 1)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e6, e10, e7, 0)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e10, e9, e8, 0)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e2, e15, e12, 4)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e15, e13, e7, 4)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e3, e16, e11, 2)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e16, e12, e8, 2)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e17, e14, e4, 5)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e17, e11, e9, 5)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e18, e13, e1, 3)));
-  gts_surface_add_face (s, GTS_FACE (gfs_face_new (klass, e18, e14, e6, 3)));
-}
-
-static void cell_size (FttCell * cell, GtsVector s)
-{
-#if FTT_2D3
-  s[0] = s[1] = ftt_cell_size (cell);
-  s[2] = 1.;
-#else  /* 2D or 3D */
-  s[0] = s[1] = s[2] = ftt_cell_size (cell);
-#endif /* 2D or 3D */
-}
-
-static GtsBBox * bbox_cell (GtsBBoxClass * klass, FttCell * cell)
-{
-  FttVector p;
-  GtsVector size;
-
-  ftt_cell_pos (cell, &p);
-  cell_size (cell, size);
-  return gts_bbox_new (klass, cell, 
-		       p.x - size[0]/2., p.y - size[1]/2., p.z - size[2]/2.,
-		       p.x + size[0]/2., p.y + size[1]/2., p.z + size[2]/2.);
-}
-
-static void gfs_cell_set_fraction (FttCell * cell, 
-				   GfsVariable * c,
-				   gdouble val)
-{
-  g_return_if_fail (cell != NULL);
-
-  GFS_VARIABLE (cell, c->i) = val;
-  if (!FTT_CELL_IS_LEAF (cell)) {
-    FttCellChildren child;
-    guint i;
- 
-    ftt_cell_children (cell, &child);
-    for (i = 0; i < FTT_CELLS; i++)
-      if (child.c[i])
-	gfs_cell_set_fraction (child.c[i], c, val);
+  else if (GFS_STATE (cell)->div == 0.) {
+    g_assert (*not_cut);
+    GFS_VARIABLE (cell, c->i) = 0.;
   }
-}
-
-static void set_full_or_empty (FttCell * cell,
-			       GNode * tree,
-			       gboolean is_open,
-			       GfsVariable * c)
-{
-  FttVector pos;
-  GtsPoint * p;
-
-  ftt_cell_pos (cell, &pos);
-  p = gts_point_new (gts_point_class (), pos.x, pos.y, pos.z);
-  if (gts_point_is_inside_surface (p, tree, is_open))
-    gfs_cell_set_fraction (cell, c, 1.);
-  else
-    gfs_cell_set_fraction (cell, c, 0.);
-  gts_object_destroy (GTS_OBJECT (p));
-}
-
-static void bbox_size (GtsBBox * bbox, GtsVector s)
-{
-  s[0] = bbox->x2 - bbox->x1;
-  s[1] = bbox->y2 - bbox->y1;
-  s[2] = bbox->z2 - bbox->z1;
-}
-
-static void set_fraction_from_surface (FttCell * cell,
-				       GtsBBox * bbox,
-				       GtsSurface * s,
-				       GNode * stree,
-				       gboolean is_open,
-				       GfsVariable * c)
-{
-  GtsSurface * cs; 
-  GNode * ctree;
-  GtsSurfaceInter * si;
-  gboolean closed = TRUE;
-
-  cs = gts_surface_new (gts_surface_class (),
-			GTS_FACE_CLASS (gfs_face_class ()),
-			gts_edge_class (),
-			gts_vertex_class ());
-  surface_add_box (cs, 
-		   bbox->x1, bbox->y1, bbox->z1,
-		   bbox->x2, bbox->y2, bbox->z2);
-  ctree = gts_bb_tree_surface (cs);
-  si = gts_surface_inter_new (gts_surface_inter_class (),
-			      cs, s, ctree, stree, FALSE, is_open);
-  g_assert (gts_surface_inter_check (si, &closed));
-  if (si->edges == NULL)
-    set_full_or_empty (cell, stree, is_open, c);
   else {
-    GtsSurface * inter = gts_surface_new (gts_surface_class (),
-					  gts_face_class (),
-					  gts_edge_class (),
-					  gts_vertex_class ());
-    GtsVector size;
-
-    g_assert (closed);
-    gts_surface_inter_boolean (si, inter, GTS_1_IN_2);
-    gts_surface_inter_boolean (si, inter, GTS_2_IN_1);
-    bbox_size (bbox, size);
-    GFS_VARIABLE (cell, c->i) = gts_surface_volume (inter)/(size[0]*size[1]*size[2]);
-    g_assert (GFS_VARIABLE (cell, c->i) > -1e-9 && 
-	      GFS_VARIABLE (cell, c->i) < 1. + 1e-9);
-    gts_object_destroy (GTS_OBJECT (inter));
+    g_assert (GFS_STATE (cell)->div == 1. || GFS_STATE (cell)->div == 2.);
+    GFS_VARIABLE (cell, c->i) = GFS_STATE (cell)->div - 1.;
   }
-
-  gts_object_destroy (GTS_OBJECT (si));
-  gts_bb_tree_destroy (ctree, TRUE);
-  gts_object_destroy (GTS_OBJECT (cs));
 }
 
 /**
- * gfs_cell_init_fraction:
- * @root: the root #FttCell of the cell tree.
- * @s: a closed, orientable surface defining the solid boundary.
- * @stree: a bounding box tree of the faces of @s.
- * @is_open: %TRUE if @s is an "open" boundary i.e. the signed volume
- * enclosed by @s is negative, %FALSE otherwise.
+ * gfs_domain_init_fraction:
+ * @domain: a #GfsDomain.
+ * @s: an orientable surface defining the interface boundary.
  * @c: a #GfsVariable.
  *
- * Initializes the fraction @c of all the cells of the cell tree
- * starting at @root.
+ * Initializes the fraction @c of the interface @s contained in all
+ * the cells of @domain.
  */
-void gfs_cell_init_fraction (FttCell * root, 
-			     GtsSurface * s,
-			     GNode * stree,
-			     gboolean is_open,
-			     GfsVariable * c)
+void gfs_domain_init_fraction (GfsDomain * domain,
+			       GtsSurface * s,
+			       GfsVariable * c)
 {
-  GtsBBox * bbox;
+  gboolean not_cut = TRUE;
+  gpointer data[2];
 
-  g_return_if_fail (root != NULL);
+  g_return_if_fail (domain != NULL);
   g_return_if_fail (s != NULL);
-  g_return_if_fail (stree != NULL);
   g_return_if_fail (c != NULL);
 
-  bbox = bbox_cell (gts_bbox_class (), root);
-  if (gts_bb_tree_is_overlapping (stree, bbox)) {
-    if (FTT_CELL_IS_LEAF (root))
-      set_fraction_from_surface (root, bbox, s, stree, is_open, c);
-    else {
-      FttCellChildren child;
-      guint i;
-
-      ftt_cell_children (root, &child);
-      for (i = 0; i < FTT_CELLS; i++)
-	if (child.c[i])
-	  gfs_cell_init_fraction (child.c[i], s, stree, is_open, c);
-      gfs_get_from_below_extensive (root, c);
-      GFS_VARIABLE (root, c->i) /= 4.;
-    }
-  }
-  else /* !gts_bb_tree_is_overlapping (stree, bbox) */
-    set_full_or_empty (root, stree, is_open, c);
-
-  gts_object_destroy (GTS_OBJECT (bbox));
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) save_solid, c);
+  gfs_domain_init_solid_fractions (domain, s, FALSE, NULL, NULL);
+  data[0] = c;
+  data[1] = &not_cut;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) restore_solid, data);
+  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, c);
 }
 
 /**
