@@ -2322,6 +2322,28 @@ static gboolean do_path (FttCell * cell, gint i,
   return FALSE;
 }
 
+static gdouble distance (FttVector * c, FttCell * cell, gboolean centered)
+{
+  if (centered || !GFS_IS_MIXED (cell))
+    return ftt_cell_size (cell)*
+#if FTT_2D
+      0.707106781185
+#else  /* 3D */
+      0.866025403785
+#endif /* 3D */
+      ;
+  else {
+    FttVector cm;
+    gfs_cell_cm (cell, &cm);
+    /* fixme: what about periodic boundaries? */
+    return sqrt ((cm.x - c->x)*(cm.x - c->x) + (cm.y - c->y)*(cm.y - c->y)
+#if (!FTT_2D)
+      + (cm.z - c->z)*(cm.z - c->z)
+#endif /* 3D */
+		 );
+  }
+}
+
 /**
  * gfs_cell_corner_interpolator:
  * @cell: a #FttCell.
@@ -2357,7 +2379,6 @@ void gfs_cell_corner_interpolator (FttCell * cell,
     return;
 
   {
-    void (*cell_pos) (const FttCell *, FttVector *) = centered ? ftt_cell_pos : gfs_cell_cm;
     FttVector c;
     gdouble w = 0.;
 
@@ -2366,14 +2387,7 @@ void gfs_cell_corner_interpolator (FttCell * cell,
     for (i = 0; i < N_CELLS; i++)
       if (n[i]) {
 	gdouble a;
-	FttVector cm;
-	(*cell_pos) (n[i], &cm);
-	/* fixme: what about periodic boundaries? */
-	a = 1./((cm.x - c.x)*(cm.x - c.x) + (cm.y - c.y)*(cm.y - c.y)
-#if (!FTT_2D)
-		+ (cm.z - c.z)*(cm.z - c.z)
-#endif /* 3D */
-		+ 1e-6);
+	a = 1./(distance (&c, n[i], centered) + 1e-12);
 	inter->c[inter->n] = n[i];
 	inter->w[inter->n++] = a;
 	w += a;
