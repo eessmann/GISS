@@ -16,6 +16,10 @@ if len(sys.argv) < 2:
 dico = {}
 for f in glob.glob("@abs_top_srcdir@/doc/reference/*.html"):
     gfs2tex.dictionary(dico,open(f))
+
+def myexit(s):
+    os.system("rm -r -f " + wdname)
+    sys.exit(s)
     
 for d in sys.argv[1:]:
     example = gfs2tex.Example("./" + d)
@@ -42,32 +46,48 @@ for d in sys.argv[1:]:
     tex.write("\\end{document}\n")
     tex.close()
     os.symlink(os.getcwd() + "/" + example.name, wdname + "/" + example.name)
-    if not os.system("rm -r -f " + example.name + ".pdf " + example.name + "_html" +\
+    if os.system("rm -r -f " + example.name + ".pdf " + example.name + "_html" +\
               "&& cd " + wdname + \
               "&& latex -interaction=nonstopmode > /dev/null 2>&1 " + example.name + ".tex" +\
-              "&& latex -interaction=nonstopmode " + example.name + ".tex") and \
-       not os.system("cd " + wdname + \
+              "&& latex -interaction=nonstopmode " + example.name + ".tex") or \
+       os.system("cd " + wdname + \
               "&& dvips -Ppdf -G0 " + example.name + ".dvi -o " + example.name + ".ps" +\
               "&& ps2pdf -sPAPERSIZE=a4 -dMaxSubsetPct=100 -dCompatibilityLevel=1.2 -dSubsetFonts=true -dEmbedAllFonts=true " + example.name + ".ps " + example.name + ".pdf" +\
               "&& mv " + example.name + ".pdf " + os.getcwd()):
-        print "\n\nSuccessfully generated file: " + example.name + ".pdf"
-        hname = wdname + "/" + example.name + "_html"
-        os.mkdir(hname)
-        os.symlink("../" + example.name, hname + "/" + example.name)
-        if not os.system("cd " + wdname + \
+        print "\n\n**** Errors occured while generating file ****: " + example.name + ".pdf"
+        myexit(1)
+        
+    print "\n\n**** Successfully generated file ****: " + example.name + ".pdf\n\n"
+    hname = wdname + "/" + example.name + "_html"
+    os.mkdir(hname)
+    os.symlink("../" + example.name, hname + "/" + example.name)
+    if os.system("cd " + wdname + \
                   "&& latex2html -dir " + hname + " -no_math -html_version 3.2,math -address \"\" -info \"\" -split 0 -no_navigation -t \"Example " + example.name + "\" -white " + \
                          example.name + ".tex" + \
                   "&& mv " + hname + " " + os.getcwd()):
-            print "\n\nSuccessfully generated directory: " + example.name + "_html"
-            files = example.name + "/" + example.name + ".gfs"
-            for f in example.required:
-                files += " " + example.name + "/" + f
-            if not os.system("tar czf " + example.name + ".tgz " + files):
-                print "Successfully generated file: " + example.name + ".tgz"
-            else:
-                print "Errors occured while generating file: " + example.name + ".tgz"
-        else:
-            print "\n\nErrors occured while generating directory: " + example.name + "_html"
-    else:
-        print "\n\nErrors occured while generating file: " + example.name + ".pdf"
+        print "\n\n**** Errors occured while generating directory ****: " + example.name + "_html"
+        myexit(1)
+        
+    print "\n\n**** Successfully generated directory ****: " + example.name + "_html\n\n"
+    files = example.name + "/" + example.name + ".gfs"
+    for f in example.required:
+        files += " " + example.name + "/" + f
+    if os.system("tar czf " + example.name + ".tgz " + files + " && " +\
+                 "cd " + wdname + " && " +\
+                 "mkdir test && cd test && " +\
+                 "tar xzf " + os.getcwd() + "/" + example.name + ".tgz && " +\
+                 "cd " + example.name + " && " +\
+                 "awk '{ if ($1 == \"Time\" || $1 == \"GfsTime\")" +\
+                 "  print $0 \"\\nTime { iend = 1 }\";" +
+                 "else print $0;"
+                "}' < " + example.name + ".gfs > " + example.name + ".tmp && " +\
+                 "mv -f " + example.name + ".tmp " + example.name + ".gfs && " +\
+                 "`awk '{if($1 == \"#\" && $2 == \"Command:\")"+\
+                 "         for (i = 3; i <= NF; i++) printf (\"%s \", $i);" +\
+                 "}' < " + example.name + ".gfs`"):
+        print "\n\n**** Errors occured while generating file ****: " + example.name + ".tgz"
+        os.remove(example.name + ".tgz")
+        myexit(1)
+
+    print "\n\n**** Successfully generated file ****: " + example.name + ".tgz\n\n"
     os.system("rm -r -f " + wdname)
