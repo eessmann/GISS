@@ -49,9 +49,9 @@ void    gfs_plane_center           (FttVector * m,
 				    gdouble a,
 				    FttVector * p);
 #endif /* 3D */
-gdouble gfs_youngs_gradient        (FttCell * cell, 
-				    FttComponent c, 
-				    GfsVariable * v);
+void    gfs_youngs_normal          (FttCell * cell, 
+				    GfsVariable * v,
+				    FttVector * n);
 void    gfs_cell_vof_advection     (FttCell * cell,
 				    FttComponent c,
 				    GfsAdvectionParams * par);

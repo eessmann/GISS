@@ -75,10 +75,9 @@ static void foreach_cell_normal (FttCell * cell, GfsSourceTension * s)
   gdouble sigh = s->sigma/ftt_cell_size (cell);
   FttComponent c;
 
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    (&n.x)[c] = gfs_youngs_gradient (cell, c, s->c);
+  gfs_youngs_normal (cell, s->c, &n);
+  for (c = 0; c < FTT_DIMENSION; c++)
     nn += (&n.x)[c]*(&n.x)[c];
-  }
   nn = sqrt (nn + 1e-50);
   GFS_STATE (cell)->g[0] = sigh*n.x*n.x/nn;
   GFS_STATE (cell)->g[1] = sigh*n.y*n.y/nn;
@@ -88,11 +87,14 @@ static void foreach_cell_normal (FttCell * cell, GfsSourceTension * s)
 static void foreach_cell_tension (FttCell * cell, GfsSourceTension * s)
 {
   gdouble h = ftt_cell_size (cell);
+  FttVector nx, ny, nxy;
 
-  GFS_VARIABLE (cell, s->t[0]->i) = (gfs_youngs_gradient (cell, FTT_X, gfs_gy) -
-				     gfs_youngs_gradient (cell, FTT_Y, gfs_div))/h;
-  GFS_VARIABLE (cell, s->t[1]->i) = (gfs_youngs_gradient (cell, FTT_Y, gfs_gx) -
-				     gfs_youngs_gradient (cell, FTT_X, gfs_div))/h;
+  gfs_youngs_normal (cell, gfs_gx, &nx);
+  gfs_youngs_normal (cell, gfs_gy, &ny);
+  gfs_youngs_normal (cell, gfs_div, &nxy);
+
+  GFS_VARIABLE (cell, s->t[0]->i) = (ny.x - nxy.y)/h;
+  GFS_VARIABLE (cell, s->t[1]->i) = (nx.y - nxy.x)/h;
 }
 
 static void gfs_source_tension_event (GfsEvent * event, 

@@ -360,47 +360,45 @@ gdouble gfs_plane_alpha (FttVector * m, gdouble c)
 }
 #endif /* 3D */
 
-static gdouble avg (FttCell * cell, FttDirection d, GfsVariable * v)
+/**
+ * gfs_youngs_normal:
+ * @cell: a #FttCell.
+ * @v: a #GfsVariable.
+ * @n: a #FttVector.
+ *
+ * Fills @n with the Youngs-averaged gradients of @v 
+ * normalised by the size of @cell.
+ */
+void gfs_youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 {
-  FttDirection d1[2*(FTT_DIMENSION - 1)][FTT_DIMENSION];
-  FttComponent c = FTT_ORTHOGONAL_COMPONENT (d/2);
-  gdouble v1 = 0.;
+  static FttDirection d[(FTT_DIMENSION - 1)*4][FTT_DIMENSION] = {
+#if FTT_2D
+    {FTT_RIGHT, FTT_TOP}, {FTT_LEFT, FTT_TOP}, {FTT_LEFT, FTT_BOTTOM}, {FTT_RIGHT, FTT_BOTTOM}
+#else  /* 3D */
+    {FTT_RIGHT, FTT_TOP, FTT_FRONT}, {FTT_LEFT, FTT_TOP, FTT_FRONT}, 
+    {FTT_LEFT, FTT_BOTTOM, FTT_FRONT}, {FTT_RIGHT, FTT_BOTTOM, FTT_FRONT},
+    {FTT_RIGHT, FTT_TOP, FTT_BACK}, {FTT_LEFT, FTT_TOP, FTT_BACK}, 
+    {FTT_LEFT, FTT_BOTTOM, FTT_BACK}, {FTT_RIGHT, FTT_BOTTOM, FTT_BACK},
+#endif /* 3D */
+  };
+  gdouble u[(FTT_DIMENSION - 1)*4];
   guint i;
 
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (v != NULL);
+  g_return_if_fail (n != NULL);
+
+  for (i = 0; i < (FTT_DIMENSION - 1)*4; i++)
+    u[i] = gfs_cell_corner_value (cell, d[i], v, -1);
+
 #if FTT_2D
-  d1[0][0] = d1[1][0] = d;
-  d1[0][1] = 2*c;
-  d1[1][1] = 2*c + 1;
+  n->x = (u[0] + u[3] - u[1] - u[2])/2.;
+  n->y = (u[0] + u[1] - u[2] - u[3])/2.;
 #else  /* 3D */
-  FttComponent c1 = FTT_ORTHOGONAL_COMPONENT (c);
-
-  d1[0][0] = d1[1][0] = d1[2][0] = d1[3][0] = d;
-  d1[0][1] = 2*c;     d1[0][2] = 2*c1;
-  d1[1][1] = 2*c;     d1[1][2] = 2*c1 + 1;
-  d1[2][1] = 2*c + 1; d1[2][2] = 2*c1;
-  d1[3][1] = 2*c + 1; d1[3][2] = 2*c1 + 1;
+  n->x = (u[0] + u[3] + u[4] + u[7] - u[1] - u[2] - u[5] - u[6])/4.;
+  n->y = (u[0] + u[1] + u[4] + u[5] - u[2] - u[3] - u[6] - u[7])/4.;
+  n->z = (u[0] + u[1] + u[2] + u[3] - u[4] - u[5] - u[6] - u[7])/4.;
 #endif /* 3D */
-  
-  for (i = 0; i < 2*(FTT_DIMENSION - 1); i++)
-    v1 += gfs_cell_corner_value (cell, d1[i], v, -1);
-  return v1/(2*(FTT_DIMENSION - 1));
-}
-
-/**
- * gfs_youngs_gradient:
- * @cell: a #FttCell.
- * @c: a component.
- * @v: a #GfsVariable.
- *
- * Returns: the Youngs-averaged gradient of variable @v in direction
- * @c normalised by the size of @cell.
- */
-gdouble gfs_youngs_gradient (FttCell * cell, FttComponent c, GfsVariable * v)
-{
-  g_return_val_if_fail (cell != NULL, 0.);
-  g_return_val_if_fail (v != NULL, 0.);
-
-  return avg (cell, 2*c, v) - avg (cell, 2*c + 1, v);
 }
 
 static void gfs_cell_vof_advected_face_values (FttCell * cell,
@@ -433,7 +431,7 @@ static void gfs_cell_vof_advected_face_values (FttCell * cell,
     GFS_STATE (cell)->f[left].v = f;
   }
   else {
-    FttVector m;
+    FttVector m1, m;
     gdouble alpha, n;
     static FttComponent d[FTT_DIMENSION][FTT_DIMENSION - 1] = {
 #if FTT_2D
@@ -444,9 +442,10 @@ static void gfs_cell_vof_advected_face_values (FttCell * cell,
     };
     guint i;
 
-    m.x = - gfs_youngs_gradient (cell, c, par->v);
+    gfs_youngs_normal (cell, par->v, &m1);
+    m.x = - (&m1.x)[c];
     for (i = 0; i < FTT_DIMENSION - 1; i++)
-      (&m.x)[i + 1] = - gfs_youngs_gradient (cell, d[c][i], par->v);
+      (&m.x)[i + 1] = - (&m1.x)[d[c][i]];
     
     if (m.x < 0.) {
       n = - u_left; u_left = - u_right; u_right = n;
