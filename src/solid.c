@@ -393,12 +393,23 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
 	(&m.x)[c] = - (&m.x)[c];
 	(&ca.x)[c] = 1. - (&ca.x)[c];
       }
-      (&m.x)[c] += 1e-6;
       n += (&m.x)[c];
     }
-    m.x /= n; m.y /= n; m.z /= n;
-    alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
-    solid->a = gfs_plane_volume (&m, alpha, 1.);
+    if (n > 0.) {
+      m.x /= n; m.y /= n; m.z /= n;
+      alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
+      solid->a = gfs_plane_volume (&m, alpha, 1.);
+    }
+    else { /* degenerate intersections */
+      solid->a = 0.;
+      for (i = 0; i < FTT_NEIGHBORS; i++)
+	solid->a += solid->s[i];
+      solid->a /= FTT_NEIGHBORS;
+      if (solid->a == 0. || solid->a == 1.) {
+	g_free (solid);
+	GFS_STATE (cell)->solid = NULL;
+      }
+    }
   }
 }
 #endif /* 3D */
