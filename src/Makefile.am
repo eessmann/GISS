@@ -115,7 +115,7 @@ SRC = \
 libgfs3D_la_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
 	-release $(LT_RELEASE) -export-dynamic
-libgfs3D_la_SOURCES = $(SRC)
+libgfs3D_la_SOURCES = $(SRC) isocube.h
 
 libgfs2D_la_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -126,7 +126,7 @@ libgfs2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 libgfs2D3_la_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
 	-release $(LT_RELEASE) -export-dynamic
-libgfs2D3_la_SOURCES = $(SRC)
+libgfs2D3_la_SOURCES = $(SRC) isocube.h
 libgfs2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 
 CLEANFILES = $(BUILT_SOURCES)
