@@ -135,7 +135,8 @@ EXTRA_DIST = \
 	mpi_boundary.c \
 	mpi_boundary.h \
 	ftt_internal.c \
-	dx.c
+	dx.c \
+	isocube.h
 
 bin_PROGRAMS = gerris2D gerris3D gerris2D3 gerris2D_dir gerris3D_dir
 
