@@ -983,8 +983,7 @@ Error m_ImportGfs3D (Object * in, Object * out)
 
   gfs_init (NULL, NULL);
 
-  sim = gfs_simulation_new (gfs_simulation_class ());
-  if (gfs_simulation_read (sim, f)) {
+  if ((sim = gfs_simulation_read (f)) == NULL) {
     DXSetError (ERROR_BAD_PARAMETER,
 		"file \"%s\" is not a valid GFS file\n"
 		"%s:%d:%d: %s",
