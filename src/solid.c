@@ -54,17 +54,17 @@ static gdouble segment_triangle_intersection (GtsPoint * E, GtsPoint * D,
 					      GtsTriangle * t,
 					      gboolean * inside)
 {
+  GtsVertex * vA, * vB, * vC;
   GtsPoint * A, * B, * C;
   gint ABCE, ABCD, ADCE, ABDE, BCDE;
   GtsEdge * AB, * BC, * CA;
   gdouble a, b;
   gboolean reversed = FALSE;
 
-  gts_triangle_vertices_edges (t, NULL, 
-			       (GtsVertex **) &A, 
-			       (GtsVertex **) &B, 
-			       (GtsVertex **) &C, 
-			       &AB, &BC, &CA);
+  gts_triangle_vertices_edges (t, NULL, &vA, &vB, &vC, &AB, &BC, &CA);
+  A = GTS_POINT (vA);
+  B = GTS_POINT (vB);
+  C = GTS_POINT (vC);
   ABCE = gts_point_orientation_3d_sos (A, B, C, E);
   ABCD = gts_point_orientation_3d_sos (A, B, C, D);
   if (ABCE < 0 || ABCD > 0) {
