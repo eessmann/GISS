@@ -398,20 +398,43 @@ static void refine_height_read (GtsObject ** o, GtsFile * fp)
 			      (GtsFunc) gts_triangle_revert, NULL);
 }
 
+static gboolean height_maxlevel (GtsPoint * p, guint level, GfsRefine * refine, GtsFace ** guess)
+{
+  GtsFace * f = gts_point_locate (p, GFS_REFINE_SURFACE (refine)->surface, *guess);
+
+  if (f != NULL) {
+    FttVector pos;
+
+    *guess = f;
+    gts_triangle_interpolate_height (GTS_TRIANGLE (f), p);
+    pos.x = p->x; pos.y = p->y; pos.z = p->z;
+    return (level < gfs_function_value (refine->maxlevel, &pos, p->z));
+  }
+  return FALSE;
+}
+
 static gboolean refine_height_maxlevel (FttCell * cell, gpointer * data)
 {
   GfsRefine * refine = data[0];
-  GtsFace * f, ** guess = data[1];
+  GtsFace ** guess = data[1];
+  guint level = ftt_cell_level (cell);
+  gdouble h = ftt_cell_size (cell)/2.;
   FttVector pos;
   GtsPoint p;
 
   ftt_cell_pos (cell, &pos);
-  p.x = pos.x; p.y = pos.y;
-  if ((f = gts_point_locate (&p, GFS_REFINE_SURFACE (refine)->surface, NULL))) {
-    *guess = f;
-    gts_triangle_interpolate_height (GTS_TRIANGLE (f), &p);
-    return (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, &pos, p.z));
-  }
+  p.x = pos.x - h; p.y = pos.y - h;
+  if (height_maxlevel (&p, level, refine, guess))
+    return TRUE;
+  p.x = pos.x + h; p.y = pos.y - h;
+  if (height_maxlevel (&p, level, refine, guess))
+    return TRUE;
+  p.x = pos.x + h; p.y = pos.y + h;
+  if (height_maxlevel (&p, level, refine, guess))
+    return TRUE;
+  p.x = pos.x - h; p.y = pos.y + h;
+  if (height_maxlevel (&p, level, refine, guess))
+    return TRUE;
   return FALSE;
 }
 
