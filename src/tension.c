@@ -98,6 +98,10 @@ static void foreach_cell_tension (FttCell * cell, GfsSourceTension * s)
 static void gfs_source_tension_event (GfsEvent * event, 
 				      GfsSimulation * sim)
 {
+#if (!FTT_2D)
+  g_assert_not_implemented ();
+#endif
+
   gfs_domain_cell_traverse (GFS_DOMAIN (sim),
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) foreach_cell_normal, event);
