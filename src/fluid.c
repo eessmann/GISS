@@ -1821,11 +1821,13 @@ static GtsSurface * cell_is_cut (FttCell * cell, GtsSurface * s)
   ftt_cell_pos (cell, &p);
   bb.x1 = p.x - h; bb.y1 = p.y - h;
   bb.x2 = p.x + h; bb.y2 = p.y + h; 
-#if FTT_2D3
+#if FTT_2D
+  bb.z1 = bb.z2 = 0.;
+#elif FTT_2D3
   bb.z1 = p.z - 1./1.99999; bb.z2 = p.z + 1./1.99999;
-#else  /* 2D or 3D */
+#else  /* 3D */
   bb.z1 = p.z - h; bb.z2 = p.z + h;
-#endif /* 2D or 3D */
+#endif /* 3D */
   data[0] = &bb;
   data[1] = &s1;
   gts_surface_foreach_face (s, (GtsFunc) face_overlaps_box, data);
