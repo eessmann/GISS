@@ -1047,13 +1047,40 @@ int main (int argc, char * argv[])
       }
       printf ("})\n");
     }
-    else if (profile && var) {
+    else if (profile) {
       FttVector p;
 
-      while (fscanf (profile, "%lf %lf %lf", &p.x, &p.y, &p.z) == 3) {
-	FttCell * cell = gfs_domain_locate (domain, p, -1);
-	if (cell)
-	  printf ("%g %g %g %g\n", p.x, p.y, p.z, gfs_interpolate (cell, p, var));
+      if (var)
+	while (fscanf (profile, "%lf %lf %lf", &p.x, &p.y, &p.z) == 3) {
+	  FttCell * cell = gfs_domain_locate (domain, p, -1);
+	  if (cell)
+	    printf ("%g %g %g %g\n", p.x, p.y, p.z, gfs_interpolate (cell, p, var));
+	}
+      else {
+	GfsVariable * v;
+	guint i = 4;
+
+	printf ("# 1:X 2:Y 3:Z ");
+	v = domain->variables;
+	while (v) {
+	  if (v->name)
+	    printf ("%d:%s ", i++, v->name);
+	  v = v->next;
+	}
+	printf ("\n");
+	while (fscanf (profile, "%lf %lf %lf", &p.x, &p.y, &p.z) == 3) {
+	  FttCell * cell = gfs_domain_locate (domain, p, -1);
+	  if (cell) {
+	    printf ("%g %g %g ", p.x, p.y, p.z);
+	    v = domain->variables;
+	    while (v) {
+	      if (v->name)
+		printf ("%g ", gfs_interpolate (cell, p, v));
+	      v = v->next;
+	    }
+	    printf ("\n");
+	  }
+	}
       }
     }
     else if (vector > 0.) {
