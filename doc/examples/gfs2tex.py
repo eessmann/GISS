@@ -2,6 +2,7 @@ import sys
 import os
 import os.path
 import re
+import tempfile
 
 def generated(lines):
     for line in lines:
@@ -181,3 +182,28 @@ class Example:
                         out.write(r + " ")
                 out.write("<br>\n")
         out.write("</tt></body>\n</html>\n")
+
+    def test(self):
+        wdname = tempfile.mkdtemp()
+        path = os.getcwd() + "/" + self.path + "/"
+        files = path + self.name + ".gfs"
+        for f in self.required:
+            files += " " + path + f
+        out = os.popen("cd " + wdname + " && " +\
+                       "mkdir test && cd test && " +\
+                       "cp -f " + files + " . && " +\
+                       "awk '{ if ($1 == \"Time\" || $1 == \"GfsTime\")" +\
+                       "  print $0 \"\\nTime { iend = 1 }\";" +
+                       "else print $0;"
+                       "}' < " + self.name + ".gfs > " + self.name + ".tmp && " +\
+                       "mv -f " + self.name + ".tmp " + self.name + ".gfs && " +\
+                       "`awk '{if($1 == \"#\" && $2 == \"Command:\")"+\
+                       "         for (i = 3; i <= NF; i++) printf (\"%s \", $i);" +\
+                       "}' < " + self.name + ".gfs` 2>&1")
+        lines = out.readlines()
+        status = out.close()
+        os.system("rm -r -f " + wdname)
+        if status != None:
+            return status,lines
+        else:
+            return None,None

@@ -68,26 +68,20 @@ for d in sys.argv[1:]:
         print "\n\n**** Errors occured while generating directory ****: " + example.name + "_html"
         myexit(1)
         
-    print "\n\n**** Successfully generated directory ****: " + example.name + "_html\n\n"
+    print "\n\n**** Successfully generated directory ****: " + example.name + "_html\n"
     files = example.name + "/" + example.name + ".gfs"
     for f in example.required:
         files += " " + example.name + "/" + f
-    if os.system("tar czf " + example.name + ".tgz " + files + " && " +\
-                 "cd " + wdname + " && " +\
-                 "mkdir test && cd test && " +\
-                 "tar xzf " + os.getcwd() + "/" + example.name + ".tgz && " +\
-                 "cd " + example.name + " && " +\
-                 "awk '{ if ($1 == \"Time\" || $1 == \"GfsTime\")" +\
-                 "  print $0 \"\\nTime { iend = 1 }\";" +
-                 "else print $0;"
-                "}' < " + example.name + ".gfs > " + example.name + ".tmp && " +\
-                 "mv -f " + example.name + ".tmp " + example.name + ".gfs && " +\
-                 "`awk '{if($1 == \"#\" && $2 == \"Command:\")"+\
-                 "         for (i = 3; i <= NF; i++) printf (\"%s \", $i);" +\
-                 "}' < " + example.name + ".gfs`"):
-        print "\n\n**** Errors occured while generating file ****: " + example.name + ".tgz"
+    if os.system("tar czf " + example.name + ".tgz " + files):
+        print "**** Errors occured while generating file ****: " + example.name + ".tgz"
+        os.remove(example.name + ".tgz")
+        myexit(1)
+    status,msg = example.test()
+    if status != None:
+        print "**** Errors occured while generating file ****: " + example.name + ".tgz"
+        print " ".join(msg)
         os.remove(example.name + ".tgz")
         myexit(1)
 
-    print "\n\n**** Successfully generated file ****: " + example.name + ".tgz\n\n"
+    print "**** Successfully generated file ****: " + example.name + ".tgz"
     os.system("rm -r -f " + wdname)

@@ -7,7 +7,14 @@ EXTRA_DIST = \
 	template.tex \
 	gfs2tex.py \
 	gfs2tex \
-	depend
+	depend.py \
+	test.py
+
+TESTS = test.sh
+
+test.sh: $(EXAMPLES)
+	echo "python test.py $(EXAMPLES)" > test.sh
+	chmod +x test.sh
 
 bin_SCRIPTS = \
 	gfs2doc
@@ -22,7 +29,7 @@ dist_pkglib_DATA = gfs2tex.py
 gfs2doc: gfs2doc.in
 
 clean-generic:
-	$(RM) *.dvi *.aux *.log *.toc *.out examples.tex *.pyc
+	$(RM) *.dvi *.aux *.log *.toc *.out examples.tex *.pyc test.sh gfs2doc
 
 examples: examples.ps.gz
 	latex2html -no_math -html_version 3.2,math -address "" -info "" -split +3 -show_section_numbers -toc_depth 5 -t "Gerris Examples" -local_icons -white examples.tex
@@ -47,6 +54,6 @@ examples.tex: template.tex
 	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < template.tex > examples.tex
 
 Makefile.deps: $(EXAMPLES)
-	python depend $(EXAMPLES) > Makefile.deps
+	python depend.py $(EXAMPLES) > Makefile.deps
 
 -include Makefile.deps
