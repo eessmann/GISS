@@ -208,6 +208,7 @@ void         gfs_domain_remove_ponds          (GfsDomain * domain,
 					       gint min,
 					       FttCellCleanupFunc cleanup,
 					       gpointer data);
+void         gfs_domain_remove_specks         (GfsDomain * domain);
 void         gfs_domain_timer_start           (GfsDomain * domain, 
 					       const gchar * name);
 void         gfs_domain_timer_stop            (GfsDomain * domain, 

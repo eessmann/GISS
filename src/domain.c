@@ -2569,6 +2569,86 @@ void gfs_domain_remove_ponds (GfsDomain * domain,
   g_array_free (sizes, TRUE);
 }
 
+static gboolean tag_speck (FttCell * cell)
+{
+  if (GFS_STATE (cell)->div == 0.) {
+    FttDirection d;
+    FttCellNeighbors n;
+    GfsSolidVector * solid = GFS_STATE (cell)->solid;
+    
+    g_assert (FTT_CELL_IS_LEAF (cell));
+    ftt_cell_neighbors (cell, &n);
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      if (!n.c[d])
+	return FALSE;
+    GFS_STATE (cell)->div = 1.;
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      if (GFS_STATE (n.c[d])->div == 0. && 
+	  !GFS_CELL_IS_BOUNDARY (n.c[d]) &&
+	  solid->s[d] > 0. && solid->s[d] < 1.) {
+	g_assert (GFS_IS_MIXED (n.c[d]));
+	if (FTT_CELL_IS_LEAF (n.c[d])) {
+	  if (!tag_speck (n.c[d])) {
+	    GFS_STATE (cell)->div = 0.;
+	    return FALSE;
+	  }
+	}
+	else {
+	  FttCellChildren child;
+	  FttDirection od = FTT_OPPOSITE_DIRECTION (d);
+	  guint i;
+	  
+#if FTT_2D3
+	  g_assert_not_implemented ();
+#endif	
+	  ftt_cell_children_direction (n.c[d], od, &child);
+	  for (i = 0; i < FTT_CELLS/2; i++)
+	    if (!child.c[i] || (GFS_STATE (child.c[i])->div == 0 && 
+				GFS_IS_MIXED (child.c[i]) &&
+				!tag_speck (child.c[i]))) {
+	      GFS_STATE (cell)->div = 0.;
+	      return FALSE;
+	    }
+	}
+      }
+  }
+  return TRUE;
+}
+
+static void fill_speck (FttCell * cell, gboolean * changed)
+{
+  if (GFS_STATE (cell)->div == 1.) {
+    g_free (GFS_STATE (cell)->solid);
+    GFS_STATE (cell)->solid = NULL;
+    *changed = TRUE;
+  }
+}
+
+/**
+ * gfs_domain_remove_specks:
+ * @domain: a #GfsDomain.
+ *
+ * Removes all the solid "specks" of @domain. Solid specks are islands
+ * which do not contain any empty cell.
+ */
+void gfs_domain_remove_specks (GfsDomain * domain)
+{
+  gboolean changed = FALSE;
+
+  g_return_if_fail (domain != NULL);
+
+  gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
+			     (FttCellTraverseFunc) gfs_cell_reset, gfs_div);
+  gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			     (FttCellTraverseFunc) tag_speck, NULL);
+  gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			     (FttCellTraverseFunc) fill_speck, &changed);
+  if (changed)
+    gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_init_solid_fractions_from_children, 
+			      NULL);
+}
+
 /**
  * gfs_domain_timer_start:
  * @domain: a #GfsDomain.
