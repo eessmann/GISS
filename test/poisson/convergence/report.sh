@@ -52,7 +52,7 @@ EOF
 for file in $1; do
     testfile=test/`basename $file`
     sname=`basename $file | awk '{print substr ($1, 1, index ($1, ".") - 1)}'`
-    xmgr -hardcopy -noask -hdevice EPS -printfile figures/$sname.eps -param divfig.par $file $testfile
+    xmgrace -hardcopy -noask -hdevice EPS -printfile figures/$sname.eps -param divfig.par $file $testfile
     echo "\\begin{figure}" >> $texfile.tex
     echo "\\begin{center}" >> $texfile.tex
     echo "\\psfig{file=figures/$sname.eps, width=\\hsize}" >> $texfile.tex

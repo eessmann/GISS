@@ -444,13 +444,6 @@ static gboolean refine (FttCell * cell, guint * minlevel)
   return FALSE;
 }
 
-static gboolean refine_solid (FttCell * cell, guint * maxlevel)
-{
-  if (GFS_IS_MIXED (cell) && ftt_cell_level (cell) < *maxlevel)
-    return TRUE;
-  return FALSE;
-}
-
 static gboolean refine_inside_solid (FttCell * cell, gpointer * data)
 {
   GNode * tree = data[0];
@@ -496,18 +489,6 @@ static gboolean refine_randomly (FttCell * cell, gpointer * data)
   return FALSE;
 }
 
-static void init_solid_fractions (FttCell * cell, gpointer * data)
-{
-  gboolean * is_open = data[2];
-  GfsDomain * domain = data[3];
-
-  gfs_cell_init (cell, domain);
-  gfs_cell_init_solid_fractions (cell, 
-				 data[0], data[1], *is_open, 
-				 TRUE, (FttCellCleanupFunc) gfs_cell_cleanup,
-				 NULL);
-}
-
 #define GFS_FLAG_MARKED  (1 << 5)
 #define GFS_IS_MARKED(cell) (((cell)->flags & GFS_FLAG_MARKED) != 0)
 
@@ -517,6 +498,15 @@ typedef enum
   RELAX,
   CUSTOM
 } Method;
+
+static void refine_cut_cell (FttCell * cell, GtsSurface * s, gpointer * data)
+{
+  GfsDomain * domain = data[0];
+  guint * maxlevel = data[1];
+
+  if (ftt_cell_level (cell) < *maxlevel)
+    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_init, domain);
+}
 
 static GfsBox * solution (guint levels,
 			  guint levelmax,
@@ -576,26 +566,20 @@ static GfsBox * solution (guint levels,
     }
     else {
       gpointer data[4];
-	
-      gfs_cell_init_solid_fractions (box->root, solid, tree, is_open, 
-				     TRUE, 
-				     (FttCellCleanupFunc) gfs_cell_cleanup,
-				     NULL);
 
-      data[0] = solid;
-      data[1] = tree;
-      data[2] = &is_open;
-      data[3] = domain;
+      data[0] = domain;
+      data[1] = &levelmax;
       if (levelmax > 0)
-	ftt_cell_refine (box->root, 
-			 (FttCellRefineFunc) refine_solid, &levelmax,
-			 (FttCellInitFunc) init_solid_fractions, data);	
+	gfs_domain_traverse_cut (domain, solid,
+				 FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+				 (FttCellTraverseCutFunc) refine_cut_cell, data);
       ftt_cell_refine (box->root, 
 		       (FttCellRefineFunc) ftt_refine_corner, NULL,
-		       (FttCellInitFunc) init_solid_fractions, data);
+		       (FttCellInitFunc) gfs_cell_init, domain);
+      gfs_domain_init_solid_fractions (domain, solid, 
+				       TRUE, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+      g_assert (gfs_cell_check_solid_fractions (box->root));
 
-      g_assert (gfs_cell_check_solid_fractions (box->root, 
-						solid, tree, is_open));
       if (fix_vol)
 	gfs_domain_cell_traverse (domain, 
 				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
