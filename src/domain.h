@@ -213,6 +213,16 @@ void         gfs_domain_timer_start           (GfsDomain * domain,
 					       const gchar * name);
 void         gfs_domain_timer_stop            (GfsDomain * domain, 
 					       const gchar * name);
+typedef
+void      (* FttCellCombineTraverseFunc)      (FttCell * cell1, 
+					       FttCell * cell2, 
+					       gpointer data);
+void         gfs_domain_combine_traverse      (GfsDomain * domain1,
+					       GfsDomain * domain2,
+					       FttCellCombineTraverseFunc inside,
+					       gpointer idata,
+					       FttCellTraverseFunc outside,
+					       gpointer odata);
 
 #ifdef __cplusplus
 }

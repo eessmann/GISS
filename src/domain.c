@@ -2719,3 +2719,88 @@ void gfs_domain_timer_stop (GfsDomain * domain, const gchar * name)
   gts_range_update (&t->r);
   t->start = -1.;
 }
+
+static void cell_combine_traverse (FttCell * cell,
+				   FttCell * parent,
+				   FttCellCombineTraverseFunc inside,
+				   gpointer idata,
+				   FttCellTraverseFunc outside,
+				   gpointer odata)
+{
+  FttCell * locate;
+  FttVector p;
+
+  ftt_cell_pos (cell, &p);
+  locate = ftt_cell_locate (parent, p, ftt_cell_level (cell));
+  if (locate == NULL) {
+    if (outside)
+      ftt_cell_traverse (cell, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, outside, odata);
+  }
+  else {
+    if (FTT_CELL_IS_LEAF (cell))
+      (* inside) (cell, locate, idata);
+    else {
+      FttCellChildren child;
+      guint i;
+
+      ftt_cell_children (cell, &child);
+      for (i = 0; i < FTT_CELLS; i++)
+	if (child.c[i])
+	  cell_combine_traverse (child.c[i], locate, inside, idata, outside, odata);
+    }
+  }  
+}
+
+static void box_combine_traverse (GfsBox * box, gpointer * data)
+{
+  FttVector p;
+  FttCell * locate;
+
+  ftt_cell_pos (box->root, &p);
+  locate = gfs_domain_locate (data[0], p, ftt_cell_level (box->root));
+  if (locate == NULL) {
+    if (data[3])
+      ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, data[3], data[4]);
+  }
+  else
+    cell_combine_traverse (box->root, locate, data[1], data[2], data[3], data[4]);
+}
+
+/**
+ * gfs_domain_combine_traverse:
+ * @domain1: a #GfsDomain.
+ * @domain2: another #GfsDomain.
+ * @inside: function to call for each pair of cells.
+ * @idata: user data to pass to @inside.
+ * @outside: function to call for cells falling outside of @domain2 or
+ * %NULL.
+ * @odata: user data to pass to @outside.
+ *
+ * Calls @inside for each leaf cell of @domain1 contained in
+ * @domain2. The second cell argument to @inside is set to the cell of
+ * @domain2 containing the first cell argument.
+ *
+ * If @outside is not %NULL it is called for each leaf cell of
+ * @domain1 which is outside of @domain2.
+ */
+void gfs_domain_combine_traverse (GfsDomain * domain1,
+				  GfsDomain * domain2,
+				  FttCellCombineTraverseFunc inside,
+				  gpointer idata,
+				  FttCellTraverseFunc outside,
+				  gpointer odata)				  
+{
+  gpointer data[5];
+
+  g_return_if_fail (domain1 != NULL);
+  g_return_if_fail (domain2 != NULL);
+  g_return_if_fail (inside != NULL);
+
+  data[0] = domain2;
+  data[1] = inside;
+  data[2] = idata;
+  data[3] = outside;
+  data[4] = odata;
+
+  gts_container_foreach (GTS_CONTAINER (domain1), (GtsFunc) box_combine_traverse, data);
+}
