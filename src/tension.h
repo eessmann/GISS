@@ -35,7 +35,7 @@ struct _GfsSourceTension {
   GfsSourceVector parent;
 
   /*< public >*/
-  GfsVariable * t[FTT_DIMENSION];
+  GfsVariable * c, * t[FTT_DIMENSION];
   gdouble sigma;
 };
 

@@ -386,8 +386,20 @@ static gdouble avg (FttCell * cell, FttDirection d, GfsVariable * v)
   return v1/(2*(FTT_DIMENSION - 1));
 }
 
-static gdouble gfs_youngs_gradient (FttCell * cell, FttComponent c, GfsVariable * v)
+/**
+ * gfs_youngs_gradient:
+ * @cell: a #FttCell.
+ * @c: a component.
+ * @v: a #GfsVariable.
+ *
+ * Returns: the Youngs-averaged gradient of variable @v in direction
+ * @c normalised by the size of @cell.
+ */
+gdouble gfs_youngs_gradient (FttCell * cell, FttComponent c, GfsVariable * v)
 {
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
+
   return avg (cell, 2*c, v) - avg (cell, 2*c + 1, v);
 }
 
