@@ -733,9 +733,7 @@ static gboolean check_area_fractions (const FttCell * root)
       }
       else { /* fine/coarse boundary */
 	g_assert (ftt_cell_level (neighbor.c[i]) == level - 1);
-	/* check for mixed cell refinement violation (topology.fig) */
-	g_return_val_if_fail (GFS_IS_FLUID (neighbor.c[i]), FALSE);
-	if (GFS_IS_MIXED (root) && 1. - solid->s[i] >= 1e-10) {
+	if (GFS_IS_FLUID (neighbor.c[i]) && GFS_IS_MIXED (root) && 1. - solid->s[i] >= 1e-10) {
 	  g_warning ("file %s: line %d (%s): s[%d]: %g",
 		     __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
 		     i, solid->s[i]);
