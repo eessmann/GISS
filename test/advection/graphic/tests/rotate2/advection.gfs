@@ -1,0 +1,24 @@
+1 0 GfsAdvection GfsBox GfsGEdge {} {
+  Time { end = 3.14159265359 }
+  Refine 6
+  VariableTracer {} T
+  AdvectionParams { cfl = 0.5 }
+  Init {} {
+    U = { return -8.*y; }
+    V = { return  8.*x; }
+    T = { 
+      double r2 = x*x + y*y; 
+      double coeff = 20. + 20000.*r2*r2*r2*r2;
+      return (1. + cos(20.*x)*cos(20.*y))*exp(-coeff*r2)/2.;
+    }
+  }
+  OutputScalarStats { istep = 1 } log { v = T }
+  OutputScalarSum { istep = 1 } log { v = T }
+  OutputSimulation { step = 0.785398 } stdout { variables = T binary = 1 }
+  EventScript { step = 0.785398 } {
+    number=`echo $GfsTime | awk '{print int($1/0.785398+0.001)}'`
+    echo "Save t-$number.eps { format = EPS width = 400 height = 400 }" 
+  }
+  OutputProgress { istep = 1 } stderr
+}
+GfsBox {}

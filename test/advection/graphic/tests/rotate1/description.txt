@@ -1,2 +1,1 @@
-command: advection -l 6 -s -v -n
 caption: Rotation of a smooth field (``gaussian''), no limiter, CFL of 0.5.

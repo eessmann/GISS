@@ -1,2 +1,1 @@
-command: advection -l 5 -s -v -t -p -r 2 -n
 caption: Translation of a smooth field (``gaussian''), periodic boundary conditions, no limiter, CFL of 0.5, two levels of refinement on the half left domain.

@@ -10,18 +10,20 @@ startdate=`date +%s`
 PATH=$PATH:../../../../poisson:../../..
 for test in $1; do
     cd $test
-    command=`awk '{if ($1 == "command:") print substr ($0, 10);}' < description.txt`
-    rm -f *.gts
-    if /bin/sh -c "$command > log 2>&1"; then
-	all=`expr $all + 1`;
-	echo "PASS: `basename $test`"
+    if gerris2D advection.gfs | gfsview-batch2D graphics.gfs 2> /dev/null; then
+	if ../../conservation.sh; then
+	    echo "PASS: `basename $test`"
+	else
+	    failed=`expr $failed + 1`;
+	    echo "FAIL: `basename $test`"
+	fi
     else
-	all=`expr $all + 1`;
-	failed=`expr $failed + 1`;
-	echo "FAIL: `basename $test`"
+        failed=`expr $failed + 1`;
+	echo "FAIL: `basename $test`"	
     fi
     cd ../..
     expr `date +%s` - $startdate > timestamp
+    all=`expr $all + 1`;
 done
 
 if test "$failed" -eq 0; then

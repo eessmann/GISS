@@ -1,2 +1,1 @@
-command: shapes star | transform -i -s 0.9 | advection -l 6 -v -t -p
 caption: Translation of a sharp field (``star''), periodic boundary conditions, van Leer limiter, CFL of 0.5.

@@ -1,2 +1,1 @@
-command: advection -l 6 -S -v -t -p
 caption: Translation of a smooth field (``periodic''), periodic boundary conditions, no limiter, CFL of 0.5.

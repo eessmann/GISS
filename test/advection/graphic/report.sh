@@ -25,7 +25,7 @@ cat <<EOF > $texfile.tex
 \vspace{5mm}
 EOF
 
-../advection -V 2>&1 | awk '{print $0 "\\\\"}' >> $texfile.tex
+gerris2D -V 2>&1 | awk '{print $0 "\\\\"}' >> $texfile.tex
 echo "`uname -a` \\\\" >> $texfile.tex
 echo "Total running time: `cat timestamp` s\\\\" >> $texfile.tex
 
@@ -42,20 +42,25 @@ for test in $1; do
     name=`basename $test`
     if test "$name" != "CVS"; then
 	cd $test
-	command=`awk '{if ($1 == "command:") print substr ($0, 10);}' < description.txt`
+        esname=`echo $name | awk 'BEGIN{FS=""}{for (i = 1; i <= NF; i++)if($i=="_")printf("\\\_"); else printf("%s", $i);}'`
 	caption=`awk '{if ($1 == "caption:") print substr ($0, 10);}' < description.txt`
-	../../figures.sh "*.gts" > figure.ps
 	printf "Figure %2d: %s\n" $figure $name
 	figure=`expr $figure + 1`
 	cd ../..
-	echo "\\begin{figure}" >> $texfile.tex
-	echo "\\begin{center}" >> $texfile.tex
-	echo "\\psfig{file=$test/figure.ps, width=\\hsize}" >> $texfile.tex
-	echo "\\end{center}" >> $texfile.tex
-	esname=`echo $name | awk 'BEGIN{FS=""}{for (i = 1; i <= NF; i++)if($i=="_")printf("\\\_"); else printf("%s", $i);}'`
-	echo "\\caption{$esname: $caption {\tt $command}}" >> $texfile.tex
-	echo "\\end{figure}" >> $texfile.tex
-	echo "\\clearpage" >> $texfile.tex
+        cat <<EOF >> $texfile.tex
+\\begin{figure}
+\\begin{center}
+\\begin{tabular}{cc}
+\\psfig{file=$test/t-0.eps, width=0.45\\hsize} &
+\\psfig{file=$test/t-1.eps, width=0.45\\hsize} \\\\
+\\psfig{file=$test/t-2.eps, width=0.45\\hsize} &
+\\psfig{file=$test/t-3.eps, width=0.45\\hsize}
+\\end{tabular}
+\\end{center}
+\\caption{$esname: $caption}
+\\end{figure}
+\\clearpage
+EOF
     fi
 done
 echo "\\end{document}" >> $texfile.tex
