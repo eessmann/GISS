@@ -280,6 +280,7 @@ void gfs_init (int * argc, char *** argv)
       gfs_output_simulation_class ();
       gfs_output_boundaries_class ();
       gfs_output_energy_class ();
+      gfs_output_particle_class ();
 
       gfs_output_scalar_class ();
         gfs_output_scalar_norm_class ();
@@ -289,7 +290,6 @@ void gfs_init (int * argc, char *** argv)
           gfs_output_correlation_class ();
 	gfs_output_squares_class ();
 	gfs_output_streamline_class ();
-	gfs_output_streakline_class ();
         gfs_output_ppm_class ();
 
   /* If modules are not supported, calls modules init functions */

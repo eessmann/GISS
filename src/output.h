@@ -244,29 +244,25 @@ struct _GfsOutputStreamline {
 
 GfsOutputClass * gfs_output_streamline_class  (void);
 
-/* GfsOutputStreakline: Header */
+/* GfsOutputParticle: Header */
 
-typedef struct _GfsOutputStreakline         GfsOutputStreakline;
+typedef struct _GfsOutputParticle         GfsOutputParticle;
 
-struct _GfsOutputStreakline {
+struct _GfsOutputParticle {
   /*< private >*/
-  GfsOutputScalar parent;
-
-  gboolean started;
-  gdouble ds;
+  GfsOutput parent;
 
   /*< public >*/
   GtsPoint * p;
-  GSList * streak;
 };
 
-#define GFS_OUTPUT_STREAKLINE(obj)         GTS_OBJECT_CAST (obj,\
-					       GfsOutputStreakline,\
-					       gfs_output_streakline_class ())
-#define GFS_IS_OUTPUT_STREAKLINE(obj)     (gts_object_is_from_class (obj,\
-					       gfs_output_streakline_class ()))
+#define GFS_OUTPUT_PARTICLE(obj)         GTS_OBJECT_CAST (obj,\
+					       GfsOutputParticle,\
+					       gfs_output_particle_class ())
+#define GFS_IS_OUTPUT_PARTICLE(obj)     (gts_object_is_from_class (obj,\
+					       gfs_output_particle_class ()))
 
-GfsOutputClass * gfs_output_streakline_class  (void);
+GfsOutputClass * gfs_output_particle_class  (void);
 
 /* GfsOutputPPM: Header */
 

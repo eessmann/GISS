@@ -2213,26 +2213,23 @@ GfsOutputClass * gfs_output_streamline_class (void)
   return klass;
 }
 
-/* GfsOutputStreakline: Object */
+/* GfsOutputParticle: Object */
 
-static void gfs_output_streakline_destroy (GtsObject * o)
+static void gfs_output_particle_destroy (GtsObject * o)
 {
-  GfsOutputStreakline * l = GFS_OUTPUT_STREAKLINE (o);
+  GfsOutputParticle * l = GFS_OUTPUT_PARTICLE (o);
 
   gts_object_destroy (GTS_OBJECT (l->p));
-  g_slist_foreach (l->streak, (GFunc) gts_object_destroy, NULL);
-  g_slist_free (l->streak);
   
-  (* GTS_OBJECT_CLASS (gfs_output_streakline_class ())->parent_class->destroy) 
-    (o);
+  (* GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class->destroy) (o);
 }
 
-static void gfs_output_streakline_read (GtsObject ** o, GtsFile * fp)
+static void gfs_output_particle_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsOutputStreakline * l = GFS_OUTPUT_STREAKLINE (*o);
+  GfsOutputParticle * l = GFS_OUTPUT_PARTICLE (*o);
 
-  if (GTS_OBJECT_CLASS (gfs_output_streakline_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_output_streakline_class ())->parent_class->read) 
+  if (GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class->read) 
       (o, fp);
   if (fp->type == GTS_ERROR)
     return;
@@ -2257,99 +2254,64 @@ static void gfs_output_streakline_read (GtsObject ** o, GtsFile * fp)
   }
   l->p->z = atof (fp->token->str);
   gts_file_next_token (fp);
-
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (ds)");
-    return;
-  }
-  l->ds = atof (fp->token->str);
-  gts_file_next_token (fp);
-
-  l->streak = g_slist_prepend (l->streak, 
-			       gts_point_new (gts_point_class (), 
-					      l->p->x, l->p->y, l->p->z));
 }
 
-static void gfs_output_streakline_write (GtsObject * o, FILE * fp)
+static void gfs_output_particle_write (GtsObject * o, FILE * fp)
 {
-  GfsOutputStreakline * l = GFS_OUTPUT_STREAKLINE (o);
+  GfsOutputParticle * l = GFS_OUTPUT_PARTICLE (o);
 
-  if (GTS_OBJECT_CLASS (gfs_output_streakline_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_output_streakline_class ())->parent_class->write) 
-      (o, fp);
-  fprintf (fp, " %g %g %g %g", l->p->x, l->p->y, l->p->z, l->ds);
+  if (GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class->write)
+    (* GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %g %g %g", l->p->x, l->p->y, l->p->z);
 }
 
-static void advect_point (GtsPoint * p, GfsSimulation * sim)
+static gboolean gfs_output_particle_event (GfsEvent * event, 
+					   GfsSimulation * sim)
 {
-  gfs_domain_advect_point (GFS_DOMAIN (sim), p, sim->advection_params.dt);
-}
-
-static gboolean gfs_output_streakline_event (GfsEvent * event, 
-					    GfsSimulation * sim)
-{
-  GfsOutputStreakline * l = GFS_OUTPUT_STREAKLINE (event);
+  GfsOutputParticle * l = GFS_OUTPUT_PARTICLE (event);
   gboolean ret = FALSE;
 
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_streakline_class ())->parent_class)->event) (event,sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class)->event)
+      (event,sim)) {
     FILE * fp = GFS_OUTPUT (event)->file->fp;
-    GSList * i = l->streak;
 
-    fprintf (fp, "%s %u\n", 
-	     GTS_OBJECT (event)->klass->info.name, 
-	     g_slist_length (i));
-    while (i) {
-      fprintf (fp, "%g %g %g\n", 
-	       GTS_POINT (i->data)->x, 
-	       GTS_POINT (i->data)->y, 
-	       GTS_POINT (i->data)->z);
-      i = i->next;
-    }
-    l->started = ret = TRUE;
+    fprintf (fp, "%g %g %g %g\n", sim->time.t, l->p->x, l->p->y, l->p->z);
+    ret = TRUE;
   }
-  if (l->started) {
-    if (gts_point_distance2 (l->p, l->streak->data) >= l->ds*l->ds)
-      l->streak = g_slist_prepend (l->streak, 
-				   gts_point_new (gts_point_class (), 
-						  l->p->x, l->p->y, l->p->z));
-    g_slist_foreach (l->streak, (GFunc) advect_point, sim);
-  }
+  gfs_domain_advect_point (GFS_DOMAIN (sim), l->p, sim->advection_params.dt);
   return ret;
 }
 
-static void gfs_output_streakline_class_init (GfsOutputClass * klass)
+static void gfs_output_particle_class_init (GfsOutputClass * klass)
 {
-  GFS_EVENT_CLASS (klass)->event = gfs_output_streakline_event;
-  GTS_OBJECT_CLASS (klass)->read = gfs_output_streakline_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_output_streakline_write;
-  GTS_OBJECT_CLASS (klass)->destroy = gfs_output_streakline_destroy;
+  GFS_EVENT_CLASS (klass)->event = gfs_output_particle_event;
+  GTS_OBJECT_CLASS (klass)->read = gfs_output_particle_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_output_particle_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_output_particle_destroy;
 }
 
-static void gfs_output_streakline_init (GfsOutputStreakline * l)
+static void gfs_output_particle_init (GfsOutputParticle * l)
 {
-  l->started = FALSE;
-  l->ds = G_MAXDOUBLE;
   l->p = gts_point_new (gts_point_class (), 0., 0., 0.);
-  l->streak = NULL;
 }
 
-GfsOutputClass * gfs_output_streakline_class (void)
+GfsOutputClass * gfs_output_particle_class (void)
 {
   static GfsOutputClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_output_streakline_info = {
-      "GfsOutputStreakline",
-      sizeof (GfsOutputStreakline),
+    GtsObjectClassInfo gfs_output_particle_info = {
+      "GfsOutputParticle",
+      sizeof (GfsOutputParticle),
       sizeof (GfsOutputClass),
-      (GtsObjectClassInitFunc) gfs_output_streakline_class_init,
-      (GtsObjectInitFunc) gfs_output_streakline_init,
+      (GtsObjectClassInitFunc) gfs_output_particle_class_init,
+      (GtsObjectInitFunc) gfs_output_particle_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS 
-				  (gfs_output_scalar_class ()),
-				  &gfs_output_streakline_info);
+				  (gfs_output_class ()),
+				  &gfs_output_particle_info);
   }
 
   return klass;
