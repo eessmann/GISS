@@ -31,7 +31,7 @@ gdouble gfs_line_area              (FttVector * m,
 				    gdouble c1);
 void    gfs_line_center            (FttVector * m, 
 				    gdouble alpha, 
-				    gdouble c, 
+				    gdouble a, 
 				    FttVector * p);
 gdouble gfs_line_alpha             (FttVector * m, 
 				    gdouble c);
@@ -44,6 +44,10 @@ gdouble gfs_plane_volume           (FttVector * m,
 				    gdouble c1);
 gdouble gfs_plane_alpha            (FttVector * m, 
 				    gdouble c);
+void    gfs_plane_center           (FttVector * m, 
+				    gdouble alpha, 
+				    gdouble a,
+				    FttVector * p);
 #endif /* 3D */
 void    gfs_cell_vof_advection     (FttCell * cell,
 				    FttComponent c,

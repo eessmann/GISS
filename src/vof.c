@@ -62,19 +62,19 @@ gdouble gfs_line_area (FttVector * m, gdouble alpha, gdouble c1)
  * gfs_line_center:
  * @m: normal to the line.
  * @alpha: line constant.
- * @c: area of cell fraction.
+ * @a: area of cell fraction.
  * @p: a #FttVector.
  *
  * Fills @p with the position of the center of mass of the fraction of
  * a square cell lying under the line (@m,@alpha).
  */
-void gfs_line_center (FttVector * m, gdouble alpha, gdouble c, FttVector * p)
+void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 {
-  gdouble a;
+  gdouble b;
 
   g_return_if_fail (m != NULL);
   g_return_if_fail (p != NULL);
-  g_return_if_fail (c > 0. && c < 1.);
+  g_return_if_fail (a > 0. && a < 1.);
 
   if (alpha <= 0.) {
     p->x = p->y = 0.;
@@ -90,20 +90,20 @@ void gfs_line_center (FttVector * m, gdouble alpha, gdouble c, FttVector * p)
 
   p->x = p->y = alpha*alpha*alpha;
 
-  a = alpha - m->x;
-  if (a > 0.) {
-    p->x -= a*a*(alpha + 2.*m->x);
-    p->y -= a*a*a;
+  b = alpha - m->x;
+  if (b > 0.) {
+    p->x -= b*b*(alpha + 2.*m->x);
+    p->y -= b*b*b;
   }
 
-  a = alpha - m->y;
-  if (a > 0.) {
-    p->y -= a*a*(alpha + 2.*m->y);
-    p->x -= a*a*a;
+  b = alpha - m->y;
+  if (b > 0.) {
+    p->y -= b*b*(alpha + 2.*m->y);
+    p->x -= b*b*b;
   }
   
-  p->x /= 6.*m->x*m->x*m->y*c;
-  p->y /= 6.*m->x*m->y*m->y*c;
+  p->x /= 6.*m->x*m->x*m->y*a;
+  p->y /= 6.*m->x*m->y*m->y*a;
 }
 
 #if (!FTT_2D)
@@ -156,6 +156,85 @@ gdouble gfs_plane_volume (FttVector * m, gdouble alpha, gdouble c1)
   }
 
   return v/(6.*m->x*m->y*m->z);
+}
+
+/**
+ * gfs_plane_center:
+ * @m: normal to the plane.
+ * @alpha: plane constant.
+ * @a: volume of cell fraction.
+ * @p: a #FttVector.
+ *
+ * Fills @p with the position of the center of mass of the fraction of
+ * a cubic cell lying under the plane (@m,@alpha).
+ */
+void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
+{
+  gdouble b, amax;
+
+  g_return_if_fail (m != NULL);
+  g_return_if_fail (a > 0. && a < 1.);
+  g_return_if_fail (p != NULL);
+
+  if (alpha <= 0.) {
+    p->x = p->y = p->z = 0.;
+    return;
+  }
+
+  amax = m->x + m->y + m->z;
+  if (alpha >= amax) {
+    p->x = p->y = p->z = 0.5;
+    return;
+  }
+
+  g_assert (m->x >= 1e-9 && m->y >= 1e-9 && m->z >= 1e-9);
+
+  p->x = p->y = p->z = alpha*alpha*alpha;
+  p->x *= alpha/m->x;
+  p->y *= alpha/m->y;
+  p->z *= alpha/m->z;
+
+  b = alpha - m->x;
+  if (b > 0.) {
+    p->x -= b*b*b*(3. + alpha/m->x);
+    p->y -= b*b*b*b/m->y;
+    p->z -= b*b*b*b/m->z;
+  }
+  b = alpha - m->y;
+  if (b > 0.) {
+    p->y -= b*b*b*(3. + alpha/m->y);
+    p->x -= b*b*b*b/m->x;
+    p->z -= b*b*b*b/m->z;
+  }
+  b = alpha - m->z;
+  if (b > 0.) {
+    p->z -= b*b*b*(3. + alpha/m->z);
+    p->x -= b*b*b*b/m->x;
+    p->y -= b*b*b*b/m->y;
+  }
+
+  amax = alpha - amax;
+  b = amax + m->x;
+  if (b > 0.) {
+    p->y += b*b*b*(3. + (alpha - m->z)/m->y);
+    p->z += b*b*b*(3. + (alpha - m->y)/m->z);
+    p->x += b*b*b*b/m->x;
+  }
+  b = amax + m->y;
+  if (b > 0.) {
+    p->x += b*b*b*(3. + (alpha - m->z)/m->x);
+    p->z += b*b*b*(3. + (alpha - m->x)/m->z);
+    p->y += b*b*b*b/m->y;
+  }
+  b = amax + m->z;
+  if (b > 0.) {
+    p->x += b*b*b*(3. + (alpha - m->y)/m->x);
+    p->y += b*b*b*(3. + (alpha - m->x)/m->y);
+    p->z += b*b*b*b/m->z;
+  }
+
+  b = 24.*m->x*m->y*m->z*a;
+  p->x /= b; p->y /= b; p->z /= b;
 }
 #endif /* 3D */
 

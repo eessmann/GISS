@@ -379,11 +379,16 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
   }
 
   /* now compute cell fraction, center of area, center of mass */
-  ca.x /= n1; ca.y /= n1; ca.z /= n1;
+
+  /* fixme: the calculation of ca below is not strictly equivalent to
+     the true center of area of the piece of surface contained in the
+     cell if there are more than 4 intersection points (n1 > 4) */
+  ca.x /= n1; ca.y /= n1; ca.z /= n1; 
   solid->ca = ca;
   {
     FttVector m;
     gdouble alpha, n = 0.;
+    gboolean sym[FTT_DIMENSION];
     FttComponent c;
 
     for (c = 0; c < FTT_DIMENSION; c++) {
@@ -392,13 +397,19 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
       if ((&m.x)[c] < 0.) {
 	(&m.x)[c] = - (&m.x)[c];
 	(&ca.x)[c] = 1. - (&ca.x)[c];
+	sym[c] = TRUE;
       }
+      else
+	sym[c] = FALSE;
       n += (&m.x)[c];
     }
     if (n > 0.) {
-      m.x /= n; m.y /= n; m.z /= n;
+      m.x = m.x/n + 1e-6; m.y = m.y/n + 1e-6; m.z = m.z/n + 1e-6;
       alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
       solid->a = gfs_plane_volume (&m, alpha, 1.);
+      gfs_plane_center (&m, alpha, solid->a, &solid->cm);
+      for (c = 0; c < FTT_DIMENSION; c++)
+	(&solid->cm.x)[c] = (&o.x)[c] + (sym[c] ? 1. - (&solid->cm.x)[c] : (&solid->cm.x)[c])*h;
     }
     else { /* degenerate intersections */
       solid->a = 0.;
