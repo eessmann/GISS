@@ -537,7 +537,7 @@ static void init_vf (FttCell * cell, gpointer * data)
     ftt_cell_pos (cell, &p);
   else
     gfs_cell_cm (cell, &p);
-  GFS_VARIABLE (cell, v->i) = gfs_function_value (f, NULL, &p, sim->time.t);
+  GFS_VARIABLE (cell, v->i) = gfs_function_value (f, cell, &p, sim->time.t);
 }
 
 static void init_f (GfsVariable * v, GfsFunction * f, GfsDomain * domain)

@@ -1982,7 +1982,7 @@ static void compute_error (FttCell * cell, GfsOutputScalar * o)
   else
     gfs_cell_cm (cell, &p);
   GFS_VARIABLE (cell, GFS_OUTPUT_ERROR_NORM (o)->v->i) = GFS_VARIABLE (cell, o->v->i) -
-    gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, NULL, &p, sim->time.t); 
+    gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, cell, &p, sim->time.t); 
 }
 
 static void remove_bias (FttCell * cell, gpointer * data)
