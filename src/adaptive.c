@@ -21,6 +21,7 @@
 #include <math.h>
 
 #include "adaptive.h"
+#include "solid.h"
 
 #include "graphic.h"
 
@@ -404,6 +405,72 @@ GfsEventClass * gfs_adapt_streamline_curvature_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_adapt_class ()),
 				  &gfs_adapt_streamline_curvature_info);
+  }
+
+  return klass;
+}
+
+/* GfsAdaptFunction: Object */
+
+static void gfs_adapt_function_destroy (GtsObject * o)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_ADAPT_FUNCTION (o)->f));
+
+  (* GTS_OBJECT_CLASS (gfs_adapt_function_class ())->parent_class->destroy) (o);
+}
+
+static void gfs_adapt_function_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_adapt_function_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  gfs_object_simulation (GFS_ADAPT_FUNCTION (*o)->f) = gfs_object_simulation (*o);
+  gfs_function_read (GFS_ADAPT_FUNCTION (*o)->f, fp);
+}
+
+static void gfs_adapt_function_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_adapt_function_class ())->parent_class->write) (o, fp);
+  gfs_function_write (GFS_ADAPT_FUNCTION (o)->f, fp);
+}
+
+static void gfs_adapt_function_class_init (GtsObjectClass * klass)
+{
+  klass->destroy = gfs_adapt_function_destroy;  
+  klass->read = gfs_adapt_function_read;
+  klass->write = gfs_adapt_function_write;
+}
+
+static gdouble function_cost (FttCell * cell, GfsAdaptFunction * a)
+{
+  FttVector p;
+  gfs_cell_cm (cell, &p);
+  return gfs_function_value (a->f, cell, &p, gfs_object_simulation (a)->time.t);
+}
+
+static void gfs_adapt_function_init (GfsAdaptFunction * object)
+{
+  object->f = gfs_function_new (gfs_function_class (), 0.);
+  GFS_ADAPT (object)->cost = (GtsKeyFunc) function_cost;
+}
+
+GfsEventClass * gfs_adapt_function_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_adapt_function_info = {
+      "GfsAdaptFunction",
+      sizeof (GfsAdaptFunction),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_adapt_function_class_init,
+      (GtsObjectInitFunc) gfs_adapt_function_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_adapt_class ()),
+				  &gfs_adapt_function_info);
   }
 
   return klass;

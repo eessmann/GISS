@@ -252,6 +252,7 @@ void gfs_init (int * argc, char *** argv)
     gfs_adapt_class ();
       gfs_adapt_vorticity_class ();
       gfs_adapt_streamline_curvature_class ();
+      gfs_adapt_function_class ();
       gfs_adapt_gradient_class ();
         gfs_adapt_curvature_class ();
       gfs_adapt_not_box_class ();

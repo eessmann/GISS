@@ -88,6 +88,26 @@ GfsEventClass * gfs_adapt_vorticity_class  (void);
 
 GfsEventClass * gfs_adapt_streamline_curvature_class  (void);
  
+/* GfsAdaptFunction: Header */
+
+typedef struct _GfsAdaptFunction         GfsAdaptFunction;
+
+struct _GfsAdaptFunction {
+  /*< private >*/
+  GfsAdapt parent;
+
+  /*< public >*/
+  GfsFunction * f;
+};
+
+#define GFS_ADAPT_FUNCTION(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsAdaptFunction,\
+					         gfs_adapt_function_class ())
+#define GFS_IS_ADAPT_FUNCTION(obj)         (gts_object_is_from_class (obj,\
+						 gfs_adapt_function_class ()))
+
+GfsEventClass * gfs_adapt_function_class  (void);
+
 /* GfsAdaptGradient: Header */
 
 typedef struct _GfsAdaptGradient         GfsAdaptGradient;
