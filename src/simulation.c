@@ -210,7 +210,6 @@ static void check_solid_surface (GtsSurface * s,
 				 const gchar * fname,
 				 GtsFile * fp)
 {
-  GtsSurface * self;
   GString * name = g_string_new ("surface");
 
   if (fname) {
@@ -221,12 +220,6 @@ static void check_solid_surface (GtsSurface * s,
 
   if (!gts_surface_is_orientable (s))
     gts_file_error (fp, "%s is not orientable", name->str);
-  else if (!gts_surface_is_closed (s))
-    gts_file_error (fp, "%s is not closed", name->str);
-  else if ((self = gts_surface_is_self_intersecting (s))) {
-    gts_object_destroy (GTS_OBJECT (self));
-    gts_file_error (fp, "%s is self-intersecting", name->str);
-  }
   g_string_free (name, TRUE);
 }
 
@@ -554,8 +547,6 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   fp->scope_max--;
   gts_file_next_token (fp);
 
-  if (sim->surface && gts_surface_volume (sim->surface) < 0.)
-    sim->is_open = TRUE;
   if (sim->interface) {
     if (sim->itree)
       gts_bb_tree_destroy (sim->itree, TRUE);
@@ -688,21 +679,20 @@ static void gfs_simulation_init (GfsSimulation * object)
   gfs_multilevel_params_init (&object->approx_projection_params);
 
   object->surface = NULL;
-  object->is_open = FALSE;
 
   object->interface = NULL;
   object->itree = NULL;
   object->i_is_open = FALSE;
 
-  object->refines = GTS_SLIST_CONTAINER (gts_container_new 
-					 (GTS_CONTAINER_CLASS 
+  object->refines = GTS_SLIST_CONTAINER (gts_container_new
+					 (GTS_CONTAINER_CLASS
 					  (gts_slist_container_class ())));
-  object->adapts = GTS_SLIST_CONTAINER (gts_container_new 
-					(GTS_CONTAINER_CLASS 
+  object->adapts = GTS_SLIST_CONTAINER (gts_container_new
+					(GTS_CONTAINER_CLASS
 					 (gts_slist_container_class ())));
   gfs_adapt_stats_init (&object->adapts_stats);
-  object->events = GTS_SLIST_CONTAINER (gts_container_new 
-					(GTS_CONTAINER_CLASS 
+  object->events = GTS_SLIST_CONTAINER (gts_container_new
+					(GTS_CONTAINER_CLASS
 					 (gts_slist_container_class ())));
   object->modules = NULL;
   
@@ -743,10 +733,8 @@ GfsSimulation * gfs_simulation_new (GfsSimulationClass * klass)
 
 static void box_init_solid_fractions (GfsBox * box, GfsSimulation * sim)
 {
-  gfs_cell_init_solid_fractions (box->root, 
-				 sim->surface, sim->is_open,
-				 TRUE, (FttCellCleanupFunc) gfs_cell_cleanup,
-				 NULL);
+  gfs_cell_init_solid_fractions (box->root, sim->surface, TRUE, 
+				 (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
   if (FTT_CELL_IS_DESTROYED (box->root)) {
     FttVector p;
 
@@ -773,13 +761,11 @@ static void check_face (FttCellFace * f, guint * nf)
     (*nf)++;
 }
 
-static void check_solid_fractions (GfsBox * box, gpointer * data)
+static void check_solid_fractions (GfsBox * box, guint * nf)
 {
-  GfsSimulation * sim = data[0];
-  guint * nf = data[1];
   FttDirection d;
 
-  gfs_cell_check_solid_fractions (box->root, sim->surface, sim->is_open);
+  gfs_cell_check_solid_fractions (box->root);
   for (d = 0; d < FTT_NEIGHBORS; d++)
     ftt_face_traverse_boundary (box->root, d, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttFaceTraverseFunc) check_face, nf);
@@ -802,7 +788,6 @@ void gfs_simulation_refine (GfsSimulation * sim)
   GSList * i;
   guint depth, nf = 0;
   gint l;
-  gpointer data[2];
   GfsDomain * domain;
 
   g_return_if_fail (sim != NULL);
@@ -835,9 +820,7 @@ void gfs_simulation_refine (GfsSimulation * sim)
     gfs_domain_match (domain);
     gfs_domain_timer_stop (domain, "solid_fractions");
   }
-  data[0] = sim;
-  data[1] = &nf;
-  gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) check_solid_fractions, data);
+  gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) check_solid_fractions, &nf);
   if (nf > 0) {
     GfsVariable * v = domain->variables;
     gboolean diffusion = FALSE;

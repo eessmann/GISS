@@ -31,14 +31,11 @@ extern "C" {
 void         gfs_cell_fluid                              (FttCell * cell);
 void         gfs_cell_init_solid_fractions        (FttCell * root, 
 						   GtsSurface * s,
-						   gboolean is_open,
 						   gboolean destroy_solid,
 						   FttCellCleanupFunc cleanup,
 						   gpointer data);
 void         gfs_cell_init_solid_fractions_from_children (FttCell * cell);
-gboolean     gfs_cell_check_solid_fractions              (FttCell * root,
-							  GtsSurface * solid,
-							  gboolean is_open);
+gboolean     gfs_cell_check_solid_fractions              (FttCell * root);
 gboolean     gfs_refine_mixed                       (const FttCell * cell);
 void         gfs_cell_init_fraction                 (FttCell * root, 
 						     GtsSurface * s,
