@@ -23,13 +23,10 @@ static void traverse_face (FttCell * cell, gpointer * datum)
 	face.d = FTT_OPPOSITE_DIRECTION (face.d);
 	n = ftt_cell_children_direction (face.neighbor, face.d, &children);
 	face.neighbor = face.cell;
-	for (i = 0; i < n; i++) {
-	  face.cell = children.c[i];
-	  /* check for mixed cell refinement violation (topology.fig) */
-	  g_assert (face.cell != NULL);
-	  if (!check || (face.cell->flags & FTT_FLAG_TRAVERSED) == 0)
+	for (i = 0; i < n; i++)
+	  if ((face.cell = children.c[i]) && 
+	      (!check || (face.cell->flags & FTT_FLAG_TRAVERSED) == 0))
 	    (* func) (&face, data);
-	}
       }
       else
 	(* func) (&face, data);
