@@ -68,49 +68,43 @@ static void gfs_source_tension_write (GtsObject * o, FILE * fp)
   fprintf (fp, " %s %g", GFS_SOURCE_TENSION (o)->c->name, GFS_SOURCE_TENSION (o)->sigma);
 }
 
-static void foreach_cell_normal (FttCell * cell, GfsVariable * v)
+static void foreach_cell_normal (FttCell * cell, GfsSourceTension * s)
 {
   FttVector n;
   gdouble nn = 0.;
+  gdouble sigh = s->sigma/ftt_cell_size (cell);
   FttComponent c;
 
   for (c = 0; c < FTT_DIMENSION; c++) {
-    (&n.x)[c] = gfs_youngs_gradient (cell, c, v);
+    (&n.x)[c] = gfs_youngs_gradient (cell, c, s->c);
     nn += (&n.x)[c]*(&n.x)[c];
   }
   nn = sqrt (nn + 1e-50);
-  GFS_STATE (cell)->g[0] = n.x*n.x/nn;
-  GFS_STATE (cell)->g[1] = n.y*n.y/nn;
-  GFS_STATE (cell)->div = n.x*n.y/nn;
+  GFS_STATE (cell)->g[0] = sigh*n.x*n.x/nn;
+  GFS_STATE (cell)->g[1] = sigh*n.y*n.y/nn;
+  GFS_STATE (cell)->div  = sigh*n.x*n.y/nn;
 }
 
 static void foreach_cell_tension (FttCell * cell, GfsSourceTension * s)
 {
   gdouble h = ftt_cell_size (cell);
-  gdouble sigh = s->sigma/(h*h*h);
 
-  GFS_VARIABLE (cell, s->t[0]->i) = sigh*(gfs_youngs_gradient (cell, FTT_X, gfs_gy) -
-					  gfs_youngs_gradient (cell, FTT_Y, gfs_div));
-  GFS_VARIABLE (cell, s->t[1]->i) = sigh*(gfs_youngs_gradient (cell, FTT_Y, gfs_gx) -
-					  gfs_youngs_gradient (cell, FTT_X, gfs_div));
+  GFS_VARIABLE (cell, s->t[0]->i) = (gfs_youngs_gradient (cell, FTT_X, gfs_gy) -
+				     gfs_youngs_gradient (cell, FTT_Y, gfs_div))/h;
+  GFS_VARIABLE (cell, s->t[1]->i) = (gfs_youngs_gradient (cell, FTT_Y, gfs_gx) -
+				     gfs_youngs_gradient (cell, FTT_X, gfs_div))/h;
 }
 
-static gboolean gfs_source_tension_event (GfsEvent * event, 
-					  GfsSimulation * sim)
+static void gfs_source_tension_event (GfsEvent * event, 
+				      GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_source_tension_class ())->parent_class)->event) 
-      (event, sim)) {
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim),
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) foreach_cell_normal, 
-			      GFS_SOURCE_TENSION (event)->c);
-    /* fixme: boundary conditions for normal */
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) foreach_cell_tension, event);
-    return TRUE;
-  }
-  return FALSE;
+  gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) foreach_cell_normal, event);
+  /* fixme: boundary conditions for normal */
+  gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) foreach_cell_tension, event);
 }
 
 static gdouble gfs_source_tension_value (GfsSourceGeneric * s, 
@@ -128,10 +122,10 @@ static gdouble gfs_source_tension_value (GfsSourceGeneric * s,
 
 static void gfs_source_tension_class_init (GfsSourceGenericClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->read =  gfs_source_tension_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_source_tension_write;
-  GFS_EVENT_CLASS (klass)->event =  gfs_source_tension_event;
-  klass->centered_value =           gfs_source_tension_value;
+  GTS_OBJECT_CLASS (klass)->read =       gfs_source_tension_read;
+  GTS_OBJECT_CLASS (klass)->write =      gfs_source_tension_write;
+  GFS_EVENT_CLASS (klass)->event_half =  gfs_source_tension_event;
+  klass->centered_value =                gfs_source_tension_value;
 }
 
 GfsSourceGenericClass * gfs_source_tension_class (void)
