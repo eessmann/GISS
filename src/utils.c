@@ -27,6 +27,29 @@
 
 /* GfsFunction: Object */
 
+static GtsSurface * read_surface (gchar * name, GtsFile * fp)
+{
+  FILE * fptr = fopen (name, "r");
+  GtsSurface * s;
+  GtsFile * fp1;
+
+  if (fptr == NULL) {
+    gts_file_error (fp, "cannot open file `%s'", name);
+    return NULL;
+  }
+  fp1 = gts_file_new (fptr);
+  s = gts_surface_new (gts_surface_class (), gts_face_class (), 
+		       gts_edge_class (), gts_vertex_class ());
+  if (gts_surface_read (s, fp1)) {
+    gts_file_error (fp, "%s:%d:%d: %s", name, fp1->line, fp1->pos, fp1->error);
+    gts_object_destroy (GTS_OBJECT (s));
+    s = NULL;
+  }
+  gts_file_destroy (fp1);
+  fclose (fptr);
+  return s;
+}
+
 static gboolean load_module (GfsFunction * f, GtsFile * fp, gchar * mname)
 {
   gchar * path;
@@ -63,14 +86,22 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     f->val = atof (fp->token->str);
     break;
 
-    /* load module */
+    /* load GTS file or module */
   case GTS_STRING:
-    if (!g_module_supported ()) {
-      gts_file_error (fp, "expecting a number (val)");
-      return;
+    if (strlen (fp->token->str) > 3 &&
+	!strcmp (&(fp->token->str[strlen (fp->token->str) - 4]), ".gts")) {
+      if ((f->s = read_surface (fp->token->str, fp)) == NULL)
+	return;
+      f->sname = g_strdup (fp->token->str);
     }
-    else
-      load_module (f, fp, fp->token->str);
+    else {
+      if (!g_module_supported ()) {
+	gts_file_error (fp, "expecting a number (val)");
+	return;
+      }
+      else
+	load_module (f, fp, fp->token->str);
+    }
     break;
 
     /* compile C expression */
@@ -221,6 +252,8 @@ static void function_write (GtsObject * o, FILE * fp)
     fprintf (fp, " %s", f->expr->str);
   else if (f->module)
     fprintf (fp, " %s", g_module_name (f->module));
+  else if (f->s)
+    fprintf (fp, " %s", f->sname);
   else
     fprintf (fp, " %g", f->val);
 }
@@ -231,6 +264,10 @@ static void function_destroy (GtsObject * object)
 
   if (f->module) g_module_close (f->module);
   if (f->expr) g_string_free (f->expr, TRUE);
+  if (f->s) {
+    gts_object_destroy (GTS_OBJECT (f->s));
+    g_free (f->sname);
+  }
 
   (* GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->destroy) 
     (object);
@@ -275,6 +312,21 @@ GfsFunction * gfs_function_new (GfsFunctionClass * klass,
   return object;
 }
 
+static gdouble interpolated_value (GfsFunction * f, FttVector * p)
+{
+  GtsPoint q;
+  GtsFace * t;
+
+  q.x = p->x; q.y = p->y;
+  t = gts_point_locate (&q, f->s, NULL);
+  if (t == NULL) {
+    g_warning ("%s: cannot locate point (%g,%g)", f->sname, p->x, p->y);
+    return 0.;
+  }
+  gts_triangle_interpolate_height (GTS_TRIANGLE (t), &q);
+  return q.z;
+}
+
 /**
  * gfs_function_value:
  * @f: a #GfsFunction.
@@ -288,7 +340,9 @@ gdouble gfs_function_value (GfsFunction * f, FttCell * cell, FttVector * p, gdou
 {
   g_return_val_if_fail (f != NULL, 0.);
 
-  if (f->f) {
+  if (f->s)
+    return interpolated_value (f, p);
+  else if (f->f) {
     g_return_val_if_fail (p != NULL, 0.);
     return (* f->f) (cell, p->x, p->y, p->z, t);
   }
@@ -309,13 +363,21 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa,
 {
   g_return_val_if_fail (f != NULL, 0.);
 
-  if (f->f) {
+  if (f->s) {
     FttVector p;
 
     g_return_val_if_fail (fa != NULL, 0.);
     
     ftt_face_pos (fa, &p);
-    return (* f->f) (NULL, p.x, p.y, p.z, t);
+    return interpolated_value (f, &p);
+  }
+  else if (f->f) {
+    FttVector p;
+
+    g_return_val_if_fail (fa != NULL, 0.);
+    
+    ftt_face_pos (fa, &p);
+    return (* f->f) (fa->cell, p.x, p.y, p.z, t);
   }
   else
     return f->val;

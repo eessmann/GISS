@@ -39,6 +39,8 @@ struct _GfsFunction {
   GModule * module;
   GString * expr;
   gdouble (* f) (FttCell *, gdouble x, gdouble y, gdouble z, gdouble t);
+  gchar * sname;
+  GtsSurface * s;
   gdouble val;
 
   /*< public >*/
