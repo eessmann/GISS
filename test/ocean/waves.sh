@@ -8,7 +8,7 @@ wave=`mktemp /tmp/wave.XXXXXX`
 res=`mktemp /tmp/wave.XXXXXX`
 for l in `seq 5 1 7`; do
   cat <<EOF > $wave
-1 0 GfsOcean GfsBox GfsGEdge { variables = Div,PS } {
+1 0 GfsOcean GfsBox GfsGEdge {} {
  Time { end = 37.80501984 dtmax = 0.1 }
  PhysicalParams { g = 5.87060327757e-3 }
  Init {} {

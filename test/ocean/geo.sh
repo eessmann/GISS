@@ -4,7 +4,7 @@ param=`mktemp /tmp/geo.XXXXXX`
 error=`mktemp /tmp/geo.XXXXXX`
 
 cat <<EOF > $param
-1 0 GfsOcean GfsBox GfsGEdge { variables = PS,Div } {
+1 0 GfsOcean GfsBox GfsGEdge {} {
  # dt = 1000 s
  Time { iend = 1580 dtmax = 0.10285 }
  Refine 6
@@ -50,7 +50,7 @@ END{
 fi
 
 cat <<EOF > $param
-1 0 GfsOcean GfsBox GfsGEdge { variables = PS,Div } {
+1 0 GfsOcean GfsBox GfsGEdge {} {
  # dt = 1000 s
  Time { iend = 1580 dtmax = 0.10285 }
  Refine 6

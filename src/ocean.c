@@ -27,7 +27,7 @@
 
 /* GfsOcean: Object */
 
-static void gfs_ocean_destroy (GtsObject * object)
+static void ocean_destroy (GtsObject * object)
 {
   guint i;
   GPtrArray * layer = GFS_OCEAN (object)->layer;
@@ -41,6 +41,16 @@ static void gfs_ocean_destroy (GtsObject * object)
   g_ptr_array_free (layer, TRUE);
 
   (* GTS_OBJECT_CLASS (gfs_ocean_class ())->parent_class->destroy) (object);  
+}
+
+static void ocean_read (GtsObject ** object, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_ocean_class ())->parent_class->read) (object, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  gfs_domain_add_variable (GFS_DOMAIN (*object), "PS");
+  gfs_domain_add_variable (GFS_DOMAIN (*object), "Div");
 }
 
 static void new_layer (GfsOcean * ocean)
@@ -450,7 +460,8 @@ static void ocean_run (GfsSimulation * sim)
 
 static void gfs_ocean_class_init (GfsSimulationClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->destroy = gfs_ocean_destroy;
+  GTS_OBJECT_CLASS (klass)->destroy = ocean_destroy;
+  GTS_OBJECT_CLASS (klass)->read = ocean_read;
   GFS_DOMAIN_CLASS (klass)->post_read = ocean_post_read;
   klass->run = ocean_run;
 }
