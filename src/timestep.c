@@ -731,6 +731,14 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
 
 /* GfsSurfaceGenericBc: Object */
 
+static void gfs_surface_generic_bc_destroy (GtsObject * o)
+{
+  if (GFS_SURFACE_GENERIC_BC (o)->v)
+    GFS_SURFACE_GENERIC_BC (o)->v->surface_bc = NULL;
+
+  (* GTS_OBJECT_CLASS (gfs_surface_generic_bc_class ())->parent_class->destroy) (o);
+}
+
 static void gfs_surface_generic_bc_read (GtsObject ** o, GtsFile * fp)
 {
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
@@ -776,13 +784,13 @@ static void gfs_surface_generic_bc_read (GtsObject ** o, GtsFile * fp)
 static void gfs_surface_generic_bc_write (GtsObject * o, FILE * fp)
 {
   if (GTS_OBJECT_CLASS (gfs_surface_generic_bc_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_surface_generic_bc_class ())->parent_class->write) 
-      (o, fp);
+    (* GTS_OBJECT_CLASS (gfs_surface_generic_bc_class ())->parent_class->write) (o, fp);
   fprintf (fp, "%s %s", o->klass->info.name, GFS_SURFACE_GENERIC_BC (o)->v->name);
 }
 
 static void gfs_surface_generic_bc_class_init (GfsSurfaceGenericBcClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_surface_generic_bc_destroy;
   GTS_OBJECT_CLASS (klass)->read = gfs_surface_generic_bc_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_surface_generic_bc_write;
 }

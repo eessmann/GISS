@@ -1921,20 +1921,11 @@ static void gfs_variable_clone (GtsObject * clone, GtsObject * object)
   GfsVariable * c = GFS_VARIABLE1 (clone);
   GfsVariable * v = GFS_VARIABLE1 (object);
 
-  (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->clone) 
-    (clone, object);
+  (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->clone) (clone, object);
   if (v->name)
     c->name = g_strdup (v->name);
-  if (v->sources) {
-    GSList * i = GTS_SLIST_CONTAINER (v->sources)->items;
-
-    c->sources = 
-      gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
-    while (i) {
-      gts_container_add (c->sources, GTS_CONTAINEE (i->data));
-      i = i->next;
-    }
-  }
+  c->sources = NULL;
+  c->surface_bc = NULL;
 }
 
 static void gfs_variable_class_init (GfsVariableClass * klass)
