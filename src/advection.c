@@ -236,7 +236,8 @@ static gdouble interpolate_2D1 (const FttCell * cell,
   FttDirection dleft;
 
   g_return_val_if_fail (cell != NULL, 0.);
-  g_return_val_if_fail (!GFS_IS_MIXED (cell), 0.);
+  /* fixme: this routine does not take into account mixed cells
+     fractions (in contrast to interpolate_1D1 above) */
 
   dleft = FTT_OPPOSITE_DIRECTION (dright);
   v0 = GFS_STATE (cell)->f[dleft].v;
@@ -252,13 +253,16 @@ static gdouble interpolate_2D1 (const FttCell * cell,
       d[0] = FTT_OPPOSITE_DIRECTION (dright);
       d[1] = FTT_OPPOSITE_DIRECTION (d1);
       d[2] = d2;
-      n1 = ftt_cell_child_corner (n1, d);
-      /* check for mixed cell refinement violation */
-      g_assert (n1);
-      x1 = 1./4.;
-      y1 = 3./4.;
+      if ((n1 = ftt_cell_child_corner (n1, d))) {
+	v1 = GFS_STATE (n1)->f[dleft].v;
+	x1 = 1./4.;
+	y1 = 3./4.;
+      }
+      else
+	v1 = v0;
     }
-    v1 = GFS_STATE (n1)->f[dleft].v;
+    else
+      v1 = GFS_STATE (n1)->f[dleft].v;
   }
   else
     v1 = v0;
@@ -274,13 +278,16 @@ static gdouble interpolate_2D1 (const FttCell * cell,
       d[0] = FTT_OPPOSITE_DIRECTION (dright);
       d[1] = FTT_OPPOSITE_DIRECTION (d2);
       d[2] = d1;
-      n2 = ftt_cell_child_corner (n2, d);
-      /* check for mixed cell refinement violation */
-      g_assert (n2);
-      x2 = 3./4.;
-      y2 = 1./4.;
+      if ((n2 = ftt_cell_child_corner (n2, d))) {
+	v2 = GFS_STATE (n2)->f[dleft].v;
+	x2 = 3./4.;
+	y2 = 1./4.;
+      }
+      else
+	v2 = v0;
     }
-    v2 = GFS_STATE (n2)->f[dleft].v;
+    else
+      v2 = GFS_STATE (n2)->f[dleft].v;
   }
   else
     v2 = v0;

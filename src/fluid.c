@@ -158,9 +158,9 @@ static GfsGradient interpolate_1D1 (FttCell * cell,
  * First order 2D interpolation.
  */
 static GfsGradient interpolate_2D1 (FttCell * cell,
-				   FttDirection d1, FttDirection d2,
-				   gdouble x, gdouble y,
-				   guint v)
+				    FttDirection d1, FttDirection d2,
+				    gdouble x, gdouble y,
+				    guint v)
 {
   GfsGradient p;
   gdouble y1 = 1.;
@@ -170,7 +170,6 @@ static GfsGradient interpolate_2D1 (FttCell * cell,
   FttCellFace f1, f2;
 
   g_return_val_if_fail (cell != NULL, p);
-  g_return_val_if_fail (!GFS_IS_MIXED (cell), p);
   
   f1 = ftt_cell_face (cell, d1);
   if (f1.neighbor)
@@ -1067,22 +1066,18 @@ void gfs_face_gradient_flux (const FttCellFace * face,
       f.d = FTT_OPPOSITE_DIRECTION (face->d);
       n = ftt_cell_children_direction (face->neighbor, f.d, &children);
       f.neighbor = face->cell;
-      for (i = 0; i < n; i++) {
-	f.cell = children.c[i];
-	w = GFS_STATE (f.cell)->f[f.d].v;
-	
-	/* check for mixed cell refinement violation (topology.fig) */
-	g_assert (f.cell);
-
-	if (GFS_IS_MIXED (f.cell) || GFS_IS_MIXED (f.neighbor)) {
-	  if (!mixed_face_gradient (&f, &gcf, v, max_level))
+      for (i = 0; i < n; i++) 
+	if ((f.cell = children.c[i])) {
+	  w = GFS_STATE (f.cell)->f[f.d].v;
+	  if (GFS_IS_MIXED (f.cell) || GFS_IS_MIXED (f.neighbor)) {
+	    if (!mixed_face_gradient (&f, &gcf, v, max_level))
+	      gcf = gradient_fine_coarse (&f, v, max_level);
+	  }
+	  else
 	    gcf = gradient_fine_coarse (&f, v, max_level);
+	  g->a += w*gcf.b;
+	  g->b += w*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
 	}
-	else
-	  gcf = gradient_fine_coarse (&f, v, max_level);
-	g->a += w*gcf.b;
-	g->b += w*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
-      }
     }
   }
 }
