@@ -19,13 +19,11 @@
 
 #include "config.h"
 
-#ifdef HAVE_FPU_CONTROL_H
-#  include <fpu_control.h>
-#  ifdef _FPU_IEEE
-     static fpu_control_t fpu_trap_exceptions = 
-     _FPU_IEEE & ~(_FPU_MASK_ZM /*| _FPU_MASK_IM | _FPU_MASK_OM*/);
-#  endif /* _FPU_IEEE */
-#endif /* HAVE_FPU_CONTROL_H */
+#ifdef HAVE_FPU_SETCW
+# include <fpu_control.h>
+  static fpu_control_t fpu_trap_exceptions = 
+       _FPU_IEEE & ~(_FPU_MASK_ZM /*| _FPU_MASK_IM | _FPU_MASK_OM*/);
+#endif /* HAVE_FPU_SETCW */
 
 #include <stdlib.h>
 #include "boundary.h"
@@ -140,11 +138,9 @@ void gfs_init (int * argc, char *** argv)
 #endif /* HAVE_MPI */
   initialized = TRUE;
 
-#ifdef HAVE_FPU_CONTROL_H
-#  ifdef _FPU_IEEE
-     _FPU_SETCW (fpu_trap_exceptions);
-#  endif /* _FPU_IEEE */
-#endif /* HAVE_FPU_CONTROL_H */
+#ifdef HAVE_FPU_SETCW
+   _FPU_SETCW (fpu_trap_exceptions);
+#endif /* HAVE_FPU_SETCW */
 
   g_log_set_handler (G_LOG_DOMAIN,
 		     G_LOG_LEVEL_ERROR |

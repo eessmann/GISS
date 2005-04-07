@@ -278,7 +278,12 @@ AC_SUBST(CPPFLAGS)
 AC_SUBST(LDFLAGS)
 
 dnl header file checks
-AC_CHECK_HEADERS(fpu_control.h, AC_DEFINE(HAVE_FPU_CONTROL_H))
+AC_CHECK_HEADERS(fpu_control.h,
+  AC_CHECK_DECL(_FPU_SETCW, 
+                AC_DEFINE(HAVE_FPU_SETCW,,[Define to 1 if you have _FPU_SETCW]),,
+                [#include <fpu_control.h>])
+)
+
 AC_CHECK_HEADERS(unistd.h, AC_DEFINE(HAVE_UNISTD_H))
 AC_CHECK_HEADERS(getopt.h, AC_DEFINE(HAVE_GETOPT_H))
 
