@@ -1,4 +1,4 @@
-AC_INIT(src/ftt.h)
+AC_INIT(configure.in)
 
 dnl we to AC_DIVERT_PUSH/AC_DIVERT_POP these variable definitions so they
 dnl are available for $ac_help expansion (don't we all *love* autoconf?)
