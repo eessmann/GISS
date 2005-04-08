@@ -52,12 +52,12 @@ examples.pdf: examples.dvi
 	ps2pdf -sPAPERSIZE=a4 -dMaxSubsetPct=100 -dCompatibilityLevel=1.2 -dSubsetFonts=true -dEmbedAllFonts=true examples.ps examples.pdf
 	rm -f examples.ps
 
-examples.tex: template.tex
+examples.tex: template.tex Makefile.deps
 	rm -r -f examples
 	python gfs2tex $(EXAMPLES)
 	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < template.tex > examples.tex
 
-Makefile.deps:
+Makefile.deps: Makefile.am
 	python depend.py $(EXAMPLES) > Makefile.deps
 
 -include Makefile.deps

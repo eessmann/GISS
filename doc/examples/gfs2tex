@@ -10,7 +10,7 @@ if not os.access("examples",os.F_OK):
     os.mkdir("examples")
 
 dico = {}
-for f in glob.glob("../reference/*.html"):
+for f in glob.glob("../html/*.html"):
     gfs2tex.dictionary(dico,open(f))
 
 for start in sys.argv[1:]:
