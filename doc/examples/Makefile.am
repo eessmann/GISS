@@ -3,7 +3,8 @@
 EXAMPLES = \
 	cylinder \
 	lid \
-	shear
+	shear \
+	boussinesq
 
 EXTRA_DIST = \
 	template.tex \
