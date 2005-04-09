@@ -13,6 +13,8 @@
 #
 # The turbulent plume obtained is illustrated on Figure \ref{tracer}.
 #
+# The movie is generated using the scripting mode of GfsView.
+#
 # \begin{figure}[htbp]
 # \begin{center}
 # \htmladdnormallinkfoot{\includegraphics[width=0.3\hsize]{t.eps}}{t.mpg}
@@ -22,7 +24,7 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: gerris2D boussinesq.gfs
+# Command: gerris2D boussinesq.gfs | gfsview2D | ppmtoy4m -F 24:1 -v 0 | mpeg2enc -v 0 -o t.mpg
 # Version: 0.6.4
 # Required files: cylinder.gts
 # Running time: 60 minutes
@@ -68,21 +70,21 @@
   # Writes info about the convergence of the Poisson solver on standard error
   OutputProjectionStats { istep = 10 } stderr
 
-  # Pipes a bitmap PPM image representation of the T field every 4 timestepsq
-  # into a MJPEGTools conversion pipeline to create a MPEG movie called t.mpg
-  # Sets the minimum used for colormapping to 0 and the maximum to 1
-  OutputPPM { istep = 4 } { ppmtoy4m -F 24:1 -v 0 | mpeg2enc -v 0 -o t.mpg } {
-    min = 0 max = 1 v = T
-  }
-
-  # Pipes a bitmap PPM image representation of the T field at time 15
-  # into the ImageMagick converter "convert" to create the corresponding EPS file
-  OutputPPM { start = 15 } { convert -colors 256 ppm:- t.eps } {
-    min = 0 max = 1 v = T
-  }
-
   # Outputs profiling information at the end of the simulation to standard error
   OutputTiming { start = end } stderr
+
+  # Outputs the simulation every 4 timesteps
+  OutputSimulation { istep = 4 } stdout { binary = 1 }
+ 
+  # boussinesq.gfv contains the visualisation parameters used by GfsView
+  EventScript { start = 0 } { cat boussinesq.gfv }
+ 
+  # Every 4 timesteps, GfsView will read the following command, after having read
+  # the simulation file and will output a PPM screenshot on its standard output
+  EventScript { istep = 4 } { echo "Save stdout { width = 256 height = 512 }" }
+ 
+  # At the end of the simulation, GfsView will create the EPS file used in the doc.
+  EventScript { start = end } { echo "Save t.eps { format = EPS }" }
 }
 GfsBox {}
 # The top boundary is a simple outflow condition. This could cause problems
