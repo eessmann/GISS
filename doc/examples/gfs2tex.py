@@ -168,7 +168,7 @@ class Example:
                     if len(record) > 2 and record[1] == "Generated" and record[2] == "files:":
                         infile = 1
                         insthg = 0
-            elif insthg:
+            else:
                 record = l.split()
                 for r in record:
                     key = None
