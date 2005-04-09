@@ -83,8 +83,11 @@
   # the simulation file and will output a PPM screenshot on its standard output
   EventScript { istep = 4 } { echo "Save stdout { width = 256 height = 512 }" }
  
-  # At the end of the simulation, GfsView will create the EPS file used in the doc.
-  EventScript { start = end } { echo "Save t.eps { format = EPS }" }
+  # At t = 19, GfsView will create the PPM file used in the doc.
+  EventScript { start = 19 } { echo "Save t.ppm { width = 256 height = 512 }" }
+
+  # At the end of the simulation this file is converted to EPS.
+  EventScript { start = end } { convert -colors 256 t.ppm t.eps ; rm -f t.ppm }
 }
 GfsBox {}
 # The top boundary is a simple outflow condition. This could cause problems
