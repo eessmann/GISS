@@ -410,7 +410,6 @@ static void gfs_cell_vof_advected_face_values (FttCell * cell,
 
   g_return_if_fail (cell != NULL);
   g_return_if_fail (par != NULL);
-  g_return_if_fail (par->cfl <= 0.5);
 
   f = GFS_VARIABLE (cell, par->v->i);
   THRESHOLD (f);

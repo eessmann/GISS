@@ -950,17 +950,8 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
       par->scheme = GFS_GODUNOV;
     else if (!strcmp (scheme, "none"))
       par->scheme = GFS_NONE;
-    else if (!strcmp (scheme, "vof")) {
+    else if (!strcmp (scheme, "vof"))
       par->scheme = GFS_VOF;
-      if (par->cfl > 0.5) {
-	if (fp->type != GTS_ERROR && var[0].set)
-	  gts_file_variable_error (fp, var, "cfl", 
-				   "cfl `%g' is out of range `]0,0.5]'", 
-				   par->cfl);
-	else
-	  par->cfl = 0.5;
-      }
-    }
     else if (fp->type != GTS_ERROR)
       gts_file_variable_error (fp, var, "scheme",
 			       "unknown scheme parameter `%s'", scheme);
