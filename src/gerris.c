@@ -120,10 +120,14 @@ int main (int argc, char * argv[])
     return 1; /* failure */
   }
 
-  fptr = fopen (argv[optind], "r");
-  if (fptr == NULL) {
-    fprintf (stderr, "gerris: unable to open file `%s'\n", argv[optind]);
-    return 1;
+  if (!strcmp (argv[optind], "-"))
+    fptr = stdin;
+  else {
+    fptr = fopen (argv[optind], "r");
+    if (fptr == NULL) {
+      fprintf (stderr, "gerris: unable to open file `%s'\n", argv[optind]);
+      return 1;
+    }
   }
 
   fp = gts_file_new (fptr);
@@ -136,7 +140,8 @@ int main (int argc, char * argv[])
     return 1;
   }
   gts_file_destroy (fp);
-  fclose (fptr);
+  if (fptr != stdin)
+    fclose (fptr);
 
   if (npart > 0) {
     guint nmin = 1000;

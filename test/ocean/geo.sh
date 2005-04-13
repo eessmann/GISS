@@ -1,9 +1,8 @@
 # !/bin/sh
 
-param=`mktemp /tmp/geo.XXXXXX`
 error=`mktemp /tmp/geo.XXXXXX`
 
-cat <<EOF > $param
+cat <<EOF | gerris2D3 -
 1 0 GfsOcean GfsBox GfsGEdge {} {
  # dt = 1000 s
  Time { iend = 1580 dtmax = 0.10285 }
@@ -35,8 +34,6 @@ GfsBox {
 }
 EOF
 
-gerris2D3 $param
-
 if awk 'BEGIN{emax=0.}{if ($2 > emax) emax=$2;}
 END{
   print "maximum geostrophic error: " emax;
@@ -45,11 +42,11 @@ END{
   else
     exit 1;
 }' < $error; then
-  rm -f $param $error
+  rm -f $error
   exit 1;
 fi
 
-cat <<EOF > $param
+cat <<EOF | gerris2D3 -
 1 0 GfsOcean GfsBox GfsGEdge {} {
  # dt = 1000 s
  Time { iend = 1580 dtmax = 0.10285 }
@@ -77,8 +74,6 @@ GfsBox {
 }
 EOF
 
-gerris2D3 $param
-
 if awk 'BEGIN{emin=1.}{if ($2 < emin) emin=$2;}
 END{
   print "minimum geostrophic energy: " emin;
@@ -87,8 +82,8 @@ END{
   else
     exit 1;
 }' < $error; then
-  rm -f $param $error
+  rm -f $error
   exit 1;
 fi
 
-rm -f $param $error
+rm -f $error
