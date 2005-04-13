@@ -47,7 +47,7 @@ EOF
 for file in $1; do
     testfile=test/`basename $file`
     sname=`basename $file | awk '{print substr ($1, 1, index ($1, ".") - 1)}'`
-    xmgr -hardcopy -noask -eps -device 2 -printfile figures/$sname.eps -p order.par $file $testfile > /dev/null 2>&1
+    xmgrace -hardcopy -noask -hdevice EPS -printfile figures/$sname.eps -p order.par $file $testfile
     echo "\\begin{figure}" >> $texfile.tex
     echo "\\begin{center}" >> $texfile.tex
     echo "\\psfig{file=figures/$sname.eps, height=\\hsize, angle=270}" >> $texfile.tex
