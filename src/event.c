@@ -679,6 +679,7 @@ static void multiply (FttCell * cell, GfsVariable * v)
   gdouble size = ftt_cell_size (cell);
   
   GFS_STATE (cell)->div *= size*size;
+  GFS_STATE (cell)->g[0] = 0.;
 }
 
 static void stream_from_vorticity (GfsDomain * domain,
@@ -692,12 +693,11 @@ static void stream_from_vorticity (GfsDomain * domain,
   g_return_if_fail (domain != NULL);
 
   gfs_poisson_coefficients (domain, NULL, 1.);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) multiply, vorticity);
   correct_div (domain); /* enforce solvability condition */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, 
-			    stream);
+			    (FttCellTraverseFunc) gfs_cell_reset, stream);
   gfs_residual (domain, FTT_DIMENSION, FTT_TRAVERSE_LEAFS, -1, stream, vorticity, gfs_res);
   norm = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1.);
   maxlevel = gfs_domain_depth (domain);
@@ -711,12 +711,12 @@ static void stream_from_vorticity (GfsDomain * domain,
 	       "  (residual: %g)", norm.infty);
 }
 
-static void init_from_streamfunction (FttCell * cell)
+static void init_from_streamfunction (FttCell * cell, GfsVariable * stream)
 {
   gdouble size = ftt_cell_size (cell);
 
-  GFS_STATE (cell)->u = - gfs_center_gradient (cell, FTT_Y, GFS_GX)/size;
-  GFS_STATE (cell)->v = gfs_center_gradient (cell, FTT_X, GFS_GX)/size;
+  GFS_STATE (cell)->u = - gfs_center_gradient (cell, FTT_Y, stream->i)/size;
+  GFS_STATE (cell)->v = gfs_center_gradient (cell, FTT_X, stream->i)/size;
 }
 
 static gboolean gfs_init_vorticity_event (GfsEvent * event, 
@@ -724,11 +724,10 @@ static gboolean gfs_init_vorticity_event (GfsEvent * event,
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class)->event) 
       (event, sim)) {
-    stream_from_vorticity (GFS_DOMAIN (sim), gfs_gx, gfs_div, 1e-9);
+    stream_from_vorticity (GFS_DOMAIN (sim), gfs_gy, gfs_div, 1e-9);
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) init_from_streamfunction,
-			      NULL);
+			      (FttCellTraverseFunc) init_from_streamfunction, gfs_gy);
     return TRUE;
   }
   return FALSE;
