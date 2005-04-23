@@ -638,7 +638,29 @@ GfsEventClass * gfs_init_flow_constant_class (void)
 
 /* GfsInitVorticity: Object */
 
-static void sum_volume (FttCell * cell, GtsRange * vol) 
+static void gfs_init_vorticity_read (GtsObject ** o, GtsFile * fp)
+{
+  if (GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class->read) 
+      (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  gfs_function_read (GFS_INIT_VORTICITY (*o)->f, gfs_object_simulation (*o), fp);
+}
+
+static void gfs_init_vorticity_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class->write) (o, fp);
+  gfs_function_write (GFS_INIT_VORTICITY (o)->f, fp);
+}
+
+static void gfs_init_vorticity_destroy (GtsObject * object)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_INIT_VORTICITY (object)->f));
+  (* GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class->destroy) (object);
+}
+
+static void sum_volume (FttCell * cell, GtsRange * vol)
 {
   gdouble size = ftt_cell_size (cell);
   
@@ -648,7 +670,7 @@ static void sum_volume (FttCell * cell, GtsRange * vol)
     gts_range_add_value (vol, size*size);
 }
 
-static void add_ddiv (FttCell * cell, gdouble * ddiv) 
+static void add_ddiv (FttCell * cell, gdouble * ddiv)
 {
   gdouble size = ftt_cell_size (cell);
   
@@ -674,14 +696,6 @@ static void correct_div (GfsDomain * domain)
 			    (FttCellTraverseFunc) add_ddiv, &ddiv);
 }
 
-static void multiply (FttCell * cell, GfsVariable * v)
-{
-  gdouble size = ftt_cell_size (cell);
-  
-  GFS_STATE (cell)->div *= size*size;
-  GFS_STATE (cell)->g[0] = 0.;
-}
-
 static void stream_from_vorticity (GfsDomain * domain,
 				   GfsVariable * stream,
 				   GfsVariable * vorticity,
@@ -694,7 +708,7 @@ static void stream_from_vorticity (GfsDomain * domain,
 
   gfs_poisson_coefficients (domain, NULL, 1.);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) multiply, vorticity);
+			    (FttCellTraverseFunc) gfs_cell_reset, gfs_gx);
   correct_div (domain); /* enforce solvability condition */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, stream);
@@ -719,11 +733,22 @@ static void init_from_streamfunction (FttCell * cell, GfsVariable * stream)
   GFS_STATE (cell)->v = gfs_center_gradient (cell, FTT_X, stream->i)/size;
 }
 
+static void compute_vorticity (FttCell * cell, GfsInitVorticity * init)
+{
+  FttVector p;
+  gdouble size = ftt_cell_size (cell);
+
+  gfs_cell_cm (cell, &p);
+  GFS_STATE (cell)->div = gfs_function_value (init->f, cell, &p, 0.)*size*size;  
+}
+
 static gboolean gfs_init_vorticity_event (GfsEvent * event, 
 					  GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class)->event) 
       (event, sim)) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) compute_vorticity, event);
     stream_from_vorticity (GFS_DOMAIN (sim), gfs_gy, gfs_div, 1e-9);
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -733,10 +758,17 @@ static gboolean gfs_init_vorticity_event (GfsEvent * event,
   return FALSE;
 }
 
-
 static void gfs_init_vorticity_class_init (GfsInitVorticityClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->read = gfs_init_vorticity_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_init_vorticity_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_init_vorticity_destroy;
   GFS_EVENT_CLASS (klass)->event = gfs_init_vorticity_event;
+}
+
+static void gfs_init_vorticity_init (GfsInitVorticity * init)
+{
+  init->f = gfs_function_new (gfs_function_class (), 0.);
 }
 
 GfsInitVorticityClass * gfs_init_vorticity_class (void)
@@ -749,7 +781,7 @@ GfsInitVorticityClass * gfs_init_vorticity_class (void)
       sizeof (GfsInitVorticity),
       sizeof (GfsInitVorticityClass),
       (GtsObjectClassInitFunc) gfs_init_vorticity_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_init_vorticity_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };

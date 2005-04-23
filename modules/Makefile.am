@@ -4,26 +4,18 @@ INCLUDES = -I$(top_srcdir)/src -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs-modules\" $(GTS_CFLAGS)
 
 pkglib_LTLIBRARIES = \
-	libperiodic_flow2D.la \
-	libvorticity_spectrum2D.la \
-	libtesting2D.la
+	libvorticity_spectrum2D.la
 
 AM_CFLAGS = -DFTT_2D=1
 AM_LDFLAGS = $(NO_UNDEFINED) -version-info 0:0:0 -export-dynamic
 
 EXTRA_DIST = \
-	periodic_flow.mod \
-	vorticity_spectrum.mod \
-	testing.mod
+	vorticity_spectrum.mod
 
 BUILT_SOURCES = \
-	periodic_flow.c \
-	vorticity_spectrum.c \
-	testing.c
+	vorticity_spectrum.c
 
-libperiodic_flow2D_la_SOURCES = periodic_flow.c
 libvorticity_spectrum2D_la_SOURCES = vorticity_spectrum.c
-libtesting2D_la_SOURCES = testing.c
 
 if HAVE_MODULES
 %.c : %.mod

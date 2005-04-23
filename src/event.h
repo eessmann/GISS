@@ -115,6 +115,9 @@ typedef struct _GfsInitVorticity         GfsInitVorticity;
 struct _GfsInitVorticity {
   /*< private >*/
   GfsGenericInit parent;
+
+  /*< public >*/
+  GfsFunction * f;
 };
 
 typedef struct _GfsInitVorticityClass    GfsInitVorticityClass;

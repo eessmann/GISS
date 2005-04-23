@@ -43,15 +43,16 @@ cat <<EOF > merging.sim
 1 0 GfsSimulation GfsBox GfsGEdge {} {
   GfsTime { end = $tmax }
   $convective
-  GModule testing
-  GfsRefine 6
-  GfsRefineSphere 7  { r = 0.25 }
-  GfsRefineSphere 8  { r = 0.125 }
-  GfsRefineSphere 9  { r = 0.0625 }
-  GfsRefineSphere 10 { r = 0.03125 }
-  GfsAddGaussianVortex {} { x = 0 y =  0.01 scale = 0.01 }
-  GfsAddGaussianVortex {} { x = 0 y = -0.01 scale = 0.01 }
-  GfsInitVorticity {}
+  GfsRefine {
+    double r = sqrt (x*x + y*y); 
+    return r < 0.03125 ? 10 : r < 0.0625 ? 9 : r < 0.125 ? 8 : r < 0.25 ? 7 : 6;
+  }
+  GfsInitVorticity {} {
+    double gaussian (double xo, double yo, double scale) {
+      return 2.*M_PI*exp (- 2.*((x - xo)*(x - xo) + (y - yo)*(y - yo))/(scale*scale));
+    }
+    return gaussian (0, 0.01, 0.01) + gaussian (0, -0.01, 0.01);
+  }
   GfsOutputTime { istep = 1 } stdout
   GfsOutputScalarNorm { istep = 1 } stdout { v = Divergence }
   GfsOutputProjectionStats { istep = 1 } stdout
@@ -67,16 +68,16 @@ cat <<EOF > merging.sim
 1 0 GfsSimulation GfsBox GfsGEdge {} {
   GfsTime { end = $tmax }
   $convective
-  GModule testing
-  GfsRefine 6
-  GfsRefineSphere 7  { r = 0.25 }
-  GfsRefineSphere 8  { r = 0.125 }
-  GfsRefineSphere 9  { r = 0.09375 }
-  GfsRefineSphere 10 { r = 0.0625 }
-  GfsRefineSphere 11 { r = 0.03125 }
-  GfsAddGaussianVortex {} { x = 0 y =  0.01 scale = 0.01 }
-  GfsAddGaussianVortex {} { x = 0 y = -0.01 scale = 0.01 }
-  GfsInitVorticity {}
+  GfsRefine {
+    double r = sqrt (x*x + y*y); 
+    return r < 0.03125 ? 11 : r < 0.0625 ? 10 : r < 0.09375 ? 9 : r < 0.125 ? 8 : r < 0.25 ? 7 : 6;
+  }
+  GfsInitVorticity {} {
+    double gaussian (double xo, double yo, double scale) {
+      return 2.*M_PI*exp (- 2.*((x - xo)*(x - xo) + (y - yo)*(y - yo))/(scale*scale));
+    }
+    return gaussian (0, 0.01, 0.01) + gaussian (0, -0.01, 0.01);
+  }
   GfsOutputTime { istep = 1 } stdout
   GfsOutputScalarNorm { istep = 1 } stdout { v = Divergence }
   GfsOutputProjectionStats { istep = 1 } stdout
@@ -92,17 +93,16 @@ cat <<EOF > merging.sim
 1 0 GfsSimulation GfsBox GfsGEdge {} {
   GfsTime { end = $tmax }
   $convective
-  GModule testing
-  GfsRefine 6
-  GfsRefineSphere 7  { r = 0.25 }
-  GfsRefineSphere 8  { r = 0.125 }
-  GfsRefineSphere 9  { r = 0.09375 }
-  GfsRefineSphere 10 { r = 0.0625 }
-  GfsRefineSphere 11 { r = 0.046875 }
-  GfsRefineSphere 12 { r = 0.03125 }
-  GfsAddGaussianVortex {} { x = 0 y =  0.01 scale = 0.01 }
-  GfsAddGaussianVortex {} { x = 0 y = -0.01 scale = 0.01 }
-  GfsInitVorticity {}
+  GfsRefine {
+    double r = sqrt (x*x + y*y); 
+    return r < 0.03125 ? 12 : r < 0.046875 ? 11 : r < 0.0625 ? 10 : r < 0.09375 ? 9 : r < 0.125 ? 8 : r < 0.25 ? 7 : 6;
+  }
+  GfsInitVorticity {} {
+    double gaussian (double xo, double yo, double scale) {
+      return 2.*M_PI*exp (- 2.*((x - xo)*(x - xo) + (y - yo)*(y - yo))/(scale*scale));
+    }
+    return gaussian (0, 0.01, 0.01) + gaussian (0, -0.01, 0.01);
+  }
   GfsOutputTime { istep = 1 } stdout
   GfsOutputScalarNorm { istep = 1 } stdout { v = Divergence }
   GfsOutputProjectionStats { istep = 1 } stdout
