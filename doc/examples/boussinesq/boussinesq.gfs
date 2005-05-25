@@ -26,7 +26,7 @@
 # Author: St\'ephane Popinet
 # Command: gerris2D boussinesq.gfs | gfsview2D | ppmtoy4m -F 24:1 -v 0 | mpeg2enc -v 0 -o t.mpg
 # Version: 0.6.4
-# Required files: cylinder.gts
+# Required files: cylinder.gts boussinesq.gfv
 # Running time: 60 minutes
 # Generated files: t.mpg t.eps
 #
