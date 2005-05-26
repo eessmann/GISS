@@ -1443,19 +1443,18 @@ static gboolean gfs_event_script_event (GfsEvent * event, GfsSimulation * sim)
     if (s->script) {
       gchar * scommand;
       gchar sname[] = "/tmp/gfsXXXXXX";
-      gchar ename[] = "/tmp/gfsXXXXXX";
       gint sf = mkstemp (sname);
-      gint ef = mkstemp (ename);
       gint status;
       FILE * f;
 
-      if (sf < 0 || ef < 0) {
+      if (sf < 0) {
 	g_warning ("GfsEventScript cannot create temporary files");
 	return TRUE;
       }
       f = fdopen (sf, "w");
       fputs (s->script->str, f);
       fclose (f);
+      close (sf);
       scommand = g_strdup_printf ("GfsTime=%g GfsIter=%d GfsPid=%d "
 				  "GFS_STOP=%d sh %s",
 				  sim->time.t, sim->time.i, 
@@ -1471,16 +1470,6 @@ static gboolean gfs_event_script_event (GfsEvent * event, GfsSimulation * sim)
       remove (sname);
       if (status == GFS_EVENT_SCRIPT_STOP)
 	sim->time.end = sim->time.t;
-      else if (status == -1 || status != 0) {
-	FILE * ferr = fdopen (ef, "r");
-	gint c;
-
-	fputs ("Error while executing GfsEventScript:\n", stderr);
-	while ((c = fgetc (ferr)) != EOF)
-	  fputc (c, stderr);
-	fclose (ferr);
-      }
-      remove (ename);
     }
     return TRUE;
   }
