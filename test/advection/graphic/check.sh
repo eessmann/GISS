@@ -11,7 +11,7 @@ PATH=$PATH:../../../../poisson:../../..
 for test in $1; do
     cd $test
     if gerris2D advection.gfs | gfsview-batch2D graphics.gfs 2> /dev/null; then
-	if ../../conservation.sh; then
+	if sh ../../conservation.sh; then
 	    echo "PASS: `basename $test`"
 	else
 	    failed=`expr $failed + 1`;

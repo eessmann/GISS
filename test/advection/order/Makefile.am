@@ -6,19 +6,17 @@ EXTRA_DIST = \
 	order.sh \
 	check.sh \
 	order.par \
-	reference \
-	avgorder.awk \
-	checkorder.awk \
-	report.sh
+	report.sh \
+	tests
 
-test.sh:
+test.sh: Makefile.am
 	@echo "#! /bin/sh" > test.sh
 	@echo "rm -f report.ps" >> test.sh
-	@echo "./check.sh \"reference/*.xmgr\" 0.9" >> test.sh
+	@echo "sh check.sh \"tests/*\" 1.9" >> test.sh
 	@chmod +x test.sh
 
 report.ps: report.sh timestamp
-	./report.sh "reference/*.xmgr"
+	sh report.sh "tests/*"
 
 clean-generic:
-	$(RM) -r -f figures test
+	$(RM) -f tests/*/result.* tests/*/*~ tests/*/core timestamp test.sh
