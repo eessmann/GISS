@@ -1,1 +1,0 @@
-caption: Rotation of a smooth field (``gaussian''), van Leer limiter, CFL of 0.5.

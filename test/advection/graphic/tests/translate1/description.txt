@@ -1,1 +1,0 @@
-caption: Translation of a smooth field (``gaussian''), periodic boundary conditions, no limiter, CFL of 0.5.

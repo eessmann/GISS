@@ -43,7 +43,7 @@ for test in $1; do
     if test "$name" != "CVS"; then
 	cd $test
         esname=`echo $name | awk 'BEGIN{FS=""}{for (i = 1; i <= NF; i++)if($i=="_")printf("\\\_"); else printf("%s", $i);}'`
-	caption=`awk '{if ($1 == "caption:") print substr ($0, 10);}' < description.txt`
+	caption=`cat description.tex`
 	printf "Figure %2d: %s\n" $figure $name
 	figure=`expr $figure + 1`
 	cd ../..

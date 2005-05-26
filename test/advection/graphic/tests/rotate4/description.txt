@@ -1,1 +1,0 @@
-caption: Rotation of a sharp field (``star''), VOF scheme, CFL of 0.5.
