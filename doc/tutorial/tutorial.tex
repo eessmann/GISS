@@ -70,11 +70,33 @@ If you get a result, you have the Glib library on your system,
 otherwise you will need to install it following the instructions on
 the Glib web site.
 
-You now need to install the {\sc GNU} Triangulated Surface Library
-({\sc GTS}). To do that, go on the \htmladdnormallink{{\sc GTS}
-web site}{http://gts.sf.net} and download a recent source file
-package. Move it to your preferred location for unpacking source files
-and type:
+\subsubsection{Using Debian packages}
+
+If you are using one of the Debian-based distribution (e.g. Debian,
+Knoppix, Ubuntu, etc...), you can install GTS and Gerris using your
+favourite Debian package management tool. Be aware however that the
+most recent version of Gerris may not be packaged yet for Debian
+(especially if you are using the ``testing'' or ``stable'' branches of
+Debian). To install Gerris using {\tt apt-get} just type as root:
+\begin{verbatim}
+% apt-get install gerris
+\end{verbatim}
+If you want to install only the Debian packages for GTS (and then
+compile Gerris from source) type:
+\begin{verbatim}
+% apt-get install libgts-dev
+\end{verbatim}
+In all cases, this will also install the required version of Glib.
+
+\subsubsection{Installing from source}
+\label{build_source}
+
+If you choose to install everything from source, you will now need to
+install the {\sc GNU} Triangulated Surface Library ({\sc GTS}). To do
+that, go on the \htmladdnormallink{{\sc GTS} web
+  site}{http://gts.sf.net} and download a recent source file package.
+Move it to your preferred location for unpacking source files and
+type:
 \begin{verbatim}
 % gunzip gts.tar.gz
 % tar xvf gts.tar
@@ -99,9 +121,15 @@ type instead:
 % make
 % make install
 \end{verbatim}
-You probably want to add {\tt /home/joe/local/bin} to your {\tt
-PATH} and {\tt /home/joe/local/lib} to your {\tt LD}\_{\tt
-LIBRARY}\_{\tt PATH}.
+You can also type
+\begin{verbatim}
+% ./configure --help
+\end{verbatim}
+to get a summary of the options taken by configure.
+
+You probably want to add {\tt /home/joe/local/bin} to your {\tt PATH},
+{\tt /home/joe/local/lib} to your {\tt LD}\_{\tt LIBRARY}\_{\tt PATH}
+and {\tt /home/joe/local/lib/pkgconfig} to your {\tt PKG}\_{\tt CONFIG}\_{\tt PATH}.
 
 The next step is installing Gerris itself, do the same, go to the
 \htmladdnormallinkfoot{Gerris web site}{http://gfs.sf.net} download a recent source file
@@ -122,6 +150,58 @@ We are now ready to start. Just to check that everything is okay try:
 \begin{verbatim}
 % gerris2D -V
 \end{verbatim}
+
+\subsubsection{Installing from the version control system}
+\label{build_darcs}
+
+If you want to keep up with the most recent version of Gerris without
+having to wait for tarball releases, you will need to install from the
+version control system. This is also the preferred way of installing
+Gerris if you want to change the code and submit changes for inclusion
+in the main Gerris distribution. I currently use
+\htmladdnormallinkfoot{darcs}{http://abridgegame.org/darcs/}, a very
+nice distributed version control system. I will just give a recipe on
+how to install Gerris from the central darcs repository. You should
+consult the \htmladdnormallinkfoot{darcs
+  manual}{http://abridgegame.org/darcs/manual/} if you want to learn
+more about darcs. 
+
+After \htmladdnormallinkfoot{installing
+  darcs}{http://darcs.net/DarcsWiki/CategoryBinaries}, to get the
+current stable version of Gerris using darcs do:
+\begin{verbatim}
+% darcs get http://gfs.sf.net/darcs/gerris/gerris-stable
+\end{verbatim}
+which will create a {\tt gerris-stable} directory containing the
+source code. To build Gerris you will need the autoconf, automake
+toolsuite. The version of Automake must be $>=$ 1.7 (it won't work
+with the 1.4 series). Then type:
+\begin{verbatim}
+% cd gerris-stable
+% sh autogen.sh
+\end{verbatim}
+which will generate the configure script. Then follow the instructions
+of section \ref{build_source}.
+
+The darcs repository is updated regularly with patches submitted by
+developers. To synchronise your current version with the most recent
+one type:
+\begin{verbatim}
+% cd gerris-stable
+% darcs pull
+% make
+% make install
+\end{verbatim}
+
+If you make changes to the source code and want to record these in darcs type:
+\begin{verbatim}
+% darcs record
+\end{verbatim}
+
+You may also need to track the changes made to the GTS library if they
+are used by the current version of Gerris. I also use darcs to store
+GTS changes. To install GTS just repeat the instructions using {\tt
+  http://gts.sf.net/darcs/gts-mainline} as source repository.
 
 \subsection{Simulation file}
 
@@ -942,6 +1022,11 @@ you will be able to start GfsView using:
 \begin{verbatim}
 % gfsview2D half-cylinder-0.5.gfs
 \end{verbatim}
+Note that you can also install the most recent GfsView version using
+darcs and {\tt http://gfs.sourceforge.net/darcs/gfsview/gfsview-mainline} as source
+repository (you will also need to install Gerris this way, see section
+\ref{build_darcs} for details).
+
 Clicking on ``Linear'', ``Vectors'' and ``Solid'' in the toolbar and
 changing the vector length by editing the properties of the
 ``Vectors'' object (select the object then choose
@@ -1726,6 +1811,11 @@ by no means a complete description. To learn more you should first
 consult the \htmladdnormallinkfoot{Gerris reference
   manual}{http://gfs.sf.net/reference/book1.html} which describes each
 object and the corresponding file parameters in more detail.
+
+You should also have a look at the \htmladdnormallinkfoot{Gerris
+  Examples}{http://gfs.sf.net/examples/examples} page for examples of how to
+use Gerris for a range of problems. The parameter files are
+cross-linked with the reference manual.
 
 If things are still unclear you can ask for help on the
 \htmladdnormallinkfoot{{\tt gfs-users} mailing
