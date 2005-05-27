@@ -18,7 +18,7 @@ while test $# -gt 0; do
 
   case $1 in
     --convective)
-      convective="GfsAdvectionParams {
+      convective="AdvectionParams {
     flux = gfs_face_velocity_convective_flux
   }"
       ;;
@@ -39,79 +39,79 @@ mkdir merging/run3
 
 tmax=4.0
 cd merging/run1
-cat <<EOF > merging.sim
+cat <<EOF > merging.gfs
 1 0 GfsSimulation GfsBox GfsGEdge {} {
-  GfsTime { end = $tmax }
+  Time { end = $tmax }
   $convective
-  GfsRefine {
+  Refine {
     double r = sqrt (x*x + y*y); 
     return r < 0.03125 ? 10 : r < 0.0625 ? 9 : r < 0.125 ? 8 : r < 0.25 ? 7 : 6;
   }
-  GfsInitVorticity {} {
+  InitVorticity {} {
     double gaussian (double xo, double yo, double scale) {
       return 2.*M_PI*exp (- 2.*((x - xo)*(x - xo) + (y - yo)*(y - yo))/(scale*scale));
     }
     return gaussian (0, 0.01, 0.01) + gaussian (0, -0.01, 0.01);
   }
-  GfsOutputTime { istep = 1 } stdout
-  GfsOutputScalarNorm { istep = 1 } stdout { v = Divergence }
-  GfsOutputProjectionStats { istep = 1 } stdout
-  GfsOutputSimulation { step = 0.2 } sim-%3.1f {}
-  GfsOutputTiming { start = end } stdout
+  OutputTime { istep = 1 } stdout
+  OutputScalarNorm { istep = 1 } stdout { v = Divergence }
+  OutputProjectionStats { istep = 1 } stdout
+  OutputSimulation { step = 0.2 } sim-%3.1f {}
+  OutputTiming { start = end } stdout
 }
 GfsBox {}
 EOF
-gerris2D merging.sim > log
+gerris2D merging.gfs > log
 
 cd ../run2
-cat <<EOF > merging.sim
+cat <<EOF > merging.gfs
 1 0 GfsSimulation GfsBox GfsGEdge {} {
-  GfsTime { end = $tmax }
+  Time { end = $tmax }
   $convective
-  GfsRefine {
+  Refine {
     double r = sqrt (x*x + y*y); 
     return r < 0.03125 ? 11 : r < 0.0625 ? 10 : r < 0.09375 ? 9 : r < 0.125 ? 8 : r < 0.25 ? 7 : 6;
   }
-  GfsInitVorticity {} {
+  InitVorticity {} {
     double gaussian (double xo, double yo, double scale) {
       return 2.*M_PI*exp (- 2.*((x - xo)*(x - xo) + (y - yo)*(y - yo))/(scale*scale));
     }
     return gaussian (0, 0.01, 0.01) + gaussian (0, -0.01, 0.01);
   }
-  GfsOutputTime { istep = 1 } stdout
-  GfsOutputScalarNorm { istep = 1 } stdout { v = Divergence }
-  GfsOutputProjectionStats { istep = 1 } stdout
-  GfsOutputSimulation { step = 0.2 } sim-%3.1f {}
-  GfsOutputTiming { start = end } stdout
+  OutputTime { istep = 1 } stdout
+  OutputScalarNorm { istep = 1 } stdout { v = Divergence }
+  OutputProjectionStats { istep = 1 } stdout
+  OutputSimulation { step = 0.2 } sim-%3.1f {}
+  OutputTiming { start = end } stdout
 }
 GfsBox {}
 EOF
-gerris2D merging.sim > log
+gerris2D merging.gfs > log
 
 cd ../run3
-cat <<EOF > merging.sim
+cat <<EOF > merging.gfs
 1 0 GfsSimulation GfsBox GfsGEdge {} {
-  GfsTime { end = $tmax }
+  Time { end = $tmax }
   $convective
-  GfsRefine {
+  Refine {
     double r = sqrt (x*x + y*y); 
     return r < 0.03125 ? 12 : r < 0.046875 ? 11 : r < 0.0625 ? 10 : r < 0.09375 ? 9 : r < 0.125 ? 8 : r < 0.25 ? 7 : 6;
   }
-  GfsInitVorticity {} {
+  InitVorticity {} {
     double gaussian (double xo, double yo, double scale) {
       return 2.*M_PI*exp (- 2.*((x - xo)*(x - xo) + (y - yo)*(y - yo))/(scale*scale));
     }
     return gaussian (0, 0.01, 0.01) + gaussian (0, -0.01, 0.01);
   }
-  GfsOutputTime { istep = 1 } stdout
-  GfsOutputScalarNorm { istep = 1 } stdout { v = Divergence }
-  GfsOutputProjectionStats { istep = 1 } stdout
-  GfsOutputSimulation { step = 0.2 } sim-%3.1f {}
-  GfsOutputTiming { start = end } stdout
+  OutputTime { istep = 1 } stdout
+  OutputScalarNorm { istep = 1 } stdout { v = Divergence }
+  OutputProjectionStats { istep = 1 } stdout
+  OutputSimulation { step = 0.2 } sim-%3.1f {}
+  OutputTiming { start = end } stdout
 }
 GfsBox {}
 EOF
-gerris2D merging.sim > log
+gerris2D merging.gfs > log
 cd ..
 
 uerror=`mktemp /tmp/uerror.XXXXXX`

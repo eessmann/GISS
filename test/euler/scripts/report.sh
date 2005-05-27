@@ -78,10 +78,10 @@ for file in $1; do
 	params=`echo $command | awk '{
 	    print substr ($1, 1, index ($1, ".sh") - 1);
         }'`
-	xmgr -hardcopy -noask -eps -device 2 -printfile figures/$sname.eps -p parameters/$params.par $file $testfile > /dev/null 2>&1
+	xmgrace -hardcopy -noask -hdevice EPS -printfile figures/$sname.eps -p parameters/$params.par $file $testfile > /dev/null 2>&1
 	echo "\\begin{figure}" >> $texfile.tex
 	echo "\\begin{center}" >> $texfile.tex
-	echo "\\psfig{file=figures/$sname.eps, height=\\hsize, angle=270}" >> $texfile.tex
+	echo "\\psfig{file=figures/$sname.eps, width=\\hsize}" >> $texfile.tex
 	echo "\\end{center}" >> $texfile.tex
 	esname=`echo $sname | awk 'BEGIN{FS=""}{for (i = 1; i <= NF; i++)if($i=="_")printf("\\\_"); else printf("%s", $i);}'`
 	echo "\\caption{$esname: {\tt $command}}" >> $texfile.tex
@@ -118,4 +118,5 @@ echo "\\end{document}" >> $texfile.tex
 latex -interaction=nonstopmode $texfile.tex > /dev/null 2>&1
 latex -interaction=nonstopmode $texfile.tex > /dev/null 2>&1
 dvips $texfile.dvi -o $texfile.ps > /dev/null 2>&1
-rm -f $texfile.log $texfile.aux $texfile.dvi
+rm -f $texfile.log $texfile.aux $texfile.dvi $texfile.lof $texfile.toc $texfile.tex
+

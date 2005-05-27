@@ -10,82 +10,76 @@ PATH=$PATH:../../poisson:../../../tools:..
 cd channel
 /bin/sh -c "shapes channel | transform --revert --scale 4 --tx 1.5 > channel.gts"
 
-cat <<EOF > channel.sim
+cat <<EOF | gerris2D - > log128
 4 3 GfsSimulation GfsBox GfsGEdge {} {
-  GfsTime { end = 1 }
-  GfsRefine 5
+  Time { end = 1 }
+  Refine 5
   GtsSurfaceFile channel.gts
-  GfsInitFlowConstant {} { U = 1 }
-  GfsOutputSolidStats {} stdout
-  GfsOutputTime { istep = 10 } stdout
-  GfsOutputProjectionStats { istep = 10 } stdout
-  GfsOutputSimulation { start = end } channel_128.sim {
+  Init {} { U = 1 }
+  OutputSolidStats {} stdout
+  OutputTime { istep = 10 } stdout
+  OutputProjectionStats { istep = 10 } stdout
+  OutputSimulation { start = end } channel_128.gfs {
     variables = U,V
   }
 }
-GfsBox { left = GfsBoundaryInflowConstant 1 }
+GfsBox { left = BoundaryInflowConstant 1 }
 GfsBox {}
 GfsBox {}
-GfsBox { right = GfsBoundaryOutflow }
+GfsBox { right = BoundaryOutflow }
 1 2 right
 2 3 right
 3 4 right
 EOF
-rm -f channel_128.sim
-gerris2D channel.sim > log128
 
-cat <<EOF > channel.sim
+cat <<EOF | gerris2D - > log256
 4 3 GfsSimulation GfsBox GfsGEdge {} {
-  GfsTime { end = 1 }
-  GfsRefine 6
+  Time { end = 1 }
+  Refine 6
   GtsSurfaceFile channel.gts
-  GfsInitFlowConstant {} { U = 1 }
-  GfsOutputSolidStats {} stdout
-  GfsOutputTime { istep = 10 } stdout
-  GfsOutputProjectionStats { istep = 10 } stdout
-  GfsOutputSimulation { start = end } channel_256.sim {
+  Init {} { U = 1 }
+  OutputSolidStats {} stdout
+  OutputTime { istep = 10 } stdout
+  OutputProjectionStats { istep = 10 } stdout
+  OutputSimulation { start = end } channel_256.gfs {
     variables = U,V
   }
 }
-GfsBox { left = GfsBoundaryInflowConstant 1 }
+GfsBox { left = BoundaryInflowConstant 1 }
 GfsBox {}
 GfsBox {}
-GfsBox { right = GfsBoundaryOutflow }
+GfsBox { right = BoundaryOutflow }
 1 2 right
 2 3 right
 3 4 right
 EOF
-rm -f channel_256.sim
-gerris2D channel.sim > log256
 
-cat <<EOF > channel.sim
+cat <<EOF | gerris2D - > log512
 4 3 GfsSimulation GfsBox GfsGEdge {} {
-  GfsTime { end = 1 }
-  GfsRefine 7
+  Time { end = 1 }
+  Refine 7
   GtsSurfaceFile channel.gts
-  GfsInitFlowConstant {} { U = 1 }
-  GfsOutputSolidStats {} stdout
-  GfsOutputTime { istep = 10 } stdout
-  GfsOutputProjectionStats { istep = 10 } stdout
-  GfsOutputSimulation { start = end } channel_512.sim {
+  Init {} { U = 1 }
+  OutputSolidStats {} stdout
+  OutputTime { istep = 10 } stdout
+  OutputProjectionStats { istep = 10 } stdout
+  OutputSimulation { start = end } channel_512.gfs {
     variables = U,V
   }
 }
-GfsBox { left = GfsBoundaryInflowConstant 1 }
+GfsBox { left = BoundaryInflowConstant 1 }
 GfsBox {}
 GfsBox {}
-GfsBox { right = GfsBoundaryOutflow }
+GfsBox { right = BoundaryOutflow }
 1 2 right
 2 3 right
 3 4 right
 EOF
-rm -f channel_512.sim
-gerris2D channel.sim > log512
 
-error256=`gfscompare2D -n -v channel_256.sim channel_512.sim U 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error128=`gfscompare2D -n -v channel_128.sim channel_256.sim U 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error256full=`gfscompare2D -f 5 -n -v channel_256.sim channel_512.sim U 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error128full=`gfscompare2D -f 5 -n -v channel_128.sim channel_256.sim U 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error256=`gfscompare2D -n -v channel_256.gfs channel_512.gfs U 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error128=`gfscompare2D -n -v channel_128.gfs channel_256.gfs U 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error256full=`gfscompare2D -f 5 -n -v channel_256.gfs channel_512.gfs U 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error128full=`gfscompare2D -f 5 -n -v channel_128.gfs channel_256.gfs U 2>&1 | awk '{if ($1 == "total") print $0;}'`
 
 cat <<EOF
 % command: channel.sh
@@ -129,10 +123,10 @@ cat <<EOF
 \end{table}
 EOF
 
-error256=`gfscompare2D -n -v channel_256.sim channel_512.sim V 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error128=`gfscompare2D -n -v channel_128.sim channel_256.sim V 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error256full=`gfscompare2D -f 5 -n -v channel_256.sim channel_512.sim V 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error128full=`gfscompare2D -f 5 -n -v channel_128.sim channel_256.sim V 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error256=`gfscompare2D -n -v channel_256.gfs channel_512.gfs V 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error128=`gfscompare2D -n -v channel_128.gfs channel_256.gfs V 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error256full=`gfscompare2D -f 5 -n -v channel_256.gfs channel_512.gfs V 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error128full=`gfscompare2D -f 5 -n -v channel_128.gfs channel_256.gfs V 2>&1 | awk '{if ($1 == "total") print $0;}'`
 
 cat <<EOF
 

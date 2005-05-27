@@ -10,64 +10,58 @@ PATH=$PATH:../../poisson:../../../tools:..
 cd boundaries
 /bin/sh -c "shapes almgren > boundaries.gts"
 
-cat <<EOF > boundaries.sim
+cat <<EOF | gerris2D -
 1 0 GfsSimulation GfsBox GfsGEdge {} {
-  GfsTime { end = 0 }
-  GfsApproxProjectionParams {
+  Time { end = 0 }
+  ApproxProjectionParams {
     tolerance = 1e-6
   }
-  GfsRefine 7
+  Refine 7
   GtsSurfaceFile boundaries.gts
-  GfsInitFlowConstant {} { U = 1 }
-  GfsOutputSimulation { start = end } boundaries_128.sim {
+  Init {} { U = 1 }
+  OutputSimulation { start = end } boundaries_128.gfs {
     variables = U,V,P
   }
 }
-GfsBox { left = GfsBoundaryInflowConstant 1 right = GfsBoundaryOutflow }
+GfsBox { left = BoundaryInflowConstant 1 right = BoundaryOutflow }
 EOF
-rm -f boundaries_128.sim
-gerris2D boundaries.sim
 
-cat <<EOF > boundaries.sim
+cat <<EOF | gerris2D -
 1 0 GfsSimulation GfsBox GfsGEdge {} {
-  GfsTime { end = 0 }
-  GfsApproxProjectionParams {
+  Time { end = 0 }
+  ApproxProjectionParams {
     tolerance = 1e-6
   }
-  GfsRefine 8
+  Refine 8
   GtsSurfaceFile boundaries.gts
-  GfsInitFlowConstant {} { U = 1 }
-  GfsOutputSimulation { start = end } boundaries_256.sim {
+  Init {} { U = 1 }
+  OutputSimulation { start = end } boundaries_256.gfs {
     variables = U,V,P
   }
 }
-GfsBox { left = GfsBoundaryInflowConstant 1 right = GfsBoundaryOutflow }
+GfsBox { left = BoundaryInflowConstant 1 right = BoundaryOutflow }
 EOF
-rm -f boundaries_256.sim
-gerris2D boundaries.sim 
 
-cat <<EOF > boundaries.sim
+cat <<EOF | gerris2D -
 1 0 GfsSimulation GfsBox GfsGEdge {} {
-  GfsTime { end = 0 }
-  GfsApproxProjectionParams {
+  Time { end = 0 }
+  ApproxProjectionParams {
     tolerance = 1e-6
   }
-  GfsRefine 9
+  Refine 9
   GtsSurfaceFile boundaries.gts
-  GfsInitFlowConstant {} { U = 1 }
-  GfsOutputSimulation { start = end } boundaries_512.sim {
+  Init {} { U = 1 }
+  OutputSimulation { start = end } boundaries_512.gfs {
     variables = U,V,P
   }
 }
-GfsBox { left = GfsBoundaryInflowConstant 1 right = GfsBoundaryOutflow }
+GfsBox { left = BoundaryInflowConstant 1 right = BoundaryOutflow }
 EOF
-rm -f boundaries_512.sim
-gerris2D boundaries.sim
 
-error256=`gfscompare2D -n -v boundaries_256.sim boundaries_512.sim U 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error128=`gfscompare2D -n -v boundaries_128.sim boundaries_256.sim U 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error256full=`gfscompare2D -f 7 -n -v boundaries_256.sim boundaries_512.sim U 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error128full=`gfscompare2D -f 7 -n -v boundaries_128.sim boundaries_256.sim U 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error256=`gfscompare2D -n -v boundaries_256.gfs boundaries_512.gfs U 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error128=`gfscompare2D -n -v boundaries_128.gfs boundaries_256.gfs U 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error256full=`gfscompare2D -f 7 -n -v boundaries_256.gfs boundaries_512.gfs U 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error128full=`gfscompare2D -f 7 -n -v boundaries_128.gfs boundaries_256.gfs U 2>&1 | awk '{if ($1 == "total") print $0;}'`
 
 cat <<EOF
 % command: boundaries.sh
@@ -111,10 +105,10 @@ cat <<EOF
 \end{table}
 EOF
 
-error256=`gfscompare2D -n -v boundaries_256.sim boundaries_512.sim V 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error128=`gfscompare2D -n -v boundaries_128.sim boundaries_256.sim V 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error256full=`gfscompare2D -f 7 -n -v boundaries_256.sim boundaries_512.sim V 2>&1 | awk '{if ($1 == "total") print $0;}'`
-error128full=`gfscompare2D -f 7 -n -v boundaries_128.sim boundaries_256.sim V 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error256=`gfscompare2D -n -v boundaries_256.gfs boundaries_512.gfs V 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error128=`gfscompare2D -n -v boundaries_128.gfs boundaries_256.gfs V 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error256full=`gfscompare2D -f 7 -n -v boundaries_256.gfs boundaries_512.gfs V 2>&1 | awk '{if ($1 == "total") print $0;}'`
+error128full=`gfscompare2D -f 7 -n -v boundaries_128.gfs boundaries_256.gfs V 2>&1 | awk '{if ($1 == "total") print $0;}'`
 
 cat <<EOF
 

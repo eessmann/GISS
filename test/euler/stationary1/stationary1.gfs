@@ -1,0 +1,49 @@
+# Title: Estimation of the numerical viscosity
+#
+# Description:
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{divmax.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{divL2.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{kinetic.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{reynolds.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh stationary1.sh
+# Version: 0.6.4
+# Required files: stationary1.sh
+# Running time: 3 minutes
+# Generated files: divmax.eps reynolds.eps divL2.eps kinetic.eps
+#
+1 2 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 2 }
+  Refine LEVEL
+  Init {} {
+    U = (- cos (2.*M_PI*x)*sin (2.*M_PI*y))
+    V = (sin (2.*M_PI*x)*cos (2.*M_PI*y))
+  }
+  OutputScalarNorm { istep = 1 } divLEVEL { v = Divergence }
+  OutputScalarSum { istep = 1 } kineticLEVEL { v = Velocity2 }
+  OutputScalarSum { istep = 1 } stdout { v = Velocity2 }
+}
+GfsBox {}
+1 1 right
+1 1 top
