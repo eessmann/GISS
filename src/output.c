@@ -1263,8 +1263,8 @@ static void output_simulation_write (GtsObject * o, FILE * fp)
       v = v->next;
     }
   }
-  if (output->binary)
-    fputs (" binary = 1", fp);
+  if (!output->binary)
+    fputs (" binary = 0", fp);
   if (!output->surface)
     fputs (" surface = 0", fp);
   fputs (" }", fp);
@@ -1331,7 +1331,7 @@ static void gfs_output_simulation_init (GfsOutputSimulation * object)
 {
   object->max_depth = -1;
   object->var = NULL;
-  object->binary = 0;
+  object->binary = 1;
   object->surface = 1;
 }
 
