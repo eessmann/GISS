@@ -64,7 +64,7 @@ struct _GfsSourceGenericClass {
 #define GFS_SOURCE_GENERIC_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
 						 GfsSourceGenericClass,\
 						 gfs_source_generic_class())
-#define GFS_IS_SOURCE(obj)         (gts_object_is_from_class (obj,\
+#define GFS_IS_SOURCE_GENERIC(obj)         (gts_object_is_from_class (obj,\
 						 gfs_source_generic_class ()))
 
 GfsSourceGenericClass * gfs_source_generic_class  (void);
@@ -104,10 +104,31 @@ struct _GfsSource {
 #define GFS_SOURCE(obj)            GTS_OBJECT_CAST (obj,\
 					         GfsSource,\
 					         gfs_source_class ())
-#define GFS_IS_SOURCE_CONSTANT(obj)         (gts_object_is_from_class (obj,\
+#define GFS_IS_SOURCE(obj)         (gts_object_is_from_class (obj,\
 						 gfs_source_class ()))
 
 GfsSourceGenericClass * gfs_source_class  (void);
+
+/* GfsSourceControl: Header */
+
+typedef struct _GfsSourceControl         GfsSourceControl;
+
+struct _GfsSourceControl {
+  /*< private >*/
+  GfsSource parent;
+  gdouble s;
+
+  /*< public >*/
+  GfsFunction * delay;
+};
+
+#define GFS_SOURCE_CONTROL(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourceControl,\
+					         gfs_source_control_class ())
+#define GFS_IS_SOURCE_CONTROL(obj)         (gts_object_is_from_class (obj,\
+						 gfs_source_control_class ()))
+
+GfsSourceGenericClass * gfs_source_control_class  (void);
 
 /* GfsDiffusion: Header */
 

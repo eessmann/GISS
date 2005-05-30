@@ -363,8 +363,10 @@ gdouble gfs_function_value (GfsFunction * f, FttCell * cell, FttVector * p, gdou
   if (f->s)
     return interpolated_value (f, p);
   else if (f->f) {
-    g_return_val_if_fail (p != NULL, 0.);
-    return (* f->f) (cell, p->x, p->y, p->z, t);
+    if (p != NULL)
+      return (* f->f) (cell, p->x, p->y, p->z, t);
+    else
+      return (* f->f) (cell, 0., 0., 0., t);
   }
   else
     return f->val;

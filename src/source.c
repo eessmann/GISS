@@ -330,6 +330,82 @@ GfsSourceGenericClass * gfs_source_class (void)
   return klass;
 }
 
+/* GfsSourceControl: Object */
+
+static void source_control_destroy (GtsObject * o)
+{
+  if (GFS_SOURCE_CONTROL (o)->delay)
+    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CONTROL (o)->delay));
+
+  (* GTS_OBJECT_CLASS (gfs_source_control_class ())->parent_class->destroy) (o);
+}
+
+static void source_control_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_control_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GFS_SOURCE_CONTROL (*o)->delay = gfs_function_new (gfs_function_class (), 1.);
+  gfs_function_read (GFS_SOURCE_CONTROL (*o)->delay, gfs_object_simulation (*o), fp);
+}
+
+static void source_control_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_control_class ())->parent_class->write) (o, fp);
+  gfs_function_write (GFS_SOURCE_CONTROL (o)->delay, fp);
+}
+
+static gboolean source_control_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* gfs_event_class ()->event) (event, sim)) {
+    GfsSourceControl * s = GFS_SOURCE_CONTROL (event);
+    GtsRange r = gfs_domain_stats_variable (GFS_DOMAIN (sim), GFS_SOURCE_GENERIC (event)->v,
+					    FTT_TRAVERSE_LEAFS, -1);
+    s->s = (gfs_function_value (GFS_SOURCE (s)->intensity, NULL, NULL, sim->time.t) - r.mean)/
+      gfs_function_value (s->delay, NULL, NULL, sim->time.t);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static gdouble source_control_value (GfsSourceGeneric * s, 
+				     FttCell * cell, 
+				     GfsVariable * v)
+{
+  return GFS_SOURCE_CONTROL (s)->s;
+}
+
+static void source_control_class_init (GfsSourceGenericClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->destroy = source_control_destroy;
+  GTS_OBJECT_CLASS (klass)->read = source_control_read;
+  GTS_OBJECT_CLASS (klass)->write = source_control_write;
+  GFS_EVENT_CLASS (klass)->event = source_control_event;
+  klass->mac_value = klass->centered_value = source_control_value;
+}
+
+GfsSourceGenericClass * gfs_source_control_class (void)
+{
+  static GfsSourceGenericClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo source_control_info = {
+      "GfsSourceControl",
+      sizeof (GfsSourceControl),
+      sizeof (GfsSourceGenericClass),
+      (GtsObjectClassInitFunc) source_control_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_class ()),
+				  &source_control_info);
+  }
+
+  return klass;
+}
+
 /* GfsDiffusion: Object */
 
 static void diffusion_read (GtsObject ** o, GtsFile * fp)

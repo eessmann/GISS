@@ -258,6 +258,7 @@ void gfs_init (int * argc, char *** argv)
     gfs_event_script_class ();
     gfs_source_generic_class ();
       gfs_source_class ();
+        gfs_source_control_class ();
       gfs_source_coriolis_class ();
       gfs_source_hydrostatic_class ();
       gfs_source_diffusion_class ();
