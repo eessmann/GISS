@@ -1082,7 +1082,7 @@ foreach $typ (@IMAGE_TYPES) {
 	'index_visible_mark' ,"index.$typ",
 	'footnote_mark' ,"footnote.$typ",
 	'up_inactive_visible_mark' ,"up.$typ", 
-	'next_inactive_visible_mark' ,"nx_grp_g.$typ", 
+	'next_inactive_visible_mark' ,"next.$typ", 
 	'previous_inactive_visible_mark' ,"pv_grp_g.$typ",
 	'next_page_inactive_visible_mark' ,"next.$typ",
 	'previous_page_inactive_visible_mark' ,"prev.$typ",
