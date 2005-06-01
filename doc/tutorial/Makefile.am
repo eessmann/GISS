@@ -14,7 +14,8 @@ tutorial.tar.gz: tutorial.ps.gz
 	sed 's/input{pdf.tex}/usepackage{graphicx}\\newcommand{\\gfx}{eps}/g' < tutorial.tex | sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" > tutorial1.tex
 	latex2html -no_math -html_version 3.2,math -address "" -info "" -split +2 -show_section_numbers -toc_depth 5 -t "The Gerris Tutorial" -local_icons -white tutorial1.tex
 	mv -f tutorial1 tutorial
-	./pre_fix.sh
+	sh pre_fix.sh
+	cp -f ../share/darcs.css tutorial/tutorial1.css
 	tar cf tutorial.tar tutorial
 	gzip -f --best tutorial.tar
 

@@ -37,6 +37,7 @@ clean-generic:
 
 examples: examples.ps.gz
 	latex2html -no_math -html_version 3.2,math -address "" -info "" -split +3 -show_section_numbers -toc_depth 5 -t "Gerris Examples" -local_icons -white examples.tex
+	cp -f ../share/darcs.css examples/examples.css
 
 examples.dvi: examples.tex
 	latex -interaction=nonstopmode examples.tex > /dev/null 2>&1

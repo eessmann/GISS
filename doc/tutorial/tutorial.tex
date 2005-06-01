@@ -10,6 +10,8 @@
 \textwidth=15.42cm
 \textheight=23.2cm
 
+\newcommand{\gfsweb}{http://gfs.sf.net}
+
 \begin{document}
 
 \mbox{}\vspace{1cm}
@@ -18,7 +20,7 @@
 {\large Version GFS_VERSION}\\
 \vspace{5mm}
 {\large St\'ephane Popinet\\
-{\tt s.popinet@niwa.cri.nz}\\
+{\tt popinet@users.sf.net}\\
 \vspace{5mm}
 \today}
 \vspace{1cm}
@@ -33,13 +35,13 @@ necessary to use Gerris. It is specifically designed for a end-user
 and is not a technical description of the numerical techniques used
 within Gerris. If you are interested by that, you should consult the
 bibliography section on the \htmladdnormallinkfoot{Gerris web
-site}{http://gfs.sf.net}.
+site}{\gfsweb}.
 
 Various versions of this tutorial are available:
 \begin{itemize}
-\item Printable formats: both \htmladdnormallinkfoot{compressed Postscript}{http://gfs.sf.net/tutorial.ps.gz} and \htmladdnormallinkfoot{PDF}{http://gfs.sf.net/tutorial.pdf}.
-\item HTML: \htmladdnormallinkfoot{direct link}{http://gfs.sf.net/tutorial/tutorial1.html} or
-\htmladdnormallinkfoot{compressed archive}{http://gfs.sf.net/tutorial.tar.gz}.
+\item Printable formats: both \htmladdnormallinkfoot{compressed Postscript}{\gfsweb/tutorial/tutorial.ps.gz} and \htmladdnormallinkfoot{PDF}{\gfsweb/tutorial/tutorial.pdf}.
+\item HTML: \htmladdnormallinkfoot{direct link}{\gfsweb/tutorial/tutorial/tutorial1.html} or
+\htmladdnormallinkfoot{compressed archive}{\gfsweb/tutorial/tutorial.tar.gz}.
 \end{itemize}
 
 In this tutorial I will assume that you are familiar with the Unix
@@ -132,7 +134,7 @@ You probably want to add {\tt /home/joe/local/bin} to your {\tt PATH},
 and {\tt /home/joe/local/lib/pkgconfig} to your {\tt PKG}\_{\tt CONFIG}\_{\tt PATH}.
 
 The next step is installing Gerris itself, do the same, go to the
-\htmladdnormallinkfoot{Gerris web site}{http://gfs.sf.net} download a recent source file
+\htmladdnormallinkfoot{Gerris web site}{\gfsweb} download a recent source file
 package and type:
 \begin{verbatim}
 % gunzip gerris.tar.gz
@@ -170,7 +172,7 @@ After \htmladdnormallinkfoot{installing
   darcs}{http://darcs.net/DarcsWiki/CategoryBinaries}, to get the
 current stable version of Gerris using darcs do:
 \begin{verbatim}
-% darcs get http://gfs.sf.net/darcs/gerris/gerris-stable
+% darcs get \gfsweb/darcs/gerris/gerris-stable
 \end{verbatim}
 which will create a {\tt gerris-stable} directory containing the
 source code. To build Gerris you will need the autoconf, automake
@@ -809,7 +811,7 @@ which comes with the library.
 
 This tutorial comes (handily) with one such file:
 \htmladdnormallinkfoot{{\tt half-cylinder.gts}}
-{http://gfs.sf.net/half-cylinder.gts}. You can
+{\gfsweb/half-cylinder.gts}. You can
 visualise the surface it describes using a program
 called
 \htmladdnormallinkfoot{Geomview}{http://www.geomview.org}. To do this,
@@ -1129,7 +1131,7 @@ If you are not familiar with OpenDX, you should read the available
 \htmladdnormallinkfoot{documentation}{http://www.opendx.org/support.html\#docs}
 and go through the integrated tutorial. You can use the visual program
 called \htmladdnormallinkfoot{{\tt
-gfs2D.net}}{http://gfs.sf.net/gfs2D.net} provided with this tutorial
+gfs2D.net}}{\gfsweb/gfs2D.net} provided with this tutorial
 as a starting point. Typing
 \begin{verbatim}
 % dx -mdf /home/joe/local/lib/gerris/dx2D.mdf -program gfs2D.net
@@ -1690,7 +1692,7 @@ The {\tt gfs}\_{\tt domain}\_{\tt cell}\_{\tt traverse} function traverses the c
 and calls the {\tt init}\_{\tt velocity} function for each leaf cell ({\tt
 FTT}\_{\tt TRAVERSE}\_{\tt LEAFS}). A {\tt GfsSimulation} is an object derived from
 {\tt GfsDomain} which justifies the {\tt GFS}\_{\tt DOMAIN (sim)} type
-casting. Have a look in the \htmladdnormallinkfoot{reference manual}{http://gfs.sf.net/reference/book1.html} if you want to know more
+casting. Have a look in the \htmladdnormallinkfoot{reference manual}{\gfsweb/reference/book1.html} if you want to know more
 about these structures and functions.
 
 We also pass an extra parameter to {\tt init}\_{\tt velocity}: {\tt
@@ -1808,18 +1810,19 @@ specified in the {\tt read} method of our class.
 
 While this tutorial should give you a good overview of Gerris, it is
 by no means a complete description. To learn more you should first
-consult the \htmladdnormallinkfoot{Gerris reference
-  manual}{http://gfs.sf.net/reference/book1.html} which describes each
+consult the \htmladdnormallinkfoot{Gerris Frequently Asked Questions}{\gfsweb/faq/faq/faq.html} and the
+\htmladdnormallinkfoot{Gerris reference
+  manual}{\gfsweb/reference/book1.html} which describes each
 object and the corresponding file parameters in more detail.
 
 You should also have a look at the \htmladdnormallinkfoot{Gerris
-  Examples}{http://gfs.sf.net/examples/examples} page for examples of how to
+  Examples}{\gfsweb/examples/examples} page for examples of how to
 use Gerris for a range of problems. The parameter files are
 cross-linked with the reference manual.
 
 If things are still unclear you can ask for help on the
 \htmladdnormallinkfoot{{\tt gfs-users} mailing
-  list}{http://gfs.sf.net/mailinglists.html}. Please note that you
+  list}{\gfsweb/mailinglists.html}. Please note that you
 first need to subscribe to the list to be able to post messages.
 
 \section{Do you want to help?}

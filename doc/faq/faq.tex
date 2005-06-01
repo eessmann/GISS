@@ -1,0 +1,788 @@
+\documentclass[a4paper]{article}
+\usepackage{html}
+\usepackage{color}
+\pagecolor{white}
+
+\oddsidemargin=4mm
+\evensidemargin=-1mm
+\topmargin=-7mm
+\textwidth=15.42cm
+\textheight=23.2cm
+
+\newcommand{\gfsweb}{http://gfs.sf.net}
+
+\begin{document}
+
+\mbox{}\vspace{1cm}
+\begin{center}
+{\huge The Gerris FAQ}\\
+\vspace{5mm}
+{\large St\'ephane Popinet\\
+{\tt popinet@users.sf.net}\\
+\vspace{5mm}
+\today}
+\vspace{1cm}
+\end{center}
+
+\tableofcontents
+
+\section{General questions}
+
+\subsubsection{What does ``Gerris'' mean?}
+
+Gerris is the Latin (and French) name of the water strider (or water
+boatman), an aquatic insect which uses surface tension to ``walk'' on
+the surface of the water. Have a look at the logo on the front page of
+the Gerris \htmladdnormallinkfoot{web site}{\gfsweb} for a
+graphical description.
+
+\subsubsection{How is ``Gerris'' pronounced?}
+
+With a soft `g' like `genetics' or `general'.
+
+\subsubsection{Where are the printable versions of the docs?}
+
+The tutorial, FAQ and examples pages all have printable PDF (\htmladdnormallinkfoot{tutorial.pdf}{\gfsweb/tutorial/tutorial.pdf}, \htmladdnormallinkfoot{faq.pdf}{\gfsweb/faq/faq.pdf}, \htmladdnormallinkfoot{examples.pdf}{\gfsweb/examples/examples.pdf}) and Postscript (\htmladdnormallinkfoot{tutorial.ps.gz}{\gfsweb/tutorial/tutorial.ps.gz}, \htmladdnormallinkfoot{faq.ps.gz}{\gfsweb/faq/faq.ps.gz}, \htmladdnormallinkfoot{examples.ps.gz}{\gfsweb/examples/examples.ps.gz}) versions,
+the reference manual only exists as an \htmladdnormallinkfoot{HTML document}{\gfsweb/reference/book1.html}.
+
+\subsubsection{What grid generator is Gerris using?}
+
+Gerris uses an ``embedded boundary'' technique. Grid generation reduces
+to the computation of the ``shape'' (surface and volume fractions) of
+Cartesian (cubic) cells cut by the solid boundaries. These ``boolean
+operations'' between solids are performed automatically using GTS (the
+GNU Triangulated Surface Library). The cells cut by the boundaries can
+then be refined automatically using the quad/octree structure of the
+discretisation. Mesh generation is entirely automatic and works for
+any input geometry (provided it is topologically consistent, i.e. an
+orientable non-self-intersecting manifold).
+
+\subsubsection{Can Gerris handle unstructured tetrahedral meshes?}
+
+Gerris uses a quadtree (octree in 3D) finite volume discretisation. It
+cannot handle unstructured meshes.
+
+\subsubsection{Are there any plans to extend Gerris to RANS (Reynolds-Averaged Navier-Stokes)?}
+
+The focus is on time-dependent Navier-Stokes, so RANS is not really in
+my mind but nothing is in the way if this is what you need.
+
+Large Eddy Simulation (LES) models is what I am thinking about as far
+as turbulence modelling is concerned.
+
+\subsubsection{What boundary conditions are in the code now and what
+BCs are planned for the near future?}
+
+Slip, no-slip solid boundaries, inflow, outflow, periodic\dots, but
+everything is there to implement your own boundary conditions as
+Gerris can not supply all the boundary conditions users could think
+of.
+
+\subsubsection{How is Gerris parallelised? Does it use MPI or a shared memory technique?}
+
+Gerris uses a domain decomposition approach using MPI for
+synchronisation at domain boundaries. For the moment it does not do
+dynamic balancing of domain sizes which limits its applicability to
+statically refined problems.
+
+\subsubsection{Does adaptive refinement work in parallel?}
+
+Yes but there may be load-balancing issues. I
+don't use the MPI version for the moment. For the type of studies I am
+interested in, it is usually much easier to do ``direct parallelism''
+i.e. run several simulations with different parameters ``in parallel''.
+
+\subsubsection{Does the parallel version of the code do load-balancing?}
+
+No, the code does not have parallel load-balancing capabilities at the
+moment. It can do static load-balancing i.e. ``optimal'' partitioning of
+the domain so that an initial mesh is divided in roughly equal-sized
+subdomains while minimising the size of the communication boundaries.
+
+I don't personally use the parallel capability of the code very
+much. What I usually need is several different sequential computations
+with a different set of parameters. This is of course the ideal case
+for ``parallelism''. I don't usually require to run ``one shot'' very
+large parallel computations.
+
+\subsubsection{When will parallel load-balancing be available?}
+
+Load-balancing is not very high on my list of priorities at the
+moment. I don't see fundamental obstacles to dynamic
+load-balancing. The main limitation of the current code which would be
+hard to do away with is the fact that only ``coarse grain'' parallelism
+is possible (i.e. domains can be partitioned only at the GfsBox level
+not at an individual cell level). This is a limitation only when the
+ratio of total number of cells to total number of CPUs becomes small
+however.
+
+What's ultimately needed to implement ``full'' load-balancing is a way
+in the code to transfer entire GfsBoxes from one processor to the
+other (ensuring the correct restructuring of associated boundary
+conditions). This is a technical problem but which could be solved
+relatively easily by someone with a good understanding of the code
+structure at the GfsBox/GfsBoundary level.
+
+An intermediate possibly easier (but not as clean) solution can be to
+save the simulation and stop the code when load-balancing becomes too
+bad, then do a static load-balancing step and restart a ``new''
+simulation with this as initial state. I would probably first
+experiment with this approach to get used to the problems involved
+first and then move to the full internally-coded solution.
+
+\subsubsection{Can Gerris handle moving/deforming solid geometries?}
+
+Not yet but this is planned for a next phase.
+
+\subsubsection{Can Gerris also be used for compressible fluids?}
+
+No, but this would be possible. The existing shallow-water solver in particular
+can be seen as one form of compressible flow solver.
+
+\subsubsection{Can Gerris solve the shallow-water (Saint-Venant) equations?}
+
+Yes, starting with version 0.6.0, although I would not consider it
+ready for ``general consumption'' right now. For simple examples on how
+this works have a look in the source file in {\tt test/ocean}.
+
+\subsubsection{How can I assist you in your development effort?}
+
+Thanks for asking. The easiest way you can help me is first by using
+the code. Setting up your own test cases etc\dots And reporting
+problems, either in term of usability, unexpected results etc\dots
+
+By doing that you will certainly help me ensure that the code is as
+robust as possible and you will soon find areas which need improvement
+and which you might like to work on (preferably after consultation with
+me so that we can coordinate our efforts).
+
+An important point is also to remember to try to send your
+questions/comments to one of the two Gerris mailing lists (gfs-users
+or gfs-devel) so that other people can benefit from the exchange (I
+will also more readily reply to a message on the mailing list than to
+one addressed directly to me).
+
+\section{Installation and coding}
+
+\subsubsection{How do I install the parallel version of Gerris?}
+
+If when running {\tt ./configure} you got lines looking like
+\begin{verbatim}
+checking for mpicc... yes
+\end{verbatim}
+then you don't have anything else
+to do. Otherwise, you need to make sure that you have MPI installed
+and that the {\tt mpicc} command is in your {\tt PATH}.
+
+For running the code in parallel, you will have to wait until I have
+written the next chapter of the tutorial\dots
+
+\subsubsection{Does the Gerris {\tt configure} script support a LAM MPI implementation?}
+
+Yes, more generally it should support any MPI implementation which
+defines a working {\tt mpicc} command accessible in the {\tt PATH}.
+
+\subsubsection{My crappy MPI installation prevents Gerris from compiling, 
+how do I turn MPI support off?}
+
+\begin{verbatim}
+% ./configure --disable-mpi
+\end{verbatim}
+
+\subsubsection{Is there a Windows version of Gerris?}
+
+Certainly not a native Windows version (Gerris relies on features
+found in professional operating systems) but one should be able to
+compile and install it on Windows using \htmladdnormallinkfoot{cygwin}{http://www.cygwin.com}.
+
+Gerris also runs on MacOSX.
+
+My personal advice would be ``why use Windows?''
+
+\subsubsection{Are there any plans to release a more documented version of the code?}
+
+I have chosen the ``classical'' point of view that, if the general
+description of the arguments and of what the function does (given just
+before the body of (almost) all the exported functions) together with
+the code in the function itself does not clearly describe what the
+function is doing, then this is a problem with the code itself not
+with the documentation. A counter-example of that would be a very long
+monolithic code described by comments every few lines.
+
+Also, from my personal experience, working with a number of research
+and commercial codes, I would consider Gerris to be fairly well documented.
+The code is also quite modular, so you shouldn't (hopefully) need to
+go through all the 16000 lines of code...
+
+Of course, I would be glad to address any detailed problem you may
+have (unclear documentation etc\dots)
+
+\subsubsection{Are there any plans to release a C++/Java/Object Oriented 
+implementation of Gerris?}
+
+No. Gerris is already object-oriented (with class inheritance etc\dots),
+see the tutorial for an example of how this works.
+
+\section{Physics and dimensioning}
+
+\subsubsection{Where are variables like viscosity, density etc\dots defined?}
+
+By default, the density is unity and the molecular viscosity is
+zero (i.e. there is no explicit viscous term in the momentum
+equation). In practice, it does not mean that there is no viscosity at 
+all however, because any discretisation scheme always has
+some numerical viscosity. Of course, the lower the numerical
+viscosity, the better. Gerris has quite good properties in this
+respect.
+
+\subsubsection{How come Gerris generates a Von Karman vortex street for 
+an inviscid flow around a half-cylinder? I would expect the inviscid flow 
+to remain irrotational.}
+
+This is perfectly right in the case of flow around smooth
+solid boundaries. If there is a sharp corner (as for the
+half-cylinder), the potential flow solution is singular in the sense
+that the velocity tends to infinity as one gets closer to the
+corner. In practice (finite difference numerical solution) and in
+reality, the local numerical (or real) viscosity near the corner,
+smears out the singularity, which results in the creation of a (point) 
+source of vorticity which is then carried away by the mean flow (as
+you can see on the half-cylinder example).
+
+Even in the case of a smooth geometry, numerical inaccuracies in the
+boundary conditions on the solid surface can lead to the generation of 
+a small amount of vorticity (much smaller than what is generated at a
+discontinuity though).
+
+\subsubsection{How would I create a $5\times 5$ box?}
+
+It is possible to change the size of the unit GfsBox, however, I would
+encourage you to think in ``relative units'' rather than ``absolute
+units''. When studying fluid mechanics (and other physical) problems it
+is almost always a good idea to use non-dimensional units. This makes
+relevant independent parameters (such as the Reynolds number for
+example) immediately apparent. When using Gerris I would recommend
+scaling all your physical input parameters by a reference length (the
+physical length of the GfsBox). This also eliminates the need for
+changing the length of the GfsBox.
+
+\subsubsection{How would I modify the file you sent me ({\tt tangaroa.gfs}) for a ship that is 150 
+meters long and exposed to a cross-flow wind velocity of 50 meters/sec?}
+ 
+You would have to non-dimensionalise both the model ship geometry and wind speed.
+
+The reference length of the {\tt GfsBox} would be $3*150\;meters$, so you would
+scale the model geometry by a factor of $1/(reference\;length)$ or $1/450$.
+
+You might want to use the {\tt transform} program to do
+that, something like this:
+\begin{verbatim}
+% transform --scale 2.22222e-3 < model.gts > model_scaled.gts
+\end{verbatim}
+
+You also have to keep in mind that the bottom boundary of a 3D box is
+at $z = -0.5$. You want to have that coinciding with the sea level
+(i.e. translate your model vertically by the correct amount).
+
+\subsubsection{How would I redimensionalise U,V,W and P?}
+
+$$U\;meters/sec = U*Uref = U*50\;meters/sec$$
+$$V\;meters/sec = V*Uref = V*50\;meters/sec$$
+$$W\;meters/sec = W*Uref = W*50\;meters/sec$$
+$$P\;Pascals = P*DENSITY*Uref^2$$
+
+However, keep in mind that the only relevant parameter for the
+(constant density) Navier-Stokes equations is the Reynolds number. If
+you do not include any explicit viscous term the (theoretical)
+Reynolds number is always infinite. In practice this means that the
+inflow velocity has only a uniform scaling influence on the final
+solution. For example
+\begin{description}
+\item[simulation 1:] inflow velocity set to 1.0
+\item[simulation 2:] inflow velocity set to 2.0
+\end{description}
+then, the velocity field of simulation 1 at time t is exactly equal
+(to machine precision) to the velocity field for simulation 2 at time
+$t/2.0$, divided by 2.0.
+
+\subsubsection{It looks like t and dt output by GfsOutputTime are also scaled?  How would I scale t and dt to time in seconds?}
+
+Let's say your reference scale is $L=450\;meters$, your reference speed
+$U=50\;meters/sec$, your reference time is then $T=L/U=9\;sec$
+
+You thus need to multiply both t and dt by $T=9\;sec$.
+
+\subsubsection{How do I scale Vorticity?}
+
+The units of vorticity are 
+$$LT^{-1}/L \rightarrow T^{-1}$$
+and
+$$ T' = T*Lref/Vref$$
+therefore
+$$
+VORTICITY' = VORTICITY*Vref/Lref
+$$
+
+\subsubsection{The code provides support for the variable density incompressible Euler 
+equations.  Does that mean you can input the density of the fluid density 
+(air, water, etc\dots)?}
+
+Not really if what you mean is a constant density throughout the
+domain. In the case of the incompressible constant-density Navier-Stokes
+equations, the density is irrelevant. It is only a scaling factor for
+the pressure.
+
+What this really means is that Gerris can deal with flows where
+the density varies across the domain (e.g. a mixture of two miscible
+fluids, or density variations due to salinity variations in the sea for
+example).
+
+\subsubsection{Although the initialised problem is symmetric, the solution 
+becomes asymmetric as time passes, why?}
+
+The code is indeed not perfectly numerically symmetrical. This is due
+mainly to the tolerance in the solution for the pressure equation, if
+you decrease the tolerance you should see smaller
+asymmetries. You can do this using
+\begin{verbatim}
+  ApproxProjectionParams {
+    tolerance = 1e-6
+  }
+  ProjectionParams {
+    tolerance = 1e-6
+  }
+\end{verbatim}
+
+\subsubsection{How do I deal with negative values of the pressure?}
+
+Your question is interesting, it comes down to the meaning of
+``pressure'' for incompressible flows.
+
+For {\em compressible} flows ``pressure'' has a thermodynamic definition
+and is directly linked to other physical quantities through an
+equation of state. It is defined on an absolute scale.
+
+For {\em incompressible} flows ``pressure'' does not have a thermodynamic
+definition (there is no equation of state linking it to other physical
+quantities), rather it comes about as the stress field necessary to
+enforce the incompressibility condition. In this context, only its
+gradients are relevant, not its absolute value i.e. one can add any
+constant to the pressure field without changing the solution.
+
+Conclusion: If you don't like negative pressures just add any constant
+necessary to make them positive.
+
+\section{Representation of solid boundaries}
+
+\subsubsection{How do I import my geometry into Gerris?}
+
+You need to convert your geometry into a set of triangulated surfaces
+and be able to export it in the GTS format (very simple, described
+\htmladdnormallinkfoot{here}{http://gts.sourceforge.net/reference/gts-surfaces.html\#GTS-SURFACE-WRITE})
+or alternatively in the STL format (which can be converted to GTS
+using the {\tt stl2gts} program).
+
+The tricky bit is that the surfaces you export must represent proper
+solid objects i.e. they must be orientable, closed, manifold and non
+self-intersecting surfaces.
+
+\subsubsection{What CAD package can I use to export STL/GTS files?}
+
+Blender can do that and is open-source, also have a look at ac3d, k3d
+and Pro/Engineer, Rhino. There are plenty of others.
+
+\subsubsection{Do I need to tessellate (increase the number of triangles of) 
+my surface before importing it into GTS?}
+
+If your solid boundary is exactly defined using a few triangles, there
+is no need to use more. In short, the mesh size generated by Gerris is
+completely independent from the ``triangle size'' of the input surface
+(in contrast to what happens in ``classical'' unstructured mesh
+solvers).
+
+If for example, you want to resolve the boundary layers around your
+solid, you could tell Gerris to use a ``fine enough'' mesh like this:
+\begin{verbatim}
+GfsRefineSolid 10
+\end{verbatim}
+which tells Gerris to use 10 levels of refinement near the solid
+surface. ``Fine enough'' is going to depend on the details of the
+physics (most importantly Reynolds number) and on the constraints in
+term of computational time, memory size etc\dots
+
+\subsubsection{Which part of the parameter file tells Gerris where the
+ half-cylinder is placed? How do I alter it?}
+
+The position of the solid object is defined (obviously) through the
+coordinates of its vertices. If you created it using a CAD or similar
+program, you can translate, rotate etc\dots the object using this same
+program.
+
+Alternatively, you can use the {\tt transform} program which comes with
+GTS.
+\begin{verbatim}
+% transform -h
+\end{verbatim}
+will give you a summary of the transformations you can make, currently
+\begin{verbatim}
+Usage: transform [OPTION] < file.gts
+Apply geometric transformations to the input.
+
+  -r ANGLE  --rx=ANGLE      rotate around x-axis
+  -m ANGLE  --ry=ANGLE      rotate around y-axis
+  -n ANGLE  --rz=ANGLE      rotate around z-axis
+  -s FACTOR --scale=FACTOR  scale by FACTOR
+  -R FACTOR --sx=FACTOR     scale x-axis by FACTOR
+  -M FACTOR --sy=FACTOR     scale y-axis by FACTOR
+  -N FACTOR --sz=FACTOR     scale z-axis by FACTOR
+  -t V      --tx=V          translate of V along x-axis
+  -u V      --ty=V          translate of V along y-axis
+  -w V      --tz=V          translate of V along z-axis
+  -i        --revert        turn surface inside out
+  -o        --normalize     fit the resulting surface in a cube of
+                            size 1 centered at the origin
+  -v        --verbose       print statistics about the surface
+  -h        --help          display this help and exit
+
+Reports bugs to popinet@users.sourceforge.net
+\end{verbatim}
+The resulting (transformed) object is written on the standard output.
+
+For example, if you want the half-cylinder in the second cell do:
+\begin{verbatim}
+% transform -t 1 < half-cylinder.gts > half-cylinder1.gts
+\end{verbatim}
+and use {\tt half-cylinder1.gts} in the parameter file.
+
+\subsubsection{Are there any tools for converting format-X (not STL) files 
+(generated via a CAD system) to a GTS-format file?}
+
+The GTS file format is described \htmladdnormallinkfoot{here}{http://gts.sourceforge.net/reference/gts-surfaces.html\#GTS-SURFACE-WRITE}.
+It is very simple. You should be able to write your own filter
+using your favourite scripting language. You might want to have a look 
+at the {\tt cleanup} utility which comes with GTS (in the {\tt examples/} 
+directory) It will allow you to link unlinked faces, remove duplicate
+vertices etc\dots
+
+\subsubsection{Gerris seem to allow only one solid body, is this correct?}
+
+No, there is no limitation on the number and/or complexity of solid
+bodies (as long as they are properly oriented, manifold geometrical
+surfaces). Multiple bodies are possible, either as a single GTS file
+containing multiple separate bodies or as multiple calls to
+{\tt GtsSurface} in the parameter file with several non-intersecting GTS
+surfaces.
+\begin{verbatim}
+GtsSurfaceFile box_1.gts
+GtsSurfaceFile box_2.gts
+\end{verbatim}
+Note however that the solids cannot intersect.
+
+\subsubsection{How do I orient my solid surfaces properly?}
+
+The orientation of the
+faces of your solid defines where the fluid side is (by
+convention the counter-clockwise (CCW) normal direction to a face points toward the solid
+side). If your solid is not oriented properly you can use the
+{\tt --revert} or {\tt -i} option of {\tt transform} to turn it ``inside out''.
+
+\subsubsection{It looks like all STL files need to be turned ``inside out''.  I don't understand why, but {\tt transform -i} fixed the problem.}
+
+It is just a matter of different conventions. The program you use has
+chosen to orient the CCW face normals toward the ``outside'' of the
+solid object.
+
+\subsubsection{Can solids intersect?}
+
+No, you first need to use the ``boolean operations'' or ``constructive
+solid geometry'' operations of your solid modeller to generate the
+union of your solids.
+
+This may change in the future.
+
+\subsubsection{We have a problem inserting some GTS files generated 
+from STL files and even inserting the standard GTS files found 
+on the \htmladdnormallinkfoot{GTS samples}{http://gts.sourceforge.net/samples.html} site?}
+
+The samples files on the GTS site are not
+necessarily describing consistent geometric surfaces (i.e. they can be
+open, non-manifold etc\dots)
+
+\section{Post-processing and Visualisation}
+
+\subsubsection{Is there a way to view the results and solid(s) at the same time (with the 
+solid in the correct location? (Geomview question)}
+
+Yes, you need to select the Inspect$\rightarrow$Appearance$\rightarrow$Normalise$\rightarrow$None
+option in the Geomview menu. The default is to ``normalise''
+(i.e. rescale) each object individually (Normalise$\rightarrow$Individual option)
+so that it fits at the centre of the viewed area.
+
+\subsubsection{Is there any way to output U, V, W, P, etc\dots at point (X, Y, Z) in the flow field?}
+
+Yes, use
+\begin{verbatim}
+GfsOutputLocation { step = 1 } data -0.209371 -0.0166124 -0.449834
+\end{verbatim}
+where the last three numbers are the $x,y,z$ coordinates of the location
+where you want the values of the variables or
+\begin{verbatim}
+GfsOutputLocation { step = 1 } data positions
+\end{verbatim}
+where {\tt positions} is a file containing newline-separated coordinates.
+
+The file {\tt data} will contain the data as described in the first line of the file, a ``comment'' line starting with \#.
+
+\subsubsection{Where is the description of the format of the data 
+section of saved simulation files?}
+
+If you intend to read the simulation files (to convert them or do
+other operations/calculations etc\dots) I would highly recommend that
+you do so through the functions provided by the Gerris library
+({\tt gfs\_simulation\_read()} and so on). This way you will not reinvent the
+wheel and you will be able to use all the functionalities provided by
+the library (traversal of the octree structure, computation of
+gradients, interpolations etc\dots). This would also ensure that your
+code is independent of the format changes in the simulation file.
+
+Just to give you an example on how this can bite you:
+
+the GfsOutputSimulation object can be used like this (in simulation
+files)
+\begin{verbatim}
+  GfsOutputSimulation { step = 0.1 } sim-%3.1f { variables = P,C }
+\end{verbatim}
+in this case, the simulations files ({\tt sim-0.1}, {\tt sim-0.2} etc\dots) will
+only contain the {\tt P} and {\tt C} variables.
+
+Your code which reads the simulation files would need to know about
+this. The {\tt gfs\_simulation\_read()} function deals with that for you and
+other functions give you easy access to this kind of information (what
+variables where contained in the simulation file etc\dots)
+
+\subsubsection{How do I compute/display the vorticity field with OpenDX?}
+
+The {\tt DivCurl} tool in OpenDX works for general grids. You can use it
+to compute the vorticity (vector) from the {\tt U} field returned by
+{\tt GfsImport}, however this will work only for 3D fields.
+
+\subsubsection{The GfsOutputSimulation and GfsOutputLocation files only place up
+to eight decimals. Is there any way to increase the number of decimal places?}
+
+Good question. No there isn't, short of editing and recompiling the
+source code. That would be a nice option to have in the simulation
+file.
+
+\subsubsection{I would like a time-averaged velocity profile,
+Would I have to specify a number of monitoring points at different heights,  
+or is there a method to time average over a line through the solution 
+domain?}
+
+There is no method to do line averaging at the moment, however there
+is a method which averages (or more exactly stores the sum) of a given
+variable in time over the whole domain. You can do it like that:
+\begin{verbatim} 
+  EventSum { start = 1 istep = 1 } U SUx
+  EventSum { start = 1 istep = 1 } V SUy
+  EventSum { start = 1 istep = 1 } W SUz
+  EventSum2 { start = 1 istep = 1 } U SU2x
+  EventSum2 { start = 1 istep = 1 } V SU2y
+  EventSum2 { start = 1 istep = 1 } W SU2z
+  OutputSimulation { start = end } simulation-sum { 
+    variables = SUx,SUy,SUz,SU2x,SU2y,SU2z
+  }
+\end{verbatim}
+which would add {\tt U} to {\tt SUx} at every timestep ({\tt istep = 1}) starting from
+time 1 ({\tt start = 1}) etc\dots and {\tt U2} to {\tt SU2x} at every timestep
+etc\dots The resulting sums are then written at the end of the
+simulation in the file {\tt simulation-sum}. This file can then be
+post-processed (using {\tt gfs2oogl} for example) to obtain averages,
+standard deviations etc\dots (along any curves you want of course).
+
+\subsubsection{Why create a new visualisation tool like 
+GfsView? Can't you use existing tools like Mayavi/VTK, OpenDX etc\dots?}
+
+Most visualisation packages assume that the data is defined
+on either structured Cartesian meshes (this includes curvilinear
+coordinates) or fully unstructured meshes (tetrahedra etc\dots). 
+
+The octrees used by Gerris need first to be converted into
+unstructured tetrahedra and then imported into OpenDX etc\dots This is
+quite slow and memory-hungry and loses most of the advantages of
+the octree: in particular the multilevel representation of the
+solution is very useful from a visualisation point of view.
+
+I am not aware of any good visualisation tool which understands
+octrees. It would be a good idea to post messages on OpenDX, Mayavi, VTK
+etc\dots mailing lists asking about support for octrees. I did that and
+got little feed back, but more messages would show the developers of these
+projects that there is a desire for such a feature.
+
+GfsView makes the most of the octree structure to accelerate
+visualisation, computation of isosurfaces etc\dots
+
+\section{Running Gerris}
+
+\subsubsection{Are the files {\tt vorticity.gfs} and {\tt half-cylinder.gfs} included in the 
+Gerris distribution?}
+
+No, you will need to type them following the tutorial\dots
+
+\subsubsection{Your flow analysis for the RV Tangaroa is just the type of problem I would 
+like to be able to solve quickly, etc\dots  How long did it take to setup and run 
+this problem?  Could you send me a copy of the input file?}
+
+The longest was to get a ``proper'' CAD model of the vessel. We had it
+made by the ship designers but it was full of topological
+inconsistencies (folds, degenerate faces etc\dots). It was a real pain
+to fix it. Once you have a proper orientable, manifold solid there is
+nothing more to do really.
+
+Here is a parameter file (replace {\tt tangaroa.gts} with your model)
+\begin{verbatim}
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 3 }
+  GtsSurfaceFile tangaroa.gts
+  Refine 5
+  RefineSolid 9
+  Init {} { U = 1. }
+  AdaptVorticity { istep = 1 } { maxlevel = 8 cmax = 1e-2 }
+  OutputSolidStats {} stdout
+  OutputTime { istep = 1 } stdout
+  OutputBalance { istep = 1 } stdout
+  OutputProjectionStats { istep = 1 } stdout
+  OutputSimulation { start = 0.1 step = 0.1 } simulation-%03.1f {
+	variables = U,V,W,P 
+  }
+  OutputTiming { start = end } stdout
+}
+GfsBox { right = BoundaryOutflow left = BoundaryInflowConstant 1. }
+\end{verbatim}
+It took about 12 hours (and 100 MB RAM) on a single CPU 350 MHz
+Pentium (knowing that the maximum length of the model I use is about a
+third of the domain size).
+
+\subsubsection{How do you modify the mesh to give greater detail in
+a specific area of flow?}
+
+As you saw in the tutorial, the meshing is automatic and follows
+user-defined criteria. Vorticity and gradient-based criteria for
+example, can be used. The level of refinement used for both the
+initial refinement and the adaptive refinement can both be functions
+of space, time, other variables etc\dots which give almost total
+flexibility. Other criteria can be added within the object-oriented
+framework of the code if necessary.
+
+\subsubsection{Is there any way to initialise the grid so that a fine grid is generated 
+around the surface of the solid and a coarser grid is generated in the flow 
+field (resulting in significantly fewer cells being generated)?}
+
+Sure. You can use something like:
+\begin{verbatim}
+GfsRefine 6
+GfsRefineSolid 8
+\end{verbatim}
+which will first create a uniform level 6 grid and then add two extra
+levels (up to level 8) only in the cells cut by the solid boundary.
+
+\subsubsection{Is it possible to turn off  adaptive meshing in defined areas?}
+
+You could do this like that for example:
+\begin{verbatim}
+AdaptVorticity { istep = 1 } { 
+  cmax = 1e-2 
+  levelmin = (x > 0 ? 6 : 0)
+  levelmax = (x > 0 ? 6 : 7)
+}
+\end{verbatim}
+which would use a constant resolution (6 levels) on the right side of
+the domain ({\tt x > 0}) and adaptive resolution (up to 7 levels) on
+the left side.
+
+\subsubsection{Is there a way to control the maximum size of a simulation?}
+
+Use something like:
+\begin{verbatim}
+AdaptVorticity { maxlevel = 10 maxcells = 400000 cmax = 1e-2 }
+\end{verbatim}
+the {\tt maxcells} option tells the adaptive algorithm to use a maximum of
+400,000 cells to discretise the domain. When this maximum number is
+reached the algorithm minimises the maximum cost of the refinement by
+optimally distributing the cells across the domain. You have to be
+aware however that this means that the accuracy of the simulation will
+not be constant in time.
+
+\subsubsection{My simulation file looks fine but does not work, why?}
+
+Are you sure your text editor does not
+include special characters in your files? (the infamous DOS line ending
+comes to mind).
+
+\subsubsection{How do I make all the boundaries of a 2D box no-slip?}
+
+\begin{verbatim}
+GfsBox {
+   top =    Boundary { BcDirichlet U 1 }
+   bottom = Boundary { BcDirichlet U 0 }
+   left =   Boundary { BcDirichlet V 0 }
+   right =  Boundary { BcDirichlet V 0 }
+}
+\end{verbatim}
+
+\subsubsection{How do I make boundary conditions time-dependent?}
+
+What about \htmladdnormallinkfoot{this page}{http://gfs.sourceforge.net/tutorial/node15.html} of the tutorial?
+As \htmladdnormallinkfoot{described}{http://gfs.sourceforge.net/reference/gfs-functions.html} in the reference manual
+functions can depend on time (just use variable {\tt t}). You should
+be able to use this to implement your boundary conditions.
+
+\subsubsection{How do I run Gerris in parallel?}
+
+The principle is relatively simple. Each {\tt GfsBox} can take a {\tt pid}
+argument which defines the number of the process on which the solution
+for this GfsBox will be computed. If you take the ``half cylinder''
+example and do something like:
+\begin{verbatim}
+4 3 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = 10 }
+  Refine 6
+  GtsSurfaceFile half-cylinder.gts
+  Init {} { U = 1 }
+  OutputProjectionStats { step = 0.02 } stderr
+  OutputSimulation { step = 1 } simulation-%d-%3.1f {
+    variables = U,V,P,C
+  }
+  OutputTiming { start = end } stderr
+}
+GfsBox { pid = 0 left = BoundaryInflowConstant 1 }
+GfsBox { pid = 1 }
+GfsBox { pid = 2 }
+GfsBox { pid = 3 right = BoundaryOutflow }
+1 2 right
+2 3 right
+3 4 right
+\end{verbatim}
+if you run this using
+\begin{verbatim}
+% gerris2D half-cylinder.gfs
+\end{verbatim}
+it will run on one processor. If you now do
+\begin{verbatim}
+% mpirun -np 4 gerris2D half-cylinder.gfs
+\end{verbatim}
+it will run on 4 processor with each of the {\tt GfsBoxes} assigned to a
+different processor. Gerris takes care of the communications necessary
+at the boundaries between {\tt GfsBoxes} on different processors.
+
+The data will be written in different files e.g:
+\begin{verbatim}
+vorticity-0.ppm, vorticity-1.ppm etc\dots
+\end{verbatim}
+where the number is the pid of the processor.
+
+For a more complete description you will have to wait until I find the
+time to write the corresponding section in the tutorial.
+
+\end{document}
+
+% LocalWords:  isosurfaces

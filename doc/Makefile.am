@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = tutorial examples
+SUBDIRS = tutorial examples faq
 
 # The name of the module.
 DOC_MODULE=gfs
