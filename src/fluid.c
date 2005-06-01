@@ -847,11 +847,17 @@ static gboolean face_bilinear (const FttCellFace * face,
 #if FTT_2D
   for (i = 0; i < 3; i++) {
     FttVector cm;
+    guint j;
 
     (*cell_pos) (n[i + 1], &cm);
-    cm.x = (cm.x - o->x)/size;
-    cm.y = (cm.y - o->y)/size;
-    g_assert (fabs (cm.x) <= 4. && fabs (cm.y) <= 4.);
+
+    for (j = 0; j < FTT_DIMENSION; j++) {
+      (&cm.x)[j] -= (&o->x)[j];
+      /* fixme: this does not work for periodic boundaries */      
+      (&cm.x)[j] /= size;
+      g_assert (fabs ((&cm.x)[j]) <= 4.);
+    }
+
     m[i][0] = cm.x;
     m[i][1] = cm.y; 
     m[i][2] = cm.x*cm.y;
@@ -900,11 +906,15 @@ static gboolean face_bilinear (const FttCellFace * face,
 	output_error_mesh (n);
 
     (*cell_pos) (n[i + 1], &cm);
-    cm.x = (cm.x - o->x)/size;
-    cm.y = (cm.y - o->y)/size;
-    cm.z = (cm.z - o->z)/size;
-    if (fabs (cm.x) > 4. || fabs (cm.y) > 4. || fabs (cm.z) > 4.)
-      output_error_mesh (n);
+
+    for (j = 0; j < FTT_DIMENSION; j++) {
+      (&cm.x)[j] -= (&o->x)[j];
+      /* fixme: this does not work for periodic boundaries */      
+      (&cm.x)[j] /= size;
+      if (fabs ((&cm.x)[j]) > 4.)
+	output_error_mesh (n);
+    }
+
     m[i][0] = cm.x;
     m[i][1] = cm.y; 
     m[i][2] = cm.z;
