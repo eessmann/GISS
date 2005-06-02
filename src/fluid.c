@@ -1777,6 +1777,34 @@ void gfs_velocity_lambda2 (FttCell * cell,
   GFS_VARIABLE (cell, v->i) = lambda[1]/2.;
 }
 
+/**
+ * gfs_pressure_force:
+ * @cell: a #FttCell.
+ * @f: a #FttVector.
+ *
+ * Fills @f with the pressure component of the force exerted by the
+ * fluid on the fraction of embedded boundary contained in @cell.
+ */
+void gfs_pressure_force (FttCell * cell,
+			 FttVector * f)
+{
+  GfsSolidVector * s;
+
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (f != NULL);
+
+  if ((s = GFS_STATE (cell)->solid)) {
+    gdouble p = gfs_cell_dirichlet_value (cell, gfs_p, -1);
+    FttComponent c;
+
+    gfs_solid_normal (cell, f);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&f->x)[c] *= p;
+  }
+  else
+    f->x = f->y = f->z = 0.;
+}
+
 static void cell_traverse_mixed (FttCell * cell,
 				 FttTraverseType order,
 				 FttTraverseFlags flags,

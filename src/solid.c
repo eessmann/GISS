@@ -909,6 +909,37 @@ void gfs_cell_cm (const FttCell * cell, FttVector * cm)
 }
 
 /**
+ * gfs_solid_normal:
+ * @cell: a #FttCell.
+ * @n: a #FttVector.
+ *
+ * Fills @n with the components of the average unit normal to the
+ * fraction of solid boundary contained in @cell, multiplied by the
+ * area of the fraction of solid boundary contained in @cell.
+ */
+void gfs_solid_normal (const FttCell * cell, FttVector * n)
+{
+  GfsSolidVector * s;
+
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (n != NULL);
+
+  if ((s = GFS_STATE (cell)->solid)) {
+    gdouble size = ftt_cell_size (cell);
+    FttComponent c;
+
+#if (!FTT_2D)
+    size *= size;
+#endif /* 3D */
+
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&n->x)[c] = (s->s[2*c + 1] - s->s[2*c])*size;
+  }
+  else
+    n->x = n->y = n->z = 0.;
+}
+
+/**
  * gfs_face_ca:
  * @face: a #FttCellFace.
  * @ca: a #FttVector.

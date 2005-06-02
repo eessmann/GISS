@@ -201,6 +201,8 @@ void                  gfs_velocity_norm2             (FttCell * cell,
 						      GfsVariable * v);
 void                  gfs_velocity_lambda2           (FttCell * cell,
 						      GfsVariable * v);
+void                  gfs_pressure_force             (FttCell * cell,
+						      FttVector * f);
 GtsRange              gfs_stats_variable             (FttCell * root, 
 						      GfsVariable * v, 
 						      FttTraverseFlags flags,

@@ -2214,17 +2214,12 @@ GfsVariable * gfs_domain_add_variable (GfsDomain * domain,
 
 static void add_pressure_force (FttCell * cell, gdouble * f)
 {
-  GfsSolidVector * s = GFS_STATE (cell)->solid;
-  gdouble p = gfs_cell_dirichlet_value (cell, gfs_p, -1);
+  FttVector ff;
   FttComponent c;
-  gdouble size = ftt_cell_size (cell);
 
-#if (!FTT_2D)
-  size *= size;
-#endif /* 3D */
-
+  gfs_pressure_force (cell, &ff);
   for (c = 0; c < FTT_DIMENSION; c++)
-    f[c] += p*(s->s[2*c + 1] - s->s[2*c])*size;
+    f[c] += (&ff.x)[c];
 }
 
 static GfsSourceDiffusion * source_diffusion (GfsVariable * v)

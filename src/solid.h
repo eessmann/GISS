@@ -41,6 +41,8 @@ void         gfs_domain_init_fraction                    (GfsDomain * domain,
 							  GfsVariable * c);
 void         gfs_cell_cm                                 (const FttCell * cell, 
 							  FttVector * cm);
+void         gfs_solid_normal                            (const FttCell * cell,
+							  FttVector * n);
 void         gfs_face_ca                                 (const FttCellFace * face, 
 							  FttVector * ca);
 
