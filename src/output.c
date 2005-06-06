@@ -1794,6 +1794,157 @@ GfsOutputClass * gfs_output_scalar_sum_class (void)
   return klass;
 }
 
+/* GfsOutputScalarHistogram: Object */
+
+static void gfs_output_scalar_histogram_destroy (GtsObject * o)
+{
+  g_free (GFS_OUTPUT_SCALAR_HISTOGRAM (o)->x);
+  g_free (GFS_OUTPUT_SCALAR_HISTOGRAM (o)->y);
+
+  (* GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class->destroy) (o);
+}
+
+static void gfs_output_scalar_histogram_read (GtsObject ** o, GtsFile * fp)
+{
+  GtsFileVariable var[] = {
+    {GTS_DOUBLE, "min", TRUE},
+    {GTS_DOUBLE, "max", TRUE},
+    {GTS_UINT,   "n",   TRUE},
+    {GTS_NONE}
+  };
+  GfsOutputScalarHistogram * output;
+
+  (* GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  output = GFS_OUTPUT_SCALAR_HISTOGRAM (*o);
+
+  var[0].data = &output->min;
+  var[1].data = &output->max;
+  var[2].data = &output->n;
+
+  gts_file_assign_variables (fp, var);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (var[0].set && output->min >= output->max) {
+    gts_file_variable_error (fp, var, "min", 
+			     "min `%g' must be strictly smaller than `%g'", 
+			     output->min, output->max);
+    return;
+  }
+  if (var[1].set && output->max <= output->min) {
+    gts_file_variable_error (fp, var, "max",
+			     "max `%g' must be strictly larger than `%g'", 
+			     output->max, output->min);
+    return;
+  }
+  if (var[2].set && output->n <= 0) {
+    gts_file_variable_error (fp, var, "n", 
+			     "n `%d' must be strictly positive", 
+			     output->n);
+    return;
+  }
+  output->x = g_malloc0 (output->n*sizeof (gdouble));
+  output->y = g_malloc0 (output->n*sizeof (gdouble));
+}
+
+static void gfs_output_scalar_histogram_write (GtsObject * o, FILE * fp)
+{
+  GfsOutputScalarHistogram * output = GFS_OUTPUT_SCALAR_HISTOGRAM (o);
+
+  (* GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class->write) (o, fp);
+
+  fprintf (fp, " { min = %g max = %g n = %d }", output->min, output->max, output->n);
+}
+
+static void update_histogram (FttCell * cell, GfsOutputScalarHistogram * h)
+{
+  gdouble v = GFS_VARIABLE (cell, GFS_OUTPUT_SCALAR (h)->v->i); 
+  gint i = (v - h->min)/(h->max - h->min)*h->n;
+
+  if (i >= 0 && i < h->n) {
+    gdouble w = gfs_cell_volume (cell);
+
+    h->w += w;
+    h->x[i] += v*w;
+    h->y[i] += w;
+  }
+}
+
+static gboolean gfs_output_scalar_histogram_event (GfsEvent * event,
+						   GfsSimulation * sim)
+{
+  GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
+  GfsDomain * domain = GFS_DOMAIN (sim);
+
+  if (output->v->derived) {
+    gfs_variable_set_parent (output->v, domain);
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) output->v->derived, 
+			      output->v);
+  }
+  if (output->maxlevel >= 0)
+    gfs_domain_cell_traverse (domain,
+			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) output->v->fine_coarse,
+			      output->v);
+  gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
+			    FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
+			    (FttCellTraverseFunc) update_histogram, output);
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class)->event)
+      (event, sim)) {
+    GfsOutputScalarHistogram * h = GFS_OUTPUT_SCALAR_HISTOGRAM (event);
+    guint i;
+
+    for (i = 0; i < h->n; i++)
+      if (h->w > 0.)
+	fprintf (GFS_OUTPUT (output)->file->fp, "%g %g\n", h->x[i]/h->w, h->y[i]/h->w);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_output_scalar_histogram_class_init (GfsOutputClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = gfs_output_scalar_histogram_event;
+  GTS_OBJECT_CLASS (klass)->read = gfs_output_scalar_histogram_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_output_scalar_histogram_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_output_scalar_histogram_destroy;
+}
+
+static void gfs_output_scalar_histogram_init (GfsOutputScalarHistogram * object)
+{
+  object->x = object->y = NULL;
+  object->n = 100;
+  object->min = -1.;
+  object->max =  1.;
+  object->w = 0.;
+}
+
+GfsOutputClass * gfs_output_scalar_histogram_class (void)
+{
+  static GfsOutputClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_output_scalar_histogram_info = {
+      "GfsOutputScalarHistogram",
+      sizeof (GfsOutputScalarHistogram),
+      sizeof (GfsOutputClass),
+      (GtsObjectClassInitFunc) gfs_output_scalar_histogram_class_init,
+      (GtsObjectInitFunc) gfs_output_scalar_histogram_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_output_scalar_class ()),
+				  &gfs_output_scalar_histogram_info);
+  }
+
+  return klass;
+}
+
 /* GfsOutputEnergy: Object */
 
 static void add_energy (FttCell * cell, gpointer * data)

@@ -187,6 +187,27 @@ GfsOutputClass * gfs_output_scalar_stats_class  (void);
 
 GfsOutputClass * gfs_output_scalar_sum_class  (void);
 
+/* GfsOutputScalarHistogram: Header */
+
+typedef struct _GfsOutputScalarHistogram         GfsOutputScalarHistogram;
+
+struct _GfsOutputScalarHistogram {
+  /*< private >*/
+  GfsOutputScalar parent;
+  
+  /*< public >*/
+  gdouble * x, * y, min, max, w;
+  guint n;
+};
+
+#define GFS_OUTPUT_SCALAR_HISTOGRAM(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsOutputScalarHistogram,\
+					         gfs_output_scalar_histogram_class ())
+#define GFS_IS_OUTPUT_SCALAR_HISTOGRAM(obj)         (gts_object_is_from_class (obj,\
+						 gfs_output_scalar_histogram_class ()))
+
+GfsOutputClass * gfs_output_scalar_histogram_class  (void);
+
 /* GfsOutputEnergy: Header */
 
 GfsOutputClass * gfs_output_energy_class  (void);

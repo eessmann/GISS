@@ -289,6 +289,7 @@ void gfs_init (int * argc, char *** argv)
         gfs_output_scalar_norm_class ();
         gfs_output_scalar_stats_class ();
         gfs_output_scalar_sum_class ();
+        gfs_output_scalar_histogram_class ();
         gfs_output_error_norm_class ();
           gfs_output_correlation_class ();
 	gfs_output_squares_class ();
