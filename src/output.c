@@ -1737,8 +1737,7 @@ GfsOutputClass * gfs_output_scalar_stats_class (void)
 
 static void add (FttCell * cell, gpointer * data)
 {
-  GfsSolidVector * solid = GFS_STATE (cell)->solid;
-  gdouble vol = (solid ? solid->a : 1.)*ftt_cell_volume (cell);
+  gdouble vol = gfs_cell_volume (cell);
   GfsVariable * v = data[0];
   gdouble * sum = data[1];
 
@@ -1799,10 +1798,9 @@ GfsOutputClass * gfs_output_scalar_sum_class (void)
 
 static void add_energy (FttCell * cell, gpointer * data)
 {
-  GfsSolidVector * solid = GFS_STATE (cell)->solid;
   GfsStateVector * s = GFS_STATE (cell);
   GtsRange * ps = data[2];
-  gdouble vol = (solid ? solid->a : 1.)*ftt_cell_volume (cell);
+  gdouble vol = gfs_cell_volume (cell);
   gdouble * ke = data[0];
   gdouble * pe = data[1];
 
@@ -2083,7 +2081,7 @@ static void compute_correlation (FttCell * cell, gpointer * data)
     gfs_cell_cm (cell, &p);
   ref = gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, NULL, &p, sim->time.t);
   v = GFS_VARIABLE (cell, o->v->i) - *bias;
-  w = ftt_cell_volume (cell)*(GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.);
+  w = gfs_cell_volume (cell);
   *sumref += ref*ref*w;
   *sum += v*ref*w;
 }

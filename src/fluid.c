@@ -1403,9 +1403,7 @@ static void add_norm (const FttCell * cell, gpointer * data)
   GfsNorm * n = data[0];
   GfsVariable * v = data[1];
 
-  gfs_norm_add (n, GFS_VARIABLE (cell, v->i), 
-		ftt_cell_volume (cell)*(GFS_IS_MIXED (cell) ? 
-				    GFS_STATE (cell)->solid->a : 1.));
+  gfs_norm_add (n, GFS_VARIABLE (cell, v->i), gfs_cell_volume (cell));
 }
 
 /**
