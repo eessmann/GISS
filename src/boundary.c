@@ -225,11 +225,9 @@ static void homogeneous_dirichlet (FttCellFace * f, GfsBc * b)
 
 static void face_dirichlet (FttCellFace * f, GfsBc * b)
 {
-  gdouble v = gfs_function_face_value (GFS_BC_VALUE (b)->val, f,
-		   GFS_SIMULATION (gfs_box_domain (b->b->box))->time.t);
-  
   GFS_STATE (f->cell)->f[f->d].v = 
-    GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = v;
+    gfs_function_face_value (GFS_BC_VALUE (b)->val, f,
+			     GFS_SIMULATION (gfs_box_domain (b->b->box))->time.t);
 }
 
 static void gfs_bc_dirichlet_init (GfsBc * object)
@@ -278,14 +276,11 @@ static void homogeneous_neumann (FttCellFace * f, GfsBc * b)
 
 static void face_neumann (FttCellFace * f, GfsBc * b)
 {
-  gdouble v = 
+  GFS_STATE (f->cell)->f[f->d].v = 
     GFS_VARIABLE (f->neighbor, b->v->i) +
     gfs_function_face_value (GFS_BC_VALUE (b)->val, f, 
 	         GFS_SIMULATION (gfs_box_domain (b->b->box))->time.t)
     *ftt_cell_size (f->cell)/2.;
-
-  GFS_STATE (f->cell)->f[f->d].v = 
-    GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = v;
 }
 
 static void gfs_bc_neumann_init (GfsBc * object)
