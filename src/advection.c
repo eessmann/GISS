@@ -24,7 +24,6 @@
 
 #include "solid.h"
 
-#if 1
 static gdouble transverse_term (FttCell * cell,
 				gdouble size,
 				FttComponent c,
@@ -73,10 +72,8 @@ void gfs_cell_advected_face_values (FttCell * cell,
       par->dt*GFS_VARIABLE (cell, GFS_VELOCITY_INDEX (c))/size :
       par->dt*(s->f[2*c].un + s->f[2*c + 1].un)/(2.*size);
     gdouble g = (* par->gradient) (cell, c, par->v->i);
-    gdouble vl = GFS_VARIABLE (cell, par->v->i) + 
-      MIN ((1. - unorm)/2., 0.5)*g;
-    gdouble vr = GFS_VARIABLE (cell, par->v->i) + 
-      MAX ((- 1. - unorm)/2., -0.5)*g;
+    gdouble vl = GFS_VARIABLE (cell, par->v->i) + MIN ((1. - unorm)/2., 0.5)*g;
+    gdouble vr = GFS_VARIABLE (cell, par->v->i) + MAX ((- 1. - unorm)/2., -0.5)*g;
     gdouble src = par->dt*gfs_variable_mac_source (par->v, cell)/2.;
     gdouble dv;
 
@@ -95,56 +92,6 @@ void gfs_cell_advected_face_values (FttCell * cell,
     s->f[2*c + 1].v = vr + src - dv;
   }
 }
-#else
-/**
- * gfs_cell_advected_face_values:
- * @cell: a #FttCell.
- * @par: the advection parameters.
- *
- * Fills the face variable (@v field of #GfsFaceStateVector) of all the
- * faces of @cell with the advected value of variable @par->v at time
- * t + dt/2.
- */
-void gfs_cell_advected_face_values (FttCell * cell,
-				    const GfsAdvectionParams * par)
-{
-  FttComponent c;
-  gdouble size;
-  gdouble g[FTT_DIMENSION];
-
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (par != NULL);
-
-  size = ftt_cell_size (cell);
-  for (c = 0; c < FTT_DIMENSION; c++)
-    g[c] = (* par->gradient) (cell, c, par->v);
-
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    gdouble u = par->dt*GFS_VARIABLE (cell, GFS_VELOCITY (c))/size;
-    gdouble vl = GFS_VARIABLE (cell, par->v) + MIN ((1. - u)/2., 0.5)*g[c];
-    gdouble vr = GFS_VARIABLE (cell, par->v) + MAX ((-1. - u)/2., -0.5)*g[c];
-    gdouble dv;
-    FttComponent cp;
-#if FTT_2D
-
-    cp = FTT_ORTHOGONAL_COMPONENT (c);
-    dv = par->dt*GFS_VARIABLE (cell, GFS_VELOCITY (cp))*g[cp]/(2.*size);
-#else  /* FTT_3D */
-    static FttComponent orthogonal[FTT_DIMENSION][2] = {
-      {FTT_Y, FTT_Z}, {FTT_X, FTT_Z}, {FTT_X, FTT_Y}
-    };
-
-    cp = orthogonal[c][0];
-    dv = par->dt*GFS_VARIABLE (cell, GFS_VELOCITY (cp))*g[cp]/(2.*size);
-    cp = orthogonal[c][1];
-    dv += par->dt*GFS_VARIABLE (cell, GFS_VELOCITY (cp))*g[cp]/(2.*size);
-#endif /* FTT_3D */
-
-    cell->s.f[2*c].v     = vl - dv;
-    cell->s.f[2*c + 1].v = vr - dv;
-  }
-}
-#endif
 
 /**
  * gfs_cell_non_advected_face_values:
@@ -404,7 +351,7 @@ void gfs_face_advection_flux (const FttCellFace * face,
   g_return_if_fail (par != NULL);
 
   flux = GFS_FACE_FRACTION (face)*GFS_FACE_NORMAL_VELOCITY (face)*par->dt*
-    gfs_face_upwinded_value (face, FALSE)/ftt_cell_size (face->cell);
+    gfs_face_upwinded_value (face, GFS_FACE_UPWINDING)/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
     flux = - flux;
   GFS_VARIABLE (face->cell, par->fv->i) -= flux;
