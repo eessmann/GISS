@@ -1865,7 +1865,7 @@ static void update_histogram (FttCell * cell, GfsOutputScalarHistogram * h)
   gint i = (v - h->min)/(h->max - h->min)*h->n;
 
   if (i >= 0 && i < h->n) {
-    gdouble w = gfs_cell_volume (cell);
+    gdouble w = gfs_cell_volume (cell)*h->dt;
 
     h->w += w;
     h->x[i] += v*w;
@@ -1877,31 +1877,44 @@ static gboolean gfs_output_scalar_histogram_event (GfsEvent * event,
 						   GfsSimulation * sim)
 {
   GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
+  GfsOutputScalarHistogram * h = GFS_OUTPUT_SCALAR_HISTOGRAM (event);
   GfsDomain * domain = GFS_DOMAIN (sim);
 
-  if (output->v->derived) {
-    gfs_variable_set_parent (output->v, domain);
-    gfs_domain_cell_traverse (domain,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) output->v->derived, 
-			      output->v);
+  if (h->last >= 0.) {
+    if (output->v->derived) {
+      gfs_variable_set_parent (output->v, domain);
+      gfs_domain_cell_traverse (domain,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) output->v->derived, 
+				output->v);
+    }
+    if (output->maxlevel >= 0)
+      gfs_domain_cell_traverse (domain,
+				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				(FttCellTraverseFunc) output->v->fine_coarse,
+				output->v);
+    h->dt = sim->time.t - h->last;
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
+			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
+			      (FttCellTraverseFunc) update_histogram, output);
+    h->last = sim->time.t;
   }
-  if (output->maxlevel >= 0)
-    gfs_domain_cell_traverse (domain,
-			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) output->v->fine_coarse,
-			      output->v);
-  gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
-			    FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
-			    (FttCellTraverseFunc) update_histogram, output);
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class)->event)
       (event, sim)) {
-    GfsOutputScalarHistogram * h = GFS_OUTPUT_SCALAR_HISTOGRAM (event);
-    guint i;
+    if (h->last < 0.)
+      h->last = sim->time.t;
+    else {
+      GfsOutput * output = GFS_OUTPUT (event);
+      guint i;
 
-    for (i = 0; i < h->n; i++)
-      if (h->w > 0.)
-	fprintf (GFS_OUTPUT (output)->file->fp, "%g %g\n", h->x[i]/h->w, h->y[i]/h->w);
+      if (output->file && !output->dynamic)
+	output->file->fp = freopen (output->format, "w", output->file->fp);
+      for (i = 0; i < h->n; i++)
+	if (h->y[i] > 0.)
+	  fprintf (output->file->fp, "%g %g\n", h->x[i]/h->y[i], h->y[i]/h->w);
+      if (output->file && !output->dynamic)
+	fflush (output->file->fp);
+    }
     return TRUE;
   }
   return FALSE;
@@ -1922,6 +1935,7 @@ static void gfs_output_scalar_histogram_init (GfsOutputScalarHistogram * object)
   object->min = -1.;
   object->max =  1.;
   object->w = 0.;
+  object->last = -1.;
 }
 
 GfsOutputClass * gfs_output_scalar_histogram_class (void)

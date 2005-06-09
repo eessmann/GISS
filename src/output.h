@@ -197,6 +197,7 @@ struct _GfsOutputScalarHistogram {
   
   /*< public >*/
   gdouble * x, * y, min, max, w;
+  gdouble last, dt;
   guint n;
 };
 
