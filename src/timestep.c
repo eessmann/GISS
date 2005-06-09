@@ -834,11 +834,11 @@ static void gfs_surface_bc_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
   if (!strcmp (fp->token->str, "Neumann")) {
-    bc->type->val = 0.;
+    gfs_function_set_constant_value (bc->type, 0.);
     gts_file_next_token (fp);
   }
   else if (!strcmp (fp->token->str, "Dirichlet")) {
-    bc->type->val = 1.;
+    gfs_function_set_constant_value (bc->type, 1.);
     gts_file_next_token (fp);
   }
   else {
@@ -852,11 +852,12 @@ static void gfs_surface_bc_read (GtsObject ** o, GtsFile * fp)
 static void gfs_surface_bc_write (GtsObject * o, FILE * fp)
 {
   GfsSurfaceBc * bc = GFS_SURFACE_BC (o);
+  gdouble val;
 
   if (GTS_OBJECT_CLASS (gfs_surface_bc_class ())->parent_class->write)
     (* GTS_OBJECT_CLASS (gfs_surface_bc_class ())->parent_class->write) (o, fp);
-  if (!bc->type->f)
-    fprintf (fp, " %s", bc->type->val ? "Dirichlet" : "Neumann");
+  if ((val = gfs_function_get_constant_value (bc->type)) < G_MAXDOUBLE)
+    fprintf (fp, " %s", val ? "Dirichlet" : "Neumann");
   else
     gfs_function_write (bc->type, fp);
   gfs_function_write (bc->val, fp);

@@ -29,6 +29,20 @@
 
 /* GfsFunction: Object */
 
+struct _GfsFunction {
+  /*< private >*/
+  GtsObject parent;
+  GString * expr;
+  GModule * module;
+  gdouble (* f) (FttCell *, gdouble x, gdouble y, gdouble z, gdouble t);
+  gchar * sname;
+  GtsSurface * s;
+  GfsVariable * v;
+  gdouble val;
+
+  /*< public >*/
+};
+
 static GtsSurface * read_surface (gchar * name, GtsFile * fp)
 {
   FILE * fptr = fopen (name, "r");
@@ -77,12 +91,14 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 {
   GfsFunction * f = GFS_FUNCTION (*o);
   GtsTokenType type;
+  GfsDomain * domain;
 
   if (GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
+  domain = GFS_DOMAIN (gfs_object_simulation (*o));
   type = fp->type;
   switch (type) {
     /* constant value */
@@ -90,7 +106,6 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     f->val = atof (fp->token->str);
     break;
 
-    /* load GTS file */
   case GTS_STRING:
     if (strlen (fp->token->str) > 3 &&
 	!strcmp (&(fp->token->str[strlen (fp->token->str) - 4]), ".gts")) {
@@ -99,6 +114,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       f->sname = g_strdup (fp->token->str);
       break;
     }
+    else if ((f->v = gfs_variable_from_name (domain->variables, fp->token->str)))
+      break;
     /* fall through */
 
     /* compile C expression */
@@ -140,14 +157,14 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	     "double f (FttCell * cell, double x, double y, double z, double t) {\n"
 	     "  double ",
 	     fin);
-      v = GFS_DOMAIN (gfs_object_simulation (*o))->variables;
+      v = domain->variables;
       fprintf (fin, "%s", v->name);
       while ((v = v->next)) {
 	if (v->name)
 	  fprintf (fin, ", %s", v->name);
       }
       fputs (";\n  if (cell) {\n", fin);
-      v = GFS_DOMAIN (gfs_object_simulation (*o))->variables;
+      v = domain->variables;
       while (v) {
 	if (v->name)
 	  fprintf (fin, "    %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
@@ -272,6 +289,8 @@ static void function_write (GtsObject * o, FILE * fp)
     fprintf (fp, " %s", f->expr->str);
   else if (f->module)
     fprintf (fp, " %s", g_module_name (f->module));
+  else if (f->v)
+    fprintf (fp, " %s", f->v->name);
   else if (f->s)
     fprintf (fp, " %s", f->sname);
   else
@@ -368,6 +387,8 @@ gdouble gfs_function_value (GfsFunction * f, FttCell * cell, FttVector * p, gdou
     else
       return (* f->f) (cell, 0., 0., 0., t);
   }
+  else if (f->v)
+    return GFS_VARIABLE (cell, f->v->i);
   else
     return f->val;
 }
@@ -401,6 +422,40 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa,
     ftt_face_pos (fa, &p);
     return (* f->f) (fa->cell, p.x, p.y, p.z, t);
   }
+  else if (f->v)
+    return gfs_face_interpolated_value (fa, f->v->i);
+  else
+    return f->val;
+}
+
+/**
+ * gfs_function_set_constant_value:
+ * @f: a #GfsFunction.
+ * @val: the value.
+ *
+ * Sets the value of the constant function @f to @val.
+ */
+void gfs_function_set_constant_value (GfsFunction * f, gdouble val)
+{
+  g_return_if_fail (f != NULL);
+  g_return_if_fail (!f->f && !f->s && !f->v);
+
+  f->val = val;
+}
+
+/**
+ * gfs_function_get_constant_value:
+ * @f: a #GfsFunction.
+ *
+ * Returns: the value of function @f if @f is constant, G_MAXDOUBLE
+ * otherwise.
+ */
+gdouble gfs_function_get_constant_value (GfsFunction * f)
+{
+  g_return_val_if_fail (f != NULL, G_MAXDOUBLE);
+
+  if (f->f || f->s || f->v)
+    return G_MAXDOUBLE;
   else
     return f->val;
 }

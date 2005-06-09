@@ -33,19 +33,6 @@ extern "C" {
 
 typedef struct _GfsFunction         GfsFunction;
 
-struct _GfsFunction {
-  /*< private >*/
-  GtsObject parent;
-  GModule * module;
-  GString * expr;
-  gdouble (* f) (FttCell *, gdouble x, gdouble y, gdouble z, gdouble t);
-  gchar * sname;
-  GtsSurface * s;
-  gdouble val;
-
-  /*< public >*/
-};
-
 typedef struct _GfsFunctionClass    GfsFunctionClass;
 
 struct _GfsFunctionClass {
@@ -71,6 +58,9 @@ gdouble            gfs_function_value       (GfsFunction * f,
 					     FttCell * cell,
 					     FttVector * p,
 					     gdouble t);
+void               gfs_function_set_constant_value (GfsFunction * f, 
+						    gdouble val);
+gdouble            gfs_function_get_constant_value (GfsFunction * f);
 void               gfs_function_read        (GfsFunction * f, 
 					     gpointer domain,
 					     GtsFile * fp);
