@@ -218,14 +218,6 @@ static void gfs_output_write (GtsObject * o, FILE * fp)
     fprintf (fp, " %s", output->format);
 }
 
-static gboolean char_in_string (char c, const char * s)
-{
-  while (*s != '\0')
-    if (*(s++) == c)
-      return TRUE;
-  return FALSE;
-}
-
 static void gfs_output_read (GtsObject ** o, GtsFile * fp)
 {
   GfsOutput * output;
@@ -300,7 +292,7 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
 	
 	len = 1;
 	c++;
-	while (*c != '\0' && !char_in_string (*c, "diouxXeEfFgGaAcsCSpn%")) {
+	while (*c != '\0' && !gfs_char_in_string (*c, "diouxXeEfFgGaAcsCSpn%")) {
 	  prev = c;
 	  c++;
 	  len++;
@@ -309,7 +301,7 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
 	if (*c == '%')
 	  output->formats = g_slist_prepend (output->formats,
 					     format_new ("%", 1, NONE));
-	else if (char_in_string (*c, "diouxXc")) {
+	else if (gfs_char_in_string (*c, "diouxXc")) {
 	  if (*prev == 'l') {
 	    output->formats = g_slist_prepend (output->formats,
 					       format_new (startf, len, ITER));
@@ -319,7 +311,7 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
 	    output->formats = g_slist_prepend (output->formats,
 					       format_new (startf, len, PID));
 	}
-	else if (char_in_string (*c, "eEfFgGaA")) {
+	else if (gfs_char_in_string (*c, "eEfFgGaA")) {
 	  output->formats = g_slist_prepend (output->formats,
 					     format_new (startf, len, TIME));
 	  output->dynamic = TRUE;

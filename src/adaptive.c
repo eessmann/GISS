@@ -352,8 +352,7 @@ static gdouble cost_vorticity (FttCell * cell, GfsAdaptVorticity * a)
 {
   if (a->maxa <= 0.)
     return 0.;
-  return fabs (gfs_vorticity_value (cell, &GFS_DOMAIN (gfs_object_simulation (a))->lambda))*
-    ftt_cell_size (cell)/a->maxa;
+  return fabs (gfs_vorticity (cell))*ftt_cell_size (cell)/a->maxa;
 }
 
 static void gfs_adapt_vorticity_init (GfsAdaptVorticity * object)

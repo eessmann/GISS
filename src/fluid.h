@@ -189,18 +189,11 @@ void                  gfs_face_gradient_flux_centered(const FttCellFace * face,
 
 void                  gfs_normal_divergence          (FttCell * cell);
 void                  gfs_normal_divergence_2D       (FttCell * cell);
-void                  gfs_divergence                 (FttCell * cell,
-						      GfsVariable * v);
-gdouble               gfs_vorticity_value            (FttCell * cell,
-						      FttVector * lambda);
-void                  gfs_vorticity                  (FttCell * cell,
-						      GfsVariable * v);
-void                  gfs_velocity_norm              (FttCell * cell,
-						      GfsVariable * v);
-void                  gfs_velocity_norm2             (FttCell * cell,
-						      GfsVariable * v);
-void                  gfs_velocity_lambda2           (FttCell * cell,
-						      GfsVariable * v);
+gdouble               gfs_divergence                 (FttCell * cell);
+gdouble               gfs_vorticity                  (FttCell * cell);
+gdouble               gfs_velocity_norm              (FttCell * cell);
+gdouble               gfs_velocity_norm2             (FttCell * cell);
+gdouble               gfs_velocity_lambda2           (FttCell * cell);
 void                  gfs_pressure_force             (FttCell * cell,
 						      FttVector * f);
 GtsRange              gfs_stats_variable             (FttCell * root, 

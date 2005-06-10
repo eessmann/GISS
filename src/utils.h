@@ -29,6 +29,17 @@ extern "C" {
 
 #define GFS_DOUBLE_TO_POINTER(d)     (*((gpointer *) &(d)))
 
+gboolean gfs_char_in_string (char c, const char * s);
+
+/* Derived variables */
+
+typedef struct {
+  gchar * name;
+  gdouble (* func) (FttCell *);
+} GfsDerivedVariable;
+
+GTS_C_VAR GfsDerivedVariable gfs_derived_variable[];
+
 /* GfsFunction: Header */
 
 typedef struct _GfsFunction         GfsFunction;

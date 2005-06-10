@@ -78,6 +78,21 @@ static void gfs_log (const gchar * log_domain,
 	   log_domain, stype[type], pe, message); 
 }
 
+static void cell_vorticity (FttCell * cell, GfsVariable * v)
+{
+  GFS_VARIABLE (cell, v->i) = gfs_vorticity (cell);
+}
+
+static void cell_velocity_norm (FttCell * cell, GfsVariable * v)
+{
+  GFS_VARIABLE (cell, v->i) = gfs_velocity_norm (cell);
+}
+
+static void cell_velocity_norm2 (FttCell * cell, GfsVariable * v)
+{
+  GFS_VARIABLE (cell, v->i) = gfs_velocity_norm2 (cell);
+}
+
 static void cell_level (FttCell * cell, GfsVariable * v)
 {
   GFS_VARIABLE (cell, v->i) = ftt_cell_level (cell);
@@ -91,8 +106,7 @@ static void cell_fraction (FttCell * cell, GfsVariable * v)
 static void cell_lambda2 (FttCell * cell, GfsVariable * v)
 {
   gdouble size = ftt_cell_size (cell);
-  gfs_velocity_lambda2 (cell, v);
-  GFS_VARIABLE (cell, v->i) /= size*size;
+  GFS_VARIABLE (cell, v->i) /= gfs_velocity_lambda2 (cell)/(size*size);
 }
 
 static void cell_curvature (FttCell * cell, GfsVariable * v)
@@ -189,13 +203,13 @@ void gfs_init (int * argc, char *** argv)
   /* Initializes derived variables */
   gfs_derived_first = v = 
     gfs_variable_new (gfs_variable_class (), NULL, "Vorticity", FALSE, GFS_DIV);
-  v->derived = gfs_vorticity;
+  v->derived = cell_vorticity;
   v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "Divergence", FALSE, GFS_DIV);
   v->derived = (GfsVariableDerivedFunc) gfs_divergence;
   v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "Velocity", FALSE, GFS_DIV);
-  v->derived = gfs_velocity_norm;
+  v->derived = cell_velocity_norm;
   v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "Velocity2", FALSE, GFS_DIV);
-  v->derived = gfs_velocity_norm2;
+  v->derived = cell_velocity_norm2;
   v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "Level", FALSE, GFS_DIV);
   v->derived = cell_level;
   v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "A", FALSE, GFS_DIV);

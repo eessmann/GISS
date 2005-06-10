@@ -27,20 +27,73 @@
 #include "solid.h"
 #include "simulation.h"
 
+/**
+ * @c: a character.
+ * @s: a string.
+ *
+ * Returns: %TRUE if @c belongs to @s, %FALSE otherwise.
+ */
+gboolean gfs_char_in_string (char c, const char * s)
+{
+  if (s == NULL)
+    return FALSE;
+  while (*s != '\0')
+    if (*(s++) == c)
+      return TRUE;
+  return FALSE;
+}
+
+/* Derived variables */
+
+typedef gdouble (* GfsFunctionFunc) (const FttCell * cell, 
+				     gdouble x, gdouble y, gdouble z, 
+				     gdouble t);
+
+static gdouble cell_level (FttCell * cell)
+{
+  return ftt_cell_level (cell);
+}
+
+static gdouble cell_fraction (FttCell * cell)
+{
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
+}
+
+GfsDerivedVariable gfs_derived_variable[] = {
+  { "Vorticity ", gfs_vorticity },
+  { "Divergence", gfs_divergence },
+  { "Velocity",   gfs_velocity_norm },
+  { "Velocity2",  gfs_velocity_norm2 },
+  { "Level",      cell_level },
+  { "A",          cell_fraction },
+  { "Lambda2",    gfs_velocity_lambda2 },
+  { "Curvature",  gfs_streamline_curvature },
+  { NULL, NULL}
+};
+
+static GfsFunctionFunc lookup_derived_variable (const gchar * name)
+{
+  GfsDerivedVariable * v = gfs_derived_variable;
+
+  while (v->name) {
+    if (!strcmp (v->name, name))
+      return (GfsFunctionFunc) v->func;
+    v++;
+  }
+  return NULL;
+}
+
 /* GfsFunction: Object */
 
 struct _GfsFunction {
-  /*< private >*/
   GtsObject parent;
   GString * expr;
   GModule * module;
-  gdouble (* f) (FttCell *, gdouble x, gdouble y, gdouble z, gdouble t);
+  GfsFunctionFunc f;
   gchar * sname;
   GtsSurface * s;
   GfsVariable * v;
   gdouble val;
-
-  /*< public >*/
 };
 
 static GtsSurface * read_surface (gchar * name, GtsFile * fp)
@@ -87,6 +140,121 @@ static gboolean load_module (GfsFunction * f, GtsFile * fp, gchar * mname)
   return TRUE;
 }
 
+static gboolean expr_or_func (GtsFile * fp, GfsFunction * f)
+{
+  GtsTokenType type = fp->type;
+  gint c, scope;
+  
+  if (type == '(' || type == GTS_STRING) {
+    f->expr = g_string_new (fp->token->str);
+    if (type == '(' || fp->next_token != '\0') {
+      scope = type == '(' ? 1 : 0;
+      if (fp->next_token != '\0')
+	g_string_append_c (f->expr, fp->next_token);
+      c = gts_file_getc (fp);
+      while (c != EOF && (scope > 0 || (c != ' ' && c != '\n'))) {
+	if (c == '(') scope++;
+	if (c == ')') scope--;
+	g_string_append_c (f->expr, c);
+	c = gts_file_getc (fp);
+      }
+    }
+    return TRUE;
+  }
+  else {
+    f->expr = g_string_new ("{");
+    scope = fp->scope_max;
+    c = gts_file_getc (fp);
+    while (c != EOF && fp->scope > scope) {
+      g_string_append_c (f->expr, c);
+      c = gts_file_getc (fp);
+    }
+    g_string_append_c (f->expr, '}');
+    if (fp->scope != scope)
+      gts_file_error (fp, "parse error");
+    return FALSE;
+  }
+}
+
+static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
+{
+  gchar foutname[] = "/tmp/gfsXXXXXX";
+  gchar ferrname[] = "/tmp/gfsXXXXXX";
+  gchar ftmpname[] = "/tmp/gfsXXXXXX";
+  gint foutd, ferrd, ftmpd;
+  gchar * cc;
+  gint status;
+#if FTT_2D
+  gchar cccommand[] = "gcc `pkg-config gerris2D --cflags --libs` -O -fPIC -shared -x c";
+#elif FTT_2D3
+  gchar cccommand[] = "gcc `pkg-config gerris2D3 --cflags --libs` -O -fPIC -shared -x c";
+#else /* 3D */
+  gchar cccommand[] = "gcc `pkg-config gerris3D --cflags --libs` -O -fPIC -shared -x c";
+#endif 
+  
+  foutd = mkstemp (foutname);
+  ferrd = mkstemp (ferrname);
+  ftmpd = mkstemp (ftmpname);
+  if (foutd < 0 || ferrd < 0 || ftmpd < 0) {
+    gts_file_error (fp, "cannot create temporary file");
+    return SIGABRT;
+  }
+  cc = g_strjoin (" ",
+		  cccommand, ftmpname, 
+		  "-o", foutname,
+		  "`awk '{"
+		  "   if ($1 == \"#\" && $2 == \"link\") {"
+		  "     for (i = 3; i <= NF; i++) printf (\"%s \", $i);"
+		  "     print \"\" > \"/dev/stderr\";"
+		  "   }"
+		  "   else if ($1 == \"#link\") {"
+		  "     for (i = 2; i <= NF; i++) printf (\"%s \", $i);"
+		  "     print \"\" > \"/dev/stderr\";"
+		  "   } else print $0 > \"/dev/stderr\";"
+		  "}' <", finname, "2>", ftmpname, "` 2>",
+		  ferrname, NULL);
+  status = system (cc);
+  g_free (cc);
+  close (ftmpd);
+  remove (ftmpname);
+  if (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || WTERMSIG (status) == SIGQUIT))
+    status = SIGQUIT;
+  else if (status == -1 || WEXITSTATUS (status) != 0) {
+    GString * msg = g_string_new ("");
+    FILE * ferr = fdopen (ferrd, "r");
+    gint c;
+
+    while ((c = fgetc (ferr)) != EOF)
+      g_string_append_c (msg, c);
+    fclose (ferr);
+    gts_file_error (fp, "error compiling expression\n%s", msg->str);
+    g_string_free (msg, TRUE);
+    status = SIGABRT;
+  }
+  else {
+    if (load_module (f, fp, foutname))
+      status = SIGCONT;
+    else
+      status = SIGABRT;
+  }
+  close (foutd);
+  remove (foutname);
+  close (ferrd);
+  remove (ferrname);
+  return status;
+}
+
+static gchar * find_identifier (const gchar * s, const gchar * i)
+{
+  gchar * f = strstr (s, i);
+  static gchar allowed[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+
+  if (!f || gfs_char_in_string (f[strlen(i)], allowed) ||
+      (f > s && gfs_char_in_string (f[-1], allowed)))
+    return NULL;
+  return f;
+}
+
 static void function_read (GtsObject ** o, GtsFile * fp)
 {
   GfsFunction * f = GFS_FUNCTION (*o);
@@ -116,6 +284,10 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     }
     else if ((f->v = gfs_variable_from_name (domain->variables, fp->token->str)))
       break;
+    else if ((f->f = lookup_derived_variable (fp->token->str))) {
+      f->expr = g_string_new (fp->token->str);
+      break;
+    }
     /* fall through */
 
     /* compile C expression */
@@ -125,23 +297,18 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     else {
-#if FTT_2D
-      gchar cccommand[] = "gcc `pkg-config gerris2D --cflags --libs` -O -fPIC -shared -x c";
-#elif FTT_2D3
-      gchar cccommand[] = "gcc `pkg-config gerris2D3 --cflags --libs` -O -fPIC -shared -x c";
-#else /* 3D */
-      gchar cccommand[] = "gcc `pkg-config gerris3D --cflags --libs` -O -fPIC -shared -x c";
-#endif 
+      gboolean isexpr;
       gchar finname[] = "/tmp/gfsXXXXXX";
-      gchar foutname[] = "/tmp/gfsXXXXXX";
-      gchar ferrname[] = "/tmp/gfsXXXXXX";
-      gchar ftmpname[] = "/tmp/gfsXXXXXX";
-      gint find, foutd, ferrd, ftmpd;
+      gint find, status;
       FILE * fin;
       GfsVariable * v;
-      gchar * cc;
-      gint c, status;
+      GfsDerivedVariable * dv;
+      GSList * lv = NULL, * ldv = NULL;
+      guint n = 0;
 
+      isexpr = expr_or_func (fp, f);
+      if (fp->type == GTS_ERROR)
+	return;
       find = mkstemp (finname);
       if (find < 0) {
 	gts_file_error (fp, "cannot create temporary file");
@@ -154,117 +321,68 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	     "#include <gfs.h>\n"
 	     "static double Dirichlet = 1.;\n"
 	     "static double Neumann = 0.;\n"
-	     "double f (FttCell * cell, double x, double y, double z, double t) {\n"
-	     "  double ",
+	     "double f (FttCell * cell, double x, double y, double z, double t) {\n",
 	     fin);
       v = domain->variables;
-      fprintf (fin, "%s", v->name);
-      while ((v = v->next)) {
-	if (v->name)
-	  fprintf (fin, ", %s", v->name);
-      }
-      fputs (";\n  if (cell) {\n", fin);
-      v = domain->variables;
       while (v) {
-	if (v->name)
-	  fprintf (fin, "    %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
+	if (v->name && find_identifier (f->expr->str, v->name))
+	  lv = g_slist_prepend (lv, v);
 	v = v->next;
       }
-      fprintf (fin, "  }\n#line %d \"GfsFunction\"\n", fp->line);
-
-      if (type == '(' || type == GTS_STRING) {
-	f->expr = g_string_new (fp->token->str);
-	if (type == '(' || fp->next_token != '\0') {
-	  gint c, scope = type == '(' ? 1 : 0;
-	  if (fp->next_token != '\0')
-	    g_string_append_c (f->expr, fp->next_token);
-	  c = gts_file_getc (fp);
-	  while (c != EOF && (scope > 0 || (c != ' ' && c != '\n'))) {
-	    if (c == '(') scope++;
-	    if (c == ')') scope--;
-	    g_string_append_c (f->expr, c);
-	    c = gts_file_getc (fp);
-	  }
-	}
-	fprintf (fin, "return %s;\n", f->expr->str);
-	fputs ("}\n", fin);
-	fclose (fin);
+      dv = gfs_derived_variable;
+      while (dv->name) {
+	if (find_identifier (f->expr->str, dv->name))
+	  ldv = g_slist_prepend (ldv, GUINT_TO_POINTER (n));
+	dv++; n++;
       }
-      else {
-	guint scope;
+      if (lv || ldv) {
+	GSList * i = lv;
 
-	f->expr = g_string_new ("{");
-	scope = fp->scope_max;
-	c = gts_file_getc (fp);
-	while (c != EOF && fp->scope > scope) {
-	  fputc (c, fin);
-	  g_string_append_c (f->expr, c);
-	  c = gts_file_getc (fp);
+	while (i) {
+	  GfsVariable * v = i->data;
+	  fprintf (fin, "  double %s;\n", v->name);
+	  i = i->next;
 	}
-	fputs ("}\n", fin);
-	g_string_append_c (f->expr, '}');
-	fclose (fin);      
-	if (fp->scope != scope) {
-	  gts_file_error (fp, "parse error");
-	  close (find);
-	  remove (finname);
-	  return;
+	i = ldv;
+	while (i) {
+	  guint n = GPOINTER_TO_UINT (i->data);
+	  fprintf (fin, "  double %s;\n", gfs_derived_variable[n].name);
+	  i = i->next;
 	}
+	fputs ("  if (cell) {\n", fin);
+	i = lv;
+	while (i) {
+	  GfsVariable * v = i->data;
+	  fprintf (fin, "    %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
+	  i = i->next;
+	}
+	g_slist_free (lv);
+	i = ldv;
+	while (i) {
+	  guint n = GPOINTER_TO_UINT (i->data);
+	  fprintf (fin, "    %s = (* gfs_derived_variable[%d].func) (cell);\n", 
+		   gfs_derived_variable[n].name, n);
+	  i = i->next;
+	}
+	g_slist_free (ldv);
+	fputs ("  }\n", fin);
       }
+      fprintf (fin, "#line %d \"GfsFunction\"\n", fp->line);
 
-      foutd = mkstemp (foutname);
-      ferrd = mkstemp (ferrname);
-      ftmpd = mkstemp (ftmpname);
-      if (foutd < 0 || ferrd < 0 || ftmpd < 0) {
-	gts_file_error (fp, "cannot create temporary file");
-	return;
-      }
-      cc = g_strjoin (" ",
-		      cccommand, ftmpname, 
-		      "-o", foutname,
-		      "`awk '{"
-                      "   if ($1 == \"#\" && $2 == \"link\") {"
-		      "     for (i = 3; i <= NF; i++) printf (\"%s \", $i);"
-		      "     print \"\" > \"/dev/stderr\";"
-                      "   }"
-                      "   else if ($1 == \"#link\") {"
-		      "     for (i = 2; i <= NF; i++) printf (\"%s \", $i);"
-		      "     print \"\" > \"/dev/stderr\";"
-		      "   } else print $0 > \"/dev/stderr\";"
-		      "}' <", finname, "2>", ftmpname, "` 2>",
-		      ferrname, NULL);
-      status = system (cc);
-      g_free (cc);
+      if (isexpr)
+	fprintf (fin, "return %s;\n}\n", f->expr->str);
+      else
+	fprintf (fin, "%s\n}\n", f->expr->str);
+      fclose (fin);
       close (find);
-      remove (finname);
-      close (ftmpd);
-      remove (ftmpname);
-      if (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || WTERMSIG (status) == SIGQUIT)) {
-	close (foutd);
-	remove (foutname);
-	close (ferrd);
-	remove (ferrname);
-	exit (0);
-      }
-      if (status == -1 || WEXITSTATUS (status) != 0) {
-	GString * msg = g_string_new ("");
-	FILE * ferr = fdopen (ferrd, "r");
 
-	while ((c = fgetc (ferr)) != EOF)
-	  g_string_append_c (msg, c);
-	fclose (ferr);
-	gts_file_error (fp, "error compiling expression\n%s", msg->str);
-	g_string_free (msg, TRUE);
-	close (foutd);
-	remove (foutname);
-	remove (ferrname);
-	return;
+      status = compile (fp, f, finname);
+      remove (finname);
+      switch (status) {
+      case SIGQUIT: exit (0);
+      case SIGABRT: return;
       }
-      load_module (f, fp, foutname);
-      close (foutd);
-      remove (foutname);
-      close (ferrd);
-      remove (ferrname);
+
       if ((type == '(' || type == GTS_STRING) && fp->next_token != '\0')
       	gts_file_next_token (fp);
     }
