@@ -62,6 +62,7 @@ struct _GfsFunctionClass {
 GfsFunctionClass * gfs_function_class       (void);
 GfsFunction *      gfs_function_new         (GfsFunctionClass * klass,
 					     gdouble val);
+gchar *            gfs_function_description (GfsFunction * f);
 gdouble            gfs_function_face_value  (GfsFunction * f,
 					     FttCellFace * fa,
 					     gdouble t);
@@ -72,6 +73,7 @@ gdouble            gfs_function_value       (GfsFunction * f,
 void               gfs_function_set_constant_value (GfsFunction * f, 
 						    gdouble val);
 gdouble            gfs_function_get_constant_value (GfsFunction * f);
+GfsVariable *      gfs_function_get_variable (GfsFunction * f);
 void               gfs_function_read        (GfsFunction * f, 
 					     gpointer domain,
 					     GtsFile * fp);

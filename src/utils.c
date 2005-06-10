@@ -18,12 +18,12 @@
  */
 
 #include <stdlib.h>
+#include <ctype.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <signal.h>
 #include <math.h>
 #include "config.h"
-#include "utils.h"
 #include "solid.h"
 #include "simulation.h"
 
@@ -60,7 +60,7 @@ static gdouble cell_fraction (FttCell * cell)
 }
 
 GfsDerivedVariable gfs_derived_variable[] = {
-  { "Vorticity ", gfs_vorticity },
+  { "Vorticity",  gfs_vorticity },
   { "Divergence", gfs_divergence },
   { "Velocity",   gfs_velocity_norm },
   { "Velocity2",  gfs_velocity_norm2 },
@@ -485,6 +485,39 @@ static gdouble interpolated_value (GfsFunction * f, FttVector * p)
 }
 
 /**
+ * gfs_function_description:
+ * @f: a #GfsFunction.
+ *
+ * Returns: a newly allocated string describing @f concisely.
+ */
+gchar * gfs_function_description (GfsFunction * f)
+{
+  gchar * s;
+
+  g_return_val_if_fail (f != NULL, NULL);
+
+  if (f->s)
+    s = g_strdup (f->sname);
+  else if (f->v)
+    s = g_strdup (f->v->name);
+  else if (f->expr) {
+    gchar * c = s = g_strdup (f->expr->str);
+    guint n = 0;
+
+    while (*c != '\0' && !isspace (*c))
+      c++;
+    while (*c != '\0' && n < 3) {
+      *c = '.';
+      c++; n++;
+    }
+    *c = '\0';
+  }
+  else
+    s = g_strdup_printf ("%g", f->val);
+  return s;
+}
+
+/**
  * gfs_function_value:
  * @f: a #GfsFunction.
  * @cell: a #FttCell or %NULL.
@@ -576,6 +609,20 @@ gdouble gfs_function_get_constant_value (GfsFunction * f)
     return G_MAXDOUBLE;
   else
     return f->val;
+}
+
+/**
+ * gfs_function_get_variable:
+ * @f: a #GfsFunction.
+ *
+ * Returns: the variable containing the value of @f if @f is a simple
+ * variable, NULL otherwise.
+ */
+GfsVariable * gfs_function_get_variable (GfsFunction * f)
+{
+  g_return_val_if_fail (f != NULL, NULL);
+
+  return f->v;
 }
 
 /**

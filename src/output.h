@@ -157,11 +157,12 @@ typedef struct _GfsOutputScalar         GfsOutputScalar;
 struct _GfsOutputScalar {
   /*< private >*/
   GfsOutput parent;
-
   gboolean autoscale;
+  GfsFunction * f;
   
   /*< public >*/
   GfsVariable * v;
+  gchar * name;
   gdouble min, max;
   gint maxlevel;
   GtsBBox * box;

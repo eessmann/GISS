@@ -1395,24 +1395,19 @@ GfsOutputClass * gfs_output_boundaries_class (void)
 
 static void gfs_output_scalar_destroy (GtsObject * o)
 {
-  if (GFS_OUTPUT_SCALAR (o)->box)
-    gts_object_destroy (GTS_OBJECT (GFS_OUTPUT_SCALAR (o)->box));
+  GfsOutputScalar * output = GFS_OUTPUT_SCALAR (o);
+
+  if (output->box)
+    gts_object_destroy (GTS_OBJECT (output->box));
+  gts_object_destroy (GTS_OBJECT (output->f));
+  g_free (output->name);
+
   (* GTS_OBJECT_CLASS (gfs_output_scalar_class ())->parent_class->destroy) (o);
 }
 
 static void gfs_output_scalar_read (GtsObject ** o, GtsFile * fp)
 {
-  GtsFileVariable var[] = {
-    {GTS_DOUBLE, "min",      TRUE},
-    {GTS_DOUBLE, "max",      TRUE},
-    {GTS_STRING, "v",        TRUE},
-    {GTS_INT,    "maxlevel", TRUE},
-    {GTS_STRING, "box",      TRUE},
-    {GTS_NONE}
-  };
   GfsOutputScalar * output;
-  GfsDomain * domain;
-  gchar * vname = NULL, * box = NULL;
 
   if (GTS_OBJECT_CLASS (gfs_output_scalar_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_output_scalar_class ())->parent_class->read) 
@@ -1421,114 +1416,180 @@ static void gfs_output_scalar_read (GtsObject ** o, GtsFile * fp)
     return;
 
   output = GFS_OUTPUT_SCALAR (*o);
-  domain = GFS_DOMAIN (gfs_object_simulation (output));
   output->autoscale = TRUE;
 
-  var[0].data = &output->min;
-  var[1].data = &output->max;
-  var[2].data = &vname;
-  var[3].data = &output->maxlevel;
-  var[4].data = &box;
+  if (fp->type != '{') {
+    gts_file_error (fp, "expecting an opening brace");
+    return;
+  }
+  fp->scope_max++;
+  gts_file_next_token (fp);
 
-  gts_file_assign_variables (fp, var);
+  while (fp->type != GTS_ERROR && fp->type != '}') {
+    if (fp->type == '\n') {
+      gts_file_next_token (fp);
+      continue;
+    }
+    if (fp->type != GTS_STRING) {
+      gts_file_error (fp, "expecting a keyword");
+      return;
+    }
+    else if (!strcmp (fp->token->str, "v")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      gfs_function_read (output->f, gfs_object_simulation (*o), fp);
+      output->name = gfs_function_description (output->f);
+    }
+    else if (!strcmp (fp->token->str, "min")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+	gts_file_error (fp, "expecting a number (min)");
+	return;
+      }
+      output->min = atof (fp->token->str);
+      if (output->min > output->max) {
+	gts_file_error (fp, "min `%g' must be smaller than or equal to max `%g'", 
+			output->min, output->max);
+	return;
+      }
+      output->autoscale = FALSE;
+      gts_file_next_token (fp);
+    }
+    else if (!strcmp (fp->token->str, "max")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+	gts_file_error (fp, "expecting a number (max)");
+	return;
+      }
+      output->max = atof (fp->token->str);
+      if (output->max < output->min) {
+	gts_file_error (fp, "max `%g' must be larger than or equal to min `%g'", 
+			output->max, output->min);
+	return;
+      }
+      output->autoscale = FALSE;
+      gts_file_next_token (fp);
+    }
+    else if (!strcmp (fp->token->str, "maxlevel")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      if (fp->type != GTS_INT) {
+	gts_file_error (fp, "expecting an integer (maxlevel)");
+	return;
+      }
+      output->maxlevel = atoi (fp->token->str);
+      gts_file_next_token (fp);
+    }
+    else if (!strcmp (fp->token->str, "box")) {
+      gchar * box, * s;
+
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      if (fp->type != GTS_STRING) {
+	gts_file_error (fp, "expecting a string (box)");
+	return;
+      }
+      box = g_strdup (fp->token->str);
+      s = strtok (box, ",");
+      output->box = GTS_BBOX (gts_object_new (GTS_OBJECT_CLASS (gts_bbox_class ())));
+      if (s == NULL) {
+	gts_file_error (fp, "expecting a number (x1)");
+	g_free (box);
+	return;
+      }
+      output->box->x1 = atof (s);
+      s = strtok (NULL, ",");
+      if (s == NULL) {
+	gts_file_error (fp, "expecting a number (y1)");
+	g_free (box);
+	return;
+      }
+      output->box->y1 = atof (s);
+      s = strtok (NULL, ",");
+#if (!FTT_2D)
+      if (s == NULL) {
+	gts_file_error (fp, "expecting a number (z1)");
+	g_free (box);
+	return;
+      }
+      output->box->z1 = atof (s);
+      s = strtok (NULL, ",");
+#endif /* 3D */
+      if (s == NULL) {
+	gts_file_error (fp, "expecting a number (x2)");
+	g_free (box);
+	return;
+      }
+      output->box->x2 = atof (s);
+      if (output->box->x2 < output->box->x1) {
+	gts_file_error (fp, "x2 must be larger than x1");
+	g_free (box);
+	return;
+      }
+      s = strtok (NULL, ",");
+      if (s == NULL) {
+	gts_file_error (fp, "expecting a number (y2)");
+	g_free (box);
+	return;
+      }
+      output->box->y2 = atof (s);
+      if (output->box->y2 < output->box->y1) {
+	gts_file_error (fp, "y2 must be larger than y1");
+	g_free (box);
+	return;
+      }
+#if (!FTT_2D)
+      s = strtok (NULL, ",");
+      if (s == NULL) {
+	gts_file_error (fp, "expecting a number (z2)");
+	g_free (box);
+	return;
+      }
+      output->box->z2 = atof (s);
+      if (output->box->z2 < output->box->z1) {
+	gts_file_error (fp, "z2 must be larger than z1");
+	g_free (box);
+	return;
+      }
+#endif /* 3D */
+      g_free (box);
+      gts_file_next_token (fp);
+    }
+    else {
+      gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
+      return;
+    }
+  }
   if (fp->type == GTS_ERROR)
     return;
-
-  if (vname != NULL) {
-    gfs_derived_last->next = domain->variables;
-    output->v = gfs_variable_from_name (gfs_derived_first, vname);
-    if (output->v == NULL) {
-      gts_file_variable_error (fp, var, "v", "unknown scalar `%s'", vname);
-      g_free (vname);
-      g_free (box);
-      return;
-    }
-    g_free (vname);
-  }
-  
-  if (box != NULL) {
-    gchar * s = strtok (box, ",");
-
-    output->box = GTS_BBOX (gts_object_new (GTS_OBJECT_CLASS (gts_bbox_class ())));
-    if (s == NULL) {
-      gts_file_variable_error (fp, var, "box", "expecting a number (x1)");
-      g_free (box);
-      return;
-    }
-    output->box->x1 = atof (s);
-    s = strtok (NULL, ",");
-    if (s == NULL) {
-      gts_file_variable_error (fp, var, "box", "expecting a number (y1)");
-      g_free (box);
-      return;
-    }
-    output->box->y1 = atof (s);
-    s = strtok (NULL, ",");
-#if (!FTT_2D)
-    if (s == NULL) {
-      gts_file_variable_error (fp, var, "box", "expecting a number (z1)");
-      g_free (box);
-      return;
-    }
-    output->box->z1 = atof (s);
-    s = strtok (NULL, ",");
-#endif /* 3D */
-    if (s == NULL) {
-      gts_file_variable_error (fp, var, "box", "expecting a number (x2)");
-      g_free (box);
-      return;
-    }
-    output->box->x2 = atof (s);
-    if (output->box->x2 < output->box->x1) {
-      gts_file_variable_error (fp, var, "box", "x2 must be larger than x1");
-      g_free (box);
-      return;
-    }
-    s = strtok (NULL, ",");
-    if (s == NULL) {
-      gts_file_variable_error (fp, var, "box", "expecting a number (y2)");
-      g_free (box);
-      return;
-    }
-    output->box->y2 = atof (s);
-    if (output->box->y2 < output->box->y1) {
-      gts_file_variable_error (fp, var, "box", "y2 must be larger than y1");
-      g_free (box);
-      return;
-    }
-#if (!FTT_2D)
-    s = strtok (NULL, ",");
-    if (s == NULL) {
-      gts_file_variable_error (fp, var, "box", "expecting a number (z2)");
-      g_free (box);
-      return;
-    }
-    output->box->z2 = atof (s);
-    if (output->box->z2 < output->box->z1) {
-      gts_file_variable_error (fp, var, "box", "z2 must be larger than z1");
-      g_free (box);
-      return;
-    }
-#endif /* 3D */
-    g_free (box);
-  }
-
-  if (var[0].set || var[1].set)
-    output->autoscale = FALSE;
-
-  if (var[0].set && output->min > output->max) {
-    gts_file_variable_error (fp, var, "min", 
-	     "min `%g' must be smaller than or equal to max `%g'", 
-			     output->min, output->max);
+  if (fp->type != '}') {
+    gts_file_error (fp, "expecting a closing brace");
     return;
   }
-
-  if (var[1].set && output->max < output->min) {
-    gts_file_variable_error (fp, var, "max", 
-	     "max `%g' must be larger than or equal to min `%g'", 
-			     output->max, output->min);
-    return;
-  }
+  fp->scope_max--;
+  gts_file_next_token (fp);
 }
 
 static void gfs_output_scalar_write (GtsObject * o, FILE * fp)
@@ -1539,7 +1600,8 @@ static void gfs_output_scalar_write (GtsObject * o, FILE * fp)
     (* GTS_OBJECT_CLASS (gfs_output_scalar_class ())->parent_class->write) 
       (o, fp);
 
-  fprintf (fp, " { v = %s", output->v->name);
+  fputs (" { v = ", fp);
+  gfs_function_write (output->f, fp);
   if (output->maxlevel >= 0)
     fprintf (fp, " maxlevel = %d", output->maxlevel);
   if (output->box != NULL)
@@ -1557,6 +1619,14 @@ static void gfs_output_scalar_write (GtsObject * o, FILE * fp)
     fputs (" }", fp);
 }
 
+static void update_v (FttCell * cell, GfsOutputScalar * output)
+{
+  FttVector p;
+  gfs_cell_cm (cell, &p);
+  GFS_VARIABLE (cell, output->v->i) = gfs_function_value (output->f, cell, &p,
+							  gfs_object_simulation (output)->time.t);
+}
+
 static gboolean gfs_output_scalar_event (GfsEvent * event,
 					 GfsSimulation * sim)
 {
@@ -1564,13 +1634,12 @@ static gboolean gfs_output_scalar_event (GfsEvent * event,
       (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
     GfsDomain * domain = GFS_DOMAIN (sim);
-    
-    if (output->v->derived) {
-      gfs_variable_set_parent (output->v, domain);
+
+    if (!(output->v = gfs_function_get_variable (output->f))) {
+      output->v = gfs_div;
       gfs_domain_cell_traverse (domain,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) output->v->derived, 
-				output->v);
+				(FttCellTraverseFunc) update_v, output);
     }
     if (output->maxlevel >= 0)
         gfs_domain_cell_traverse (domain,
@@ -1599,8 +1668,9 @@ static void gfs_output_scalar_class_init (GfsOutputClass * klass)
 
 static void gfs_output_scalar_init (GfsOutputScalar * object)
 {
-  object->v = gfs_p;
-  object->min = object->max = 0.;
+  object->f = gfs_function_new (gfs_function_class (), 0.);
+  object->min = -G_MAXDOUBLE;
+  object->max =  G_MAXDOUBLE;
   object->autoscale = TRUE;
   object->maxlevel = -1;
   object->box = NULL;
@@ -1639,10 +1709,10 @@ static gboolean gfs_output_scalar_norm_event (GfsEvent * event,
 					     output->v,
 					     FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
 					     output->maxlevel);
-    
-    fprintf (GFS_OUTPUT (event)->file->fp,
+
+    fprintf (GFS_OUTPUT (event)->file->fp, 
 	     "%s time: %g first: % 10.3e second: % 10.3e infty: % 10.3e\n",
-	     output->v->name,
+	     output->name,
 	     sim->time.t,
 	     norm.first, norm.second, norm.infty);
     return TRUE;
@@ -1688,11 +1758,10 @@ static gboolean gfs_output_scalar_stats_event (GfsEvent * event,
 						output->v,
 						FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
 						output->maxlevel);
-    
-    fprintf (GFS_OUTPUT (event)->file->fp,
+
+    fprintf (GFS_OUTPUT (event)->file->fp, 
 	     "%s time: %g min: %10.3e avg: %10.3e | %10.3e max: %10.3e\n",
-	     output->v->name,
-	     sim->time.t,
+	     output->name, sim->time.t,
 	     stats.min, stats.mean, stats.stddev, stats.max);
     return TRUE;
   }
@@ -1752,9 +1821,8 @@ static gboolean gfs_output_scalar_sum_event (GfsEvent * event,
 			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
 			      output->maxlevel,
 			      (FttCellTraverseFunc) add, data);
-    fprintf (GFS_OUTPUT (event)->file->fp,
-	     "%s time: %g sum: % 15.6e\n",
-	     output->v->name, sim->time.t, sum);
+    fprintf (GFS_OUTPUT (event)->file->fp, 
+	     "%s time: %g sum: % 15.6e\n", output->name, sim->time.t, sum);
     return TRUE;
   }
   return FALSE;
@@ -2132,7 +2200,7 @@ static void compute_error (FttCell * cell, GfsOutputScalar * o)
   FttVector p;
   GfsSimulation * sim = gfs_object_simulation (o);
 
-  if (o->v->centered)
+  if (o->v->centered) /* fixme: this does not work with new scalar functions */
     ftt_cell_pos (cell, &p);
   else
     gfs_cell_cm (cell, &p);
@@ -2178,7 +2246,7 @@ static gboolean gfs_output_error_norm_event (GfsEvent * event,
     }
     fprintf (GFS_OUTPUT (event)->file->fp,
 	     "%s time: %g first: % 10.3e second: % 10.3e infty: % 10.3e bias: %10.3e\n",
-	     output->v->name, sim->time.t,
+	     output->name, sim->time.t,
 	     norm.first, norm.second, norm.infty, norm.bias);
     return TRUE;
   }
@@ -2232,7 +2300,7 @@ static void compute_correlation (FttCell * cell, gpointer * data)
   FttVector p;
   GfsSimulation * sim = gfs_object_simulation (o);
 
-  if (o->v->centered)
+  if (o->v->centered) /* fixme: this does not work with new scalar functions */
     ftt_cell_pos (cell, &p);
   else
     gfs_cell_cm (cell, &p);
@@ -2278,7 +2346,7 @@ static gboolean gfs_output_correlation_event (GfsEvent * event,
 			      (FttCellTraverseFunc) compute_correlation, data);
     fprintf (GFS_OUTPUT (event)->file->fp,
 	     "%s time: %g %10.3e\n",
-	     output->v->name, sim->time.t, sumref > 0. ? sum/sumref : 0.);
+	     output->name, sim->time.t, sumref > 0. ? sum/sumref : 0.);
     return TRUE;
   }
   return FALSE;
