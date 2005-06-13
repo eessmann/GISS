@@ -59,6 +59,13 @@ static gdouble cell_fraction (FttCell * cell)
   return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
 }
 
+static gdouble cell_solid_area (FttCell * cell)
+{
+  FttVector n;
+  gfs_solid_normal (cell, &n);
+  return sqrt (n.x*n.x + n.y*n.y + n.z*n.z);
+}
+
 GfsDerivedVariable gfs_derived_variable[] = {
   { "Vorticity",  gfs_vorticity },
   { "Divergence", gfs_divergence },
@@ -66,6 +73,7 @@ GfsDerivedVariable gfs_derived_variable[] = {
   { "Velocity2",  gfs_velocity_norm2 },
   { "Level",      cell_level },
   { "A",          cell_fraction },
+  { "S",          cell_solid_area },
   { "Lambda2",    gfs_velocity_lambda2 },
   { "Curvature",  gfs_streamline_curvature },
   { NULL, NULL}
