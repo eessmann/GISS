@@ -863,7 +863,7 @@ int main (int argc, char * argv[])
       /* fall through */
     case 'C': /* cylinder */
       stream = fopen (optarg, "rt");
-      streamname = g_basename (optarg); 
+      streamname = g_strdup (g_basename (optarg));
       if (stream == NULL) {
 	fprintf (stderr, 
 		 "gfs2oogl: cannot open file `%s'\n"
