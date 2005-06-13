@@ -255,7 +255,7 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
 static gchar * find_identifier (const gchar * s, const gchar * i)
 {
   gchar * f = strstr (s, i);
-  static gchar allowed[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+  static gchar allowed[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_1234567890";
 
   if (!f || gfs_char_in_string (f[strlen(i)], allowed) ||
       (f > s && gfs_char_in_string (f[-1], allowed)))
