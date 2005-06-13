@@ -1858,20 +1858,18 @@ GfsOutputClass * gfs_output_scalar_sum_class (void)
 
 static void gfs_output_scalar_histogram_destroy (GtsObject * o)
 {
-  g_free (GFS_OUTPUT_SCALAR_HISTOGRAM (o)->x);
-  g_free (GFS_OUTPUT_SCALAR_HISTOGRAM (o)->y);
+  GfsOutputScalarHistogram * output = GFS_OUTPUT_SCALAR_HISTOGRAM (o);
+
+  g_free (output->x);
+  g_free (output->y);
+  if (output->w)
+    gts_object_destroy (GTS_OBJECT (output->w));
 
   (* GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class->destroy) (o);
 }
 
 static void gfs_output_scalar_histogram_read (GtsObject ** o, GtsFile * fp)
 {
-  GtsFileVariable var[] = {
-    {GTS_DOUBLE, "min", TRUE},
-    {GTS_DOUBLE, "max", TRUE},
-    {GTS_UINT,   "n",   TRUE},
-    {GTS_NONE}
-  };
   GfsOutputScalarHistogram * output;
 
   (* GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class->read) (o, fp);
@@ -1879,33 +1877,64 @@ static void gfs_output_scalar_histogram_read (GtsObject ** o, GtsFile * fp)
     return;
 
   output = GFS_OUTPUT_SCALAR_HISTOGRAM (*o);
+  if (fp->type != '{') {
+    gts_file_error (fp, "expecting an opening brace");
+    return;
+  }
+  fp->scope_max++;
+  gts_file_next_token (fp);
 
-  var[0].data = &output->min;
-  var[1].data = &output->max;
-  var[2].data = &output->n;
-
-  gts_file_assign_variables (fp, var);
+  while (fp->type != GTS_ERROR && fp->type != '}') {
+    if (fp->type == '\n') {
+      gts_file_next_token (fp);
+      continue;
+    }
+    if (fp->type != GTS_STRING) {
+      gts_file_error (fp, "expecting a keyword");
+      return;
+    }
+    else if (!strcmp (fp->token->str, "n")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      if (fp->type != GTS_INT) {
+	gts_file_error (fp, "expecting a number (n)");
+	return;
+      }
+      output->n = atoi (fp->token->str);
+      if (output->n <= 0) {
+	gts_file_error (fp, "n `%d' must be strictly positive", output->n);
+	return;
+      }
+      gts_file_next_token (fp);
+    }
+    else if (!strcmp (fp->token->str, "w")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      output->w = gfs_function_new (gfs_function_class (), 0.);
+      gfs_function_read (output->w, gfs_object_simulation (*o), fp);
+    }
+    else {
+      gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
+      return;
+    }
+  }
   if (fp->type == GTS_ERROR)
     return;
+  if (fp->type != '}') {
+    gts_file_error (fp, "expecting a closing brace");
+    return;
+  }
+  fp->scope_max--;
+  gts_file_next_token (fp);
 
-  if (var[0].set && output->min >= output->max) {
-    gts_file_variable_error (fp, var, "min", 
-			     "min `%g' must be strictly smaller than `%g'", 
-			     output->min, output->max);
-    return;
-  }
-  if (var[1].set && output->max <= output->min) {
-    gts_file_variable_error (fp, var, "max",
-			     "max `%g' must be strictly larger than `%g'", 
-			     output->max, output->min);
-    return;
-  }
-  if (var[2].set && output->n <= 0) {
-    gts_file_variable_error (fp, var, "n", 
-			     "n `%d' must be strictly positive", 
-			     output->n);
-    return;
-  }
   output->x = g_malloc0 (output->n*sizeof (gdouble));
   output->y = g_malloc0 (output->n*sizeof (gdouble));
 }
@@ -1916,20 +1945,35 @@ static void gfs_output_scalar_histogram_write (GtsObject * o, FILE * fp)
 
   (* GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class->write) (o, fp);
 
-  fprintf (fp, " { min = %g max = %g n = %d }", output->min, output->max, output->n);
+  fprintf (fp, " { n = %d", output->n);
+  if (output->w) {
+    fputs (" w = ", fp);
+    gfs_function_write (output->w, fp);
+  }
+  fputs (" }", fp);
 }
 
-static void update_histogram (FttCell * cell, GfsOutputScalarHistogram * h)
+static void update_histogram (FttCell * cell, GfsOutputScalar * h)
 {
-  gdouble v = GFS_VARIABLE (cell, GFS_OUTPUT_SCALAR (h)->v->i); 
-  gint i = (v - h->min)/(h->max - h->min)*h->n;
+  GfsOutputScalarHistogram * hi = GFS_OUTPUT_SCALAR_HISTOGRAM (h);
+  gdouble v = GFS_VARIABLE (cell, h->v->i);
+  gint i = (v - h->min)/(h->max - h->min)*hi->n;
 
-  if (i >= 0 && i < h->n) {
-    gdouble w = gfs_cell_volume (cell)*h->dt;
+  if (i >= 0 && i < hi->n) {
+    gdouble w = hi->dt;
 
-    h->w += w;
-    h->x[i] += v*w;
-    h->y[i] += w;
+    if (hi->w) {
+      FttVector p;
+
+      gfs_cell_cm (cell, &p);
+      w *= gfs_function_value (hi->w, cell, &p, gfs_object_simulation (h)->time.t);
+    }
+    else
+      w *= gfs_cell_volume (cell);
+
+    hi->W += w;
+    hi->x[i] += v*w;
+    hi->y[i] += w;
   }
 }
 
@@ -1971,7 +2015,7 @@ static gboolean gfs_output_scalar_histogram_event (GfsEvent * event,
 	output->file->fp = freopen (output->format, "w", output->file->fp);
       for (i = 0; i < h->n; i++)
 	if (h->y[i] > 0.)
-	  fprintf (output->file->fp, "%g %g\n", h->x[i]/h->y[i], h->y[i]/h->w);
+	  fprintf (output->file->fp, "%g %g\n", h->x[i]/h->y[i], h->y[i]/h->W);
       if (output->file && !output->dynamic)
 	fflush (output->file->fp);
     }
@@ -1990,11 +2034,12 @@ static void gfs_output_scalar_histogram_class_init (GfsOutputClass * klass)
 
 static void gfs_output_scalar_histogram_init (GfsOutputScalarHistogram * object)
 {
+  GFS_OUTPUT_SCALAR (object)->min = -1.;
+  GFS_OUTPUT_SCALAR (object)->max =  1.;
+  GFS_OUTPUT_SCALAR (object)->autoscale = FALSE;
   object->x = object->y = NULL;
   object->n = 100;
-  object->min = -1.;
-  object->max =  1.;
-  object->w = 0.;
+  object->W = 0.;
   object->last = -1.;
 }
 
