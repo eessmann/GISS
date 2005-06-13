@@ -63,7 +63,7 @@ static gdouble cell_solid_area (FttCell * cell)
 {
   FttVector n;
   gfs_solid_normal (cell, &n);
-  return sqrt (n.x*n.x + n.y*n.y + n.z*n.z);
+  return ftt_vector_norm (&n);
 }
 
 GfsDerivedVariable gfs_derived_variable[] = {

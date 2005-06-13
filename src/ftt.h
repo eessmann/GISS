@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <glib.h>
 #include <gts.h>
 
@@ -49,6 +50,12 @@ typedef struct _FttVector        FttVector;
 struct _FttVector {
   gdouble x, y, z;
 };
+
+#if FTT_2D
+# define ftt_vector_norm(v) (sqrt((v)->x*(v)->x + (v)->y*(v)->y))
+#else  /* 3D */
+# define ftt_vector_norm(v) (sqrt((v)->x*(v)->x + (v)->y*(v)->y + (v)->z*(v)->z))
+#endif /* 3D */
 
 typedef enum
 {
