@@ -1,34 +1,49 @@
 ## Process this file with automake to produce Makefile.in
 
-INCLUDES = -I$(top_srcdir)/src -I$(includedir) -DG_LOG_DOMAIN=\"Gfs-test\"\
-            $(GTS_CFLAGS)
-LDADD = $(GFS2D_LIBS)
-CFLAGS += -DFTT_2D=1
+TESTDIRS = \
+	reynolds
 
 EXTRA_DIST = \
-	reference2D \
-	parameters \
-	scripts
+	template.tex \
+	depend.py \
+	test.py \
+	gfs2tex \
+	l2hconf.pm \
+	Makefile.deps
 
-REFERENCE = reference2D
+TESTS = test.sh
 
-test.sh:
-	@echo "#! /bin/sh" > test.sh
-	@echo "rm -f report.ps" >> test.sh
-	@echo "./scripts/check.sh \"$(REFERENCE)/*\"" >> test.sh
+test.sh: $(TESTDIRS)
+	@echo "python test.py $(TESTDIRS)" > test.sh
 	@chmod +x test.sh
 
-report.ps: scripts/report.sh timestamp
-	./scripts/report.sh "$(REFERENCE)/*"
-
 clean-generic:
-	./scripts/cleanup.sh
+	$(RM) *.dvi *.aux *.log *.toc *.out tests.tex *.pyc test.sh
 
-dist-hook:
-	./scripts/cleanup.sh
+tests: tests.ps.gz l2hconf.pm
+	latex2html -no_math -html_version 3.2,math -address "" -info "" -split +3 -show_section_numbers -toc_depth 5 -t "Gerris Tests" -local_icons -white tests.tex
+	cp -f ../../doc/share/darcs.css tests/tests.css
 
-if HAVE_MPI
-  TESTS = test.sh ./scripts/mpi.sh
-else
-  TESTS = test.sh
-endif
+tests.dvi: tests.tex
+	latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
+	latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
+	latex -interaction=nonstopmode tests.tex
+
+tests.ps.gz: tests.dvi
+	dvips tests.dvi -o tests.ps
+	gzip -f --best tests.ps
+
+tests.pdf: tests.dvi
+	dvips -Ppdf -G0 tests.dvi -o tests.ps
+	ps2pdf -sPAPERSIZE=a4 -dMaxSubsetPct=100 -dCompatibilityLevel=1.2 -dSubsetFonts=true -dEmbedAllFonts=true tests.ps tests.pdf
+	rm -f tests.ps
+
+tests.tex: template.tex Makefile.deps
+	rm -r -f tests
+	python gfs2tex $(TESTDIRS)
+	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < template.tex > tests.tex
+
+Makefile.deps: Makefile.am depend.py
+	python depend.py $(TESTDIRS) > Makefile.deps
+
+-include Makefile.deps

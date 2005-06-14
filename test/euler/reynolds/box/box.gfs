@@ -1,23 +1,9 @@
-# Title: Estimation of the numerical viscosity
+# Title: Estimation of the numerical viscosity with refined box
 #
 # Description:
 #
-# The velocity field is initialised with an exact stationary solution of
-# the Euler equations in a periodic 2D domain. An exact Euler solver
-# would not change this field, however any numerical solver will
-# introduce numerical dissipation which will slowly dissipate the
-# kinetic energy of the initial solution. By monitoring the evolution of
-# the kinetic energy, the dissipative properties of the numerical scheme
-# can be measured.
-#
-# Figures \ref{divmax} and figure \ref{divL2} illustrate the evolution
-# of the divergence of the velocity field with time. This is a check of
-# the stability of the approximate projection and should remain bounded.
-#
-# Figures \ref{kinetic} and \ref{reynolds} illustrates the evolution of
-# the kinetic energy and the corresponding equivalent Reynolds number as
-# a function of resolution. The higher the Reynolds number, the less
-# dissipative the scheme.
+# Same as the previous test but with a refined box in the middle and four
+# modes of the exact Euler solution.
 #
 # \begin{figure}[htbp]
 # \begin{center}
@@ -52,18 +38,18 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: sh reynolds.sh reynolds.gfs 1
+# Command: sh ../reynolds.sh box.gfs 4
 # Version: 0.6.4
-# Required files: reynolds.sh div5.ref div6.ref div7.ref reynolds.ref
+# Required files: ../reynolds.sh div5.ref div6.ref div7.ref reynolds.ref
 # Running time: 3 minutes
 # Generated files: divmax.eps reynolds.eps divL2.eps kinetic.eps
 #
 1 2 GfsSimulation GfsBox GfsGEdge {} {
   Time { end = 2 }
-  Refine LEVEL
+  Refine (x > 0.25 || x < -0.25 || y > 0.25 || y < -0.25 ? LEVEL : LEVEL + 1)
   Init {} {
-    U = (- cos (2.*M_PI*x)*sin (2.*M_PI*y))
-    V = (sin (2.*M_PI*x)*cos (2.*M_PI*y))
+    U = (- cos (8.*M_PI*x)*sin (8.*M_PI*y))
+    V = (sin (8.*M_PI*x)*cos (8.*M_PI*y))
   }
   OutputScalarNorm { istep = 1 } divLEVEL { v = Divergence }
   OutputScalarSum { istep = 1 } kineticLEVEL { v = Velocity2 }

@@ -55,10 +55,14 @@ class Example:
         else:
             self.path += "/" + self.name
         self.section = ["\\subsection","\\subsubsection"][self.path.count("/")]
-        name = self.path + "/" + self.name + ".gfs"
-        file = open(name)
+        file = open(self.path + "/" + self.name + ".gfs")
         lines = file.readlines()
         self.generated = generated(lines)
+        if os.access(self.path + "/status", os.R_OK):
+            self.status = open(self.path + "/status").readline()
+            self.generated.append("status")
+        else:
+            self.status = None
         p = re.compile(r"\\label\{[a-zA-Z0-9_\-]*\}")
         labels = []
         for line in lines:
@@ -108,11 +112,27 @@ class Example:
                         insthg.append(" ".join(record[1:]))
                 elif not insthg == None:
                     insthg.append(" ".join(record[1:]))
+
+        if os.access(self.path + "/runtime", os.R_OK):
+            self.runtime = float(open(self.path + "/runtime").readline())
+            self.time = ""
+            m = int(self.runtime/60.)
+            if m > 0:
+                self.time += repr(m) + " minutes"
+            s = int(self.runtime-60.*m)
+            if s > 0:
+                self.time += " " + repr(s) + " seconds"
+            self.generated.append("runtime")
+        else:
+            self.runtime = None
             
     def write(self,dico,file=None):
         if file == None:
             file = open(self.path + "/" + self.name + ".tex", 'w')
-        file.write(self.section + "{" + "\n".join(self.title) + "}\n")
+        if self.status:
+            file.write(self.section + "{" + self.status + "\n".join(self.title) + "}\n")
+        else:
+            file.write(self.section + "{" + "\n".join(self.title) + "}\n")
         file.write("\\begin{description}\n")
         file.write("\\item[Author]" + self.author + "\n")
         file.write("\\item[Command]" + "{\\tt " + self.command + "}\n")
@@ -203,6 +223,26 @@ class Example:
         lines = out.readlines()
         status = out.close()
         os.system("rm -r -f " + wdname)
+        if status != None:
+            return status,lines
+        else:
+            return None,None
+
+    def run(self,env=""):
+        out = os.popen("cd " + self.path + " && " +\
+                       "sh -c \"time -p " + env + self.command + "\" 2>&1")
+        lines = []
+        for l in out:
+            record = l.split()
+            if len(record) > 0:
+                if record[0] == "user":
+                    self.runtime = float(record[1])
+                    print >>open(self.path + "/runtime",'w'), self.runtime
+                elif record[0] != "real" and record[0] != "sys":
+                    lines.append(l)
+            else:
+                lines.append(l)
+        status = out.close()
         if status != None:
             return status,lines
         else:

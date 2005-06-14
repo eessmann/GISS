@@ -1,19 +1,22 @@
 rm -f reynolds
 
 for level in 5 6 7; do
- sed "s/LEVEL/$level/" < $1 | gerris2D - | awk -v m=1 -v level=$level '{
-   time = $3
-   ke = $5
-   if (time == 0)
-     ke0 = ke;
- }END{
-   a = -log(ke/ke0)/time
-   nu = a/(4.*(2.*m*3.14159265359)^2)
-   print level " " 1./nu
- }' >> reynolds
+  if sed "s/LEVEL/$level/g" < $1 | $gerris2D - | awk -v m=$2 -v level=$level '{
+    time = $3
+    ke = $5
+    if (time == 0)
+      ke0 = ke;
+  }END{
+    a = -log(ke/ke0)/time
+    nu = a/(4.*(2.*m*3.14159265359)^2)
+    print level " " 1./nu
+  }' >> reynolds; then :
+  else
+      exit 1
+  fi
 done
 
-cat <<EOF | gnuplot
+if cat <<EOF | gnuplot ; then :
     set term postscript eps color solid 20
     set output 'divmax.eps'
     set xlabel 'Time'
@@ -31,6 +34,9 @@ cat <<EOF | gnuplot
     set logscale y
     plot 'reynolds' u 1:2 t "" w lp lw 2, 'reynolds.ref' u 1:2 t "ref" w lp lw 2
 EOF
+else
+    exit 1
+fi
 
 if cat <<EOF | python ; then :
 from check import *
@@ -45,5 +51,5 @@ if (Curve('div5',3,9) - Curve('div5.ref',3,9)).max() > 0.05*Curve('div5.ref',3,9
    exit(1)
 EOF
 else
-    exit 1
+   exit 1
 fi

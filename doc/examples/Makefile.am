@@ -12,6 +12,7 @@ EXTRA_DIST = \
 	gfs2tex \
 	depend.py \
 	test.py \
+	l2hconf.pm \
 	Makefile.deps
 
 TESTS = test.sh
@@ -35,7 +36,7 @@ gfs2doc: gfs2doc.in
 clean-generic:
 	$(RM) *.dvi *.aux *.log *.toc *.out examples.tex *.pyc test.sh gfs2doc
 
-examples: examples.ps.gz
+examples: examples.ps.gz l2hconf.pm
 	latex2html -no_math -html_version 3.2,math -address "" -info "" -split +3 -show_section_numbers -toc_depth 5 -t "Gerris Examples" -local_icons -white examples.tex
 	cp -f ../share/darcs.css examples/examples.css
 
@@ -58,7 +59,7 @@ examples.tex: template.tex Makefile.deps
 	python gfs2tex $(EXAMPLES)
 	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < template.tex > examples.tex
 
-Makefile.deps: Makefile.am
+Makefile.deps: Makefile.am depend.py
 	python depend.py $(EXAMPLES) > Makefile.deps
 
 -include Makefile.deps
