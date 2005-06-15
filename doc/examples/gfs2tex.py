@@ -230,7 +230,7 @@ class Example:
 
     def run(self,env=""):
         out = os.popen("cd " + self.path + " && " +\
-                       "sh -c \"time -p " + env + self.command + "\" 2>&1")
+                       "sh -c \"time -p " + env + " " + self.command + "\" 2>&1")
         lines = []
         for l in out:
             record = l.split()

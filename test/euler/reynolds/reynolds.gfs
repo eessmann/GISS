@@ -8,7 +8,7 @@
 # introduce numerical dissipation which will slowly dissipate the
 # kinetic energy of the initial solution. By monitoring the evolution of
 # the kinetic energy, the dissipative properties of the numerical scheme
-# can be measured.
+# can be measured (see \cite{rider95} for details).
 #
 # Figures \ref{divmax} and figure \ref{divL2} illustrate the evolution
 # of the divergence of the velocity field with time. This is a check of

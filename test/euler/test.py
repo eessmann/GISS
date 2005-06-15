@@ -10,7 +10,7 @@ env = "PYTHONPATH=$PYTHONPATH:" + os.getcwd()
 system = commands.getoutput('uname -o -n -m')
 path = commands.getoutput('which gerris2D')
 version = commands.getoutput("""gerris2D -V 2>&1 | awk '{if ($5 == "version") print $6;}'""")
-start = datetime.now()
+starttime = datetime.now()
 
 n = 0
 failed = 0
@@ -30,8 +30,8 @@ for start in sys.argv[1:]:
                 print >>open(test.path + "/status",'w'), "{\color{green}PASS}:"
             n += 1
 
-end = datetime.now()
-e = end - start
+endtime = datetime.now()
+e = endtime - starttime
 s = e.seconds
 h = int(s/3600)
 s -= h*3600
@@ -43,8 +43,8 @@ print >>summary, r'\begin{tabular}{ll}'
 print >>summary, r'{\bf Version} &', version, r'\\'
 print >>summary, r'{\bf Path} &', path, r'\\'
 print >>summary, r'{\bf System} &', system, r'\\'
-print >>summary, r'{\bf Start} &', start.strftime('%a %d %b %H:%M:%S'), r'\\'
-print >>summary, r'{\bf Finish} &', end.strftime('%a %d %b %H:%M:%S'), r'\\'
+print >>summary, r'{\bf Start} &', starttime.strftime('%a %d %b %H:%M:%S'), r'\\'
+print >>summary, r'{\bf Finish} &', endtime.strftime('%a %d %b %H:%M:%S'), r'\\'
 print >>summary, r'{\bf Elapsed} &', repr(e.days) + ":" + repr(h) + ":" + repr(m) + ":" + repr(s), r'\\'
 print >>summary, r'{\bf Status} &',
 if failed:

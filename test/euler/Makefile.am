@@ -5,6 +5,7 @@ TESTDIRS = \
 
 EXTRA_DIST = \
 	template.tex \
+	tests.bib \
 	depend.py \
 	test.py \
 	gfs2tex \
@@ -18,14 +19,15 @@ test.sh: $(TESTDIRS)
 	@chmod +x test.sh
 
 clean-generic:
-	$(RM) *.dvi *.aux *.log *.toc *.out tests.tex *.pyc test.sh
+	$(RM) *.dvi *.aux *.log *.toc *.out tests.tex *.pyc test.sh *.bbl *.blg
 
 tests: tests.ps.gz l2hconf.pm
 	latex2html -no_math -html_version 3.2,math -address "" -info "" -split +3 -show_section_numbers -toc_depth 5 -t "Gerris Tests" -local_icons -white tests.tex
 	cp -f ../../doc/share/darcs.css tests/tests.css
 
-tests.dvi: tests.tex
+tests.dvi: tests.tex tests.bib
 	latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
+	bibtex tests
 	latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode tests.tex
 
