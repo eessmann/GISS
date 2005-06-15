@@ -41,7 +41,7 @@ tests.pdf: tests.dvi
 tests.tex: template.tex Makefile.deps
 	rm -r -f tests
 	python gfs2tex $(TESTDIRS)
-	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < template.tex > tests.tex
+	cp -f template.tex tests.tex
 
 Makefile.deps: Makefile.am depend.py
 	python depend.py $(TESTDIRS) > Makefile.deps

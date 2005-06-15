@@ -1,7 +1,7 @@
 rm -f reynolds
 
 for level in 5 6 7; do
-  if sed "s/LEVEL/$level/g" < $1 | $gerris2D - | awk -v m=$2 -v level=$level '{
+  if sed "s/LEVEL/$level/g" < $1 | gerris2D - | awk -v m=$2 -v level=$level '{
     time = $3
     ke = $5
     if (time == 0)
