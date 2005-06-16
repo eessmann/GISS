@@ -1,7 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
 TESTDIRS = \
-	reynolds
+	reynolds \
+	periodic
 
 EXTRA_DIST = \
 	template.tex \

@@ -1,20 +1,22 @@
-rm -f reynolds
+if ! $donotrun; then
+    rm -f reynolds
 
-for level in 5 6 7; do
-  if sed "s/LEVEL/$level/g" < $1 | gerris2D - | awk -v m=$2 -v level=$level '{
-    time = $3
-    ke = $5
-    if (time == 0)
-      ke0 = ke;
-  }END{
-    a = -log(ke/ke0)/time
-    nu = a/(4.*(2.*m*3.14159265359)^2)
-    print level " " 1./nu
-  }' >> reynolds; then :
-  else
-      exit 1
-  fi
-done
+    for level in 5 6 7; do
+	if sed "s/LEVEL/$level/g" < $1 | gerris2D - | awk -v m=$2 -v level=$level '{
+          time = $3
+          ke = $5
+          if (time == 0)
+            ke0 = ke;
+          }END{
+            a = -log(ke/ke0)/time
+            nu = a/(4.*(2.*m*3.14159265359)^2)
+            print level " " 1./nu
+          }' >> reynolds; then :
+	else
+	    exit 1
+	fi
+    done
+fi
 
 if cat <<EOF | gnuplot ; then :
     set term postscript eps color solid 20
@@ -41,14 +43,10 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-if (Curve('div5',3,9) - Curve('div5.ref',3,9)).max() > 0.05*Curve('div5.ref',3,9).mean() or\
-   (Curve('div6',3,9) - Curve('div6.ref',3,9)).max() > 0.05*Curve('div6.ref',3,9).mean() or\
-   (Curve('div7',3,9) - Curve('div7.ref',3,9)).max() > 0.05*Curve('div7.ref',3,9).mean() or\
-   (Curve('div5',3,7) - Curve('div5.ref',3,7)).max() > 0.05*Curve('div5.ref',3,7).mean() or\
-   (Curve('div6',3,7) - Curve('div6.ref',3,7)).max() > 0.05*Curve('div6.ref',3,7).mean() or\
-   (Curve('div7',3,7) - Curve('div7.ref',3,7)).max() > 0.05*Curve('div7.ref',3,7).mean() or\
-   (Curve('reynolds',1,2) - Curve('reynolds.ref',1,2)).max() > 0.0 :
-   exit(1)
+for div in ['div5','div6','div7']:
+  if (Curve(div,3,9) - Curve(div+'.ref',3,9)).max() > 0.01*Curve(div+'.ref',3,9).mean() or\
+     (Curve(div,3,7) - Curve(div+'.ref',3,7)).max() > 0.01*Curve(div+'.ref',3,7).mean():
+    exit(1)
 EOF
 else
    exit 1

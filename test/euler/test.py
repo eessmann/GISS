@@ -6,7 +6,7 @@ sys.path.append("../../doc/examples")
 import gfs2tex
 from datetime import *
 
-env = "PYTHONPATH=$PYTHONPATH:" + os.getcwd()
+env = "PYTHONPATH=$PYTHONPATH:" + os.getcwd() + " donotrun=false"
 system = commands.getoutput('uname -o -n -m')
 path = commands.getoutput('which gerris2D')
 version = commands.getoutput("""gerris2D -V 2>&1 | awk '{if ($5 == "version") print $6;}'""")
@@ -48,9 +48,9 @@ print >>summary, r'{\bf Finish} &', endtime.strftime('%a %d %b %H:%M:%S'), r'\\'
 print >>summary, r'{\bf Elapsed} &', repr(e.days) + ":" + repr(h) + ":" + repr(m) + ":" + repr(s), r'\\'
 print >>summary, r'{\bf Status} &',
 if failed:
-    print >>summary, r'{\color{red}FAIL}'
+    print >>summary, r'{\color{red}FAIL (' + repr(failed) + '/' + repr(n) +')}'
 else:
-    print >>summary, r'{\color{green}PASS}'
+    print >>summary, r'{\color{green}PASS (' + repr(n) + ')}'
 print >>summary, r'\end{tabular}'
 
 if failed:
