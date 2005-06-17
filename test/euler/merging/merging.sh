@@ -1,7 +1,7 @@
 if ! $donotrun; then
     if sed "s/LEVEL/8/g" < $1 | \
        sed "s/SIM/sim-8/g" | \
-       gerris2D - | gfsview2D; then :
+       gerris2D - | gfsview-batch2D; then :
     else
 	exit 1
     fi

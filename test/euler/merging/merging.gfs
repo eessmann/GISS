@@ -102,7 +102,7 @@
 # Generated files: convergence.tex tv_0_05.eps tm_0_05.eps tv_0_15.eps tm_0_15.eps tv_0_25.eps tm_0_25.eps
 #
 1 0 GfsSimulation GfsBox GfsGEdge {} {
-  Time { end = 0.3 }
+  Time { end = 0.25 }
   AdvectionParams { cfl = 0.9 }
   ApproxProjectionParams { tolerance = 1e-5 }
   ProjectionParams { tolerance = 1e-5 }
