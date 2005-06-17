@@ -25,33 +25,37 @@ print r"""\begin{tabular}{|c|c|c|c|c|c|}\hline
         & \multicolumn{5}{c|}{\$L_2\$} \\\ \hline
         & \$L=5\$   & \$O_2\$ & \$L=6\$    & \$O_2\$ & \$L=7\$  \\\ \hline"""
 
-def order(r,rr):
+def order(r,color='black'):
    for i in range(0,len(r.l)-1):
      y0,y1 = r.l[i][1],r.l[i+1][1]
-     yr0,yr1 = rr.l[i][1],rr.l[i+1][1]
-     print '& %.2e / {\color{blue}%.2e} & %4.2f / {\color{blue}%4.2f}' % \
-       (y0, yr0, log(y0/y1)/log(2.), log(yr0/yr1)/log(2.)),
-   print '& %.2e / {\color{blue}%.2e}' % (r.l[i+1][1],rr.l[i+1][1]), r'\\\ \hline'
+     print '& {\color{%s}%.2e} & {\color{%s}%4.2f}' % (color, y0, color, log(y0/y1)/log(2.)),
+   print '& {\color{%s}%.2e}' % (color, r.l[i+1][1]), r'\\\'
 
 print 'Uniform',
-order(Curve('r0',1,2),Curve('r0.ref',1,2))
+order(Curve('r0',1,2))
+order(Curve('r0.ref',1,2),'blue')
 print '\$r=1\$',
-order(Curve('r1',1,2),Curve('r1.ref',1,2))
+order(Curve('r1',1,2))
+order(Curve('r1.ref',1,2),'blue')
 print '\$r=2\$',
-order(Curve('r2',1,2),Curve('r2.ref',1,2))
+order(Curve('r2',1,2))
+order(Curve('r2.ref',1,2),'blue')
 
 print r"""\hline
         & \multicolumn{5}{c|}{\$L_\infty\$} \\\ \hline
         & \$L=5\$   & \$O_\infty\$  & \$L=6\$   & \$O_\infty\$  & \$L=7\$ \\\ \hline"""
 
 print 'Uniform',
-order(Curve('r0',1,3),Curve('r0.ref',1,3))
+order(Curve('r0',1,3))
+order(Curve('r0.ref',1,3),'blue')
 print '\$r=1\$',
-order(Curve('r1',1,3),Curve('r1.ref',1,3))
+order(Curve('r1',1,3))
+order(Curve('r1.ref',1,3),'blue')
 print '\$r=2\$',
-order(Curve('r2',1,3),Curve('r2.ref',1,3))
+order(Curve('r2',1,3))
+order(Curve('r2.ref',1,3),'blue')
 
-print r'\end{tabular}'
+print r"\hline\end{tabular}"
 EOF
 else
     exit 1

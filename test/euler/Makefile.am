@@ -2,7 +2,8 @@
 
 TESTDIRS = \
 	reynolds \
-	periodic
+	periodic \
+	merging
 
 EXTRA_DIST = \
 	template.tex \
