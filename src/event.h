@@ -58,6 +58,7 @@ struct _GfsEventClass {
 						   gfs_event_class())
 #define GFS_IS_EVENT(obj)         (gts_object_is_from_class (obj,\
 						   gfs_event_class ()))
+
 GfsEventClass * gfs_event_class       (void);
 GfsEvent *      gfs_event_new         (GfsEventClass * klass);
 void            gfs_event_set         (GfsEvent * e, 
@@ -73,6 +74,7 @@ void            gfs_event_do          (GfsEvent * event,
 				       GfsSimulation * sim);
 void            gfs_event_half_do     (GfsEvent * event, 
 				       GfsSimulation * sim);
+#define         gfs_event_is_repetitive(e) ((e)->step < G_MAXDOUBLE || (e)->istep < G_MAXINT)
 
 /* GfsGenericInit: Header */
 

@@ -1980,36 +1980,23 @@ static void update_histogram (FttCell * cell, GfsOutputScalar * h)
 static gboolean gfs_output_scalar_histogram_event (GfsEvent * event,
 						   GfsSimulation * sim)
 {
-  GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
-  GfsOutputScalarHistogram * h = GFS_OUTPUT_SCALAR_HISTOGRAM (event);
-  GfsDomain * domain = GFS_DOMAIN (sim);
-
-  if (h->last >= 0.) {
-    if (output->v->derived) {
-      gfs_variable_set_parent (output->v, domain);
-      gfs_domain_cell_traverse (domain,
-				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) output->v->derived, 
-				output->v);
-    }
-    if (output->maxlevel >= 0)
-      gfs_domain_cell_traverse (domain,
-				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-				(FttCellTraverseFunc) output->v->fine_coarse,
-				output->v);
-    h->dt = sim->time.t - h->last;
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
-			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
-			      (FttCellTraverseFunc) update_histogram, output);
-    h->last = sim->time.t;
-  }
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class)->event)
       (event, sim)) {
-    if (h->last < 0.)
-      h->last = sim->time.t;
-    else {
+    GfsOutputScalarHistogram * h = GFS_OUTPUT_SCALAR_HISTOGRAM (event);
+
+    if (gfs_event_is_repetitive (event))
+      h->dt = h->last >= 0. ? sim->time.t - h->last : 0.;
+    else
+      h->dt = 1.;
+
+    if (h->dt > 0.) {
       GfsOutput * output = GFS_OUTPUT (event);
       guint i;
+
+      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
+				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
+				GFS_OUTPUT_SCALAR (output)->maxlevel,
+				(FttCellTraverseFunc) update_histogram, output);
 
       if (output->file && !output->dynamic)
 	output->file->fp = freopen (output->format, "w", output->file->fp);
@@ -2019,6 +2006,7 @@ static gboolean gfs_output_scalar_histogram_event (GfsEvent * event,
       if (output->file && !output->dynamic)
 	fflush (output->file->fp);
     }
+    h->last = sim->time.t;
     return TRUE;
   }
   return FALSE;
