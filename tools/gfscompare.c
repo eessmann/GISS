@@ -280,66 +280,14 @@ static void difference_centered (FttCell * cell, gpointer * data)
   GfsVariable * v = data[1];
   FttVector p;
   FttCell * locate;
-  guint level = ftt_cell_level (cell), i, n = 0;
-  FttCellChildren child;
-  gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
 
-  if (a < 0.5)
-    return;
-
-  ftt_cell_pos (cell, &p);
-  locate = gfs_domain_locate (ref, p, level);
-  if (locate == NULL || ftt_cell_level (locate) < level) {
+  gfs_cell_cm (cell, &p);
+  locate = gfs_domain_locate (ref, p, -1);
+  if (locate == NULL || ftt_cell_level (locate) < ftt_cell_level (cell)) {
     fprintf (stderr, "gfscompare: the files are not comparable\n");
     exit (1);
-  }
-
-  if (FTT_CELL_IS_LEAF (locate)) {
-    GFS_STATE (cell)->dp = GFS_VARIABLE (cell, v->i) - 
-      GFS_VARIABLE (locate, v->i);
-    return;
-  }
-
-  ftt_cell_children (locate, &child);
-  for (i = 0; i < FTT_CELLS; i++)
-    if (child.c[i])
-      n++;
-
-  if (n == 4)
-    GFS_STATE (cell)->dp = GFS_VARIABLE (cell, v->i) - 
-      (GFS_VARIABLE (child.c[0], v->i) + GFS_VARIABLE (child.c[1], v->i) +
-       GFS_VARIABLE (child.c[2], v->i) + GFS_VARIABLE (child.c[3], v->i))/4.;
-#if 0
-  else if (n == 3) {
-    if (child.c[0] && child.c[3])
-      GFS_STATE (cell)->dp = GFS_VARIABLE (cell, v->i) - 
-	(GFS_VARIABLE (child.c[0], v->i) + GFS_VARIABLE (child.c[3], v->i))/2.;
-    else
-      GFS_STATE (cell)->dp = GFS_VARIABLE (cell, v->i) - 
-	(GFS_VARIABLE (child.c[1], v->i) + GFS_VARIABLE (child.c[2], v->i))/2.;
   }  
-  else {
-    GtsVector g;
-    gdouble dp, dpmax = 0.;
-
-    g[0] = gfs_center_gradient (cell, 0, v->i);
-    g[1] = gfs_center_gradient (cell, 1, v->i);
-    for (i = 0; i < FTT_CELLS; i++)
-      if (child.c[i]) {
-	FttVector p;
-
-	ftt_cell_relative_pos (child.c[i], &p);
-	dp = GFS_VARIABLE (cell, v->i) + g[0]*p.x + g[1]*p.y -
-	  GFS_VARIABLE (child.c[i], v->i);
-	if (fabs (dp) > fabs (dpmax))
-	  dpmax = dp;
-      }
-    GFS_STATE (cell)->dp = dpmax;
-  }
-#else
-  else
-    GFS_STATE (cell)->dp = 0.;
-#endif
+  GFS_STATE (cell)->dp = GFS_VARIABLE (cell, v->i) - gfs_interpolate (locate, p, v);
 }
 
 int main (int argc, char * argv[])
@@ -445,10 +393,6 @@ int main (int argc, char * argv[])
       break;
     case 'c': /* centered */
       centered = TRUE;
-#if (!FTT_2D)
-      fprintf (stderr, "gfscompare: option '-c' not supported in 3D\n");
-      exit (1);
-#endif /* not FTT_2D */
       break;
     case 'p': /* period */
       period = atof (optarg);
@@ -501,7 +445,6 @@ int main (int argc, char * argv[])
      "                      the error between the two fields (useful for pressure)\n"
      "  -w    --not-weighted do not use area-weighted norm estimation\n"
      "  -c    --centered    use error estimation for cell-centered variables\n"
-     "                      (only works in 2D)\n"
      "  -p P  --period=P    shifts FILE1 by P along the x axis\n"
      "  -H    --histogram   output (error,volume) pairs for each cell used\n"
      "                      to compute the error norms\n"
