@@ -1,6 +1,6 @@
 if ! $donotrun; then
-    ../../poisson/shapes almgren > boundaries.gts
-    for level in 7 8 9; do
+    ../../poisson/shapes channel | transform --revert --scale 4 --tx 1.5 > channel.gts
+    for level in 5 6 7; do
 	if sed "s/LEVEL/$level/g" < $1 | \
            gerris2D -; then :
 	else
@@ -11,7 +11,7 @@ fi
 
 for v in U V; do
     rm -f order$v orderf$v
-    for level in 7 8; do
+    for level in 5 6; do
 	level1=`expr $level + 1`
 	echo -n "$level " >> order$v
 	if gfscompare2D -c -v sim-$level sim-$level1 $v 2>&1 | \
@@ -20,7 +20,7 @@ for v in U V; do
 	    exit 1
 	fi
 	echo -n "$level " >> orderf$v
-	if gfscompare2D -f 7 -v sim-$level sim-$level1 $v 2>&1 | \
+	if gfscompare2D -f 5 -v sim-$level sim-$level1 $v 2>&1 | \
 	    awk '{if ($1 == "total") print $4 " " $6 " " $8;}' >> orderf$v; then :
 	else
 	    exit 1
@@ -61,7 +61,7 @@ for component,variable in [('x','U'),('y','V')]:
   \end{center}
   \caption{"""
   print r"Errors and convergence rates for the \$"+component+r"\$-component of the velocity.}"
-  print r"\label{boundaries-" + component + "}"
+  print r"\label{channel-" + component + "}"
   print r"\end{table}"
 EOF
 else

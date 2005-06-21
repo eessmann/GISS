@@ -4,7 +4,8 @@ TESTDIRS = \
 	reynolds \
 	periodic \
 	merging \
-	boundaries
+	boundaries \
+	channel
 
 EXTRA_DIST = \
 	template.tex \

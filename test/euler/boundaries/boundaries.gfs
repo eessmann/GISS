@@ -8,7 +8,7 @@
 # boundaries. Projection is then preformed to obtain a potential flow
 # solution around the bodies.
 #
-# Tables \ref{x} and \ref{y} illustrate the errors and convergence
+# Tables \ref{boundaries-x} and \ref{boundaries-y} illustrate the errors and convergence
 # orders obtained for both components of the velocity when the
 # resolution varies. Richardson extrapolation is used.  The errors are
 # computed either on the whole domain (All cells) or on the cells
