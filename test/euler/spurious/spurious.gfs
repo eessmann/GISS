@@ -1,0 +1,85 @@
+# Title: Amplitude of spurious currents
+#
+# Description:
+#
+# A circular "bubble" of diameter $D=0.4$ is initialised in the middle of
+# the unit box. Surface tension is imposed on the interface. The exact
+# solution is given by Laplace's law: uniform zero velocity and a
+# pressure jump accross the interface exactly balancing the surface
+# tension force.
+#
+# This test case uses a continuum formulation for surface tension,
+# which induces numerical errors leading to a non-exact balance of
+# pressure gradient and surface tension forces. A measure of the
+# amplitude of this error is the amplitude of the resulting "spurious
+# currents" around the bubble (see for example \cite{popinet99} for
+# a detailed discussion). The pattern of spurious currents obtained
+# using Gerris is illustrated on figure \ref{vectors}.
+#
+# Figure \ref{laplace} illustrates the independence of the asymptotic
+# ($t\rightarrow\infty$) non-dimensional capillary number
+# $Ca=\max(|{\bf u}|)/\sigma$ from the Laplace number $La=\sigma\rho
+# D/\mu^2$. The asymptotic value of $Ca$ is a measure of the accuracy
+# of the numerical scheme (the smaller the better).
+#
+# An annoying property of simple continuum formulations for surface
+# tension is that they are in effect of order 0 i.e. they do not
+# converge with resolution as demonstrated on figure
+# \ref{convergence}.
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{vectors.eps}
+# \end{center}
+# \caption{Spurious currents at equilibrium for $La=12000$.}
+# \label{vectors}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{laplace.eps}
+# \end{center}
+# \caption{Evolution of the capillary number $Ca$ as a function of
+# non-dimensional time $\tau=t\sigma/(\mu D)$ for the range of Laplace
+# numbers indicated in the legend.}
+# \label{laplace}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{convergence.eps}
+# \end{center}
+# \caption{Poor convergence of the capillary number with increased
+# resolution. The diameter is given in number of grid points.}
+# \label{convergence}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh spurious.sh spurious.gfs
+# Version: 0.6.4
+# Required files: spurious.sh vectors.gfv convergence.ref
+# Running time: 3 minutes
+# Generated files: laplace.eps convergence.eps vectors.eps
+#
+1 2 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = TMAX dtmax = 1e-3 }
+  Refine LEVEL
+
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
+  AdvectionParams { scheme = none }
+
+  VariableTracer {} T { scheme = vof }
+  SourceTension {} U V T 1
+  SourceDiffusion {} U MU
+  SourceDiffusion {} V MU
+
+  InitFraction {} T circle.gts
+
+  OutputSimulation { start = end } sim-LEVEL {}
+
+  OutputScalarNorm { istep = 1 } stdout { v = Velocity }
+}
+GfsBox {}
+1 1 right
+1 1 top

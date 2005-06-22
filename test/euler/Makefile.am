@@ -5,7 +5,8 @@ TESTDIRS = \
 	periodic \
 	merging \
 	boundaries \
-	channel
+	channel \
+	spurious
 
 EXTRA_DIST = \
 	template.tex \
