@@ -57,15 +57,14 @@ static void domain_write (GtsObject * o, FILE * fp)
   if (domain->lambda.z != 1.)
     fprintf (fp, "lz = %g ", domain->lambda.z);
   if (domain->max_depth_write > -2) {
-    GfsVariable * v = domain->variables_io;
+    GSList * i = domain->variables_io;
 
-    if (v != NULL) {
-      fprintf (fp, "variables = %s", v->name);
-      v = v->next;
-      while (v) {
-	if (v->name)
-	  fprintf (fp, ",%s", v->name);
-	v = v->next;
+    if (i != NULL) {
+      fprintf (fp, "variables = %s", GFS_VARIABLE1 (i->data)->name);
+      i = i->next;
+      while (i) {
+	fprintf (fp, ",%s", GFS_VARIABLE1 (i->data)->name);
+	i = i->next;
       }
       fputc (' ', fp);
     }
@@ -127,26 +126,14 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
 
   if (variables != NULL) {
     gchar * variables1, * s;
-    gboolean empty = TRUE;
 
     variables1 = g_strdup (variables);
     s = strtok (variables1, ",");
     while (s) {
       gfs_domain_add_variable (domain, s);
-      empty = FALSE;
       s = strtok (NULL, ",");
     }
     g_free (variables1);
-
-    if (!empty) {
-      gchar * error;
-
-      if (domain->variables_io != domain->variables)
-	gfs_variable_list_destroy (domain->variables_io);
-      domain->variables_io = gfs_variables_from_list (domain->variables, 
-						      variables, &error);
-      g_assert (domain->variables_io);
-    }
     g_free (variables);
   }
 }
@@ -239,11 +226,20 @@ static void free_pair (gpointer key, gpointer value)
 static void domain_destroy (GtsObject * o)
 {
   GfsDomain * domain = GFS_DOMAIN (o);
+  GSList * i;
 
   g_timer_destroy (domain->timer);
-  gfs_variable_list_destroy (domain->variables);
-  if (domain->variables_io != domain->variables)
-    gfs_variable_list_destroy (domain->variables_io);
+
+  i = domain->variables;
+  while (i) {
+    GSList * next = i->next;
+    gts_object_destroy (i->data);
+    i = next;
+  }
+  g_assert (domain->variables == NULL);
+
+  g_array_free (domain->allocated, TRUE);
+
   g_hash_table_foreach (domain->timers, (GHFunc) free_pair, NULL);
   g_hash_table_destroy (domain->timers);
 
@@ -286,10 +282,11 @@ static void domain_init (GfsDomain * domain)
   domain->rootlevel = 0;
   domain->refpos.x = domain->refpos.y = domain->refpos.z = 0.;
   domain->lambda.x = domain->lambda.y = domain->lambda.z = 1.;
-  domain->variables = gfs_variable_list_copy (gfs_centered_variables, 
-					      GTS_OBJECT (domain));
-  domain->variables_size = sizeof (GfsStateVector);
-  domain->variables_io = domain->variables;
+
+  domain->allocated = g_array_new (FALSE, TRUE, sizeof (gboolean));
+  domain->variables = NULL;
+
+  domain->variables_io = NULL;
   domain->max_depth_write = -1;
 }
 
@@ -666,6 +663,17 @@ static void neumann_bc (FttCell * cell)
   GFS_STATE (cell)->solid->fv = 0.;
 }
 
+static gboolean is_velocity (GfsVariable * v, GfsDomain * domain)
+{
+  FttComponent c;
+  GfsVariable ** u = gfs_domain_velocity (domain);
+
+  for (c = 0; c < FTT_DIMENSION; c++)
+    if (v == u[c])
+      return TRUE;
+  return FALSE;
+}
+
 /**
  * gfs_domain_surface_bc:
  * @domain: a #GfsDomain.
@@ -683,14 +691,12 @@ void gfs_domain_surface_bc (GfsDomain * domain,
     gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
       (FttCellTraverseFunc) GFS_SURFACE_GENERIC_BC_CLASS (GTS_OBJECT (v->surface_bc)->klass)->bc, 
 			       v->surface_bc);
-  else {
-    if (GFS_VELOCITY_COMPONENT (v->i) < FTT_DIMENSION)
-      gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
-				 (FttCellTraverseFunc) dirichlet_bc, NULL);
-    else
-      gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
-				 (FttCellTraverseFunc) neumann_bc, NULL);
-  }
+  else if (is_velocity (v, domain))
+    gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
+			       (FttCellTraverseFunc) dirichlet_bc, NULL);
+  else
+    gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
+			       (FttCellTraverseFunc) neumann_bc, NULL);
 }
 
 static void box_traverse (GfsBox * box, gpointer * datum)
@@ -1379,11 +1385,13 @@ GfsNorm gfs_domain_norm_variable (GfsDomain * domain,
   return n;
 }
 
-static void add_norm_residual (const FttCell * cell, GfsNorm * n)
+static void add_norm_residual (const FttCell * cell, gpointer * data)
 {
   gdouble size = ftt_cell_size (cell);
-
-  gfs_norm_add (n, GFS_STATE (cell)->res/(size*size), 1.);
+  GfsVariable * res = data[0];
+  GfsNorm * n = data[1];
+  
+  gfs_norm_add (n, GFS_VARIABLE (cell, res->i)/(size*size), 1.);
 }
 
 /**
@@ -1392,6 +1400,7 @@ static void add_norm_residual (const FttCell * cell, GfsNorm * n)
  * @flags: which types of cells are to be visited.
  * @max_depth: maximum depth of the traversal.
  * @dt: the time step.
+ * @res: the residual.
  *
  * Traverses the domain defined by @domain using gfs_domain_cell_traverse()
  * and gathers norm statistics about the volume weighted relative residual
@@ -1404,15 +1413,20 @@ static void add_norm_residual (const FttCell * cell, GfsNorm * n)
 GfsNorm gfs_domain_norm_residual (GfsDomain * domain,
 				  FttTraverseFlags flags,
 				  gint max_depth,
-				  gdouble dt)
+				  gdouble dt,
+				  GfsVariable * res)
 {
   GfsNorm n;
+  gpointer data[2];
 
   g_return_val_if_fail (domain != NULL, n);
+  g_return_val_if_fail (res != NULL, n);
   
   gfs_norm_init (&n);
+  data[0] = res;
+  data[1] = &n;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
-			   (FttCellTraverseFunc) add_norm_residual, &n);
+			   (FttCellTraverseFunc) add_norm_residual, data);
 #ifdef HAVE_MPI
   domain_norm_reduce (domain, &n);
 #endif /* HAVE_MPI */
@@ -1425,17 +1439,33 @@ GfsNorm gfs_domain_norm_residual (GfsDomain * domain,
   return n;
 }
 
-static void add_norm_velocity (const FttCell * cell, GfsNorm * n)
+/**
+ * gfs_domain_velocity:
+ * @domain: a #GfsDomain.
+ *
+ * Returns: the components of the velocity vector for @domain.
+ */
+GfsVariable ** gfs_domain_velocity (GfsDomain * domain)
 {
   FttComponent c;
-  gdouble unorm = 0.;
+  static gchar name[][2] = {"U","V","W"};
+
+  g_return_val_if_fail (domain != NULL, NULL);
   
   for (c = 0; c < FTT_DIMENSION; c++) {
-    gdouble uc = GFS_VARIABLE (cell, GFS_VELOCITY_INDEX (c));
-
-    unorm += uc*uc;
+    GfsVariable * v = gfs_variable_from_name (domain->variables, name[c]);
+    g_return_val_if_fail (v != NULL, NULL);
+    domain->velocity[c] = v;
   }
-  gfs_norm_add (n, sqrt (unorm), gfs_cell_volume (cell));
+  return domain->velocity;
+}
+
+static void add_norm_velocity (FttCell * cell, gpointer * data)
+{
+  GfsVariable ** u = data[0];
+  GfsNorm * n = data[1];
+  
+  gfs_norm_add (n, gfs_vector_norm (cell, u), gfs_cell_volume (cell));
 }
 
 /**
@@ -1454,12 +1484,15 @@ GfsNorm gfs_domain_norm_velocity (GfsDomain * domain,
 				  gint max_depth)
 {
   GfsNorm n;
+  gpointer data[2];
 
   g_return_val_if_fail (domain != NULL, n);
   
   gfs_norm_init (&n);
+  data[0] = gfs_domain_velocity (domain);
+  data[1] = &n;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
-			   (FttCellTraverseFunc) add_norm_velocity, &n);
+			   (FttCellTraverseFunc) add_norm_velocity, data);
 #ifdef HAVE_MPI
   domain_norm_reduce (domain, &n);
 #endif /* HAVE_MPI */
@@ -1499,6 +1532,7 @@ static void box_split (GfsBox * box, gpointer * data)
   guint * bid = data[1];
   gboolean * one_box_per_pe = data[2];
   gint * pid = data[3];
+  GfsVariable * newboxp = data[4];
   guint refid = FTT_DIMENSION == 2 ? 2 : 6;
   FttCellChildren child;
   FttDirection d;
@@ -1525,7 +1559,7 @@ static void box_split (GfsBox * box, gpointer * data)
       else
 	newbox->id = (*bid)++;
 
-      GFS_DOUBLE_TO_POINTER (GFS_STATE (child.c[i])->div) = newbox;
+      GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], newboxp->i)) = newbox;
 
       if (FTT_CELL_IS_LEAF (child.c[i]))
 	ftt_cell_refine_single (child.c[i], (FttCellInitFunc) gfs_cell_init, domain);
@@ -1549,7 +1583,7 @@ static void box_split (GfsBox * box, gpointer * data)
       for (i = 0; i < FTT_CELLS/2; i++)
 	if (child.c[i]) {
 	  FttCell * neighbor = ftt_cell_neighbor (child.c[i], d);
-	  GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_STATE (child.c[i])->div);
+	  GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], newboxp->i));
 	  GfsBoundaryClass * klass = GFS_BOUNDARY_CLASS (GTS_OBJECT (boundary)->klass);
 	  GfsBoundary * newboundary = gfs_boundary_new (klass, newbox, d);
 	  gchar fname[] = "/tmp/XXXXXX";
@@ -1575,15 +1609,17 @@ static void box_split (GfsBox * box, gpointer * data)
     }
 }
 
-static void box_link (GfsBox * box, GfsDomain * domain)
+static void box_link (GfsBox * box, gpointer * data)
 {
+  GfsVariable * newboxp = data[4];
+  GfsDomain * domain = data[5];
   FttCellChildren child;
   guint i;
 
   ftt_cell_children (box->root, &child);
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i]) {
-       GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_STATE (child.c[i])->div);
+       GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], newboxp->i));
        FttDirection d;
        
        g_assert (newbox);
@@ -1593,7 +1629,7 @@ static void box_link (GfsBox * box, GfsDomain * domain)
 	   FttCell * neighbor = ftt_cell_neighbor (child.c[i], d);
 
 	   if (neighbor) {
-	     GfsBox * newbox1 = GFS_DOUBLE_TO_POINTER (GFS_STATE (neighbor)->div);
+	     GfsBox * newbox1 = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (neighbor, newboxp->i));
 	     FttDirection od = FTT_OPPOSITE_DIRECTION (d);
 	     GfsGEdge * edge;
 
@@ -1610,7 +1646,7 @@ static void box_link (GfsBox * box, GfsDomain * domain)
     }
 }
 
-static void box_destroy (GfsBox * box)
+static void box_destroy (GfsBox * box, GfsVariable * newboxp)
 {
   GfsBox * newbox[FTT_CELLS];
   FttCellChildren child;
@@ -1619,7 +1655,7 @@ static void box_destroy (GfsBox * box)
   ftt_cell_children (box->root, &child);
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i])
-      newbox[i] = GFS_DOUBLE_TO_POINTER (GFS_STATE (child.c[i])->div);
+      newbox[i] = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], newboxp->i));
     else
       newbox[i] = NULL;
 
@@ -1654,20 +1690,25 @@ void gfs_domain_split (GfsDomain * domain, gboolean one_box_per_pe)
   GSList * list = NULL;
   guint bid = 2;
   gint pid = 0;
-  gpointer data[4];
+  gpointer data[6];
+  GfsVariable * newboxp;
 
   g_return_if_fail (domain != NULL);
 
+  newboxp = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, 1,
-  			   (FttCellTraverseFunc) gfs_cell_reset, gfs_div);
+  			   (FttCellTraverseFunc) gfs_cell_reset, newboxp);
   data[0] = &list;
   data[1] = &bid;
   data[2] = &one_box_per_pe;
   data[3] = &pid;
+  data[4] = newboxp;
+  data[5] = domain;
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_split, data);
-  g_slist_foreach (list, (GFunc) box_link, domain);
-  g_slist_foreach (list, (GFunc) box_destroy, NULL);
+  g_slist_foreach (list, (GFunc) box_link, data);
+  g_slist_foreach (list, (GFunc) box_destroy, newboxp);
   g_slist_free (list);
+  gts_object_destroy (GTS_OBJECT (newboxp));
 
   gfs_domain_match (domain);
   domain->rootlevel++;
@@ -1733,7 +1774,7 @@ void gfs_domain_advect_point (GfsDomain * domain,
   FttCell * cell;
   FttVector p0, p1;
   FttComponent c;
-  GfsVariable * v1, * v;
+  GfsVariable ** u;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (p != NULL);
@@ -1744,15 +1785,14 @@ void gfs_domain_advect_point (GfsDomain * domain,
   cell = gfs_domain_locate (domain, p0, -1);
   if (cell == NULL)
     return;
-  v1 = v = gfs_variable_from_name (domain->variables, "U");
-  for (c = 0; c < FTT_DIMENSION; c++, v = v->next)
-    (&p1.x)[c] += dt*gfs_interpolate (cell, p0, v)/2.;
+  u = gfs_domain_velocity (domain);
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&p1.x)[c] += dt*gfs_interpolate (cell, p0, u[c])/2.;
   cell = gfs_domain_locate (domain, p1, -1);
   if (cell == NULL)
     return;
-  v = v1;
-  for (c = 0; c < FTT_DIMENSION; c++, v = v->next)
-    (&p->x)[c] += dt*gfs_interpolate (cell, p1, v);
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&p->x)[c] += dt*gfs_interpolate (cell, p1, u[c]);
 }
 
 static void count (FttCell * cell, guint * n)
@@ -1793,19 +1833,19 @@ guint gfs_domain_size (GfsDomain * domain,
 static void minimum_cfl (FttCell * cell, gpointer * data)
 {
   gdouble * cfl = data[0];
-  GfsVariable * v = data[1];
+  GfsVariable ** v = data[1];
   gdouble size = ftt_cell_size (cell);
   FttComponent c;
 
-  for (c = 0; c < FTT_DIMENSION; c++, v = v->next) {
-    if (GFS_VARIABLE (cell, v->i) != 0.) {
-      gdouble cflu = size/fabs (GFS_VARIABLE (cell, v->i));
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    if (GFS_VARIABLE (cell, v[c]->i) != 0.) {
+      gdouble cflu = size/fabs (GFS_VARIABLE (cell, v[c]->i));
 
       if (cflu*cflu < *cfl)
 	*cfl = cflu*cflu;
     }
-    if (v->sources) {
-      gdouble g = gfs_variable_mac_source (v, cell);
+    if (v[c]->sources) {
+      gdouble g = gfs_variable_mac_source (v[c], cell);
 
       if (g != 0.) {
 	gdouble cflg = 2.*size/fabs (g);
@@ -1838,7 +1878,7 @@ gdouble gfs_domain_cfl (GfsDomain * domain,
   g_return_val_if_fail (domain != NULL, 0.);
 
   data[0] = &cfl;
-  data[1] = gfs_variable_from_name (domain->variables, "U");
+  data[1] = gfs_domain_velocity (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
 			    (FttCellTraverseFunc) minimum_cfl, data);
 #ifdef HAVE_MPI
@@ -1865,7 +1905,23 @@ void gfs_cell_init (FttCell * cell, GfsDomain * domain)
   g_return_if_fail (cell->data == NULL);
   g_return_if_fail (domain != NULL);
 
-  cell->data = g_malloc0 (domain->variables_size);
+  cell->data = g_malloc0 (gfs_domain_variables_size (domain));
+}
+
+/**
+ * gfs_cell_reinit:
+ * @cell: a #FttCell.
+ * @domain: a #GfsDomain containing @cell.
+ *
+ * Re-allocates the memory for fluid state data associated to @cell.
+ */
+void gfs_cell_reinit (FttCell * cell, GfsDomain * domain)
+{
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (cell->data != NULL);
+  g_return_if_fail (domain != NULL);
+
+  cell->data = g_realloc (cell->data, gfs_domain_variables_size (domain));
 }
 
 /**
@@ -1896,7 +1952,7 @@ void gfs_cell_copy (const FttCell * from,
       tos = GFS_STATE (to);
     }
     solid = tos->solid;
-    memcpy (to->data, from->data, domain->variables_size);
+    memcpy (to->data, from->data, gfs_domain_variables_size (domain));
     if (froms->solid == NULL) {
       if (solid)
 	g_free (solid);
@@ -1914,14 +1970,14 @@ void gfs_cell_copy (const FttCell * from,
  * gfs_cell_write:
  * @cell: a #FttCell.
  * @fp: a file pointer.
- * @variables: the #GfsVariable to be written.
+ * @variables: the list of #GfsVariable to be written.
  *
  * Writes in @fp the fluid data associated with @cell and described by
  * @variables. This function is generally used in association with
  * ftt_cell_write().  
  */
 void gfs_cell_write (const FttCell * cell, FILE * fp,
-		     GfsVariable * variables)
+		     GSList * variables)
 {
   g_return_if_fail (cell != NULL);
   g_return_if_fail (fp != NULL);
@@ -1940,8 +1996,7 @@ void gfs_cell_write (const FttCell * cell, FILE * fp,
     fputs (" -1", fp);
   
   while (variables) {
-    if (variables->name)
-      fprintf (fp, " %g", GFS_VARIABLE (cell, variables->i));
+    fprintf (fp, " %g", GFS_VARIABLE (cell, GFS_VARIABLE1 (variables->data)->i));
     variables = variables->next;
   }
 }
@@ -1960,7 +2015,7 @@ void gfs_cell_read (FttCell * cell, GtsFile * fp, GfsDomain * domain)
 {
   gdouble s0;
   GfsStateVector * s;
-  GfsVariable * v;
+  GSList * i;
 
   g_return_if_fail (cell != NULL);
   g_return_if_fail (fp != NULL);
@@ -2005,15 +2060,17 @@ void gfs_cell_read (FttCell * cell, GtsFile * fp, GfsDomain * domain)
     }
   }
 
-  v = domain->variables_io;
-  while (v) {
+  i = domain->variables_io;
+  while (i) {
+    GfsVariable * v = i->data;
+
     if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
       gts_file_error (fp, "expecting a number (%s)", v->name);
       return;
     }
     GFS_VARIABLE (cell, v->i) = atof (fp->token->str);
     gts_file_next_token (fp);
-    v = v->next;
+    i = i->next;
   }
 }
 
@@ -2021,14 +2078,14 @@ void gfs_cell_read (FttCell * cell, GtsFile * fp, GfsDomain * domain)
  * gfs_cell_write_binary:
  * @cell: a #FttCell.
  * @fp: a file pointer.
- * @variables: the #GfsVariable to be written.
+ * @variables: the list of #GfsVariable to be written.
  *
  * Writes in @fp the fluid data associated with @cell and described by
  * @variables. This function is generally used in association with
  * ftt_cell_write_binary().
  */
 void gfs_cell_write_binary (const FttCell * cell, FILE * fp,
-			    GfsVariable * variables)
+			    GSList * variables)
 {
   g_return_if_fail (cell != NULL);
   g_return_if_fail (fp != NULL);
@@ -2046,10 +2103,8 @@ void gfs_cell_write_binary (const FttCell * cell, FILE * fp,
   }
   
   while (variables) {
-    if (variables->name) {
-      gdouble a = GFS_VARIABLE (cell, variables->i);
-      fwrite (&a, sizeof (gdouble), 1, fp);
-    }
+    gdouble a = GFS_VARIABLE (cell, GFS_VARIABLE1 (variables->data)->i);
+    fwrite (&a, sizeof (gdouble), 1, fp);
     variables = variables->next;
   }
 }
@@ -2068,7 +2123,7 @@ void gfs_cell_read_binary (FttCell * cell, GtsFile * fp, GfsDomain * domain)
 {
   gdouble s0;
   GfsStateVector * s;
-  GfsVariable * v;
+  GSList * i;
 
   g_return_if_fail (cell != NULL);
   g_return_if_fail (fp != NULL);
@@ -2099,8 +2154,9 @@ void gfs_cell_read_binary (FttCell * cell, GtsFile * fp, GfsDomain * domain)
     }
   }
 
-  v = domain->variables_io;
-  while (v) {
+  i = domain->variables_io;
+  while (i) {
+    GfsVariable * v = i->data;
     gdouble a;
 
     if (gts_file_read (fp, &a, sizeof (gdouble), 1) != 1) {
@@ -2108,76 +2164,60 @@ void gfs_cell_read_binary (FttCell * cell, GtsFile * fp, GfsDomain * domain)
       return;
     }
     GFS_VARIABLE (cell, v->i) = a;
-    v = v->next;
+    i = i->next;
   }
 }
 
-/**
- * gfs_domain_replace_variable:
- * @domain: a #GfsDomain.
- * @v: the #GfsVariable to replace.
- * @with: the new #GfsVariable.
- *
- * Replaces existing variable @v with new variable @with.
- */
-void gfs_domain_replace_variable (GfsDomain * domain,
-				  GfsVariable * v,
-				  GfsVariable * with)
+static void box_realloc (GfsBox * box, GfsDomain * domain)
 {
-  GfsVariable * v1, * prev = NULL;
+  FttDirection d;
 
-  g_return_if_fail (domain != NULL);
-  g_return_if_fail (gts_container_size (GTS_CONTAINER (domain)) == 0);
-  g_return_if_fail (v != NULL);
-  g_return_if_fail (with != NULL);
-
-  v1 = domain->variables;
-  while (v1 && v1 != v) {
-    prev = v1;
-    v1 = v1->next;
-  }
-  g_return_if_fail (v1 == v);
-  with->i = v->i;
-  v->i = -1;
-  with->p = GTS_OBJECT (domain);
-  v->p = NULL;
-  with->next = v->next;
-  v->next = NULL;
-  if (prev)
-    prev->next = with;
-  else
-    domain->variables = with;
+  ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+		     (FttCellTraverseFunc) gfs_cell_reinit, domain);
+  for (d = 0; d < FTT_CELLS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d]))
+      ftt_cell_traverse (GFS_BOUNDARY (box->neighbor[d])->root, 
+			 FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			 (FttCellTraverseFunc) gfs_cell_reinit, domain);
 }
 
 /**
- * gfs_domain_add_new_variable:
+ * gfs_domain_alloc:
  * @domain: a #GfsDomain.
- * @v: the #GfsVariable to add.
  *
- * Adds a new variable @v to @domain.
+ * Returns: the index of a memory location newly allocated for each
+ * cell of @domain.
  */
-void gfs_domain_add_new_variable (GfsDomain * domain,
-				  GfsVariable * v)
+guint gfs_domain_alloc (GfsDomain * domain)
 {
-  GfsVariable * v1, * last;
+  guint i = 0;
 
-  g_return_if_fail (domain != NULL);
-  g_return_if_fail (gts_container_size (GTS_CONTAINER (domain)) == 0);
-  g_return_if_fail (v != NULL);
-  g_return_if_fail (v->name == NULL || 
-		    gfs_variable_from_name (domain->variables, v->name) == NULL);
+  g_return_val_if_fail (domain != NULL, -1);
 
-  v1 = last = domain->variables;
-  while (v1) {
-    last = v1;
-    v1 = v1->next;
+  while (i < domain->allocated->len && g_array_index (domain->allocated, gboolean, i))
+    i++;
+  if (i == domain->allocated->len) {
+    g_array_set_size (domain->allocated, domain->allocated->len + 1);
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_realloc, domain);
   }
-  g_assert (last);
+  g_array_index (domain->allocated, gboolean, i) = TRUE;
+  return i;
+}
 
-  last->next = v;
-  v->i = last->i + 1;
-  v->p = GTS_OBJECT (domain);
-  domain->variables_size += sizeof (gdouble);
+/**
+ * gfs_domain_free:
+ * @domain: a #GfsDomain.
+ * @i: a memory location index previously allocated using gfs_domain_alloc().
+ *
+ * Frees the memory location of @domain defined by @i.
+ */
+void gfs_domain_free (GfsDomain * domain, guint i)
+{
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (i < domain->allocated->len);
+  g_return_if_fail (g_array_index (domain->allocated, gboolean, i));
+
+  g_array_index (domain->allocated, gboolean, i) = FALSE;
 }
 
 /**
@@ -2190,30 +2230,28 @@ void gfs_domain_add_new_variable (GfsDomain * domain,
  * Returns: the new variable or %NULL if a variable with the same name
  * already exists.  
  */
-GfsVariable * gfs_domain_add_variable (GfsDomain * domain, 
+GfsVariable * gfs_domain_add_variable (GfsDomain * domain,
 				       const gchar * name)
 {
   GfsVariable * v;
 
   g_return_val_if_fail (domain != NULL, NULL);
-  g_return_val_if_fail (gts_container_size (GTS_CONTAINER (domain)) == 0, NULL);
+  g_return_val_if_fail (name != NULL, NULL);
 
-  if (name && gfs_variable_from_name (domain->variables, name))
+  if ((v = gfs_variable_new (gfs_variable_class (), domain, name)) == NULL)
     return NULL;
-
-  v = GFS_VARIABLE1 (gts_object_new (GTS_OBJECT_CLASS (gfs_variable_class ())));
-  v->name = g_strdup (name);
-  gfs_domain_add_new_variable (domain, v);
-
+  domain->variables = g_slist_append (domain->variables, v);
   return v;
 }
 
-static void add_pressure_force (FttCell * cell, gdouble * f)
+static void add_pressure_force (FttCell * cell, gpointer * data)
 {
+  gdouble * f = data[0];
+  GfsVariable * p = data[1];
   FttVector ff;
   FttComponent c;
 
-  gfs_pressure_force (cell, &ff);
+  gfs_pressure_force (cell, p, &ff);
   for (c = 0; c < FTT_DIMENSION; c++)
     f[c] += (&ff.x)[c];
 }
@@ -2250,7 +2288,7 @@ static void add_viscous_force (FttCell * cell, gpointer * data)
   n.x = s->s[1] - s->s[0];
   n.y = s->s[3] - s->s[2];
 #if FTT_2D
-  switch (GFS_VELOCITY_COMPONENT (v->i)) {
+  switch (v->component) {
   case FTT_X:
     f->x -= D*(2.*g.x*n.x + g.y*n.y);
     f->y -= D*g.y*n.x;
@@ -2265,7 +2303,7 @@ static void add_viscous_force (FttCell * cell, gpointer * data)
 #else /* 3D */
   n.z = s->s[5] - s->s[4];
   D *= ftt_cell_size (cell);
-  switch (GFS_VELOCITY_COMPONENT (v->i)) {
+  switch (v->component) {
   case FTT_X:
     f->x -= D*(2.*g.x*n.x + g.y*n.y + g.z*n.z);
     f->y -= D*g.y*n.x;
@@ -2302,49 +2340,52 @@ void gfs_domain_solid_force (GfsDomain * domain,
 			     FttVector * vf)
 {
   FttComponent c;
-  GfsVariable * v;
+  GfsVariable ** v;
+  gpointer data[2];
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (pf != NULL);
   g_return_if_fail (vf != NULL);
 
   pf->x = pf->y = pf->z = 0.;
+  data[0] = pf;
+  data[1] = gfs_variable_from_name (domain->variables, "P");
   gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			     (FttCellTraverseFunc) add_pressure_force, pf);
+			     (FttCellTraverseFunc) add_pressure_force, data);
 
   vf->x = vf->y = vf->z = 0.;
-  v = gfs_variable_from_name (domain->variables, "U");
-  for (c = 0; c < FTT_DIMENSION; c++, v = v->next) {
-    GfsSourceDiffusion * D = source_diffusion (v);
+  v = gfs_domain_velocity (domain);
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    GfsSourceDiffusion * D = source_diffusion (v[c]);
 
     if (D) {
       gpointer data[3];
 
-      gfs_domain_surface_bc (domain, v);
+      gfs_domain_surface_bc (domain, v[c]);
       data[0] = vf;
-      data[1] = v;
+      data[1] = v[c];
       data[2] = D;
       gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-				 (FttCellTraverseFunc) add_viscous_force, 
-				 data);
+				 (FttCellTraverseFunc) add_viscous_force, data);
     }
   }
 }
 
-static void tag_cell_fraction (FttCell * cell, GfsVariable * c, guint tag, guint * size)
+static void tag_cell_fraction (FttCell * cell,
+			       GfsVariable * c, GfsVariable * v,
+			       guint tag, guint * size)
 {
   FttDirection d;
   FttCellNeighbors n;
 
   g_assert (FTT_CELL_IS_LEAF (cell));
-  GFS_STATE (cell)->div = tag;
+  GFS_VARIABLE (cell, v->i) = tag;
   (*size)++;
   ftt_cell_neighbors (cell, &n);
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (n.c[d] && GFS_STATE (n.c[d])->div == 0. &&
-	GFS_VARIABLE (n.c[d], c->i) > 1e-4) {
+    if (n.c[d] && GFS_VARIABLE (n.c[d], v->i) == 0. && GFS_VARIABLE (n.c[d], c->i) > 1e-4) {
       if (FTT_CELL_IS_LEAF (n.c[d]))
-	tag_cell_fraction (n.c[d], c, tag, size);
+	tag_cell_fraction (n.c[d], c, v, tag, size);
       else {
 	FttCellChildren child;
 	FttDirection od = FTT_OPPOSITE_DIRECTION (d);
@@ -2355,21 +2396,23 @@ static void tag_cell_fraction (FttCell * cell, GfsVariable * c, guint tag, guint
 #endif	
 	ftt_cell_children_direction (n.c[d], od, &child);
 	for (i = 0; i < FTT_CELLS/2; i++)
-	  if (child.c[i] && GFS_STATE (child.c[i])->div == 0. &&
+	  if (child.c[i] && GFS_VARIABLE (child.c[i], v->i) == 0. &&
 	      GFS_VARIABLE (child.c[i], c->i) > 1e-4)
-	    tag_cell_fraction (child.c[i], c, tag, size);
+	    tag_cell_fraction (child.c[i], c, v, tag, size);
       }
     }
 }
 
 static void tag_new_fraction_region (FttCell * cell, gpointer * data)
 {
-  if (GFS_STATE (cell)->div == 0.) {
+  GfsVariable * v = data[3];
+
+  if (GFS_VARIABLE (cell, v->i) == 0.) {
     GfsVariable * c = data[0];
     GArray * sizes = data[1];
     guint size = 0;
     
-    tag_cell_fraction (cell, c, sizes->len + 1, &size);
+    tag_cell_fraction (cell, c, v, sizes->len + 1, &size);
     g_array_append_val (sizes, size);
   }
 }
@@ -2378,9 +2421,11 @@ static void reset_small_fraction (FttCell * cell, gpointer * data)
 {
   GfsVariable * c = data[0];
   GArray * sizes = data[1];
-  guint * min = data[2], i = GFS_STATE (cell)->div - 1.;
+  guint * min = data[2];
+  GfsVariable * v = data[3];
+  guint i = GFS_VARIABLE (cell, v->i) - 1.;
   
-  g_assert (GFS_STATE (cell)->div > 0.);
+  g_assert (GFS_VARIABLE (cell, v->i) > 0.);
   if (g_array_index (sizes, guint, i) < *min)
     GFS_VARIABLE (cell, c->i) = 0.;
 }
@@ -2404,18 +2449,21 @@ void gfs_domain_remove_droplets (GfsDomain * domain,
 				 GfsVariable * c,
 				 gint min)
 {
+  GfsVariable * v;
   GArray * sizes;
-  gpointer data[3];
+  gpointer data[4];
   guint minsize;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (c != NULL);
 
+  v = gfs_temporary_variable (domain);
   sizes = g_array_new (FALSE, FALSE, sizeof (guint));
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, gfs_div);
+			    (FttCellTraverseFunc) gfs_cell_reset, v);
   data[0] = c;
   data[1] = sizes;
+  data[3] = v;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) tag_new_fraction_region, data);
   g_assert (sizes->len > 0);
@@ -2434,24 +2482,25 @@ void gfs_domain_remove_droplets (GfsDomain * domain,
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) reset_small_fraction, data);
   g_array_free (sizes, TRUE);
+  gts_object_destroy (GTS_OBJECT (v));
 }
 
-static void tag_cell (FttCell * cell, guint tag, guint * size)
+static void tag_cell (FttCell * cell, GfsVariable * v, guint tag, guint * size)
 {
   FttDirection d;
   FttCellNeighbors n;
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
 
   g_assert (FTT_CELL_IS_LEAF (cell));
-  GFS_STATE (cell)->div = tag;
+  GFS_VARIABLE (cell, v->i) = tag;
   (*size)++;
   ftt_cell_neighbors (cell, &n);
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (n.c[d] && GFS_STATE (n.c[d])->div == 0. &&
+    if (n.c[d] && GFS_VARIABLE (n.c[d], v->i) == 0. &&
 	!GFS_CELL_IS_BOUNDARY (n.c[d]) &&
 	(!solid || solid->s[d] > 0.)) {
       if (FTT_CELL_IS_LEAF (n.c[d]))
-	tag_cell (n.c[d], tag, size);
+	tag_cell (n.c[d], v, tag, size);
       else {
 	FttCellChildren child;
 	FttDirection od = FTT_OPPOSITE_DIRECTION (d);
@@ -2459,19 +2508,22 @@ static void tag_cell (FttCell * cell, guint tag, guint * size)
 	
 	j = ftt_cell_children_direction (n.c[d], od, &child);
 	for (i = 0; i < j; i++)
-	  if (child.c[i] && GFS_STATE (child.c[i])->div == 0. &&
+	  if (child.c[i] && GFS_VARIABLE (child.c[i], v->i) == 0. &&
 	      (!GFS_IS_MIXED (child.c[i]) || GFS_STATE (child.c[i])->solid->s[od] > 0.))
-	    tag_cell (child.c[i], tag, size);
+	    tag_cell (child.c[i], v, tag, size);
       }
     }
 }
 
-static void tag_new_region (FttCell * cell, GArray * sizes)
+static void tag_new_region (FttCell * cell, gpointer * data)
 {
-  if (GFS_STATE (cell)->div == 0.) {
+  GfsVariable * v = data[0];
+
+  if (GFS_VARIABLE (cell, v->i) == 0.) {
+    GArray * sizes = data[1];
     guint size = 0;
 
-    tag_cell (cell, sizes->len + 1, &size);
+    tag_cell (cell, v, sizes->len + 1, &size);
     g_array_append_val (sizes, size);
   }
 }
@@ -2480,9 +2532,10 @@ static gboolean remove_small (FttCell * cell, gpointer * data)
 {
   if (FTT_CELL_IS_LEAF (cell)) {
     GArray * sizes = data[0];
-    guint * min = data[1], i = GFS_STATE (cell)->div - 1.;
+    GfsVariable * v = data[5];
+    guint * min = data[1], i = GFS_VARIABLE (cell, v->i) - 1.;
 
-    g_assert (GFS_STATE (cell)->div > 0.);
+    g_assert (GFS_VARIABLE (cell, v->i) > 0.);
     if (g_array_index (sizes, guint, i) < *min) {
       if (FTT_CELL_IS_ROOT (cell))
 	g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR, "root cell belongs to a pond");
@@ -2545,14 +2598,18 @@ void gfs_domain_remove_ponds (GfsDomain * domain,
   gpointer dat[5];
   guint minsize;
   gboolean changed = FALSE;
+  GfsVariable * v;
 
   g_return_if_fail (domain != NULL);
 
+  v = gfs_temporary_variable (domain);
   sizes = g_array_new (FALSE, FALSE, sizeof (guint));
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, gfs_div);
+			    (FttCellTraverseFunc) gfs_cell_reset, v);
+  dat[0] = v;
+  dat[1] = sizes;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) tag_new_region, sizes);
+			    (FttCellTraverseFunc) tag_new_region, dat);
   g_assert (sizes->len > 0);
   if (min >= 0)
     minsize = min;
@@ -2570,15 +2627,17 @@ void gfs_domain_remove_ponds (GfsDomain * domain,
   dat[2] = cleanup;
   dat[3] = data;
   dat[4] = &changed;
+  dat[5] = v;
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) remove_small_box, dat);
   g_array_free (sizes, TRUE);
+  gts_object_destroy (GTS_OBJECT (v));
   if (changed)
     gfs_domain_match (domain);
 }
 
-static gboolean tag_speck (FttCell * cell)
+static gboolean tag_speck (FttCell * cell, GfsVariable * v)
 {
-  if (GFS_STATE (cell)->div == 0.) {
+  if (GFS_VARIABLE (cell, v->i) == 0.) {
     FttDirection d;
     FttCellNeighbors n;
     GfsSolidVector * solid = GFS_STATE (cell)->solid;
@@ -2588,15 +2647,15 @@ static gboolean tag_speck (FttCell * cell)
     for (d = 0; d < FTT_NEIGHBORS; d++)
       if (!n.c[d])
 	return FALSE;
-    GFS_STATE (cell)->div = 1.;
+    GFS_VARIABLE (cell, v->i) = 1.;
     for (d = 0; d < FTT_NEIGHBORS; d++)
-      if (GFS_STATE (n.c[d])->div == 0. && 
+      if (GFS_VARIABLE (n.c[d], v->i) == 0. && 
 	  !GFS_CELL_IS_BOUNDARY (n.c[d]) &&
 	  solid->s[d] > 0. && solid->s[d] < 1.) {
 	g_assert (GFS_IS_MIXED (n.c[d]));
 	if (FTT_CELL_IS_LEAF (n.c[d])) {
-	  if (!tag_speck (n.c[d])) {
-	    GFS_STATE (cell)->div = 0.;
+	  if (!tag_speck (n.c[d], v)) {
+	    GFS_VARIABLE (cell, v->i) = 0.;
 	    return FALSE;
 	  }
 	}
@@ -2610,10 +2669,10 @@ static gboolean tag_speck (FttCell * cell)
 #endif	
 	  ftt_cell_children_direction (n.c[d], od, &child);
 	  for (i = 0; i < FTT_CELLS/2; i++)
-	    if (!child.c[i] || (GFS_STATE (child.c[i])->div == 0 && 
+	    if (!child.c[i] || (GFS_VARIABLE (child.c[i], v->i) == 0 && 
 				GFS_IS_MIXED (child.c[i]) &&
-				!tag_speck (child.c[i]))) {
-	      GFS_STATE (cell)->div = 0.;
+				!tag_speck (child.c[i], v))) {
+	      GFS_VARIABLE (cell, v->i) = 0.;
 	      return FALSE;
 	    }
 	}
@@ -2622,9 +2681,12 @@ static gboolean tag_speck (FttCell * cell)
   return TRUE;
 }
 
-static void fill_speck (FttCell * cell, gboolean * changed)
+static void fill_speck (FttCell * cell, gpointer * data)
 {
-  if (GFS_STATE (cell)->div == 1.) {
+  GfsVariable * v = data[0];
+
+  if (GFS_VARIABLE (cell, v->i) == 1.) {
+    gboolean * changed = data[1];
     g_free (GFS_STATE (cell)->solid);
     GFS_STATE (cell)->solid = NULL;
     *changed = TRUE;
@@ -2643,15 +2705,21 @@ static void fill_speck (FttCell * cell, gboolean * changed)
 void gfs_domain_remove_specks (GfsDomain * domain)
 {
   gboolean changed = FALSE;
+  GfsVariable * v;
+  gpointer data[2];
 
   g_return_if_fail (domain != NULL);
 
+  v = gfs_temporary_variable (domain);
   gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
-			     (FttCellTraverseFunc) gfs_cell_reset, gfs_div);
+			     (FttCellTraverseFunc) gfs_cell_reset, v);
   gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			     (FttCellTraverseFunc) tag_speck, NULL);
+			     (FttCellTraverseFunc) tag_speck, v);
+  data[0] = v;
+  data[1] = &changed;
   gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			     (FttCellTraverseFunc) fill_speck, &changed);
+			     (FttCellTraverseFunc) fill_speck, data);
+  gts_object_destroy (GTS_OBJECT (v));
   if (changed)
     gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_init_solid_fractions_from_children, 

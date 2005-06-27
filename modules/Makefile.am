@@ -3,20 +3,6 @@
 INCLUDES = -I$(top_srcdir)/src -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs-modules\" $(GTS_CFLAGS)
 
-pkglib_LTLIBRARIES = \
-	libvorticity_spectrum2D.la
-
-AM_CFLAGS = -DFTT_2D=1
-AM_LDFLAGS = $(NO_UNDEFINED) -version-info 0:0:0 -export-dynamic
-
-EXTRA_DIST = \
-	vorticity_spectrum.mod
-
-BUILT_SOURCES = \
-	vorticity_spectrum.c
-
-libvorticity_spectrum2D_la_SOURCES = vorticity_spectrum.c
-
 if HAVE_MODULES
 %.c : %.mod
 	@echo "/* $@" > $@

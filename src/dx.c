@@ -836,9 +836,10 @@ static void gfs_array_destroy (GfsArray * a, gboolean free_seg)
 static gint cell_index (FttCell * cell,
 			GfsArray * pos,
 			GPtrArray * data,
-			FttVector * lambda)
+			FttVector * lambda,
+			GfsVariable * index)
 {
-  if (GFS_STATE (cell)->dp <= 0.) {
+  if (GFS_VARIABLE (cell, index->i) <= 0.) {
     gfloat fp[3];
     FttVector p;
     guint i;
@@ -862,9 +863,9 @@ static gint cell_index (FttCell * cell,
     fp[1] = p.y/lambda->y;
     fp[2] = p.z/lambda->z;
     gfs_array_add (pos, fp);
-    GFS_STATE (cell)->dp = pos->i;
+    GFS_VARIABLE (cell, index->i) = pos->i;
   }
-  return GFS_STATE (cell)->dp - 1.;
+  return GFS_VARIABLE (cell, index->i) - 1.;
 }
 
 #if FTT_2D
@@ -875,15 +876,16 @@ static void add_cell (FttCell * cell, gpointer * par)
   GfsArray * con = par[1];
   GPtrArray * data = par[2];
   FttVector * lambda = par[3];
+  GfsVariable * iv = par[4];
   Edge e[12];
   guint i, len;
   gint index[3];
 
   len = cell_edges (cell, e);
-  index[0] = cell_index (cell, pos, data, lambda);
+  index[0] = cell_index (cell, pos, data, lambda, iv);
   for (i = 0; i < len; i++) {
-    index[1] = cell_index (e[i].c1, pos, data, lambda);
-    index[2] = cell_index (e[i].c2, pos, data, lambda);
+    index[1] = cell_index (e[i].c1, pos, data, lambda, iv);
+    index[2] = cell_index (e[i].c2, pos, data, lambda, iv);
     gfs_array_add (con, index);
   }
 }
@@ -896,16 +898,17 @@ static void add_cell (FttCell * cell, gpointer * par)
   GfsArray * con = par[1];
   GPtrArray * data = par[2];
   FttVector * lambda = par[3];
+  GfsVariable * iv = par[4];
   Face f[24];
   guint i, len;
   gint index[4];
 
   len = cell_faces (cell, f);
-  index[0] = cell_index (cell, pos, data, lambda);
+  index[0] = cell_index (cell, pos, data, lambda, iv);
   for (i = 0; i < len; i++) {
-    index[1] = cell_index (f[i].c1, pos, data, lambda);
-    index[2] = cell_index (f[i].c2, pos, data, lambda);
-    index[3] = cell_index (f[i].c3, pos, data, lambda);
+    index[1] = cell_index (f[i].c1, pos, data, lambda, iv);
+    index[2] = cell_index (f[i].c2, pos, data, lambda, iv);
+    index[3] = cell_index (f[i].c3, pos, data, lambda, iv);
     gfs_array_add (con, index);
   }
 }
@@ -952,14 +955,15 @@ Error m_ImportGfs3D (Object * in, Object * out)
   GtsFile * f = NULL;
   GfsSimulation * sim = NULL;
   GfsDomain * domain;
-  gpointer par[4];
+  gpointer par[5];
   GfsArray * pos = NULL, * con = NULL;
   GPtrArray * data = NULL;
   Group group = NULL;
-  GfsVariable * v;
+  GSList * j;
   guint i;
   gboolean pos_used = FALSE, con_used = FALSE;
   Field solid = NULL;
+  GfsVariable * iv;
 
   /* extract the file name from in[0] */
   if (!in[0]) {
@@ -998,10 +1002,10 @@ Error m_ImportGfs3D (Object * in, Object * out)
   domain = GFS_DOMAIN (sim);
     
   gfs_domain_match (domain);
-  v = domain->variables;
-  while (v) {
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v);
-    v = v->next;
+  j = domain->variables;
+  while (j) {
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, j->data);
+    j = j->next;
   }
 
   /* positions */
@@ -1014,31 +1018,32 @@ Error m_ImportGfs3D (Object * in, Object * out)
 
   /* data */
   data = g_ptr_array_new ();
-  v = domain->variables_io;
-  while (v) {
+  j = domain->variables;
+  while (j) {
+    GfsVariable * v = j->data;
     GfsVariable * vv[FTT_DIMENSION], * v1;
 
-    if (!strcmp (v->name, "U") && v->next &&
-	!strcmp (v->next->name, "V")
+    if (!strcmp (v->name, "U") && j->next &&
+	!strcmp (GFS_VARIABLE1 (j->next)->name, "V")
 #if (!FTT_2D)
-	&& v->next->next && !strcmp (v->next->next->name, "W")
+	&& j->next->next && !strcmp (GFS_VARIABLE1 (j->next->next)->name, "W")
 #endif /* not FTT_2D */
 	) {
-      vv[0] = v; v = v->next;
+      vv[0] = v; j = j->next; v = j->data;      
       vv[1] = v; 
 #if (!FTT_2D)
-      v = v->next;
+      j = j->next; v = j->data;
       vv[2] = v;
 #endif /* not FTT_2D */
       g_ptr_array_add (data, gfs_array_new (vv, "U", TYPE_FLOAT, 
 					    FTT_DIMENSION, TRUE));
     }
     else if (v->name[strlen (v->name) - 1] == 'x' &&
-	     (vv[0] = v) && (v1 = v->next) &&
+	     (vv[0] = v) && (j = j->next) && (v1 = j->data) &&
 	     v1->name[strlen (v1->name) - 1] == 'y' &&
 	     (vv[1] = v1) 
 #if (!FTT_2D)
-	     && (v1 = v1->next) &&
+	     && (j = j->next) && (v1 = j->data) &&
 	     v1->name[strlen (v1->name) - 1] == 'z' &&
 	     (vv[2] = v1)
 #endif /* not FTT_2D */
@@ -1051,19 +1056,22 @@ Error m_ImportGfs3D (Object * in, Object * out)
     }
     else 
       g_ptr_array_add (data, gfs_array_new (&v, v->name, TYPE_FLOAT, 1, TRUE));
-    v = v->next;
+    j = j->next;
   }
 
+  iv = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, gfs_dp);
+			    (FttCellTraverseFunc) gfs_cell_reset, iv);
   par[0] = pos;
   par[1] = con;
   par[2] = data;
   par[3] = &domain->lambda;
+  par[4] = iv;
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) add_cell, par);
+  gts_object_destroy (GTS_OBJECT (iv));
 
   if (!(group = DXNewGroup ()))
     goto error;

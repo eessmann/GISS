@@ -233,6 +233,17 @@ GfsSourceGenericClass * gfs_source_diffusion_explicit_class  (void);
 
 /* GfsSourceViscosity: Header */
 
+typedef struct _GfsSourceViscosity         GfsSourceViscosity;
+
+struct _GfsSourceViscosity {
+  /*< private >*/
+  GfsSourceGeneric parent;
+  GfsVariable * v[FTT_DIMENSION];
+};
+
+#define GFS_SOURCE_VISCOSITY(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourceViscosity,\
+					         gfs_source_viscosity_class ())
 #define GFS_IS_SOURCE_VISCOSITY(obj) (gts_object_is_from_class (obj,\
 				       gfs_source_viscosity_class ()))
 
@@ -244,7 +255,7 @@ typedef struct _GfsSourceCoriolis         GfsSourceCoriolis;
 
 struct _GfsSourceCoriolis {
   /*< private >*/
-  GfsSourceGeneric parent;
+  GfsSourceVector parent;
   GfsVariable * u[2];
 
   /*< public >*/

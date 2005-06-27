@@ -214,10 +214,13 @@ static void source_vector_read (GtsObject ** o, GtsFile * fp)
       gts_file_error (fp, "expecting a string (GfsVariable)");
       return;
     }
-    source->v[c] = gfs_variable_from_name (domain->variables, 
-					   fp->token->str);
+    source->v[c] = gfs_variable_from_name (domain->variables, fp->token->str);
     if (source->v[c] == NULL) {
       gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+      return;
+    }
+    if (source->v[c]->component != c) {
+      gts_file_error (fp, "variable `%s' is not component %d", fp->token->str, c);
       return;
     }
     if (source->v[c]->sources == NULL)
@@ -290,14 +293,7 @@ static gdouble source_value (GfsSourceGeneric * s,
 			     FttCell * cell, 
 			     GfsVariable * v)
 {
-  FttVector p;
-
-  if (v->centered)
-    ftt_cell_pos (cell, &p);
-  else
-    gfs_cell_cm (cell, &p);
-  return gfs_function_value (GFS_SOURCE (s)->intensity, cell, &p,
-			     gfs_object_simulation (s)->time.t);
+  return gfs_function_value (GFS_SOURCE (s)->intensity, cell);
 }
 
 static void source_class_init (GfsSourceGenericClass * klass)
@@ -362,8 +358,8 @@ static gboolean source_control_event (GfsEvent * event, GfsSimulation * sim)
     GfsSourceControl * s = GFS_SOURCE_CONTROL (event);
     GtsRange r = gfs_domain_stats_variable (GFS_DOMAIN (sim), GFS_SOURCE_GENERIC (event)->v,
 					    FTT_TRAVERSE_LEAFS, -1);
-    s->s = (gfs_function_value (GFS_SOURCE (s)->intensity, NULL, NULL, sim->time.t) - r.mean)/
-      gfs_function_value (s->delay, NULL, NULL, sim->time.t);
+    s->s = (gfs_function_value (GFS_SOURCE (s)->intensity, NULL) - r.mean)/
+      gfs_function_value (s->delay, NULL);
     return TRUE;
   }
   return FALSE;
@@ -681,7 +677,7 @@ static gdouble source_diffusion_value (GfsSourceGeneric * s,
   if (GFS_IS_MIXED (cell)) /* this improves results for channel test */
     return 0.;
 
-  c = GFS_VELOCITY_COMPONENT (v->i);
+  c = v->component;
 
   v0 = GFS_VARIABLE (cell, v->i);
   f.cell = cell;
@@ -830,31 +826,56 @@ GfsSourceGenericClass * gfs_source_diffusion_explicit_class (void)
 
 static void source_viscosity_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsVariable * v;
   FttComponent c;
+  GfsDomain * domain;
+  GfsSourceViscosity * s;
 
-  if (GTS_OBJECT_CLASS (gfs_source_viscosity_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_source_viscosity_class ())->parent_class->read)
-      (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_source_viscosity_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
-  
-  v = GFS_SOURCE_GENERIC (*o)->v->next;
-  for (c = 1; c < FTT_DIMENSION; c++, v = v->next)
-    if (!v) {
-      gts_file_error (fp, "not enough velocity components");
+
+  s = GFS_SOURCE_VISCOSITY (*o);
+  s->v[0] = GFS_SOURCE_GENERIC (*o)->v;
+  if (s->v[0]->component != 0) {
+    gts_file_error (fp, "`%s' is not vector component 0", s->v[0]->name);
+    return;
+  }
+  domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  for (c = 1; c < FTT_DIMENSION; c++) {
+    GfsVariable * v;
+
+    if (fp->type != GTS_STRING) {
+      gts_file_error (fp, "expecting a string (vector component %d)", c);
       return;
     }
-    else {
-      if (v->sources == NULL)
-	v->sources = 
-	  gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
-      else if (previous_diffusion_source (v, NULL)) {
-	gts_file_error (fp, "only one diffusion source can be specified for a given variable");
-	return;
-      }
-      gts_container_add (v->sources, GTS_CONTAINEE (*o));
+    if (!(v = gfs_variable_from_name (domain->variables, fp->token->str))) {
+      gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+      return;
     }
+    if (v->component != c) {
+      gts_file_error (fp, "`%s' is not vector component %d", fp->token->str, c);
+      return;
+    }
+    if (v->sources == NULL)
+      v->sources = gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
+    else if (previous_diffusion_source (v, NULL)) {
+      gts_file_error (fp, "only one diffusion source can be specified for a given variable");
+      return;
+    }
+    gts_container_add (v->sources, GTS_CONTAINEE (*o));
+    gts_file_next_token (fp);
+    s->v[c] = v;
+  }
+}
+
+static void source_viscosity_write (GtsObject * o, FILE * fp)
+{
+  FttComponent c;
+
+  (* GTS_OBJECT_CLASS (gfs_source_viscosity_class ())->parent_class->write) (o, fp);
+  
+  for (c = 1; c < FTT_DIMENSION; c++)
+    fprintf (fp, " %s", GFS_SOURCE_VISCOSITY (o)->v[c]->name);
 }
 
 static gdouble source_viscosity_non_diffusion_value (GfsSourceGeneric * s,
@@ -866,15 +887,16 @@ static gdouble source_viscosity_non_diffusion_value (GfsSourceGeneric * s,
   if (mu == NULL)
     return 0.;
   else {
-    FttComponent c = GFS_VELOCITY_COMPONENT (v->i), i;
+    GfsVariable ** u = GFS_SOURCE_VISCOSITY (s)->v;
+    FttComponent c = v->component, j;
     gdouble rho = 1.
       /* fixme: + GFS_STATE (cell)->c*(gfs_object_simulation (s)->physical_params.rho - 1.)*/;
     gdouble h = ftt_cell_size (cell);
     gdouble a = 0.;
 
-    for (i = 0; i < FTT_DIMENSION; i++)
-      a += (gfs_center_gradient (cell, c, GFS_VELOCITY_INDEX (i))*
-	    gfs_center_gradient (cell, i, mu->i));
+    for (j = 0; j < FTT_DIMENSION; j++)
+      a += (gfs_center_gradient (cell, c, u[j]->i)*
+	    gfs_center_gradient (cell, j, mu->i));
     return a/(rho*h*h);
   }
 }
@@ -893,6 +915,7 @@ static gdouble source_viscosity_value (GfsSourceGeneric * s,
 static void source_viscosity_class_init (GfsSourceGenericClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = source_viscosity_read;
+  GTS_OBJECT_CLASS (klass)->write = source_viscosity_write;
   klass->mac_value = source_viscosity_value;
   klass->centered_value = source_viscosity_non_diffusion_value;
 }
@@ -904,7 +927,7 @@ GfsSourceGenericClass * gfs_source_viscosity_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo source_viscosity_info = {
       "GfsSourceViscosity",
-      sizeof (GfsSourceDiffusion),
+      sizeof (GfsSourceViscosity),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) source_viscosity_class_init,
       (GtsObjectInitFunc) NULL,
@@ -931,39 +954,22 @@ static void source_coriolis_destroy (GtsObject * o)
 static void gfs_source_coriolis_read (GtsObject ** o, GtsFile * fp)
 {
   FttComponent c;
-  GfsVariable * v;
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
 
-  if (GTS_OBJECT_CLASS (gfs_source_coriolis_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_source_coriolis_class ())->parent_class->read) (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_source_coriolis_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
   GFS_SOURCE_CORIOLIS (*o)->omegaz = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (GFS_SOURCE_CORIOLIS (*o)->omegaz, gfs_object_simulation (*o), fp);
 
-  v = GFS_SOURCE_GENERIC (*o)->v->next;
-  for (c = 1; c < 2; c++, v = v->next) {
-    if (!v) {
-      gts_file_error (fp, "not enough velocity components");
-      return;
-    }
-    else {
-      if (v->sources == NULL)
-	v->sources = gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
-      gts_container_add (v->sources, GTS_CONTAINEE (*o));
-    }
-  }
-  for (c = 0; c <  2; c++) {
+  for (c = 0; c <  2; c++)
     GFS_SOURCE_CORIOLIS (*o)->u[c] = gfs_domain_add_variable (domain, NULL);
-    g_assert (GFS_SOURCE_CORIOLIS (*o)->u[c]);
-  }
 }
 
 static void gfs_source_coriolis_write (GtsObject * o, FILE * fp)
 {
-  if (GTS_OBJECT_CLASS (gfs_source_coriolis_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_source_coriolis_class ())->parent_class->write) (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_source_coriolis_class ())->parent_class->write) (o, fp);
   gfs_function_write (GFS_SOURCE_CORIOLIS (o)->omegaz, fp);
 }
 
@@ -971,15 +977,13 @@ static gdouble gfs_source_coriolis_mac_value (GfsSourceGeneric * s,
 					      FttCell * cell,
 					      GfsVariable * v)
 {
-  FttVector p;
+  GfsSourceVector * sv = GFS_SOURCE_VECTOR (s);
   gdouble f;
 
-  gfs_cell_cm (cell, &p);
-  f = gfs_function_value (GFS_SOURCE_CORIOLIS (s)->omegaz, NULL, &p, 
-			  gfs_object_simulation (s)->time.t);
-  switch (GFS_VELOCITY_COMPONENT (v->i)) {
-  case FTT_X: return   f*GFS_STATE (cell)->v;
-  case FTT_Y: return - f*GFS_STATE (cell)->u;
+  f = gfs_function_value (GFS_SOURCE_CORIOLIS (s)->omegaz, cell);
+  switch (v->component) {
+  case FTT_X: return   f*GFS_VARIABLE (cell, sv->v[1]->i);
+  case FTT_Y: return - f*GFS_VARIABLE (cell, sv->v[0]->i);
   default: g_assert_not_reached ();
   }
   return 0.;
@@ -987,14 +991,15 @@ static gdouble gfs_source_coriolis_mac_value (GfsSourceGeneric * s,
 
 static void save_coriolis (FttCell * cell, GfsSourceCoriolis * s)
 {
+  GfsSourceVector * sv = GFS_SOURCE_VECTOR (s);
   FttComponent c;
-  FttVector p;
   gdouble f;
 
-  gfs_cell_cm (cell, &p);
-  f = gfs_function_value (s->omegaz, NULL, &p, gfs_object_simulation (s)->time.t)/2.;
+  f = gfs_function_value (s->omegaz, cell)/2.;
   for (c = 0; c < 2; c++)
-    GFS_VARIABLE (cell, s->u[c]->i) = c == FTT_X ? f*GFS_STATE (cell)->v : -f*GFS_STATE (cell)->u;
+    GFS_VARIABLE (cell, s->u[c]->i) = c == FTT_X ?
+      f*GFS_VARIABLE (cell, sv->v[1]->i) :
+      - f*GFS_VARIABLE (cell, sv->v[0]->i);
 }
 
 static gboolean gfs_source_coriolis_event (GfsEvent * event, GfsSimulation * sim)
@@ -1011,10 +1016,7 @@ static gdouble gfs_source_coriolis_centered_value (GfsSourceGeneric * s,
 						   FttCell * cell,
 						   GfsVariable * v)
 {
-  FttComponent c = GFS_VELOCITY_COMPONENT (v->i);
-  GfsSourceCoriolis * b = GFS_SOURCE_CORIOLIS (s);
-
-  return GFS_VARIABLE (cell, b->u[c]->i);
+  return GFS_VARIABLE (cell, GFS_SOURCE_CORIOLIS (s)->u[v->component]->i);
 }
 
 static void gfs_source_coriolis_class_init (GfsSourceGenericClass * klass)
@@ -1042,7 +1044,7 @@ GfsSourceGenericClass * gfs_source_coriolis_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_generic_class ()),
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_vector_class ()),
 				  &gfs_source_coriolis_info);
   }
 
@@ -1051,16 +1053,15 @@ GfsSourceGenericClass * gfs_source_coriolis_class (void)
 
 static void implicit_coriolis (FttCell * cell, GfsSourceCoriolis * s)
 {
-  FttVector p;
+  GfsSourceVector * sv = GFS_SOURCE_VECTOR (s);
   gdouble c, u, v;
   GfsSimulation * sim = gfs_object_simulation (s);
 
-  gfs_cell_cm (cell, &p);
-  c = sim->advection_params.dt*gfs_function_value (s->omegaz, NULL, &p, sim->time.t)/2.;
-  u = GFS_STATE (cell)->u;
-  v = GFS_STATE (cell)->v;
-  GFS_STATE (cell)->u = (u + c*v)/(1. + c*c);
-  GFS_STATE (cell)->v = (v - c*u)/(1. + c*c);
+  c = sim->advection_params.dt*gfs_function_value (s->omegaz, cell)/2.;
+  u = GFS_VARIABLE (cell, sv->v[0]->i);
+  v = GFS_VARIABLE (cell, sv->v[1]->i);
+  GFS_VARIABLE (cell, sv->v[0]->i) = (u + c*v)/(1. + c*c);
+  GFS_VARIABLE (cell, sv->v[1]->i) = (v - c*u)/(1. + c*c);
 }
 
 /**
@@ -1078,11 +1079,13 @@ gboolean gfs_source_coriolis_implicit (GfsSimulation * sim,
 				       GfsVariable * p)
 {
   GfsVariable * v;
+  GfsDomain * domain;
 
   g_return_val_if_fail (sim != NULL, FALSE);
   g_return_val_if_fail (p != NULL, FALSE);
 
-  v = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, "U");
+  domain = GFS_DOMAIN (sim);
+  v = gfs_variable_from_name (domain->variables, "U");
   g_assert (v);
   if (v->sources) {
     GSList * i = GTS_SLIST_CONTAINER (v->sources)->items;
@@ -1113,10 +1116,23 @@ gboolean gfs_source_coriolis_implicit (GfsSimulation * sim,
     }
 
     if (s != NULL) {
-      gfs_poisson_coefficients (GFS_DOMAIN (sim), apar->c, apar->rho);
-      gfs_correct_normal_velocities (GFS_DOMAIN (sim), 2, p, apar->dt);
-      gfs_correct_centered_velocities (GFS_DOMAIN (sim), 2, apar->dt);
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+      GfsVariable * dia, * g[2];
+      FttComponent c;
+
+      dia = gfs_temporary_variable (domain);
+      gfs_poisson_coefficients (domain, dia, apar->c, apar->rho);
+      gts_object_destroy (GTS_OBJECT (dia));
+
+      for (c = 0; c < 2; c++)
+	g[c] = gfs_temporary_variable (domain);
+
+      gfs_correct_normal_velocities (domain, 2, p, g, apar->dt);
+      gfs_correct_centered_velocities (domain, 2, g, apar->dt);
+      
+      for (c = 0; c < 2; c++)
+	gts_object_destroy (GTS_OBJECT (g[c]));
+
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) implicit_coriolis, s);
       return TRUE;
     }

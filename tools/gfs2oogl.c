@@ -93,19 +93,21 @@ static gboolean stop (gdouble cost, guint nedge)
   return FALSE;
 }
 
-static void draw_vector (FttCell * cell, gdouble * scale)
+static void draw_vector (FttCell * cell, gpointer * data)
 {
+  gdouble * scale = data[0];
+  GfsVariable ** u = data[1];
   FILE * fp = stdout;
   FttVector pos, f;
 
   gfs_cell_cm (cell, &pos);
   
-  f.x = GFS_STATE (cell)->u*(*scale);
-  f.y = GFS_STATE (cell)->v*(*scale);
+  f.x = GFS_VARIABLE (cell, u[0]->i)*(*scale);
+  f.y = GFS_VARIABLE (cell, u[1]->i)*(*scale);
 #if FTT_2D
   f.z = 0.;
 #else
-  f.z = GFS_STATE (cell)->w*(*scale);
+  f.z = GFS_VARIABLE (cell, u[2]->i)*(*scale);
 #endif
   fprintf (fp, "VECT 1 3 0 3 0 %g %g %g %g %g %g %g %g %g\n",
 	   pos.x + f.x - (f.x - f.y/2.)/5.,
@@ -131,9 +133,8 @@ static void compute_mixed_vorticity (FttCell * cell, gpointer * data)
   FttVector g;
 
   g_assert (((cell)->flags & GFS_FLAG_DIRICHLET) != 0);
-  gfs_cell_dirichlet_gradient (cell, u->i, -1, 
-			       GFS_STATE (cell)->solid->fv, &g);
-  if (GFS_VELOCITY_COMPONENT (u->i) == FTT_X)
+  gfs_cell_dirichlet_gradient (cell, u->i, -1, GFS_STATE (cell)->solid->fv, &g);
+  if (u->component == FTT_X)
     GFS_VARIABLE (cell, v->i) -= g.y;
   else
     GFS_VARIABLE (cell, v->i) += g.x;
@@ -148,12 +149,12 @@ static void output_mixed_vorticity (FttCell * cell, GfsVariable * v)
 	  GFS_VARIABLE (cell, v->i)/size);
 }
 
-static void output_mixed_pressure (FttCell * cell, FILE * fp)
+static void output_mixed_pressure (FttCell * cell, GfsVariable * p)
 {
   GfsSolidVector * s = GFS_STATE (cell)->solid;
 
-  fprintf (fp, "%g %g %g %g\n", s->ca.x, s->ca.y, s->ca.z, 
-	   gfs_cell_dirichlet_value (cell, gfs_p, -1));
+  printf ("%g %g %g %g\n", s->ca.x, s->ca.y, s->ca.z, 
+	  gfs_cell_dirichlet_value (cell, p, -1));
 }
 
 /* SVertex: Header */
@@ -371,11 +372,11 @@ static gboolean advect (GfsDomain * domain,
   guint n = 10;
   gdouble h = ds/n;
   gboolean ad = TRUE;
-  GfsVariable * U = gfs_variable_from_name (domain->variables, "U"), * v;
+  GfsVariable ** U = gfs_domain_velocity (domain);
 
   while (n-- > 0 && ad) {
-    for (c = 0, v = U; c < 2/*FTT_DIMENSION*/; c++, v = v->next) {
-      ((gdouble *) &u)[c] = direction*gfs_interpolate (cell, *p, v);
+    for (c = 0; c < 2/*FTT_DIMENSION*/; c++) {
+      ((gdouble *) &u)[c] = direction*gfs_interpolate (cell, *p, U[c]);
       nu += ((gdouble *) &u)[c]*((gdouble *) &u)[c];
     }
     if (nu > 0.) {
@@ -386,8 +387,8 @@ static gboolean advect (GfsDomain * domain,
       cell = gfs_domain_locate (domain, ph, -1);
       if (cell != NULL) {
 	nu = 0.;
-	for (c = 0, v = U; c < 2/*FTT_DIMENSION*/; c++, v = v->next) {
-	  ((gdouble *) &u)[c] = direction*gfs_interpolate (cell, ph, v);
+	for (c = 0; c < 2/*FTT_DIMENSION*/; c++) {
+	  ((gdouble *) &u)[c] = direction*gfs_interpolate (cell, ph, U[c]);
 	  nu += ((gdouble *) &u)[c]*((gdouble *) &u)[c];
 	}
 	if (nu > 0.) {
@@ -664,10 +665,26 @@ static void write_stream (GSList * i, FILE * fp)
   }
 }
 
+static void update_var (FttCell * cell, gpointer * data)
+{
+  GfsVariable * v = data[0];
+  GfsFunction * f = data[1];
+
+  GFS_VARIABLE (cell, v->i) = gfs_function_value (f, cell);
+}
+
+static void velocity_norm (FttCell * cell, gpointer * data)
+{
+  GfsVariable * v = data[0];
+  GfsVariable ** u = data[1];
+  GFS_VARIABLE (cell, v->i) = gfs_vector_norm (cell, u);
+}
+
 int main (int argc, char * argv[])
 {
   int c = 0;
-  GfsVariable * v, * var = NULL;
+  GSList * i;
+  GfsVariable * var = NULL;
   GtsFile * fp;
   GtsSurface * surface = NULL;
   gboolean draw_surface = FALSE;
@@ -953,39 +970,50 @@ int main (int argc, char * argv[])
       return 1;
     }
 
-    if (color &&
-	!(var = gfs_variable_from_name (gfs_derived_first, color)) &&
-	!(var = gfs_variable_from_name (GFS_DOMAIN (simulation)->variables, color))) {
+    domain = GFS_DOMAIN (simulation);
+
+    if (color) {
+      GtsFile * fp = gts_file_new_from_string (color);
+      GfsFunction * f = gfs_function_new (gfs_function_class (), 0.);
+ 
+      gfs_function_read (f, domain, fp);
+      if (fp->type == GTS_ERROR) {
 	fprintf (stderr, 
-		 "gfs2oogl: unknown variable `%s'\n"
-		 "Try `gfs2oogl --help' for more information.\n",
-		 color);
-	return 1; /* failure */
+		 "gfs2oogl: incorrect `color' argument\n"
+		 "%d: %s\n",
+		 fp->pos, fp->error);
+	return 1;
+      }
+      gts_file_destroy (fp);
+      g_free (color);
+      
+      if (!(var = gfs_function_get_variable (f))) {
+	gpointer data[2];
+
+	data[0] = var = gfs_temporary_variable (domain);
+	data[1] = f;
+	gfs_domain_cell_traverse (domain,
+				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				  (FttCellTraverseFunc) update_var, data);
+      }
+      gts_object_destroy (GTS_OBJECT (f));
     }
 
     if (verbose)
       fprintf (stderr, "gfs2oogl: processing t = %10e\n", simulation->time.t);
-
-    domain = GFS_DOMAIN (simulation);
 
     if (!reinit)
       gfs_domain_match (domain);
     else
       gfs_simulation_refine (simulation);
 
-    v = domain->variables;
-    while (v) {
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v);
-      v = v->next;
+    i = domain->variables;
+    while (i) {
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
+      i = i->next;
     }
 
     if (var != NULL) {
-      if (var->derived) {
-	gfs_variable_set_parent (var, GTS_OBJECT (domain));
-	gfs_domain_cell_traverse (domain, 
-				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				  (FttCellTraverseFunc) var->derived, var);
-      }
       gfs_domain_cell_traverse (domain,
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 				(FttCellTraverseFunc) var->fine_coarse, var);
@@ -1057,26 +1085,26 @@ int main (int argc, char * argv[])
 	    printf ("%g %g %g %g\n", p.x, p.y, p.z, gfs_interpolate (cell, p, var));
 	}
       else {
-	GfsVariable * v;
+	GSList * j;
 	guint i = 4;
 
 	printf ("# 1:X 2:Y 3:Z ");
-	v = domain->variables;
-	while (v) {
-	  if (v->name)
-	    printf ("%d:%s ", i++, v->name);
-	  v = v->next;
+	j = domain->variables;
+	while (j) {
+	  GfsVariable * v = j->data;
+	  printf ("%d:%s ", i++, v->name);
+	  j = j->next;
 	}
 	printf ("\n");
 	while (fscanf (profile, "%lf %lf %lf", &p.x, &p.y, &p.z) == 3) {
 	  FttCell * cell = gfs_domain_locate (domain, p, -1);
 	  if (cell) {
 	    printf ("%g %g %g ", p.x, p.y, p.z);
-	    v = domain->variables;
-	    while (v) {
-	      if (v->name)
-		printf ("%g ", gfs_interpolate (cell, p, v));
-	      v = v->next;
+	    j = domain->variables;
+	    while (j) {
+	      GfsVariable * v = j->data;
+	      printf ("%g ", gfs_interpolate (cell, p, v));
+	      j = j->next;
 	    }
 	    printf ("\n");
 	  }
@@ -1086,13 +1114,16 @@ int main (int argc, char * argv[])
     else if (vector > 0.) {
       GtsRange stats;
       gdouble scale = 1.;
+      GfsVariable * norm = gfs_temporary_variable (domain);
+      gpointer data[2];
 
+      data[0] = norm;
+      data[1] = gfs_domain_velocity (domain);
       gfs_domain_cell_traverse (domain,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) gfs_velocity_norm, 
-				gfs_div);
-      stats = gfs_domain_stats_variable (domain, gfs_div, 
-					 FTT_TRAVERSE_LEAFS, -1);
+				(FttCellTraverseFunc) velocity_norm, data);
+      stats = gfs_domain_stats_variable (domain, norm, FTT_TRAVERSE_LEAFS, -1);
+      gts_object_destroy (GTS_OBJECT (norm));
       if (verbose)
 	fprintf (stderr, 
 		 "min: %g avg: %g| %g max: %g n: %7d\n",
@@ -1100,6 +1131,7 @@ int main (int argc, char * argv[])
       if (stats.max > 0.)
 	scale = vector*ftt_level_size (gfs_domain_depth (domain))/stats.max;
       printf ("(geometry \"vector-%g\" = LIST {\n", simulation->time.t);
+      data[0] = &scale;
 #if FTT_2D
       if (box == NULL)
 	box = gts_bbox_new (gts_bbox_class (), NULL,
@@ -1108,12 +1140,12 @@ int main (int argc, char * argv[])
 #else /* 3D */
       if (box == NULL)
 	gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-				  (FttCellTraverseFunc) draw_vector, &scale);
+				  (FttCellTraverseFunc) draw_vector, data);
       else
 #endif /* 3D */
       gfs_domain_cell_traverse_box (domain, box,
 				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				    (FttCellTraverseFunc) draw_vector, &scale);
+				    (FttCellTraverseFunc) draw_vector, data);
       printf ("})\n");
     }
     else if (draw_surface) {
@@ -1143,29 +1175,26 @@ int main (int argc, char * argv[])
     }
     else if (mixed && !strcmp (var->name, "Vorticity")) {
       FttComponent c;
-      GfsVariable * v;
+      GfsVariable ** u, * vort = gfs_temporary_variable (domain);
       gpointer data[2];
 
-      v = gfs_variable_from_name (domain->variables, "U");
+      u = gfs_domain_velocity (domain);
       gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-				 (FttCellTraverseFunc) gfs_cell_reset, 
-				 gfs_div);
-      v = gfs_variable_from_name (domain->variables, "U");
-      data[0] = gfs_div;
-      for (c = 0; c < FTT_DIMENSION; c++, v = v->next) {
-	gfs_domain_surface_bc (domain, v);
-	data[1] = v;
+				 (FttCellTraverseFunc) gfs_cell_reset, vort);
+      data[0] = vort;
+      for (c = 0; c < FTT_DIMENSION; c++) {
+	gfs_domain_surface_bc (domain, u[c]);
+	data[1] = u[c];
 	gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-	     (FttCellTraverseFunc) compute_mixed_vorticity, data);
+				   (FttCellTraverseFunc) compute_mixed_vorticity, data);
       }
       gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-				 (FttCellTraverseFunc) output_mixed_vorticity,
-				 gfs_div);
+				 (FttCellTraverseFunc) output_mixed_vorticity, vort);
+      gts_object_destroy (GTS_OBJECT (vort));
     }
     else if (mixed && !strcmp (var->name, "P"))
       gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-				 (FttCellTraverseFunc) output_mixed_pressure,
-				 stdout);
+				 (FttCellTraverseFunc) output_mixed_pressure, var);
     else if (even_stream > 0.) {
       GList * s, * i;
       ClosestGrid * grid;

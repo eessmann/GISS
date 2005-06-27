@@ -40,14 +40,14 @@ struct _GfsVariable {
 
   /*< public >*/
   guint i;
+  FttComponent component;
   gchar * name;
   gboolean centered;
   GfsVariableDerivedFunc derived;
   GfsVariableFineCoarseFunc fine_coarse;
   GtsContainer * sources;
   GfsSurfaceGenericBc * surface_bc;
-  GfsVariable * next, * permanent;
-  GtsObject * p;
+  GfsDomain * domain;
 };
 
 typedef struct _GfsVariableClass    GfsVariableClass;
@@ -67,23 +67,19 @@ struct _GfsVariableClass {
 						 gfs_variable_class())
 #define GFS_IS_VARIABLE(obj)         (gts_object_is_from_class (obj,\
 						 gfs_variable_class ()))
-#define gfs_variable_parent(v)         ((v)->p)
-#define gfs_variable_set_parent(v, pa) ((v)->p = GTS_OBJECT (pa))
 
 GfsVariableClass *    gfs_variable_class            (void);
 GfsVariable *         gfs_variable_new              (GfsVariableClass * klass,
-						     GtsObject * parent,
-						     const gchar * name,
-						     gboolean centered,
-						     guint i);
-GfsVariable *         gfs_variable_list_copy        (GfsVariable * v,
-						     GtsObject * parent);
-void                  gfs_variable_list_destroy     (GfsVariable * v);
-GfsVariable *         gfs_variable_from_name        (GfsVariable * variables,
+						     GfsDomain * domain,
 						     const gchar * name);
-GfsVariable *         gfs_variables_from_list       (GfsVariable * variables,
+#define               gfs_temporary_variable(d)     (gfs_variable_new (gfs_variable_class (),\
+                                                                      (d), NULL))
+GfsVariable *         gfs_variable_from_name        (GSList * i,
+						     const gchar * name);
+GSList *              gfs_variables_from_list       (GSList * i,
 						     gchar * list,
 						     gchar ** error);
+#define gfs_variable_set_vector(v, c)  ((v)->component = (c))
 
 /* GfsVariableTracer: header */
 

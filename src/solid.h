@@ -33,7 +33,8 @@ void         gfs_domain_init_solid_fractions             (GfsDomain * domain,
 							  GtsSurface * s,
 							  gboolean destroy_solid,
 							  FttCellCleanupFunc cleanup,
-							  gpointer data);
+							  gpointer data,
+							  GfsVariable * status);
 void         gfs_cell_init_solid_fractions_from_children (FttCell * cell);
 gboolean     gfs_cell_check_solid_fractions              (FttCell * root);
 void         gfs_domain_init_fraction                    (GfsDomain * domain,

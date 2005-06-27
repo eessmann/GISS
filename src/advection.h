@@ -45,7 +45,7 @@ void      (* GfsFaceAdvectionFluxFunc)       (const FttCellFace * face,
 
 struct _GfsAdvectionParams {
   gdouble cfl, dt;
-  GfsVariable * v, * fv;
+  GfsVariable * v, * fv, ** u, ** g;
   GfsCenterGradient gradient;
   gboolean use_centered_velocity;
   GfsUpwinding upwinding;
@@ -65,7 +65,8 @@ void         gfs_cell_advected_face_values    (FttCell * cell,
 void         gfs_cell_non_advected_face_values (FttCell * cell,
 						const GfsAdvectionParams * par);
 gdouble      gfs_face_upwinded_value          (const FttCellFace * face,
-					       GfsUpwinding upwinding);
+					       GfsUpwinding upwinding,
+					       GfsVariable ** u);
 void         gfs_face_advection_flux          (const FttCellFace * face,
 					       const GfsAdvectionParams * par);
 void         gfs_face_velocity_advection_flux (const FttCellFace * face,
@@ -73,8 +74,9 @@ void         gfs_face_velocity_advection_flux (const FttCellFace * face,
 void         gfs_face_velocity_convective_flux (const FttCellFace * face,
 						const GfsAdvectionParams * par);
 void         gfs_face_advected_normal_velocity     (const FttCellFace * face,
-						    GfsUpwinding * upwinding);
-void         gfs_face_interpolated_normal_velocity (const FttCellFace * face);
+						    const GfsAdvectionParams * par);
+void         gfs_face_interpolated_normal_velocity (const FttCellFace * face,
+						    GfsVariable ** v);
 void         gfs_face_reset_normal_velocity        (const FttCellFace * face);
 void         gfs_set_merged                        (GfsDomain * domain);
 typedef void (* GfsMergedTraverseFunc)             (GSList * merged,

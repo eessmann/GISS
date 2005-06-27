@@ -26,18 +26,6 @@
 #include "domain.h"
 #include "solid.h"
 
-/* Permanent variables */
-GfsVariable * gfs_div, * gfs_dp, * gfs_res;
-GfsVariable * gfs_gx, * gfs_gy;
-#if (!FTT_2D)
-GfsVariable * gfs_gz;
-#endif /* FTT_3D */
-GfsVariable * gfs_centered_variables;
-GfsVariable * gfs_p;
-
-/* Derived variables */
-GfsVariable * gfs_derived_first, * gfs_derived_last;
-
 typedef struct _Gradient Gradient;
 
 /* grad(p) = -a*p(cell) + b*p(neighbor) + c */
@@ -1556,16 +1544,19 @@ gdouble gfs_face_interpolated_value (const FttCellFace * face,
 /**
  * gfs_normal_divergence:
  * @cell: a #FttCell.
+ * @v: a #GfsVariable.
  *
- * Fills variable %GFS_DIV of @cell with the integral of the divergence
+ * Fills variable @v of @cell with the integral of the divergence
  * of the (MAC) velocity field in this cell.  
  */
-void gfs_normal_divergence (FttCell * cell)
+void gfs_normal_divergence (FttCell * cell,
+			    GfsVariable * v)
 {
   FttComponent c;
   gdouble div = 0.;
 
   g_return_if_fail (cell != NULL);
+  g_return_if_fail (v != NULL);
 
   if (GFS_IS_MIXED (cell)) {
     GfsSolidVector * solid = GFS_STATE (cell)->solid;
@@ -1584,22 +1575,25 @@ void gfs_normal_divergence (FttCell * cell)
       div += (GFS_STATE (cell)->f[d].un - 
 	      GFS_STATE (cell)->f[d + 1].un);
     }
-  GFS_STATE (cell)->div = div*ftt_cell_size (cell);
+  GFS_VARIABLE (cell, v->i) = div*ftt_cell_size (cell);
 }
 
 /**
  * gfs_normal_divergence_2D:
  * @cell: a #FttCell.
+ * @v: a #GfsVariable.
  *
- * Fills variable %GFS_DIV of @cell with the integral of the 2D
+ * Fills variable @v of @cell with the integral of the 2D
  * divergence of the (MAC) velocity field in this cell.
  */
-void gfs_normal_divergence_2D (FttCell * cell)
+void gfs_normal_divergence_2D (FttCell * cell,
+			       GfsVariable * v)
 {
   FttComponent c;
   gdouble div = 0.;
 
   g_return_if_fail (cell != NULL);
+  g_return_if_fail (v != NULL);
 
   if (GFS_IS_MIXED (cell)) {
     GfsSolidVector * solid = GFS_STATE (cell)->solid;
@@ -1618,35 +1612,40 @@ void gfs_normal_divergence_2D (FttCell * cell)
       div += (GFS_STATE (cell)->f[d].un - 
 	      GFS_STATE (cell)->f[d + 1].un);
     }
-  GFS_STATE (cell)->div = div*ftt_cell_size (cell);
+  GFS_VARIABLE (cell, v->i) = div*ftt_cell_size (cell);
 }
 
 /**
  * gfs_divergence:
  * @cell: a #FttCell.
+ * @v: the components of the vector.
  *
- * Returns: the divergence of the (centered) velocity field in @cell.
+ * Returns: the divergence of the (centered) vector field @v in @cell.
  */
-gdouble gfs_divergence (FttCell * cell)
+gdouble gfs_divergence (FttCell * cell,
+			GfsVariable ** v)
 {
   FttComponent c;
   gdouble div = 0.;
 
   g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
 
   for (c = 0; c < FTT_DIMENSION; c++)
-    div += gfs_center_gradient (cell, c, GFS_VELOCITY_INDEX (c));
+    div += gfs_center_gradient (cell, c, v[c]->i);
   return div/ftt_cell_size (cell);
 }
 
 /**
  * gfs_vorticity:
  * @cell: a #FttCell.
+ * @v: the components of the vector.
  *
  * Returns: the vorticity (norm of the vorticity vector in 3D) of the
- * velocity field in @cell.
+ * vector field @v in @cell.
  */
-gdouble gfs_vorticity (FttCell * cell)
+gdouble gfs_vorticity (FttCell * cell,
+		       GfsVariable ** v)
 {
   gdouble size;
 #if (!FTT_2D)
@@ -1654,71 +1653,68 @@ gdouble gfs_vorticity (FttCell * cell)
 #endif /* FTT_3D */
 
   g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
 
   size = ftt_cell_size (cell);
 #if FTT_2D
-  return (gfs_center_gradient (cell, FTT_X, GFS_V) -
-	  gfs_center_gradient (cell, FTT_Y, GFS_U))/size;
+  return (gfs_center_gradient (cell, FTT_X, v[1]->i) -
+	  gfs_center_gradient (cell, FTT_Y, v[0]->i))/size;
 #else  /* FTT_3D */
-  vort.x = (gfs_center_gradient (cell, FTT_Y, GFS_W) -
-	    gfs_center_gradient (cell, FTT_Z, GFS_V))/size;
-  vort.y = (gfs_center_gradient (cell, FTT_Z, GFS_U) -
-	    gfs_center_gradient (cell, FTT_X, GFS_W))/size;
-  vort.z = (gfs_center_gradient (cell, FTT_X, GFS_V) -
-	    gfs_center_gradient (cell, FTT_Y, GFS_U))/size;
+  vort.x = (gfs_center_gradient (cell, FTT_Y, v[2]->i) -
+	    gfs_center_gradient (cell, FTT_Z, v[1]->i))/size;
+  vort.y = (gfs_center_gradient (cell, FTT_Z, v[0]->i) -
+	    gfs_center_gradient (cell, FTT_X, v[2]->i))/size;
+  vort.z = (gfs_center_gradient (cell, FTT_X, v[1]->i) -
+	    gfs_center_gradient (cell, FTT_Y, v[0]->i))/size;
   return sqrt (vort.x*vort.x + vort.y*vort.y + vort.z*vort.z);
 #endif /* FTT_3D */
 }
 
 /**
- * gfs_velocity_norm:
+ * gfs_vector_norm2:
  * @cell: a #FttCell.
+ * @v: the components of the vector.
  *
- * Returns: the norm of the velocity field in @cell.
+ * Returns: the squared norm of the vector field @v in @cell.
  */
-gdouble gfs_velocity_norm (FttCell * cell)
+gdouble gfs_vector_norm2 (FttCell * cell,
+			  GfsVariable ** v)
 {
-  GfsStateVector * s;
+  FttComponent c;
+  gdouble n = 0.;
   
   g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
 
-  s = GFS_STATE (cell);
-#if FTT_2D
-  return sqrt (s->u*s->u + s->v*s->v);
-#else  /* FTT_3D */
-  return sqrt (s->u*s->u + s->v*s->v + s->w*s->w);
-#endif /* FTT_3D */
+  for (c = 0; c < FTT_DIMENSION; c++)
+    n += GFS_VARIABLE (cell, v[c]->i)*GFS_VARIABLE (cell, v[c]->i);
+  return n;
 }
 
 /**
- * gfs_velocity_norm2:
+ * gfs_vector_norm:
  * @cell: a #FttCell.
+ * @v: the components of the vector.
  *
- * Returns: the squared norm of the velocity field in @cell.
+ * Returns: the norm of the vector field @v in @cell.
  */
-gdouble gfs_velocity_norm2 (FttCell * cell)
+gdouble gfs_vector_norm (FttCell * cell,
+			 GfsVariable ** v)
 {
-  GfsStateVector * s;
-
-  g_return_val_if_fail (cell != NULL, 0.);
-
-  s = GFS_STATE (cell);
-#if FTT_2D
-  return s->u*s->u + s->v*s->v;
-#else  /* FTT_3D */
-  return s->u*s->u + s->v*s->v + s->w*s->w;
-#endif /* FTT_3D */
+  return sqrt (gfs_vector_norm2 (cell, v));
 }
 
 /**
- * gfs_velocity_lambda2:
+ * gfs_vector_lambda2:
  * @cell: a #FttCell.
+ * @v: the components of the vector.
  *
  * Returns: The value of the lambda2 eigenvalue used by Jeong and
  * Hussain as vortex criterion (JFM 285, 69-94, 1995), normalized by
  * the square of the size of the cell.
  */
-gdouble gfs_velocity_lambda2 (FttCell * cell)
+gdouble gfs_vector_lambda2 (FttCell * cell,
+			    GfsVariable ** v)
 {
   gdouble J[FTT_DIMENSION][FTT_DIMENSION];
   gdouble S2O2[FTT_DIMENSION][FTT_DIMENSION];
@@ -1726,10 +1722,11 @@ gdouble gfs_velocity_lambda2 (FttCell * cell)
   guint i, j, k;
 
   g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
 
   for (i = 0; i < FTT_DIMENSION; i++)
     for (j = 0; j < FTT_DIMENSION; j++)
-      J[i][j] = gfs_center_gradient (cell, j, GFS_VELOCITY_INDEX (i));
+      J[i][j] = gfs_center_gradient (cell, j, v[i]->i);
   for (i = 0; i < FTT_DIMENSION; i++)
     for (j = 0; j < FTT_DIMENSION; j++) {
       S2O2[i][j] = 0.;
@@ -1743,26 +1740,29 @@ gdouble gfs_velocity_lambda2 (FttCell * cell)
 /**
  * gfs_pressure_force:
  * @cell: a #FttCell.
+ * @p: a #GfsVariable.
  * @f: a #FttVector.
  *
- * Fills @f with the pressure component of the force exerted by the
+ * Fills @f with the pressure @p component of the force exerted by the
  * fluid on the fraction of embedded boundary contained in @cell.
  */
 void gfs_pressure_force (FttCell * cell,
+			 GfsVariable * p,
 			 FttVector * f)
 {
   GfsSolidVector * s;
 
   g_return_if_fail (cell != NULL);
+  g_return_if_fail (p != NULL);
   g_return_if_fail (f != NULL);
 
   if ((s = GFS_STATE (cell)->solid)) {
-    gdouble p = gfs_cell_dirichlet_value (cell, gfs_p, -1);
+    gdouble pv = gfs_cell_dirichlet_value (cell, p, -1);
     FttComponent c;
 
     gfs_solid_normal (cell, f);
     for (c = 0; c < FTT_DIMENSION; c++)
-      (&f->x)[c] *= p;
+      (&f->x)[c] *= pv;
   }
   else
     f->x = f->y = f->z = 0.;
@@ -2060,25 +2060,22 @@ gdouble gfs_center_curvature (FttCell * cell,
 /**
  * gfs_streamline_curvature:
  * @cell: a #FttCell.
+ * @v: the components of the vector.
  *
  * The curvature is normalized by the size of the cell.
  *
- * Returns: the value of the curvature of the streamline passing
+ * Returns: the value of the curvature of the streamline defined by @v passing
  * through the center of the cell.
  */
-gdouble gfs_streamline_curvature (FttCell * cell)
+gdouble gfs_streamline_curvature (FttCell * cell,
+				  GfsVariable ** v)
 {
-  GfsStateVector * s;
   gdouble u2;
 
   g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
 
-  s = GFS_STATE (cell);
-#if FTT_2D
-  u2 = s->u*s->u + s->v*s->v;
-#else  /* FTT_3D */
-  u2 = s->u*s->u + s->v*s->v + s->w*s->w;
-#endif /* FTT_3D */
+  u2 = gfs_vector_norm2 (cell, v);
 
   if (u2 == 0.)
     return 0.;
@@ -2091,56 +2088,11 @@ gdouble gfs_streamline_curvature (FttCell * cell)
       gdouble ugui = 0.;
 
       for (j = 0; j < FTT_DIMENSION; j++)
-	ugui += GFS_VARIABLE (cell, GFS_VELOCITY_INDEX (j))*
-	  gfs_center_gradient (cell, j, GFS_VELOCITY_INDEX (i));
+	ugui += GFS_VARIABLE (cell, v[j]->i)*gfs_center_gradient (cell, j, v[i]->i);
       ugu += ugui*ugui;
     }
     return sqrt (ugu)/u2;
   }
-}
-
-/**
- * gfs_cell_laplacian:
- * @cell: a #FttCell.
- * @v: a #GfsVariable.
- *
- * Returns: an evaluation of the Laplacian of @v at the center of
- * @cell normalized by h^2, where h is the cell size.
- */
-gdouble gfs_cell_laplacian (FttCell * cell, GfsVariable * v)
-{
-  FttCellFace f;
-  FttCellNeighbors n;
-  GfsGradient g = { 0., 0. };
-  FttComponent c;
-  gdouble v0;
-
-  g_return_val_if_fail (cell != NULL, 0.);
-  g_return_val_if_fail (v != NULL, 0.);
-
-  if (GFS_IS_MIXED (cell))
-    return 0.;
-
-  c = GFS_VELOCITY_COMPONENT (v->i);
-
-  v0 = GFS_VARIABLE (cell, v->i);
-  f.cell = cell;
-  ftt_cell_neighbors (cell, &n);
-  for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++)
-    if (n.c[f.d]) {
-      GfsGradient e;
-
-      f.neighbor = n.c[f.d];
-      gfs_face_gradient (&f, &e, v->i, -1);
-      g.a += e.a;
-      g.b += e.b;
-    }
-    else if (f.d/2 == c) {
-      g.a += 1.;
-      g.b -= v0;
-    }
-
-  return g.b - g.a*v0;
 }
 
 static FttCell * cell_corner_neighbor (FttCell * cell,

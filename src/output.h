@@ -131,7 +131,7 @@ struct _GfsOutputSimulation {
   GfsOutput parent;
 
   gint max_depth;
-  GfsVariable * var;
+  GSList * var;
   gboolean binary, surface;
 };
 

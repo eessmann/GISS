@@ -37,8 +37,7 @@ static FttVector rpos[FTT_NEIGHBORS] = {
 
 static void symmetry (FttCellFace * f, GfsBc * b)
 {
-  if (b->v->i == GFS_VELOCITY_INDEX (f->d/2) ||
-      b->v->i == GFS_GRADIENT_INDEX (f->d/2))
+  if (b->v->component == f->d/2)
     GFS_VARIABLE (f->cell, b->v->i) = - GFS_VARIABLE (f->neighbor, b->v->i);
   else
     GFS_VARIABLE (f->cell, b->v->i) =   GFS_VARIABLE (f->neighbor, b->v->i);
@@ -46,8 +45,7 @@ static void symmetry (FttCellFace * f, GfsBc * b)
 
 static void face_symmetry (FttCellFace * f, GfsBc * b)
 {
-  if (b->v->i == GFS_VELOCITY_INDEX (f->d/2) ||
-      b->v->i == GFS_GRADIENT_INDEX (f->d/2))
+  if (b->v->component == f->d/2)
     GFS_STATE (f->cell)->f[f->d].v = 
       GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = 0.;
   else
@@ -213,8 +211,7 @@ GfsBc * gfs_bc_value_new (GfsBcClass * k,
 static void dirichlet (FttCellFace * f, GfsBc * b)
 {
   GFS_VARIABLE (f->cell, b->v->i) = 
-    2.*gfs_function_face_value (GFS_BC_VALUE (b)->val, f, 
-		     GFS_SIMULATION (gfs_box_domain (b->b->box))->time.t)
+    2.*gfs_function_face_value (GFS_BC_VALUE (b)->val, f)
     - GFS_VARIABLE (f->neighbor, b->v->i);
 }
 
@@ -226,8 +223,7 @@ static void homogeneous_dirichlet (FttCellFace * f, GfsBc * b)
 static void face_dirichlet (FttCellFace * f, GfsBc * b)
 {
   GFS_STATE (f->cell)->f[f->d].v = 
-    gfs_function_face_value (GFS_BC_VALUE (b)->val, f,
-			     GFS_SIMULATION (gfs_box_domain (b->b->box))->time.t);
+    gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
 }
 
 static void gfs_bc_dirichlet_init (GfsBc * object)
@@ -264,8 +260,7 @@ static void neumann (FttCellFace * f, GfsBc * b)
 {
   GFS_VARIABLE (f->cell, b->v->i) = 
     GFS_VARIABLE (f->neighbor, b->v->i) +
-    gfs_function_face_value (GFS_BC_VALUE (b)->val, f, 
-		  GFS_SIMULATION (gfs_box_domain (b->b->box))->time.t)
+    gfs_function_face_value (GFS_BC_VALUE (b)->val, f)
     *ftt_cell_size (f->cell);
 }
 
@@ -278,8 +273,7 @@ static void face_neumann (FttCellFace * f, GfsBc * b)
 {
   GFS_STATE (f->cell)->f[f->d].v = 
     GFS_VARIABLE (f->neighbor, b->v->i) +
-    gfs_function_face_value (GFS_BC_VALUE (b)->val, f, 
-	         GFS_SIMULATION (gfs_box_domain (b->b->box))->time.t)
+    gfs_function_face_value (GFS_BC_VALUE (b)->val, f)
     *ftt_cell_size (f->cell)/2.;
 }
 
@@ -743,8 +737,8 @@ static void inflow_constant_read (GtsObject ** o, GtsFile * fp)
 {
   GfsBoundary * b = GFS_BOUNDARY (*o);  
   FttComponent c;
-  GfsVariable * v;
   GfsFunction * un = GFS_BOUNDARY_INFLOW_CONSTANT (*o)->un;
+  GfsVariable ** v;
 
   if (GTS_OBJECT_CLASS (gfs_boundary_inflow_constant_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_boundary_inflow_constant_class ())->parent_class->read) 
@@ -754,14 +748,14 @@ static void inflow_constant_read (GtsObject ** o, GtsFile * fp)
 
   gfs_function_read (un, gfs_box_domain (b->box), fp);
 
-  v = gfs_variable_from_name (gfs_box_domain (b->box)->variables, "U");
-  for (c = 0; c < FTT_DIMENSION; c++, v = v->next)
+  v = gfs_domain_velocity (gfs_box_domain (b->box));
+  for (c = 0; c < FTT_DIMENSION; c++)
     if (c == b->d/2)
       gfs_boundary_add_bc (b, gfs_bc_value_new (gfs_bc_dirichlet_class (),
-						v, un, FALSE));
+						v[c], un, FALSE));
     else
       gfs_boundary_add_bc (b, gfs_bc_value_new (gfs_bc_dirichlet_class (),
-						v, NULL, FALSE));
+						v[c], NULL, FALSE));
 }
 
 static void gfs_boundary_inflow_constant_class_init (GtsObjectClass * klass)
@@ -809,9 +803,9 @@ static GtsColor outflow_color (GtsObject * o)
 
 static void outflow_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsBoundary * b = GFS_BOUNDARY (*o);  
-  FttComponent c;
-  GfsVariable * v;
+  GfsBoundary * b = GFS_BOUNDARY (*o);
+  GfsDomain * domain;
+  GfsVariable ** v;
 
   if (GTS_OBJECT_CLASS (gfs_boundary_outflow_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_boundary_outflow_class ())->parent_class->read) 
@@ -819,14 +813,14 @@ static void outflow_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  v = gfs_variable_from_name (gfs_box_domain (b->box)->variables, "U");
-  for (c = 0; c < b->d/2; c++, v = v->next) 
-    ;
-
-  gfs_boundary_add_bc (b, gfs_bc_value_new (gfs_bc_neumann_class (), v, NULL,
-					    FALSE));
+  domain = gfs_box_domain (b->box);
+  v = gfs_domain_velocity (domain);
+  gfs_boundary_add_bc (b, gfs_bc_value_new (gfs_bc_neumann_class (),
+					    v[b->d/2],
+					    NULL, FALSE));
   gfs_boundary_add_bc (b, gfs_bc_value_new (gfs_bc_dirichlet_class (),
-					    gfs_p, NULL, FALSE));
+					    gfs_variable_from_name (domain->variables, "P"),
+					    NULL, FALSE));
 }
 
 static void gfs_boundary_outflow_class_init (GfsBoundaryClass * klass)

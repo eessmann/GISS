@@ -380,11 +380,15 @@ void gfs_event_init (GfsEvent * event,
  */
 void gfs_event_do (GfsEvent * event, GfsSimulation * sim)
 {
+  GfsEventClass * klass;
+
   g_return_if_fail (event != NULL);
   g_return_if_fail (sim != NULL);
 
-  g_assert (GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event);
-  (* GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event) (event, sim);
+  klass = GFS_EVENT_CLASS (GTS_OBJECT (event)->klass);
+  g_assert (klass->event);
+  if ((* klass->event) (event, sim) && klass->post_event)
+    (* klass->post_event) (event, sim);
 }
 
 /**
@@ -530,23 +534,16 @@ static void init_vf (FttCell * cell, gpointer * data)
 {
   GfsVariable * v = data[0];
   GfsFunction * f = data[1];
-  GfsSimulation * sim = data[2];
-  FttVector p;
 
-  if (v->centered)
-    ftt_cell_pos (cell, &p);
-  else
-    gfs_cell_cm (cell, &p);
-  GFS_VARIABLE (cell, v->i) = gfs_function_value (f, cell, &p, sim->time.t);
+  GFS_VARIABLE (cell, v->i) = gfs_function_value (f, cell);
 }
 
 static void init_f (GfsVariable * v, GfsFunction * f, GfsDomain * domain)
 {
-  gpointer data[3];
+  gpointer data[2];
   
   data[0] = v;
   data[1] = f;
-  data[2] = domain;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) init_vf, data);
 }
@@ -670,30 +667,35 @@ static void sum_volume (FttCell * cell, GtsRange * vol)
     gts_range_add_value (vol, size*size);
 }
 
-static void add_ddiv (FttCell * cell, gdouble * ddiv)
+static void add_ddiv (FttCell * cell, gpointer * data)
 {
+  gdouble * ddiv = data[0];
+  GfsVariable * div = data[1];
   gdouble size = ftt_cell_size (cell);
   
   if (GFS_IS_MIXED (cell))
-    GFS_STATE (cell)->div += size*size*GFS_STATE (cell)->solid->a*(*ddiv);
+    GFS_VARIABLE (cell, div->i) += size*size*GFS_STATE (cell)->solid->a*(*ddiv);
   else
-    GFS_STATE (cell)->div += size*size*(*ddiv);
+    GFS_VARIABLE (cell, div->i) += size*size*(*ddiv);
 }
 
-static void correct_div (GfsDomain * domain)
+static void correct_div (GfsDomain * domain, GfsVariable * v)
 {
   GtsRange div, vol;
   gdouble ddiv;
+  gpointer data[2];
 
-  div = gfs_domain_stats_variable (domain, gfs_div, FTT_TRAVERSE_LEAFS, -1);
+  div = gfs_domain_stats_variable (domain, v, FTT_TRAVERSE_LEAFS, -1);
   gts_range_init (&vol);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) sum_volume, &vol);
   gts_range_update (&vol);
   ddiv = - div.mean/vol.mean;
 
+  data[0] = &ddiv;
+  data[1] = v;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) add_ddiv, &ddiv);
+			    (FttCellTraverseFunc) add_ddiv, data);
 }
 
 static void stream_from_vorticity (GfsDomain * domain,
@@ -703,43 +705,44 @@ static void stream_from_vorticity (GfsDomain * domain,
 {
   GfsNorm norm;
   guint maxlevel, maxit = 100;
+  GfsVariable * res, * dia;
 
   g_return_if_fail (domain != NULL);
 
-  gfs_poisson_coefficients (domain, NULL, 1.);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, gfs_gx);
-  correct_div (domain); /* enforce solvability condition */
+  dia = gfs_temporary_variable (domain);
+  gfs_poisson_coefficients (domain, dia, NULL, 1.);
+  correct_div (domain, vorticity); /* enforce solvability condition */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, stream);
-  gfs_residual (domain, FTT_DIMENSION, FTT_TRAVERSE_LEAFS, -1, stream, vorticity, gfs_res);
-  norm = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1.);
+  res = gfs_temporary_variable (domain);
+  gfs_residual (domain, FTT_DIMENSION, FTT_TRAVERSE_LEAFS, -1, stream, vorticity, dia, res);
+  norm = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res);
   maxlevel = gfs_domain_depth (domain);
   while (norm.infty > tolerance && maxit) {
-    gfs_poisson_cycle (domain, FTT_DIMENSION, 0, maxlevel, 4, stream, vorticity);
-    norm = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1.);
+    gfs_poisson_cycle (domain, FTT_DIMENSION, 0, maxlevel, 4, stream, vorticity, dia, res);
+    norm = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res);
     maxit--;
   }
   if (maxit == 0)
     g_warning ("GfsInitVorticity: cannot solve streamfunction from vorticity\n"
 	       "  (residual: %g)", norm.infty);
+  gts_object_destroy (GTS_OBJECT (res));
+  gts_object_destroy (GTS_OBJECT (dia));
 }
 
-static void init_from_streamfunction (FttCell * cell, GfsVariable * stream)
+static void init_from_streamfunction (FttCell * cell, GfsInitVorticity * init)
 {
   gdouble size = ftt_cell_size (cell);
 
-  GFS_STATE (cell)->u = - gfs_center_gradient (cell, FTT_Y, stream->i)/size;
-  GFS_STATE (cell)->v = gfs_center_gradient (cell, FTT_X, stream->i)/size;
+  GFS_VARIABLE (cell, init->u[0]->i) = - gfs_center_gradient (cell, FTT_Y, init->stream->i)/size;
+  GFS_VARIABLE (cell, init->u[1]->i) = gfs_center_gradient (cell, FTT_X, init->stream->i)/size;
 }
 
 static void compute_vorticity (FttCell * cell, GfsInitVorticity * init)
 {
-  FttVector p;
   gdouble size = ftt_cell_size (cell);
 
-  gfs_cell_cm (cell, &p);
-  GFS_STATE (cell)->div = gfs_function_value (init->f, cell, &p, 0.)*size*size;  
+  GFS_VARIABLE (cell, init->vort->i) = gfs_function_value (init->f, cell)*size*size;  
 }
 
 static gboolean gfs_init_vorticity_event (GfsEvent * event, 
@@ -747,12 +750,20 @@ static gboolean gfs_init_vorticity_event (GfsEvent * event,
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class)->event) 
       (event, sim)) {
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+    GfsInitVorticity * init = GFS_INIT_VORTICITY (event);
+    GfsDomain * domain = GFS_DOMAIN (sim);
+
+    init->vort = gfs_temporary_variable (domain);
+    init->stream = gfs_temporary_variable (domain);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) compute_vorticity, event);
-    stream_from_vorticity (GFS_DOMAIN (sim), gfs_gy, gfs_div, 1e-9);
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
+    stream_from_vorticity (domain, init->stream, init->vort, 1e-9);
+    gts_object_destroy (GTS_OBJECT (init->vort));
+    init->u = gfs_domain_velocity (domain);
+    gfs_domain_cell_traverse (domain, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) init_from_streamfunction, gfs_gy);
+			      (FttCellTraverseFunc) init_from_streamfunction, init);
+    gts_object_destroy (GTS_OBJECT (init->stream));
     return TRUE;
   }
   return FALSE;

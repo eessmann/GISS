@@ -37,16 +37,18 @@
  */
 void gfs_cell_coarse_init (FttCell * cell, GfsDomain * domain)
 {
-  GfsVariable * v;
+  GSList * i;
 
   g_return_if_fail (cell != NULL);
   g_return_if_fail (!FTT_CELL_IS_LEAF (cell));
   g_return_if_fail (domain != NULL);
 
-  v = domain->variables;
-  while (v) {
+  i = domain->variables;
+  while (i) {
+    GfsVariable * v = i->data;
+  
     (* v->fine_coarse) (cell, v);
-    v = v->next;
+    i = i->next;
   }
 }
 
@@ -64,7 +66,7 @@ void gfs_cell_coarse_init (FttCell * cell, GfsDomain * domain)
 void gfs_cell_fine_init (FttCell * cell, GfsDomain * domain)
 {
   FttCell * parent;
-  GfsVariable * v;
+  GSList * i;
 
   g_return_if_fail (cell != NULL);
   g_return_if_fail (!FTT_CELL_IS_ROOT (cell));
@@ -75,10 +77,12 @@ void gfs_cell_fine_init (FttCell * cell, GfsDomain * domain)
   g_assert (GFS_CELL_IS_BOUNDARY (parent) || GFS_IS_FLUID (parent));
 
   gfs_cell_init (cell, domain);
-  v = domain->variables;
-  while (v) {
+  i = domain->variables;
+  while (i) {
+    GfsVariable * v = i->data;
+
     GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (parent, v->i);
-    v = v->next;
+    i = i->next;
   }
 
   if (!GFS_CELL_IS_BOUNDARY (parent)) {
@@ -86,8 +90,10 @@ void gfs_cell_fine_init (FttCell * cell, GfsDomain * domain)
     FttComponent c;
     
     ftt_cell_relative_pos (cell, &p);
-    v = domain->variables;
-    while (v) {
+    i = domain->variables;
+    while (i) {
+      GfsVariable * v = i->data;
+
       for (c = 0; c < FTT_DIMENSION; c++)
 	GFS_VARIABLE (cell, v->i) += (&p.x)[c]*
 #if 1
@@ -95,12 +101,20 @@ void gfs_cell_fine_init (FttCell * cell, GfsDomain * domain)
 #else
           gfs_center_gradient (parent, c, v->i);
 #endif
-      v = v->next;
+      i = i->next;
     }
   }
 }
 
 /* GfsAdapt: Object */
+
+typedef struct {
+  GfsSimulation * sim;
+  guint nc;
+  GtsEHeap * hcoarse, * hfine;
+  gdouble clim;
+  GfsVariable * hcoarsev, * hfinev, * costv, * c;
+} AdaptParams;
 
 static void gfs_adapt_destroy (GtsObject * o)
 {
@@ -337,6 +351,7 @@ static gboolean gfs_adapt_vorticity_event (GfsEvent * event,
       (event, sim)) {
     GfsAdaptVorticity * a = GFS_ADAPT_VORTICITY (event);
 
+    a->u = gfs_domain_velocity (GFS_DOMAIN (sim));
     a->maxa = gfs_domain_norm_velocity (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1).infty;
     return TRUE;
   }
@@ -352,7 +367,7 @@ static gdouble cost_vorticity (FttCell * cell, GfsAdaptVorticity * a)
 {
   if (a->maxa <= 0.)
     return 0.;
-  return fabs (gfs_vorticity (cell))*ftt_cell_size (cell)/a->maxa;
+  return fabs (gfs_vorticity (cell, a->u))*ftt_cell_size (cell)/a->maxa;
 }
 
 static void gfs_adapt_vorticity_init (GfsAdaptVorticity * object)
@@ -442,9 +457,7 @@ static void gfs_adapt_function_class_init (GtsObjectClass * klass)
 
 static gdouble function_cost (FttCell * cell, GfsAdaptFunction * a)
 {
-  FttVector p;
-  gfs_cell_cm (cell, &p);
-  return gfs_function_value (a->f, cell, &p, gfs_object_simulation (a)->time.t);
+  return gfs_function_value (a->f, cell);
 }
 
 static void gfs_adapt_function_init (GfsAdaptFunction * object)
@@ -682,9 +695,9 @@ GfsAdaptNotBox * gfs_adapt_not_box_new (GfsEventClass * klass,
   return a;
 }
 
-#define CELL_COST(cell) (GFS_STATE (cell)->div)
-#define CELL_HCOARSE(c) (GFS_DOUBLE_TO_POINTER (GFS_STATE (c)->dp))
-#define CELL_HFINE(c)   (GFS_DOUBLE_TO_POINTER (GFS_STATE (c)->g[0]))
+#define CELL_COST(cell) (GFS_VARIABLE (cell, p->costv->i))
+#define CELL_HCOARSE(c) (GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (c, p->hcoarsev->i)))
+#define CELL_HFINE(c)   (GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (c, p->hfinev->i)))
 
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {
@@ -693,32 +706,38 @@ static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 			    domain);
 }
 
-static FttCell * remove_top_coarse (GtsEHeap * h, gdouble * cost)
+static FttCell * remove_top_coarse (GtsEHeap * h, gdouble * cost, GfsVariable * hcoarse)
 {
   FttCell * cell = gts_eheap_remove_top (h, cost);
-  if (cell) GFS_STATE (cell)->dp = 0.;
+
+  if (cell)
+    GFS_VARIABLE (cell, hcoarse->i) = 0.;
   while (cell && !FTT_CELL_IS_LEAF (cell)) {
     cell = gts_eheap_remove_top (h, cost);
-    if (cell) GFS_STATE (cell)->dp = 0.;
+    if (cell) 
+      GFS_VARIABLE (cell, hcoarse->i) = 0.;
   }
   return cell;
 }
 
-static FttCell * remove_top_fine (GtsEHeap * h, gdouble * cost)
+static FttCell * remove_top_fine (GtsEHeap * h, gdouble * cost, GfsVariable * hfine)
 {
   FttCell * cell = gts_eheap_remove_top (h, cost);
-  if (cell) GFS_STATE (cell)->g[0] = 0.;
+
+  if (cell)
+    GFS_VARIABLE (cell, hfine->i) = 0.;
   while (cell && ftt_cell_depth (cell) - ftt_cell_level (cell) != 1) {
     cell = gts_eheap_remove_top (h, cost);
-    if (cell) GFS_STATE (cell)->g[0] = 0.;
+    if (cell) 
+      GFS_VARIABLE (cell, hfine->i) = 0.;
   }
   return cell;
 }
 
-static void cell_coarse_init (FttCell * cell, GfsDomain * domain)
+static void cell_coarse_init (FttCell * cell, AdaptParams * p)
 {
   CELL_COST (cell) = 0.;
-  gfs_cell_coarse_init (cell, domain);
+  gfs_cell_coarse_init (cell, GFS_DOMAIN (p->sim));
 }
 
 static gdouble refine_cost (FttCell * cell, GfsSimulation * sim)
@@ -737,15 +756,13 @@ static gdouble refine_cost (FttCell * cell, GfsSimulation * sim)
   return cost;
 }
 
-static void compute_cost (FttCell * cell, gpointer * data)
+static void compute_cost (FttCell * cell, AdaptParams * p)
 {
-  guint * nc = data[1];
-
-  (*nc)++;
+  p->nc++;
   if (!GFS_IS_MIXED (cell)) {
-    gdouble cost = refine_cost (cell, data[0]);
+    gdouble cost = refine_cost (cell, p->sim);
 
-    GFS_STATE (cell)->dp = GFS_STATE (cell)->g[0] = 0.;
+    GFS_VARIABLE (cell, p->hcoarsev->i) = GFS_VARIABLE (cell, p->hfinev->i) = 0.;
     if (FTT_CELL_IS_LEAF (cell)) {
       CELL_COST (cell) = cost;
     }
@@ -773,23 +790,21 @@ static void compute_cost (FttCell * cell, gpointer * data)
   }
 }
 
-static void store_cost (FttCell * cell, GfsVariable * c)
+static void store_cost (FttCell * cell, AdaptParams * p)
 {
-  GFS_VARIABLE (cell, c->i) = GFS_IS_MIXED (cell) ? 0. : CELL_COST (cell);
+  GFS_VARIABLE (cell, p->c->i) = GFS_IS_MIXED (cell) ? 0. : CELL_COST (cell);
 }
 
 static guint minlevel (FttCell * cell, GfsSimulation * sim)
 {
   guint minlevel = 0;
   GSList * i = sim->adapts->items;
-  FttVector p;
 
-  ftt_cell_pos (cell, &p);
   while (i) {
     GfsAdapt * a = i->data;
     guint l;
     
-    if (a->active && (l = gfs_function_value (a->minlevel, NULL, &p, sim->time.t)) > minlevel)
+    if (a->active && (l = gfs_function_value (a->minlevel, cell)) > minlevel)
       minlevel = l;
     i = i->next;
   }
@@ -800,83 +815,68 @@ static guint maxlevel (FttCell * cell, GfsSimulation * sim)
 {
   GSList * i = sim->adapts->items;
   guint maxlevel = G_MAXINT;
-  FttVector p;
 
-  ftt_cell_pos (cell, &p);
   while (i) {
     GfsAdapt * a = i->data;
     guint l;
 
-    if (a->active && (l = gfs_function_value (a->maxlevel, NULL, &p, sim->time.t)) < maxlevel)
+    if (a->active && (l = gfs_function_value (a->maxlevel, cell)) < maxlevel)
       maxlevel = l;
     i = i->next;
   }
   return maxlevel;
 }
 
-static void fill_heaps (FttCell * cell, gpointer * data)
+static void fill_heaps (FttCell * cell, AdaptParams * p)
 {
   /* refinement of solid cells not implemented (yet) */
   if (!GFS_IS_MIXED (cell)) {
-    GtsEHeap * hcoarse = data[0], * hfine = data[1];
-    GfsSimulation * sim = data[2];
     guint level = ftt_cell_level (cell);
     FttCell * parent = ftt_cell_parent (cell);
 
-    if (level < maxlevel (cell, sim))
-      GFS_DOUBLE_TO_POINTER (GFS_STATE (cell)->dp) = 
-	gts_eheap_insert_with_key (hcoarse, cell, - CELL_COST (cell));
-    if (parent && GFS_STATE (parent)->g[0] == 0. && !GFS_IS_MIXED (parent) && 
-	level > minlevel (parent, sim))
-      GFS_DOUBLE_TO_POINTER (GFS_STATE (parent)->g[0]) = 
-	gts_eheap_insert_with_key (hfine, parent, CELL_COST (parent));
+    if (level < maxlevel (cell, p->sim))
+      GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, p->hcoarsev->i)) = 
+	gts_eheap_insert_with_key (p->hcoarse, cell, - CELL_COST (cell));
+    if (parent && GFS_VARIABLE (parent, p->hfinev->i) == 0. && !GFS_IS_MIXED (parent) && 
+	level > minlevel (parent, p->sim))
+      GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (parent, p->hfinev->i)) = 
+	gts_eheap_insert_with_key (p->hfine, parent, CELL_COST (parent));
   }
 }
 
-#ifdef DEBUG
-static void cost_stats (FttCell * cell, GtsRange * r)
-{
-  if (!GFS_IS_MIXED (cell))
-    gts_range_add_value (r, CELL_COST (cell));
-}
-#endif /* DEBUG */
-
-static gboolean fine_cell_coarsenable (FttCell * cell, gpointer * data)
+static gboolean fine_cell_coarsenable (FttCell * cell, AdaptParams * p)
 {
   if (GFS_CELL_IS_BOUNDARY (cell))
     return TRUE;
   if (GFS_IS_MIXED (cell))
     return FALSE;
-  if (CELL_COST (cell) >= -(*((gdouble *)data[4])))
+  if (CELL_COST (cell) >= -p->clim)
     return FALSE;
-  if (ftt_cell_level (cell) < minlevel (cell, data[2]))
+  if (ftt_cell_level (cell) < minlevel (cell, p->sim))
     return FALSE;
   return TRUE;      
 }
 
-static void fine_cell_cleanup (FttCell * cell, gpointer * data)
+static void fine_cell_cleanup (FttCell * cell, AdaptParams * p)
 {
   if (!GFS_CELL_IS_BOUNDARY (cell)) {
-    guint * nc = data[3];
-    gpointer p;
+    gpointer o;
 
-    (*nc)--;
-    if ((p = CELL_HCOARSE (cell)))
-      gts_eheap_remove (data[0], p);
-    if ((p = CELL_HFINE (cell)))
-      gts_eheap_remove (data[1], p);
+    p->nc--;
+    if ((o = CELL_HCOARSE (cell)))
+      gts_eheap_remove (p->hcoarse, o);
+    if ((o = CELL_HFINE (cell)))
+      gts_eheap_remove (p->hfine, o);
   }
   gfs_cell_cleanup (cell);
 }
 
-static void cell_fine_init (FttCell * cell, gpointer * data)
+static void cell_fine_init (FttCell * cell, AdaptParams * p)
 {
-  gfs_cell_fine_init (cell, data[2]);
+  gfs_cell_fine_init (cell, GFS_DOMAIN (p->sim));
   CELL_COST (cell) = G_MAXDOUBLE;
-  if (!GFS_CELL_IS_BOUNDARY (ftt_cell_parent (cell))) {
-    guint * nc = data[3];
-    (*nc)++;
-  }
+  if (!GFS_CELL_IS_BOUNDARY (ftt_cell_parent (cell)))
+    p->nc++;
 }
 
 /**
@@ -925,103 +925,95 @@ void gfs_simulation_adapt (GfsSimulation * simulation,
     i = i->next;
   }
   if (active) {
-    guint depth, nc = 0;
+    guint depth;
     gint l;
-    GfsVariable * v;
-    GtsEHeap * hcoarse, * hfine;
-    gdouble ccoarse = 0., cfine = 0., clim;
+    GSList * i;
+    gdouble ccoarse = 0., cfine = 0.;
     FttCell * coarse, * fine;
-    gpointer data[5];
     gboolean changed = TRUE;
+    AdaptParams apar;
     
     depth = gfs_domain_depth (domain);
+
+    apar.sim = simulation;
+    apar.nc = 0;
+    apar.costv = gfs_temporary_variable (domain);
+    apar.hcoarsev = gfs_temporary_variable (domain);
+    apar.hfinev = gfs_temporary_variable (domain);
+    apar.hcoarse = gts_eheap_new (NULL, NULL);
+    apar.hfine = gts_eheap_new (NULL, NULL);
+    apar.c = c;
+
     gfs_domain_cell_traverse (domain, 
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) cell_coarse_init,
-			      domain);
-    data[0] = simulation;
-    data[1] = &nc;
+			      (FttCellTraverseFunc) cell_coarse_init, &apar);
     for (l = depth; l >= 0; l--)
       gfs_domain_cell_traverse (domain, 
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-				(FttCellTraverseFunc) compute_cost, data);
-    if (c)
+				(FttCellTraverseFunc) compute_cost, &apar);
+    if (apar.c)
       gfs_domain_cell_traverse (domain, 
 				FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-				(FttCellTraverseFunc) store_cost, c);
-#ifdef DEBUG
-    {
-      GtsRange r;
-      gts_range_init (&r);
-      gfs_domain_cell_traverse (domain, FTT_POST_ORDER, 
-				FTT_TRAVERSE_NON_LEAFS, -1,
-				(FttCellTraverseFunc) cost_stats, &r);
-      gts_range_update (&r);
-      fprintf (stderr, "cost_before: ");
-      gts_range_print (&r, stderr);
-      fprintf (stderr, "\n");
-    }
-#endif
-    hcoarse = gts_eheap_new (NULL, NULL);
-    hfine = gts_eheap_new (NULL, NULL);
-    gts_eheap_freeze (hcoarse);
-    gts_eheap_freeze (hfine);
-    data[0] = hcoarse;
-    data[1] = hfine;
-    data[2] = simulation;
-    data[3] = &nc;
-    data[4] = &clim;
+				(FttCellTraverseFunc) store_cost, &apar);
+    gts_eheap_freeze (apar.hcoarse);
+    gts_eheap_freeze (apar.hfine);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) fill_heaps, data);
-    gts_eheap_thaw (hcoarse);
-    gts_eheap_thaw (hfine);
-    coarse = remove_top_coarse (hcoarse, &ccoarse);
-    fine = remove_top_fine (hfine, &cfine);
+			      (FttCellTraverseFunc) fill_heaps, &apar);
+    gts_eheap_thaw (apar.hcoarse);
+    gts_eheap_thaw (apar.hfine);
+    coarse = remove_top_coarse (apar.hcoarse, &ccoarse, apar.hcoarsev);
+    fine = remove_top_fine (apar.hfine, &cfine, apar.hfinev);
 #ifdef DEBUG
-    fprintf (stderr, "initial: %g %g %d\n", cfine, -ccoarse, nc);
+    fprintf (stderr, "initial: %g %g %d\n", cfine, -ccoarse, apar.nc);
 #endif /* DEBUG */
     while (changed) {
 #ifdef DEBUG
-      fprintf (stderr, "%g %g %d\n", cfine, -ccoarse, nc);
+      fprintf (stderr, "%g %g %d\n", cfine, -ccoarse, apar.nc);
 #endif /* DEBUG */
       changed = FALSE;
-      if (fine && ((cfine < -ccoarse && nc > maxcells) || 
-		   (cfine < cmax && nc >= mincells))) {
-	guint n = nc;
+      if (fine && ((cfine < -ccoarse && apar.nc > maxcells) || 
+		   (cfine < cmax && apar.nc >= mincells))) {
+	guint n = apar.nc;
 	
-	clim = MIN (ccoarse, -cmax);
+	apar.clim = MIN (ccoarse, -cmax);
 	ftt_cell_coarsen (fine,
-			  (FttCellCoarsenFunc) fine_cell_coarsenable, data,
-			  (FttCellCleanupFunc) fine_cell_cleanup, data);
+			  (FttCellCoarsenFunc) fine_cell_coarsenable, &apar,
+			  (FttCellCleanupFunc) fine_cell_cleanup, &apar);
 #ifdef DEBUG
-	fprintf (stderr, "coarsen: %d\n", nc);
+	fprintf (stderr, "coarsen: %d\n", apar.nc);
 #endif /* DEBUG */
-	fine = remove_top_fine (hfine, &cfine);
-	if (s) gts_range_add_value (&s->removed, n - nc);
+	fine = remove_top_fine (apar.hfine, &cfine, apar.hfinev);
+	if (s)
+	  gts_range_add_value (&s->removed, n - apar.nc);
 	changed = TRUE;
       }
-      if (coarse && ((-ccoarse > cfine && nc < mincells) ||
-		     (-ccoarse > cmax && nc <= maxcells))) {
-	guint level = ftt_cell_level (coarse), n = nc;
+      if (coarse && ((-ccoarse > cfine && apar.nc < mincells) ||
+		     (-ccoarse > cmax && apar.nc <= maxcells))) {
+	guint level = ftt_cell_level (coarse), n = apar.nc;
 	
-	ftt_cell_refine_corners (coarse, (FttCellInitFunc) cell_fine_init, data);
-	ftt_cell_refine_single (coarse, (FttCellInitFunc) cell_fine_init, data);
+	ftt_cell_refine_corners (coarse, (FttCellInitFunc) cell_fine_init, &apar);
+	ftt_cell_refine_single (coarse, (FttCellInitFunc) cell_fine_init, &apar);
 	if (level + 1 > depth)
 	  depth = level + 1;
 #ifdef DEBUG
-	fprintf (stderr, "refine: %d\n", nc);
+	fprintf (stderr, "refine: %d\n", apar.nc);
 #endif /* DEBUG */
-	coarse = remove_top_coarse (hcoarse, &ccoarse);
-	if (s) gts_range_add_value (&s->created, nc - n);
+	coarse = remove_top_coarse (apar.hcoarse, &ccoarse, apar.hcoarsev);
+	if (s) 
+	  gts_range_add_value (&s->created, apar.nc - n);
 	changed = TRUE;
       }
     }
     if (s) {
       gts_range_add_value (&s->cmax, -ccoarse);
-      gts_range_add_value (&s->ncells, nc);
+      gts_range_add_value (&s->ncells, apar.nc);
     }
-    gts_eheap_destroy (hcoarse);
-    gts_eheap_destroy (hfine);
+
+    gts_eheap_destroy (apar.hcoarse);
+    gts_eheap_destroy (apar.hfine);
+    gts_object_destroy (GTS_OBJECT (apar.costv));
+    gts_object_destroy (GTS_OBJECT (apar.hcoarsev));
+    gts_object_destroy (GTS_OBJECT (apar.hfinev));
     
     for (l = depth - 2; l >= 0; l--)
       gfs_domain_cell_traverse (domain, 
@@ -1030,30 +1022,11 @@ void gfs_simulation_adapt (GfsSimulation * simulation,
 				domain);
     gfs_domain_match (domain);
     gfs_set_merged (domain);
-    v = domain->variables;
-    while (v) {
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v);
-      v = v->next;
+    i = domain->variables;
+    while (i) {
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
+      i = i->next;
     }
-    
-#ifdef DEBUG
-    {
-      GtsRange r;
-      
-      data[0] = simulation;
-      data[1] = &nc;
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-				(FttCellTraverseFunc) compute_cost, data);
-      gts_range_init (&r);
-      gfs_domain_cell_traverse (domain, FTT_POST_ORDER, 
-				FTT_TRAVERSE_NON_LEAFS, -1,
-				(FttCellTraverseFunc) cost_stats, &r);
-      gts_range_update (&r);
-      fprintf (stderr, "cost_after: ");
-      gts_range_print (&r, stderr);
-      fprintf (stderr, "\n");
-    }
-#endif /* DEBUG */
   }
 
   gfs_domain_timer_stop (domain, "adapt");

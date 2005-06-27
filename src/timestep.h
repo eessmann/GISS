@@ -50,27 +50,36 @@ void          gfs_multilevel_params_read      (GfsMultilevelParams * par,
 void          gfs_correct_normal_velocities   (GfsDomain * domain,
 					       guint dimension,
 					       GfsVariable * p,
+					       GfsVariable ** g,
 					       gdouble dt);
 void          gfs_mac_projection              (GfsDomain * domain,
 					       GfsMultilevelParams * par,
-					       GfsAdvectionParams * apar);
+					       GfsAdvectionParams * apar,
+					       GfsVariable * p,
+					       GfsVariable ** g);
 void          gfs_correct_centered_velocities (GfsDomain * domain,
 					       guint dimension,
+					       GfsVariable ** g,
 					       gdouble dt);
 void          gfs_approximate_projection      (GfsDomain * domain,
 					       GfsMultilevelParams * par,
-					       GfsAdvectionParams * apar);
+					       GfsAdvectionParams * apar,
+					       GfsVariable * p,
+					       GfsVariable * res);
 void          gfs_predicted_face_velocities   (GfsDomain * domain,
 					       guint d,
 					       GfsAdvectionParams * par);
 
 void          gfs_diffusion                   (GfsDomain * domain,
 					       GfsMultilevelParams * par,
-					       GfsVariable * v);
+					       GfsVariable * v,
+					       GfsVariable * rhs, 
+					       GfsVariable * dia);
 void          gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
-					       guint dimension,
-					       GfsAdvectionParams * par,
-					       GfsMultilevelParams * dpar);
+							 guint dimension,
+							 GfsAdvectionParams * par,
+							 GfsMultilevelParams * dpar,
+							 GfsVariable ** g);
 void          gfs_tracer_advection_diffusion  (GfsDomain * domain,
 					       GfsAdvectionParams * par,
 					       GfsMultilevelParams * dpar,

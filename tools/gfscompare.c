@@ -109,7 +109,9 @@ static GtsSurface * surface_from_domain (GfsDomain * domain)
 static void difference_triangulated (GfsVertex * v, gpointer * data)
 {
   GtsSurface * s = data[0];
-  GfsVariable * var = data[1];
+  GfsVariable * var1 = data[1];
+  GfsVariable * var2 = data[2];
+  GfsVariable * e = data[3];
   GtsFace * f = gts_point_locate (GTS_POINT (v), s, NULL);
 
   if (f != NULL && gts_triangle_quality (GTS_TRIANGLE (f)) > 0.8) {
@@ -128,11 +130,11 @@ static void difference_triangulated (GfsVertex * v, gpointer * data)
     g_assert (det != 0.);
     a = (x*y2 - y*x2)/det;
     b = (y*x1 - x*y1)/det;
-    fv1 = GFS_VARIABLE (GFS_VERTEX (v1)->cell, var->i);
-    fv2 = GFS_VARIABLE (GFS_VERTEX (v2)->cell, var->i);
-    fv3 = GFS_VARIABLE (GFS_VERTEX (v3)->cell, var->i);
-    GTS_POINT (v)->z = GFS_STATE (v->cell)->dp = 
-      GFS_VARIABLE (v->cell, var->i) -
+    fv1 = GFS_VARIABLE (GFS_VERTEX (v1)->cell, var2->i);
+    fv2 = GFS_VARIABLE (GFS_VERTEX (v2)->cell, var2->i);
+    fv3 = GFS_VARIABLE (GFS_VERTEX (v3)->cell, var2->i);
+    GTS_POINT (v)->z = GFS_VARIABLE (v->cell, e->i) = 
+      GFS_VARIABLE (v->cell, var1->i) -
       (fv1 + a*(fv2 - fv1) + b*(fv3 - fv1));
   }
 }
@@ -148,7 +150,7 @@ static gboolean is_mixed (FttCell * cell, guint level)
   return FALSE;
 }
 
-static void inject (FttCell * cell)
+static void inject (FttCell * cell, GfsVariable * e)
 {
   if (!FTT_CELL_IS_LEAF (cell)) {
     FttCellChildren child;
@@ -157,15 +159,17 @@ static void inject (FttCell * cell)
     ftt_cell_children (cell, &child);
     for (i = 0; i < FTT_CELLS; i++)
       if (child.c[i]) {
-	GFS_STATE (child.c[i])->dp = GFS_STATE (cell)->dp;
-	inject (child.c[i]);
+	GFS_VARIABLE (child.c[i], e->i) = GFS_VARIABLE (cell, e->i);
+	inject (child.c[i], e);
       }
   }
 }
 
 static gboolean difference_tree (FttCell * cell,
 				 GfsDomain * ref,
-				 GfsVariable * v,
+				 GfsVariable * v1,
+				 GfsVariable * v2,
+				 GfsVariable * e,
 				 gdouble period)
 {
   guint level = ftt_cell_level (cell);
@@ -192,22 +196,22 @@ static gboolean difference_tree (FttCell * cell,
 
     ftt_cell_children (cell, &child);
     for (i = 0; i < FTT_CELLS; i++)
-      if (child.c[i] && difference_tree (child.c[i], ref, v, period))
+      if (child.c[i] && difference_tree (child.c[i], ref, v1, v2, e, period))
 	added = TRUE;
   }
   if (!added) {
-    GFS_STATE (cell)->dp = (GFS_VARIABLE (cell, v->i) -
-			    GFS_VARIABLE (locate, v->i));
-    inject (cell);
+    GFS_VARIABLE (cell, e->i) = (GFS_VARIABLE (cell, v1->i) -
+				 GFS_VARIABLE (locate, v2->i));
+    inject (cell, e);
   }
   return TRUE;
 }
 
 static void difference_box (GfsBox * box, gpointer * data)
 {
-  gdouble * period = data[2];
+  gdouble * period = data[4];
 
-  difference_tree (box->root, data[0], data[1], *period);
+  difference_tree (box->root, data[0], data[1], data[2], data[3], *period);
 }
 
 static void difference_constant (FttCell * cell, gpointer * data)
@@ -217,6 +221,7 @@ static void difference_constant (FttCell * cell, gpointer * data)
   gboolean * centered = data[3];
   gboolean * weighted = data[4];
   gdouble * weight = data[5];
+  GfsVariable * e = data[6];
   gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
 
   if ((full == -2 || 
@@ -225,7 +230,7 @@ static void difference_constant (FttCell * cell, gpointer * data)
       (!(*centered) || a >= 0.5)) {
     gdouble w = *weighted ? ftt_cell_volume (cell)*a : 1.;
 
-    *sum += w*GFS_STATE (cell)->dp;
+    *sum += w*GFS_VARIABLE (cell, e->i);
     *weight += w;
   }
 }
@@ -239,6 +244,7 @@ static void difference (FttCell * cell, gpointer * data)
   gboolean * weighted = data[4];
   gdouble * constant = data[5];
   gboolean * mixed = data[6];
+  GfsVariable * e = data[7];
   gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
 
   if ((!(*mixed) || a < 1.) &&
@@ -246,38 +252,41 @@ static void difference (FttCell * cell, gpointer * data)
        (full == -1 && !GFS_IS_MIXED (cell)) ||
        (full >= 0 && !is_mixed (cell, full))) &&
       (!(*centered) || a >= 0.5)) {
-    gfs_norm_add (norm, GFS_STATE (cell)->dp - *constant,
+    gfs_norm_add (norm, GFS_VARIABLE (cell, e->i) - *constant,
 		  *weighted ? ftt_cell_volume (cell)*a : 1.);
     if (*histogram)
-      printf ("%g %g\n", GFS_STATE (cell)->dp, a);
+      printf ("%g %g\n", GFS_VARIABLE (cell, e->i), a);
   }
   else
-    GFS_STATE (cell)->dp = 0.;
+    GFS_VARIABLE (cell, e->i) = 0.;
 }
 
 static void compute_gradient (FttCell * cell, gpointer * data) 
 {
   GfsVariable * v = data[0];
   FttComponent * c = data[1];
+  GfsVariable * g = data[2];
 
-  GFS_STATE (cell)->g[0] = 
+  GFS_VARIABLE (cell, g->i) = 
     gfs_center_gradient (cell, *c, v->i)/ftt_cell_size (cell);
 }
 
-static void compute_log (FttCell * cell) 
+static void compute_log (FttCell * cell, GfsVariable * e) 
 {
-  GFS_STATE (cell)->dp = log10 (fabs (GFS_STATE (cell)->dp) + 1e-10);
+  GFS_VARIABLE (cell, e->i) = log10 (fabs (GFS_VARIABLE (cell, e->i)) + 1e-10);
 }
 
-static void compute_absolute (FttCell * cell)
+static void compute_absolute (FttCell * cell, GfsVariable * e)
 {
-  GFS_STATE (cell)->dp =  fabs (GFS_STATE (cell)->dp);
+  GFS_VARIABLE (cell, e->i) =  fabs (GFS_VARIABLE (cell, e->i));
 }
 
 static void difference_centered (FttCell * cell, gpointer * data)
 {
   GfsDomain * ref = data[0];
-  GfsVariable * v = data[1];
+  GfsVariable * v1 = data[1];
+  GfsVariable * v2 = data[2];
+  GfsVariable * e = data[3];
   FttVector p;
   FttCell * locate;
 
@@ -286,8 +295,8 @@ static void difference_centered (FttCell * cell, gpointer * data)
   if (locate == NULL || ftt_cell_level (locate) < ftt_cell_level (cell)) {
     fprintf (stderr, "gfscompare: the files are not comparable\n");
     exit (1);
-  }  
-  GFS_STATE (cell)->dp = GFS_VARIABLE (cell, v->i) - gfs_interpolate (locate, p, v);
+  }
+  GFS_VARIABLE (cell, e->i) = GFS_VARIABLE (cell, v1->i) - gfs_interpolate (locate, p, v2);
 }
 
 int main (int argc, char * argv[])
@@ -295,7 +304,8 @@ int main (int argc, char * argv[])
   GtsFile * fp;
   FILE * f;
   int c = 0;
-  GfsVariable * var;
+  gchar * name;
+  GfsVariable * var1, * var2, * e;
   GfsSimulation * s1, * s2;
   
   gboolean verbose = FALSE;
@@ -310,7 +320,7 @@ int main (int argc, char * argv[])
   FttComponent gradient = FTT_DIMENSION;
 
   GfsNorm norm;
-  gpointer data[7];
+  gpointer data[8];
 
   gboolean refined_error = FALSE;
   gboolean histogram = FALSE;
@@ -495,15 +505,7 @@ int main (int argc, char * argv[])
 	     "Try `gfscompare --help' for more information.\n");
     return 1; /* failure */
   }
-  var = gfs_variable_from_name (gfs_p, argv[optind]);
-  if (var == NULL) {
-    fprintf (stderr, 
-	     "gfscompare: unknown variable `%s'\n"
-	     "Try `gfscompare --help' for more information.\n",
-	     argv[optind]);
-    return 1; /* failure */
-  }
-  optind++;
+  name = argv[optind++];
 
   f = fopen (fname1, "rt");
   if (f == NULL) {
@@ -537,13 +539,31 @@ int main (int argc, char * argv[])
   gts_file_destroy (fp);
   fclose (f);
 
+  var1 = gfs_variable_from_name (GFS_DOMAIN (s1)->variables, name);
+  if (var1 == NULL) {
+    fprintf (stderr, 
+	     "gfscompare: unknown variable `%s' for `%s'\n"
+	     "Try `gfscompare --help' for more information.\n",
+	     name, fname1);
+    return 1; /* failure */
+  }
+
+  var2 = gfs_variable_from_name (GFS_DOMAIN (s2)->variables, name);
+  if (var2 == NULL) {
+    fprintf (stderr, 
+	     "gfscompare: unknown variable `%s' for `%s'\n"
+	     "Try `gfscompare --help' for more information.\n",
+	     name, fname2);
+    return 1; /* failure */
+  }
+
   if (verbose) {
     GtsRange s;
 
     norm = gfs_domain_norm_variable (GFS_DOMAIN (s1),
-				     var, FTT_TRAVERSE_LEAFS, -1);
+				     var1, FTT_TRAVERSE_LEAFS, -1);
     s = gfs_domain_stats_variable (GFS_DOMAIN (s1),
-				   var, FTT_TRAVERSE_LEAFS, -1);
+				   var1, FTT_TRAVERSE_LEAFS, -1);
     fprintf (stderr, 
 	     "%s:\n"
 	     "  first: %g second: %g infty: %g w: %g\n"
@@ -552,9 +572,9 @@ int main (int argc, char * argv[])
 	     norm.first, norm.second, norm.infty, norm.w,
 	     s.min, s.mean, s.stddev, s.max);
     norm = gfs_domain_norm_variable (GFS_DOMAIN (s2),
-				    var, FTT_TRAVERSE_LEAFS, -1);
+				    var2, FTT_TRAVERSE_LEAFS, -1);
     s = gfs_domain_stats_variable (GFS_DOMAIN (s2),
-				   var, FTT_TRAVERSE_LEAFS, -1);
+				   var2, FTT_TRAVERSE_LEAFS, -1);
     fprintf (stderr, 
 	     "%s:\n"
 	     "  first: %g second: %g infty: %g w: %g\n"
@@ -565,22 +585,29 @@ int main (int argc, char * argv[])
   }
 
   if (gradient < FTT_DIMENSION) {
-    gpointer data[2];
+    gpointer data[3];
+    GfsVariable * g1 = gfs_temporary_variable (GFS_DOMAIN (s1));
+    GfsVariable * g2 = gfs_temporary_variable (GFS_DOMAIN (s2));
 
-    data[0] = var;
+    data[0] = var1;
     data[1] = &gradient;
-
+    data[2] = g1;
     gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) compute_gradient, data);
+    data[0] = var2;
+    data[2] = g2;
     gfs_domain_cell_traverse (GFS_DOMAIN (s2), 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) compute_gradient, data);
-    var = gfs_gx;
+    var1 = g1;
+    var2 = g2;
   }
 
   data[0] = s2;
-  data[1] = var;
+  data[1] = var1;
+  data[2] = var2;
+  data[3] = e = gfs_temporary_variable (GFS_DOMAIN (s1));
   if (centered)
     gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -588,7 +615,7 @@ int main (int argc, char * argv[])
 #if FTT_2D
   else if (triangulate) {
     GtsSurface * ss1, * ss2;
-    gpointer data[2];
+    gpointer data[3];
 
     gfs_simulation_refine (s1);
     gfs_simulation_refine (s2);
@@ -597,7 +624,9 @@ int main (int argc, char * argv[])
     ss1 = surface_from_domain (GFS_DOMAIN (s1));
     ss2 = surface_from_domain (GFS_DOMAIN (s2));
     data[0] = ss2;
-    data[1] = var;
+    data[1] = var1;
+    data[2] = var2;
+    data[3] = e;
     gts_surface_foreach_vertex (ss1, (GtsFunc) difference_triangulated, data);
   }
 #endif /* FTT_2D */
@@ -605,24 +634,20 @@ int main (int argc, char * argv[])
     if (!extensive) {
       gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-          (FttCellTraverseFunc) gfs_get_from_below_intensive,
-				var);
+				(FttCellTraverseFunc) gfs_get_from_below_intensive, var1);
       gfs_domain_cell_traverse (GFS_DOMAIN (s2), 
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-          (FttCellTraverseFunc) gfs_get_from_below_intensive,
-				var);
+				(FttCellTraverseFunc) gfs_get_from_below_intensive, var2);
     }
     else {
       gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-          (FttCellTraverseFunc) gfs_get_from_below_extensive,
-				var);
+				(FttCellTraverseFunc) gfs_get_from_below_extensive, var1);
       gfs_domain_cell_traverse (GFS_DOMAIN (s2), 
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-          (FttCellTraverseFunc) gfs_get_from_below_extensive,
-				var);
+				(FttCellTraverseFunc) gfs_get_from_below_extensive, var2);
     }
-    data[2] = &period;
+    data[4] = &period;
     gts_container_foreach (GTS_CONTAINER (s1), (GtsFunc) difference_box, data);
   }
 
@@ -635,10 +660,10 @@ int main (int argc, char * argv[])
 
     data[1] = &sum;
     data[5] = &weight;
+    data[6] = e;
     gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) difference_constant, 
-			      data);
+			      (FttCellTraverseFunc) difference_constant, data);
     constant = weight > 0. ? sum/weight : 0.;
   }
   
@@ -646,6 +671,7 @@ int main (int argc, char * argv[])
   data[1] = &norm;
   data[5] = &constant;
   data[6] = &mixed;
+  data[7] = e;
   gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) difference, data);
@@ -656,7 +682,7 @@ int main (int argc, char * argv[])
 	     norm.first, norm.second, norm.infty, norm.w);
     if (refined_error) {
       norm = gfs_domain_norm_variable (GFS_DOMAIN (s1),
-				       gfs_dp, FTT_TRAVERSE_LEVEL,
+				       e, FTT_TRAVERSE_LEVEL,
 				       gfs_domain_depth (GFS_DOMAIN (s1)));
       fprintf (stderr, 
 	  "refined err first: %10.3e second: %10.3e infty: %10.3e w: %g\n",
@@ -672,16 +698,15 @@ int main (int argc, char * argv[])
     if (take_log)
       gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
 			       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			       (FttCellTraverseFunc) compute_log, NULL);
+			       (FttCellTraverseFunc) compute_log, e);
     else if (absolute)
       gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
 			       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			       (FttCellTraverseFunc) compute_absolute, NULL);
+			       (FttCellTraverseFunc) compute_absolute, e);
     if (squares) {
-      GtsRange stats = gfs_domain_stats_variable (GFS_DOMAIN (s1), gfs_dp,
-						  FTT_TRAVERSE_LEAFS, -1);
+      GtsRange stats = gfs_domain_stats_variable (GFS_DOMAIN (s1), e, FTT_TRAVERSE_LEAFS, -1);
 
-      gfs_write_squares (GFS_DOMAIN (s1), gfs_dp, 
+      gfs_write_squares (GFS_DOMAIN (s1), e, 
 			 min < G_MAXDOUBLE ? min : stats.min, 
 			 max > - G_MAXDOUBLE ? max : stats.max,
 			 FTT_TRAVERSE_LEAFS, -1, 
@@ -689,13 +714,12 @@ int main (int argc, char * argv[])
     }
 #if FTT_2D
     else if (gnuplot)
-      gfs_write_gnuplot (GFS_DOMAIN (s1), gfs_dp,
+      gfs_write_gnuplot (GFS_DOMAIN (s1), e,
 			 FTT_TRAVERSE_LEAFS, -1, 
 			 NULL, stdout);
 #endif /* FTT_2D */
     else
-	gfs_write_gts (GFS_DOMAIN (s1), 
-		     gfs_dp, FTT_TRAVERSE_LEAFS, -1, NULL, stdout);
+	gfs_write_gts (GFS_DOMAIN (s1), e, FTT_TRAVERSE_LEAFS, -1, NULL, stdout);
   }
 
   return 0;

@@ -35,10 +35,9 @@ gboolean gfs_char_in_string (char c, const char * s);
 
 typedef struct {
   gchar * name;
-  gdouble (* func) (FttCell *);
+  gpointer func;
+  gpointer data;
 } GfsDerivedVariable;
-
-GTS_C_VAR GfsDerivedVariable gfs_derived_variable[];
 
 /* GfsFunction: Header */
 
@@ -64,12 +63,9 @@ GfsFunction *      gfs_function_new         (GfsFunctionClass * klass,
 					     gdouble val);
 gchar *            gfs_function_description (GfsFunction * f);
 gdouble            gfs_function_face_value  (GfsFunction * f,
-					     FttCellFace * fa,
-					     gdouble t);
+					     FttCellFace * fa);
 gdouble            gfs_function_value       (GfsFunction * f,
-					     FttCell * cell,
-					     FttVector * p,
-					     gdouble t);
+					     FttCell * cell);
 void               gfs_function_set_constant_value (GfsFunction * f, 
 						    gdouble val);
 gdouble            gfs_function_get_constant_value (GfsFunction * f);

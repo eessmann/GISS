@@ -78,42 +78,6 @@ static void gfs_log (const gchar * log_domain,
 	   log_domain, stype[type], pe, message); 
 }
 
-static void cell_vorticity (FttCell * cell, GfsVariable * v)
-{
-  GFS_VARIABLE (cell, v->i) = gfs_vorticity (cell);
-}
-
-static void cell_velocity_norm (FttCell * cell, GfsVariable * v)
-{
-  GFS_VARIABLE (cell, v->i) = gfs_velocity_norm (cell);
-}
-
-static void cell_velocity_norm2 (FttCell * cell, GfsVariable * v)
-{
-  GFS_VARIABLE (cell, v->i) = gfs_velocity_norm2 (cell);
-}
-
-static void cell_level (FttCell * cell, GfsVariable * v)
-{
-  GFS_VARIABLE (cell, v->i) = ftt_cell_level (cell);
-}
-
-static void cell_fraction (FttCell * cell, GfsVariable * v)
-{
-  GFS_VARIABLE (cell, v->i) = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
-}
-
-static void cell_lambda2 (FttCell * cell, GfsVariable * v)
-{
-  gdouble size = ftt_cell_size (cell);
-  GFS_VARIABLE (cell, v->i) /= gfs_velocity_lambda2 (cell)/(size*size);
-}
-
-static void cell_curvature (FttCell * cell, GfsVariable * v)
-{
-  GFS_VARIABLE (cell, v->i) = gfs_streamline_curvature (cell)/ftt_cell_size (cell);
-}
-
 /**
  * gfs_init:
  * @argc: a pointer on the number of command line arguments passed to
@@ -126,8 +90,6 @@ static void cell_curvature (FttCell * cell, GfsVariable * v)
  */
 void gfs_init (int * argc, char *** argv)
 {
-  guint i = 0;
-  GfsVariable * v;
   static gboolean initialized = FALSE;
 
   if (initialized)
@@ -166,60 +128,6 @@ void gfs_init (int * argc, char *** argv)
 		     G_LOG_FLAG_FATAL |
 		     G_LOG_FLAG_RECURSION,
 		     (GLogFunc) gfs_log, NULL);
-
-  /* Initialize permanent variables */
-  gfs_div = v = gfs_variable_new (gfs_variable_class (), NULL, NULL, FALSE, i++);
-  v->permanent = NULL;
-  g_assert (v->i == GFS_DIV);
-  gfs_dp = v = v->next = gfs_variable_new (gfs_variable_class (), NULL, NULL, TRUE, i++);
-  v->permanent = NULL;
-  g_assert (v->i  == GFS_DP);
-  gfs_res = v = v->next = gfs_variable_new (gfs_variable_class (), NULL, NULL, FALSE, i++);
-  v->permanent = NULL;
-  g_assert (v->i == GFS_RES);
-  gfs_gx = v = v->next = gfs_variable_new (gfs_variable_class (), NULL, NULL, FALSE, i++);
-  v->permanent = NULL;
-  g_assert (v->i  == GFS_GX);
-  gfs_gy = v = v->next = gfs_variable_new (gfs_variable_class (), NULL, NULL, FALSE, i++);
-  v->permanent = NULL;
-  g_assert (v->i  == GFS_GY);
-#if (!FTT_2D)
-  gfs_gz = v = v->next = gfs_variable_new (gfs_variable_class (), NULL, NULL, FALSE, i++);
-  v->permanent = NULL;
-  g_assert (v->i  == GFS_GZ);
-#endif /* FTT_3D */
-  gfs_centered_variables = gfs_p = v = v->next = 
-    gfs_variable_new (gfs_variable_class (), NULL, "P", TRUE, i++);
-  g_assert (v->i   == GFS_P);
-  v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "U", FALSE, i++);
-  g_assert (v->i == GFS_U);
-  v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "V", FALSE, i++);
-  g_assert (v->i == GFS_V);
-#if (!FTT_2D)
-  v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "W", FALSE, i++);
-  g_assert (v->i == GFS_W);
-#endif /* FTT_3D */
-
-  /* Initializes derived variables */
-  gfs_derived_first = v = 
-    gfs_variable_new (gfs_variable_class (), NULL, "Vorticity", FALSE, GFS_DIV);
-  v->derived = cell_vorticity;
-  v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "Divergence", FALSE, GFS_DIV);
-  v->derived = (GfsVariableDerivedFunc) gfs_divergence;
-  v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "Velocity", FALSE, GFS_DIV);
-  v->derived = cell_velocity_norm;
-  v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "Velocity2", FALSE, GFS_DIV);
-  v->derived = cell_velocity_norm2;
-  v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "Level", FALSE, GFS_DIV);
-  v->derived = cell_level;
-  v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "A", FALSE, GFS_DIV);
-  v->derived = cell_fraction;
-  v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "Lambda2", FALSE, GFS_DIV);
-  v->derived = cell_lambda2;
-  v = v->next = gfs_variable_new (gfs_variable_class (), NULL, "Curvature", FALSE, GFS_DIV);
-  v->derived = cell_curvature;
-  gfs_derived_last = v;
-  v->next = gfs_centered_variables;
 
   /* Instantiates classes before reading any domain or simulation file */
   gfs_simulation_class ();
@@ -274,7 +182,7 @@ void gfs_init (int * argc, char *** argv)
       gfs_source_class ();
         gfs_source_control_class ();
       gfs_source_coriolis_class ();
-      gfs_source_hydrostatic_class ();
+      /* fixme: gfs_source_hydrostatic_class (); */
       gfs_source_diffusion_class ();
         gfs_source_diffusion_explicit_class ();
         gfs_source_viscosity_class ();

@@ -45,6 +45,7 @@ struct _GfsEventClass {
   GtsSListContaineeClass parent_class;
 
   gboolean (* event)      (GfsEvent * event, GfsSimulation * sim);
+  void     (* post_event) (GfsEvent * event, GfsSimulation * sim);
   void     (* event_half) (GfsEvent * event, GfsSimulation * sim);
 };
 
@@ -117,6 +118,7 @@ typedef struct _GfsInitVorticity         GfsInitVorticity;
 struct _GfsInitVorticity {
   /*< private >*/
   GfsGenericInit parent;
+  GfsVariable * vort, * stream, ** u;
 
   /*< public >*/
   GfsFunction * f;

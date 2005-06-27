@@ -32,10 +32,6 @@ void               gfs_write_gts               (GfsDomain * domain,
 						gint level,
 						GtsBBox * box,
 						FILE * fp);
-void               gfs_write_vtk               (GfsDomain * domain,
-						FttTraverseFlags flags,
-						gint level,
-						FILE * fp);
 GtsSurface *       gfs_isosurface              (GfsDomain * domain, 
 						GfsVariable * v, 
 						gdouble val,

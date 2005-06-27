@@ -43,50 +43,22 @@ gboolean gfs_char_in_string (char c, const char * s)
   return FALSE;
 }
 
-/* Derived variables */
+typedef gdouble (* GfsFunctionFunc) (const FttCell * cell,
+				     const FttCellFace * face,
+				     GfsSimulation * sim);
+typedef gdouble (* GfsFunctionDerivedFunc) (const FttCell * cell,
+					    const FttCellFace * face,
+					    GfsSimulation * sim,
+					    gpointer data);
 
-typedef gdouble (* GfsFunctionFunc) (const FttCell * cell, 
-				     gdouble x, gdouble y, gdouble z, 
-				     gdouble t);
-
-static gdouble cell_level (FttCell * cell)
+static GfsDerivedVariable * lookup_derived_variable (const gchar * name,
+						     GSList * i)
 {
-  return ftt_cell_level (cell);
-}
-
-static gdouble cell_fraction (FttCell * cell)
-{
-  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
-}
-
-static gdouble cell_solid_area (FttCell * cell)
-{
-  FttVector n;
-  gfs_solid_normal (cell, &n);
-  return ftt_vector_norm (&n);
-}
-
-GfsDerivedVariable gfs_derived_variable[] = {
-  { "Vorticity",  gfs_vorticity },
-  { "Divergence", gfs_divergence },
-  { "Velocity",   gfs_velocity_norm },
-  { "Velocity2",  gfs_velocity_norm2 },
-  { "Level",      cell_level },
-  { "A",          cell_fraction },
-  { "S",          cell_solid_area },
-  { "Lambda2",    gfs_velocity_lambda2 },
-  { "Curvature",  gfs_streamline_curvature },
-  { NULL, NULL}
-};
-
-static GfsFunctionFunc lookup_derived_variable (const gchar * name)
-{
-  GfsDerivedVariable * v = gfs_derived_variable;
-
-  while (v->name) {
+  while (i) {
+    GfsDerivedVariable * v = i->data;
     if (!strcmp (v->name, name))
-      return (GfsFunctionFunc) v->func;
-    v++;
+      return v;
+    i = i->next;
   }
   return NULL;
 }
@@ -101,6 +73,7 @@ struct _GfsFunction {
   gchar * sname;
   GtsSurface * s;
   GfsVariable * v;
+  GfsDerivedVariable * dv;
   gdouble val;
 };
 
@@ -267,6 +240,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 {
   GfsFunction * f = GFS_FUNCTION (*o);
   GtsTokenType type;
+  GfsSimulation * sim;
   GfsDomain * domain;
 
   if (GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read)
@@ -274,7 +248,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  sim = gfs_object_simulation (*o);
+  domain = GFS_DOMAIN (sim);
   type = fp->type;
   switch (type) {
     /* constant value */
@@ -292,7 +267,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     }
     else if ((f->v = gfs_variable_from_name (domain->variables, fp->token->str)))
       break;
-    else if ((f->f = lookup_derived_variable (fp->token->str))) {
+    else if ((f->dv = lookup_derived_variable (fp->token->str, sim->derived_variables))) {
       f->expr = g_string_new (fp->token->str);
       break;
     }
@@ -309,10 +284,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       gchar finname[] = "/tmp/gfsXXXXXX";
       gint find, status;
       FILE * fin;
-      GfsVariable * v;
-      GfsDerivedVariable * dv;
-      GSList * lv = NULL, * ldv = NULL;
-      guint n = 0;
+      GSList * lv = NULL, * ldv = NULL, * i;
 
       isexpr = expr_or_func (fp, f);
       if (fp->type == GTS_ERROR)
@@ -327,21 +299,26 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	     "#include <stdio.h>\n"
 	     "#include <math.h>\n"
 	     "#include <gfs.h>\n"
+	     "typedef double (* Func) (const FttCell * cell,\n"
+	     "                         const FttCellFace * face,\n"
+	     "                         GfsSimulation * sim,\n"
+	     "                         gpointer data);\n"
 	     "static double Dirichlet = 1.;\n"
 	     "static double Neumann = 0.;\n"
-	     "double f (FttCell * cell, double x, double y, double z, double t) {\n",
+	     "double f (FttCell * cell, FttCellFace * face, GfsSimulation * sim) {\n",
 	     fin);
-      v = domain->variables;
-      while (v) {
-	if (v->name && find_identifier (f->expr->str, v->name))
-	  lv = g_slist_prepend (lv, v);
-	v = v->next;
+      i = domain->variables;
+      while (i) {
+	if (find_identifier (f->expr->str, GFS_VARIABLE1 (i->data)->name))
+	  lv = g_slist_prepend (lv, i->data);
+	i = i->next;
       }
-      dv = gfs_derived_variable;
-      while (dv->name) {
-	if (find_identifier (f->expr->str, dv->name))
-	  ldv = g_slist_prepend (ldv, GUINT_TO_POINTER (n));
-	dv++; n++;
+      i = sim->derived_variables;
+      while (i) {
+	GfsDerivedVariable * v = i->data;
+	if (find_identifier (f->expr->str, v->name))
+	  ldv = g_slist_prepend (ldv, v);
+	i = i->next;
       }
       if (lv || ldv) {
 	GSList * i = lv;
@@ -353,8 +330,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	}
 	i = ldv;
 	while (i) {
-	  guint n = GPOINTER_TO_UINT (i->data);
-	  fprintf (fin, "  double %s;\n", gfs_derived_variable[n].name);
+	  GfsDerivedVariable * v = i->data;
+	  fprintf (fin, "  double %s;\n", v->name);
 	  i = i->next;
 	}
 	fputs ("  if (cell) {\n", fin);
@@ -367,9 +344,12 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	g_slist_free (lv);
 	i = ldv;
 	while (i) {
-	  guint n = GPOINTER_TO_UINT (i->data);
-	  fprintf (fin, "    %s = (* gfs_derived_variable[%d].func) (cell);\n", 
-		   gfs_derived_variable[n].name, n);
+	  GfsDerivedVariable * v = i->data;
+	  fprintf (fin, "    %s = (* (Func) %p) (cell, face, sim, ", v->name, v->func);
+	  if (v->data)
+	    fprintf (fin, "%p);\n", v->data);
+	  else
+	    fprintf (fin, "NULL);\n");
 	  i = i->next;
 	}
 	g_slist_free (ldv);
@@ -385,7 +365,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       close (find);
 
       status = compile (fp, f, finname);
-      remove (finname);
+      //      remove (finname);
       switch (status) {
       case SIGQUIT: exit (0);
       case SIGABRT: return;
@@ -529,25 +509,28 @@ gchar * gfs_function_description (GfsFunction * f)
  * gfs_function_value:
  * @f: a #GfsFunction.
  * @cell: a #FttCell or %NULL.
- * @p: a #FttVector.
- * @t: the time.
  *
- * Returns: the value of function @f at location @p of @cell.
+ * Returns: the value of function @f in @cell.
  */
-gdouble gfs_function_value (GfsFunction * f, FttCell * cell, FttVector * p, gdouble t)
+gdouble gfs_function_value (GfsFunction * f, FttCell * cell)
 {
   g_return_val_if_fail (f != NULL, 0.);
+  g_return_val_if_fail (cell != NULL, 0.);
 
-  if (f->s)
-    return interpolated_value (f, p);
-  else if (f->f) {
-    if (p != NULL)
-      return (* f->f) (cell, p->x, p->y, p->z, t);
-    else
-      return (* f->f) (cell, 0., 0., 0., t);
+  if (f->s) {
+    FttVector p;
+
+    gfs_cell_cm (cell, &p);
+    return interpolated_value (f, &p);
   }
   else if (f->v)
     return GFS_VARIABLE (cell, f->v->i);
+  else if (f->dv)
+    return (* (GfsFunctionDerivedFunc) f->dv->func) (cell, NULL, 
+						     gfs_object_simulation (f), 
+						     f->dv->data);
+  else if (f->f)
+    return (* f->f) (cell, NULL, gfs_object_simulation (f));
   else
     return f->val;
 }
@@ -556,33 +539,28 @@ gdouble gfs_function_value (GfsFunction * f, FttCell * cell, FttVector * p, gdou
  * gfs_function_face_value:
  * @f: a #GfsFunction.
  * @fa: a #FttCellFace.
- * @t: the time.
  *
  * Returns: the value of function @f at the center of face @fa.
  */
-gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa,
-				 gdouble t)
+gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa)
 {
   g_return_val_if_fail (f != NULL, 0.);
+  g_return_val_if_fail (fa != NULL, 0.);
 
   if (f->s) {
     FttVector p;
 
-    g_return_val_if_fail (fa != NULL, 0.);
-    
     ftt_face_pos (fa, &p);
     return interpolated_value (f, &p);
   }
-  else if (f->f) {
-    FttVector p;
-
-    g_return_val_if_fail (fa != NULL, 0.);
-    
-    ftt_face_pos (fa, &p);
-    return (* f->f) (fa->cell, p.x, p.y, p.z, t);
-  }
   else if (f->v)
     return gfs_face_interpolated_value (fa, f->v->i);
+  else if (f->dv)
+    return (* (GfsFunctionDerivedFunc) f->dv->func) (fa->cell, fa,
+						     gfs_object_simulation (f), 
+						     f->dv->data);
+  else if (f->f)
+    return (* f->f) (fa->cell, fa, gfs_object_simulation (f));
   else
     return f->val;
 }
@@ -597,7 +575,7 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa,
 void gfs_function_set_constant_value (GfsFunction * f, gdouble val)
 {
   g_return_if_fail (f != NULL);
-  g_return_if_fail (!f->f && !f->s && !f->v);
+  g_return_if_fail (!f->f && !f->s && !f->v && !f->dv);
 
   f->val = val;
 }
@@ -613,7 +591,7 @@ gdouble gfs_function_get_constant_value (GfsFunction * f)
 {
   g_return_val_if_fail (f != NULL, G_MAXDOUBLE);
 
-  if (f->f || f->s || f->v)
+  if (f->f || f->s || f->v || f->dv)
     return G_MAXDOUBLE;
   else
     return f->val;

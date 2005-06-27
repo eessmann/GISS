@@ -21,26 +21,38 @@
 
 /* GfsVariable: Object */
 
+static void variable_init_domain (GfsVariable * v, GfsDomain * domain)
+{
+   v->i = gfs_domain_alloc (domain);
+   v->centered = TRUE;
+   v->domain = domain;
+}
+
 static void gfs_variable_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsEvent * e;
+  GfsDomain * domain;
+  GfsVariable * v, * old;
 
   if (GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
-  e = GFS_EVENT (*o);
-  if (e->end < G_MAXDOUBLE || e->iend < G_MAXINT || e->end_event) {
-    gts_file_error (fp, "a GfsVariable event cannot end");
-    return;
-  }
   if (fp->type != GTS_STRING) {
     gts_file_error (fp, "expecting a string (name)");
     return;
   }
-  GFS_VARIABLE1 (*o)->name = g_strdup (fp->token->str);
+  v = GFS_VARIABLE1 (*o);
+  v->name = g_strdup (fp->token->str);
   gts_file_next_token (fp);
+
+  domain = (*o)->reserved;
+  if ((old = gfs_variable_from_name (domain->variables, v->name))) {
+    domain->variables = g_slist_remove (domain->variables, old);
+    gts_object_destroy (GTS_OBJECT (old));
+  }
+  variable_init_domain (v, domain);
+  domain->variables = g_slist_append (domain->variables, v);
 }
 
 static void gfs_variable_write (GtsObject * o, FILE * fp)
@@ -59,20 +71,12 @@ static void gfs_variable_destroy (GtsObject * object)
     gts_object_destroy (GTS_OBJECT (v->sources));
   if (v->surface_bc)
     gts_object_destroy (GTS_OBJECT (v->surface_bc));
+  if (v->domain) {
+    gfs_domain_free (v->domain, v->i);
+    v->domain->variables = g_slist_remove (v->domain->variables, v);
+  }
 
   (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->destroy) (object);
-}
-
-static void gfs_variable_clone (GtsObject * clone, GtsObject * object)
-{
-  GfsVariable * c = GFS_VARIABLE1 (clone);
-  GfsVariable * v = GFS_VARIABLE1 (object);
-
-  (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->clone) (clone, object);
-  if (v->name)
-    c->name = g_strdup (v->name);
-  c->sources = NULL;
-  c->surface_bc = NULL;
 }
 
 static void gfs_variable_class_init (GfsVariableClass * klass)
@@ -80,12 +84,12 @@ static void gfs_variable_class_init (GfsVariableClass * klass)
   GTS_OBJECT_CLASS (klass)->read = gfs_variable_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_variable_write;
   GTS_OBJECT_CLASS (klass)->destroy = gfs_variable_destroy;
-  GTS_OBJECT_CLASS (klass)->clone = gfs_variable_clone;
 }
 
 static void gfs_variable_init (GfsVariable * v)
 {
   GFS_EVENT (v)->istep = 1;
+  v->component = FTT_DIMENSION;
   v->fine_coarse = (GfsVariableFineCoarseFunc) gfs_get_from_below_intensive;
 }
 
@@ -112,126 +116,79 @@ GfsVariableClass * gfs_variable_class (void)
 /**
  * gfs_variable_new:
  * @klass: a #GfsVariableClass.
- * @parent: the parent or %NULL.
- * @name: the name of the variable.
- * @centered: is the variable cell-centered?
- * @i: the variable index.
+ * @domain: a #GfsDomain.
+ * @name: the name of the variable or %NULL.
  *
- * Returns: a newly allocated #GfsVariable,
+ * Returns: a newly allocated #GfsVariable or %NULL if a variable
+ * named @name already exists in @domain.
  */
 GfsVariable * gfs_variable_new (GfsVariableClass * klass,
-				GtsObject * parent,
-				const gchar * name,
-				gboolean centered,
-				guint i)
+				GfsDomain * domain,
+				const gchar * name)
 {
   GfsVariable * v;
+
+  g_return_val_if_fail (klass != NULL, NULL);
+  g_return_val_if_fail (domain != NULL, NULL);
+
+  if (name && gfs_variable_from_name (domain->variables, name))
+    return NULL;
 
   v = GFS_VARIABLE1 (gts_object_new (GTS_OBJECT_CLASS (klass)));
   if (name)
     v->name = g_strdup (name);
-  v->i = i;
-  v->centered = centered;
-  v->p = parent;
-  v->permanent = v;
+  variable_init_domain (v, domain);
 
   return v;
 }
 
 /**
- * gfs_variable_list_copy:
- * @v: a #GfsVariable.
- * @parent: the parent of the new list or %NULL.
- *
- * Returns: a new variable list copy of @v.
- */
-GfsVariable * gfs_variable_list_copy (GfsVariable * v,
-				      GtsObject * parent)
-{
-  GfsVariable * start = NULL, * prev = NULL;
-
-  while (v) {
-    GfsVariable * n = GFS_VARIABLE1 (gts_object_clone (GTS_OBJECT (v)));
-
-    n->p = parent;
-    if (prev == NULL)
-      start = n;
-    else
-      prev->next = n;
-    prev = n;
-    v = v->next;
-  }
-  return start;
-}
-
-/**
- * gfs_variable_list_destroy:
- * @v: a #GfsVariable.
- *
- * Free all the memory allocated for the list starting at @v.
- */
-void gfs_variable_list_destroy (GfsVariable * v)
-{
-  while (v) {
-    GfsVariable * next = v->next;
-
-    gts_object_destroy (GTS_OBJECT (v));
-    v = next;
-  }
-}
-
-/**
  * gfs_variable_from_name:
- * @variables: the list of available #GfsVariable.
+ * @i: the list of available #GfsVariable.
  * @name: the name of the variable to find.
  *
  * Returns: the #GfsVariable @name or %NULL if this variable name does
  * not exist.  
  */
-GfsVariable * gfs_variable_from_name (GfsVariable * variables,
+GfsVariable * gfs_variable_from_name (GSList * i,
 				      const gchar * name)
 {
   g_return_val_if_fail (name != NULL, NULL);
 
-  while (variables && (!variables->name || strcmp (name, variables->name)))
-    variables = variables->next;
-  return variables;
+  while (i && strcmp (name, GFS_VARIABLE1 (i->data)->name))
+    i = i->next;
+  return i ? GFS_VARIABLE1 (i->data) : NULL;
 }
 
 /**
  * gfs_variables_from_list:
- * @variables: the list of available #GfsVariable.
+ * @i: the list of available #GfsVariable.
  * @list: a malloc'ed string containing comma separated variable names.
  * @error: where to return the variable name in case of error.
  *
  * Returns: a list of variables or %NULL in case of error, in which
  * case *@error points to the name of the unknown variable.  
  */
-GfsVariable * gfs_variables_from_list (GfsVariable * variables,
-				       gchar * list,
-				       gchar ** error)
+GSList * gfs_variables_from_list (GSList * i,
+				  gchar * list,
+				  gchar ** error)
 {
   gchar * s;
-  GfsVariable * var = NULL, * prev = NULL;
+  GSList * var = NULL;
 
-  g_return_val_if_fail (list != NULL, NULL);
+  g_return_val_if_fail (i != NULL, NULL);
   g_return_val_if_fail (error != NULL, NULL);
 
   s = strtok (list, ",");
   while (s) {
-    GfsVariable * v = gfs_variable_from_name (variables, s), * n;
+    GfsVariable * v = gfs_variable_from_name (i, s);
 
     if (v == NULL) {
       *error = s;
-      gfs_variable_list_destroy (var);
+      g_slist_free (var);
       return NULL;
     }
-    n = gfs_variable_new (gfs_variable_class (), v->p, v->name, FALSE, v->i);
-    if (prev)
-      prev->next = n;
-    else
-      var = n;
-    prev = n;
+    var = g_slist_append (var, v);
     s = strtok (NULL, ",");
   }
   return var;
@@ -273,7 +230,7 @@ static void variable_tracer_init (GfsVariableTracer * v)
   v->advection.gradient = gfs_center_van_leer_gradient;
   v->advection.flux = gfs_face_advection_flux;
   v->advection.v = GFS_VARIABLE1 (v);
-  v->advection.fv = gfs_res;
+  v->advection.fv = NULL;
 
   gfs_multilevel_params_init (&v->diffusion);
   v->diffusion.tolerance = 1e-6;
@@ -305,8 +262,8 @@ GfsVariableClass * gfs_variable_tracer_class (void)
 static void scale_residual (FttCell * cell, GfsVariable * res)
 {
   gdouble size = ftt_cell_size (cell);
-  gdouble dt = GFS_SIMULATION (gfs_variable_parent (res))->advection_params.dt;
-  GFS_VARIABLE (cell, res->i) = dt*GFS_STATE (cell)->res/(size*size);
+  gdouble dt = GFS_SIMULATION (res->domain)->advection_params.dt;
+  GFS_VARIABLE (cell, res->i) *= dt/(size*size);
 }
 
 static gboolean variable_residual_event (GfsEvent * event, GfsSimulation * sim)

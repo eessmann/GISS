@@ -31,7 +31,7 @@ static gdouble transverse_term (FttCell * cell,
 {
   GfsStateVector * s = GFS_STATE (cell);
   gdouble vtan = par->use_centered_velocity ? 
-    GFS_VARIABLE (cell, GFS_VELOCITY_INDEX (c)) :
+    GFS_VARIABLE (cell, par->u[c]->i) :
     (s->f[2*c].un + s->f[2*c + 1].un)/2.;
   FttCellFace f;
   GfsGradient gf;
@@ -69,7 +69,7 @@ void gfs_cell_advected_face_values (FttCell * cell,
   size = ftt_cell_size (cell);
   for (c = 0; c < FTT_DIMENSION; c++) {
     gdouble unorm = par->use_centered_velocity ?
-      par->dt*GFS_VARIABLE (cell, GFS_VELOCITY_INDEX (c))/size :
+      par->dt*GFS_VARIABLE (cell, par->u[c]->i)/size :
       par->dt*(s->f[2*c].un + s->f[2*c + 1].un)/(2.*size);
     gdouble g = (* par->gradient) (cell, c, par->v->i);
     gdouble vl = GFS_VARIABLE (cell, par->v->i) + MIN ((1. - unorm)/2., 0.5)*g;
@@ -249,6 +249,7 @@ static gdouble interpolate_2D1 (const FttCell * cell,
  * gfs_face_upwinded_value:
  * @face: a #FttCellFace.
  * @upwinding: type of upwinding.
+ * @u: the cell-centered velocity.
  *
  * This function assumes that the face variable has been previously
  * defined using gfs_cell_advected_face_values().
@@ -256,7 +257,8 @@ static gdouble interpolate_2D1 (const FttCell * cell,
  * Returns: the upwinded value of the face variable.  
  */
 gdouble gfs_face_upwinded_value (const FttCellFace * face,
-				 GfsUpwinding upwinding)
+				 GfsUpwinding upwinding,
+				 GfsVariable ** u)
 {
   gdouble un = 0.;
 
@@ -267,11 +269,16 @@ gdouble gfs_face_upwinded_value (const FttCellFace * face,
 
   switch (upwinding) {
   case GFS_CENTERED_UPWINDING:
-    un = gfs_face_interpolated_value (face, GFS_VELOCITY_INDEX (face->d/2)); break;
+    g_return_val_if_fail (u != NULL, 0.);
+    un = gfs_face_interpolated_value (face, u[face->d/2]->i); 
+    break;
   case GFS_FACE_UPWINDING:
-    un = GFS_FACE_NORMAL_VELOCITY (face); break;
+    un = GFS_FACE_NORMAL_VELOCITY (face); 
+    break;
   case GFS_NO_UPWINDING:
     break;
+  default:
+    g_assert_not_reached ();
   }
   if (!FTT_FACE_DIRECT (face))
     un = - un;
@@ -351,7 +358,7 @@ void gfs_face_advection_flux (const FttCellFace * face,
   g_return_if_fail (par != NULL);
 
   flux = GFS_FACE_FRACTION (face)*GFS_FACE_NORMAL_VELOCITY (face)*par->dt*
-    gfs_face_upwinded_value (face, GFS_FACE_UPWINDING)/ftt_cell_size (face->cell);
+    gfs_face_upwinded_value (face, GFS_FACE_UPWINDING, NULL)/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
     flux = - flux;
   GFS_VARIABLE (face->cell, par->fv->i) -= flux;
@@ -392,7 +399,7 @@ void gfs_face_velocity_advection_flux (const FttCellFace * face,
   g_return_if_fail (face != NULL);
   g_return_if_fail (par != NULL);
 
-  c = GFS_VELOCITY_COMPONENT (par->v->i);
+  c = par->v->component;
   g_return_if_fail (c >= 0 && c < FTT_DIMENSION);
 
   flux = GFS_FACE_FRACTION (face)*GFS_FACE_NORMAL_VELOCITY (face)*par->dt
@@ -402,9 +409,9 @@ void gfs_face_velocity_advection_flux (const FttCellFace * face,
     flux *= GFS_FACE_NORMAL_VELOCITY (face);
   else /* tangential component */
 #else
-    flux *= gfs_face_upwinded_value (face, par->upwinding)
+    flux *= gfs_face_upwinded_value (face, par->upwinding, par->u)
       /* pressure correction */
-      - gfs_face_interpolated_value (face, GFS_GRADIENT_INDEX (c))*par->dt/2.;
+      - gfs_face_interpolated_value (face, par->g[c]->i)*par->dt/2.;
 #endif
   if (!FTT_FACE_DIRECT (face))
     flux = - flux;
@@ -447,7 +454,7 @@ void gfs_face_velocity_convective_flux (const FttCellFace * face,
   g_return_if_fail (par != NULL);
   g_return_if_fail (GFS_FACE_FRACTION (face) == 1.);
 
-  c = GFS_VELOCITY_COMPONENT (par->v->i);
+  c = par->v->component;
   g_return_if_fail (c >= 0 && c < FTT_DIMENSION);
 
 #if 0
@@ -458,9 +465,9 @@ void gfs_face_velocity_convective_flux (const FttCellFace * face,
       /* pressure correction */
       - gfs_face_interpolated_value (face, GFS_GRADIENT_INDEX (c))*par->dt/2.;
 #else
-  u = gfs_face_upwinded_value (face, par->upwinding)
+  u = gfs_face_upwinded_value (face, par->upwinding, par->u)
     /* pressure correction */
-    - gfs_face_interpolated_value (face, GFS_GRADIENT_INDEX (c))*par->dt/2.;
+    - gfs_face_interpolated_value (face, par->g[c]->i)*par->dt/2.;
 #endif
   u *= par->dt/(2.*ftt_cell_size (face->cell));
   if (!FTT_FACE_DIRECT (face))
@@ -489,7 +496,7 @@ void gfs_face_velocity_convective_flux (const FttCellFace * face,
 /**
  * gfs_face_advected_normal_velocity:
  * @face: a #FttCellFace.
- * @upwinding: the type of upwinding.
+ * @par: the #GfsAdvectionParams.
  *
  * Fills the normal component of the velocity at @face with the value
  * advected (to time t + dt/2) from the centered velocities.
@@ -499,16 +506,17 @@ void gfs_face_velocity_convective_flux (const FttCellFace * face,
  * gfs_cell_advected_face_values().  
  */
 void gfs_face_advected_normal_velocity (const FttCellFace * face,
-					GfsUpwinding * upwinding)
+					const GfsAdvectionParams * par)
 {
   gdouble u;
 
   g_return_if_fail (face != NULL);
+  g_return_if_fail (par != NULL);
 
   if (GFS_FACE_FRACTION (face) == 0.)
     return;
 
-  GFS_FACE_NORMAL_VELOCITY_LEFT (face) = u = gfs_face_upwinded_value (face, *upwinding);
+  GFS_FACE_NORMAL_VELOCITY_LEFT (face) = u = gfs_face_upwinded_value (face, par->upwinding, par->u);
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
@@ -527,21 +535,22 @@ void gfs_face_advected_normal_velocity (const FttCellFace * face,
 /**
  * gfs_face_interpolated_normal_velocity:
  * @face: a #FttCellFace.
+ * @v: the velocity.
  *
  * Fills the normal component of the velocity at @face with the value
  * interpolated from the centered velocities.
  */
-void gfs_face_interpolated_normal_velocity (const FttCellFace * face)
+void gfs_face_interpolated_normal_velocity (const FttCellFace * face, GfsVariable ** v)
 {
   gdouble u;
 
   g_return_if_fail (face != NULL);
+  g_return_if_fail (v != NULL);
 
   if (GFS_FACE_FRACTION (face) == 0.)
     return;
 
-  GFS_FACE_NORMAL_VELOCITY_LEFT (face) = u = 
-    gfs_face_interpolated_value (face, GFS_VELOCITY_INDEX (face->d/2));
+  GFS_FACE_NORMAL_VELOCITY_LEFT (face) = u = gfs_face_interpolated_value (face, v[face->d/2]->i);
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
@@ -832,6 +841,9 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
 {
   g_return_if_fail (par != NULL);
 
+  par->fv = NULL;
+  par->u = NULL;
+  par->g = NULL;
   par->cfl = 0.8;
   par->dt = 1.;
   par->gradient = gfs_center_gradient;

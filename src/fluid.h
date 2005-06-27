@@ -47,35 +47,8 @@ struct _GfsStateVector {
   /* solid boundaries */
   GfsSolidVector * solid;
 
-  /* centered temporary variables */
-  gdouble div, dp, res;
-  gdouble g[FTT_DIMENSION];
-
-  /* centered primitive variables */
-  gdouble p;
-  gdouble u, v;
-#if (!FTT_2D)
-  gdouble w;
-#endif /* FTT_3D */
+  gdouble place_holder;
 };
-
-typedef enum {
-  /* centered temporary variables */
-  GFS_DIV = 0,
-  GFS_DP,
-  GFS_RES,
-  GFS_GX,
-  GFS_GY,
-#if (!FTT_2D)
-  GFS_GZ,
-#endif /* FTT_3D */
-  /* centered primitive variables */
-  GFS_P,
-  GFS_U, GFS_V,
-#if (!FTT_2D)
-  GFS_W,
-#endif /* FTT_3D */
-} GfsPermanentVariable;
 
 struct _GfsSolidVector {
   gdouble s[FTT_NEIGHBORS];
@@ -91,24 +64,8 @@ typedef enum {
   GFS_FLAG_USER =            FTT_FLAG_USER + 3 /* user flags start here */
 } GfsFlags;
 
-/* Permanent variables: defined in fluid.c */
-GTS_C_VAR GfsVariable * gfs_div, * gfs_dp, * gfs_res;
-GTS_C_VAR GfsVariable * gfs_gx, * gfs_gy;
-#if (!FTT_2D)
-GTS_C_VAR GfsVariable * gfs_gz;
-#endif /* FTT_3D */
-GTS_C_VAR GfsVariable * gfs_centered_variables;
-GTS_C_VAR GfsVariable * gfs_p;
-
-/* Derived variables: defined in fluid.c */
-GTS_C_VAR GfsVariable * gfs_derived_first, * gfs_derived_last;
-
 #define GFS_STATE(cell)               ((GfsStateVector *) (cell)->data)
-#define GFS_VARIABLE(cell, index)     ((&GFS_STATE (cell)->div)[index])
-#define GFS_VELOCITY_INDEX(component) (GFS_U + (component))
-#define GFS_GRADIENT_INDEX(component) (GFS_GX + (component))
-#define GFS_VELOCITY_COMPONENT(index) ((index) - GFS_U)
-#define GFS_GRADIENT_COMPONENT(index) ((index) - GFS_GX)
+#define GFS_VARIABLE(cell, index)     ((&GFS_STATE (cell)->place_holder)[index])
 
 #define GFS_FACE_NORMAL_VELOCITY(fa)\
   (GFS_STATE ((fa)->cell)->f[(fa)->d].un)
@@ -187,14 +144,22 @@ void                  gfs_face_gradient_flux_centered(const FttCellFace * face,
 						      guint v,
 						      gint max_level);
 
-void                  gfs_normal_divergence          (FttCell * cell);
-void                  gfs_normal_divergence_2D       (FttCell * cell);
-gdouble               gfs_divergence                 (FttCell * cell);
-gdouble               gfs_vorticity                  (FttCell * cell);
-gdouble               gfs_velocity_norm              (FttCell * cell);
-gdouble               gfs_velocity_norm2             (FttCell * cell);
-gdouble               gfs_velocity_lambda2           (FttCell * cell);
+void                  gfs_normal_divergence          (FttCell * cell,
+						      GfsVariable * v);
+void                  gfs_normal_divergence_2D       (FttCell * cell,
+						      GfsVariable * v);
+gdouble               gfs_divergence                 (FttCell * cell,
+						      GfsVariable ** v);
+gdouble               gfs_vorticity                  (FttCell * cell,
+						      GfsVariable ** v);
+gdouble               gfs_vector_norm                (FttCell * cell,
+						      GfsVariable ** v);
+gdouble               gfs_vector_norm2               (FttCell * cell,
+						      GfsVariable ** v);
+gdouble               gfs_vector_lambda2             (FttCell * cell,
+						      GfsVariable ** v);
 void                  gfs_pressure_force             (FttCell * cell,
+						      GfsVariable * p,
 						      FttVector * f);
 GtsRange              gfs_stats_variable             (FttCell * root, 
 						      GfsVariable * v, 
@@ -247,9 +212,8 @@ void                  ftt_cell_refine_corners       (FttCell * cell,
 gdouble               gfs_center_curvature          (FttCell * cell,
 						     FttComponent c,
 						     guint v);
-gdouble               gfs_streamline_curvature      (FttCell * cell);
-gdouble               gfs_cell_laplacian            (FttCell * cell, 
-						     GfsVariable * v);
+gdouble               gfs_streamline_curvature      (FttCell * cell,
+						     GfsVariable ** v);
 
 typedef struct {
 #if FTT_2D

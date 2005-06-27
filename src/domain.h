@@ -53,9 +53,13 @@ struct _GfsDomain {
   guint rootlevel;
   FttVector refpos;
   FttVector lambda;
-  GfsVariable * variables;
-  guint variables_size;
-  GfsVariable * variables_io;
+
+  GArray * allocated;
+  GSList * variables;
+
+  GfsVariable * velocity[FTT_DIMENSION];
+
+  GSList * variables_io;
   gboolean binary;
 
   gint max_depth_write;
@@ -75,6 +79,9 @@ struct _GfsDomainClass {
 						   gfs_domain_class())
 #define GFS_IS_DOMAIN(obj)         (gts_object_is_from_class (obj,\
 						   gfs_domain_class ()))
+
+#define gfs_domain_variables_size(d)   (sizeof (GfsStateVector) +\
+                                        sizeof (gdouble)*((d)->allocated->len - 1))
      
 GfsDomainClass * gfs_domain_class          (void);
 void         gfs_domain_cell_traverse         (GfsDomain * domain,
@@ -155,7 +162,9 @@ GfsNorm      gfs_domain_norm_variable         (GfsDomain * domain,
 GfsNorm      gfs_domain_norm_residual         (GfsDomain * domain,
 					       FttTraverseFlags flags,
 					       gint max_depth,
-					       gdouble dt);
+					       gdouble dt,
+					       GfsVariable * res);
+GfsVariable ** gfs_domain_velocity            (GfsDomain * domain);
 GfsNorm      gfs_domain_norm_velocity         (GfsDomain * domain,
 					       FttTraverseFlags flags,
 					       gint max_depth);
@@ -176,6 +185,8 @@ gdouble      gfs_domain_cfl                   (GfsDomain * domain,
 					       gint max_depth);
 void         gfs_cell_init                    (FttCell * cell,
 					       GfsDomain * domain);
+void         gfs_cell_reinit                  (FttCell * cell, 
+					       GfsDomain * domain);
 void         gfs_cell_copy                    (const FttCell * from, 
 					       FttCell * to,
 					       GfsDomain * domain);
@@ -184,18 +195,16 @@ void         gfs_cell_read                    (FttCell * cell,
 					       GfsDomain * domain);
 void         gfs_cell_write                   (const FttCell * cell, 
 					       FILE * fp,
-					       GfsVariable * variables);
+					       GSList * variables);
 void         gfs_cell_read_binary             (FttCell * cell, 
 					       GtsFile * fp,
 					       GfsDomain * domain);
 void         gfs_cell_write_binary            (const FttCell * cell, 
 					       FILE * fp,
-					       GfsVariable * variables);
-void         gfs_domain_replace_variable      (GfsDomain * domain,
-					       GfsVariable * v,
-					       GfsVariable * with);
-void         gfs_domain_add_new_variable      (GfsDomain * domain,
-					       GfsVariable * v);
+					       GSList * variables);
+guint        gfs_domain_alloc                 (GfsDomain * domain);
+void         gfs_domain_free                  (GfsDomain * domain, 
+					       guint i);
 GfsVariable * gfs_domain_add_variable         (GfsDomain * domain, 
 					       const gchar * name);
 void         gfs_domain_solid_force           (GfsDomain * domain, 

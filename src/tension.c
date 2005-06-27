@@ -77,9 +77,9 @@ static void foreach_cell_normal (FttCell * cell, GfsSourceTension * s)
   for (c = 0; c < FTT_DIMENSION; c++)
     nn += (&n.x)[c]*(&n.x)[c];
   nn = sqrt (nn + 1e-50);
-  GFS_STATE (cell)->g[0] = sigh*n.x*n.x/nn;
-  GFS_STATE (cell)->g[1] = sigh*n.y*n.y/nn;
-  GFS_STATE (cell)->div  = sigh*n.x*n.y/nn;
+  GFS_VARIABLE (cell, s->g[0]->i) = sigh*n.x*n.x/nn;
+  GFS_VARIABLE (cell, s->g[1]->i) = sigh*n.y*n.y/nn;
+  GFS_VARIABLE (cell, s->g[2]->i) = sigh*n.x*n.y/nn;
 }
 
 static void foreach_cell_tension (FttCell * cell, GfsSourceTension * s)
@@ -87,9 +87,9 @@ static void foreach_cell_tension (FttCell * cell, GfsSourceTension * s)
   gdouble h = ftt_cell_size (cell);
   FttVector nx, ny, nxy;
 
-  gfs_youngs_normal (cell, gfs_gx, &nx);
-  gfs_youngs_normal (cell, gfs_gy, &ny);
-  gfs_youngs_normal (cell, gfs_div, &nxy);
+  gfs_youngs_normal (cell, s->g[0], &nx);
+  gfs_youngs_normal (cell, s->g[1], &ny);
+  gfs_youngs_normal (cell, s->g[2], &nxy);
 
   GFS_VARIABLE (cell, s->t[0]->i) = (ny.x - nxy.y)/h;
   GFS_VARIABLE (cell, s->t[1]->i) = (nx.y - nxy.x)/h;
@@ -98,9 +98,15 @@ static void foreach_cell_tension (FttCell * cell, GfsSourceTension * s)
 static void gfs_source_tension_event (GfsEvent * event, 
 				      GfsSimulation * sim)
 {
+  GfsSourceTension * s = GFS_SOURCE_TENSION (event);
+  guint i;
+
 #if (!FTT_2D)
   g_assert_not_implemented ();
 #endif
+
+  for (i = 0; i < 3; i++)
+    s->g[i] = gfs_temporary_variable (GFS_DOMAIN (sim));
 
   gfs_domain_cell_traverse (GFS_DOMAIN (sim),
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -109,6 +115,8 @@ static void gfs_source_tension_event (GfsEvent * event,
   gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) foreach_cell_tension, event);
+  for (i = 0; i < 3; i++)
+    gts_object_destroy (GTS_OBJECT (s->g[i]));
 }
 
 static gdouble gfs_source_tension_value (GfsSourceGeneric * s, 

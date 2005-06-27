@@ -1134,14 +1134,13 @@ static gboolean gfs_output_location_event (GfsEvent * event,
     guint i;
 
     if (GFS_OUTPUT (event)->first_call) {
-      GfsVariable * v = domain->variables;
+      GSList * i = domain->variables;
       guint nv = 5;
 
       fputs ("# 1:T 2:X 3:Y 4:Z", fp);
-      while (v) {
-	if (v->name)
-	  fprintf (fp, " %d:%s", nv++, v->name);
-	v = v->next;
+      while (i) {
+	fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
+	i = i->next;
       }
       fputc ('\n', fp);
     }
@@ -1150,13 +1149,12 @@ static gboolean gfs_output_location_event (GfsEvent * event,
       FttCell * cell = gfs_domain_locate (domain, p, -1);
       
       if (cell != NULL) {
-	GfsVariable * v = domain->variables;
+	GSList * i = domain->variables;
 	
 	fprintf (fp, "%g %g %g %g", sim->time.t, p.x, p.y, p.z);
-	while (v) {
-	  if (v->name)
-	    fprintf (fp, " %g", gfs_interpolate (cell, p, v));
-	  v = v->next;
+	while (i) {
+	  fprintf (fp, " %g", gfs_interpolate (cell, p, i->data));
+	  i = i->next;
 	}
 	fputc ('\n', fp);
       }
@@ -1207,7 +1205,7 @@ static void output_simulation_destroy (GtsObject * object)
 {
   GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (object);
 
-  gfs_variable_list_destroy (output->var);
+  g_slist_free (output->var);
 
   (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->destroy) (object);
 }
@@ -1217,9 +1215,6 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (event);
-    GfsVariable * var = domain->variables_io;
-    gboolean binary = domain->binary;
-    gboolean surface = sim->output_surface;
 
     domain->variables_io = output->var;
     domain->binary =       output->binary;
@@ -1227,9 +1222,9 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
     gfs_simulation_write (sim,
 			  output->max_depth,
 			  GFS_OUTPUT (event)->file->fp);
-    domain->variables_io = var;
-    domain->binary =       binary;
-    sim->output_surface =  surface;
+    domain->variables_io = NULL;
+    domain->binary =       TRUE;
+    sim->output_surface =  TRUE;
     fflush (GFS_OUTPUT (event)->file->fp);
     return TRUE;
   }
@@ -1239,20 +1234,19 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
 static void output_simulation_write (GtsObject * o, FILE * fp)
 {
   GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (o);
-  GfsVariable * v = output->var;
+  GSList * i = output->var;
 
   (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->write) (o, fp);
 
   fputs (" {", fp);
   if (output->max_depth != -1)
     fprintf (fp, " depth = %d", output->max_depth);
-  if (v != NULL) {
-    fprintf (fp, " variables = %s", v->name);
-    v = v->next;
-    while (v) {
-      if (v->name)
-	fprintf (fp, ",%s", v->name);
-      v = v->next;
+  if (i != NULL) {
+    fprintf (fp, " variables = %s", GFS_VARIABLE1 (i->data)->name);
+    i = i->next;
+    while (i) {
+      fprintf (fp, ",%s", GFS_VARIABLE1 (i->data)->name);
+      i = i->next;
     }
   }
   if (!output->binary)
@@ -1292,8 +1286,7 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
 
   if (variables != NULL) {
     gchar * error = NULL;
-    GfsVariable * vars = gfs_variables_from_list (domain->variables, 
-						  variables, &error);
+    GSList * vars = gfs_variables_from_list (domain->variables, variables, &error);
 
     if (vars == NULL) {
       gts_file_variable_error (fp, var, "variables",
@@ -1302,13 +1295,12 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     if (output->var)
-      gfs_variable_list_destroy (output->var);
+      g_slist_free (output->var);
     output->var = vars;
     g_free (variables);
   }
   else if (output->var == NULL)
-    output->var = gfs_variable_list_copy (domain->variables, 
-					  GTS_OBJECT (domain));
+    output->var = g_slist_copy (domain->variables);
 }
 
 static void gfs_output_simulation_class_init (GfsEventClass * klass)
@@ -1621,10 +1613,7 @@ static void gfs_output_scalar_write (GtsObject * o, FILE * fp)
 
 static void update_v (FttCell * cell, GfsOutputScalar * output)
 {
-  FttVector p;
-  gfs_cell_cm (cell, &p);
-  GFS_VARIABLE (cell, output->v->i) = gfs_function_value (output->f, cell, &p,
-							  gfs_object_simulation (output)->time.t);
+  GFS_VARIABLE (cell, output->v->i) = gfs_function_value (output->f, cell);
 }
 
 static gboolean gfs_output_scalar_event (GfsEvent * event,
@@ -1636,7 +1625,7 @@ static gboolean gfs_output_scalar_event (GfsEvent * event,
     GfsDomain * domain = GFS_DOMAIN (sim);
 
     if (!(output->v = gfs_function_get_variable (output->f))) {
-      output->v = gfs_div;
+      output->v = gfs_variable_new (gfs_variable_class (), domain, NULL);
       gfs_domain_cell_traverse (domain,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) update_v, output);
@@ -1658,9 +1647,21 @@ static gboolean gfs_output_scalar_event (GfsEvent * event,
   return FALSE;
 }
 
+static void gfs_output_scalar_post_event (GfsEvent * event,
+					  GfsSimulation * sim)
+{
+  GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
+
+  if (!gfs_function_get_variable (output->f)) {
+    gts_object_destroy (GTS_OBJECT (output->v));
+    output->v = NULL;
+  }
+}
+
 static void gfs_output_scalar_class_init (GfsOutputClass * klass)
 {
   GFS_EVENT_CLASS (klass)->event = gfs_output_scalar_event;
+  GFS_EVENT_CLASS (klass)->post_event = gfs_output_scalar_post_event;
   GTS_OBJECT_CLASS (klass)->read = gfs_output_scalar_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_output_scalar_write;
   GTS_OBJECT_CLASS (klass)->destroy = gfs_output_scalar_destroy;
@@ -1962,12 +1963,8 @@ static void update_histogram (FttCell * cell, GfsOutputScalar * h)
   if (i >= 0 && i < hi->n) {
     gdouble w = hi->dt;
 
-    if (hi->w) {
-      FttVector p;
-
-      gfs_cell_cm (cell, &p);
-      w *= gfs_function_value (hi->w, cell, &p, gfs_object_simulation (h)->time.t);
-    }
+    if (hi->w)
+      w *= gfs_function_value (hi->w, cell);
     else
       w *= gfs_cell_volume (cell);
 
@@ -2054,16 +2051,18 @@ GfsOutputClass * gfs_output_scalar_histogram_class (void)
 
 /* GfsOutputEnergy: Object */
 
-static void add_energy (FttCell * cell, gpointer * data)
-{
-  GfsStateVector * s = GFS_STATE (cell);
-  GtsRange * ps = data[2];
-  gdouble vol = gfs_cell_volume (cell);
-  gdouble * ke = data[0];
-  gdouble * pe = data[1];
+typedef struct {
+  GtsRange ps;
+  gdouble ke, pe;
+  GfsVariable ** u, * p;
+} EnergyParams;
 
-  *ke += vol*(s->u*s->u + s->v*s->v);;
-  *pe += vol*(s->p - ps->mean)*(s->p - ps->mean);
+static void add_energy (FttCell * cell, EnergyParams * p)
+{
+  gdouble vol = gfs_cell_volume (cell);
+
+  p->ke += vol*gfs_vector_norm2 (cell, p->u);
+  p->pe += vol*(GFS_VARIABLE (cell, p->p->i) - p->ps.mean)*(GFS_VARIABLE (cell, p->p->i) - p->ps.mean);
 }
 
 static gboolean gfs_output_energy_event (GfsEvent * event,
@@ -2072,24 +2071,21 @@ static gboolean gfs_output_energy_event (GfsEvent * event,
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_energy_class ())->parent_class)->event) 
       (event, sim)) {
     GfsOutput * output = GFS_OUTPUT (event);
-    gpointer data[3];
-    gdouble ke = 0., pe = 0.;
-    GtsRange stats = gfs_domain_stats_variable (GFS_DOMAIN (sim), 
-						gfs_p,
-						FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
-						-1);
+    EnergyParams p;
 
-    data[0] = &ke;
-    data[1] = &pe;
-    data[2] = &stats;
+    p.p = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, "P");
+    p.u = gfs_domain_velocity (GFS_DOMAIN (sim));
+    p.ps = gfs_domain_stats_variable (GFS_DOMAIN (sim), p.p,
+				      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, -1);
+    p.pe = p.ke = 0.;
+
     gfs_domain_cell_traverse (GFS_DOMAIN (sim),
 			      FTT_PRE_ORDER, 
-			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
-			      -1,
-			      (FttCellTraverseFunc) add_energy, data);
+			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, -1,
+			      (FttCellTraverseFunc) add_energy, &p);
     fprintf (output->file->fp,
 	     "Energy time: %g kinetic: %10.3e potential: %10.3e\n",
-	     sim->time.t, ke, pe/sim->physical_params.g);
+	     sim->time.t, p.ke, p.pe/sim->physical_params.g);
     return TRUE;
   }
   return FALSE;
@@ -2196,7 +2192,6 @@ static void output_error_norm_read (GtsObject ** o, GtsFile * fp)
       n->v = gfs_variable_from_name (domain->variables, fp->token->str);
       if (!n->v)
 	n->v = gfs_domain_add_variable (domain, fp->token->str);
-      g_assert (n->v);
       gts_file_next_token (fp);
     }
     else {
@@ -2222,7 +2217,7 @@ static void output_error_norm_write (GtsObject * o, FILE * fp)
   fputs (" { s = ", fp);
   gfs_function_write (n->s, fp);
   fprintf (fp, " unbiased = %d", n->unbiased);
-  if (n->v != gfs_div)
+  if (n->v)
     fprintf (fp, " v = %s }", n->v->name);
   else
     fputs (" }", fp);
@@ -2230,15 +2225,8 @@ static void output_error_norm_write (GtsObject * o, FILE * fp)
 
 static void compute_error (FttCell * cell, GfsOutputScalar * o)
 {
-  FttVector p;
-  GfsSimulation * sim = gfs_object_simulation (o);
-
-  if (o->v->centered) /* fixme: this does not work with new scalar functions */
-    ftt_cell_pos (cell, &p);
-  else
-    gfs_cell_cm (cell, &p);
   GFS_VARIABLE (cell, GFS_OUTPUT_ERROR_NORM (o)->v->i) = GFS_VARIABLE (cell, o->v->i) -
-    gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, cell, &p, sim->time.t); 
+    gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, cell);
 }
 
 static void remove_bias (FttCell * cell, gpointer * data)
@@ -2254,28 +2242,35 @@ static gboolean gfs_output_error_norm_event (GfsEvent * event,
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_error_norm_class ())->parent_class)->event)
       (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
-    GfsVariable * v = GFS_OUTPUT_ERROR_NORM (event)->v;
+    GfsOutputErrorNorm * enorm = GFS_OUTPUT_ERROR_NORM (event);
+    GfsVariable * v = enorm->v;
     GfsNorm norm;
 
+    if (v == NULL)
+      enorm->v = gfs_variable_new (gfs_variable_class (), GFS_DOMAIN (sim), NULL);
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
 			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
 			      output->maxlevel,
 			      (FttCellTraverseFunc) compute_error, output);
-    norm = gfs_domain_norm_variable (GFS_DOMAIN (sim), v,
+    norm = gfs_domain_norm_variable (GFS_DOMAIN (sim), enorm->v,
 				     FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
 				     output->maxlevel);
     if (GFS_OUTPUT_ERROR_NORM (event)->unbiased) {
       gpointer data[2];
 
-      data[0] = v;
+      data[0] = enorm->v;
       data[1] = &norm;
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
 				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
 				output->maxlevel,
 				(FttCellTraverseFunc) remove_bias, data);
-      norm = gfs_domain_norm_variable (GFS_DOMAIN (sim), v,
+      norm = gfs_domain_norm_variable (GFS_DOMAIN (sim), enorm->v,
 				       FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
 				       output->maxlevel);
+    }
+    if (v == NULL) {
+      gts_object_destroy (GTS_OBJECT (enorm->v));
+      enorm->v = NULL;
     }
     fprintf (GFS_OUTPUT (event)->file->fp,
 	     "%s time: %g first: % 10.3e second: % 10.3e infty: % 10.3e bias: %10.3e\n",
@@ -2297,7 +2292,6 @@ static void gfs_output_error_norm_class_init (GfsOutputClass * klass)
 static void output_error_norm_init (GfsOutputErrorNorm * e)
 {
   e->s = gfs_function_new (gfs_function_class (), 0.);
-  e->v = gfs_div;
 }
 
 GfsOutputClass * gfs_output_error_norm_class (void)
@@ -2330,14 +2324,8 @@ static void compute_correlation (FttCell * cell, gpointer * data)
   gdouble * sum = data[2];
   gdouble * sumref = data[3];
   gdouble v, ref, w;
-  FttVector p;
-  GfsSimulation * sim = gfs_object_simulation (o);
 
-  if (o->v->centered) /* fixme: this does not work with new scalar functions */
-    ftt_cell_pos (cell, &p);
-  else
-    gfs_cell_cm (cell, &p);
-  ref = gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, NULL, &p, sim->time.t);
+  ref = gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, cell);
   v = GFS_VARIABLE (cell, o->v->i) - *bias;
   w = gfs_cell_volume (cell);
   *sumref += ref*ref*w;

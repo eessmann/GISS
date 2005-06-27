@@ -33,15 +33,18 @@ void                  gfs_relax                      (GfsDomain * domain,
 						      guint d,
 						      gint max_depth,
 						      GfsVariable * u,
-						      GfsVariable * rhs);
+						      GfsVariable * rhs,
+						      GfsVariable * dia);
 void                  gfs_residual                   (GfsDomain * domain,
 						      guint d,
 						      FttTraverseFlags flags,
 						      gint max_depth,
 						      GfsVariable * u,
 						      GfsVariable * rhs,
+						      GfsVariable * dia,
 						      GfsVariable * res);
 void                  gfs_poisson_coefficients       (GfsDomain * domain,
+						      GfsVariable * dia,
 						      GfsVariable * c,
 						      gdouble rho);
 void                  gfs_poisson_cycle              (GfsDomain * domain,
@@ -50,25 +53,37 @@ void                  gfs_poisson_cycle              (GfsDomain * domain,
 						      guint depth,
 						      guint nrelax,
 						      GfsVariable * u,
-						      GfsVariable * rhs);
+						      GfsVariable * rhs,
+						      GfsVariable * dia,
+						      GfsVariable * res);
 
 void                  gfs_diffusion_coefficients     (GfsDomain * domain,
 						      GfsSourceDiffusion * d,
-						      gdouble dt);
+						      gdouble dt,
+						      GfsVariable * dia);
 void                  gfs_viscosity_coefficients     (GfsDomain * domain,
 						      GfsSourceDiffusion * d,
 						      gdouble dt,
 						      GfsVariable * c,
-						      gdouble rho);
-void                  gfs_diffusion_rhs              (FttCell * cell, 
-						      GfsVariable * v);
-void                  gfs_diffusion_residual         (FttCell * cell, 
-						      GfsVariable * v);
+						      gdouble rho,
+						      GfsVariable * dia);
+void                  gfs_diffusion_rhs              (GfsDomain * domain,
+						      GfsVariable * v,
+						      GfsVariable * rhs,
+						      GfsVariable * dia);
+void                  gfs_diffusion_residual         (GfsDomain * domain,
+						      GfsVariable * u,
+						      GfsVariable * rhs,
+						      GfsVariable * dia,
+						      GfsVariable * res);
 void                  gfs_diffusion_cycle            (GfsDomain * domain,
 						      guint levelmin,
 						      guint depth,
 						      guint nrelax,
-						      GfsVariable * u);
+						      GfsVariable * u,
+						      GfsVariable * rhs,
+						      GfsVariable * dia,
+						      GfsVariable * res);
 
 #ifdef __cplusplus
 }

@@ -68,6 +68,7 @@ typedef struct _GfsAdaptVorticity         GfsAdaptVorticity;
 struct _GfsAdaptVorticity {
   /*< private >*/
   GfsAdapt parent;
+  GfsVariable ** u;
   gdouble maxa;
 
   /*< public >*/

@@ -8,7 +8,6 @@ LDADD = $(GFS2D_LIBS)
 AM_CFLAGS = -DFTT_2D=1
 
 noinst_PROGRAMS = \
-	poisson \
 	simple \
 	shapes
 

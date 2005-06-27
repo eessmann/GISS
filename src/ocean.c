@@ -27,6 +27,30 @@
 
 /* GfsOcean: Object */
 
+#if 1
+static fixme(){}
+
+GfsSimulationClass * gfs_ocean_class (void)
+{
+  static GfsSimulationClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_ocean_info = {
+      "GfsOcean",
+      sizeof (GfsOcean),
+      sizeof (GfsSimulationClass),
+      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_simulation_class ()), &gfs_ocean_info);
+  }
+
+  return klass;
+}
+#else
+
 static void ocean_destroy (GtsObject * object)
 {
   guint i;
@@ -323,7 +347,8 @@ static void gfs_free_surface_divergence (GfsDomain * domain, GfsVariable * div)
 			    (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
   gfs_domain_face_traverse (domain, FTT_XY,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, NULL);
+			    (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
+			    gfs_domain_velocity (domain));
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_normal_divergence_2D, NULL);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -441,7 +466,8 @@ static void ocean_run (GfsSimulation * sim)
 			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
     gfs_domain_face_traverse (domain, FTT_XY,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, NULL);
+			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
+			      gfs_domain_velocity (domain));
     gfs_free_surface_pressure (domain, &sim->approx_projection_params, &sim->advection_params,
 			       ps, div, sim->physical_params.g);
     gfs_domain_timer_stop (domain, "free_surface_pressure");
@@ -703,3 +729,6 @@ GfsSourceGenericClass * gfs_source_hydrostatic_class (void)
 
   return klass;
 }
+
+
+#endif

@@ -132,60 +132,59 @@ void gfs_face_gradient_flux_centered (const FttCellFace * face,
   }
 }
 
-static void relax (FttCell * cell, gpointer * data)
+typedef struct {
+  guint u, rhs, dia, res;
+  gint maxlevel;
+} RelaxParams;
+
+static void relax (FttCell * cell, RelaxParams * p)
 {
-  guint u = ((GfsVariable *) data[0])->i;
-  guint rhs = ((GfsVariable *) data[1])->i;
-  gint max_level = *((gint *) data[2]);
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
 
-  g.a = GFS_STATE (cell)->g[0];
+  g.a = GFS_VARIABLE (cell, p->dia);
   g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      FACE_GRADIENT (&f, &ng, u, max_level);
+      FACE_GRADIENT (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
   }
   if (g.a > 0.)
-    GFS_VARIABLE (cell, u) = (g.b - GFS_VARIABLE (cell, rhs))/g.a;
+    GFS_VARIABLE (cell, p->u) = (g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
   else
-    GFS_VARIABLE (cell, u) = 0.;
+    GFS_VARIABLE (cell, p->u) = 0.;
 }
 
-static void relax2D (FttCell * cell, gpointer * data)
+static void relax2D (FttCell * cell, RelaxParams * p)
 {
-  guint u = ((GfsVariable *) data[0])->i;
-  guint rhs = ((GfsVariable *) data[1])->i;
-  gint max_level = *((gint *) data[2]);
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
 
-  g.a = GFS_STATE (cell)->g[0];
+  g.a = GFS_VARIABLE (cell, p->dia);
   g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      FACE_GRADIENT (&f, &ng, u, max_level);
+      FACE_GRADIENT (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
   }
   if (g.a > 0.)
-    GFS_VARIABLE (cell, u) = (g.b - GFS_VARIABLE (cell, rhs))/g.a;
+    GFS_VARIABLE (cell, p->u) = (g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
   else
-    GFS_VARIABLE (cell, u) = 0.;
+    GFS_VARIABLE (cell, p->u) = 0.;
 }
 
 /**
@@ -195,6 +194,7 @@ static void relax2D (FttCell * cell, gpointer * data)
  * @max_depth: the maximum depth of the domain to relax.
  * @u: the variable to use as left-hand side.
  * @rhs: the variable to use as right-hand side.
+ * @dia: the diagonal weight.
  *
  * Apply one pass of a Jacobi relaxation to all the leaf cells of
  * @domain with a level inferior or equal to @max_depth and to all the
@@ -206,75 +206,71 @@ void gfs_relax (GfsDomain * domain,
 		guint d,
 		gint max_depth,
 		GfsVariable * u,
-		GfsVariable * rhs)
+		GfsVariable * rhs,
+		GfsVariable * dia)
 {
-  gpointer data[3];
+  RelaxParams p;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (d > 1 && d <= 3);
   g_return_if_fail (u != NULL);
   g_return_if_fail (rhs != NULL);
+  g_return_if_fail (dia != NULL);
 
-  data[0] = u;
-  data[1] = rhs;
-  data[2] = &max_depth;
-
+  p.u = u->i;
+  p.rhs = rhs->i;
+  p.dia = dia->i;
+  p.maxlevel = max_depth;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 			    max_depth,
-			    (FttCellTraverseFunc) (d == 2 ? relax2D : relax), data);
+			    (FttCellTraverseFunc) (d == 2 ? relax2D : relax), &p);
 }
 
-static void residual_set (FttCell * cell, gpointer * data)
+static void residual_set (FttCell * cell, RelaxParams * p)
 {
-  guint u = ((GfsVariable *) data[0])->i;
-  guint rhs = ((GfsVariable *) data[1])->i;
-  guint res = ((GfsVariable *) data[2])->i;
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
 
-  g.a = GFS_STATE (cell)->g[0];
+  g.a = GFS_VARIABLE (cell, p->dia);
   g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      FACE_GRADIENT (&f, &ng, u, -1);
+      FACE_GRADIENT (&f, &ng, p->u, -1);
       g.a += ng.a;
       g.b += ng.b;
     }
   }
-  GFS_VARIABLE (cell, res) = GFS_VARIABLE (cell, rhs) - 
-    (g.b - GFS_VARIABLE (cell, u)*g.a);
+  GFS_VARIABLE (cell, p->res) = GFS_VARIABLE (cell, p->rhs) - 
+    (g.b - GFS_VARIABLE (cell, p->u)*g.a);
 }
 
-static void residual_set2D (FttCell * cell, gpointer * data)
+static void residual_set2D (FttCell * cell, RelaxParams * p)
 {
-  guint u = ((GfsVariable *) data[0])->i;
-  guint rhs = ((GfsVariable *) data[1])->i;
-  guint res = ((GfsVariable *) data[2])->i;
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
 
-  g.a = GFS_STATE (cell)->g[0];
+  g.a = GFS_VARIABLE (cell, p->dia);
   g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      FACE_GRADIENT (&f, &ng, u, -1);
+      FACE_GRADIENT (&f, &ng, p->u, -1);
       g.a += ng.a;
       g.b += ng.b;
     }
   }
-  GFS_VARIABLE (cell, res) = GFS_VARIABLE (cell, rhs) - 
-    (g.b - GFS_VARIABLE (cell, u)*g.a);
+  GFS_VARIABLE (cell, p->res) = GFS_VARIABLE (cell, p->rhs) - 
+    (g.b - GFS_VARIABLE (cell, p->u)*g.a);
 }
 
 /**
@@ -285,6 +281,7 @@ static void residual_set2D (FttCell * cell, gpointer * data)
  * @max_depth: maximum depth of the traversal.
  * @u: the variable to use as left-hand side.
  * @rhs: the variable to use as right-hand side.
+ * @dia: the diagonal weight.
  * @res: the variable to use to store the residual.
  *
  * For each cell of @domain, computes the sum of the residual over
@@ -296,22 +293,24 @@ void gfs_residual (GfsDomain * domain,
 		   guint d,
 		   FttTraverseFlags flags,
 		   gint max_depth,
-		   GfsVariable * u, GfsVariable * rhs, GfsVariable * res)
+		   GfsVariable * u, GfsVariable * rhs, GfsVariable * dia,
+		   GfsVariable * res)
 {
-  gpointer data[3];
+  RelaxParams p;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (d > 1 && d <= 3);
   g_return_if_fail (u != NULL);
   g_return_if_fail (rhs != NULL);
+  g_return_if_fail (dia != NULL);
   g_return_if_fail (res != NULL);
 
-  data[0] = u;
-  data[1] = rhs;
-  data[2] = res;
-
+  p.u = u->i;
+  p.rhs = rhs->i;
+  p.dia = dia->i;
+  p.res = res->i;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth,
-			    (FttCellTraverseFunc) (d == 2 ? residual_set2D : residual_set), data);
+			    (FttCellTraverseFunc) (d == 2 ? residual_set2D : residual_set), &p);
 }
 
 static void reset_coeff (FttCell * cell)
@@ -321,6 +320,12 @@ static void reset_coeff (FttCell * cell)
   
   for (d = 0; d < FTT_NEIGHBORS; d++)
     f[d].v = 0.;
+}
+
+static void reset_poisson_coeff (FttCell * cell, GfsVariable * dia)
+{
+  reset_coeff (cell);
+  GFS_VARIABLE (cell, dia->i) = 0.;
 }
 
 static void poisson_coeff (FttCellFace * face, gdouble * lambda2)
@@ -391,15 +396,23 @@ static void face_coeff_from_below (FttCell * cell)
   }
 }
 
+static void face_poisson_coeff_from_below (FttCell * cell, GfsVariable * dia)
+{
+  face_coeff_from_below (cell);
+  GFS_VARIABLE (cell, dia->i) = 0.;
+}
+
 /**
  * gfs_poisson_coefficients:
  * @domain: a #GfsDomain.
+ * @dia: the diagonal weight.
  * @c: the volume fraction.
  * @rho: the relative density.
  *
  * Initializes the face coefficients for the Poisson equation.
  */
 void gfs_poisson_coefficients (GfsDomain * domain,
+			       GfsVariable * dia,
 			       GfsVariable * c,
 			       gdouble rho)
 {
@@ -407,6 +420,7 @@ void gfs_poisson_coefficients (GfsDomain * domain,
   FttComponent i;
 
   g_return_if_fail (domain != NULL);
+  g_return_if_fail (dia != NULL);
 
   for (i = 0; i < FTT_DIMENSION; i++) {
     gdouble lambda = (&domain->lambda.x)[i];
@@ -415,7 +429,7 @@ void gfs_poisson_coefficients (GfsDomain * domain,
   }
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_coeff, NULL);
+			    (FttCellTraverseFunc) reset_poisson_coeff, dia);
   if (c == NULL || rho == 1.)
     gfs_domain_face_traverse (domain, FTT_XYZ, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -433,13 +447,14 @@ void gfs_poisson_coefficients (GfsDomain * domain,
   }
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			    (FttCellTraverseFunc) face_coeff_from_below, 
-			    NULL);
+			    (FttCellTraverseFunc) face_poisson_coeff_from_below, dia);
 }
 
-static void correct (FttCell * cell, GfsVariable * u) 
+static void correct (FttCell * cell, gpointer * data)
 {
-  GFS_VARIABLE (cell, u->i) += GFS_STATE (cell)->dp;
+  GfsVariable * u = data[0];
+  GfsVariable * dp = data[1];
+  GFS_VARIABLE (cell, u->i) += GFS_VARIABLE (cell, dp->i);
 }
 
 /**
@@ -451,17 +466,19 @@ static void correct (FttCell * cell, GfsVariable * u)
  * @nrelax: the number of relaxations to apply at each level.
  * @u: the variable to use as left-hand side.
  * @rhs: the variable to use as right-hand side.
+ * @dia: the diagonal weight.
+ * @res: the residual.
  *
  * Apply one multigrid iteration to the Poisson equation defined by @u
  * and @rhs.
  *
- * The initial value of %GFS_RES on the leaves of @root must be set to
+ * The initial value of @res on the leaves of @root must be set to
  * the residual of the Poisson equation (using gfs_residual()).
  *
  * The face coefficients must be set using gfs_poisson_coefficients().
  *
  * The values of @u on the leaf cells are updated as well as the values
- * of %GFS_RES (i.e. the cell tree is ready for another iteration).
+ * of @res (i.e. the cell tree is ready for another iteration).
  */
 void gfs_poisson_cycle (GfsDomain * domain,
 			guint d,
@@ -469,30 +486,37 @@ void gfs_poisson_cycle (GfsDomain * domain,
 			guint depth,
 			guint nrelax,
 			GfsVariable * u,
-			GfsVariable * rhs)
+			GfsVariable * rhs,
+			GfsVariable * dia,
+			GfsVariable * res)
 {
   guint n, l;
-
+  GfsVariable * dp;
+  gpointer data[2];
+  
   g_return_if_fail (domain != NULL);
   g_return_if_fail (d > 1 && d <= 3);
   g_return_if_fail (u != NULL);
   g_return_if_fail (rhs != NULL);
+  g_return_if_fail (dia != NULL);
+  g_return_if_fail (res != NULL);
+
+  dp = gfs_temporary_variable (domain);
 
   /* compute residual on non-leafs cells */
   gfs_domain_cell_traverse (domain, 
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_get_from_below_extensive, 
-			    gfs_res);
+			    (FttCellTraverseFunc) gfs_get_from_below_extensive, res);
 
   /* relax top level */
   gfs_domain_cell_traverse (domain, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, levelmin,
-			    (FttCellTraverseFunc) gfs_cell_reset, gfs_dp);
+			    (FttCellTraverseFunc) gfs_cell_reset, dp);
   for (n = 0; n < 10*nrelax; n++) {
     gfs_domain_homogeneous_bc (domain,
 			       FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-			       levelmin, gfs_dp, u);
-    gfs_relax (domain, d, levelmin, gfs_dp, gfs_res);
+			       levelmin, dp, u);
+    gfs_relax (domain, d, levelmin, dp, res, dia);
   }
 
   /* relax from top to bottom */
@@ -500,21 +524,24 @@ void gfs_poisson_cycle (GfsDomain * domain,
     /* get initial guess from coarser grid */ 
     gfs_domain_cell_traverse (domain, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-			      (FttCellTraverseFunc) gfs_get_from_above, 
-			      gfs_dp);
+			      (FttCellTraverseFunc) gfs_get_from_above, dp);
     for (n = 0; n < nrelax; n++) {
       gfs_domain_homogeneous_bc (domain, 
 				 FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-				 l, gfs_dp, u);
-      gfs_relax (domain, d, l, gfs_dp, gfs_res);
+				 l, dp, u);
+      gfs_relax (domain, d, l, dp, res, dia);
     }
   }
   /* correct on leaf cells */
+  data[0] = u;
+  data[1] = dp;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) correct, u);
+			    (FttCellTraverseFunc) correct, data);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, u);
   /* compute new residual on leaf cells */
-  gfs_residual (domain, d, FTT_TRAVERSE_LEAFS, -1, u, rhs, gfs_res);
+  gfs_residual (domain, d, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
+
+  gts_object_destroy (GTS_OBJECT (dp));
 }
 
 static void diffusion_coef (FttCellFace * face, gpointer * data)
@@ -551,7 +578,7 @@ static void diffusion_mixed_coef (FttCell * cell, gpointer * data)
 
     GFS_STATE (cell)->solid->v = *dt*gfs_source_diffusion_cell (d, cell);
   }
-  GFS_STATE (cell)->g[0] = 1.;
+  GFS_VARIABLE (cell, GFS_VARIABLE1 (data[3])->i) = 1.;
 }
 
 /**
@@ -559,19 +586,22 @@ static void diffusion_mixed_coef (FttCell * cell, gpointer * data)
  * @domain: a #GfsDomain.
  * @d: a #GfsSourceDiffusion.
  * @dt: the time-step.
+ * @dia: where to store the diagonal weight.
  *
  * Initializes the face coefficients for the diffusion equation.
  */
 void gfs_diffusion_coefficients (GfsDomain * domain,
 				 GfsSourceDiffusion * d,
-				 gdouble dt)
+				 gdouble dt,
+				 GfsVariable * dia)
 {
   gdouble lambda2[FTT_DIMENSION];
-  gpointer data[3];
+  gpointer data[4];
   FttComponent i;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (d != NULL);
+  g_return_if_fail (dia != NULL);
 
   for (i = 0; i < FTT_DIMENSION; i++) {
     gdouble lambda = (&domain->lambda.x)[i];
@@ -581,6 +611,7 @@ void gfs_diffusion_coefficients (GfsDomain * domain,
   data[0] = d;
   data[1] = lambda2;
   data[2] = &dt;
+  data[3] = dia;
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) diffusion_mixed_coef, data);
@@ -599,7 +630,7 @@ static void density (FttCell * cell, gpointer * data)
   gdouble c = GFS_VARIABLE (cell, v->i);
   gdouble * rho = data[1];
 
-  GFS_STATE (cell)->g[0] = 1. + *rho*(c > 1. ? 1. : c < 0. ? 0. : c);
+  GFS_VARIABLE (cell, GFS_VARIABLE1 (data[2])->i) = 1. + *rho*(c > 1. ? 1. : c < 0. ? 0. : c);
 }
 
 /**
@@ -609,6 +640,7 @@ static void density (FttCell * cell, gpointer * data)
  * @dt: the time-step.
  * @c: the volume fraction (at t+dt/2).
  * @rho: the relative density.
+ * @dia: where to store the diagonal weight.
  *
  * Initializes the face coefficients for the diffusion equation for
  * the velocity.
@@ -617,75 +649,92 @@ void gfs_viscosity_coefficients (GfsDomain * domain,
 				 GfsSourceDiffusion * d,
 				 gdouble dt,
 				 GfsVariable * c,
-				 gdouble rho)
+				 gdouble rho,
+				 GfsVariable * dia)
 {
   g_return_if_fail (domain != NULL);
   g_return_if_fail (d != NULL);
   g_return_if_fail (c != NULL);
+  g_return_if_fail (dia != NULL);
 
-  gfs_diffusion_coefficients (domain, d, dt);
+  gfs_diffusion_coefficients (domain, d, dt, dia);
   if (rho != 1.) {
-    gpointer data[2];
+    gpointer data[3];
 
     rho -= 1.;
     data[0] = c;
     data[1] = &rho;
+    data[2] = dia;
     gfs_domain_cell_traverse (domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) density, data);
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_get_from_below_intensive, 
-			      gfs_gx);
+			      (FttCellTraverseFunc) gfs_get_from_below_intensive, dia);
   }
 }
 
-/**
- * gfs_diffusion_rhs:
- * @cell: a #FttCell.
- * @v: a #GfsVariable.
- *
- * Adds to the @div variable of @cell the right-hand side of the
- * diffusion equation for variable @v.
- *
- * The diffusion coefficients must have been already set using
- * gfs_diffusion_coefficients().
- */
-void gfs_diffusion_rhs (FttCell * cell, GfsVariable * v)
+static void diffusion_rhs (FttCell * cell, RelaxParams * p)
 {
   gdouble a, f, h, val;
   FttCellNeighbors neighbor;
   FttCellFace face;
   
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (v != NULL);
-
   if (GFS_IS_MIXED (cell)) {
-    a = GFS_STATE (cell)->solid->a*GFS_STATE (cell)->g[0];
+    a = GFS_STATE (cell)->solid->a*GFS_VARIABLE (cell, p->dia);
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-      f = gfs_cell_dirichlet_gradient_flux (cell, v->i, -1, GFS_STATE (cell)->solid->fv);
+      f = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, GFS_STATE (cell)->solid->fv);
     else
       f = GFS_STATE (cell)->solid->fv;
   }
   else {
-    a = GFS_STATE (cell)->g[0];
+    a = GFS_VARIABLE (cell, p->dia);
     f = 0.; /* Neumann condition by default */
   }
   h = ftt_cell_size (cell);
-  val = GFS_VARIABLE (cell, v->i);
+  val = GFS_VARIABLE (cell, p->u);
   face.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
   for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++) {
     GfsGradient g;
 
     face.neighbor = neighbor.c[face.d];
-    gfs_face_gradient_flux (&face, &g, v->i, -1);
+    gfs_face_gradient_flux (&face, &g, p->u, -1);
     f += g.b - g.a*val;
   }
-  GFS_STATE (cell)->div += val + f/(2.*h*h*a);
+  GFS_VARIABLE (cell, p->rhs) += val + f/(2.*h*h*a);
 }
 
-static void diffusion_relax (FttCell * cell, gint * maxlevel)
+/**
+ * gfs_diffusion_rhs:
+ * @domain: a #GfsDomain.
+ * @v: a #GfsVariable.
+ * @rhs: a #GfsVariable.
+ * @dia: the diagonal weight.
+ *
+ * Adds to the @rhs variable of @cell the right-hand side of the
+ * diffusion equation for variable @v.
+ *
+ * The diffusion coefficients must have been already set using
+ * gfs_diffusion_coefficients().
+ */
+void gfs_diffusion_rhs (GfsDomain * domain, GfsVariable * v, GfsVariable * rhs, GfsVariable * dia)
+{
+  RelaxParams p;
+
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (v != NULL);
+  g_return_if_fail (rhs != NULL);
+  g_return_if_fail (dia != NULL);
+
+  p.u = v->i;
+  p.rhs = rhs->i;
+  p.dia = dia->i;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) diffusion_rhs, &p);
+}
+
+static void diffusion_relax (FttCell * cell, RelaxParams * p)
 {
   gdouble a;
   GfsGradient g = { 0., 0. };
@@ -694,12 +743,12 @@ static void diffusion_relax (FttCell * cell, gint * maxlevel)
   FttCellFace face;
 
   if (GFS_IS_MIXED (cell)) {
-    a = GFS_STATE (cell)->solid->a*GFS_STATE (cell)->g[0];
+    a = GFS_STATE (cell)->solid->a*GFS_VARIABLE (cell, p->dia);
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-      g.b = gfs_cell_dirichlet_gradient_flux (cell, gfs_dp->i, *maxlevel, 0.);
+      g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, 0.);
   }
   else
-    a = GFS_STATE (cell)->g[0];
+    a = GFS_VARIABLE (cell, p->dia);
 
   face.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
@@ -707,31 +756,19 @@ static void diffusion_relax (FttCell * cell, gint * maxlevel)
     GfsGradient ng;
 
     face.neighbor = neighbor.c[face.d];
-    gfs_face_gradient_flux (&face, &ng, gfs_dp->i, *maxlevel);
+    gfs_face_gradient_flux (&face, &ng, p->u, p->maxlevel);
     g.a += ng.a;
     g.b += ng.b;
   }
   a *= 2.*h*h;
   g_assert (a > 0.);
   g.a = 1. + g.a/a;
-  g.b = GFS_STATE (cell)->res + g.b/a;
+  g.b = GFS_VARIABLE (cell, p->res) + g.b/a;
   g_assert (g.a > 0.);
-  GFS_STATE (cell)->dp = g.b/g.a;
+  GFS_VARIABLE (cell, p->u) = g.b/g.a;
 }
 
-/**
- * gfs_diffusion_residual:
- * @cell: a #FttCell.
- * @v: a #GfsVariable.
- *
- * Sets the @res variable of @cell to the residual of the diffusion
- * equation for @v.
- *
- * The diffusion coefficients must have been set using
- * gfs_diffusion_coefficients() and the right-hand side using
- * gfs_diffusion_rhs().
- */
-void gfs_diffusion_residual (FttCell * cell, GfsVariable * v)
+static void diffusion_residual (FttCell * cell, RelaxParams * p)
 {
   gdouble a;
   GfsGradient g = { 0., 0. };
@@ -739,20 +776,16 @@ void gfs_diffusion_residual (FttCell * cell, GfsVariable * v)
   FttCellNeighbors neighbor;
   FttCellFace face;
 
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (v != NULL);
-
   h = ftt_cell_size (cell);
   if (GFS_IS_MIXED (cell)) {
-    a = GFS_STATE (cell)->solid->a*GFS_STATE (cell)->g[0];
+    a = GFS_STATE (cell)->solid->a*GFS_VARIABLE (cell, p->dia);
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-      g.b = gfs_cell_dirichlet_gradient_flux (cell, v->i, -1, 
-					      GFS_STATE (cell)->solid->fv);
+      g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, GFS_STATE (cell)->solid->fv);
     else
       g.b = GFS_STATE (cell)->solid->fv;
   }
   else
-    a = GFS_STATE (cell)->g[0];
+    a = GFS_VARIABLE (cell, p->dia);
 
   face.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
@@ -760,15 +793,48 @@ void gfs_diffusion_residual (FttCell * cell, GfsVariable * v)
     GfsGradient ng;
 
     face.neighbor = neighbor.c[face.d];
-    gfs_face_gradient_flux (&face, &ng, v->i, -1);
+    gfs_face_gradient_flux (&face, &ng, p->u, -1);
     g.a += ng.a;
     g.b += ng.b;
   }
   a *= 2.*h*h;
   g_assert (a > 0.);
   g.a = 1. + g.a/a;
-  g.b = GFS_STATE (cell)->div + g.b/a;
-  GFS_STATE (cell)->res = g.b - g.a*GFS_VARIABLE (cell, v->i);
+  g.b = GFS_VARIABLE (cell, p->rhs) + g.b/a;
+  GFS_VARIABLE (cell, p->res) = g.b - g.a*GFS_VARIABLE (cell, p->u);
+}
+
+/**
+ * gfs_diffusion_residual:
+ * @domain: a #GfsDomain.
+ *
+ * Sets the @res variable of each leaf cell of @domain to the residual
+ * of the diffusion equation for @v.
+ *
+ * The diffusion coefficients must have been set using
+ * gfs_diffusion_coefficients() and the right-hand side using
+ * gfs_diffusion_rhs().
+ */
+void gfs_diffusion_residual (GfsDomain * domain,
+			     GfsVariable * u,
+			     GfsVariable * rhs,
+			     GfsVariable * dia,
+			     GfsVariable * res)
+{
+  RelaxParams p;
+
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (u != NULL);
+  g_return_if_fail (rhs != NULL);
+  g_return_if_fail (dia != NULL);
+  g_return_if_fail (res != NULL);
+
+  p.u = u->i;
+  p.rhs = rhs->i;
+  p.dia = dia->i;
+  p.res = res->i;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) diffusion_residual, &p);
 }
 
 /**
@@ -778,71 +844,89 @@ void gfs_diffusion_residual (FttCell * cell, GfsVariable * v)
  * @depth: the total depth of the domain.
  * @nrelax: the number of relaxations to apply at each level.
  * @u: the variable to use as left-hand side.
+ * @rhs: the right-hand side.
+ * @dia: the diagonal weight.
+ * @res: the residual.
  *
  * Apply one multigrid iteration to the diffusion equation for @u.
  *
- * The initial value of %GFS_RES on the leaves of @root must be set to
+ * The initial value of @res on the leaves of @root must be set to
  * the residual of the diffusion equation using gfs_diffusion_residual().
  *
  * The diffusion coefficients must be set using gfs_diffusion_coefficients().
  *
  * The values of @u on the leaf cells are updated as well as the values
- * of %GFS_RES (i.e. the cell tree is ready for another iteration).
+ * of @res (i.e. the cell tree is ready for another iteration).
  */
 void gfs_diffusion_cycle (GfsDomain * domain,
 			  guint levelmin,
 			  guint depth,
 			  guint nrelax,
-			  GfsVariable * u)
+			  GfsVariable * u,
+			  GfsVariable * rhs,
+			  GfsVariable * dia,
+			  GfsVariable * res)
 {
-  gint n, l;
+  guint n;
+  GfsVariable * dp;
+  RelaxParams p;
+  gpointer data[2];
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (u != NULL);
+  g_return_if_fail (rhs != NULL);
+  g_return_if_fail (dia != NULL);
+  g_return_if_fail (res != NULL);
+
+  dp = gfs_temporary_variable (domain);
 
   /* compute residual on non-leafs cells */
   gfs_domain_cell_traverse (domain, 
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_get_from_below_intensive, 
-			    gfs_res);
+			    (FttCellTraverseFunc) gfs_get_from_below_intensive, res);
 
   /* relax top level */
   gfs_domain_cell_traverse (domain, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, levelmin,
-			    (FttCellTraverseFunc) gfs_cell_reset, gfs_dp);
-  l = levelmin;
+			    (FttCellTraverseFunc) gfs_cell_reset, dp);
+  p.maxlevel = levelmin;
+  p.u = dp->i;
+  p.res = res->i;
+  p.dia = dia->i;
   for (n = 0; n < 10*nrelax; n++) {
     gfs_domain_homogeneous_bc (domain, 
 			       FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-			       levelmin, gfs_dp, u);
+			       levelmin, dp, u);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			      FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, 
 			      levelmin,
-			      (FttCellTraverseFunc) diffusion_relax, &l);
+			      (FttCellTraverseFunc) diffusion_relax, &p);
   }
 
   /* relax from top to bottom */
-  for (l = levelmin + 1; l <= depth; l++) {
+  for (p.maxlevel = levelmin + 1; p.maxlevel <= depth; p.maxlevel++) {
     /* get initial guess from coarser grid */ 
     gfs_domain_cell_traverse (domain, 
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-			      (FttCellTraverseFunc) gfs_get_from_above, 
-			      gfs_dp);
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, p.maxlevel,
+			      (FttCellTraverseFunc) gfs_get_from_above, dp);
     for (n = 0; n < nrelax; n++) {
       gfs_domain_homogeneous_bc (domain, 
 				 FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-				 l, gfs_dp, u);
+				 p.maxlevel, dp, u);
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
-				FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, l,
-				(FttCellTraverseFunc) diffusion_relax, &l);
+				FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p.maxlevel,
+				(FttCellTraverseFunc) diffusion_relax, &p);
     }
   }
   /* correct on leaf cells */
+  data[0] = u;
+  data[1] = dp;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) correct, u);
+			    (FttCellTraverseFunc) correct, data);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, u);
   /* compute new residual on leaf cells */
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_diffusion_residual, u);
+  gfs_diffusion_residual (domain, u, rhs, dia, res);
+
+  gts_object_destroy (GTS_OBJECT (dp));
 }
 

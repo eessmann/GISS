@@ -33,7 +33,8 @@ typedef struct _GfsSourceTension         GfsSourceTension;
 struct _GfsSourceTension {
   /*< private >*/
   GfsSourceVector parent;
-
+  GfsVariable * g[3];
+  
   /*< public >*/
   GfsVariable * c, * t[FTT_DIMENSION];
   gdouble sigma;

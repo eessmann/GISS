@@ -59,6 +59,8 @@ static void simulation_destroy (GtsObject * object)
     i = i->next;
   }
   g_slist_free (sim->modules);
+  g_slist_foreach (sim->derived_variables, (GFunc) g_free, NULL);
+  g_slist_free (sim->derived_variables);
   g_slist_free (sim->variables);
 
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->destroy) 
@@ -101,14 +103,15 @@ static void simulation_write (GtsObject * object, FILE * fp)
     i = i->next;
   }
 
-  v = GFS_DOMAIN (sim)->variables;
-  while (v) {
+  i = GFS_DOMAIN (sim)->variables;
+  while (i) {
+    v = i->data;
     if (v->surface_bc) {
       fputs ("  ", fp);
       (* GTS_OBJECT (v->surface_bc)->klass->write) (GTS_OBJECT (v->surface_bc), fp);
       fputc ('\n', fp);
     }
-    v = v->next;
+    i = i->next;
   }
 
   if (GFS_DOMAIN (sim)->max_depth_write < -1) {
@@ -295,9 +298,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 {
   GfsSimulation * sim = GFS_SIMULATION (*object);
   
-  if (GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->read)
-      (object, fp);
+  (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->read) (object, fp);
   if (fp->type == GTS_ERROR)
     return;
 
@@ -467,19 +468,6 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       else if (GFS_IS_ADAPT (object))
 	gts_container_add (GTS_CONTAINER (sim->adapts),
 			   GTS_CONTAINEE (object));
-      else if (GFS_IS_VARIABLE (object)) {
-	GfsVariable * v = GFS_VARIABLE1 (object);
-	GfsVariable * old = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, v->name);
-
-	if (old == NULL)
-	  gfs_domain_add_new_variable (GFS_DOMAIN (sim), v);
-	else {
-	  gfs_domain_replace_variable (GFS_DOMAIN (sim), old, v);
-	  gts_object_destroy (GTS_OBJECT (old));
-	  sim->variables = g_slist_remove (sim->variables, old);
-	}
-	sim->variables = g_slist_append (sim->variables, v);
-      }
       else if (GFS_IS_EVENT (object))
 	gts_container_add (GTS_CONTAINER (sim->events), 
 			   GTS_CONTAINEE (object));
@@ -513,10 +501,14 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 
 static void simulation_run (GfsSimulation * sim)
 {
-  GfsVariable * v, * c, * ch;
+  GfsVariable * p, * res = NULL;
   GfsDomain * domain;
+  GSList * i;
 
   domain = GFS_DOMAIN (sim);
+
+  p = gfs_variable_from_name (domain->variables, "P");
+  g_assert (p);
 
   gfs_simulation_refine (sim);
 
@@ -524,30 +516,29 @@ static void simulation_run (GfsSimulation * sim)
   gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
 
   gfs_set_merged (domain);
-  v = domain->variables;
-  while (v) {
-    gfs_event_init (GFS_EVENT (v), sim);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v);
-    v = v->next;
+  i = domain->variables;
+  while (i) {
+    gfs_event_init (GFS_EVENT (i->data), sim);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
+    if (GFS_IS_VARIABLE_RESIDUAL (i->data))
+      res = i->data;
+    i = i->next;
   }
-  c = gfs_variable_from_name (domain->variables, "C");
-  g_assert (c == NULL);
-  ch = gfs_variable_from_name (domain->variables, "CH");
-  g_assert (ch == NULL);
 
-  sim->advection_params.c = c;
   gfs_approximate_projection (domain,
       			      &sim->approx_projection_params,
-      			      &sim->advection_params);
+      			      &sim->advection_params,
+			      p, res);
 
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
+    GfsVariable * g[FTT_DIMENSION];
     gdouble tstart;
 
-    v = domain->variables;
-    while (v) {
-      gfs_event_do (GFS_EVENT (v), sim);
-      v = v->next;
+    i = domain->variables;
+    while (i) {
+      gfs_event_do (GFS_EVENT (i->data), sim);
+      i = i->next;
     }
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
@@ -558,17 +549,17 @@ static void simulation_run (GfsSimulation * sim)
 
     gfs_simulation_set_timestep (sim);
 
-    sim->advection_params.c = c;
-
     gfs_predicted_face_velocities (domain, FTT_DIMENSION, &sim->advection_params);
-    gfs_mac_projection (domain, 
+    
+    gfs_mac_projection (domain,
     			&sim->projection_params, 
-    			&sim->advection_params);
+    			&sim->advection_params,
+			p, g);
 
-    v = domain->variables;
-    while (v) {
-      if (GFS_IS_VARIABLE_TRACER (v)) {
-	GfsVariableTracer * t = GFS_VARIABLE_TRACER (v);
+    i = domain->variables;
+    while (i) {
+      if (GFS_IS_VARIABLE_TRACER (i->data)) {
+	GfsVariableTracer * t = i->data;
 
 	t->advection.dt = sim->advection_params.dt;
 	switch (t->advection.scheme) {
@@ -577,26 +568,27 @@ static void simulation_run (GfsSimulation * sim)
 	  break;
 	case GFS_VOF:
 	  gfs_tracer_vof_advection (domain, &t->advection, NULL);
-	  gfs_domain_variable_centered_sources (domain, v, v, t->advection.dt);
+	  gfs_domain_variable_centered_sources (domain, i->data, i->data, t->advection.dt);
 	  break;
 	case GFS_NONE:
 	  break;
 	}
       }
-      v = v->next;
+      i = i->next;
     }
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
-    sim->advection_params.c = ch;
     gfs_centered_velocity_advection_diffusion (domain,
 					       FTT_DIMENSION,
 					       &sim->advection_params,
-					       &sim->diffusion_params);
+					       &sim->diffusion_params,
+					       g);
+
     gfs_simulation_adapt (sim, NULL);
     gfs_approximate_projection (domain,
    				&sim->approx_projection_params, 
-    				&sim->advection_params);
+    				&sim->advection_params, p, res);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
@@ -620,14 +612,131 @@ static void gfs_simulation_class_init (GfsSimulationClass * klass)
   klass->run = simulation_run;
 }
 
+/* Derived variables */
+
+static gdouble cell_x (FttCell * cell, FttCellFace * face)
+{
+  FttVector p;
+
+  if (face)
+    ftt_face_pos (face, &p);
+  else
+    gfs_cell_cm (cell, &p);
+  return p.x;
+}
+
+static gdouble cell_y (FttCell * cell, FttCellFace * face)
+{
+  FttVector p;
+
+  if (face)
+    ftt_face_pos (face, &p);
+  else
+    gfs_cell_cm (cell, &p);
+  return p.y;
+}
+
+static gdouble cell_z (FttCell * cell, FttCellFace * face)
+{
+  FttVector p;
+
+  if (face)
+    ftt_face_pos (face, &p);
+  else
+    gfs_cell_cm (cell, &p);
+  return p.z;
+}
+
+static gdouble cell_t (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
+{
+  return sim->time.t;
+}
+
+static gdouble cell_vorticity (FttCell * cell, FttCellFace * face, GfsDomain * domain)
+{
+  return gfs_vorticity (cell, gfs_domain_velocity (domain));
+}
+
+static gdouble cell_divergence (FttCell * cell, FttCellFace * face, GfsDomain * domain)
+{
+  return gfs_divergence (cell, gfs_domain_velocity (domain));
+}
+
+static gdouble cell_velocity_norm (FttCell * cell, FttCellFace * face, GfsDomain * domain)
+{
+  return gfs_vector_norm (cell, gfs_domain_velocity (domain));
+}
+
+static gdouble cell_velocity_norm2 (FttCell * cell, FttCellFace * face, GfsDomain * domain)
+{
+  return gfs_vector_norm2 (cell, gfs_domain_velocity (domain));
+}
+
+static gdouble cell_level (FttCell * cell)
+{
+  return ftt_cell_level (cell);
+}
+
+static gdouble cell_fraction (FttCell * cell)
+{
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
+}
+
+static gdouble cell_solid_area (FttCell * cell)
+{
+  FttVector n;
+  gfs_solid_normal (cell, &n);
+  return ftt_vector_norm (&n);
+}
+
+static gdouble cell_velocity_lambda2 (FttCell * cell, FttCellFace * face, GfsDomain * domain)
+{
+  return gfs_vector_lambda2 (cell, gfs_domain_velocity (domain));
+}
+
+static gdouble cell_streamline_curvature (FttCell * cell, FttCellFace * face, GfsDomain * domain)
+{
+  return gfs_streamline_curvature (cell, gfs_domain_velocity (domain));
+}
+
 static void gfs_simulation_init (GfsSimulation * object)
 {
+  GfsDomain * domain = GFS_DOMAIN (object);
+  static GfsDerivedVariable derived_variable[] = {
+    { "x",          cell_x },
+    { "y",          cell_y },
+    { "z",          cell_z },
+    { "t",          cell_t },
+    { "Vorticity",  cell_vorticity },
+    { "Divergence", cell_divergence },
+    { "Velocity",   cell_velocity_norm },
+    { "Velocity2",  cell_velocity_norm2 },
+    { "Level",      cell_level },
+    { "A",          cell_fraction },
+    { "S",          cell_solid_area },
+    { "Lambda2",    cell_velocity_lambda2 },
+    { "Curvature",  cell_streamline_curvature },
+    { NULL, NULL}
+  };
+  GfsDerivedVariable * v = derived_variable;
+
+  gfs_domain_add_variable (domain, "P");
+  gfs_variable_set_vector (gfs_domain_add_variable (domain, "U"), FTT_X);
+  gfs_variable_set_vector (gfs_domain_add_variable (domain, "V"), FTT_Y);
+#if (!FTT_2D)
+  gfs_variable_set_vector (gfs_domain_add_variable (domain, "W"), FTT_Z);
+#endif /* FTT_3D */
+
+  while (v->name) {
+    gfs_simulation_add_derived_variable (object, *v);
+    v++;
+  }
+
   gfs_time_init (&object->time);
   gfs_physical_params_init (&object->physical_params);
 
   gfs_advection_params_init (&object->advection_params);
   object->advection_params.flux = gfs_face_velocity_advection_flux;
-  object->advection_params.fv = gfs_res;
   gfs_multilevel_params_init (&object->diffusion_params);
   object->diffusion_params.tolerance = 1e-6;
 
@@ -758,19 +867,22 @@ void gfs_simulation_refine (GfsSimulation * sim)
   if (sim->surface) {
     gfs_domain_timer_start (domain, "solid_fractions");
     gfs_domain_init_solid_fractions (domain, sim->surface, TRUE,
-				     (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+				     (FttCellCleanupFunc) gfs_cell_cleanup, NULL, 
+				     NULL);
     gfs_domain_match (domain);
     gfs_domain_timer_stop (domain, "solid_fractions");
   }
   gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) check_solid_fractions, &nf);
   if (nf > 0) {
-    GfsVariable * v = domain->variables;
+    GSList * i = domain->variables;
     gboolean diffusion = FALSE;
     
-    while (v && !diffusion) {
+    while (i && !diffusion) {
+      GfsVariable * v = i->data;
+
       if (v->sources)
 	gts_container_foreach (v->sources, (GtsFunc) is_diffusion, &diffusion);
-      v = v->next;
+      i = i->next;
     }
     if (diffusion)
       g_warning ("the solid surface cuts %d boundary cells,\n"
@@ -834,12 +946,14 @@ void gfs_simulation_write (GfsSimulation * sim,
 static gdouble min_cfl (GfsSimulation * sim)
 {
   gdouble cfl = sim->advection_params.cfl;
-  GfsVariable * v = GFS_DOMAIN (sim)->variables;
+  GSList * i = GFS_DOMAIN (sim)->variables;
   
-  while (v) {
+  while (i) {
+    GfsVariable * v = i->data;
+
     if (GFS_IS_VARIABLE_TRACER (v) && GFS_VARIABLE_TRACER (v)->advection.cfl < cfl)
       cfl = GFS_VARIABLE_TRACER (v)->advection.cfl;
-    v = v->next;
+    i = i->next;
   }
 
   return cfl;
@@ -1053,12 +1167,72 @@ void gfs_simulation_run (GfsSimulation * sim)
   g_timer_stop (GFS_DOMAIN (sim)->timer);
 }
 
+/**
+ * gfs_simulation_add_derived_variable:
+ * @sim: a #GfsSimulation.
+ * @v: the #GfsDerivedVariable.
+ *
+ * Adds @v to @sim.
+ *
+ * Returns: %TRUE if the variable was successfully added to @sim or
+ * %FALSE if a derived variable with the same name already exists.
+ */
+gboolean gfs_simulation_add_derived_variable (GfsSimulation * sim, GfsDerivedVariable v)
+{
+  GSList * i;
+  
+  g_return_val_if_fail (sim != NULL, FALSE);
+
+  i = sim->derived_variables;
+  while (i) {
+    GfsDerivedVariable * u = i->data;
+    if (!strcmp (u->name, v.name))
+      return FALSE;
+    i = i->next;
+  }
+  sim->derived_variables = g_slist_prepend (sim->derived_variables, 
+					    g_memdup (&v, sizeof (GfsDerivedVariable)));
+  return TRUE;
+}
+
+/**
+ * gfs_simulation_remove_derived_variable:
+ * @sim: a #GfsSimulation.
+ * @name: the name of a #GfsDerivedVariable.
+ *
+ * Removes derived variable @name from @sim.
+ *
+ * Returns: %TRUE if the variable was successfully removed from @sim or
+ * %FALSE if a derived variable with the this name does not exist.
+ */
+gboolean gfs_simulation_remove_derived_variable (GfsSimulation * sim, const gchar * name)
+{
+  GSList * i;
+  
+  g_return_val_if_fail (sim != NULL, FALSE);
+  g_return_val_if_fail (name != NULL, FALSE);
+
+  i = sim->derived_variables;
+  while (i) {
+    GfsDerivedVariable * u = i->data;
+
+    if (!strcmp (u->name, name)) {
+      g_free (u);
+      sim->derived_variables = g_slist_remove_link (sim->derived_variables, i);
+      g_slist_free (i);
+      return TRUE;
+    }
+    i = i->next;
+  }
+  return FALSE;
+}
+
 /* GfsAdvection: Object */
 
 static void advection_run (GfsSimulation * sim)
 {
-  GfsVariable * v;
   GfsDomain * domain;
+  GSList * i;
 
   domain = GFS_DOMAIN (sim);
 
@@ -1068,21 +1242,21 @@ static void advection_run (GfsSimulation * sim)
   gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
 
   gfs_set_merged (domain);
-  v = domain->variables;
-  while (v) {
-    gfs_event_init (GFS_EVENT (v), sim);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v);
-    v = v->next;
+  i = domain->variables;
+  while (i) {
+    gfs_event_init (GFS_EVENT (i->data), sim);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
+    i = i->next;
   }
 
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
     gdouble tstart;
 
-    v = domain->variables;
-    while (v) {
-      gfs_event_do (GFS_EVENT (v), sim);
-      v = v->next;
+    i = domain->variables;
+    while (i) {
+      gfs_event_do (GFS_EVENT (i->data), sim);
+      i = i->next;
     }
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
@@ -1095,16 +1269,16 @@ static void advection_run (GfsSimulation * sim)
 
     gfs_domain_face_traverse (domain, FTT_XYZ,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity,
-			      NULL);
+			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
     gfs_domain_face_traverse (domain, FTT_XYZ,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, NULL);
+			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity,
+			      gfs_domain_velocity (domain));
 
-    v = domain->variables;
-    while (v) {
-      if (GFS_IS_VARIABLE_TRACER (v)) {
-	GfsVariableTracer * t = GFS_VARIABLE_TRACER (v);
+    i = domain->variables;
+    while (i) {
+      if (GFS_IS_VARIABLE_TRACER (i->data)) {
+	GfsVariableTracer * t = GFS_VARIABLE_TRACER (i->data);
 
 	t->advection.dt = sim->advection_params.dt;
 	switch (t->advection.scheme) {
@@ -1113,13 +1287,13 @@ static void advection_run (GfsSimulation * sim)
 	  break;
 	case GFS_VOF:
 	  gfs_tracer_vof_advection (domain, &t->advection, NULL);
-	  gfs_domain_variable_centered_sources (domain, v, v, t->advection.dt);
+	  gfs_domain_variable_centered_sources (domain, i->data, i->data, t->advection.dt);
 	  break;
 	case GFS_NONE:
 	  break;
 	}
       }
-      v = v->next;
+      i = i->next;
     }
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);

@@ -26,10 +26,7 @@
 
 static gboolean refine_maxlevel (FttCell * cell, GfsFunction * maxlevel)
 {
-  FttVector p;
-
-  ftt_cell_pos (cell, &p);
-  return (ftt_cell_level (cell) < gfs_function_value (maxlevel, cell, &p, 0.));
+  return (ftt_cell_level (cell) < gfs_function_value (maxlevel, cell));
 }
 
 static void refine_box (GfsBox * box, GfsFunction * maxlevel)
@@ -143,10 +140,8 @@ static void refine_cut_cell (FttCell * cell, GtsSurface * s, gpointer * data)
 {
   GfsRefine * refine = data[0];
   GfsDomain * domain = data[1];
-  FttVector p;
 
-  ftt_cell_pos (cell, &p);
-  if (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, cell, &p, 0.))
+  if (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, cell))
     ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
 }
 
@@ -318,13 +313,36 @@ static void refine_distance_destroy (GtsObject * object)
   GfsRefineDistance * d = GFS_REFINE_DISTANCE (object);
 
   if (d->stree)
-    gts_bb_tree_destroy (d->stree, TRUE);  
+    gts_bb_tree_destroy (d->stree, TRUE);
+  gfs_simulation_remove_derived_variable (gfs_object_simulation (object), "Distance");
 
   (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->destroy) (object);
 }
 
+static gdouble cell_distance (FttCell * cell, 
+			      FttCellFace * face, 
+			      GfsSimulation * sim,
+			      GfsRefineDistance * refine)
+{
+  FttVector pos;
+  GtsPoint p;
+
+  ftt_cell_pos (cell, &pos);
+  p.x = pos.x; p.y = pos.y; p.z = pos.z;
+  return gts_bb_tree_point_distance (refine->stree, &p,
+				     (GtsBBoxDistFunc) gts_point_triangle_distance, NULL);
+}
+
 static void refine_distance_read (GtsObject ** o, GtsFile * fp)
 {
+  GfsDerivedVariable v = { "Distance", cell_distance };
+
+  v.data = *o;
+  if (!gfs_simulation_add_derived_variable (gfs_object_simulation (*o), v)) {
+    gts_file_error (fp, "derived variable `Distance' already defined");
+    return;
+  }
+
   (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
@@ -332,35 +350,10 @@ static void refine_distance_read (GtsObject ** o, GtsFile * fp)
   GFS_REFINE_DISTANCE (*o)->stree = gts_bb_tree_surface (GFS_REFINE_SURFACE (*o)->surface);
 }
 
-static gboolean refine_distance_maxlevel (FttCell * cell, GfsRefine * refine)
-{
-  FttVector pos;
-  GtsPoint p;
-  gdouble d;
-
-  ftt_cell_pos (cell, &pos);
-  p.x = pos.x; p.y = pos.y; p.z = pos.z;
-  d = gts_bb_tree_point_distance (GFS_REFINE_DISTANCE (refine)->stree, &p,
-				  (GtsBBoxDistFunc) gts_point_triangle_distance, NULL);
-  return (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, cell, &pos, d));
-}
-
-static void refine_distance (GfsBox * box, gpointer data)
-{
-  ftt_cell_refine (box->root, 
-		   (FttCellRefineFunc) refine_distance_maxlevel, data,
-		   (FttCellInitFunc) gfs_cell_fine_init, gfs_box_domain (box));
-}
-
-static void refine_distance_refine (GfsRefine * refine, GfsSimulation * sim)
-{
-  gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) refine_distance, refine);
-}
-
 static void gfs_refine_distance_class_init (GfsRefineClass * klass)
 {
-  klass->refine = refine_distance_refine;
-  
+  klass->refine = gfs_refine_refine;
+
   GTS_OBJECT_CLASS (klass)->destroy = refine_distance_destroy;
   GTS_OBJECT_CLASS (klass)->read = refine_distance_read;
 }
@@ -388,8 +381,58 @@ GfsRefineClass * gfs_refine_distance_class (void)
 
 /* GfsRefineHeight: Object */
 
+static void refine_height_destroy (GtsObject * object)
+{
+  gfs_simulation_remove_derived_variable (gfs_object_simulation (object), "Height");
+
+  (* GTS_OBJECT_CLASS (gfs_refine_height_class ())->parent_class->destroy) (object);
+}
+
+static gdouble point_height (GtsPoint * p, GtsSurface * surface, GtsFace ** guess)
+{
+  GtsFace * f = gts_point_locate (p, surface, *guess);
+
+  if (f != NULL) {
+    *guess = f;
+    gts_triangle_interpolate_height (GTS_TRIANGLE (f), p);
+    return p->z;
+  }
+  return 0.;
+}
+
+static gdouble cell_height (FttCell * cell, 
+			    FttCellFace * face, 
+			    GfsSimulation * sim,
+			    GfsRefineSurface * refine)
+{
+  GtsFace * guess = NULL;
+  gdouble h = ftt_cell_size (cell)/2.;
+  FttVector pos;
+  GtsPoint p;
+  static guint dp[4][2] = {{ -1, -1}, {1, -1}, {1, 1}, {-1, 1}}, i;
+  gdouble min = G_MAXDOUBLE;
+
+  ftt_cell_pos (cell, &pos);
+  for (i = 0; i < 4; i++) {
+    gdouble v;
+    p.x = pos.x + h*dp[i][0]; p.y = pos.y + h*dp[i][1];
+    v = point_height (&p, refine->surface, &guess);
+    if (v < min)
+      min = v;
+  }
+  return min;
+}
+
 static void refine_height_read (GtsObject ** o, GtsFile * fp)
 {
+  GfsDerivedVariable v = { "Height", cell_height };
+
+  v.data = *o;
+  if (!gfs_simulation_add_derived_variable (gfs_object_simulation (*o), v)) {
+    gts_file_error (fp, "derived variable `Height' already defined");
+    return;
+  }
+
   (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
@@ -399,66 +442,11 @@ static void refine_height_read (GtsObject ** o, GtsFile * fp)
 			      (GtsFunc) gts_triangle_revert, NULL);
 }
 
-static gboolean height_maxlevel (GtsPoint * p, guint level, GfsRefine * refine, GtsFace ** guess)
-{
-  GtsFace * f = gts_point_locate (p, GFS_REFINE_SURFACE (refine)->surface, *guess);
-
-  if (f != NULL) {
-    FttVector pos;
-
-    *guess = f;
-    gts_triangle_interpolate_height (GTS_TRIANGLE (f), p);
-    pos.x = p->x; pos.y = p->y; pos.z = p->z;
-    return (level < gfs_function_value (refine->maxlevel, NULL, &pos, p->z));
-  }
-  return FALSE;
-}
-
-static gboolean refine_height_maxlevel (FttCell * cell, gpointer * data)
-{
-  GfsRefine * refine = data[0];
-  GtsFace ** guess = data[1];
-  guint level = ftt_cell_level (cell);
-  gdouble h = ftt_cell_size (cell)/2.;
-  FttVector pos;
-  GtsPoint p;
-
-  ftt_cell_pos (cell, &pos);
-  p.x = pos.x - h; p.y = pos.y - h;
-  if (height_maxlevel (&p, level, refine, guess))
-    return TRUE;
-  p.x = pos.x + h; p.y = pos.y - h;
-  if (height_maxlevel (&p, level, refine, guess))
-    return TRUE;
-  p.x = pos.x + h; p.y = pos.y + h;
-  if (height_maxlevel (&p, level, refine, guess))
-    return TRUE;
-  p.x = pos.x - h; p.y = pos.y + h;
-  if (height_maxlevel (&p, level, refine, guess))
-    return TRUE;
-  return FALSE;
-}
-
-static void refine_height (GfsBox * box, gpointer data)
-{
-  gpointer datum[2];
-  GtsFace * guess = NULL;
-
-  datum[0] = data;
-  datum[1] = &guess;
-  ftt_cell_refine (box->root, 
-		   (FttCellRefineFunc) refine_height_maxlevel, datum,
-		   (FttCellInitFunc) gfs_cell_fine_init, gfs_box_domain (box));
-}
-
-static void refine_height_refine (GfsRefine * refine, GfsSimulation * sim)
-{
-  gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) refine_height, refine);
-}
-
 static void gfs_refine_height_class_init (GfsRefineClass * klass)
 {
-  klass->refine = refine_height_refine;
+  klass->refine = gfs_refine_refine;
+
+  GTS_OBJECT_CLASS (klass)->destroy = refine_height_destroy;
   GTS_OBJECT_CLASS (klass)->read = refine_height_read;
 }
 
