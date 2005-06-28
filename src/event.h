@@ -94,7 +94,7 @@ typedef struct _GfsInit         GfsInit;
 struct _GfsInit {
   /*< private >*/
   GfsGenericInit parent;
-  GHashTable * f;
+  GSList * f;
 };
 
 #define GFS_INIT(obj)            GTS_OBJECT_CAST (obj,\

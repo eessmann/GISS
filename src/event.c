@@ -437,6 +437,25 @@ GfsEventClass * gfs_generic_init_class (void)
 
 /* GfsInit: Object */
 
+typedef struct {
+  GfsVariable * v;
+  GfsFunction * f;
+} VarFunc;
+
+static VarFunc * var_func_new (GfsVariable * v, GfsFunction * f)
+{
+  VarFunc * vf = g_malloc (sizeof (VarFunc));
+  vf->v = v;
+  vf->f = f;
+  return vf;
+}
+
+static void var_func_destroy (VarFunc * v)
+{
+  gts_object_destroy (GTS_OBJECT (v->f));
+  g_free (v);
+}
+
 static void gfs_init_read (GtsObject ** o, GtsFile * fp)
 {
   if (GTS_OBJECT_CLASS (gfs_init_class ())->parent_class->read)
@@ -461,14 +480,13 @@ static void gfs_init_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     else {
-      GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (gfs_object_simulation (*o))->variables,
-						fp->token->str);
+      GfsInit * init = GFS_INIT (*o);
+      GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+      GfsVariable * v = gfs_variable_from_name (domain->variables, fp->token->str);
       GfsFunction * f;
 
-      if (!v) {
-	gts_file_error (fp, "unknown variable `%s'\n", fp->token->str);
-	return;
-      }
+      if (!v)
+	v = gfs_domain_add_variable (domain, fp->token->str);
       gts_file_next_token (fp);
 
       if (fp->type != '=') {
@@ -483,7 +501,7 @@ static void gfs_init_read (GtsObject ** o, GtsFile * fp)
 	gts_object_destroy (GTS_OBJECT (f));
 	return;
       }
-      g_hash_table_insert (GFS_INIT (*o)->f, v, f);
+      init->f = g_slist_append (init->f, var_func_new (v, f));
     }
   }
   if (fp->type != '}') {
@@ -494,65 +512,53 @@ static void gfs_init_read (GtsObject ** o, GtsFile * fp)
   gts_file_next_token (fp);
 }
 
-static void write_f (GfsVariable * v, GfsFunction * f, FILE * fp)
-{
-  fprintf (fp, "  %s =", v->name);
-  gfs_function_write (f, fp);
-  fputc ('\n', fp);
-}
-
 static void gfs_init_write (GtsObject * o, FILE * fp)
 {
-  GfsInit * i = GFS_INIT (o);
-
+  GSList * i;
+  
   if (GTS_OBJECT_CLASS (gfs_init_class ())->parent_class->write)
     (* GTS_OBJECT_CLASS (gfs_init_class ())->parent_class->write) 
       (o, fp);
 
   fputs (" {\n", fp);
-  g_hash_table_foreach (i->f, (GHFunc) write_f, fp);
+  i = GFS_INIT (o)->f;
+  while (i) {
+    VarFunc * v = i->data;
+    fprintf (fp, "  %s =", v->v->name);
+    gfs_function_write (v->f, fp);
+    fputc ('\n', fp);
+    i = i->data;
+  }
   fputc ('}', fp);
-}
-
-static void destroy_f (GfsVariable * v, GtsObject * o)
-{
-  gts_object_destroy (o);
 }
 
 static void gfs_init_destroy (GtsObject * object)
 {
   GfsInit * i = GFS_INIT (object);
 
-  g_hash_table_foreach (i->f, (GHFunc) destroy_f, NULL);
-  g_hash_table_destroy (i->f);
+  g_slist_foreach (i->f, (GFunc) var_func_destroy, NULL);
+  g_slist_free (i->f);
 
   (* GTS_OBJECT_CLASS (gfs_init_class ())->parent_class->destroy) 
     (object);
 }
 
-static void init_vf (FttCell * cell, gpointer * data)
+static void init_vf (FttCell * cell, VarFunc * vf)
 {
-  GfsVariable * v = data[0];
-  GfsFunction * f = data[1];
-
-  GFS_VARIABLE (cell, v->i) = gfs_function_value (f, cell);
-}
-
-static void init_f (GfsVariable * v, GfsFunction * f, GfsDomain * domain)
-{
-  gpointer data[2];
-  
-  data[0] = v;
-  data[1] = f;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) init_vf, data);
+  GFS_VARIABLE (cell, vf->v->i) = gfs_function_value (vf->f, cell);
 }
 
 static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_class ())->parent_class)->event) 
       (event, sim)) {
-    g_hash_table_foreach (GFS_INIT (event)->f, (GHFunc) init_f, sim);
+    GSList * i = GFS_INIT (event)->f;
+
+    while (i) {
+      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) init_vf, i->data);
+      i = i->next;
+    }
     return TRUE;
   }
   return FALSE;
@@ -566,11 +572,6 @@ static void gfs_init_class_init (GfsGenericInitClass * klass)
   GTS_OBJECT_CLASS (klass)->destroy = gfs_init_destroy;
 }
 
-static void gfs_init_init (GfsInit * object)
-{
-  object->f = g_hash_table_new (NULL, NULL);
-}
-
 GfsGenericInitClass * gfs_init_class (void)
 {
   static GfsGenericInitClass * klass = NULL;
@@ -581,7 +582,7 @@ GfsGenericInitClass * gfs_init_class (void)
       sizeof (GfsInit),
       sizeof (GfsGenericInitClass),
       (GtsObjectClassInitFunc) gfs_init_class_init,
-      (GtsObjectInitFunc) gfs_init_init,
+      (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
