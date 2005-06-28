@@ -128,17 +128,21 @@ static gboolean expr_or_func (GtsFile * fp, GfsFunction * f)
   
   if (type == '(' || type == GTS_STRING) {
     f->expr = g_string_new (fp->token->str);
-    if (type == '(' || fp->next_token != '\0') {
+    if (type == '(' || (fp->next_token != '\0' && fp->next_token != '}')) {
       scope = type == '(' ? 1 : 0;
       if (fp->next_token != '\0')
 	g_string_append_c (f->expr, fp->next_token);
       c = gts_file_getc (fp);
-      while (c != EOF && (scope > 0 || (c != ' ' && c != '\n'))) {
+      while (c != EOF && (scope > 0 || !gfs_char_in_string (c, "}\t \n"))) {
 	if (c == '(') scope++;
 	if (c == ')') scope--;
 	g_string_append_c (f->expr, c);
 	c = gts_file_getc (fp);
       }
+      if (scope != 0)
+	gts_file_error (fp, "parse error");
+      else if (c == '}')
+      	fp->next_token = c;
     }
     return TRUE;
   }
@@ -365,14 +369,11 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       close (find);
 
       status = compile (fp, f, finname);
-      //      remove (finname);
+      remove (finname);
       switch (status) {
       case SIGQUIT: exit (0);
       case SIGABRT: return;
       }
-
-      if ((type == '(' || type == GTS_STRING) && fp->next_token != '\0')
-      	gts_file_next_token (fp);
     }
     break;
 
