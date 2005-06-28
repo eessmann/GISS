@@ -428,7 +428,6 @@ test/advection/Makefile
 test/advection/graphic/Makefile
 test/advection/order/Makefile
 test/euler/Makefile
-test/mpi/Makefile
 test/ocean/Makefile
 doc/Makefile
 doc/tutorial/Makefile
