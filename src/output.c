@@ -1436,7 +1436,7 @@ static void gfs_output_scalar_read (GtsObject ** o, GtsFile * fp)
       }
       gts_file_next_token (fp);
       gfs_function_read (output->f, gfs_object_simulation (*o), fp);
-      output->name = gfs_function_description (output->f);
+      output->name = gfs_function_description (output->f, TRUE);
     }
     else if (!strcmp (fp->token->str, "min")) {
       gts_file_next_token (fp);

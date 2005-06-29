@@ -476,10 +476,12 @@ static gdouble interpolated_value (GfsFunction * f, FttVector * p)
 /**
  * gfs_function_description:
  * @f: a #GfsFunction.
+ * @truncate: whether to truncate long descriptions.
  *
- * Returns: a newly allocated string describing @f concisely.
+ * Returns: a newly allocated string describing @f.
  */
-gchar * gfs_function_description (GfsFunction * f)
+gchar * gfs_function_description (GfsFunction * f,
+				  gboolean truncate)
 {
   gchar * s;
 
@@ -490,16 +492,19 @@ gchar * gfs_function_description (GfsFunction * f)
   else if (f->v)
     s = g_strdup (f->v->name);
   else if (f->expr) {
-    gchar * c = s = g_strdup (f->expr->str);
-    guint n = 0;
-
-    while (*c != '\0' && !isspace (*c))
-      c++;
-    while (*c != '\0' && n < 3) {
-      *c = '.';
-      c++; n++;
+    s = g_strdup (f->expr->str);    
+    if (truncate) {
+      gchar * c = s;
+      guint n = 0;
+      
+      while (*c != '\0' && !isspace (*c))
+	c++;
+      while (*c != '\0' && n < 3) {
+	*c = '.';
+	c++; n++;
+      }
+      *c = '\0';
     }
-    *c = '\0';
   }
   else
     s = g_strdup_printf ("%g", f->val);
