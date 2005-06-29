@@ -784,7 +784,15 @@ static void gfs_source_diffusion_explicit_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GFS_SOURCE_DIFFUSION_EXPLICIT (*o)->s = 
-    gfs_domain_add_variable (GFS_DOMAIN (gfs_object_simulation (*o)), NULL);
+    gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
+}
+
+static void gfs_source_diffusion_explicit_destroy (GtsObject * o)
+{
+  if (GFS_SOURCE_DIFFUSION_EXPLICIT (o)->s)
+    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_DIFFUSION_EXPLICIT (o)->s));
+
+  (* GTS_OBJECT_CLASS (gfs_source_diffusion_explicit_class ())->parent_class->destroy) (o);
 }
 
 static gdouble source_diffusion_explicit_value (GfsSourceGeneric * s, 
@@ -798,6 +806,7 @@ static void gfs_source_diffusion_explicit_class_init (GfsSourceGenericClass * kl
 {
   GFS_EVENT_CLASS (klass)->event = gfs_source_diffusion_explicit_event;
   GTS_OBJECT_CLASS (klass)->read = gfs_source_diffusion_explicit_read;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_source_diffusion_explicit_destroy;
   klass->mac_value = klass->centered_value = source_diffusion_explicit_value;
 }
 
@@ -945,8 +954,14 @@ GfsSourceGenericClass * gfs_source_viscosity_class (void)
 
 static void source_coriolis_destroy (GtsObject * o)
 {
+  FttComponent c;
+
   if (GFS_SOURCE_CORIOLIS (o)->omegaz)
     gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CORIOLIS (o)->omegaz));
+
+  for (c = 0; c <  2; c++)
+    if (GFS_SOURCE_CORIOLIS (o)->u[c])
+      gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CORIOLIS (o)->u[c]));
 
   (* GTS_OBJECT_CLASS (gfs_source_class ())->parent_class->destroy) (o);
 }
@@ -964,7 +979,7 @@ static void gfs_source_coriolis_read (GtsObject ** o, GtsFile * fp)
   gfs_function_read (GFS_SOURCE_CORIOLIS (*o)->omegaz, gfs_object_simulation (*o), fp);
 
   for (c = 0; c <  2; c++)
-    GFS_SOURCE_CORIOLIS (*o)->u[c] = gfs_domain_add_variable (domain, NULL);
+    GFS_SOURCE_CORIOLIS (*o)->u[c] = gfs_temporary_variable (domain);
 }
 
 static void gfs_source_coriolis_write (GtsObject * o, FILE * fp)

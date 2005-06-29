@@ -485,8 +485,10 @@ static void gfs_init_read (GtsObject ** o, GtsFile * fp)
       GfsVariable * v = gfs_variable_from_name (domain->variables, fp->token->str);
       GfsFunction * f;
 
-      if (!v)
-	v = gfs_domain_add_variable (domain, fp->token->str);
+      if (!v && !(v = gfs_domain_add_variable (domain, fp->token->str))) {
+	gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
+	return;
+      }
       gts_file_next_token (fp);
 
       if (fp->type != '=') {
@@ -844,9 +846,10 @@ static void gfs_event_sum_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (sv)");
     return;
   }
-  if (!(s->sv = gfs_variable_from_name (domain->variables, fp->token->str))) {
-    s->sv = gfs_domain_add_variable (domain, fp->token->str);
-    g_assert (s->sv);
+  if (!(s->sv = gfs_variable_from_name (domain->variables, fp->token->str)) &&
+      !(s->sv = gfs_domain_add_variable (domain, fp->token->str))) {
+    gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
+    return;
   }
   s->sv->fine_coarse = s->v->fine_coarse;
   gts_file_next_token (fp);
@@ -1031,9 +1034,10 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (Z)");
     return;
   }
-  if (!(s->z = gfs_variable_from_name (domain->variables, fp->token->str))) {
-    s->z = gfs_domain_add_variable (domain, fp->token->str);
-    g_assert (s->z);
+  if (!(s->z = gfs_variable_from_name (domain->variables, fp->token->str)) &&
+      !(s->z = gfs_domain_add_variable (domain, fp->token->str))) {
+    gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
+    return;
   }
   gts_file_next_token (fp);
 
@@ -1067,15 +1071,17 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
     gchar * u;
     
     u = g_strdup_printf ("%s%d", s->Aname, i);
-    if (!(s->A[i] = gfs_variable_from_name (domain->variables, u))) {
-      s->A[i] = gfs_domain_add_variable (domain, u);
-      g_assert (s->A[i]);
+    if (!(s->A[i] = gfs_variable_from_name (domain->variables, u)) &&
+	!(s->A[i] = gfs_domain_add_variable (domain, u))) {
+      gts_file_error (fp, "`%s' is a reserved keyword", u);
+      return;
     }
     g_free (u);
     u = g_strdup_printf ("%s%d", s->Bname, i);
-    if (!(s->B[i] = gfs_variable_from_name (domain->variables, u))) {
-      s->B[i] = gfs_domain_add_variable (domain, u);
-      g_assert (s->B[i]);
+    if (!(s->B[i] = gfs_variable_from_name (domain->variables, u)) &&
+	!(s->B[i] = gfs_domain_add_variable (domain, u))) {
+      gts_file_error (fp, "`%s' is a reserved keyword", u);
+      return;
     }
   }
 
@@ -1295,7 +1301,7 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   s->max = atof (fp->token->str);
-  s->oldv = gfs_domain_add_variable (domain, NULL);
+  s->oldv = gfs_temporary_variable (domain);
   s->oldv->fine_coarse = s->v->fine_coarse;
 
   if (fp->next_token != '\n') {
@@ -1304,11 +1310,22 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
       gts_file_error (fp, "expecting a string (diff)");
       return;
     }
-    if (!(s->diff = gfs_variable_from_name (domain->variables, fp->token->str)))
-      s->diff = gfs_domain_add_variable (domain, fp->token->str);
+    if (!(s->diff = gfs_variable_from_name (domain->variables, fp->token->str)) &&
+	!(s->diff = gfs_domain_add_variable (domain, fp->token->str))) {
+      gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
+      return;
+    }
     s->diff->fine_coarse = s->v->fine_coarse;
   }
   gts_file_next_token (fp);
+}
+
+static void gfs_event_stop_destroy (GtsObject * o)
+{
+  if (GFS_EVENT_STOP (o)->oldv)
+    gts_object_destroy (GTS_OBJECT (GFS_EVENT_STOP (o)->oldv));
+
+  (* GTS_OBJECT_CLASS (gfs_event_stop_class ())->parent_class->destroy) (o);
 }
 
 static void diff (FttCell * cell, GfsEventStop * s)
@@ -1361,6 +1378,7 @@ static void gfs_event_stop_class_init (GfsEventClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = gfs_event_stop_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_event_stop_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_event_stop_destroy;
   GFS_EVENT_CLASS (klass)->event = gfs_event_stop_event;
 }
 

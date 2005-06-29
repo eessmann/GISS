@@ -59,8 +59,6 @@ static void simulation_destroy (GtsObject * object)
     i = i->next;
   }
   g_slist_free (sim->modules);
-  g_slist_foreach (sim->derived_variables, (GFunc) g_free, NULL);
-  g_slist_free (sim->derived_variables);
   g_slist_free (sim->variables);
 
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->destroy) 
@@ -728,7 +726,7 @@ static void gfs_simulation_init (GfsSimulation * object)
 #endif /* FTT_3D */
 
   while (v->name) {
-    gfs_simulation_add_derived_variable (object, *v);
+    g_assert (gfs_domain_add_derived_variable (domain, *v));
     v++;
   }
 
@@ -1165,66 +1163,6 @@ void gfs_simulation_run (GfsSimulation * sim)
   gts_range_init (&GFS_DOMAIN (sim)->mpi_wait);
   (* GFS_SIMULATION_CLASS (GTS_OBJECT (sim)->klass)->run) (sim);
   g_timer_stop (GFS_DOMAIN (sim)->timer);
-}
-
-/**
- * gfs_simulation_add_derived_variable:
- * @sim: a #GfsSimulation.
- * @v: the #GfsDerivedVariable.
- *
- * Adds @v to @sim.
- *
- * Returns: %TRUE if the variable was successfully added to @sim or
- * %FALSE if a derived variable with the same name already exists.
- */
-gboolean gfs_simulation_add_derived_variable (GfsSimulation * sim, GfsDerivedVariable v)
-{
-  GSList * i;
-  
-  g_return_val_if_fail (sim != NULL, FALSE);
-
-  i = sim->derived_variables;
-  while (i) {
-    GfsDerivedVariable * u = i->data;
-    if (!strcmp (u->name, v.name))
-      return FALSE;
-    i = i->next;
-  }
-  sim->derived_variables = g_slist_prepend (sim->derived_variables, 
-					    g_memdup (&v, sizeof (GfsDerivedVariable)));
-  return TRUE;
-}
-
-/**
- * gfs_simulation_remove_derived_variable:
- * @sim: a #GfsSimulation.
- * @name: the name of a #GfsDerivedVariable.
- *
- * Removes derived variable @name from @sim.
- *
- * Returns: %TRUE if the variable was successfully removed from @sim or
- * %FALSE if a derived variable with the this name does not exist.
- */
-gboolean gfs_simulation_remove_derived_variable (GfsSimulation * sim, const gchar * name)
-{
-  GSList * i;
-  
-  g_return_val_if_fail (sim != NULL, FALSE);
-  g_return_val_if_fail (name != NULL, FALSE);
-
-  i = sim->derived_variables;
-  while (i) {
-    GfsDerivedVariable * u = i->data;
-
-    if (!strcmp (u->name, name)) {
-      g_free (u);
-      sim->derived_variables = g_slist_remove_link (sim->derived_variables, i);
-      g_slist_free (i);
-      return TRUE;
-    }
-    i = i->next;
-  }
-  return FALSE;
 }
 
 /* GfsAdvection: Object */

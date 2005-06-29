@@ -55,8 +55,6 @@ struct _GfsAdaptStats {
 struct _GfsSimulation {
   GfsDomain parent;
 
-  GSList * derived_variables;
-
   GfsTime time;
   GfsPhysicalParams physical_params;
 
@@ -120,10 +118,6 @@ void                 gfs_physical_params_read    (GfsPhysicalParams * p,
 						  GtsFile * fp);
 void                 gfs_simulation_run          (GfsSimulation * sim);
 #define              gfs_object_simulation(o)     GFS_SIMULATION(GTS_OBJECT (o)->reserved)
-gboolean     gfs_simulation_add_derived_variable (GfsSimulation * sim, 
-						  GfsDerivedVariable v);
-gboolean     gfs_simulation_remove_derived_variable (GfsSimulation * sim, 
-						     const gchar * name);
 
 /* GfsAdvection: Header */
 

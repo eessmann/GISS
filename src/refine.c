@@ -314,7 +314,7 @@ static void refine_distance_destroy (GtsObject * object)
 
   if (d->stree)
     gts_bb_tree_destroy (d->stree, TRUE);
-  gfs_simulation_remove_derived_variable (gfs_object_simulation (object), "Distance");
+  gfs_domain_remove_derived_variable (GFS_DOMAIN (gfs_object_simulation (object)), "Distance");
 
   (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->destroy) (object);
 }
@@ -338,7 +338,7 @@ static void refine_distance_read (GtsObject ** o, GtsFile * fp)
   GfsDerivedVariable v = { "Distance", cell_distance };
 
   v.data = *o;
-  if (!gfs_simulation_add_derived_variable (gfs_object_simulation (*o), v)) {
+  if (!gfs_domain_add_derived_variable (GFS_DOMAIN (gfs_object_simulation (*o)), v)) {
     gts_file_error (fp, "derived variable `Distance' already defined");
     return;
   }
@@ -383,7 +383,7 @@ GfsRefineClass * gfs_refine_distance_class (void)
 
 static void refine_height_destroy (GtsObject * object)
 {
-  gfs_simulation_remove_derived_variable (gfs_object_simulation (object), "Height");
+  gfs_domain_remove_derived_variable (GFS_DOMAIN (gfs_object_simulation (object)), "Height");
 
   (* GTS_OBJECT_CLASS (gfs_refine_height_class ())->parent_class->destroy) (object);
 }
@@ -428,7 +428,7 @@ static void refine_height_read (GtsObject ** o, GtsFile * fp)
   GfsDerivedVariable v = { "Height", cell_height };
 
   v.data = *o;
-  if (!gfs_simulation_add_derived_variable (gfs_object_simulation (*o), v)) {
+  if (!gfs_domain_add_derived_variable (GFS_DOMAIN (gfs_object_simulation (*o)), v)) {
     gts_file_error (fp, "derived variable `Height' already defined");
     return;
   }

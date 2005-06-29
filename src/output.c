@@ -2189,9 +2189,11 @@ static void output_error_norm_read (GtsObject ** o, GtsFile * fp)
 	gts_file_error (fp, "expecting a variable name");
 	return;
       }
-      n->v = gfs_variable_from_name (domain->variables, fp->token->str);
-      if (!n->v)
-	n->v = gfs_domain_add_variable (domain, fp->token->str);
+      if (!(n->v = gfs_variable_from_name (domain->variables, fp->token->str)) &&
+	  !(n->v = gfs_domain_add_variable (domain, fp->token->str))) {
+	gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
+	return;
+      }
       gts_file_next_token (fp);
     }
     else {

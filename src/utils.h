@@ -39,6 +39,8 @@ typedef struct {
   gpointer data;
 } GfsDerivedVariable;
 
+GfsDerivedVariable * gfs_derived_variable_from_name (GSList * i, const gchar * name);
+
 /* GfsFunction: Header */
 
 typedef struct _GfsFunction         GfsFunction;

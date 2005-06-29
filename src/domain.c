@@ -134,6 +134,7 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
       s = strtok (NULL, ",");
     }
     g_free (variables1);
+    domain->variables_io = gfs_variables_from_list (domain->variables, variables, &s);
     g_free (variables);
   }
 }
@@ -237,6 +238,9 @@ static void domain_destroy (GtsObject * o)
     i = next;
   }
   g_assert (domain->variables == NULL);
+
+  g_slist_foreach (domain->derived_variables, (GFunc) g_free, NULL);
+  g_slist_free (domain->derived_variables);
 
   g_array_free (domain->allocated, TRUE);
 
@@ -2863,3 +2867,59 @@ void gfs_domain_combine_traverse (GfsDomain * domain1,
 
   gts_container_foreach (GTS_CONTAINER (domain1), (GtsFunc) box_combine_traverse, data);
 }
+
+/**
+ * gfs_domain_add_derived_variable:
+ * @domain: a #GfsDomain.
+ * @v: the #GfsDerivedVariable.
+ *
+ * Adds @v to @domain.
+ *
+ * Returns: %TRUE if the variable was successfully added to @domain or
+ * %FALSE if a variable with the same name already exists.
+ */
+gboolean gfs_domain_add_derived_variable (GfsDomain * domain, GfsDerivedVariable v)
+{
+  g_return_val_if_fail (domain != NULL, FALSE);
+
+  if (gfs_variable_from_name (domain->variables, v.name))
+    return FALSE;
+  if (gfs_derived_variable_from_name (domain->derived_variables, v.name))
+    return FALSE;
+  domain->derived_variables = g_slist_prepend (domain->derived_variables, 
+					       g_memdup (&v, sizeof (GfsDerivedVariable)));
+  return TRUE;
+}
+
+/**
+ * gfs_domain_remove_derived_variable:
+ * @domain: a #GfsDomain.
+ * @name: the name of a #GfsDerivedVariable.
+ *
+ * Removes derived variable @name from @domain.
+ *
+ * Returns: %TRUE if the variable was successfully removed from @domain or
+ * %FALSE if a derived variable with the this name does not exist.
+ */
+gboolean gfs_domain_remove_derived_variable (GfsDomain * domain, const gchar * name)
+{
+  GSList * i;
+  
+  g_return_val_if_fail (domain != NULL, FALSE);
+  g_return_val_if_fail (name != NULL, FALSE);
+
+  i = domain->derived_variables;
+  while (i) {
+    GfsDerivedVariable * u = i->data;
+
+    if (!strcmp (u->name, name)) {
+      g_free (u);
+      domain->derived_variables = g_slist_remove_link (domain->derived_variables, i);
+      g_slist_free (i);
+      return TRUE;
+    }
+    i = i->next;
+  }
+  return FALSE;
+}
+

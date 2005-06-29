@@ -271,7 +271,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     }
     else if ((f->v = gfs_variable_from_name (domain->variables, fp->token->str)))
       break;
-    else if ((f->dv = lookup_derived_variable (fp->token->str, sim->derived_variables))) {
+    else if ((f->dv = lookup_derived_variable (fp->token->str, domain->derived_variables))) {
       f->expr = g_string_new (fp->token->str);
       break;
     }
@@ -317,7 +317,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	  lv = g_slist_prepend (lv, i->data);
 	i = i->next;
       }
-      i = sim->derived_variables;
+      i = domain->derived_variables;
       while (i) {
 	GfsDerivedVariable * v = i->data;
 	if (find_identifier (f->expr->str, v->name))
@@ -645,6 +645,26 @@ void gfs_function_write (GfsFunction * f, FILE * fp)
   g_return_if_fail (fp != NULL);
 
   (* GTS_OBJECT (f)->klass->write) (GTS_OBJECT (f), fp);
+}
+
+/**
+ * gfs_derived_variable_from_name:
+ * @i: a list of #GfsDerivedVariable.
+ * @name: a name.
+ *
+ * Returns: the #GfsDerivedVariable @name of @list or %NULL.
+ */
+GfsDerivedVariable * gfs_derived_variable_from_name (GSList * i, const gchar * name)
+{
+  g_return_val_if_fail (name != NULL, NULL);
+
+  while (i) {
+    GfsDerivedVariable * v = i->data;
+    if (!strcmp (v->name, name))
+      return v;
+    i = i->next;
+  }
+  return NULL;
 }
 
 /**

@@ -131,7 +131,9 @@ GfsVariable * gfs_variable_new (GfsVariableClass * klass,
   g_return_val_if_fail (klass != NULL, NULL);
   g_return_val_if_fail (domain != NULL, NULL);
 
-  if (name && gfs_variable_from_name (domain->variables, name))
+  if (name &&
+      (gfs_variable_from_name (domain->variables, name) ||
+       gfs_derived_variable_from_name (domain->derived_variables, name)))
     return NULL;
 
   v = GFS_VARIABLE1 (gts_object_new (GTS_OBJECT_CLASS (klass)));

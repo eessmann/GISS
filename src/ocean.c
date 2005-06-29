@@ -593,12 +593,14 @@ static void gfs_source_hydrostatic_read (GtsObject ** o, GtsFile * fp)
   FttComponent c;
   GfsVariable * v;
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  GfsSourceHydrostatic * sh;
 
   if (GTS_OBJECT_CLASS (gfs_source_hydrostatic_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_source_hydrostatic_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
+  sh = GFS_SOURCE_HYDROSTATIC (*o);
   v = GFS_SOURCE_GENERIC (*o)->v->next;
   for (c = 1; c < 2; c++, v = v->next) {
     if (!v) {
@@ -616,8 +618,8 @@ static void gfs_source_hydrostatic_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (rho)");
     return;
   }
-  GFS_SOURCE_HYDROSTATIC (*o)->rho = gfs_variable_from_name (domain->variables, fp->token->str);
-  if (GFS_SOURCE_HYDROSTATIC (*o)->rho == NULL) {
+  sh->rho = gfs_variable_from_name (domain->variables, fp->token->str);
+  if (sh->rho == NULL) {
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
     return;
   }
@@ -627,12 +629,12 @@ static void gfs_source_hydrostatic_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (ph)");
     return;
   }
-  GFS_SOURCE_HYDROSTATIC (*o)->ph = gfs_variable_from_name (domain->variables, fp->token->str);
-  if (GFS_SOURCE_HYDROSTATIC (*o)->ph == NULL)
-    GFS_SOURCE_HYDROSTATIC (*o)->ph = gfs_domain_add_variable (domain, fp->token->str);
+  sh->ph = gfs_variable_from_name (domain->variables, fp->token->str);
+  if (sh->ph == NULL)
+    sh->ph = gfs_domain_add_variable (domain, fp->token->str);
   gts_file_next_token (fp);
 
-  GFS_SOURCE_HYDROSTATIC (*o)->ph1 = gfs_domain_add_variable (domain, NULL);
+  sh->ph1 = gfs_domain_add_variable (domain, NULL);
 }
 
 static void gfs_source_hydrostatic_write (GtsObject * o, FILE * fp)
