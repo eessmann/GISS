@@ -184,7 +184,9 @@ static gboolean gfs_output_event (GfsEvent * event, GfsSimulation * sim)
 				 GFS_DOMAIN (sim)->pid,
 				 sim->time.i,
 				 sim->time.t);
-	  output->file = gfs_output_file_open (fname, sim->time.i > 0 ? "a" : "w");
+	  output->file = gfs_output_file_open (fname, 
+					       sim->time.i > 0 && gfs_event_is_repetitive (event) ? 
+					       "a" : "w");
 	  if (output->file == NULL)
 	    g_warning ("could not open file `%s'", fname);
 	  g_free (fname);
