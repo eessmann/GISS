@@ -155,8 +155,9 @@ static gboolean expr_or_func (GtsFile * fp, GfsFunction * f)
       c = fp->next_token;
     else {
       if (fp->type != '(')
-	g_string_append_c (f->expr, ' ');
-      c = gts_file_getc (fp);
+	c = ' ';
+      else
+	c = gts_file_getc (fp);
     }
     while (c != EOF) {
       if (gfs_char_in_string (c, "{}\n")) {
