@@ -2178,7 +2178,7 @@ static void box_realloc (GfsBox * box, GfsDomain * domain)
 
   ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 		     (FttCellTraverseFunc) gfs_cell_reinit, domain);
-  for (d = 0; d < FTT_CELLS; d++)
+  for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOUNDARY (box->neighbor[d]))
       ftt_cell_traverse (GFS_BOUNDARY (box->neighbor[d])->root, 
 			 FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
