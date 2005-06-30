@@ -123,30 +123,9 @@ static gboolean load_module (GfsFunction * f, GtsFile * fp, gchar * mname)
 
 static gboolean expr_or_func (GtsFile * fp, GfsFunction * f)
 {
-  GtsTokenType type = fp->type;
-  gint c, scope;
-  
-  if (type == '(' || type == GTS_STRING) {
-    f->expr = g_string_new (fp->token->str);
-    if (type == '(' || (fp->next_token != '\0' && fp->next_token != '}')) {
-      scope = type == '(' ? 1 : 0;
-      if (fp->next_token != '\0')
-	g_string_append_c (f->expr, fp->next_token);
-      c = gts_file_getc (fp);
-      while (c != EOF && (scope > 0 || !gfs_char_in_string (c, "}\t \n"))) {
-	if (c == '(') scope++;
-	if (c == ')') scope--;
-	g_string_append_c (f->expr, c);
-	c = gts_file_getc (fp);
-      }
-      if (scope != 0)
-	gts_file_error (fp, "parse error");
-      else if (c == '}')
-      	fp->next_token = c;
-    }
-    return TRUE;
-  }
-  else {
+  if (fp->type == '{') {
+    gint c, scope;
+
     f->expr = g_string_new ("{");
     scope = fp->scope_max;
     c = gts_file_getc (fp);
@@ -158,6 +137,75 @@ static gboolean expr_or_func (GtsFile * fp, GfsFunction * f)
     if (fp->scope != scope)
       gts_file_error (fp, "parse error");
     return FALSE;
+  }
+  else {
+    static gchar spaces[] = " \t\f\r";
+    static gchar operators[] = "+-*/%<>=&^|?:";
+    gint c, scope = 0;
+    gchar * s;
+
+    f->expr = g_string_new (fp->token->str);
+    s = f->expr->str;
+    while (*s != '\0') {
+      if (*s == '(') scope++;
+      else if (*s == ')') scope--;
+      s++;
+    }
+    if (fp->next_token != '\0')
+      c = fp->next_token;
+    else {
+      if (fp->type != '(')
+	g_string_append_c (f->expr, ' ');
+      c = gts_file_getc (fp);
+    }
+    while (c != EOF) {
+      if (gfs_char_in_string (c, "{}\n")) {
+	fp->next_token = c;
+	g_strchomp (f->expr->str);
+	return TRUE;
+      }
+      else if (scope > 0) {
+	while (c != EOF && scope > 0) {
+	  if (c == '(') scope++;
+	  else if (c == ')') scope--;
+	  g_string_append_c (f->expr, c);
+	  c = gts_file_getc (fp);
+	}
+      }
+      else if (gfs_char_in_string (c, spaces)) {
+	while (c != EOF && gfs_char_in_string (c, spaces)) {
+	  g_string_append_c (f->expr, c);
+	  c = gts_file_getc (fp);
+	}
+	if (!gfs_char_in_string (c, operators)) {
+	  fp->next_token = c;
+	  g_strchomp (f->expr->str);
+	  return TRUE;
+	}
+	g_string_append_c (f->expr, c);
+	c = gts_file_getc (fp);
+	while (c != EOF && gfs_char_in_string (c, spaces)) {
+	  g_string_append_c (f->expr, c);
+	  c = gts_file_getc (fp);
+	}
+      }
+      else if (gfs_char_in_string (c, operators)) {
+	g_string_append_c (f->expr, c);
+	c = gts_file_getc (fp);
+	while (c != EOF && gfs_char_in_string (c, spaces)) {
+	  g_string_append_c (f->expr, c);
+	  c = gts_file_getc (fp);
+	}
+      }
+      else {
+	if (c == '(') scope++;
+	else if (c == ')') scope--;
+	g_string_append_c (f->expr, c);
+	c = gts_file_getc (fp);
+      }
+    }
+    g_strchomp (f->expr->str);
+    return TRUE;
   }
 }
 
@@ -207,11 +255,14 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
   else if (status == -1 || WEXITSTATUS (status) != 0) {
     GString * msg = g_string_new ("");
     FILE * ferr = fdopen (ferrd, "r");
+    gchar * needle;
     gint c;
 
     while ((c = fgetc (ferr)) != EOF)
       g_string_append_c (msg, c);
     fclose (ferr);
+    while ((needle = strstr (msg->str, "GfsFunction:")))
+      g_string_erase (msg, needle - msg->str, strlen ("GfsFunction:"));
     gts_file_error (fp, "error compiling expression\n%s", msg->str);
     g_string_free (msg, TRUE);
     status = SIGABRT;
@@ -243,9 +294,9 @@ static gchar * find_identifier (const gchar * s, const gchar * i)
 static void function_read (GtsObject ** o, GtsFile * fp)
 {
   GfsFunction * f = GFS_FUNCTION (*o);
-  GtsTokenType type;
   GfsSimulation * sim;
   GfsDomain * domain;
+  gboolean isexpr;
 
   if (GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read) (o, fp);
@@ -254,134 +305,133 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 
   sim = gfs_object_simulation (*o);
   domain = GFS_DOMAIN (sim);
-  type = fp->type;
-  switch (type) {
-    /* constant value */
-  case GTS_INT: case GTS_FLOAT:
-    f->val = atof (fp->token->str);
-    break;
-
-  case GTS_STRING:
-    if (strlen (fp->token->str) > 3 &&
-	!strcmp (&(fp->token->str[strlen (fp->token->str) - 4]), ".gts")) {
-      if ((f->s = read_surface (fp->token->str, fp)) == NULL)
-	return;
-      f->sname = g_strdup (fp->token->str);
-      break;
-    }
-    else if ((f->v = gfs_variable_from_name (domain->variables, fp->token->str)))
-      break;
-    else if ((f->dv = lookup_derived_variable (fp->token->str, domain->derived_variables))) {
-      f->expr = g_string_new (fp->token->str);
-      break;
-    }
-    /* fall through */
-
-    /* compile C expression */
-  case '(': case '{':
-    if (!HAVE_PKG_CONFIG) {
-      gts_file_error (fp, "expecting a number (val)");
-      return;
-    }
-    else {
-      gboolean isexpr;
-      gchar finname[] = "/tmp/gfsXXXXXX";
-      gint find, status;
-      FILE * fin;
-      GSList * lv = NULL, * ldv = NULL, * i;
-
-      isexpr = expr_or_func (fp, f);
-      if (fp->type == GTS_ERROR)
-	return;
-      find = mkstemp (finname);
-      if (find < 0) {
-	gts_file_error (fp, "cannot create temporary file");
-	return;
-      }
-      fin = fdopen (find, "w");
-      fputs ("#include <stdlib.h>\n"
-	     "#include <stdio.h>\n"
-	     "#include <math.h>\n"
-	     "#include <gfs.h>\n"
-	     "typedef double (* Func) (const FttCell * cell,\n"
-	     "                         const FttCellFace * face,\n"
-	     "                         GfsSimulation * sim,\n"
-	     "                         gpointer data);\n"
-	     "static double Dirichlet = 1.;\n"
-	     "static double Neumann = 0.;\n"
-	     "double f (FttCell * cell, FttCellFace * face, GfsSimulation * sim) {\n",
-	     fin);
-      i = domain->variables;
-      while (i) {
-	if (find_identifier (f->expr->str, GFS_VARIABLE1 (i->data)->name))
-	  lv = g_slist_prepend (lv, i->data);
-	i = i->next;
-      }
-      i = domain->derived_variables;
-      while (i) {
-	GfsDerivedVariable * v = i->data;
-	if (find_identifier (f->expr->str, v->name))
-	  ldv = g_slist_prepend (ldv, v);
-	i = i->next;
-      }
-      if (lv || ldv) {
-	GSList * i = lv;
-
-	while (i) {
-	  GfsVariable * v = i->data;
-	  fprintf (fin, "  double %s;\n", v->name);
-	  i = i->next;
-	}
-	i = ldv;
-	while (i) {
-	  GfsDerivedVariable * v = i->data;
-	  fprintf (fin, "  double %s;\n", v->name);
-	  i = i->next;
-	}
-	fputs ("  if (cell) {\n", fin);
-	i = lv;
-	while (i) {
-	  GfsVariable * v = i->data;
-	  fprintf (fin, "    %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
-	  i = i->next;
-	}
-	g_slist_free (lv);
-	i = ldv;
-	while (i) {
-	  GfsDerivedVariable * v = i->data;
-	  fprintf (fin, "    %s = (* (Func) %p) (cell, face, sim, ", v->name, v->func);
-	  if (v->data)
-	    fprintf (fin, "%p);\n", v->data);
-	  else
-	    fprintf (fin, "NULL);\n");
-	  i = i->next;
-	}
-	g_slist_free (ldv);
-	fputs ("  }\n", fin);
-      }
-      fprintf (fin, "#line %d \"GfsFunction\"\n", fp->line);
-
-      if (isexpr)
-	fprintf (fin, "return %s;\n}\n", f->expr->str);
-      else
-	fprintf (fin, "%s\n}\n", f->expr->str);
-      fclose (fin);
-      close (find);
-
-      status = compile (fp, f, finname);
-      remove (finname);
-      switch (status) {
-      case SIGQUIT: exit (0);
-      case SIGABRT: return;
-      }
-    }
-    break;
-
-  default:
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT && fp->type != GTS_STRING &&
+      fp->type != '(' && fp->type != '{') {
     gts_file_error (fp, "expecting an expression (val)");
     return;
   }
 
+  isexpr = expr_or_func (fp, f);
+  if (isexpr) {
+    if (fp->type == GTS_INT || fp->type == GTS_FLOAT) {
+      if (!strcmp (fp->token->str, f->expr->str)) {
+	f->val = atof (fp->token->str);
+	gts_file_next_token (fp);
+	return;
+      }
+    }
+    else if (fp->type == GTS_STRING) {
+      if (strlen (f->expr->str) > 3 &&
+	  !strcmp (&(f->expr->str[strlen (f->expr->str) - 4]), ".gts")) {
+	if ((f->s = read_surface (f->expr->str, fp)) == NULL)
+	  return;
+	f->sname = g_strdup (f->expr->str);
+	gts_file_next_token (fp);
+	return;
+      }
+      else if ((f->v = gfs_variable_from_name (domain->variables, f->expr->str))) {
+	gts_file_next_token (fp);
+	return;
+      }
+      else if ((f->dv = lookup_derived_variable (f->expr->str, domain->derived_variables))) {
+	gts_file_next_token (fp);
+	return;
+      }
+    }
+  }
+
+  if (!HAVE_PKG_CONFIG) {
+    gts_file_error (fp, "expecting a number, variable or GTS surface (val)");
+    return;
+  }
+  else {
+    gchar finname[] = "/tmp/gfsXXXXXX";
+    gint find, status;
+    FILE * fin;
+    GSList * lv = NULL, * ldv = NULL, * i;
+
+    find = mkstemp (finname);
+    if (find < 0) {
+      gts_file_error (fp, "cannot create temporary file");
+      return;
+    }
+    fin = fdopen (find, "w");
+    fputs ("#include <stdlib.h>\n"
+	   "#include <stdio.h>\n"
+	   "#include <math.h>\n"
+	   "#include <gfs.h>\n"
+	   "typedef double (* Func) (const FttCell * cell,\n"
+	   "                         const FttCellFace * face,\n"
+	   "                         GfsSimulation * sim,\n"
+	   "                         gpointer data);\n"
+	   "static double Dirichlet = 1.;\n"
+	   "static double Neumann = 0.;\n"
+	   "double f (FttCell * cell, FttCellFace * face, GfsSimulation * sim) {\n",
+	   fin);
+    i = domain->variables;
+    while (i) {
+      if (find_identifier (f->expr->str, GFS_VARIABLE1 (i->data)->name))
+	lv = g_slist_prepend (lv, i->data);
+      i = i->next;
+    }
+    i = domain->derived_variables;
+    while (i) {
+      GfsDerivedVariable * v = i->data;
+      if (find_identifier (f->expr->str, v->name))
+	ldv = g_slist_prepend (ldv, v);
+      i = i->next;
+    }
+    if (lv || ldv) {
+      GSList * i = lv;
+
+      while (i) {
+	GfsVariable * v = i->data;
+	fprintf (fin, "  double %s;\n", v->name);
+	i = i->next;
+      }
+      i = ldv;
+      while (i) {
+	GfsDerivedVariable * v = i->data;
+	fprintf (fin, "  double %s;\n", v->name);
+	i = i->next;
+      }
+      fputs ("  if (cell) {\n", fin);
+      i = lv;
+      while (i) {
+	GfsVariable * v = i->data;
+	fprintf (fin, "    %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
+	i = i->next;
+      }
+      g_slist_free (lv);
+      i = ldv;
+      while (i) {
+	GfsDerivedVariable * v = i->data;
+	fprintf (fin, "    %s = (* (Func) %p) (cell, face, sim, ", v->name, v->func);
+	if (v->data)
+	  fprintf (fin, "%p);\n", v->data);
+	else
+	  fprintf (fin, "NULL);\n");
+	i = i->next;
+      }
+      g_slist_free (ldv);
+      fputs ("  }\n", fin);
+    }
+    fprintf (fin, "#line %d \"GfsFunction\"\n", fp->line);
+
+    if (isexpr)
+      fprintf (fin, "return %s;\n}\n", f->expr->str);
+    else
+      fprintf (fin, "%s\n}\n", f->expr->str);
+    fclose (fin);
+    close (find);
+
+    status = compile (fp, f, finname);
+    remove (finname);
+    switch (status) {
+    case SIGQUIT: exit (0);
+    case SIGABRT: return;
+    }
+  }
   gts_file_next_token (fp);
 }
 

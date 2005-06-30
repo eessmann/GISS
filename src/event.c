@@ -492,8 +492,8 @@ static void gfs_init_read (GtsObject ** o, GtsFile * fp)
       gts_file_next_token (fp);
 
       if (fp->type != '=') {
-	 gts_file_error (fp, "expecting `=`");
-	 return;
+	gts_file_error (fp, "expecting `='");
+	return;
       }
       gts_file_next_token (fp);
 
