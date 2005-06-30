@@ -558,12 +558,12 @@ static void simulation_run (GfsSimulation * sim)
 
 	t->advection.dt = sim->advection_params.dt;
 	switch (t->advection.scheme) {
-	case GFS_GODUNOV:
+	case GFS_GODUNOV: case GFS_NONE:
 	  gfs_tracer_advection_diffusion (domain, &t->advection, &t->diffusion, NULL);
 	  break;
 	case GFS_VOF:
 	  gfs_tracer_vof_advection (domain, &t->advection, NULL);
-	  gfs_domain_variable_centered_sources (domain, i->data, i->data, t->advection.dt);
+	  gfs_domain_variable_centered_sources (domain, v, v, t->advection.dt);
 	  break;
 	case GFS_NONE:
 	  break;
