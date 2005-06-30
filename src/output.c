@@ -1217,7 +1217,8 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (event);
-
+    
+    g_slist_free (domain->variables_io);
     domain->variables_io = output->var;
     domain->binary =       output->binary;
     sim->output_surface =  output->surface;

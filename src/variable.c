@@ -48,6 +48,9 @@ static void gfs_variable_read (GtsObject ** o, GtsFile * fp)
 
   domain = (*o)->reserved;
   if ((old = gfs_variable_from_name (domain->variables, v->name))) {
+    GSList * i;
+    if ((i = g_slist_find (domain->variables_io, old)))
+      i->data = v;
     domain->variables = g_slist_remove (domain->variables, old);
     gts_object_destroy (GTS_OBJECT (old));
   }

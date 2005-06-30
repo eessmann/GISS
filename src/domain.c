@@ -247,6 +247,8 @@ static void domain_destroy (GtsObject * o)
   g_hash_table_foreach (domain->timers, (GHFunc) free_pair, NULL);
   g_hash_table_destroy (domain->timers);
 
+  g_slist_free (domain->variables_io);
+
   (* GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class->destroy) (o);
 }
 

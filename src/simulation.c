@@ -461,14 +461,11 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       }
 
       if (GFS_IS_REFINE (object))
-	gts_container_add (GTS_CONTAINER (sim->refines), 
-			   GTS_CONTAINEE (object));
+	gts_container_add (GTS_CONTAINER (sim->refines), GTS_CONTAINEE (object));
       else if (GFS_IS_ADAPT (object))
-	gts_container_add (GTS_CONTAINER (sim->adapts),
-			   GTS_CONTAINEE (object));
+	gts_container_add (GTS_CONTAINER (sim->adapts), GTS_CONTAINEE (object));
       else if (GFS_IS_EVENT (object))
-	gts_container_add (GTS_CONTAINER (sim->events), 
-			   GTS_CONTAINEE (object));
+	gts_container_add (GTS_CONTAINER (sim->events), GTS_CONTAINEE (object));
       else if (GFS_IS_SURFACE_GENERIC_BC (object))
 	;
       else
