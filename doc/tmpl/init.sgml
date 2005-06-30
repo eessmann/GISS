@@ -6,7 +6,7 @@ Used for initial conditions
 
 <!-- ##### SECTION Long_Description ##### -->
 <para>
-GfsInit can be used to set initial conditions for each primitive variable. The initial conditions can be either constants or functions of space.
+GfsInit can be used to set initial conditions for a set of variables. The initial conditions can be either constants or functions.
 </para>
 <para>
 The syntax in parameter files is as follows:
@@ -16,6 +16,9 @@ The syntax in parameter files is as follows:
 </programlisting>
 </informalexample>
 where V1, V2, ... are variable names.
+</para>
+<para>
+If the variables do not already exist at the time of initialisation, they are created.
 </para>
 
 <!-- ##### SECTION See_Also ##### -->

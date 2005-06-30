@@ -2,11 +2,11 @@
 Location output
 
 <!-- ##### SECTION Short_Description ##### -->
-Writing the values of variables at a specified location
+Writing the values of variables at specified locations
 
 <!-- ##### SECTION Long_Description ##### -->
 <para>
-GfsOutputLocation writes the values of all permanent variables at a given location. The first time GfsOutputLocation is called it writes a comment describing the fields being written.
+GfsOutputLocation writes the values of all permanent variables at a set of given locations. The first time GfsOutputLocation is called it writes a comment describing the fields being written.
 </para>
 <para>
 The values are linearly interpolated to the given location using gfs_interpolate().
@@ -19,6 +19,25 @@ The syntax in parameter files is as follows:
 </programlisting>
 </informalexample>
 where X, Y and Z are the coordinates of the location.
+</para>
+<para>
+or:
+<informalexample>
+<programlisting>
+[ #GfsOutput ] FILE
+</programlisting>
+</informalexample>
+where FILE is the name of a text file containing the space-separated
+X, Y and Z coordinates of a set of locations.
+</para>
+<para>
+or:
+<informalexample>
+<programlisting>
+[ #GfsOutput ] { X1 Y1 Z1 ... XN YN ZN }
+</programlisting>
+</informalexample>
+where the Xi, Yi and Zi are the coordinates of the set of locations.
 </para>
 
 <!-- ##### SECTION See_Also ##### -->

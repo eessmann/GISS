@@ -12,7 +12,7 @@ GfsSource is used to associate a source term (possibly a function of space and t
 The syntax in parameter files is as follows:
 <informalexample>
 <programlisting>
-[ #GfsGenericSource ] [ #GfsFunction ]
+[ #GfsSourceGeneric ] [ #GfsFunction ]
 </programlisting>
 </informalexample>
 </para>

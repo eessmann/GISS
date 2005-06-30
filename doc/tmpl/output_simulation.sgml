@@ -34,7 +34,7 @@ with
 
 <row>
 <entry><structfield>binary</structfield></entry>
-<entry>An optional parameter specifying if a binary format should be used. Binary files allow faster reading of simulation files. The default is a more portable ASCII format.</entry>
+<entry>An optional parameter specifying if a binary format should be used. Binary files allow faster reading of simulation files and are the default. Setting binary to 0 will use a more portable ASCII format.</entry>
 </row>
 
 <row>
