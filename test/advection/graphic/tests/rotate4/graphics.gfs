@@ -46,8 +46,7 @@ Isoline {
   r = 0 g = 0 b = 0
   shading = Constant
   maxlevel = -1
-} {
-  v = T
+} T {
   amin = 1
   amax = 1
   cmap = Jet

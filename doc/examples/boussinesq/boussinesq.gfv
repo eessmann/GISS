@@ -12,8 +12,7 @@ Linear {
   r = 0 g = 0 b = 0
   shading = Constant
   maxlevel = 8
-} {
-  v = T
+} T {
   amin = 0 min = 1.9696e-19
   amax = 0 max = 1
   cmap = Jet
