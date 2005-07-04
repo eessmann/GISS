@@ -286,10 +286,14 @@ static gchar * find_identifier (const gchar * s, const gchar * i)
   gchar * f = strstr (s, i);
   static gchar allowed[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_1234567890";
 
-  if (!f || gfs_char_in_string (f[strlen(i)], allowed) ||
-      (f > s && gfs_char_in_string (f[-1], allowed)))
-    return NULL;
-  return f;
+  while (f) {
+    if (gfs_char_in_string (f[strlen(i)], allowed) ||
+	(f > s && gfs_char_in_string (f[-1], allowed)))
+      f = strstr (++f, i);
+    else
+      return f;
+  }
+  return NULL;
 }
 
 static void function_read (GtsObject ** o, GtsFile * fp)
