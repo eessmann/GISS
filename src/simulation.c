@@ -563,9 +563,7 @@ static void simulation_run (GfsSimulation * sim)
 	  break;
 	case GFS_VOF:
 	  gfs_tracer_vof_advection (domain, &t->advection, NULL);
-	  gfs_domain_variable_centered_sources (domain, v, v, t->advection.dt);
-	  break;
-	case GFS_NONE:
+	  gfs_domain_variable_centered_sources (domain, i->data, i->data, t->advection.dt);
 	  break;
 	}
       }
