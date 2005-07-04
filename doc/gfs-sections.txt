@@ -40,6 +40,7 @@ ftt_cell_size
 ftt_cell_volume
 ftt_cell_parent
 ftt_cell_depth
+ftt_vector_norm
 </SECTION>
 
 <SECTION>
@@ -127,10 +128,6 @@ gfs_norm_reset
 <TITLE>Fluid cell</TITLE>
 GFS_VARIABLE
 GFS_STATE
-GFS_VELOCITY_COMPONENT
-GFS_VELOCITY_INDEX
-GFS_GRADIENT_COMPONENT
-GFS_GRADIENT_INDEX
 GFS_FACE_NORMAL_VELOCITY_RIGHT
 GFS_FACE_NORMAL_VELOCITY_LEFT
 GFS_FACE_NORMAL_VELOCITY
@@ -140,7 +137,6 @@ GFS_CELL_IS_BOUNDARY
 GfsStateVector
 GfsFaceStateVector
 GfsVariable
-GfsPermanentVariable
 GfsVariableClass
 GfsVariableDerivedFunc
 GfsVariableFineCoarseFunc
@@ -153,13 +149,8 @@ gfs_cell_copy
 gfs_cell_cm
 gfs_face_ca
 gfs_variable_new
-gfs_variable_list_copy
-gfs_variable_list_destroy
-gfs_variable_source
 gfs_variable_from_name
 gfs_variables_from_list
-gfs_variable_parent
-gfs_variable_set_parent
 gfs_stats_variable
 gfs_norm_variable
 gfs_get_from_below_intensive
@@ -167,8 +158,8 @@ gfs_get_from_below_extensive
 gfs_get_from_above
 gfs_cell_coarse_init
 gfs_cell_fine_init
-gfs_velocity_norm
-gfs_velocity_norm2
+gfs_vector_norm
+gfs_vector_norm2
 gfs_divergence
 gfs_normal_divergence
 gfs_vorticity
@@ -186,7 +177,6 @@ gfs_center_van_leer_gradient
 gfs_cell_dirichlet_gradient
 gfs_cell_dirichlet_gradient_flux
 gfs_cell_dirichlet_value
-gfs_cell_laplacian
 GfsInterpolator
 gfs_cell_corner_interpolator
 gfs_cell_corner_value
@@ -279,10 +269,8 @@ GFS_FACE_FRACTION
 GfsSolidVector
 <SUBSECTION>
 gfs_cell_fluid
-gfs_cell_init_solid_fractions
 gfs_cell_init_solid_fractions_from_children
 gfs_cell_check_solid_fractions
-gfs_refine_mixed
 gfs_cell_traverse_mixed
 </SECTION>
 
@@ -297,16 +285,20 @@ GfsDomainClass
 GfsDomain
 <SUBSECTION>
 gfs_domain_class
+gfs_domain_alloc
+gfs_domain_free
 gfs_domain_add_variable
-gfs_domain_add_new_variable
-gfs_domain_replace_variable
+gfs_domain_add_derived_variable
 gfs_domain_cell_traverse
 gfs_domain_cell_traverse_boundary
 gfs_domain_cell_traverse_box
 gfs_domain_traverse_mixed
 gfs_domain_face_traverse
+gfs_domain_combine_traverse
+gfs_domain_traverse_cut
 gfs_domain_locate
 gfs_domain_bc
+gfs_domain_copy_bc
 gfs_domain_homogeneous_bc
 gfs_domain_face_bc
 gfs_domain_surface_bc
@@ -321,7 +313,6 @@ gfs_domain_solid_force
 gfs_domain_init_fraction
 gfs_domain_read
 gfs_domain_split
-gfs_domain_variable_sources
 gfs_domain_remove_droplets
 gfs_domain_remove_ponds
 gfs_domain_remove_specks
@@ -459,6 +450,28 @@ gfs_source_class
 </SECTION>
 
 <SECTION>
+<FILE>source_control</FILE>
+<TITLE>Controled source term</TITLE>
+GFS_SOURCE_CONTROL
+GFS_IS_SOURCE_CONTROL
+<SUBSECTION>
+GfsSourceControl
+<SUBSECTION>
+gfs_source_control_class
+</SECTION>
+
+<SECTION>
+<FILE>source_tension</FILE>
+<TITLE>Surface tension source term</TITLE>
+GFS_SOURCE_TENSION
+GFS_IS_SOURCE_TENSION
+<SUBSECTION>
+GfsSourceTension
+<SUBSECTION>
+gfs_source_tension_class
+</SECTION>
+
+<SECTION>
 <FILE>adapt</FILE>
 <TITLE>Simple refinement</TITLE>
 GFS_ADAPT
@@ -504,6 +517,7 @@ GfsEvent
 gfs_event_class
 gfs_event_new
 gfs_event_set
+gfs_event_is_repetitive
 </SECTION>
 
 <SECTION>
@@ -537,7 +551,12 @@ GFS_IS_EVENT_SUM
 GfsEventSum
 <SUBSECTION>
 gfs_event_sum_class
-gfs_event_sum2_class
+</SECTION>
+
+<SECTION>
+<FILE>event_harmonic</FILE>
+<TITLE>Harmonic analysis events</TITLE>
+gfs_event_harmonic_class
 </SECTION>
 
 <SECTION>
@@ -556,12 +575,19 @@ gfs_function_face_value
 gfs_function_value
 gfs_function_read
 gfs_function_write
+gfs_function_description
+gfs_function_get_constant_value
+gfs_function_set_constant_value
+gfs_function_get_variable
 </SECTION>
 
 <SECTION>
 <FILE>generic_init</FILE>
 <TITLE>Generic initialisation event</TITLE>
 GFS_IS_GENERIC_INIT
+<SUBSECTION>
+GfsGenericInitClass
+GfsGenericInit
 <SUBSECTION>
 gfs_generic_init_class
 </SECTION>
@@ -650,6 +676,12 @@ gfs_output_timing_class
 </SECTION>
 
 <SECTION>
+<FILE>output_progress</FILE>
+<TITLE>Progress output</TITLE>
+gfs_output_progress_class
+</SECTION>
+
+<SECTION>
 <FILE>output_balance</FILE>
 <TITLE>Balance statistics output</TITLE>
 gfs_output_balance_class
@@ -726,8 +758,16 @@ gfs_output_scalar_sum_class
 </SECTION>
 
 <SECTION>
+<FILE>output_scalar_histogram</FILE>
+<TITLE>Scalar histogram output</TITLE>
+gfs_output_scalar_histogram_class
+</SECTION>
+
+<SECTION>
 <FILE>output_error_norm</FILE>
 <TITLE>Error norm output</TITLE>
+GfsOutputErrorNorm
+<SUBSECTION>
 gfs_output_error_norm_class
 </SECTION>
 
@@ -764,8 +804,6 @@ gfs_refine_class
 <FILE>refine_solid</FILE>
 <TITLE>Solid refinement</TITLE>
 GFS_IS_REFINE_SOLID
-<SUBSECTION>
-GfsRefineSolid
 <SUBSECTION>
 gfs_refine_solid_class
 </SECTION>
@@ -809,9 +847,7 @@ gfs_simulation_class
 gfs_simulation_new
 gfs_simulation_read
 gfs_simulation_refine
-gfs_simulation_event_init
 gfs_simulation_set_timestep
-gfs_simulation_event
 gfs_simulation_adapt
 gfs_simulation_write
 gfs_simulation_run

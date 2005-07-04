@@ -19,8 +19,12 @@ Diffusion solver
 
 </para>
 
-@cell: 
+@domain: 
 @v: 
+@rhs: 
+@dia: 
+<!-- # Unused Parameters # -->
+@cell: 
 
 
 <!-- ##### FUNCTION gfs_diffusion_residual ##### -->
@@ -28,6 +32,12 @@ Diffusion solver
 
 </para>
 
+@domain: 
+@u: 
+@rhs: 
+@dia: 
+@res: 
+<!-- # Unused Parameters # -->
 @cell: 
 @v: 
 
@@ -40,6 +50,7 @@ Diffusion solver
 @domain: 
 @d: 
 @dt: 
+@dia: 
 
 
 <!-- ##### FUNCTION gfs_diffusion_cycle ##### -->
@@ -52,5 +63,8 @@ Diffusion solver
 @depth: 
 @nrelax: 
 @u: 
+@rhs: 
+@dia: 
+@res: 
 
 

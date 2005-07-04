@@ -26,6 +26,7 @@
 <!entity gfs-event-script SYSTEM "sgml/event_script.sgml">
 <!entity gfs-event-stop SYSTEM "sgml/event_stop.sgml">
 <!entity gfs-event-sum SYSTEM "sgml/event_sum.sgml">
+<!entity gfs-event-harmonic SYSTEM "sgml/event_harmonic.sgml">
 <!entity gfs-generic-init SYSTEM "sgml/generic_init.sgml">
 <!entity gfs-init SYSTEM "sgml/init.sgml">
 <!entity gfs-init-vorticity SYSTEM "sgml/init_vorticity.sgml">
@@ -36,18 +37,18 @@
 <!entity gfs-output-diffusion SYSTEM "sgml/output_diffusion.sgml">
 <!entity gfs-output-adapts SYSTEM "sgml/output_adapts.sgml">
 <!entity gfs-output-timing SYSTEM "sgml/output_timing.sgml">
+<!entity gfs-output-progress SYSTEM "sgml/output_progress.sgml">
 <!entity gfs-output-balance SYSTEM "sgml/output_balance.sgml">
 <!entity gfs-output-solid SYSTEM "sgml/output_solid.sgml">
 <!entity gfs-output-solid-force SYSTEM "sgml/output_solid_force.sgml">
 <!entity gfs-output-simulation SYSTEM "sgml/output_simulation.sgml">
-<!entity gfs-output-boundaries SYSTEM "sgml/output_boundaries.sgml">
 <!entity gfs-output-location SYSTEM "sgml/output_location.sgml">
 <!entity gfs-output-scalar SYSTEM "sgml/output_scalar.sgml">
 <!entity gfs-output-scalar-norm SYSTEM "sgml/output_scalar_norm.sgml">
 <!entity gfs-output-scalar-stats SYSTEM "sgml/output_scalar_stats.sgml">
 <!entity gfs-output-scalar-sum SYSTEM "sgml/output_scalar_sum.sgml">
+<!entity gfs-output-scalar-histogram SYSTEM "sgml/output_scalar_histogram.sgml">
 <!entity gfs-output-error-norm SYSTEM "sgml/output_error_norm.sgml">
-<!entity gfs-output-squares SYSTEM "sgml/output_squares.sgml">
 <!entity gfs-output-ppm SYSTEM "sgml/output_ppm.sgml">
 <!entity gfs-refine SYSTEM "sgml/refine.sgml">
 <!entity gfs-refine-solid SYSTEM "sgml/refine_solid.sgml">
@@ -56,6 +57,7 @@
 <!entity gfs-simulation SYSTEM "sgml/simulation.sgml">
 <!entity gfs-source-generic SYSTEM "sgml/source_generic.sgml">
 <!entity gfs-source SYSTEM "sgml/source.sgml">
+<!entity gfs-source-tension SYSTEM "sgml/source_tension.sgml">
 ]>
 
 <book>
@@ -124,6 +126,7 @@
         <title>Source terms</title>
         &gfs-source-generic;
         &gfs-source;
+        &gfs-source-tension;
       </sect1>
       <sect1>
         <title>Events</title>
@@ -131,6 +134,7 @@
         &gfs-event-script;
         &gfs-event-stop;
         &gfs-event-sum;
+        &gfs-event-harmonic;
       </sect1>
       <sect1>
         <title>Initialisation</title>
@@ -147,18 +151,18 @@
         &gfs-output-diffusion;
         &gfs-output-adapts;
         &gfs-output-timing;
+        &gfs-output-progress;
         &gfs-output-balance;
         &gfs-output-solid;
         &gfs-output-solid-force;
         &gfs-output-location;
         &gfs-output-simulation;
-        &gfs-output-boundaries;
         &gfs-output-scalar;
         &gfs-output-scalar-norm;
         &gfs-output-scalar-stats;
         &gfs-output-scalar-sum;
+        &gfs-output-scalar-histogram;
         &gfs-output-error-norm;
-        &gfs-output-squares;
         &gfs-output-ppm;
       </sect1>
       <sect1>

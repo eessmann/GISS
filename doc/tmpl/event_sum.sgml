@@ -6,7 +6,7 @@ Computing time-integrated fields
 
 <!-- ##### SECTION Long_Description ##### -->
 <para>
-GfsEventSum and GfsEventSum2 can be used to compute and store the sum and squared sum of a time-varying variable.
+GfsEventSum can be used to compute and store the sum over time of a variable.
 </para>
 <para>
 The syntax in parameter files is as follows:
@@ -45,19 +45,13 @@ where V is an existing variable name and SV is a (possibly new) variable name wh
 </para>
 
 @parent: 
+@v: 
+@sv: 
 @sum: 
 @last: 
 @dt: 
 
 <!-- ##### FUNCTION gfs_event_sum_class ##### -->
-<para>
-
-</para>
-
-@Returns: 
-
-
-<!-- ##### FUNCTION gfs_event_sum2_class ##### -->
 <para>
 
 </para>

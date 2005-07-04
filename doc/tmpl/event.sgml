@@ -93,6 +93,7 @@ with
 
 @parent_class: 
 @event: 
+@post_event: 
 @event_half: 
 
 <!-- ##### STRUCT GfsEvent ##### -->
@@ -142,5 +143,13 @@ with
 @istart: 
 @iend: 
 @istep: 
+
+
+<!-- ##### MACRO gfs_event_is_repetitive ##### -->
+<para>
+
+</para>
+
+@e: 
 
 

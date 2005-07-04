@@ -21,6 +21,10 @@ Advection scheme
 
 @cfl: 
 @dt: 
+@v: 
+@fv: 
+@u: 
+@g: 
 @gradient: 
 @use_centered_velocity: 
 @upwinding: 
@@ -71,6 +75,7 @@ Advection scheme
 
 @face: 
 @upwinding: 
+@u: 
 @Returns: 
 <!-- # Unused Parameters # -->
 @centered_upwinding: 
@@ -109,6 +114,8 @@ Advection scheme
 </para>
 
 @face: 
+@par: 
+<!-- # Unused Parameters # -->
 @upwinding: 
 
 
@@ -118,6 +125,7 @@ Advection scheme
 </para>
 
 @face: 
+@v: 
 
 
 <!-- ##### FUNCTION gfs_face_reset_normal_velocity ##### -->

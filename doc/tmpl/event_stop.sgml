@@ -45,6 +45,9 @@ where NAME is the name of a variable and MIN is the threshold.
 </para>
 
 @parent: 
+@v: 
+@oldv: 
+@diff: 
 @last: 
 @max: 
 

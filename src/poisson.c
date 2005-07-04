@@ -807,6 +807,10 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
 /**
  * gfs_diffusion_residual:
  * @domain: a #GfsDomain.
+ * @u: the variable to use as left-hand side.
+ * @rhs: the right-hand side.
+ * @dia: the diagonal weight.
+ * @res: the residual.
  *
  * Sets the @res variable of each leaf cell of @domain to the residual
  * of the diffusion equation for @v.

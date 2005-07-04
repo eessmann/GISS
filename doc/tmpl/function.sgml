@@ -6,7 +6,7 @@ Values varying in space and time
 
 <!-- ##### SECTION Long_Description ##### -->
 <para>
-Functions can be used in most objects which require a numerical parameter. A function can be either a constant or a piece of C code taking coordinates (x,y,z) and time t as arguments and returning a floating-point value.
+Functions can be used in most objects which require a numerical parameter. A function can be either a constant or a piece of C code taking coordinates (x,y,z), time t or any of the domain variables as arguments and returning a floating-point value.
 </para>
 <para>
 The syntax in parameter files is as follows:
@@ -24,6 +24,12 @@ or a C function
   double c = sin (M_PI*t);
   return a + b + c;
 }
+</programlisting>
+</informalexample>
+or a C expression
+<informalexample>
+<programlisting>
+40.*(P - 1.)
 </programlisting>
 </informalexample>
 </para>
@@ -95,8 +101,9 @@ or a C function
 
 @f: 
 @fa: 
-@t: 
 @Returns: 
+<!-- # Unused Parameters # -->
+@t: 
 
 
 <!-- ##### FUNCTION gfs_function_value ##### -->
@@ -106,9 +113,10 @@ or a C function
 
 @f: 
 @cell: 
+@Returns: 
+<!-- # Unused Parameters # -->
 @p: 
 @t: 
-@Returns: 
 
 
 <!-- ##### FUNCTION gfs_function_read ##### -->
@@ -128,5 +136,42 @@ or a C function
 
 @f: 
 @fp: 
+
+
+<!-- ##### FUNCTION gfs_function_description ##### -->
+<para>
+
+</para>
+
+@f: 
+@truncate: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_function_get_constant_value ##### -->
+<para>
+
+</para>
+
+@f: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_function_set_constant_value ##### -->
+<para>
+
+</para>
+
+@f: 
+@val: 
+
+
+<!-- ##### FUNCTION gfs_function_get_variable ##### -->
+<para>
+
+</para>
+
+@f: 
+@Returns: 
 
 

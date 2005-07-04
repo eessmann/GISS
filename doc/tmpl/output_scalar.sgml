@@ -73,6 +73,7 @@ If neither max nor min are specified the bounding values are calculated before e
 </para>
 
 @v: 
+@name: 
 @min: 
 @max: 
 @maxlevel: 

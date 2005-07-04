@@ -63,8 +63,10 @@ Fluid domain
 @rootlevel: 
 @refpos: 
 @lambda: 
+@allocated: 
 @variables: 
-@variables_size: 
+@derived_variables: 
+@velocity: 
 @variables_io: 
 @binary: 
 @max_depth_write: 
@@ -77,6 +79,24 @@ Fluid domain
 @Returns: 
 
 
+<!-- ##### FUNCTION gfs_domain_alloc ##### -->
+<para>
+
+</para>
+
+@domain: 
+@Returns: 
+
+
+<!-- ##### FUNCTION gfs_domain_free ##### -->
+<para>
+
+</para>
+
+@domain: 
+@i: 
+
+
 <!-- ##### FUNCTION gfs_domain_add_variable ##### -->
 <para>
 
@@ -87,23 +107,14 @@ Fluid domain
 @Returns: 
 
 
-<!-- ##### FUNCTION gfs_domain_add_new_variable ##### -->
+<!-- ##### FUNCTION gfs_domain_add_derived_variable ##### -->
 <para>
 
 </para>
 
 @domain: 
 @v: 
-
-
-<!-- ##### FUNCTION gfs_domain_replace_variable ##### -->
-<para>
-
-</para>
-
-@domain: 
-@v: 
-@with: 
+@Returns: 
 
 
 <!-- ##### FUNCTION gfs_domain_cell_traverse ##### -->
@@ -173,6 +184,32 @@ Fluid domain
 @data: 
 
 
+<!-- ##### FUNCTION gfs_domain_combine_traverse ##### -->
+<para>
+
+</para>
+
+@domain1: 
+@domain2: 
+@inside: 
+@idata: 
+@outside: 
+@odata: 
+
+
+<!-- ##### FUNCTION gfs_domain_traverse_cut ##### -->
+<para>
+
+</para>
+
+@domain: 
+@s: 
+@order: 
+@flags: 
+@func: 
+@data: 
+
+
 <!-- ##### FUNCTION gfs_domain_locate ##### -->
 <para>
 
@@ -193,6 +230,18 @@ Fluid domain
 @flags: 
 @max_depth: 
 @v: 
+
+
+<!-- ##### FUNCTION gfs_domain_copy_bc ##### -->
+<para>
+
+</para>
+
+@domain: 
+@flags: 
+@max_depth: 
+@v: 
+@v1: 
 
 
 <!-- ##### FUNCTION gfs_domain_homogeneous_bc ##### -->

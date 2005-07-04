@@ -45,6 +45,14 @@ with
 
 </para>
 
+<!-- ##### STRUCT GfsOutputErrorNorm ##### -->
+<para>
+
+</para>
+
+@s: 
+@unbiased: 
+
 <!-- ##### FUNCTION gfs_output_error_norm_class ##### -->
 <para>
 

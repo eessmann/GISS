@@ -1696,7 +1696,7 @@ void ftt_cell_destroy (FttCell * cell,
  * @root: the root cell of a cell tree.
  * @children: a #FttCellChildren.
  * @cleanup: a #FttCellCleanupFunc to call before destroying a cell.
- # @data: user data to pass to @cleanup.
+ * @data: user data to pass to @cleanup.
  *
  * Destroys the root cell of a cell tree but not its children. Each
  * child becomes the root cell of a new cell tree. The new (orphaned)

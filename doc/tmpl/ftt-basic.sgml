@@ -339,3 +339,11 @@ Evaluates to the parent of @c. %NULL is @c is a root cell.
 @Returns: 
 
 
+<!-- ##### MACRO ftt_vector_norm ##### -->
+<para>
+
+</para>
+
+@v: 
+
+

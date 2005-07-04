@@ -6,7 +6,7 @@ Refining cells as a function of the distance to a surface
 
 <!-- ##### SECTION Long_Description ##### -->
 <para>
-For each candidate cell, GfsRefineDistance computes the distance from the cell center to the given surface. It then passes this distance as t argument to the user-defined function in order to get the maximum level of refinement allowed.
+For each candidate cell, GfsRefineDistance computes the distance from the cell center to the given surface. It then passes this distance as Distance argument to the user-defined function in order to get the maximum level of refinement allowed.
 </para>
 <para>
 The syntax in parameter files is as follows:

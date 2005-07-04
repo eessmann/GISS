@@ -30,6 +30,18 @@ The syntax in parameter files is as follows:
 @obj: 
 
 
+<!-- ##### TYPEDEF GfsGenericInitClass ##### -->
+<para>
+
+</para>
+
+
+<!-- ##### TYPEDEF GfsGenericInit ##### -->
+<para>
+
+</para>
+
+
 <!-- ##### FUNCTION gfs_generic_init_class ##### -->
 <para>
 

@@ -36,6 +36,8 @@ Cell faces operations
 
 </para>
 
+@cell: 
+@neighbor: 
 @d: 
 
 <!-- ##### FUNCTION ftt_cell_face ##### -->

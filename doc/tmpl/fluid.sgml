@@ -31,42 +31,6 @@ Evaluates to the value of variable @index in @cell.
 @cell: 
 
 
-<!-- ##### MACRO GFS_VELOCITY_COMPONENT ##### -->
-<para>
-
-</para>
-
-@index: 
-<!-- # Unused Parameters # -->
-@variable: 
-
-
-<!-- ##### MACRO GFS_VELOCITY_INDEX ##### -->
-<para>
-
-</para>
-
-@component: 
-
-
-<!-- ##### MACRO GFS_GRADIENT_COMPONENT ##### -->
-<para>
-
-</para>
-
-@index: 
-<!-- # Unused Parameters # -->
-@variable: 
-
-
-<!-- ##### MACRO GFS_GRADIENT_INDEX ##### -->
-<para>
-
-</para>
-
-@component: 
-
-
 <!-- ##### MACRO GFS_FACE_NORMAL_VELOCITY_RIGHT ##### -->
 <para>
 
@@ -114,13 +78,7 @@ The fluid variables describing the state of the cell.
 
 @f: 
 @solid: 
-@div: 
-@dp: 
-@res: 
-@g: 
-@p: 
-@u: 
-@v: 
+@place_holder: 
 
 <!-- ##### STRUCT GfsFaceStateVector ##### -->
 <para>
@@ -136,26 +94,14 @@ The fluid variables associated with a fluid cell.
 </para>
 
 @i: 
+@component: 
 @name: 
 @centered: 
 @derived: 
 @fine_coarse: 
 @sources: 
 @surface_bc: 
-@p: 
-
-<!-- ##### ENUM GfsPermanentVariable ##### -->
-<para>
-
-</para>
-
-@GFS_DIV: 
-@GFS_DP: 
-@GFS_RES: 
-@GFS_GX: 
-@GFS_GY: 
-@GFS_U: 
-@GFS_V: 
+@domain: 
 
 <!-- ##### STRUCT GfsVariableClass ##### -->
 <para>
@@ -251,29 +197,13 @@ The fluid variables associated with a fluid cell.
 </para>
 
 @klass: 
-@parent: 
+@domain: 
 @name: 
+@Returns: 
+<!-- # Unused Parameters # -->
+@parent: 
 @centered: 
 @i: 
-@Returns: 
-
-
-<!-- ##### FUNCTION gfs_variable_list_copy ##### -->
-<para>
-
-</para>
-
-@v: 
-@parent: 
-@Returns: 
-
-
-<!-- ##### FUNCTION gfs_variable_list_destroy ##### -->
-<para>
-
-</para>
-
-@v: 
 
 
 <!-- ##### FUNCTION gfs_variable_from_name ##### -->
@@ -281,9 +211,11 @@ The fluid variables associated with a fluid cell.
 
 </para>
 
-@variables: 
+@i: 
 @name: 
 @Returns: 
+<!-- # Unused Parameters # -->
+@variables: 
 
 
 <!-- ##### FUNCTION gfs_variables_from_list ##### -->
@@ -291,27 +223,12 @@ The fluid variables associated with a fluid cell.
 
 </para>
 
-@variables: 
+@i: 
 @list: 
 @error: 
 @Returns: 
-
-
-<!-- ##### MACRO gfs_variable_parent ##### -->
-<para>
-
-</para>
-
-@v: 
-
-
-<!-- ##### MACRO gfs_variable_set_parent ##### -->
-<para>
-
-</para>
-
-@v: 
-@pa: 
+<!-- # Unused Parameters # -->
+@variables: 
 
 
 <!-- ##### FUNCTION gfs_stats_variable ##### -->
@@ -391,22 +308,24 @@ The fluid variables associated with a fluid cell.
 @variables: 
 
 
-<!-- ##### FUNCTION gfs_velocity_norm ##### -->
+<!-- ##### FUNCTION gfs_vector_norm ##### -->
 <para>
 
 </para>
 
 @cell: 
 @v: 
+@Returns: 
 
 
-<!-- ##### FUNCTION gfs_velocity_norm2 ##### -->
+<!-- ##### FUNCTION gfs_vector_norm2 ##### -->
 <para>
 
 </para>
 
 @cell: 
 @v: 
+@Returns: 
 
 
 <!-- ##### FUNCTION gfs_divergence ##### -->
@@ -416,6 +335,7 @@ The fluid variables associated with a fluid cell.
 
 @cell: 
 @v: 
+@Returns: 
 
 
 <!-- ##### FUNCTION gfs_normal_divergence ##### -->
@@ -424,6 +344,7 @@ The fluid variables associated with a fluid cell.
 </para>
 
 @cell: 
+@v: 
 
 
 <!-- ##### FUNCTION gfs_vorticity ##### -->
@@ -433,6 +354,7 @@ The fluid variables associated with a fluid cell.
 
 @cell: 
 @v: 
+@Returns: 
 
 
 <!-- ##### FUNCTION gfs_face_interpolated_value ##### -->
@@ -575,16 +497,6 @@ Defines the (second-order accurate) gradient of a variable @v in a given directi
 @cell: 
 @v: 
 @max_level: 
-@Returns: 
-
-
-<!-- ##### FUNCTION gfs_cell_laplacian ##### -->
-<para>
-
-</para>
-
-@cell: 
-@v: 
 @Returns: 
 
 

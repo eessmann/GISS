@@ -210,7 +210,29 @@ Evaluates to the index of the neighboring direction opposite to @i.
 
 @obj: 
 
+<!-- ##### MACRO GFS_EVENT_HARMONIC ##### -->
+<para>
+
+</para>
+
+@obj: 
+
 <!-- ##### MACRO GFS_GRADIENT ##### -->
+<para>
+
+</para>
+
+@component: 
+
+<!-- ##### MACRO GFS_GRADIENT_COMPONENT ##### -->
+<para>
+
+</para>
+
+@index: 
+@variable: 
+
+<!-- ##### MACRO GFS_GRADIENT_INDEX ##### -->
 <para>
 
 </para>
@@ -232,6 +254,13 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @obj: 
 
 <!-- ##### MACRO GFS_IS_BOUNDARY_OUTFLOW_SOURCE ##### -->
+<para>
+
+</para>
+
+@obj: 
+
+<!-- ##### MACRO GFS_IS_EVENT_HARMONIC ##### -->
 <para>
 
 </para>
@@ -294,6 +323,21 @@ Evaluates to the index of the neighboring direction opposite to @i.
 
 @component: 
 
+<!-- ##### MACRO GFS_VELOCITY_COMPONENT ##### -->
+<para>
+
+</para>
+
+@index: 
+@variable: 
+
+<!-- ##### MACRO GFS_VELOCITY_INDEX ##### -->
+<para>
+
+</para>
+
+@component: 
+
 <!-- ##### STRUCT GfsBoundaryInflowClass ##### -->
 <para>
 
@@ -323,12 +367,60 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @GFS_BOUNDARY_MATCH_VARIABLE: 
 @GFS_BOUNDARY_VARIABLE_NUMBER: 
 
+<!-- ##### STRUCT GfsEventHarmonic ##### -->
+<para>
+
+</para>
+
+@parent: 
+@omega: 
+@v: 
+@z: 
+@A: 
+@B: 
+@vsin: 
+@vcos: 
+@M: 
+@iM: 
+@Mn: 
+@x: 
+@a: 
+@Aname: 
+@Bname: 
+@invertible: 
+
 <!-- ##### STRUCT GfsInitFlowConstant ##### -->
 <para>
 
 </para>
 
 @u: 
+
+<!-- ##### STRUCT GfsOutputScalarHistogram ##### -->
+<para>
+
+</para>
+
+@x: 
+@y: 
+@W: 
+@w: 
+@last: 
+@dt: 
+@n: 
+
+<!-- ##### ENUM GfsPermanentVariable ##### -->
+<para>
+
+</para>
+
+@GFS_DIV: 
+@GFS_DP: 
+@GFS_RES: 
+@GFS_GX: 
+@GFS_GY: 
+@GFS_U: 
+@GFS_V: 
 
 <!-- ##### STRUCT GfsProjectionParams ##### -->
 <para>
@@ -430,6 +522,15 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @data: 
 @Param2: 
 
+<!-- ##### FUNCTION gfs_cell_laplacian ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+@Returns: 
+
 <!-- ##### FUNCTION gfs_centered_velocity_advection ##### -->
 <para>
 
@@ -473,6 +574,14 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @refine: 
 @refine_data: 
 
+<!-- ##### FUNCTION gfs_domain_add_new_variable ##### -->
+<para>
+
+</para>
+
+@domain: 
+@v: 
+
 <!-- ##### FUNCTION gfs_domain_center_bc ##### -->
 <para>
 
@@ -501,6 +610,15 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @cleanup: 
 @data: 
 
+<!-- ##### FUNCTION gfs_domain_replace_variable ##### -->
+<para>
+
+</para>
+
+@domain: 
+@v: 
+@with: 
+
 <!-- ##### FUNCTION gfs_domain_traversed_merged ##### -->
 <para>
 
@@ -527,6 +645,13 @@ Evaluates to the index of the neighboring direction opposite to @i.
 
 @root: 
 @fp: 
+
+<!-- ##### FUNCTION gfs_event_sum2_class ##### -->
+<para>
+
+</para>
+
+@Returns: 
 
 <!-- ##### FUNCTION gfs_gradient ##### -->
 <para>
@@ -706,6 +831,37 @@ Evaluates to the index of the neighboring direction opposite to @i.
 
 @v: 
 
+<!-- ##### FUNCTION gfs_variable_list_copy ##### -->
+<para>
+
+</para>
+
+@v: 
+@parent: 
+@Returns: 
+
+<!-- ##### FUNCTION gfs_variable_list_destroy ##### -->
+<para>
+
+</para>
+
+@v: 
+
+<!-- ##### MACRO gfs_variable_parent ##### -->
+<para>
+
+</para>
+
+@v: 
+
+<!-- ##### MACRO gfs_variable_set_parent ##### -->
+<para>
+
+</para>
+
+@v: 
+@pa: 
+
 <!-- ##### FUNCTION gfs_variable_source ##### -->
 <para>
 
@@ -714,6 +870,22 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @v: 
 @cell: 
 @Returns: 
+
+<!-- ##### FUNCTION gfs_velocity_norm ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
+<!-- ##### FUNCTION gfs_velocity_norm2 ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
 
 <!-- ##### FUNCTION gfs_velocity_sources ##### -->
 <para>

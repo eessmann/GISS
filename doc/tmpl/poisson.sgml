@@ -64,6 +64,7 @@ Poisson solver
 @max_depth: 
 @u: 
 @rhs: 
+@dia: 
 <!-- # Unused Parameters # -->
 @root: 
 @level: 
@@ -80,6 +81,7 @@ Poisson solver
 @max_depth: 
 @u: 
 @rhs: 
+@dia: 
 @res: 
 <!-- # Unused Parameters # -->
 @root: 
@@ -92,6 +94,7 @@ Poisson solver
 </para>
 
 @domain: 
+@dia: 
 @c: 
 @rho: 
 
@@ -108,6 +111,8 @@ Poisson solver
 @nrelax: 
 @u: 
 @rhs: 
+@dia: 
+@res: 
 
 
 <!-- ##### FUNCTION gfs_correct_normal_velocities ##### -->
@@ -118,6 +123,7 @@ Poisson solver
 @domain: 
 @dimension: 
 @p: 
+@g: 
 @dt: 
 <!-- # Unused Parameters # -->
 @face: 
@@ -132,6 +138,8 @@ Poisson solver
 @domain: 
 @par: 
 @apar: 
+@p: 
+@g: 
 
 
 <!-- ##### FUNCTION gfs_approximate_projection ##### -->
@@ -142,6 +150,8 @@ Poisson solver
 @domain: 
 @par: 
 @apar: 
+@p: 
+@res: 
 
 
 <!-- ##### FUNCTION gfs_domain_norm_residual ##### -->
@@ -153,6 +163,7 @@ Poisson solver
 @flags: 
 @max_depth: 
 @dt: 
+@res: 
 @Returns: 
 
 
