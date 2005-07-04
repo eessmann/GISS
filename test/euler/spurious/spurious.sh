@@ -14,7 +14,7 @@ if ! $donotrun; then
     done
 
     rm -f convergence
-    for level in 4 5 6; do
+    for level in 5 6 7; do
         La=12000
         mu=`echo $La | awk '{print sqrt (0.4/$1)}'`
 	tmax=`echo $mu | awk '{print 1000.*$1*0.4}'`
