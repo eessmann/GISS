@@ -41,7 +41,7 @@ tutorial.pdf: tutorial1.dvi
 	/usr/local/grace/bin/xmgrace -noask -hardcopy -hdevice EPS -printfile $@ $<
 
 %.eps: %.fig
-	fig2dev -L ps $< > $@ ; ./epsbbox.sh $@ 
+	fig2dev -L ps $< > $@ ; sh epsbbox.sh $@ 
 
 %.eps: %.jpeg
 	convert $< $@.gif
