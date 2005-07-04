@@ -585,6 +585,7 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) save_previous, data);
   }
+  par->fv = gfs_temporary_variable (domain);
   data[0] = par;
   data[1] = &c1;
   for (c = 0; c < FTT_DIMENSION; c++) {
@@ -601,6 +602,8 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, par->v);
   }
   cstart = (cstart + 1) % FTT_DIMENSION;
+  gts_object_destroy (GTS_OBJECT (par->fv));
+  par->fv = NULL;
 
   if (half) {
     data[0] = par->v;
