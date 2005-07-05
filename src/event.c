@@ -810,15 +810,23 @@ GfsInitVorticityClass * gfs_init_vorticity_class (void)
 
 /* GfsEventSum: Object */
 
+static void gfs_event_sum_destroy (GtsObject * o)
+{
+  GfsEventSum * s = GFS_EVENT_SUM (o);
+
+  gts_object_destroy (GTS_OBJECT (s->v));
+
+  (* GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class->destroy) (o);
+}
+
 static void gfs_event_sum_write (GtsObject * o, FILE * fp)
 {
   GfsEventSum * s = GFS_EVENT_SUM (o);
 
-  if (GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class->write)
-      (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class->write) (o, fp);
 
-  fprintf (fp, " %s %s", s->v->name, s->sv->name);
+  gfs_function_write (s->v, fp);
+  fprintf (fp, " %s", s->sv->name);
 }
 
 static void gfs_event_sum_read (GtsObject ** o, GtsFile * fp)
@@ -826,21 +834,13 @@ static void gfs_event_sum_read (GtsObject ** o, GtsFile * fp)
   GfsEventSum * s = GFS_EVENT_SUM (*o);
   GfsDomain * domain =  GFS_DOMAIN (gfs_object_simulation (s));
 
-  if (GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class->read) 
-      (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
-  if (fp->type != GTS_STRING) {
-    gts_file_error (fp, "expecting a string (v)");
+  gfs_function_read (s->v, domain, fp);
+  if (fp->type == GTS_ERROR)
     return;
-  }
-  if (!(s->v = gfs_variable_from_name (domain->variables, fp->token->str))) {
-    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
-    return;
-  }
-  gts_file_next_token (fp);
 
   if (fp->type != GTS_STRING) {
     gts_file_error (fp, "expecting a string (sv)");
@@ -851,7 +851,6 @@ static void gfs_event_sum_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
     return;
   }
-  s->sv->fine_coarse = s->v->fine_coarse;
   gts_file_next_token (fp);
 }
 
@@ -881,17 +880,19 @@ static void gfs_event_sum_class_init (GfsEventClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = gfs_event_sum_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_event_sum_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_event_sum_destroy;
   GFS_EVENT_CLASS (klass)->event = gfs_event_sum_event;
 }
 
 static void sum (FttCell * cell, GfsEventSum * s)
 {
-  GFS_VARIABLE (cell, s->sv->i) += s->dt*GFS_VARIABLE (cell, s->v->i);
+  GFS_VARIABLE (cell, s->sv->i) += s->dt*gfs_function_value (s->v, cell);
 }
 
 static void gfs_event_sum_init (GfsEventSum * object)
 {
   object->last = -1.;
+  object->v = gfs_function_new (gfs_function_class (), 0.);
   object->sum = (FttCellTraverseFunc) sum;
 }
 
@@ -911,41 +912,6 @@ GfsEventClass * gfs_event_sum_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
 				  &gfs_event_sum_info);
-  }
-
-  return klass;
-}
-
-/* GfsEventSum2: Object */
-
-static void sum2 (FttCell * cell, GfsEventSum * s)
-{
-  gdouble val = GFS_VARIABLE (cell, s->v->i);
-
-  GFS_VARIABLE (cell, s->sv->i) += s->dt*val*val;
-}
-
-static void gfs_event_sum2_init (GfsEventSum * object)
-{
-  object->sum = (FttCellTraverseFunc) sum2;
-}
-
-GfsEventClass * gfs_event_sum2_class (void)
-{
-  static GfsEventClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_event_sum2_info = {
-      "GfsEventSum2",
-      sizeof (GfsEventSum),
-      sizeof (GfsEventClass),
-      (GtsObjectClassInitFunc) NULL,
-      (GtsObjectInitFunc) gfs_event_sum2_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_sum_class ()),
-				  &gfs_event_sum2_info);
   }
 
   return klass;

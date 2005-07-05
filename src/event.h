@@ -151,7 +151,8 @@ typedef struct _GfsEventSum         GfsEventSum;
 struct _GfsEventSum {
   GfsEvent parent;
 
-  GfsVariable * v, * sv;
+  GfsFunction * v;
+  GfsVariable * sv;
   FttCellTraverseFunc sum;
   gdouble last, dt;
 };
@@ -163,10 +164,6 @@ struct _GfsEventSum {
 						 gfs_event_sum_class ()))
 
 GfsEventClass * gfs_event_sum_class  (void);
-
-/* GfsEventSum2: Header */
-
-GfsEventClass * gfs_event_sum2_class (void);
 
 /* GfsEventHarmonic: Header */
 

@@ -175,7 +175,6 @@ void gfs_init (int * argc, char *** argv)
         gfs_adapt_curvature_class ();
       gfs_adapt_not_box_class ();
     gfs_event_sum_class ();
-      gfs_event_sum2_class ();
     gfs_event_stop_class ();
     gfs_event_script_class ();
     gfs_source_generic_class ();
