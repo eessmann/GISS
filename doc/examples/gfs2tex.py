@@ -216,10 +216,8 @@ class Example:
                        "  print $0 \"\\nTime { iend = 1 }\";" +
                        "else print $0;"
                        "}' < " + self.name + ".gfs > " + self.name + ".tmp && " +\
-                       "mv -f " + self.name + ".tmp " + self.name + ".gfs && " +\
-                       "`awk '{if($1 == \"#\" && $2 == \"Command:\")"+\
-                       "         for (i = 3; i <= NF; i++) printf (\"%s \", $i);" +\
-                       "}' < " + self.name + ".gfs` 2>&1")
+                       "mv -f " + self.name + ".tmp " + self.name + ".gfs && ( " +\
+                       self.command + " ) 2>&1")
         lines = out.readlines()
         status = out.close()
         os.system("rm -r -f " + wdname)

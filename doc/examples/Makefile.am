@@ -18,8 +18,8 @@ EXTRA_DIST = \
 TESTS = test.sh
 
 test.sh: $(EXAMPLES)
-	echo "python test.py $(EXAMPLES)" > test.sh
-	chmod +x test.sh
+	@echo "python test.py $(EXAMPLES)" > test.sh
+	@chmod +x test.sh
 
 bin_SCRIPTS = \
 	gfs2doc
