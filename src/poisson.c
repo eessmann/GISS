@@ -322,12 +322,6 @@ static void reset_coeff (FttCell * cell)
     f[d].v = 0.;
 }
 
-static void reset_poisson_coeff (FttCell * cell, GfsVariable * dia)
-{
-  reset_coeff (cell);
-  GFS_VARIABLE (cell, dia->i) = 0.;
-}
-
 static void poisson_coeff (FttCellFace * face, gdouble * lambda2)
 {
   GfsStateVector * s = GFS_STATE (face->cell);
@@ -396,23 +390,15 @@ static void face_coeff_from_below (FttCell * cell)
   }
 }
 
-static void face_poisson_coeff_from_below (FttCell * cell, GfsVariable * dia)
-{
-  face_coeff_from_below (cell);
-  GFS_VARIABLE (cell, dia->i) = 0.;
-}
-
 /**
  * gfs_poisson_coefficients:
  * @domain: a #GfsDomain.
- * @dia: the diagonal weight.
  * @c: the volume fraction.
  * @rho: the relative density.
  *
  * Initializes the face coefficients for the Poisson equation.
  */
 void gfs_poisson_coefficients (GfsDomain * domain,
-			       GfsVariable * dia,
 			       GfsVariable * c,
 			       gdouble rho)
 {
@@ -420,7 +406,6 @@ void gfs_poisson_coefficients (GfsDomain * domain,
   FttComponent i;
 
   g_return_if_fail (domain != NULL);
-  g_return_if_fail (dia != NULL);
 
   for (i = 0; i < FTT_DIMENSION; i++) {
     gdouble lambda = (&domain->lambda.x)[i];
@@ -429,7 +414,7 @@ void gfs_poisson_coefficients (GfsDomain * domain,
   }
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_poisson_coeff, dia);
+			    (FttCellTraverseFunc) reset_coeff, NULL);
   if (c == NULL || rho == 1.)
     gfs_domain_face_traverse (domain, FTT_XYZ, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -447,7 +432,7 @@ void gfs_poisson_coefficients (GfsDomain * domain,
   }
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			    (FttCellTraverseFunc) face_poisson_coeff_from_below, dia);
+			    (FttCellTraverseFunc) face_coeff_from_below, NULL);
 }
 
 static void correct (FttCell * cell, gpointer * data)

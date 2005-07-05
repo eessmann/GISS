@@ -713,7 +713,9 @@ static void stream_from_vorticity (GfsDomain * domain,
   g_return_if_fail (domain != NULL);
 
   dia = gfs_temporary_variable (domain);
-  gfs_poisson_coefficients (domain, dia, NULL, 1.);
+  gfs_poisson_coefficients (domain, NULL, 1.);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, dia);
   correct_div (domain, vorticity); /* enforce solvability condition */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, stream);

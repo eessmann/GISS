@@ -103,6 +103,14 @@ static void reset_gradients (FttCell * cell, GfsVariable ** g)
     GFS_VARIABLE (cell, g[c]->i) = 0.;
 }
 
+static void reset_gradients_2D (FttCell * cell, GfsVariable ** g)
+{
+  FttComponent c;
+
+  for (c = 0; c < 2; c++)
+    GFS_VARIABLE (cell, g[c]->i) = 0.;
+}
+
 static void correct_normal_velocity (FttCellFace * face,
 				     gpointer * data)
 {
@@ -156,6 +164,20 @@ static void scale_gradients (FttCell * cell, GfsVariable ** g)
   }
 }
 
+static void scale_gradients_2D (FttCell * cell, GfsVariable ** g)
+{
+  FttComponent c;
+  FttCellNeighbors n;
+
+  ftt_cell_neighbors (cell, &n);
+  for (c = 0; c < 2; c++) {
+    FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
+
+    if (c1 && c2)
+      GFS_VARIABLE (cell, g[c]->i) /= 2.;
+  }
+}
+
 /**
  * gfs_correct_normal_velocities:
  * @domain: a #GfsDomain.
@@ -166,7 +188,7 @@ static void scale_gradients (FttCell * cell, GfsVariable ** g)
  *
  * Corrects the normal velocity field of @domain using @p and and @dt.
  *
- * Also fills @g[] with the centered gradient of @p.
+ * Also allocates the @g variables and fills them with the centered gradient of @p.
  */
 void gfs_correct_normal_velocities (GfsDomain * domain,
 				    guint dimension,
@@ -180,9 +202,14 @@ void gfs_correct_normal_velocities (GfsDomain * domain,
   g_return_if_fail (domain != NULL);
   g_return_if_fail (p != NULL);
   g_return_if_fail (g != NULL);
-  
+
+  for (c = 0; c < dimension; c++) {
+    g[c] = gfs_temporary_variable (domain);
+    gfs_variable_set_vector (g[c], c);
+  }
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_gradients, g);
+			    (FttCellTraverseFunc) (dimension == 2 ? 
+						   reset_gradients_2D : reset_gradients), g);
   data[0] = p;
   data[1] = g;
   data[2] = &dt;
@@ -190,7 +217,8 @@ void gfs_correct_normal_velocities (GfsDomain * domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) correct_normal_velocity, data);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) scale_gradients, g);
+			    (FttCellTraverseFunc) (dimension == 2 ? 
+						   scale_gradients_2D : scale_gradients), g);
   for (c = 0; c < dimension; c++)
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, g[c]);
 }
@@ -237,7 +265,6 @@ void gfs_mac_projection (GfsDomain * domain,
   gdouble dt;
   gpointer data[2];
   GfsVariable * div, * dia, * res;
-  FttComponent c;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
@@ -256,7 +283,9 @@ void gfs_mac_projection (GfsDomain * domain,
   apar->dt /= 2.;
 
   /* Initialize face coefficients */
-  gfs_poisson_coefficients (domain, dia, apar->c, apar->rho);
+  gfs_poisson_coefficients (domain, apar->c, apar->rho);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, dia);
 
   /* compute MAC divergence */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -299,10 +328,6 @@ void gfs_mac_projection (GfsDomain * domain,
   gts_object_destroy (GTS_OBJECT (dia));
   gts_object_destroy (GTS_OBJECT (res));
 
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    g[c] = gfs_variable_new (gfs_variable_class (), domain, NULL);
-    gfs_variable_set_vector (g[c], c);
-  }
   gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
 
 #if 0
@@ -340,6 +365,8 @@ static void correct (FttCell * cell, gpointer * data)
  *
  * Corrects the velocity field of @domain using the pressure gradient
  * stored in g[].
+ *
+ * The @g[] variables are freed by this function.
  */
 void gfs_correct_centered_velocities (GfsDomain * domain,
 				      guint dimension,
@@ -359,8 +386,11 @@ void gfs_correct_centered_velocities (GfsDomain * domain,
   data[3] = &dimension;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) correct, data);
-  for (c = 0; c < dimension; c++)
+  for (c = 0; c < dimension; c++) {
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v[c]);
+    gts_object_destroy (GTS_OBJECT (g[c]));
+    g[c] = NULL;
+  }
 }
 
 /**
@@ -397,7 +427,6 @@ void gfs_approximate_projection (GfsDomain * domain,
   guint minlevel, maxlevel;
   gpointer data[2];
   GfsVariable * dia, * div, * g[FTT_DIMENSION], * res1;
-  FttComponent c;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
@@ -411,7 +440,9 @@ void gfs_approximate_projection (GfsDomain * domain,
   res1 = res ? res : gfs_temporary_variable (domain);
 
   /* Initialize face coefficients */
-  gfs_poisson_coefficients (domain, dia, apar->c, apar->rho);
+  gfs_poisson_coefficients (domain, apar->c, apar->rho);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, dia);
 
   /* compute MAC velocities from centered velocities */
   gfs_domain_face_traverse (domain, FTT_XYZ,
@@ -472,16 +503,8 @@ void gfs_approximate_projection (GfsDomain * domain,
   if (!res)
     gts_object_destroy (GTS_OBJECT (res1));
 
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    g[c] = gfs_temporary_variable (domain);
-    gfs_variable_set_vector (g[c], c);
-  }
-
   gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
   gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
-
-  for (c = 0; c < FTT_DIMENSION; c++)
-    gts_object_destroy (GTS_OBJECT (g[c]));
 
   gfs_domain_timer_stop (domain, "approximate_projection");
 }

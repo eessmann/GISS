@@ -978,6 +978,10 @@ static void gfs_source_coriolis_read (GtsObject ** o, GtsFile * fp)
   GFS_SOURCE_CORIOLIS (*o)->omegaz = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (GFS_SOURCE_CORIOLIS (*o)->omegaz, gfs_object_simulation (*o), fp);
 
+#if (!FTT_2D)
+  gts_container_remove (GFS_SOURCE_VECTOR (*o)->v[FTT_Z]->sources, GTS_CONTAINEE (*o));
+#endif /* 3D */ 
+ 
   for (c = 0; c <  2; c++)
     GFS_SOURCE_CORIOLIS (*o)->u[c] = gfs_temporary_variable (domain);
 }
@@ -1131,21 +1135,11 @@ gboolean gfs_source_coriolis_implicit (GfsSimulation * sim,
     }
 
     if (s != NULL) {
-      GfsVariable * dia, * g[2];
-      FttComponent c;
+      GfsVariable * g[2];
 
-      dia = gfs_temporary_variable (domain);
-      gfs_poisson_coefficients (domain, dia, apar->c, apar->rho);
-      gts_object_destroy (GTS_OBJECT (dia));
-
-      for (c = 0; c < 2; c++)
-	g[c] = gfs_temporary_variable (domain);
-
+      gfs_poisson_coefficients (domain, apar->c, apar->rho);
       gfs_correct_normal_velocities (domain, 2, p, g, apar->dt);
       gfs_correct_centered_velocities (domain, 2, g, apar->dt);
-      
-      for (c = 0; c < 2; c++)
-	gts_object_destroy (GTS_OBJECT (g[c]));
 
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) implicit_coriolis, s);
