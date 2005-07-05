@@ -57,7 +57,8 @@
 
   # Set a viscosity source term on the velocity vector with x-component U
   # The Reynolds number is Re = L*U/Nu = 1*1/1e-3 = 1000
-  SourceViscosity {} U 1e-3
+  SourceDiffusion {} U 1e-3
+  SourceDiffusion {} V 1e-3
 
   # Writes the time and timestep every 10 timesteps on standard error
   OutputTime { istep = 10 } stderr

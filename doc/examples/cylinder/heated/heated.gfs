@@ -60,7 +60,8 @@
   # Set a viscosity source term on the velocity vector with x-component U
   # The Reynolds number is Re = D*U/Nu = 0.125*1/0.00078125 = 160
   # where D is the cylinder diameter (as defined in cylinder.gts)
-  SourceViscosity {} U 0.00078125
+  SourceDiffusion {} U 0.00078125
+  SourceDiffusion {} V 0.00078125
 
   # Writes the time and timestep every 10 timesteps on standard output
   OutputTime { istep = 10 } stdout
