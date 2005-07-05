@@ -5,7 +5,7 @@
 # A test case initially presented by Almgren et al \cite{almgren97}.
 # Three elliptical bodies are placed in the unit square. Constant
 # unity inflow and outflow are specified on the left and right
-# boundaries. Projection is then preformed to obtain a potential flow
+# boundaries. Projection is then performed to obtain a potential flow
 # solution around the bodies.
 #
 # Tables \ref{boundaries-x} and \ref{boundaries-y} illustrate the errors and convergence
