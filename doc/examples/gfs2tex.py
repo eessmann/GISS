@@ -209,6 +209,9 @@ class Example:
         files = path + self.name + ".gfs"
         for f in self.required:
             files += " " + path + f
+        command = self.command
+        for v in ["2D","2D3","3D"]:
+            command = command.replace("gfsview" + v, "gfsview-batch" + v)
         out = os.popen("cd " + wdname + " && " +\
                        "mkdir test && cd test && " +\
                        "cp -f " + files + " . && " +\
@@ -217,7 +220,7 @@ class Example:
                        "else print $0;"
                        "}' < " + self.name + ".gfs > " + self.name + ".tmp && " +\
                        "mv -f " + self.name + ".tmp " + self.name + ".gfs && ( " +\
-                       self.command + " ) 2>&1")
+                       command + " ) 2>&1")
         lines = out.readlines()
         status = out.close()
         os.system("rm -r -f " + wdname)
