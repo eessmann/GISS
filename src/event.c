@@ -1794,7 +1794,7 @@ GfsEventClass * gfs_remove_ponds_class (void)
 
 /* GfsEventFilter: Object */
 
-static void filter (FttCell * cell, GfsVariable * v)
+static void filter (FttCell * cell, GfsEventFilter * f)
 {
   FttDirection d[4*(FTT_DIMENSION - 1)][FTT_DIMENSION] = {
 #if FTT_2D
@@ -1810,24 +1810,28 @@ static void filter (FttCell * cell, GfsVariable * v)
   gdouble val = 0.;
 
   for (i = 0; i < 4*(FTT_DIMENSION - 1); i++)
-    val += gfs_cell_corner_value (cell, d[i], v, -1);
-  GFS_STATE (cell)->div = val/(4*(FTT_DIMENSION - 1));
+    val += gfs_cell_corner_value (cell, d[i], f->v, -1);
+  GFS_VARIABLE (cell, f->tmp->i) = val/(4*(FTT_DIMENSION - 1));
 }
 
-static void filtered (FttCell * cell, GfsVariable * v)
+static void filtered (FttCell * cell, GfsEventFilter * f)
 {
-  GFS_VARIABLE (cell, v->i) = GFS_STATE (cell)->div;
+  GFS_VARIABLE (cell, f->v->i) = GFS_VARIABLE (cell, f->tmp->i);
 }
 
 static gboolean gfs_event_filter_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_filter_class ())->parent_class)->event) 
       (event, sim)) {
+    GfsEventFilter * f = GFS_EVENT_FILTER (event);
+
+    f->tmp = gfs_temporary_variable (GFS_DOMAIN (sim));
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) filter, GFS_EVENT_FILTER (event)->v);
+			      (FttCellTraverseFunc) filter, f);
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) filtered, GFS_EVENT_FILTER (event)->v);
-    gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, GFS_EVENT_FILTER (event)->v);
+			      (FttCellTraverseFunc) filtered, f);
+    gts_object_destroy (GTS_OBJECT (f->tmp));
+    gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, f->v);
     return TRUE;
   }
   return FALSE;

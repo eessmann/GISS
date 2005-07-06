@@ -305,6 +305,7 @@ typedef struct _GfsEventFilter         GfsEventFilter;
 struct _GfsEventFilter {
   /*< private >*/
   GfsEvent parent;
+  GfsVariable * tmp;
 
   /*< public >*/
   GfsVariable * v;
