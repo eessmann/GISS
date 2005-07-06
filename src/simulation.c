@@ -451,7 +451,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       }
 
       object = gts_object_new (klass);
-      gfs_object_simulation (object) = sim;
+      gfs_object_simulation_set (object, sim);
 
       g_assert (klass->read);
       (* klass->read) (&object, fp);

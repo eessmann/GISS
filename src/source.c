@@ -638,7 +638,7 @@ static void source_diffusion_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
-  gfs_object_simulation (d->D) = gfs_object_simulation (d);
+  gfs_object_simulation_set (d->D, gfs_object_simulation (d));
   (* GTS_OBJECT (d->D)->klass->read) ((GtsObject **) &d->D, fp);
 }
 
