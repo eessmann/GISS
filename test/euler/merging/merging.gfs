@@ -88,9 +88,7 @@
 # \end{tabular}
 # \end{center}
 # \caption{Contour plots of vorticity (left) and adaptive grids used
-# (right) for the four-way vortex merging calculation. The lines on the
-# pictures in the right column represent the boundaries between levels
-# of refinement (with a maximum of $L=8$ levels).}
+# (right) for the four-way vortex merging calculation.}
 # \label{vorticity}
 # \end{figure}
 #

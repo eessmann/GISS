@@ -8,13 +8,12 @@ View {
   lc = 0.001
   reactivity = 0.1
 }
-Boundaries {
+Squares {
   r = 0 g = 0 b = 0
   shading = Constant
   maxlevel = 8
-}
-Levels {
-  r = 0 g = 0 b = 0
-  shading = Constant
-  maxlevel = 8
+} Level {
+  amin = 1
+  amax = 1
+  cmap = Jet
 }
