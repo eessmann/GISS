@@ -121,22 +121,44 @@ static gboolean load_module (GfsFunction * f, GtsFile * fp, gchar * mname)
   return TRUE;
 }
 
-static gboolean expr_or_func (GtsFile * fp, GfsFunction * f)
+/**
+ * gfs_function_expression:
+ * @fp: a #GtsFile.
+ * @is_expression: a pointer to a boolean or %NULL.
+ *
+ * Reads the expression (in which case @is_expression is set to %TRUE)
+ * or function from @fp.
+ *
+ * Returns: a newly allocated GString containing the result or %NULL
+ * in case of error.
+ */
+GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
 {
+  GString * expr = NULL;
+
+  g_return_val_if_fail (fp != NULL, NULL);
+
+  if (is_expression)
+    *is_expression = TRUE;
   if (fp->type == '{') {
     gint c, scope;
 
-    f->expr = g_string_new ("{");
+    expr = g_string_new ("{");
     scope = fp->scope_max;
     c = gts_file_getc (fp);
     while (c != EOF && fp->scope > scope) {
-      g_string_append_c (f->expr, c);
+      g_string_append_c (expr, c);
       c = gts_file_getc (fp);
     }
-    g_string_append_c (f->expr, '}');
-    if (fp->scope != scope)
+    g_string_append_c (expr, '}');
+    if (fp->scope != scope) {
       gts_file_error (fp, "parse error");
-    return FALSE;
+      g_string_free (expr, TRUE);
+      return NULL;
+    }
+    if (is_expression)
+      *is_expression = FALSE;
+    return expr;
   }
   else {
     static gchar spaces[] = " \t\f\r";
@@ -144,8 +166,8 @@ static gboolean expr_or_func (GtsFile * fp, GfsFunction * f)
     gint c, scope = 0;
     gchar * s;
 
-    f->expr = g_string_new (fp->token->str);
-    s = f->expr->str;
+    expr = g_string_new (fp->token->str);
+    s = expr->str;
     while (*s != '\0') {
       if (*s == '(') scope++;
       else if (*s == ')') scope--;
@@ -162,51 +184,51 @@ static gboolean expr_or_func (GtsFile * fp, GfsFunction * f)
     while (c != EOF) {
       if (gfs_char_in_string (c, "{}\n")) {
 	fp->next_token = c;
-	g_strchomp (f->expr->str);
-	return TRUE;
+	g_strchomp (expr->str);
+	return expr;
       }
       else if (scope > 0) {
 	while (c != EOF && scope > 0) {
 	  if (c == '(') scope++;
 	  else if (c == ')') scope--;
-	  g_string_append_c (f->expr, c);
+	  g_string_append_c (expr, c);
 	  c = gts_file_getc (fp);
 	}
       }
       else if (gfs_char_in_string (c, spaces)) {
 	while (c != EOF && gfs_char_in_string (c, spaces)) {
-	  g_string_append_c (f->expr, c);
+	  g_string_append_c (expr, c);
 	  c = gts_file_getc (fp);
 	}
 	if (!gfs_char_in_string (c, operators)) {
 	  fp->next_token = c;
-	  g_strchomp (f->expr->str);
-	  return TRUE;
+	  g_strchomp (expr->str);
+	  return expr;
 	}
-	g_string_append_c (f->expr, c);
+	g_string_append_c (expr, c);
 	c = gts_file_getc (fp);
 	while (c != EOF && gfs_char_in_string (c, spaces)) {
-	  g_string_append_c (f->expr, c);
+	  g_string_append_c (expr, c);
 	  c = gts_file_getc (fp);
 	}
       }
       else if (gfs_char_in_string (c, operators)) {
-	g_string_append_c (f->expr, c);
+	g_string_append_c (expr, c);
 	c = gts_file_getc (fp);
 	while (c != EOF && gfs_char_in_string (c, spaces)) {
-	  g_string_append_c (f->expr, c);
+	  g_string_append_c (expr, c);
 	  c = gts_file_getc (fp);
 	}
       }
       else {
 	if (c == '(') scope++;
 	else if (c == ')') scope--;
-	g_string_append_c (f->expr, c);
+	g_string_append_c (expr, c);
 	c = gts_file_getc (fp);
       }
     }
-    g_strchomp (f->expr->str);
-    return TRUE;
+    g_strchomp (expr->str);
+    return expr;
   }
 }
 
@@ -316,7 +338,9 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
-  isexpr = expr_or_func (fp, f);
+  if ((f->expr = gfs_function_expression (fp, &isexpr)) == NULL)
+    return;
+
   if (isexpr) {
     if (fp->type == GTS_INT || fp->type == GTS_FLOAT) {
       if (!strcmp (fp->token->str, f->expr->str)) {

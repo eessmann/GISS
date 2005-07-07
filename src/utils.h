@@ -78,6 +78,8 @@ void               gfs_function_read        (GfsFunction * f,
 					     GtsFile * fp);
 void               gfs_function_write       (GfsFunction * f, 
 					     FILE * fp);
+GString *          gfs_function_expression  (GtsFile * fp, 
+					     gboolean * is_expression);
 GtsObjectClass *   gfs_object_class_from_name (const gchar * name);
 
 void               gfs_eigenvalues          (gdouble a[FTT_DIMENSION][FTT_DIMENSION],
