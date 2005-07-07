@@ -31,7 +31,6 @@ typedef struct _GfsSurfaceGenericBc        GfsSurfaceGenericBc;
 
 /* GfsVariable: Header */
 
-typedef void (* GfsVariableDerivedFunc)    (FttCell * cell, GfsVariable * v);
 typedef void (* GfsVariableFineCoarseFunc) (FttCell * cell, GfsVariable * v);
 
 struct _GfsVariable {
@@ -43,7 +42,6 @@ struct _GfsVariable {
   FttComponent component;
   gchar * name;
   gboolean centered;
-  GfsVariableDerivedFunc derived;
   GfsVariableFineCoarseFunc fine_coarse;
   GtsContainer * sources;
   GfsSurfaceGenericBc * surface_bc;
