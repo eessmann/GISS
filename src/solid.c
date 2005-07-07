@@ -110,6 +110,7 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
   gboolean ins;
   guint o = 0;
   GtsPoint r[2];
+  gdouble a;
 
   solid->a = 0.;
   solid->cm.x = solid->cm.y = solid->cm.z = 0.;
@@ -161,9 +162,47 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
     else
       solid->s[etod[i]] = 0.;
   }
-  solid->cm.x /= 3.*solid->a;
-  solid->cm.y /= 3.*solid->a;
-  solid->a /= 2.*h->x*h->y;
+
+  a = solid->a/(2.*h->x*h->y);
+  if (a > 1e-4) {
+    solid->cm.x /= 3.*solid->a;
+    solid->cm.y /= 3.*solid->a;
+  }
+  else {
+    guint n = 0;
+
+    solid->cm.x = solid->cm.y = 0.;
+    for (m = 0; m < 4 && f->n[m] == 0; m++);
+    ins = f->inside[m] < 0;
+    for (k = m; k < m + 4; k++) {
+      guint i = k % 4, i1 = (i + 1) % 4;
+      gdouble x1 = f->p[i].x, y1 = f->p[i].y, x2 = f->p[i1].x, y2 = f->p[i1].y;
+      if (f->n[i] > 0) {
+	gdouble x = (1. - f->x[i])*x1 + f->x[i]*x2;
+	gdouble y = (1. - f->x[i])*y1 + f->x[i]*y2;
+
+	g_assert (ins == (f->inside[i] < 0));
+	solid->cm.x += x;
+	solid->cm.y += y;
+	n++;
+	if (ins) {
+	  solid->cm.x += x1;
+	  solid->cm.y += y1;
+	  n++;
+	}
+	ins = !ins;
+      }
+      else if (ins) {
+	solid->cm.x += x1;
+	solid->cm.y += y1;
+	n++;
+      }
+    }
+    g_assert (n > 0);
+    solid->cm.x /= n;
+    solid->cm.y /= n;
+  }
+  solid->a = a;
 }
 
 #if FTT_2D
@@ -700,6 +739,22 @@ void gfs_domain_init_solid_fractions (GfsDomain * domain,
     gts_object_destroy (GTS_OBJECT (p.status));
 }
 
+static gboolean pos_is_inside (FttVector * p, const FttCell * cell)
+{
+  FttVector p1, p2;
+  gdouble h = ftt_cell_size (cell)/2.;
+
+  ftt_cell_pos (cell, &p1);
+  p2.x = (p->x - p1.x)/h;
+  p2.y = (p->y - p1.y)/h;
+  p2.z = (p->z - p1.z)/h;
+  if (fabs (p2.x) > 1. || fabs (p2.y) > 1. || fabs (p2.z) > 1.) {
+    g_warning ("cell: (%g,%g,%g) p2: (%g,%g,%g)", p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+    return FALSE;
+  }
+  return TRUE;
+}
+
 static gboolean check_area_fractions (const FttCell * root)
 {
   guint i, level;
@@ -710,6 +765,21 @@ static gboolean check_area_fractions (const FttCell * root)
   level = ftt_cell_level (root);
   ftt_cell_neighbors (root, &neighbor);
   solid = GFS_STATE (root)->solid;
+
+  if (solid) {
+    if (!pos_is_inside (&solid->cm, root)) {
+      g_warning ("file %s: line %d (%s): cm is not inside cell",
+		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION);
+      ret = FALSE;
+      g_assert_not_reached ();
+    }
+    if (!pos_is_inside (&solid->ca, root)) {
+      g_warning ("file %s: line %d (%s): ca is not inside cell",
+		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION);
+      ret = FALSE;
+      g_assert_not_reached ();
+    }
+  }
 
   for (i = 0; i < FTT_NEIGHBORS; i++)
     if (neighbor.c[i]) {
@@ -811,7 +881,7 @@ static void check_solid_fractions (FttCell * cell, gboolean * ret)
       }
     a /= FTT_CELLS;
     if (fabs (GFS_STATE (cell)->solid->a - a) >= 1e-10) {
-      g_warning ("file %s: line %d (%s): children->a: %g parent->a: %g\n",
+      g_warning ("file %s: line %d (%s): children->a: %g parent->a: %g",
 		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
 		 a, GFS_STATE (cell)->solid->a);
 	*ret = FALSE;
