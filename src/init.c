@@ -26,6 +26,8 @@
 #endif /* HAVE_FPU_SETCW */
 
 #include <stdlib.h>
+#include <locale.h>
+
 #include "boundary.h"
 #include "init.h"
 #include "refine.h"
@@ -94,6 +96,9 @@ void gfs_init (int * argc, char *** argv)
 
   if (initialized)
     return;
+
+  if (!setlocale (LC_ALL, "POSIX"))
+    g_warning ("cannot set locale to POSIX");
 
 #ifdef HAVE_MPI
   MPI_Initialized (&initialized);
