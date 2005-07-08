@@ -70,7 +70,7 @@
   AdvectionParams { scheme = none }
 
   VariableTracer {} T { scheme = vof }
-  SourceTension {} U V T 1
+  SourceTension {} T 1
   SourceDiffusion {} U MU
   SourceDiffusion {} V MU
 
