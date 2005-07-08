@@ -123,13 +123,7 @@ static gdouble gfs_source_tension_value (GfsSourceGeneric * s,
 					 FttCell * cell,
 					 GfsVariable * v)
 {
-  FttComponent c;
-
-  for (c = 0; c < FTT_DIMENSION; c++)
-    if (GFS_SOURCE_VECTOR (s)->v[c] == v)
-      return GFS_VARIABLE (cell, GFS_SOURCE_TENSION (s)->t[c]->i);
-  g_assert_not_reached ();
-  return 0;
+  return GFS_VARIABLE (cell, GFS_SOURCE_TENSION (s)->t[v->component]->i);
 }
 
 static void gfs_source_tension_class_init (GfsSourceGenericClass * klass)
@@ -155,7 +149,7 @@ GfsSourceGenericClass * gfs_source_tension_class (void)
       (GtsArgGetFunc) NULL
     };
     klass = 
-      gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_vector_class ()),
+      gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_velocity_class ()),
 			    &gfs_source_tension_info);
   }
 

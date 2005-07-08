@@ -32,7 +32,7 @@ typedef struct _GfsSourceTension         GfsSourceTension;
 
 struct _GfsSourceTension {
   /*< private >*/
-  GfsSourceVector parent;
+  GfsSourceVelocity parent;
   GfsVariable * g[3];
   
   /*< public >*/

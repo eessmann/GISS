@@ -57,7 +57,7 @@ typedef struct _GfsSourceHydrostatic         GfsSourceHydrostatic;
 
 struct _GfsSourceHydrostatic {
   /*< private >*/
-  GfsSourceGeneric parent;
+  GfsSourceVelocity parent;
   GfsVariable * ph1;
   gboolean not_first;
 

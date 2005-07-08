@@ -691,7 +691,7 @@ GfsSourceGenericClass * gfs_source_hydrostatic_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_vector_class ()),
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_velocity_class ()),
 				  &gfs_source_hydrostatic_info);
   }
 

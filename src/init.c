@@ -180,17 +180,18 @@ void gfs_init (int * argc, char *** argv)
         gfs_adapt_curvature_class ();
       gfs_adapt_not_box_class ();
     gfs_event_sum_class ();
+    gfs_event_harmonic_class ();
     gfs_event_stop_class ();
     gfs_event_script_class ();
     gfs_source_generic_class ();
-      gfs_source_class ();
-        gfs_source_control_class ();
-      gfs_source_coriolis_class ();
-      /* fixme: gfs_source_hydrostatic_class (); */
-      gfs_source_diffusion_class ();
-        gfs_source_diffusion_explicit_class ();
+      gfs_source_scalar_class ();
+        gfs_source_class ();
+          gfs_source_control_class ();
+        gfs_source_diffusion_class ();
+          gfs_source_diffusion_explicit_class ();
+      gfs_source_velocity_class ();
         gfs_source_viscosity_class ();
-            gfs_source_vector_class ();
+        gfs_source_coriolis_class ();
         gfs_source_tension_class ();
     gfs_remove_droplets_class ();
     gfs_remove_ponds_class ();

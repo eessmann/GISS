@@ -32,7 +32,6 @@ void       gfs_domain_variable_centered_sources (GfsDomain * domain,
 						 GfsVariable * v,
 						 GfsVariable * sv,
 						 gdouble dt);
-
 /* GfsSourceGeneric: Header */
 
 typedef struct _GfsSourceGeneric         GfsSourceGeneric;
@@ -69,25 +68,45 @@ struct _GfsSourceGenericClass {
 
 GfsSourceGenericClass * gfs_source_generic_class  (void);
 
-/* GfsSourceVector: Header */
+/* GfsSourceScalar: Header */
 
-typedef struct _GfsSourceVector         GfsSourceVector;
+typedef struct _GfsSourceScalar         GfsSourceScalar;
 
-struct _GfsSourceVector {
+struct _GfsSourceScalar {
   /*< private >*/
-  GfsEvent parent;
+  GfsSourceGeneric parent;
 
   /*< public >*/
-  GfsVariable * v[FTT_DIMENSION];
+  GfsVariable * v;
 };
 
-#define GFS_SOURCE_VECTOR(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsSourceVector,\
-					         gfs_source_vector_class ())
-#define GFS_IS_SOURCE_VECTOR(obj)         (gts_object_is_from_class (obj,\
-						 gfs_source_vector_class ()))
+#define GFS_SOURCE_SCALAR(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourceScalar,\
+					         gfs_source_scalar_class ())
+#define GFS_IS_SOURCE_SCALAR(obj)         (gts_object_is_from_class (obj,\
+						 gfs_source_scalar_class ()))
 
-GfsSourceGenericClass * gfs_source_vector_class  (void);
+GfsSourceGenericClass * gfs_source_scalar_class  (void);
+
+/* GfsSourceVelocity: Header */
+
+typedef struct _GfsSourceVelocity         GfsSourceVelocity;
+
+struct _GfsSourceVelocity {
+  /*< private >*/
+  GfsSourceGeneric parent;
+
+  /*< public >*/
+  GfsVariable ** v;
+};
+
+#define GFS_SOURCE_VELOCITY(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourceVelocity,\
+					         gfs_source_velocity_class ())
+#define GFS_IS_SOURCE_VELOCITY(obj)         (gts_object_is_from_class (obj,\
+						 gfs_source_velocity_class ()))
+
+GfsSourceGenericClass * gfs_source_velocity_class  (void);
 
 /* GfsSource: Header */
 
@@ -95,7 +114,7 @@ typedef struct _GfsSource         GfsSource;
 
 struct _GfsSource {
   /*< private >*/
-  GfsSourceGeneric parent;
+  GfsSourceScalar parent;
 
   /*< public >*/
   GfsFunction * intensity;
@@ -193,7 +212,7 @@ GfsDiffusionClass * gfs_diffusion_multi_class  (void);
 
 struct _GfsSourceDiffusion {
   /*< private >*/
-  GfsSourceGeneric parent;
+  GfsSourceScalar parent;
 
   /*< public >*/
   GfsDiffusion * D;
@@ -237,8 +256,10 @@ typedef struct _GfsSourceViscosity         GfsSourceViscosity;
 
 struct _GfsSourceViscosity {
   /*< private >*/
-  GfsSourceGeneric parent;
-  GfsVariable * v[FTT_DIMENSION];
+  GfsSourceVelocity parent;
+
+  /*< public >*/
+  GfsDiffusion * D;
 };
 
 #define GFS_SOURCE_VISCOSITY(obj)            GTS_OBJECT_CAST (obj,\
@@ -255,7 +276,7 @@ typedef struct _GfsSourceCoriolis         GfsSourceCoriolis;
 
 struct _GfsSourceCoriolis {
   /*< private >*/
-  GfsSourceVector parent;
+  GfsSourceVelocity parent;
   GfsVariable * u[2];
 
   /*< public >*/
@@ -269,9 +290,9 @@ struct _GfsSourceCoriolis {
 						 gfs_source_coriolis_class ()))
 
 GfsSourceGenericClass * gfs_source_coriolis_class    (void);
-gboolean                gfs_source_coriolis_implicit (GfsSimulation * sim,
-						      GfsAdvectionParams * apar,
-						      GfsVariable * p);
+void                    gfs_source_coriolis_implicit (GfsDomain * domain,
+						      gdouble dt);
+GfsSourceCoriolis *     gfs_has_source_coriolis      (GfsDomain * domain);
 
 #ifdef __cplusplus
 }
