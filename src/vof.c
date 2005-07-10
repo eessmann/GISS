@@ -78,7 +78,6 @@ void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 
   g_return_if_fail (m != NULL);
   g_return_if_fail (p != NULL);
-  g_return_if_fail (a > 0. && a < 1.);
   g_return_if_fail (m->x >= 0. && m->y >= 0.);
 
   if (alpha <= 0.) {
@@ -90,6 +89,8 @@ void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
     p->x = p->y = 0.5;
     return;
   }
+
+  g_return_if_fail (a > 0. && a < 1.);
 
   n = *m; n.x += 1e-4; n.y += 1e-4;
 
@@ -181,7 +182,6 @@ void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
   gdouble b, amax;
 
   g_return_if_fail (m != NULL);
-  g_return_if_fail (a > 0. && a < 1.);
   g_return_if_fail (p != NULL);
   g_return_if_fail (m->x >= 0. && m->y >= 0. && m->z >= 0.);
 
@@ -194,6 +194,8 @@ void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
     p->x = p->y = p->z = 0.5;
     return;
   }
+
+  g_return_if_fail (a > 0. && a < 1.);
 
   n = *m; n.x += 1e-4; n.y += 1e-4; n.z += 1e-4;
 
