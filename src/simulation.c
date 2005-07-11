@@ -713,7 +713,7 @@ static void gfs_simulation_init (GfsSimulation * object)
   };
   GfsDerivedVariable * v = derived_variable;
 
-  gfs_domain_add_variable (domain, "P");
+  gfs_domain_add_variable (domain, "P")->centered = TRUE;
   gfs_variable_set_vector (gfs_domain_add_variable (domain, "U"), FTT_X);
   gfs_variable_set_vector (gfs_domain_add_variable (domain, "V"), FTT_Y);
 #if (!FTT_2D)
