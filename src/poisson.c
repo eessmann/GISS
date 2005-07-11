@@ -356,8 +356,13 @@ static void poisson_density_coeff (FttCellFace * face,
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
   cval = gfs_face_interpolated_value (face, c->i);
+#if 1
+  v *= cval;
+#else /* fixme */
   v /= 1. + (cval > 1. ? 1. : cval < 0. ? 0. : cval)*(*rho - 1.);
+#endif
   s->f[face->d].v = v;
+
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:

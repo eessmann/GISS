@@ -73,6 +73,53 @@ struct _GfsSourceHydrostatic {
 
 GfsSourceGenericClass * gfs_source_hydrostatic_class    (void);
 
+/* GfsSourceFriction: Header */
+
+typedef struct _GfsSourceFriction         GfsSourceFriction;
+
+struct _GfsSourceFriction {
+  /*< private >*/
+  GfsSourceVelocity parent;
+  GfsVariable * u[FTT_DIMENSION];
+
+  /*< public >*/
+  GfsVariable * h;
+  gdouble f;
+};
+
+#define GFS_SOURCE_FRICTION(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourceFriction,\
+					         gfs_source_friction_class ())
+#define GFS_IS_SOURCE_FRICTION(obj)         (gts_object_is_from_class (obj,\
+						 gfs_source_friction_class ()))
+
+GfsSourceGenericClass * gfs_source_friction_class  (void);
+
+/* GfsBcFlather: Header */
+
+typedef struct _GfsBcFlather         GfsBcFlather;
+
+struct _GfsBcFlather {
+  /*< private >*/
+  GfsBcValue parent;
+
+  /*< public >*/
+  GfsVariable * h, * p;
+  GfsFunction * val;
+};
+
+#define GFS_BC_FLATHER(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsBcFlather,\
+					         gfs_bc_flather_class ())
+#define GFS_IS_BC_FLATHER(obj)         (gts_object_is_from_class (obj,\
+						 gfs_bc_flather_class ()))
+
+GfsBcClass * gfs_bc_flather_class  (void);
+
+/* GfsOcean1: Header */
+
+GfsSimulationClass * gfs_ocean1_class          (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

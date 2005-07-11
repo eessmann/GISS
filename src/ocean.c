@@ -18,6 +18,8 @@
  * 02111-1307, USA.  
  */
 
+#include <stdlib.h>
+
 #include "ocean.h"
 #include "timestep.h"
 #include "adaptive.h"
@@ -175,7 +177,7 @@ static void compute_w (FttCell * c, GfsVariable * W)
 #define THETA 0.5
 
 typedef struct {
-  GfsVariable * div, * divn, * pn, * dia;
+  GfsVariable * pn, * div, * divn, * dia;
   gdouble dt, G;
 } FreeSurfaceParams;
 
@@ -191,9 +193,14 @@ static void scale_divergence_helmoltz (FttCell * cell, FreeSurfaceParams * p)
   gdouble c = 2.*h*h/(THETA*p->G*p->dt*p->dt);
 
   if (GFS_IS_MIXED (cell))
+#if FTT_2D
     c *= GFS_STATE (cell)->solid->a;
+#else  /* 2D3 or 3D */
+    c *= GFS_STATE (cell)->solid->s[FTT_FRONT];
+#endif /* 2D3 or 3D */
+
   GFS_VARIABLE (cell, p->dia->i) = c;
-  GFS_VARIABLE (cell, p->div->i) = 2.*GFS_VARIABLE (cell, p->div->i)/p->dt - 
+  GFS_VARIABLE (cell, p->div->i) = 2.*GFS_VARIABLE (cell, p->div->i)/p->dt -
     c*GFS_VARIABLE (cell, p->pn->i);
 }
 
@@ -208,7 +215,6 @@ static void gfs_free_surface_pressure (GfsDomain * domain,
 				       GfsMultilevelParams * par,
 				       GfsAdvectionParams * apar,
 				       GfsVariable * p,
-				       GfsVariable * pn,
 				       GfsVariable * divn,
 				       GfsVariable * res,
 				       gdouble G)
@@ -222,18 +228,17 @@ static void gfs_free_surface_pressure (GfsDomain * domain,
   g_return_if_fail (par != NULL);
   g_return_if_fail (apar != NULL);
   g_return_if_fail (p != NULL);
-  g_return_if_fail (pn != NULL);
   g_return_if_fail (divn != NULL);
   g_return_if_fail (G > 0.);
 
   toplayer = GFS_OCEAN (domain)->toplayer;
   apar->v = gfs_variable_from_name (domain->variables, "U");
 
+  fp.pn = p;
   fp.div = gfs_temporary_variable (domain);
   fp.dia = gfs_temporary_variable (toplayer);
   res1 = res ? res : gfs_temporary_variable (toplayer);
   fp.divn = divn;
-  fp.pn = pn;
   fp.dt = apar->dt;
   fp.G = G/GFS_OCEAN (domain)->layer->len;
 
@@ -319,24 +324,14 @@ static void gfs_free_surface_divergence (GfsDomain * domain, GfsVariable * div)
 			    (FttCellTraverseFunc) gfs_normal_divergence_2D, div);
 }
 
-static void save_p (FttCell * cell, gpointer * data)
-{
-  GfsVariable * p = data[0], * pn = data[1];
-  GFS_VARIABLE (cell, pn->i) = GFS_VARIABLE (cell, p->i);
-}
-
 static void ocean_run (GfsSimulation * sim)
 {
-  GfsVariable * p, * pn, * divn, * res = NULL;
+  GfsVariable * p, * div, * res = NULL;
   GfsDomain * domain, * toplayer;
-  gpointer data[2];
   GSList * i;
 
   domain = GFS_DOMAIN (sim);
   toplayer = GFS_OCEAN (sim)->toplayer;
-
-  data[0] = p = gfs_variable_from_name (domain->variables, "P");
-  g_assert (p);
 
   gfs_simulation_refine (sim);
 
@@ -346,21 +341,22 @@ static void ocean_run (GfsSimulation * sim)
   gfs_set_merged (domain);
   i = domain->variables;
   while (i) {
-    gfs_event_init (GFS_EVENT (i->data), sim);
+    gfs_event_init (i->data, sim);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
     if (GFS_IS_VARIABLE_RESIDUAL (i->data))
       res = i->data;
     i = i->next;
   }
 
-  data[1] = pn = gfs_temporary_variable (domain);
-  divn = gfs_temporary_variable (domain);
+  p = gfs_variable_from_name (domain->variables, "P");
+  g_assert (p);
+
+  div = gfs_temporary_variable (domain);
 
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
     GfsVariable * g[2];
     gdouble tstart;
-    gboolean implicit;
 
     i = domain->variables;
     while (i) {
@@ -376,16 +372,13 @@ static void ocean_run (GfsSimulation * sim)
 
     gfs_simulation_set_timestep (sim);
 
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) save_p, data);
-    gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, p, pn);
-    gfs_free_surface_divergence (domain, divn);
+    gfs_free_surface_divergence (domain, div);
 
     gfs_predicted_face_velocities (domain, 2, &sim->advection_params);
 
     gfs_domain_timer_start (domain, "correct_normal_velocities");
     gfs_poisson_coefficients (domain, NULL, 0.);
-    gfs_correct_normal_velocities (domain, 2, pn, g, sim->advection_params.dt/2.);
+    gfs_correct_normal_velocities (domain, 2, p, g, sim->advection_params.dt/2.);
 #if (!FTT_2D)
     gfs_domain_cell_traverse_boundary (domain, FTT_BACK,
 				       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -420,17 +413,21 @@ static void ocean_run (GfsSimulation * sim)
 					       &sim->diffusion_params,
 					       g);
 
-    gfs_domain_timer_start (domain, "source_coriolis_implicit");
-    implicit = gfs_source_coriolis_implicit (sim, &sim->advection_params, pn);
-    gfs_domain_timer_stop (domain, "source_coriolis_implicit");
+    gfs_poisson_coefficients (domain, NULL, 0.);
+    gfs_correct_normal_velocities (domain, 2, p, g, 0.);
+    if (gfs_has_source_coriolis (domain)) {
+      gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt);
+      gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
+      gfs_correct_normal_velocities (domain, 2, p, g, 0.);
+      gfs_correct_centered_velocities (domain, 2, g, -sim->advection_params.dt/2.);
+    }
+    else
+      gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt/2.);
+
+    sim->time.t = sim->tnext;
+    sim->time.i++;
 
     gfs_domain_timer_start (domain, "free_surface_pressure");
-    gfs_poisson_coefficients (domain, NULL, 0.);
-    gfs_correct_normal_velocities (domain, 2, pn, g, sim->advection_params.dt/2.);
-    gfs_correct_centered_velocities (domain, 2, g, implicit ? 
-				     -sim->advection_params.dt/2. :
-				     sim->advection_params.dt/2.);
-
     gfs_domain_face_traverse (domain, FTT_XY,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
@@ -439,13 +436,10 @@ static void ocean_run (GfsSimulation * sim)
 			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
 			      gfs_domain_velocity (domain));
     gfs_free_surface_pressure (domain, &sim->approx_projection_params, &sim->advection_params,
-			       p, pn, divn, res, sim->physical_params.g);
+			       p, div, res, sim->physical_params.g);
     gfs_domain_timer_stop (domain, "free_surface_pressure");
 
     gfs_simulation_adapt (sim, NULL);
-
-    sim->time.t = sim->tnext;
-    sim->time.i++;
 
     gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
     gts_range_update (&domain->timestep);
@@ -455,8 +449,7 @@ static void ocean_run (GfsSimulation * sim)
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gts_object_destroy, NULL);
 
-  gts_object_destroy (GTS_OBJECT (pn));
-  gts_object_destroy (GTS_OBJECT (divn));
+  gts_object_destroy (GTS_OBJECT (div));
 }
 
 static void gfs_ocean_class_init (GfsSimulationClass * klass)
@@ -693,6 +686,377 @@ GfsSourceGenericClass * gfs_source_hydrostatic_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_velocity_class ()),
 				  &gfs_source_hydrostatic_info);
+  }
+
+  return klass;
+}
+
+/* GfsSourceFriction: Object */
+
+static void gfs_source_friction_destroy (GtsObject * o)
+{
+  FttComponent c;
+
+  for (c = 0; c <  FTT_DIMENSION; c++)
+    if (GFS_SOURCE_FRICTION (o)->u[c])
+      gts_object_destroy (GTS_OBJECT (GFS_SOURCE_FRICTION (o)->u[c]));
+
+  (* GTS_OBJECT_CLASS (gfs_source_friction_class ())->parent_class->destroy) (o);
+}
+
+static void gfs_source_friction_read (GtsObject ** o, GtsFile * fp)
+{
+  FttComponent c;
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+
+  (* GTS_OBJECT_CLASS (gfs_source_friction_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (GfsVariable h)");
+    return;
+  }
+  GFS_SOURCE_FRICTION (*o)->h = gfs_variable_from_name (domain->variables, fp->token->str);
+  if (GFS_SOURCE_FRICTION (*o)->h == NULL) {
+    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (f)");
+    return;
+  }
+  GFS_SOURCE_FRICTION (*o)->f = atof (fp->token->str);
+  gts_file_next_token (fp);
+
+  for (c = 0; c <  FTT_DIMENSION; c++)
+    GFS_SOURCE_FRICTION (*o)->u[c] = gfs_temporary_variable (domain);
+}
+
+static void gfs_source_friction_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_friction_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %s %g", GFS_SOURCE_FRICTION (o)->h->name, GFS_SOURCE_FRICTION (o)->f);
+}
+
+static gdouble gfs_source_friction_saved_value (GfsSourceGeneric * s, 
+						FttCell * cell, 
+						GfsVariable * v)
+{
+  gdouble H = GFS_VARIABLE (cell, GFS_SOURCE_FRICTION (s)->h->i);
+
+  g_assert (H > 0.);
+  return - GFS_SOURCE_FRICTION (s)->f*
+    GFS_VARIABLE (cell, GFS_SOURCE_FRICTION (s)->u[v->component]->i)/H;
+}
+
+static void save_velocity (FttCell * cell, GfsSourceFriction * s)
+{
+  FttComponent c;
+
+  for (c = 0; c < FTT_DIMENSION; c++)
+    GFS_VARIABLE (cell, s->u[c]->i) = GFS_VARIABLE (cell, GFS_SOURCE_VELOCITY (s)->v[c]->i);
+}
+
+static gboolean gfs_source_friction_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class)->event)
+      (event, sim)) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) save_velocity, event);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_source_friction_class_init (GfsSourceGenericClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_source_friction_destroy;
+  GTS_OBJECT_CLASS (klass)->read = gfs_source_friction_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_source_friction_write;
+  GFS_EVENT_CLASS (klass)->event = gfs_source_friction_event;
+  klass->mac_value = klass->centered_value = gfs_source_friction_saved_value;
+}
+
+GfsSourceGenericClass * gfs_source_friction_class (void)
+{
+  static GfsSourceGenericClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_source_friction_info = {
+      "GfsSourceFriction",
+      sizeof (GfsSourceFriction),
+      sizeof (GfsSourceGenericClass),
+      (GtsObjectClassInitFunc) gfs_source_friction_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_velocity_class ()),
+				  &gfs_source_friction_info);
+  }
+
+  return klass;
+}
+
+/* GfsBcFlather: Object */
+
+static void bc_flather_write (GtsObject * o, FILE * fp)
+{
+  GfsBcFlather * bc = GFS_BC_FLATHER (o);
+
+  (* GTS_OBJECT_CLASS (gfs_bc_flather_class ())->parent_class->write) (o, fp);
+
+  fprintf (fp, " %s %s", bc->h->name, bc->p->name);
+  if (bc->val)
+    gfs_function_write (bc->val, fp);
+}
+
+static void bc_flather_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsBcFlather * bc = GFS_BC_FLATHER (*o);
+  GfsDomain * domain = gfs_box_domain (GFS_BC (bc)->b->box);
+
+  (* GTS_OBJECT_CLASS (gfs_bc_flather_class ())->parent_class->read) (o, fp);
+
+  if (fp->type == GTS_ERROR)
+    return;
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (h)");
+    return;
+  }
+  bc->h = gfs_variable_from_name (domain->variables, fp->token->str);
+  if (bc->h == NULL) {
+    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (p)");
+    return;
+  }
+  bc->p = gfs_variable_from_name (domain->variables, fp->token->str);
+  if (bc->p == NULL) {
+    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+  if (bc->val == NULL)
+    bc->val = gfs_function_new (gfs_function_class (), 0.);
+  gfs_function_read (bc->val, gfs_box_domain (GFS_BC (bc)->b->box), fp);
+}
+
+static void bc_flather_destroy (GtsObject * o)
+{
+  if (GFS_BC_FLATHER (o)->val)
+    gts_object_destroy (GTS_OBJECT (GFS_BC_FLATHER (o)->val));
+
+  (* GTS_OBJECT_CLASS (gfs_bc_flather_class ())->parent_class->destroy) (o);
+}
+
+static gdouble flather_value (FttCellFace * f, GfsBc * b)
+{
+  guint d, nb = 0;
+  FttCellNeighbors n;
+  gdouble H;
+
+  ftt_cell_neighbors (f->neighbor, &n);
+  for (d = 0; d < FTT_NEIGHBORS_2D; d++)
+    if (n.c[d] != NULL && GFS_CELL_IS_BOUNDARY(n.c[d]) && nb++ > 0)
+      /* if the boundary cell is bounded by more than one boundary -> no flux */
+      return 0.;
+
+  H = gfs_face_interpolated_value (f, GFS_BC_FLATHER (b)->h->i);
+  if (H > 2e-3) { /* fixme: 2e-3 is an arbitrary constant which should be a parameter or sthg*/
+    GfsSimulation * sim = GFS_SIMULATION (gfs_box_domain (b->b->box));
+    gdouble cg = sqrt (sim->physical_params.g*H);
+    
+    return gfs_function_face_value (GFS_BC_VALUE (b)->val, f) +
+      (FTT_FACE_DIRECT (f) ? -1. : 1.)*
+      (GFS_VARIABLE (f->neighbor, GFS_BC_FLATHER (b)->p->i) - 
+       gfs_function_face_value (GFS_BC_FLATHER (b)->val, f))*
+      cg/sim->physical_params.g;
+  }
+  else
+    return 0.;
+}
+
+static void flather (FttCellFace * f, GfsBc * b)
+{
+  GFS_VARIABLE (f->cell, b->v->i) = 2.*flather_value (f, b) - GFS_VARIABLE (f->neighbor, b->v->i);
+}
+
+static void homogeneous_flather (FttCellFace * f, GfsBc * b)
+{
+  GFS_VARIABLE (f->cell, b->v->i) = - GFS_VARIABLE (f->neighbor, b->v->i);
+}
+
+static void face_flather (FttCellFace * f, GfsBc * b)
+{
+  GFS_STATE (f->cell)->f[f->d].v =
+    GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = flather_value (f, b);
+}
+
+static void gfs_bc_flather_class_init (GtsObjectClass * klass)
+{
+  klass->write   = bc_flather_write;
+  klass->read    = bc_flather_read;
+  klass->destroy = bc_flather_destroy;
+}
+
+static void gfs_bc_flather_init (GfsBc * object)
+{
+  object->bc =             (FttFaceTraverseFunc) flather;
+  object->homogeneous_bc = (FttFaceTraverseFunc) homogeneous_flather;
+  object->face_bc =        (FttFaceTraverseFunc) face_flather;
+}
+
+GfsBcClass * gfs_bc_flather_class (void)
+{
+  static GfsBcClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_bc_flather_info = {
+      "GfsBcFlather",
+      sizeof (GfsBcFlather),
+      sizeof (GfsBcClass),
+      (GtsObjectClassInitFunc) gfs_bc_flather_class_init,
+      (GtsObjectInitFunc) gfs_bc_flather_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_bc_value_class ()),
+				  &gfs_bc_flather_info);
+  }
+
+  return klass;
+}
+
+/* GfsOcean1: Object */
+
+static void ocean1_run (GfsSimulation * sim)
+{
+  GfsVariable * p, * div, * H, * res = NULL;
+  GfsDomain * domain, * toplayer;
+  GSList * i;
+
+  domain = GFS_DOMAIN (sim);
+  toplayer = GFS_OCEAN (sim)->toplayer;
+
+  gfs_simulation_refine (sim);
+
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
+  gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
+
+  gfs_set_merged (domain);
+  i = domain->variables;
+  while (i) {
+    gfs_event_init (i->data, sim);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
+    if (GFS_IS_VARIABLE_RESIDUAL (i->data))
+      res = i->data;
+    i = i->next;
+  }
+
+  p = gfs_variable_from_name (domain->variables, "P");
+  g_assert (p);
+  H = gfs_variable_from_name (domain->variables, "H");
+  g_assert (H);
+
+  div = gfs_temporary_variable (domain);
+
+  while (sim->time.t < sim->time.end &&
+	 sim->time.i < sim->time.iend) {
+    GfsVariable * g[2];
+    gdouble tstart;
+
+    i = domain->variables;
+    while (i) {
+      gfs_event_do (i->data, sim);
+      i = i->next;
+    }
+    gfs_domain_cell_traverse (domain,
+			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
+
+    tstart = g_timer_elapsed (domain->timer, NULL);
+
+    gfs_simulation_set_timestep (sim);
+    gfs_free_surface_divergence (domain, div);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p);
+
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
+
+    gfs_correct_normal_velocities (domain, 2, p, g, 0.); // just there so that the call below 
+                                                         // has sthg to free
+    gfs_centered_velocity_advection_diffusion (domain, 2,
+					       &sim->advection_params,
+					       &sim->diffusion_params,
+					       g);
+
+    gfs_poisson_coefficients (domain, H, 0.);
+    gfs_correct_normal_velocities (domain, 2, p, g, 0.);
+    if (gfs_has_source_coriolis (domain)) {
+      gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt);
+      gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
+      gfs_correct_normal_velocities (domain, 2, p, g, 0.);
+      gfs_correct_centered_velocities (domain, 2, g, -sim->advection_params.dt/2.);
+    }
+    else
+      gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt/2.);
+
+    sim->time.t = sim->tnext;
+    sim->time.i++;
+
+    gfs_domain_timer_start (domain, "free_surface_pressure");
+    gfs_domain_face_traverse (domain, FTT_XY,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
+    gfs_domain_face_traverse (domain, FTT_XY,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity,
+			      gfs_domain_velocity (domain));
+    gfs_free_surface_pressure (domain, &sim->approx_projection_params, &sim->advection_params,
+			       p, div, res, sim->physical_params.g);
+    gfs_domain_timer_stop (domain, "free_surface_pressure");
+
+    gfs_simulation_adapt (sim, NULL);
+
+    gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
+    gts_range_update (&domain->timestep);
+    gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
+    gts_range_update (&domain->size);
+  }
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
+  gts_container_foreach (GTS_CONTAINER (sim->events),
+			 (GtsFunc) gts_object_destroy, NULL);
+
+  gts_object_destroy (GTS_OBJECT (div));
+}
+
+static void gfs_ocean1_class_init (GfsSimulationClass * klass)
+{
+  klass->run = ocean1_run;
+}
+
+GfsSimulationClass * gfs_ocean1_class (void)
+{
+  static GfsSimulationClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_ocean_info = {
+      "GfsOcean1",
+      sizeof (GfsOcean),
+      sizeof (GfsSimulationClass),
+      (GtsObjectClassInitFunc) gfs_ocean1_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_ocean_class ()), &gfs_ocean_info);
   }
 
   return klass;
