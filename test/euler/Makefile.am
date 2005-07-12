@@ -54,3 +54,6 @@ Makefile.deps: Makefile.am depend.py
 	python depend.py $(TESTDIRS) > Makefile.deps
 
 -include Makefile.deps
+
+tests.tar.gz: tests $(DOCS)
+	tar czf tests.tar.gz tests $(DOCS)
