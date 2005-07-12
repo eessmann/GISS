@@ -95,19 +95,13 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
     gts_file_variable_error (fp, var, "nrelax", "nrelax must be non zero");
 }
 
-static void reset_gradients (FttCell * cell, GfsVariable ** g)
+static void reset_gradients (FttCell * cell, gpointer * data)
 {
+  GfsVariable ** g = data[0];
+  guint * dimension = data[1];    
   FttComponent c;
 
-  for (c = 0; c < FTT_DIMENSION; c++)
-    GFS_VARIABLE (cell, g[c]->i) = 0.;
-}
-
-static void reset_gradients_2D (FttCell * cell, GfsVariable ** g)
-{
-  FttComponent c;
-
-  for (c = 0; c < 2; c++)
+  for (c = 0; c < *dimension; c++)
     GFS_VARIABLE (cell, g[c]->i) = 0.;
 }
 
@@ -130,7 +124,6 @@ static void correct_normal_velocity (FttCellFace * face,
   type = ftt_face_type (face);
   c = face->d/2;
 
-  //  gfs_face_gradient_flux_centered (face, &g, GFS_P, -1);
   gfs_face_weighted_gradient (face, &g, p->i, -1);
   dp = (g.b - g.a*GFS_VARIABLE (face->cell, p->i))/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
@@ -140,41 +133,47 @@ static void correct_normal_velocity (FttCellFace * face,
     dp /= s->solid->s[face->d];
 
   GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= dp*(*dt);
-  GFS_VARIABLE (face->cell, gv[c]->i) += dp;
+  GFS_VARIABLE (face->cell, gv[c]->i) += dp*GFS_FACE_FRACTION_LEFT (face);
 
-  if (type == FTT_FINE_COARSE)
+  switch (type) {
+  case FTT_FINE_FINE:
+    GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*(*dt);
+    GFS_VARIABLE (face->neighbor, gv[c]->i) += dp*GFS_FACE_FRACTION_RIGHT (face);
+    break;
+  case FTT_FINE_COARSE: {
     /* fixme: does this work (FTT_CELLS/2?) for 2D3? */
-    dp *= GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*FTT_CELLS/2);
-
-  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*(*dt);
-  GFS_VARIABLE (face->neighbor, gv[c]->i) += dp;
-}
-
-static void scale_gradients (FttCell * cell, GfsVariable ** g)
-{
-  FttComponent c;
-  FttCellNeighbors n;
-
-  ftt_cell_neighbors (cell, &n);
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
-
-    if (c1 && c2)
-      GFS_VARIABLE (cell, g[c]->i) /= 2.;
+    dp *= GFS_FACE_FRACTION_LEFT (face)/(FTT_CELLS/2);
+    GFS_VARIABLE (face->neighbor, gv[c]->i) += dp;
+    GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp/GFS_FACE_FRACTION_RIGHT (face)*(*dt);
+    break;
+  }
+  default:
+    g_assert_not_reached ();
   }
 }
 
-static void scale_gradients_2D (FttCell * cell, GfsVariable ** g)
+static void scale_gradients (FttCell * cell, gpointer * data)
 {
+  GfsVariable ** g = data[0];
+  guint * dimension = data[1];
   FttComponent c;
-  FttCellNeighbors n;
 
-  ftt_cell_neighbors (cell, &n);
-  for (c = 0; c < 2; c++) {
-    FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
+  if (GFS_IS_MIXED (cell)) {
+    GfsSolidVector * s = GFS_STATE (cell)->solid;
 
-    if (c1 && c2)
-      GFS_VARIABLE (cell, g[c]->i) /= 2.;
+    for (c = 0; c < *dimension; c++)
+      GFS_VARIABLE (cell, g[c]->i) /= s->s[2*c] + s->s[2*c + 1];
+  }
+  else {
+    FttCellNeighbors n;
+
+    ftt_cell_neighbors (cell, &n);
+    for (c = 0; c < *dimension; c++) {
+      FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
+      
+      if (c1 && c2)
+	GFS_VARIABLE (cell, g[c]->i) /= 2.;
+    }
   }
 }
 
@@ -207,18 +206,20 @@ void gfs_correct_normal_velocities (GfsDomain * domain,
     g[c] = gfs_temporary_variable (domain);
     gfs_variable_set_vector (g[c], c);
   }
+  data[0] = g;
+  data[1] = &dimension;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) (dimension == 2 ? 
-						   reset_gradients_2D : reset_gradients), g);
+			    (FttCellTraverseFunc) reset_gradients, data);
   data[0] = p;
   data[1] = g;
   data[2] = &dt;
   gfs_domain_face_traverse (domain, dimension == 2 ? FTT_XY : FTT_XYZ,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) correct_normal_velocity, data);
+  data[0] = g;
+  data[1] = &dimension;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) (dimension == 2 ? 
-						   scale_gradients_2D : scale_gradients), g);
+			    (FttCellTraverseFunc) scale_gradients, data);
   for (c = 0; c < dimension; c++)
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, g[c]);
 }
