@@ -12,8 +12,8 @@ dnl are available for $ac_help expansion (don't we all *love* autoconf?)
 # set GFS_BINARY_AGE and GFS_INTERFACE_AGE to 0.
 #
 GFS_MAJOR_VERSION=0
-GFS_MINOR_VERSION=6
-GFS_MICRO_VERSION=4
+GFS_MINOR_VERSION=8
+GFS_MICRO_VERSION=0
 GFS_INTERFACE_AGE=0
 GFS_BINARY_AGE=0
 GFS_VERSION=$GFS_MAJOR_VERSION.$GFS_MINOR_VERSION.$GFS_MICRO_VERSION
@@ -153,9 +153,9 @@ fi
 if test x$with_gts = x ; then 
   # Look for separately installed gts
 
-  AM_PATH_GTS(0.7.3,,
+  AM_PATH_GTS(0.7.4,,
     AC_MSG_ERROR([
-*** GTS 0.7.3 or better is required. The latest version of GTS
+*** GTS 0.7.4 or better is required. The latest version of GTS
 *** is always available from http://gts.sourceforge.net.]))
 
   gts_cflags=`$GTS_CONFIG --cflags $gts_check_casts gmodule`
