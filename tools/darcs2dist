@@ -40,7 +40,7 @@ autoheader >> msg 2>&1
 automake -a >> msg 2>&1
 autoconf >> msg 2>&1
 ./configure >> msg 2>&1
-make changelog >> msg 2>&1
+make ChangeLog >> msg 2>&1
 if make -k >> msg 2>&1; then
     if make dist >> msg 2>&1; then
 	tar xzf $package-*.tar.gz
