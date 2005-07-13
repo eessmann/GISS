@@ -19,41 +19,28 @@ package=$1
 repo=$2
 url=$3
 
-curdir=`pwd`
 wrkdir=`mktemp -d /tmp/darcs2dist.XXXXXX`
 cd $wrkdir
-
-if darcs get $repo $package > msg 2>&1; then
-    :
+if ( darcs get $repo $package && \
+     cd $package && \
+     sh autogen.sh && \
+     make dist && \
+     tar xzf $package-*.tar.gz && \
+     pdir=`echo $package-*.tar.gz | sed 's/.tar.gz//'` && \
+     cd $pdir && \
+     ./configure && make -k && \
+     cd .. && rm -r -f $pdir && tar xzf $package-*.tar.gz && \
+     mv -f $pdir $package-`date +%y-%m-%d` && \
+     tar cf $package-snapshot.tar $package-`date +%y-%m-%d` && \
+     gzip -f --best $package-snapshot.tar && \
+     scp -q $package-snapshot.tar.gz $url/$package-snapshot.tar.gz ) > msg 2>&1; then
+    rm -f msg
+    status=0
 else
     cat msg
     rm -f msg
-    exit 1
+    status=1
 fi
 
-rm -f msg
-cd $package
-chmod +x `find . -path ./_darcs -prune -o -type f -name "*.sh" -print`
-libtoolize > msg 2>&1
-aclocal >> msg 2>&1
-autoheader >> msg 2>&1
-automake -a >> msg 2>&1
-autoconf >> msg 2>&1
-./configure >> msg 2>&1
-make ChangeLog >> msg 2>&1
-if make -k >> msg 2>&1; then
-    if make dist >> msg 2>&1; then
-	tar xzf $package-*.tar.gz
-        mv -f `echo $package-*.tar.gz | sed 's/.tar.gz//'` $package-`date +%y-%m-%d`
-        tar cf $package-snapshot.tar $package-`date +%y-%m-%d`
-        gzip -f --best $package-snapshot.tar
-	scp -q $package-snapshot.tar.gz $url/$package-snapshot.tar.gz
-    else
-	cat msg
-    fi
-else
-    cat msg
-fi
-rm -f msg
-cd $curdir
 rm -r -f $wrkdir
+exit $status
