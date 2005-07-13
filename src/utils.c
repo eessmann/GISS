@@ -240,13 +240,15 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
   gint foutd, ferrd, ftmpd;
   gchar * cc;
   gint status;
+  gchar cccommand[] = "gcc `pkg-config "
 #if FTT_2D
-  gchar cccommand[] = "gcc `pkg-config gerris2D --cflags --libs` -O -fPIC -shared -x c";
+    "gerris2D"
 #elif FTT_2D3
-  gchar cccommand[] = "gcc `pkg-config gerris2D3 --cflags --libs` -O -fPIC -shared -x c";
+    "gerris2D3"
 #else /* 3D */
-  gchar cccommand[] = "gcc `pkg-config gerris3D --cflags --libs` -O -fPIC -shared -x c";
+    "gerris3D"
 #endif 
+    " --cflags --libs` -O -fPIC -shared -x c";
   
   foutd = mkstemp (foutname);
   ferrd = mkstemp (ferrname);
