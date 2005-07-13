@@ -611,7 +611,7 @@ static gdouble cell_x (FttCell * cell, FttCellFace * face)
 {
   FttVector p;
 
-  if (face)
+  if (face && face->d/2 == 0)
     ftt_face_pos (face, &p);
   else
     gfs_cell_cm (cell, &p);
@@ -622,7 +622,7 @@ static gdouble cell_y (FttCell * cell, FttCellFace * face)
 {
   FttVector p;
 
-  if (face)
+  if (face && face->d/2 == 1)
     ftt_face_pos (face, &p);
   else
     gfs_cell_cm (cell, &p);
@@ -633,7 +633,7 @@ static gdouble cell_z (FttCell * cell, FttCellFace * face)
 {
   FttVector p;
 
-  if (face)
+  if (face && face->d/2 == 2)
     ftt_face_pos (face, &p);
   else
     gfs_cell_cm (cell, &p);
