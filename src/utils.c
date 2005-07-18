@@ -602,7 +602,6 @@ gchar * gfs_function_description (GfsFunction * f,
 gdouble gfs_function_value (GfsFunction * f, FttCell * cell)
 {
   g_return_val_if_fail (f != NULL, 0.);
-  g_return_val_if_fail (cell != NULL, 0.);
 
   if (f->s) {
     FttVector p;
