@@ -124,6 +124,10 @@ void                 gfs_simulation_run          (GfsSimulation * sim);
 
 GfsSimulationClass * gfs_advection_class          (void);
 
+/* GfsPoisson: Header */
+
+GfsSimulationClass * gfs_poisson_class            (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

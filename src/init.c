@@ -139,6 +139,7 @@ void gfs_init (int * argc, char *** argv)
     gfs_ocean_class ();
     gfs_ocean1_class ();
     gfs_advection_class ();
+    gfs_poisson_class ();
 
   gfs_variable_class ();
     gfs_variable_tracer_class ();

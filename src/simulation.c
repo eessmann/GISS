@@ -1271,3 +1271,162 @@ GfsSimulationClass * gfs_advection_class (void)
 
   return klass;
 }
+
+/* GfsPoisson: Object */
+
+static void rescale_div (FttCell * cell, gpointer * data)
+{
+  GfsVariable * divu = data[0];
+  GfsVariable * div = data[1];
+  GtsRange * vol = data[2];
+  gdouble size = ftt_cell_size (cell);
+
+  GFS_VARIABLE (cell, div->i) = GFS_VARIABLE (cell, divu->i)*size*size*(GFS_IS_MIXED (cell) ?
+									GFS_STATE (cell)->solid->a : 1.);
+  if (GFS_IS_MIXED (cell))
+    gts_range_add_value (vol, size*size*GFS_STATE (cell)->solid->a);
+  else
+    gts_range_add_value (vol, size*size);
+}
+
+static void add_ddiv (FttCell * cell, gpointer * data)
+{
+  GfsVariable * div = data[1];
+  gdouble * ddiv = data[2];
+  gdouble size = ftt_cell_size (cell);
+
+  if (GFS_IS_MIXED (cell))
+    GFS_VARIABLE (cell, div->i) += size*size*GFS_STATE (cell)->solid->a*(*ddiv);
+  else
+    GFS_VARIABLE (cell, div->i) += size*size*(*ddiv);
+}
+
+static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * div)
+{
+  gpointer data[3];
+  GtsRange vol;
+  gdouble ddiv;
+
+  gts_range_init (&vol);
+  data[0] = divu;
+  data[1] = div;
+  data[2] = &vol;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) rescale_div, data);
+  gts_range_update (&vol);
+
+  ddiv = - gfs_domain_stats_variable (domain, div, FTT_TRAVERSE_LEAFS, -1).mean/vol.mean;
+  data[2] = &ddiv;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) add_ddiv, data);
+}
+
+static void poisson_run (GfsSimulation * sim)
+{
+  GfsDomain * domain;
+  GfsVariable * dia, * div, * res = NULL, * res1, * p;
+  guint minlevel, maxlevel;
+  GfsMultilevelParams * par = &sim->approx_projection_params;
+  GSList * i;
+
+  domain = GFS_DOMAIN (sim);
+
+  gfs_simulation_refine (sim);
+
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
+  gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
+
+  i = domain->variables;
+  while (i) {
+    gfs_event_init (GFS_EVENT (i->data), sim);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
+    if (GFS_IS_VARIABLE_RESIDUAL (i->data))
+      res = i->data;
+    i = i->next;
+  }
+
+  p = gfs_variable_from_name (domain->variables, "P");
+  div = gfs_temporary_variable (domain);
+  correct_div (domain, gfs_variable_from_name (domain->variables, "Div"), div);
+  gfs_poisson_coefficients (domain, NULL, 0.);
+  res1 = res ? res : gfs_temporary_variable (domain);
+  dia = gfs_temporary_variable (domain);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, dia);
+  minlevel = domain->rootlevel;
+  if (par->minlevel > minlevel)
+    minlevel = par->minlevel;
+  maxlevel = gfs_domain_depth (domain);
+  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res1);
+  par->residual_before = par->residual = 
+    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
+  par->niter = 0;
+  while (sim->time.t < sim->time.end &&
+	 sim->time.i < sim->time.iend &&
+	 par->residual.infty > par->tolerance) {
+    gdouble tstart;
+
+    i = domain->variables;
+    while (i) {
+      gfs_event_do (GFS_EVENT (i->data), sim);
+      i = i->next;
+    }
+    gfs_domain_cell_traverse (domain,
+			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
+
+    tstart = g_timer_elapsed (domain->timer, NULL);
+
+    gfs_poisson_cycle (domain, par->dimension, minlevel, maxlevel, par->nrelax, p, div, dia, res1);
+    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
+
+    gfs_simulation_adapt (sim, NULL);
+
+    par->niter++;
+    sim->time.t = sim->tnext;
+    sim->time.i++;
+
+    gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
+    gts_range_update (&domain->timestep);
+    gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
+    gts_range_update (&domain->size);
+  }
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
+  gts_container_foreach (GTS_CONTAINER (sim->events),
+			 (GtsFunc) gts_object_destroy, NULL);
+  gts_object_destroy (GTS_OBJECT (dia));
+  gts_object_destroy (GTS_OBJECT (div));
+  if (!res)
+    gts_object_destroy (GTS_OBJECT (res1));
+}
+
+static void poisson_class_init (GfsSimulationClass * klass)
+{
+  klass->run = poisson_run;
+}
+
+static void poisson_init (GfsDomain * domain)
+{
+  gfs_domain_add_variable (domain, "Div");
+}
+
+GfsSimulationClass * gfs_poisson_class (void)
+{
+  static GfsSimulationClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_poisson_info = {
+      "GfsPoisson",
+      sizeof (GfsSimulation),
+      sizeof (GfsSimulationClass),
+      (GtsObjectClassInitFunc) poisson_class_init,
+      (GtsObjectInitFunc) poisson_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_simulation_class ()), &gfs_poisson_info);
+  }
+
+  return klass;
+}
