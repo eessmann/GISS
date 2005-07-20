@@ -3,7 +3,7 @@
 if test -f basin.gts; then
     :
 else
-    ../poisson/shapes ellipse -n 500 | transform -s 1.999 -i > basin.gts
+    shapes ellipse -n 500 | transform -s 1.999 -i > basin.gts
 fi
 
 cat <<EOF

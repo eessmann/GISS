@@ -18,7 +18,7 @@ report.ps: report.sh timestamp
 	sh report.sh "tests/*"
 
 star.gts:
-	../../poisson/shapes star | transform -i -s 0.9 > star.gts
+	shapes star | transform -i -s 0.9 > star.gts
 
 clean-generic:
 	$(RM) -f tests/*/*.eps tests/*/log tests/*/*~ tests/*/core timestamp test.sh star.gts

@@ -11,7 +11,8 @@ bin_PROGRAMS = \
 	ppmcombine \
 	gfscompare2D \
 	gfscompare2D3 \
-	gfscompare3D
+	gfscompare3D \
+	shapes
 
 bin_SCRIPTS = \
 	darcs2dist \
@@ -41,3 +42,5 @@ ppmcombine_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 ppmcombine_LDADD = $(GFS2D_LIBS)
 
 streamanime_LDADD = $(GFS3D_LIBS)
+
+shapes_LDADD = $(GTS_LIBS)

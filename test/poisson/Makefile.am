@@ -8,10 +8,7 @@ LDADD = $(GFS2D_LIBS)
 AM_CFLAGS = -DFTT_2D=1
 
 noinst_PROGRAMS = \
-	simple \
-	shapes
-
-shapes_LDADD = $(GTS_LIBS)
+	simple
 
 EXTRA_DIST = \
 	command.awk \

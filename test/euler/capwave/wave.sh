@@ -10,7 +10,7 @@ else
         print x " " 0.01*cos (2.*3.14159265359*x);
       print "-0.51 -0.51"
     }' > $file
-    ../poisson/shapes $file > wave.gts
+    shapes $file > wave.gts
     rm -f $file
 fi
 

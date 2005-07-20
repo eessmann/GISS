@@ -1,5 +1,5 @@
 if ! $donotrun; then
-    ../../poisson/shapes ellipse | transform --scale 0.8 > circle.gts
+    shapes ellipse | transform --scale 0.8 > circle.gts
     for La in 12000 1200 120; do
 	mu=`echo $La | awk '{print sqrt (0.4/$1)}'`
 	tmax=`echo $mu | awk '{print 1000.*$1*0.4}'`
