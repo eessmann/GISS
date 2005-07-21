@@ -6,7 +6,9 @@ TESTDIRS = \
 	merging \
 	boundaries \
 	channel \
-	spurious
+	spurious \
+	poisson \
+	circle
 
 EXTRA_DIST = \
 	template.tex \

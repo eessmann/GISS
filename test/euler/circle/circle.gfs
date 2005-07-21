@@ -1,0 +1,78 @@
+# Title: Convergence of the Poisson solver with solid boundaries
+#
+# Description:
+#
+# Another of the test cases presented in Popinet \cite{popinet2003}. A
+# circular solid boundary of radius 0.25 is embedded in the
+# domain. The same right-hand-side is used.
+# 
+# This time the problem does not have an analytical solution and we
+# use Richardson extrapolation to estimate the error for a given
+# resolution.
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{solution.eps}
+# \end{center}
+# \caption{Solution of the Poisson equation.}
+# \label{solution}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{residual.eps}
+# \end{center}
+# \caption{Evolution of the residual.}
+# \label{residual}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{rate.eps}
+# \end{center}
+# \caption{Average reduction factor.}
+# \label{rate}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \caption{Evolution of the error as a function of resolution.}
+# \label{error}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \caption{Corresponding convergence order.}
+# \label{order}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: shapes -n 500 ellipse > shape.gts && sh circle.sh circle.gfs
+# Version: 0.8.0
+# Required files: circle.sh res-7.ref error.ref order.ref
+# Generated files: residual.eps rate.eps error.eps order.eps solution.eps
+#
+1 0 GfsPoisson GfsBox GfsGEdge {} {
+  Time { iend = 10 }
+  Refine LEVEL
+  GtsSurfaceFile shape.gts
+  ApproxProjectionParams { nrelax = 4 tolerance = 1e-30 }
+  Init {} {
+    Div = {
+      int k = 3, l = 3;
+      return -M_PI*M_PI*(k*k + l*l)*sin (M_PI*k*x)*sin (M_PI*l*y);
+    }
+  }
+  OutputProjectionStats { istep = 1 } { 
+    awk '{
+      if ($1 == "niter:") printf ("%d ", $2);
+      if ($1 == "residual.infty:") print $3 " " $4;
+    }' > res-LEVEL 
+  }
+  OutputSimulation { start = end } sim-LEVEL { variables = P }
+}
+GfsBox {}
