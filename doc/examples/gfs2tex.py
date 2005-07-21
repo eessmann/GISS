@@ -135,7 +135,7 @@ class Example:
             file.write(self.section + "{" + "\n".join(self.title) + "}\n")
         file.write("\\begin{description}\n")
         file.write("\\item[Author]" + self.author + "\n")
-        file.write("\\item[Command]" + "{\\tt " + self.command + "}\n")
+        file.write("\\item[Command]" + "{\\tt " + self.command.replace('&',r'\&') + "}\n")
         file.write("\\item[Version]" + self.version + "\n")
         f = self.name + ".gfs"
         required = " " + f + \
@@ -229,9 +229,13 @@ class Example:
         else:
             return None,None
 
-    def run(self,env=""):
+    def run(self,env=None):
+        if env:
+            env += " && "
+        else:
+            env = ""
         out = os.popen("cd " + self.path + " && " +\
-                       "sh -c \"time -p " + env + " " + self.command + "\" 2>&1")
+                       "sh -c \"time -p " + env + self.command + "\" 2>&1")
         lines = []
         for l in out:
             record = l.split()
