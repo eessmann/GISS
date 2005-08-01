@@ -114,6 +114,7 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
 
   solid->a = 0.;
   solid->cm.x = solid->cm.y = solid->cm.z = 0.;
+  solid->ca.z = 0.;
       
   for (m = 0; m < 4 && f->n[m] == 0; m++);
   ins = f->inside[m] < 0;
