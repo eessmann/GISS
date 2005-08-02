@@ -170,8 +170,8 @@ static void scale_gradients (FttCell * cell, gpointer * data)
     ftt_cell_neighbors (cell, &n);
     for (c = 0; c < *dimension; c++) {
       FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
-      
-      if (c1 && c2)
+
+      if (c1 && c2 && !GFS_CELL_IS_GRADIENT_BOUNDARY (c1) && !GFS_CELL_IS_GRADIENT_BOUNDARY (c2))
 	GFS_VARIABLE (cell, g[c]->i) /= 2.;
     }
   }

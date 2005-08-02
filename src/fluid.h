@@ -58,10 +58,11 @@ struct _GfsSolidVector {
 };
 
 typedef enum {
-  GFS_FLAG_USED =      1 <<  FTT_FLAG_USER,
-  GFS_FLAG_BOUNDARY  = 1 << (FTT_FLAG_USER + 1),
-  GFS_FLAG_DIRICHLET = 1 << (FTT_FLAG_USER + 2),
-  GFS_FLAG_USER =            FTT_FLAG_USER + 3 /* user flags start here */
+  GFS_FLAG_USED =              1 <<  FTT_FLAG_USER,
+  GFS_FLAG_BOUNDARY          = 1 << (FTT_FLAG_USER + 1),
+  GFS_FLAG_DIRICHLET         = 1 << (FTT_FLAG_USER + 2),
+  GFS_FLAG_GRADIENT_BOUNDARY = 1 << (FTT_FLAG_USER + 3),
+  GFS_FLAG_USER =                    FTT_FLAG_USER + 4 /* user flags start here */
 } GfsFlags;
 
 #define GFS_STATE(cell)               ((GfsStateVector *) (cell)->data)
@@ -87,6 +88,7 @@ typedef enum {
 #define GFS_IS_SMALL(cell)      (GFS_IS_MIXED (cell) &&\
                                  GFS_STATE (cell)->solid->a < 0.5)
 #define GFS_CELL_IS_BOUNDARY(cell) (((cell)->flags & GFS_FLAG_BOUNDARY) != 0)
+#define GFS_CELL_IS_GRADIENT_BOUNDARY(cell) (((cell)->flags & GFS_FLAG_GRADIENT_BOUNDARY) != 0)
 
 void                  gfs_cell_cleanup              (FttCell * cell);
 void                  gfs_cell_reset                (FttCell * cell, 

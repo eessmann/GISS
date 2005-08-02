@@ -333,9 +333,12 @@ static void gfs_boundary_destroy (GtsObject * object)
 static void match (FttCell * cell, GfsBoundary * boundary)
 {
   FttCell * neighbor = ftt_cell_neighbor (cell, boundary->d);
+  FttCell * parent = ftt_cell_parent (cell);
   guint level = ftt_cell_level (cell);
 
   cell->flags |= GFS_FLAG_BOUNDARY;
+  if (parent && GFS_CELL_IS_GRADIENT_BOUNDARY (parent))
+    cell->flags |= GFS_FLAG_GRADIENT_BOUNDARY;
   if (neighbor == NULL || ftt_cell_level (neighbor) < level) {
     if (FTT_CELL_IS_ROOT (cell))
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,

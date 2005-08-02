@@ -814,6 +814,11 @@ static void bc_flather_write (GtsObject * o, FILE * fp)
     gfs_function_write (bc->val, fp);
 }
 
+static void set_gradient_boundary (FttCell * cell)
+{
+  cell->flags |= GFS_FLAG_GRADIENT_BOUNDARY;
+}
+
 static void bc_flather_read (GtsObject ** o, GtsFile * fp)
 {
   GfsBcFlather * bc = GFS_BC_FLATHER (*o);
@@ -846,6 +851,9 @@ static void bc_flather_read (GtsObject ** o, GtsFile * fp)
   if (bc->val == NULL)
     bc->val = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (bc->val, gfs_box_domain (GFS_BC (bc)->b->box), fp);
+
+  ftt_cell_traverse (GFS_BC (bc)->b->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+		     (FttCellTraverseFunc) set_gradient_boundary, NULL);
 }
 
 static void bc_flather_destroy (GtsObject * o)
@@ -885,18 +893,20 @@ static gdouble flather_value (FttCellFace * f, GfsBc * b)
 
 static void flather (FttCellFace * f, GfsBc * b)
 {
+  g_assert (GFS_CELL_IS_GRADIENT_BOUNDARY (f->cell));
   GFS_VARIABLE (f->cell, b->v->i) = 2.*flather_value (f, b) - GFS_VARIABLE (f->neighbor, b->v->i);
 }
 
 static void homogeneous_flather (FttCellFace * f, GfsBc * b)
 {
+  g_assert (GFS_CELL_IS_GRADIENT_BOUNDARY (f->cell));
   GFS_VARIABLE (f->cell, b->v->i) = - GFS_VARIABLE (f->neighbor, b->v->i);
 }
 
 static void face_flather (FttCellFace * f, GfsBc * b)
 {
-  GFS_STATE (f->cell)->f[f->d].v =
-    GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = flather_value (f, b);
+  g_assert (GFS_CELL_IS_GRADIENT_BOUNDARY (f->cell));
+  GFS_STATE (f->cell)->f[f->d].v = flather_value (f, b);
 }
 
 static void gfs_bc_flather_class_init (GtsObjectClass * klass)
