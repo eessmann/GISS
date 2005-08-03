@@ -1064,14 +1064,16 @@ void gfs_face_ca (const FttCellFace * face, FttVector * ca)
     m.x = fabs (m.x);
     m.y = fabs (m.y);
     n = m.x + m.y;
-    m.x /= n;
-    m.y /= n;
-    alpha = gfs_line_alpha (&m, f);
-    gfs_line_center (&m, alpha, f, &p);
-    if (s1) p.x = 1. - p.x;
-    if (s2) p.y = 1. - p.y;
-    (&ca->x)[c1] += (p.x - 0.5)*h;
-    (&ca->x)[c2] += (p.y - 0.5)*h;
+    if (n > 0.) {
+      m.x /= n;
+      m.y /= n;
+      alpha = gfs_line_alpha (&m, f);
+      gfs_line_center (&m, alpha, f, &p);
+      if (s1) p.x = 1. - p.x;
+      if (s2) p.y = 1. - p.y;
+      (&ca->x)[c1] += (p.x - 0.5)*h;
+      (&ca->x)[c2] += (p.y - 0.5)*h;
+    }
 #endif /* 3D */
   }
 }
