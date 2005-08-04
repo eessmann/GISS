@@ -32,7 +32,7 @@ static gboolean gfs_event_event (GfsEvent * event, GfsSimulation * sim)
       sim->time.t > event->end || 
       sim->time.i > event->iend) {
     gts_object_destroy (GTS_OBJECT (event));
-    return (event->realised = FALSE);
+    return FALSE;
   }
   if (event->end_event) {
     if (event->n == 0 &&
