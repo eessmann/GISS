@@ -1658,8 +1658,10 @@ void ftt_cell_destroy (FttCell * cell,
   cell->flags |= FTT_FLAG_DESTROYED;
 
   /* destroy children */
-  if (!FTT_CELL_IS_LEAF (cell))
+  if (!FTT_CELL_IS_LEAF (cell)) {
     oct_destroy (cell->children, cleanup, data);
+    cell->children = NULL;
+  }
 
   /* update relationships for neighbors */
   for (i = 0; i < FTT_NEIGHBORS; i++)
@@ -2015,8 +2017,8 @@ static gboolean cell_read (FttCell * cell,
   }
   flags = atoi (fp->token->str);
   if (FTT_CELL_ID (cell) != (flags & FTT_FLAG_ID)) {
-    gts_file_error (fp, "flags `%d' != (flags & FTT_FLAG_ID) `%d'",
-		    flags, (flags & FTT_FLAG_ID));
+    gts_file_error (fp, "FTT_CELL_ID (cell) `%d' != (flags & FTT_FLAG_ID) `%d'",
+		    FTT_CELL_ID (cell), (flags & FTT_FLAG_ID));
     return FALSE;
   }
   cell->flags = flags;
@@ -2121,8 +2123,8 @@ static gboolean cell_read_binary (FttCell * cell,
     return FALSE;
   }
   if (FTT_CELL_ID (cell) != (flags & FTT_FLAG_ID)) {
-    gts_file_error (fp, "flags `%d' != (flags & FTT_FLAG_ID) `%d'",
-		    flags, (flags & FTT_FLAG_ID));
+    gts_file_error (fp, "FTT_CELL_ID (cell) `%d' != (flags & FTT_FLAG_ID) `%d'",
+		    FTT_CELL_ID (cell), (flags & FTT_FLAG_ID));
     return FALSE;
   }
   cell->flags = flags;
