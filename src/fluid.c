@@ -1328,6 +1328,7 @@ void gfs_cell_cleanup (FttCell * cell)
     GFS_STATE (cell)->solid = NULL;
   }
   g_free (cell->data);
+  cell->data = NULL;
 }
 
 /**
