@@ -92,6 +92,17 @@ gpointer           gfs_matrix_new           (guint n,
 					     guint size);
 void               gfs_matrix_free          (gpointer m);
 
+typedef struct {
+  gboolean started;
+  glong start, stop;
+} GfsClock;
+
+GfsClock *         gfs_clock_new            (void);
+void               gfs_clock_start          (GfsClock * t);
+void               gfs_clock_stop           (GfsClock * t);
+gdouble            gfs_clock_elapsed        (GfsClock * t);
+void               gfs_clock_destroy        (GfsClock * t);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -39,7 +39,7 @@ struct _GfsDomain {
   GtsWGraph parent;
 
   int pid;
-  GTimer * timer;
+  GfsClock * timer;
   GHashTable * timers;
 
   GtsRange timestep;

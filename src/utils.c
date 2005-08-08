@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <math.h>
+#include <sys/times.h>
 #include "config.h"
 #include "solid.h"
 #include "simulation.h"
@@ -1004,4 +1005,90 @@ void gfs_matrix_free (gpointer m)
 
   g_free (((gpointer *) m)[0]);
   g_free (m);
+}
+
+/**
+ * gfs_clock_new:
+ *
+ * Returns: a new #GfsClock.
+ */
+GfsClock * gfs_clock_new (void)
+{
+  GfsClock * t = g_malloc (sizeof (GfsClock));
+
+  t->start = -1;
+  t->started = FALSE;
+  return t;
+}
+
+/**
+ * gfs_clock_start:
+ * @t: a #GfsClock.
+ *
+ * Starts clock @t.
+ */
+void gfs_clock_start (GfsClock * t)
+{
+  struct tms tm;
+
+  g_return_if_fail (t != NULL);
+  g_return_if_fail (!t->started);
+
+  if (times (&tm) < 0)
+    g_warning ("cannot read clock");
+  t->start = tm.tms_utime;
+  t->started = TRUE;
+}
+
+/**
+ * gfs_clock_stop:
+ * @t: a #GfsClock.
+ *
+ * Stops clock @t.
+ */
+void gfs_clock_stop (GfsClock * t)
+{
+  struct tms tm;
+
+  g_return_if_fail (t != NULL);
+  g_return_if_fail (t->started);
+
+  if (times (&tm) < 0)
+    g_warning ("cannot read clock");
+  t->stop = tm.tms_utime;
+  t->started = FALSE;
+}
+
+/**
+ * gfs_clock_elapsed:
+ * @t: a #GfsClock.
+ *
+ * Returns: the time elapsed in seconds since @t was started.
+ */
+gdouble gfs_clock_elapsed (GfsClock * t)
+{
+  g_return_val_if_fail (t != NULL, 0.);
+  g_return_val_if_fail (t->start >= 0, 0.);
+
+  if (t->started == FALSE)
+    return (t->stop - t->start)/(gdouble) sysconf (_SC_CLK_TCK);
+  else {
+    struct tms tm;
+    if (times (&tm) < 0)
+      g_warning ("cannot read clock");
+    return (tm.tms_utime - t->start)/(gdouble) sysconf (_SC_CLK_TCK);
+  }
+}
+
+/**
+ * gfs_clock_destroy:
+ * @t: a #GfsClock.
+ *
+ * Destroys the clock, freeing the memory allocated for it.
+ */
+void gfs_clock_destroy (GfsClock * t)
+{
+  g_return_if_fail (t != NULL);
+
+  g_free (t);
 }

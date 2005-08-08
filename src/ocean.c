@@ -368,7 +368,7 @@ static void ocean_run (GfsSimulation * sim)
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
-    tstart = g_timer_elapsed (domain->timer, NULL);
+    tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_simulation_set_timestep (sim);
 
@@ -441,7 +441,7 @@ static void ocean_run (GfsSimulation * sim)
 
     gfs_simulation_adapt (sim, NULL);
 
-    gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
+    gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
     gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
     gts_range_update (&domain->size);
@@ -992,7 +992,7 @@ static void ocean1_run (GfsSimulation * sim)
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
-    tstart = g_timer_elapsed (domain->timer, NULL);
+    tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_simulation_set_timestep (sim);
     gfs_free_surface_divergence (domain, div);
@@ -1035,7 +1035,7 @@ static void ocean1_run (GfsSimulation * sim)
 
     gfs_simulation_adapt (sim, NULL);
 
-    gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
+    gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
     gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
     gts_range_update (&domain->size);

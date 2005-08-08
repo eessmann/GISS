@@ -229,7 +229,7 @@ static void domain_destroy (GtsObject * o)
   GfsDomain * domain = GFS_DOMAIN (o);
   GSList * i;
 
-  g_timer_destroy (domain->timer);
+  gfs_clock_destroy (domain->timer);
 
   i = domain->variables;
   while (i) {
@@ -275,7 +275,7 @@ static void domain_init (GfsDomain * domain)
   domain->pid = -1;
 #endif /* not HAVE_MPI */
 
-  domain->timer = g_timer_new ();
+  domain->timer = gfs_clock_new ();
   domain->timers = g_hash_table_new (g_str_hash, g_str_equal);
 
   gts_range_init (&domain->size);
@@ -2756,7 +2756,7 @@ void gfs_domain_timer_start (GfsDomain * domain, const gchar * name)
   }
   else
     g_return_if_fail (t->start < 0.);
-  t->start = g_timer_elapsed (domain->timer, NULL);
+  t->start = gfs_clock_elapsed (domain->timer);
 }
 
 /**
@@ -2773,7 +2773,7 @@ void gfs_domain_timer_stop (GfsDomain * domain, const gchar * name)
   gdouble end;
 
   g_return_if_fail (domain != NULL);
-  end = g_timer_elapsed (domain->timer, NULL);
+  end = gfs_clock_elapsed (domain->timer);
   g_return_if_fail (name != NULL);
 
   t = g_hash_table_lookup (domain->timers, name);

@@ -484,13 +484,23 @@ void gfs_output_file_close (GfsOutputFile * file)
 
 /* GfsOutputTime: Object */
 
+static void time_destroy (GtsObject * o)
+{
+  gfs_clock_destroy (GFS_OUTPUT_TIME (o)->clock);
+
+  (* GTS_OBJECT_CLASS (gfs_output_time_class ())->parent_class->destroy) (o);  
+}
+
 static gboolean time_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
+    if (!GFS_OUTPUT_TIME (event)->clock->started)
+      gfs_clock_start (GFS_OUTPUT_TIME (event)->clock);
     fprintf (GFS_OUTPUT (event)->file->fp,
-	     "step: %7u t: %15.8f dt: %13.6e\n",
+	     "step: %7u t: %15.8f dt: %13.6e cpu: %15.8f\n",
 	     sim->time.i, sim->time.t, 
-	     sim->advection_params.dt);
+	     sim->advection_params.dt,
+	     gfs_clock_elapsed (GFS_OUTPUT_TIME (event)->clock));
     return TRUE;
   }
   return FALSE;
@@ -498,7 +508,13 @@ static gboolean time_event (GfsEvent * event, GfsSimulation * sim)
 
 static void gfs_output_time_class_init (GfsEventClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->destroy = time_destroy;
   klass->event = time_event;
+}
+
+static void gfs_output_time_init (GfsOutputTime * time)
+{
+  time->clock = gfs_clock_new ();
 }
 
 GfsOutputClass * gfs_output_time_class (void)
@@ -508,10 +524,10 @@ GfsOutputClass * gfs_output_time_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo gfs_output_time_info = {
       "GfsOutputTime",
-      sizeof (GfsOutput),
+      sizeof (GfsOutputTime),
       sizeof (GfsOutputClass),
       (GtsObjectClassInitFunc) gfs_output_time_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_output_time_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };

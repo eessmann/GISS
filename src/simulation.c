@@ -540,7 +540,7 @@ static void simulation_run (GfsSimulation * sim)
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
-    tstart = g_timer_elapsed (domain->timer, NULL);
+    tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_simulation_set_timestep (sim);
 
@@ -586,7 +586,7 @@ static void simulation_run (GfsSimulation * sim)
     sim->time.t = sim->tnext;
     sim->time.i++;
 
-    gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
+    gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
     gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
     gts_range_update (&domain->size);
@@ -1155,10 +1155,10 @@ void gfs_simulation_run (GfsSimulation * sim)
 {
   g_return_if_fail (sim != NULL);
 
-  g_timer_start (GFS_DOMAIN (sim)->timer);
+  gfs_clock_start (GFS_DOMAIN (sim)->timer);
   gts_range_init (&GFS_DOMAIN (sim)->mpi_wait);
   (* GFS_SIMULATION_CLASS (GTS_OBJECT (sim)->klass)->run) (sim);
-  g_timer_stop (GFS_DOMAIN (sim)->timer);
+  gfs_clock_stop (GFS_DOMAIN (sim)->timer);
 }
 
 /* GfsAdvection: Object */
@@ -1197,7 +1197,7 @@ static void advection_run (GfsSimulation * sim)
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
-    tstart = g_timer_elapsed (domain->timer, NULL);
+    tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_simulation_set_timestep (sim);
 
@@ -1237,7 +1237,7 @@ static void advection_run (GfsSimulation * sim)
     sim->time.t = sim->tnext;
     sim->time.i++;
 
-    gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
+    gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
     gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
     gts_range_update (&domain->size);
@@ -1376,7 +1376,7 @@ static void poisson_run (GfsSimulation * sim)
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
-    tstart = g_timer_elapsed (domain->timer, NULL);
+    tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_poisson_cycle (domain, par->dimension, minlevel, maxlevel, par->nrelax, p, div, dia, res1);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
@@ -1387,7 +1387,7 @@ static void poisson_run (GfsSimulation * sim)
     sim->time.t = sim->tnext;
     sim->time.i++;
 
-    gts_range_add_value (&domain->timestep, g_timer_elapsed (domain->timer, NULL) - tstart);
+    gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
     gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
     gts_range_update (&domain->size);

@@ -69,6 +69,22 @@ void            gfs_output_file_close   (GfsOutputFile * file);
 
 /* GfsOutputTime: Header */
 
+typedef struct _GfsOutputTime         GfsOutputTime;
+
+struct _GfsOutputTime {
+  /*< private >*/
+  GfsOutput parent;
+
+  /*< public >*/
+  GfsClock * clock;
+};
+
+#define GFS_OUTPUT_TIME(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsOutputTime,\
+					         gfs_output_time_class ())
+#define GFS_IS_OUTPUT_TIME(obj)         (gts_object_is_from_class (obj,\
+						 gfs_output_time_class ()))
+
 GfsOutputClass * gfs_output_time_class  (void);
 
 /* GfsOutputProgress: Header */
