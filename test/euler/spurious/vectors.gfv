@@ -2,7 +2,7 @@
 View {
   tx = 0 ty = 0
   q0 = 0 q1 = 0 q2 = 0 q3 = 1
-  zoom = -15
+  fov = 30
   r = 0.3 g = 0.4 b = 0.6
   res = 1
   lc = 0.001
