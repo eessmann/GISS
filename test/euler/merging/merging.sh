@@ -56,10 +56,10 @@ def order(r,color='black'):
 
 print 'Circle',
 order(Curve('simc.err',1,2))
-order(Curve('simc.err',1,2), 'blue')
+order(Curve('simc.err.ref',1,2), 'blue')
 print 'Adaptive',
 order(Curve('sim.err',1,2))
-order(Curve('sim.err',1,2), 'blue')
+order(Curve('sim.err.ref',1,2), 'blue')
 
 print r"""\hline
 Domain   & \multicolumn{5}{c|}{\$L_\infty\$} \\\ \hline
@@ -67,10 +67,10 @@ Domain   & \multicolumn{5}{c|}{\$L_\infty\$} \\\ \hline
 
 print 'Circle',
 order(Curve('simc.err',1,3))
-order(Curve('simc.err',1,3), 'blue')
+order(Curve('simc.err.ref',1,3), 'blue')
 print 'Adaptive',
 order(Curve('sim.err',1,3))
-order(Curve('sim.err',1,3), 'blue')
+order(Curve('sim.err.ref',1,3), 'blue')
 
 print r"\hline\end{tabular}"
 EOF
