@@ -1329,7 +1329,8 @@ static void cell_traverse_level_non_leafs (FttCell * cell,
  * @data: user data to pass to @func.
  *
  * Traverses a cell tree starting at the given root #FttCell. Calls
- * the given function for each cell visited.  */
+ * the given function for each cell visited.  
+ */
 void ftt_cell_traverse (FttCell * root,
 			FttTraverseType order,
 			FttTraverseFlags flags,

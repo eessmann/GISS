@@ -93,8 +93,6 @@ typedef enum {
 void                  gfs_cell_cleanup              (FttCell * cell);
 void                  gfs_cell_reset                (FttCell * cell, 
 						     GfsVariable * v);
-void                  gfs_get_from_above            (FttCell * cell, 
-						     const GfsVariable * v);
 void                  gfs_get_from_below_intensive  (FttCell * cell, 
 						     const GfsVariable * v);
 void                  gfs_get_from_below_extensive  (FttCell * cell, 

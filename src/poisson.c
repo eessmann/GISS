@@ -241,7 +241,7 @@ static void residual_set (FttCell * cell, RelaxParams * p)
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      FACE_GRADIENT (&f, &ng, p->u, -1);
+      FACE_GRADIENT (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
@@ -264,7 +264,7 @@ static void residual_set2D (FttCell * cell, RelaxParams * p)
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      FACE_GRADIENT (&f, &ng, p->u, -1);
+      FACE_GRADIENT (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
@@ -309,6 +309,7 @@ void gfs_residual (GfsDomain * domain,
   p.rhs = rhs->i;
   p.dia = dia->i;
   p.res = res->i;
+  p.maxlevel = max_depth;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth,
 			    (FttCellTraverseFunc) (d == 2 ? residual_set2D : residual_set), &p);
 }
@@ -447,6 +448,45 @@ static void correct (FttCell * cell, gpointer * data)
   GFS_VARIABLE (cell, u->i) += GFS_VARIABLE (cell, dp->i);
 }
 
+static void get_from_above (FttCell * parent, GfsVariable * v)
+{
+  guint level = ftt_cell_level (parent);
+  FttCellNeighbors n;
+  FttCellChildren child;
+  FttComponent c;
+  FttVector h;
+  guint i;
+
+  ftt_cell_neighbors (parent, &n);
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    FttCellFace f;
+    GfsGradient g;
+    gdouble g1, g2;
+    
+    f.cell = parent;
+    f.d = 2*c;
+    f.neighbor = n.c[f.d];
+    gfs_face_gradient (&f, &g, v->i, level);
+    g1 = g.b - g.a*GFS_VARIABLE (parent, v->i);
+    f.d = 2*c + 1;
+    f.neighbor = n.c[f.d];
+    gfs_face_gradient (&f, &g, v->i, level);
+    g2 = g.b - g.a*GFS_VARIABLE (parent, v->i);
+    (&h.x)[c] = (g1 - g2)/2.;
+  }
+
+  ftt_cell_children (parent, &child);
+  for (i = 0; i < FTT_CELLS; i++) 
+    if (child.c[i]) {
+      FttVector p;
+      
+      GFS_VARIABLE (child.c[i], v->i) = GFS_VARIABLE (parent, v->i);
+      ftt_cell_relative_pos (child.c[i], &p);
+      for (c = 0; c < FTT_DIMENSION; c++)
+	GFS_VARIABLE (child.c[i], v->i) += (&p.x)[c]*(&h.x)[c];
+    }
+}
+
 /**
  * gfs_poisson_cycle:
  * @domain: the domain on which to solve the Poisson equation.
@@ -502,19 +542,22 @@ void gfs_poisson_cycle (GfsDomain * domain,
   gfs_domain_cell_traverse (domain, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, levelmin,
 			    (FttCellTraverseFunc) gfs_cell_reset, dp);
-  for (n = 0; n < 10*nrelax; n++) {
+  for (l = levelmin; l < depth; l++)
+    nrelax *= 2;
+  for (n = 0; n < nrelax; n++) {
     gfs_domain_homogeneous_bc (domain,
 			       FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 			       levelmin, dp, u);
     gfs_relax (domain, d, levelmin, dp, res, dia);
   }
+  nrelax /= 2;
 
   /* relax from top to bottom */
-  for (l = levelmin + 1; l <= depth; l++) {
+  for (l = levelmin + 1; l <= depth; l++, nrelax /= 2) {
     /* get initial guess from coarser grid */ 
-    gfs_domain_cell_traverse (domain, 
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-			      (FttCellTraverseFunc) gfs_get_from_above, dp);
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_NON_LEAFS, l - 1,
+			      (FttCellTraverseFunc) get_from_above, dp);
     for (n = 0; n < nrelax; n++) {
       gfs_domain_homogeneous_bc (domain, 
 				 FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
@@ -900,9 +943,10 @@ void gfs_diffusion_cycle (GfsDomain * domain,
   /* relax from top to bottom */
   for (p.maxlevel = levelmin + 1; p.maxlevel <= depth; p.maxlevel++) {
     /* get initial guess from coarser grid */ 
-    gfs_domain_cell_traverse (domain, 
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, p.maxlevel,
-			      (FttCellTraverseFunc) gfs_get_from_above, dp);
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_NON_LEAFS,
+			      p.maxlevel - 1,
+			      (FttCellTraverseFunc) get_from_above, dp);
     for (n = 0; n < nrelax; n++) {
       gfs_domain_homogeneous_bc (domain, 
 				 FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,

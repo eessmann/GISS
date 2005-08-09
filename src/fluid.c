@@ -1228,25 +1228,6 @@ gdouble gfs_cell_dirichlet_value (FttCell * cell,
 }
 
 /**
- * gfs_get_from_above:
- * @cell: a #FttCell.
- * @v: a #GfsVariable to "get from above".
- *
- * Sets the value of the variable @v of @cell to the value of this
- * variable in its parent cell.
- *
- * This function fails if @cell is the root of the cell tree.
- */
-void gfs_get_from_above (FttCell * cell, const GfsVariable * v)
-{
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (!FTT_CELL_IS_ROOT (cell));
-  g_return_if_fail (v != NULL);
-
-  GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (ftt_cell_parent (cell), v->i);
-}
-
-/**
  * gfs_get_from_below_intensive:
  * @cell: a #FttCell.
  * @v: a #GfsVariable to "get from below".
