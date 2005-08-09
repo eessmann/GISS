@@ -55,7 +55,7 @@
 # Author: St\'ephane Popinet
 # Command: shapes -n 2000 --dr 0.1 star | transform -s 0.79 > shape.gts && sh ../circle.sh star.gfs
 # Version: 0.8.0
-# Required files: res-7.ref error.ref order.ref
+# Required files: res-7.ref error.ref order.ref solution.gfv
 # Generated files: residual.eps rate.eps error.eps order.eps solution.eps
 #
 1 0 GfsPoisson GfsBox GfsGEdge {} {
@@ -69,11 +69,15 @@
       return -M_PI*M_PI*(k*k + l*l)*sin (M_PI*k*x)*sin (M_PI*l*y);
     }
   }
-  OutputProjectionStats { istep = 1 } { 
+  OutputTime { istep = 1 } {
+    awk '{printf ("%g ", $8); fflush (stdout)}'
+  }
+  OutputProjectionStats { istep = 1 } {
     awk '{
       if ($1 == "niter:") printf ("%d ", $2);
       if ($1 == "residual.infty:") print $3 " " $4;
-    }' > res-LEVEL 
+      fflush (stdout);
+    }'
   }
   OutputSimulation { start = end } sim-LEVEL { variables = P }
 }

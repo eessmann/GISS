@@ -1,10 +1,7 @@
 if ! $donotrun; then
     for level in 3 4 5 6 7 8 9; do
 	if sed "s/LEVEL/$level/g" < $1 | \
-	    gerris2D - | \
-	    awk -v level=$level '{
-                  print level " " $5 " " $7 " " $9
-                }'; then :
+	    gerris2D - > res-$level; then :
 	else
 	    exit 1
 	fi
@@ -43,15 +40,15 @@ fi
 if cat <<EOF | gnuplot ; then :
     set term postscript eps color lw 3 solid 20
     set output 'residual.eps'
-    set xlabel 'V-cycle'
+    set xlabel 'CPU time'
     set ylabel 'Maximum residual'
     set logscale y
-    plot 'res-7.ref' u 1:2 t 'ref' w lp, 'res-7' u 1:2 t '' w lp
+    plot 'res-7.ref' u 1:3 t 'ref' w lp, 'res-7' u 1:3 t '' w lp
     set output 'rate.eps'
     set xlabel 'V-cycle'
     set ylabel 'Cumulative residual reduction factor'
     unset logscale
-    plot 'res-7.ref' u 1:3 t 'ref' w lp, 'res-7' u 1:3 t '' w lp
+    plot 'res-7.ref' u 2:4 t 'ref' w lp, 'res-7' u 2:4 t '' w lp
     set output 'error.eps'
     set xlabel 'Level'
     set ylabel 'Error norms'
@@ -85,7 +82,7 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-if (Curve('res-7',1,2) - Curve('res-7.ref',1,2)).max() > 1e-8 or\
+if (Curve('res-7',1,3) - Curve('res-7.ref',1,3)).max() > 1e-8 or\
    (Curve('error',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
     exit(1)
 EOF

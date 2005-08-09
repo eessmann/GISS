@@ -1,13 +1,17 @@
-# Title: Convergence with a refined circle
+# Title: Star-shaped solid boundary with refinement
 #
 # Description:
 #
-# Same as the previous test but in order to test the accuracy of the
-# gradient operator at coarse/fine boundaries, two levels of
-# refinement are added in a circle centered on the origin and of
-# radius 0.25.
+# Same as the star test but with two levels of refinement added near 
+# the solid boundary.
 #
-# The solver still shows second-order accuracy in all norms (Figure \ref{order}).
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{solution.eps}
+# \end{center}
+# \caption{Solution of the Poisson equation.}
+# \label{solution}
+# \end{figure}
 #
 # \begin{figure}[htbp]
 # \begin{center}
@@ -42,14 +46,16 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: sh ../poisson.sh circle.gfs
+# Command: shapes -n 2000 --dr 0.1 star | transform -s 0.79 > shape.gts && sh ../circle.sh refined.gfs
 # Version: 0.8.0
-# Required files: res-7.ref error.ref order.ref
-# Generated files: residual.eps rate.eps error.eps order.eps
+# Required files: res-7.ref error.ref order.ref solution.gfv
+# Generated files: residual.eps rate.eps error.eps order.eps solution.eps
 #
 1 0 GfsPoisson GfsBox GfsGEdge {} {
   Time { iend = 10 }
-  Refine (x*x + y*y <= 0.25*0.25 ? LEVEL + 2 : LEVEL)
+  Refine LEVEL
+  RefineSolid (LEVEL + 2)
+  GtsSurfaceFile shape.gts
   ApproxProjectionParams { nrelax = 4 tolerance = 1e-30 }
   Init {} {
     Div = {
@@ -67,11 +73,6 @@
       fflush (stdout);
     }'
   }
-  OutputErrorNorm { start = end } {
-    awk '{print LEVEL " " $5 " " $7 " " $9}' >> error 
-  } { v = P } {
-    s = (sin (M_PI*3.*x)*sin (M_PI*3.*y))
-    unbiased = 1
-  }
+  OutputSimulation { start = end } sim-LEVEL { variables = P }
 }
 GfsBox {}
