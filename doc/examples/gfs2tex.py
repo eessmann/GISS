@@ -229,13 +229,9 @@ class Example:
         else:
             return None,None
 
-    def run(self,env=None):
-        if env:
-            env += " && "
-        else:
-            env = ""
-        out = os.popen("cd " + self.path + " && " +\
-                       "sh -c \"time -p " + env + self.command + "\" 2>&1")
+    def run(self,env=""):
+        out = os.popen("cd " + self.path + " && ( time -p " + env +\
+                       " sh -c \"" + self.command + "\" ) 2>&1")
         lines = []
         for l in out:
             record = l.split()
