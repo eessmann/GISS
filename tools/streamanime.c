@@ -32,9 +32,9 @@
 #include "simulation.h"
 #include "graphic.h"
 
-static void streamline_draw (GSList * s, FILE * fp)
+static void streamline_draw (GList * s, FILE * fp)
 {
-  guint np = g_slist_length (s);
+  guint np = g_list_length (s);
 
   fprintf (fp, "VECT 1 %u 0 %u 0\n", np, np);
   while (s) {
@@ -111,7 +111,7 @@ int main (int argc, char * argv[])
       printf ("(redraw focus)\n(freeze focus)\n");
     }
     else if (!strcmp (fp->token->str, "GfsStreamline")) {
-      GSList * streamline = gfs_streamline_read (fp);
+      GList * streamline = gfs_streamline_read (fp);
 
       if (fp->type == GTS_ERROR) {
 	fprintf (stderr, 

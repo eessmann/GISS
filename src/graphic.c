@@ -1520,10 +1520,10 @@ static void add_face (GtsSurface * s, GtsEdge ** e1, GtsEdge ** e2,
   }
 }
 
-static GSList * next_far_enough (GSList * p, gdouble size)
+static GList * next_far_enough (GList * p, gdouble size)
 {
   GtsPoint * ps;
-  GSList * pf = NULL;
+  GList * pf = NULL;
 
   if (p == NULL)
     return NULL;
@@ -1540,7 +1540,7 @@ static GSList * next_far_enough (GSList * p, gdouble size)
 
 static void gts_extrude_profile (GtsSurface * s,
 				 GSList * profile,
-				 GSList * path)
+				 GList * path)
 {
   GtsMatrix * r;
   GtsPoint * p0, * p1, * p2;
@@ -1593,7 +1593,7 @@ size /= 4.;
   g_free (e2);
 }
 
-static gdouble curve_cost (FttVector p1, FttVector p2, FttVector p3)
+static gdouble triangle_area (FttVector p1, FttVector p2, FttVector p3)
 {
   GtsVector v1, v2, a;
 
@@ -1601,6 +1601,27 @@ static gdouble curve_cost (FttVector p1, FttVector p2, FttVector p3)
   v2[0] = p3.x - p2.x; v2[1] = p3.y - p2.y; v2[2] = p3.z - p2.z;
   gts_vector_cross (a, v1, v2);
   return gts_vector_norm (a)/2.;
+}
+
+static gdouble circumcircle_radius (FttVector p1, FttVector p2, FttVector p3)
+{
+  gdouble area = triangle_area (p1, p2, p3);
+
+  if (area == 0.)
+    return G_MAXDOUBLE;
+  else {
+    GtsVector a, b, c;
+    gts_vector_init (a, &p1, &p2);
+    gts_vector_init (b, &p2, &p3);
+    gts_vector_init (c, &p3, &p1);
+    return gts_vector_norm (a)*gts_vector_norm (b)*gts_vector_norm (c)/area;
+  }
+}
+
+static gdouble distance2 (GtsPoint * p1, FttVector p2)
+{
+  p2.x -= p1->x; p2.y -= p1->y; p2.z -= p1->z;
+  return p2.x*p2.x + p2.y*p2.y + p2.z*p2.z;
 }
 
 static GSList * circle_profile (GtsPointClass * klass, 
@@ -1646,25 +1667,27 @@ static void vorticity_vector (FttCell * cell, gpointer * data)
 }
 #endif /* 3D */
 
-static GSList * grow_curve (GfsDomain * domain,
-			    FttVector p,
-			    GfsVariable * var,
-			    gdouble min, 
-			    gdouble max,
-			    gboolean twist,
-			    GSList * path,
-			    gdouble direction)
+static GList * grow_curve (GfsDomain * domain,
+			   GfsVariable ** U,
+			   FttVector p,
+			   GfsVariable * var,
+			   gdouble min, 
+			   gdouble max,
+			   gboolean twist,
+			   GList * path,
+			   gdouble direction,
+			   gboolean (* stop) (FttCell *, GList *, gpointer),
+			   gpointer data)
 {
   FttCell * cell;
   gdouble delta = 0.1;
   GtsPoint * oldp = NULL;
   FttVector p1, p2;
   gdouble cost = 0., theta = 0.;
-  gdouble maxcost = 2e-9;
+  gdouble maxcost = 4e-9;
   guint nstep = 0, nmax = 10000;
   GtsPointClass * path_class = gfs_vertex_class ();
   Colormap * colormap = NULL;
-  GfsVariable ** U = gfs_domain_velocity (domain);
 #if (!FTT_2D)
   GfsVariable * vort[FTT_DIMENSION];
 #endif /* 3D */
@@ -1696,16 +1719,19 @@ static GSList * grow_curve (GfsDomain * domain,
 #endif /* 3D */  
 
   p1 = p2 = p;
-  while ((cell = gfs_domain_locate (domain, p, -1)) != NULL && nmax--) {
-    gdouble h = delta*ftt_cell_size (cell);
+  while ((cell = gfs_domain_locate (domain, p, -1)) != NULL &&
+	 circumcircle_radius (p1, p2, p) > ftt_cell_size (cell) &&
+	 nmax--) {
+    gdouble size = ftt_cell_size (cell);
+    gdouble h = delta*size;
     FttVector u;
     FttComponent c;
     gdouble nu = 0.;
 
-    cost += curve_cost (p1, p2, p);
+    cost += triangle_area (p1, p2, p);
     p1 = p2;
     p2 = p;
-    if (oldp == NULL || cost > maxcost) {
+    if (oldp == NULL || cost > maxcost || distance2 (oldp, p) > size*size/4.) {
       oldp = gts_point_new (path_class, p.x, p.y, p.z);
       if (var)
 	GFS_VERTEX (oldp)->v = gfs_interpolate (cell, p, var);
@@ -1714,15 +1740,31 @@ static GSList * grow_curve (GfsDomain * domain,
 	  colormap_color (colormap, (GFS_VERTEX (oldp)->v - min)/(max - min));
       if (twist)
 	GFS_TWISTED_VERTEX (oldp)->theta = theta;
-      path = g_slist_prepend (path, oldp);
+      path = g_list_prepend (path, oldp);
+      if (stop != NULL && (* stop) (cell, path, data))
+	break;
       cost = 0.;
       nstep = 0;
     }
 
     for (c = 0; c < FTT_DIMENSION; c++) {
-      ((gdouble *) &u)[c] = direction*gfs_interpolate (cell, p, U[c]);
-      nu += ((gdouble *) &u)[c]*((gdouble *) &u)[c];
+      (&u.x)[c] = direction*gfs_interpolate (cell, p, U[c]);
+      nu += (&u.x)[c]*(&u.x)[c];
     }
+    if (nu > 0) {
+      FttVector p1 = p;
+
+      nu = 2.*sqrt (nu);
+      for (c = 0; c < FTT_DIMENSION; c++)
+	(&p1.x)[c] += h*(&u.x)[c]/nu;
+      nu = 0.;
+      for (c = 0; c < FTT_DIMENSION; c++) {
+	(&u.x)[c] = direction*gfs_interpolate (cell, p1, U[c]);
+	nu += (&u.x)[c]*(&u.x)[c];
+      }
+    }
+    else
+      break;
     if (nu > 0. && nstep++ < nmax) {
       FttVector p1;
 
@@ -1753,7 +1795,7 @@ static GSList * grow_curve (GfsDomain * domain,
 	GFS_VERTEX (oldp)->v = gfs_interpolate (cell, p2, var);
       if (twist)
 	GFS_TWISTED_VERTEX (oldp)->theta = theta;
-      path = g_slist_prepend (path, oldp);
+      path = g_list_prepend (path, oldp);
     }
   }
 
@@ -1767,28 +1809,36 @@ static GSList * grow_curve (GfsDomain * domain,
       gts_object_destroy (GTS_OBJECT (vort[c]));
   }
 #endif /* 3D */
-  return direction > 0. ? g_slist_reverse (path) : path;
+  return direction > 0. ? g_list_reverse (path) : path;
 }
 
-GSList * gfs_streamline_new (GfsDomain * domain,
-			     FttVector p,
-			     GfsVariable * var,
-			     gdouble min, 
-			     gdouble max,
-			     gboolean twist)
+GList * gfs_streamline_new (GfsDomain * domain,
+			    GfsVariable ** U,
+			    FttVector p,
+			    GfsVariable * var,
+			    gdouble min,
+			    gdouble max,
+			    gboolean twist,
+			    gboolean (* stop) (FttCell *, 
+					       GList *,
+					       gpointer),
+			    gpointer data)
 {
-  GSList * path;
+  GList * path;
 
-  path = grow_curve (domain, p, var, min, max, twist, NULL, 1.);
-  path = grow_curve (domain, p, var, min, max, twist, path, -1.);
+  g_return_val_if_fail (domain != NULL, NULL);
+  g_return_val_if_fail (U != NULL, NULL);
+
+  path = grow_curve (domain, U, p, var, min, max, twist, NULL, 1., stop, data);
+  path = grow_curve (domain, U, p, var, min, max, twist, path, -1., stop, data);
   return path;
 }
 
-void gfs_streamline_write (GSList * stream, FILE * fp)
+void gfs_streamline_write (GList * stream, FILE * fp)
 {
   g_return_if_fail (fp != NULL);
 
-  fprintf (fp, "GfsStreamline %u\n", g_slist_length (stream));
+  fprintf (fp, "GfsStreamline %u\n", g_list_length (stream));
   while (stream) {
     (* GTS_OBJECT (stream->data)->klass->write) (stream->data, fp);
     fputc ('\n', fp);
@@ -1796,9 +1846,9 @@ void gfs_streamline_write (GSList * stream, FILE * fp)
   }
 }
 
-GSList * gfs_streamline_read (GtsFile * fp)
+GList * gfs_streamline_read (GtsFile * fp)
 {
-  GSList * stream = NULL;
+  GList * stream = NULL;
   guint n = 0, nv;
 
   g_return_val_if_fail (fp != NULL, NULL);
@@ -1821,21 +1871,21 @@ GSList * gfs_streamline_read (GtsFile * fp)
 
     (*o->klass->read) (&o, fp);
     gts_file_first_token_after (fp, '\n');
-    stream = g_slist_prepend (stream, o);
+    stream = g_list_prepend (stream, o);
     n++;
   }
 
   if (fp->type == GTS_ERROR) {
-    g_slist_free (stream);
+    g_list_free (stream);
     return NULL;
   }
 
   return stream;
 }
 
-void gfs_streamline_draw (GSList * stream, FILE * fp)
+void gfs_streamline_draw (GList * stream, FILE * fp)
 {
-  guint n = g_slist_length (stream);
+  guint n = g_list_length (stream);
 
   g_return_if_fail (fp != NULL);
 
@@ -1849,10 +1899,10 @@ void gfs_streamline_draw (GSList * stream, FILE * fp)
   }
 }
 
-void gfs_streamline_destroy (GSList * stream)
+void gfs_streamline_destroy (GList * stream)
 {
-  g_slist_foreach (stream, (GFunc) gts_object_destroy, NULL);
-  g_slist_free (stream);
+  g_list_foreach (stream, (GFunc) gts_object_destroy, NULL);
+  g_list_free (stream);
 }
 
 void gfs_draw_stream_cylinder (GfsDomain * domain,
@@ -1863,7 +1913,7 @@ void gfs_draw_stream_cylinder (GfsDomain * domain,
 			       FILE * fp)
 {
   GSList * profile;
-  GSList * path;
+  GList * path;
   GtsSurface * s;
 
   g_return_if_fail (domain != NULL);
@@ -1874,13 +1924,15 @@ void gfs_draw_stream_cylinder (GfsDomain * domain,
 		       gts_edge_class (),
 		       min < max ? gts_colored_vertex_class () :
 		       gts_vertex_class ());
-  path = gfs_streamline_new (domain, p, var, min, max, FALSE);
+  path = gfs_streamline_new (domain, gfs_domain_velocity (domain), p, var, min, max, FALSE, 
+			     NULL, NULL);
   profile = circle_profile (gts_point_class (), radius, 10);
   gts_extrude_profile (s, profile, path);
   gts_surface_write_oogl (s, fp);
   gts_object_destroy (GTS_OBJECT (s));
   gfs_streamline_destroy (path);
-  gfs_streamline_destroy (profile);
+  g_slist_foreach (profile, (GFunc) gts_object_destroy, NULL);
+  g_slist_free (profile);
 }
 
 void gfs_draw_stream_ribbon (GfsDomain * domain,
@@ -1890,7 +1942,8 @@ void gfs_draw_stream_ribbon (GfsDomain * domain,
 			     gdouble min, gdouble max,
 			     FILE * fp)
 {
-  GSList * path, * profile;
+  GList * path;
+  GSList * profile;
   GtsSurface * s;
 
   g_return_if_fail (domain != NULL);
@@ -1901,25 +1954,28 @@ void gfs_draw_stream_ribbon (GfsDomain * domain,
 		       gts_edge_class (),
 		       min < max ? gts_colored_vertex_class () :
 		       gts_vertex_class ());
-  path = gfs_streamline_new (domain, p, var, min, max, TRUE);
+  path = gfs_streamline_new (domain, gfs_domain_velocity (domain), p, var, min, max, TRUE, 
+			     NULL, NULL);
   profile = ribbon_profile (gts_point_class (), half_width);
   gts_extrude_profile (s, profile, path);
   gts_surface_write_oogl (s, fp);
   gts_object_destroy (GTS_OBJECT (s));
   gfs_streamline_destroy (path);
-  gfs_streamline_destroy (profile);
+  g_slist_foreach (profile, (GFunc) gts_object_destroy, NULL);
+  g_slist_free (profile);
 }
 
 void gfs_draw_streamline (GfsDomain * domain,
 			  FttVector p,
 			  FILE * fp)
 {
-  GSList * path;
+  GList * path;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (fp != NULL);
 
-  path = gfs_streamline_new (domain, p, NULL, 0., 0., FALSE);
+  path = gfs_streamline_new (domain, gfs_domain_velocity (domain), p, NULL, 0., 0., FALSE, 
+			     NULL, NULL);
   gfs_streamline_draw (path, fp);
   gfs_streamline_destroy (path);
 }

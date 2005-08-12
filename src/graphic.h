@@ -85,18 +85,23 @@ void               gfs_draw_surface            (GfsDomain * domain,
 						gdouble min, 
 						gdouble max,
 						FILE * fp);
-GSList *           gfs_streamline_new          (GfsDomain * domain,
+GList *            gfs_streamline_new          (GfsDomain * domain,
+						GfsVariable ** U,
 						FttVector p,
 						GfsVariable * var,
 						gdouble min,
 						gdouble max,
-						gboolean twist);
-void               gfs_streamline_write        (GSList * stream, 
+						gboolean twist,
+						gboolean (* stop) (FttCell *, 
+								   GList *, 
+								   gpointer),
+						gpointer data);
+void               gfs_streamline_write        (GList * stream, 
 						FILE * fp);
-GSList *           gfs_streamline_read         (GtsFile * fp);
-void               gfs_streamline_draw         (GSList * stream, 
+GList *            gfs_streamline_read         (GtsFile * fp);
+void               gfs_streamline_draw         (GList * stream, 
 						FILE * fp);
-void               gfs_streamline_destroy      (GSList * stream);
+void               gfs_streamline_destroy      (GList * stream);
 void               gfs_draw_stream_cylinder    (GfsDomain * domain,
 						FttVector p, 
 						gdouble radius,

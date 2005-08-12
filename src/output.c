@@ -2514,11 +2514,13 @@ static gboolean gfs_output_streamline_event (GfsEvent * event,
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_streamline_class ())->parent_class)->event)
       (event,sim)) {
-    GSList * stream = gfs_streamline_new (GFS_DOMAIN (sim),
-					  GFS_OUTPUT_STREAMLINE (event)->p,
-					  GFS_OUTPUT_SCALAR (event)->v,
-					  0., 0.,
-					  TRUE);
+    GList * stream = gfs_streamline_new (GFS_DOMAIN (sim),
+					 gfs_domain_velocity (GFS_DOMAIN (sim)),
+					 GFS_OUTPUT_STREAMLINE (event)->p,
+					 GFS_OUTPUT_SCALAR (event)->v,
+					 0., 0.,
+					 TRUE,
+					 NULL, NULL);
 
     gfs_streamline_write (stream, GFS_OUTPUT (event)->file->fp);
     fflush (GFS_OUTPUT (event)->file->fp);
