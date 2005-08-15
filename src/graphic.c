@@ -1618,12 +1618,6 @@ static gdouble circumcircle_radius (FttVector p1, FttVector p2, FttVector p3)
   }
 }
 
-static gdouble distance2 (GtsPoint * p1, FttVector p2)
-{
-  p2.x -= p1->x; p2.y -= p1->y; p2.z -= p1->z;
-  return p2.x*p2.x + p2.y*p2.y + p2.z*p2.z;
-}
-
 static GSList * circle_profile (GtsPointClass * klass, 
 				gdouble radius, guint np)
 {
@@ -1680,7 +1674,7 @@ static GList * grow_curve (GfsDomain * domain,
 			   gpointer data)
 {
   FttCell * cell;
-  gdouble delta = 0.1;
+  gdouble delta = 0.2;
   GtsPoint * oldp = NULL;
   FttVector p1, p2;
   gdouble cost = 0., theta = 0.;
@@ -1697,24 +1691,22 @@ static GList * grow_curve (GfsDomain * domain,
 
 #if (!FTT_2D)
   if (twist) {
-    path_class = GTS_POINT_CLASS (gfs_twisted_vertex_class ());
-    {
-      FttComponent c;
-      gpointer data[2];
+    FttComponent c;
+    gpointer data[2];
 
-      for (c = 0; c < FTT_DIMENSION; c++) {
-	vort[c] = gfs_temporary_variable (domain);
-	gfs_variable_set_vector (vort[c], c);
-      }
-      data[0] = vort;
-      data[1] = U;
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) vorticity_vector, data);
-      for (c = 0; c < FTT_DIMENSION; c++)
-	gfs_domain_cell_traverse (domain,
-				  FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-				  (FttCellTraverseFunc) vort[c]->fine_coarse, vort[c]);
+    path_class = GTS_POINT_CLASS (gfs_twisted_vertex_class ());
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      vort[c] = gfs_temporary_variable (domain);
+      gfs_variable_set_vector (vort[c], c);
     }
+    data[0] = vort;
+    data[1] = U;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) vorticity_vector, data);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      gfs_domain_cell_traverse (domain,
+				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				(FttCellTraverseFunc) vort[c]->fine_coarse, vort[c]);
   }
 #endif /* 3D */  
 
@@ -1722,8 +1714,7 @@ static GList * grow_curve (GfsDomain * domain,
   while ((cell = gfs_domain_locate (domain, p, -1)) != NULL &&
 	 circumcircle_radius (p1, p2, p) > ftt_cell_size (cell) &&
 	 nmax--) {
-    gdouble size = ftt_cell_size (cell);
-    gdouble h = delta*size;
+    gdouble h = delta*ftt_cell_size (cell);
     FttVector u;
     FttComponent c;
     gdouble nu = 0.;
@@ -1731,7 +1722,7 @@ static GList * grow_curve (GfsDomain * domain,
     cost += triangle_area (p1, p2, p);
     p1 = p2;
     p2 = p;
-    if (oldp == NULL || cost > maxcost || distance2 (oldp, p) > size*size/4.) {
+    if (oldp == NULL || cost > maxcost) {
       oldp = gts_point_new (path_class, p.x, p.y, p.z);
       if (var)
 	GFS_VERTEX (oldp)->v = gfs_interpolate (cell, p, var);
@@ -1753,13 +1744,17 @@ static GList * grow_curve (GfsDomain * domain,
     }
     if (nu > 0) {
       FttVector p1 = p;
+      FttCell * cell1;
 
       nu = 2.*sqrt (nu);
       for (c = 0; c < FTT_DIMENSION; c++)
 	(&p1.x)[c] += h*(&u.x)[c]/nu;
       nu = 0.;
+      cell1 = gfs_domain_locate (domain, p1, -1);
+      if (!cell1)
+	break;
       for (c = 0; c < FTT_DIMENSION; c++) {
-	(&u.x)[c] = direction*gfs_interpolate (cell, p1, U[c]);
+	(&u.x)[c] = direction*gfs_interpolate (cell1, p1, U[c]);
 	nu += (&u.x)[c]*(&u.x)[c];
       }
     }
