@@ -1370,6 +1370,135 @@ void ftt_cell_traverse (FttCell * root,
   }
 }
 
+/**
+ * ftt_cell_traverse_condition:
+ * @root: the root #FttCell of the tree to traverse.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @max_depth: the maximum depth of the traversal. Cells below this
+ * depth will not be traversed. If @max_depth is -1 all cells in the
+ * tree are visited.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ * @condition: the condition.
+ * @cdata: user data to pass to @condition.
+ *
+ * Traverses a cell tree starting at the given root #FttCell. Calls
+ * the given function for each cell visited.
+ *
+ * Traversal of any branch of the tree is stopped whenever @condition
+ * is not verified.
+ */
+void ftt_cell_traverse_condition (FttCell * root,
+				  FttTraverseType order,
+				  FttTraverseFlags flags,
+				  gint max_depth,
+				  FttCellTraverseFunc func,
+				  gpointer data,
+				  gboolean (* condition) (FttCell *, gpointer),
+				  gpointer cdata)
+{
+  g_return_if_fail (root != NULL);
+  g_return_if_fail (func != NULL);
+  g_return_if_fail (condition != NULL);
+
+  if ((max_depth >= 0 && ftt_cell_level (root) > max_depth) ||
+      !(* condition) (root, cdata))
+    return;
+
+  if (order == FTT_PRE_ORDER &&
+      (flags == FTT_TRAVERSE_ALL ||
+       ((flags & FTT_TRAVERSE_LEAFS) != 0 && FTT_CELL_IS_LEAF (root)) ||
+       ((flags & FTT_TRAVERSE_NON_LEAFS) != 0 && !FTT_CELL_IS_LEAF (root))))
+    (* func) (root, data);
+  if (!FTT_CELL_IS_LEAF (root)) {
+    struct _FttOct * children = root->children;
+    guint n;
+
+    for (n = 0; n < FTT_CELLS; n++) {
+      FttCell * c = &(children->cell[n]);
+
+      if (!FTT_CELL_IS_DESTROYED (c))
+	ftt_cell_traverse_condition (c, order, flags, max_depth, func, data, condition, cdata);
+    }
+  }
+  if (order == FTT_POST_ORDER &&
+      (flags == FTT_TRAVERSE_ALL ||
+       ((flags & FTT_TRAVERSE_LEAFS) != 0 && FTT_CELL_IS_LEAF (root)) ||
+       ((flags & FTT_TRAVERSE_NON_LEAFS) != 0 && !FTT_CELL_IS_LEAF (root))))
+    (* func) (root, data);
+}
+
+/**
+ * ftt_cell_bbox:
+ * @cell: a #FttCell.
+ * @bb: a #GtsBBox.
+ *
+ * Fills @bb with the bounding box of @cell.
+ */
+void ftt_cell_bbox (const FttCell * cell, GtsBBox * bb)
+{
+  FttVector p;
+  gdouble h;
+
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (bb != NULL);
+  
+  h = ftt_cell_size (cell)/1.99999;
+  ftt_cell_pos (cell, &p);
+  bb->x1 = p.x - h; bb->y1 = p.y - h;
+  bb->x2 = p.x + h; bb->y2 = p.y + h; 
+#if FTT_2D
+  bb->z1 = bb->z2 = 0.;
+#elif FTT_2D3
+  bb->z1 = p.z - 1./1.99999; bb->z2 = p.z + 1./1.99999;
+#else  /* 3D */
+  bb->z1 = p.z - h; bb->z2 = p.z + h;
+#endif /* 3D */
+}
+
+static gboolean cell_is_in_box (FttCell * cell, gpointer data)
+{
+  GtsBBox * box = data;
+  GtsBBox bb;
+
+  ftt_cell_bbox (cell, &bb);
+  return gts_bboxes_are_overlapping (&bb, box);
+}
+
+/**
+ * ftt_cell_traverse_box:
+ * @root: the root #FttCell of the tree to traverse.
+ * @box: a #GtsBBox.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @max_depth: the maximum depth of the traversal. Cells below this
+ * depth will not be traversed. If @max_depth is -1 all cells in the
+ * tree are visited.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ *
+ * Traverses a cell tree starting at the given root #FttCell. Calls
+ * the given function for each cell visited. Only the cells partly or
+ * totally contained within @box are visited.  
+ */
+void ftt_cell_traverse_box (FttCell * root,
+			    GtsBBox * box,
+			    FttTraverseType order,
+			    FttTraverseFlags flags,
+			    gint max_depth,
+			    FttCellTraverseFunc func,
+			    gpointer data)
+{
+  g_return_if_fail (root != NULL);
+  g_return_if_fail (box != NULL);
+  g_return_if_fail (func != NULL);
+
+  ftt_cell_traverse_condition (root, order, flags, max_depth, func, data, cell_is_in_box, box);
+}
+
 static void cell_traverse_boundary_pre_order_all (FttCell * cell,
 						  FttDirection d,
 						  gint max_depth,
@@ -1883,6 +2012,117 @@ FttCell * ftt_cell_locate (FttCell * root,
   }
 
   return NULL;
+}
+
+static void bubble_sort (FttCellChildren * child, gdouble * d)
+{
+  guint i, j;
+
+  for (i = 0; i < FTT_CELLS - 1; i++)
+    for (j = 0; j < FTT_CELLS - 1 - i; j++)
+      if (d[j+1] < d[j]) {
+	gdouble tmp = d[j];
+	FttCell * cell = child->c[j];
+	d[j] = d[j+1];
+	d[j+1] = tmp;
+	child->c[j] = child->c[j+1];
+	child->c[j+1] = cell;
+      }
+}
+
+/**
+ * ftt_cell_point_distance2_min:
+ * @cell: a #FttCell.
+ * @p: a #GtsPoint.
+ * 
+ * Returns: the square of the minimum distance between @cell and @p.
+ */
+gdouble ftt_cell_point_distance2_min (FttCell * cell, GtsPoint * p)
+{
+  GtsBBox bb;
+  gdouble dmin, xd1, xd2, yd1, yd2, zd1, zd2;
+    
+  g_return_val_if_fail (cell != NULL, G_MAXDOUBLE);
+  g_return_val_if_fail (p != NULL, G_MAXDOUBLE);
+
+  ftt_cell_bbox (cell, &bb);
+
+  xd1 = (bb.x1 - p->x)*(bb.x1 - p->x);
+  xd2 = (p->x - bb.x2)*(p->x - bb.x2);
+  yd1 = (bb.y1 - p->y)*(bb.y1 - p->y);
+  yd2 = (p->y - bb.y2)*(p->y - bb.y2);
+  zd1 = (bb.z1 - p->z)*(bb.z1 - p->z);
+  zd2 = (p->z - bb.z2)*(p->z - bb.z2);
+  
+  dmin = p->x < bb.x1 ? xd1 : p->x > bb.x2 ? xd2 : 0.0;
+  dmin += p->y < bb.y1 ? yd1 : p->y > bb.y2 ? yd2 : 0.0;
+  dmin += p->z < bb.z1 ? zd1 : p->z > bb.z2 ? zd2 : 0.0;
+
+  return dmin;
+}
+
+void ftt_cell_point_distance2_internal (FttCell * root,
+					GtsPoint * p,
+					gdouble d,
+					gdouble (* distance2) (FttCell *, GtsPoint *, gpointer),
+					gpointer data,
+					FttCell ** closest,
+					gdouble * dmin)
+{
+  if (FTT_CELL_IS_LEAF (root)) {
+    if (d < *dmin) {
+      *dmin = d;
+      if (closest)
+	*closest = root;
+    }
+  }
+  else {
+    FttCellChildren child;
+    gdouble dc[FTT_CELLS];
+    guint i;
+
+    ftt_cell_children (root, &child);
+    for (i = 0; i < FTT_CELLS; i++)
+      dc[i] = child.c[i] ? (* distance2) (child.c[i], p, data) : G_MAXDOUBLE;
+    bubble_sort (&child, dc);
+    for (i = 0; i < FTT_CELLS; i++)
+      if (dc[i] < *dmin)
+	ftt_cell_point_distance2_internal (child.c[i], p, dc[i], distance2, data, closest, dmin);
+  }
+}
+
+/**
+ * ftt_cell_point_distance2:
+ * @root: a #FttCell.
+ * @p: a #GtsPoint.
+ * @distance2: the squared distance function.
+ * @data: user data to pass to @distance2.
+ * @closest: where to return the closest cell or %NULL.
+ *
+ * For non-leafs cells @distance2 must return a lower-bound for the
+ * minimum distance (using for example ftt_cell_point_distance2_min()).
+ *
+ * Returns: the square of the minimum distance measured according to
+ * @distance2 between @p and a leaf cell of @root.
+ */
+gdouble ftt_cell_point_distance2 (FttCell * root,
+				  GtsPoint * p,
+				  gdouble (* distance2) (FttCell *, GtsPoint *, gpointer),
+				  gpointer data,
+				  FttCell ** closest)
+{
+  gdouble d, dmin = G_MAXDOUBLE;
+
+  g_return_val_if_fail (root != NULL, dmin);
+  g_return_val_if_fail (p != NULL, dmin);
+  g_return_val_if_fail (distance2 != NULL, dmin);
+
+  if (closest)
+    *closest = NULL;
+  d = (* distance2) (root, p, data);
+  if (d < dmin)
+    ftt_cell_point_distance2_internal (root, p, d, distance2, data, closest, &dmin);
+  return dmin;
 }
 
 /**
@@ -2466,289 +2706,6 @@ void ftt_face_traverse_boundary (FttCell * root,
   ftt_cell_traverse_boundary (root, d, order, flags, max_depth, 
 			      (FttCellTraverseFunc) traverse_face_boundary, 
 			      datum);
-}
-
-static gboolean cell_is_in_box (FttCell * cell, GtsBBox * box)
-{
-  FttVector p;
-  gdouble h = ftt_cell_size (cell)/2.;
-  GtsBBox bb;
-
-  ftt_cell_pos (cell, &p);
-  bb.x1 = p.x - h;
-  bb.y1 = p.y - h;
-  bb.x2 = p.x + h;
-  bb.y2 = p.y + h;
-#if FTT_2D
-  bb.z1 = bb.z2 = 0.;
-#else /* 3D */
-  bb.z1 = p.z - h;
-  bb.z2 = p.z + h;
-#endif /* 3D */
-  return gts_bboxes_are_overlapping (&bb, box);
-}
-
-static void cell_traverse_box_pre_order_all (FttCell * cell, 
-					     GtsBBox * box,
-					     gint max_depth,
-					     FttCellTraverseFunc func,
-					     gpointer data)
-{
-  FttCell * parent;
-
-  if ((max_depth >= 0 && ftt_cell_level (cell) > max_depth) ||
-      !cell_is_in_box (cell, box))
-    return;
-
-  parent = ftt_cell_parent (cell);
-  (* func) (cell, data);
-  /* check that cell has not been deallocated by @func */
-  g_assert (parent == NULL || parent->children != NULL);
-
-  if (!FTT_CELL_IS_LEAF (cell)) {
-    FttOct * children = cell->children;
-    guint n;
-
-    for (n = 0; n < FTT_CELLS; n++) {
-      FttCell * c = &(children->cell[n]);
-
-      if (!FTT_CELL_IS_DESTROYED (c))
-	cell_traverse_box_pre_order_all (c, box, max_depth, func, data);
-    }
-  }
-}
-
-static void cell_traverse_box_post_order_all (FttCell * cell, 
-					      GtsBBox * box,
-					      gint max_depth,
-					      FttCellTraverseFunc func,
-					      gpointer data)
-{
-  if ((max_depth >= 0 && ftt_cell_level (cell) > max_depth) ||
-      !cell_is_in_box (cell, box))
-    return;
-
-  if (!FTT_CELL_IS_LEAF (cell)) {
-    FttOct * children = cell->children;
-    guint n;
-
-    for (n = 0; n < FTT_CELLS; n++) {
-      FttCell * c = &(children->cell[n]);
-
-      if (!FTT_CELL_IS_DESTROYED (c))
-	cell_traverse_box_post_order_all (c, box, max_depth, func, data);
-    }
-  }
-
-  (* func) (cell, data);
-}
-
-static void cell_traverse_box_leafs (FttCell * cell, 
-				     GtsBBox * box,
-				     gint max_depth,
-				     FttCellTraverseFunc func,
-				     gpointer data)
-{
-  if ((max_depth >= 0 && ftt_cell_level (cell) > max_depth) ||
-      !cell_is_in_box (cell, box))
-    return;
-
-  if (FTT_CELL_IS_LEAF (cell))
-    (* func) (cell, data);
-  else {
-    FttOct * children = cell->children;
-    guint n;
-
-    for (n = 0; n < FTT_CELLS; n++) {
-      FttCell * c = &(children->cell[n]);
-
-      if (!FTT_CELL_IS_DESTROYED (c))
-	cell_traverse_box_leafs (c, box, max_depth, func, data);
-    }
-  }
-}
-
-static void cell_traverse_box_pre_order_nonleafs (FttCell * cell, 
-						  GtsBBox * box,
-						  gint max_depth,
-						  FttCellTraverseFunc func,
-						  gpointer data)
-{
-  if ((max_depth >= 0 && ftt_cell_level (cell) > max_depth) ||
-      !cell_is_in_box (cell, box))
-    return;
-
-  if (!FTT_CELL_IS_LEAF (cell)) {
-    FttCell *  parent = ftt_cell_parent (cell);
-
-    (* func) (cell, data);
-    /* check that cell has not been deallocated by @func */
-    g_assert (parent == NULL || parent->children != NULL);
-    if (!FTT_CELL_IS_LEAF (cell)) {
-      FttOct * children = cell->children;
-      guint n;
-      
-      for (n = 0; n < FTT_CELLS; n++) {
-	FttCell * c = &(children->cell[n]);
-	
-	if (!FTT_CELL_IS_DESTROYED (c))
-	  cell_traverse_box_pre_order_nonleafs (c, box, max_depth, func, data);
-      }
-    }
-  }
-}
-
-static void cell_traverse_box_post_order_nonleafs (FttCell * cell, 
-						   GtsBBox * box,
-						   gint max_depth,
-						   FttCellTraverseFunc func,
-						   gpointer data)
-{
-  if ((max_depth >= 0 && ftt_cell_level (cell) > max_depth) ||
-      !cell_is_in_box (cell, box))
-    return;
-
-  if (!FTT_CELL_IS_LEAF (cell)) {
-    FttOct * children = cell->children;
-    guint n;
-
-    for (n = 0; n < FTT_CELLS; n++) {
-      FttCell * c = &(children->cell[n]);
-
-      if (!FTT_CELL_IS_DESTROYED (c))
-	cell_traverse_box_post_order_nonleafs (c, box, max_depth, func, data);
-    }
-
-    (* func) (cell, data);
-  }
-}
-
-static void cell_traverse_box_level (FttCell * cell, 
-				     GtsBBox * box,
-				     gint max_depth,
-				     FttCellTraverseFunc func,
-				     gpointer data)
-{
-  if (!cell_is_in_box (cell, box))
-    return;
-  if (ftt_cell_level (cell) == max_depth)
-    (* func) (cell, data);
-  else if (!FTT_CELL_IS_LEAF (cell)) {
-    FttOct * children = cell->children;
-    guint n;
-
-    for (n = 0; n < FTT_CELLS; n++) {
-      FttCell * c = &(children->cell[n]);
-
-      if (!FTT_CELL_IS_DESTROYED (c))
-	cell_traverse_box_level (c, box, max_depth, func, data);
-    }
-  }
-}
-
-static void cell_traverse_box_level_leafs (FttCell * cell, 
-					   GtsBBox * box,
-					   gint max_depth,
-					   FttCellTraverseFunc func,
-					   gpointer data)
-{
-  if (!cell_is_in_box (cell, box))
-    return;
-  if (ftt_cell_level (cell) == max_depth || FTT_CELL_IS_LEAF (cell))
-    (* func) (cell, data);
-  else if (!FTT_CELL_IS_LEAF (cell)) {
-    FttOct * children = cell->children;
-    guint n;
-
-    for (n = 0; n < FTT_CELLS; n++) {
-      FttCell * c = &(children->cell[n]);
-
-      if (!FTT_CELL_IS_DESTROYED (c))
-	cell_traverse_box_level_leafs (c, box, max_depth, func, data);
-    }
-  }
-}
-
-static void cell_traverse_box_level_non_leafs (FttCell * cell, 
-					       GtsBBox * box,
-					       gint max_depth,
-					       FttCellTraverseFunc func,
-					       gpointer data)
-{
-  if (!cell_is_in_box (cell, box))
-    return;
-  if (ftt_cell_level (cell) == max_depth && !FTT_CELL_IS_LEAF (cell))
-    (* func) (cell, data);
-  else if (!FTT_CELL_IS_LEAF (cell)) {
-    FttOct * children = cell->children;
-    guint n;
-
-    for (n = 0; n < FTT_CELLS; n++) {
-      FttCell * c = &(children->cell[n]);
-
-      if (!FTT_CELL_IS_DESTROYED (c))
-	cell_traverse_box_level_non_leafs (c, box, max_depth, func, data);
-    }
-  }
-}
-
-/**
- * ftt_cell_traverse_box:
- * @root: the root #FttCell of the tree to traverse.
- * @box: a #GtsBBox.
- * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
- * %FTT_POST_ORDER. 
- * @flags: which types of children are to be visited.
- * @max_depth: the maximum depth of the traversal. Cells below this
- * depth will not be traversed. If @max_depth is -1 all cells in the
- * tree are visited.
- * @func: the function to call for each visited #FttCell.
- * @data: user data to pass to @func.
- *
- * Traverses a cell tree starting at the given root #FttCell. Calls
- * the given function for each cell visited. Only the cells partly or
- * totally contained within @box are visited.  
- */
-void ftt_cell_traverse_box (FttCell * root,
-			    GtsBBox * box,
-			    FttTraverseType order,
-			    FttTraverseFlags flags,
-			    gint max_depth,
-			    FttCellTraverseFunc func,
-			    gpointer data)
-{
-  g_return_if_fail (root != NULL);
-  g_return_if_fail (box != NULL);
-  g_return_if_fail (func != NULL);
-
-  if ((max_depth >= 0 && ftt_cell_level (root) > max_depth) ||
-      !cell_is_in_box (root, box))
-    return;
-
-  if (flags == FTT_TRAVERSE_ALL) {
-    if (order == FTT_PRE_ORDER)
-      cell_traverse_box_pre_order_all (root, box, max_depth, func, data);
-    else
-      cell_traverse_box_post_order_all (root, box, max_depth, func, data);
-  }
-  else if ((flags & FTT_TRAVERSE_LEVEL) != 0) {
-    if ((flags & FTT_TRAVERSE_LEAFS) != 0)
-      cell_traverse_box_level_leafs (root, box, max_depth, func, data);
-    else if ((flags & FTT_TRAVERSE_NON_LEAFS) != 0)
-      cell_traverse_box_level_non_leafs (root, box, max_depth, func, data);
-    else
-      cell_traverse_box_level (root, box, max_depth, func, data);
-  }
-  else if ((flags & FTT_TRAVERSE_LEAFS) != 0)
-    cell_traverse_box_leafs (root, box, max_depth, func, data);
-  else {
-    g_return_if_fail ((flags & FTT_TRAVERSE_NON_LEAFS) != 0);
-
-    if (order == FTT_PRE_ORDER)
-      cell_traverse_box_pre_order_nonleafs (root, box, max_depth, func, data);
-    else
-      cell_traverse_box_post_order_nonleafs (root, box, max_depth, func, data);
-  }
 }
 
 /**

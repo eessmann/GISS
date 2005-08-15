@@ -807,6 +807,66 @@ void gfs_domain_cell_traverse_box (GfsDomain * domain,
 			 (GtsFunc) box_traverse_box, datum);
 }
 
+static void box_traverse_condition (GfsBox * box, gpointer * datum)
+{
+  FttTraverseType * order = datum[0];
+  FttTraverseFlags * flags = datum[1];
+  gint * max_depth = datum[2];
+  FttCellTraverseFunc func = (FttCellTraverseFunc) datum[3];
+  gpointer data = datum[4];
+  gboolean (* condition) (FttCell *, gpointer) = datum[5];
+  gpointer cdata = datum[6];
+
+  ftt_cell_traverse_condition (box->root, *order, *flags, *max_depth, func, data,
+			       condition, cdata);
+}
+
+/**
+ * gfs_domain_cell_traverse_condition:
+ * @domain: a #GfsDomain.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @max_depth: the maximum depth of the traversal. Cells below this
+ * depth will not be traversed. If @max_depth is -1 all cells in the
+ * tree are visited.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ * @condition: the condition.
+ * @cdata: user data to pass to @condition.
+ *
+ * Traverses the cell trees of @domain. Calls the given function for
+ * each cell visited.
+ *
+ * Traversal of any branch of the tree is stopped whenever @condition
+ * is not verified.
+ */
+void gfs_domain_cell_traverse_condition (GfsDomain * domain,
+					 FttTraverseType order,
+					 FttTraverseFlags flags,
+					 gint max_depth,
+					 FttCellTraverseFunc func,
+					 gpointer data,
+					 gboolean (* condition) (FttCell *, gpointer),
+					 gpointer cdata)
+{
+  gpointer datum[7];
+
+  datum[0] = &order;
+  datum[1] = &flags;
+  datum[2] = &max_depth;
+  datum[3] = func;
+  datum[4] = data;
+  datum[5] = condition;
+  datum[6] = cdata;
+
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (func != NULL);
+  g_return_if_fail (condition != NULL);
+
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_traverse_condition, datum);
+}
+
 static void traverse_mixed (GfsBox * box, gpointer * datum)
 {
   FttCellTraverseFunc func = (FttCellTraverseFunc) datum[0];
@@ -1760,6 +1820,73 @@ FttCell * gfs_domain_locate (GfsDomain * domain,
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_locate, data);
 
   return cell;
+}
+
+static void box_distance2 (GfsBox * box, GPtrArray * a)
+{
+  g_ptr_array_add (a, box);
+}
+
+static void bubble_sort (GPtrArray * a, gdouble * d)
+{
+  guint i, j;
+
+  for (i = 0; i < a->len - 1; i++)
+    for (j = 0; j < a->len - 1 - i; j++)
+      if (d[j+1] < d[j]) {
+	gdouble tmp = d[j];
+	gpointer data = a->pdata[j];
+	d[j] = d[j+1];
+	d[j+1] = tmp;
+	a->pdata[j] = a->pdata[j+1];
+	a->pdata[j+1] = data;
+      }
+}
+
+/**
+ * gfs_domain_cell_point_distance2:
+ * @domain: a #GfsDomain.
+ * @p: a #GtsPoint.
+ * @distance2: the squared distance function.
+ * @data: user data to pass to @distance2.
+ * @closest: where to return the closest cell or %NULL.
+ *
+ * For non-leafs cells @distance2 must return a lower-bound for the
+ * minimum distance (using for example ftt_cell_point_distance2_min()).
+ *
+ * Returns: square of the minimum distance measured according to
+ * @distance2 between @p and a leaf cell of @domain.
+ */
+gdouble gfs_domain_cell_point_distance2 (GfsDomain * domain,
+					 GtsPoint * p,
+					 gdouble (* distance2) (FttCell *, GtsPoint *, gpointer),
+					 gpointer data,
+					 FttCell ** closest)
+{
+  gdouble dmin = G_MAXDOUBLE;
+  GPtrArray * a;
+  gdouble * d;
+  guint i;
+
+  g_return_val_if_fail (domain != NULL, dmin);
+  g_return_val_if_fail (p != NULL, dmin);
+  g_return_val_if_fail (distance2 != NULL, dmin);
+
+  if (closest)
+    *closest = NULL;
+  a = g_ptr_array_new ();
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_distance2, a);
+  d = g_malloc (sizeof (gdouble)*a->len);
+  for (i = 0; i < a->len; i++)
+    d[i] = (* distance2) (GFS_BOX (a->pdata[i])->root, p, data);
+  bubble_sort (a, d);
+  for (i = 0; i < a->len; i++)
+    if (d[i] < dmin)
+      ftt_cell_point_distance2_internal (GFS_BOX (a->pdata[i])->root, p, d[i],
+					 distance2, data, closest, &dmin);
+  g_free (d);
+  g_ptr_array_free (a, TRUE);
+  return dmin;
 }
 
 /**

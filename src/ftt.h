@@ -671,6 +671,15 @@ void                 ftt_cell_traverse               (FttCell * root,
 						      gint max_depth,
 						      FttCellTraverseFunc func,
 						      gpointer data);
+void                 ftt_cell_traverse_condition     (FttCell * root,
+						      FttTraverseType order,
+						      FttTraverseFlags flags,
+						      gint max_depth,
+						      FttCellTraverseFunc func,
+						      gpointer data,
+						      gboolean (* condition) (FttCell *, 
+									      gpointer),
+						      gpointer cdata);
 void                 ftt_cell_traverse_box           (FttCell * root,
 						      GtsBBox * box,
 						      FttTraverseType order,
@@ -704,6 +713,26 @@ void                 ftt_face_traverse_boundary      (FttCell * root,
 FttCell *            ftt_cell_locate                 (FttCell * root,
 						      FttVector target,
 						      gint max_depth);
+gdouble              ftt_cell_point_distance2_min    (FttCell * cell, 
+						      GtsPoint * p);
+void                 ftt_cell_point_distance2_internal (FttCell * root,
+							GtsPoint * p,
+							gdouble d,
+							gdouble (* distance2) (FttCell *, 
+									       GtsPoint *, 
+									       gpointer),
+							gpointer data,
+							FttCell ** closest,
+							gdouble * dmin);
+gdouble              ftt_cell_point_distance2        (FttCell * root,
+						      GtsPoint * p,
+						      gdouble (* distance2) (FttCell *, 
+									     GtsPoint *, 
+									     gpointer),
+						      gpointer data,
+						      FttCell ** closest);
+void                 ftt_cell_bbox                   (const FttCell * cell, 
+						      GtsBBox * bb);
 typedef void      (* FttCellCopyFunc)                (const FttCell * from,
 						      FttCell * to,
 						      gpointer data);

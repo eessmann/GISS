@@ -91,6 +91,14 @@ void         gfs_domain_cell_traverse         (GfsDomain * domain,
 					       gint max_depth,
 					       FttCellTraverseFunc func,
 					       gpointer data);
+void         gfs_domain_cell_traverse_condition (GfsDomain * domain,
+						 FttTraverseType order,
+						 FttTraverseFlags flags,
+						 gint max_depth,
+						 FttCellTraverseFunc func,
+						 gpointer data,
+						 gboolean (* condition) (FttCell *, gpointer),
+						 gpointer cdata);
 void         gfs_domain_cell_traverse_box     (GfsDomain * domain,
 					       GtsBBox * box,
 					       FttTraverseType order,
@@ -175,6 +183,13 @@ void         gfs_domain_split                 (GfsDomain * domain,
 FttCell *    gfs_domain_locate                (GfsDomain * domain,
 					       FttVector target,
 					       gint max_depth);
+gdouble      gfs_domain_cell_point_distance2  (GfsDomain * domain,
+					       GtsPoint * p,
+					       gdouble (* distance2) (FttCell *, 
+								      GtsPoint *, 
+								      gpointer),
+					       gpointer data,
+					       FttCell ** closest);
 void         gfs_domain_advect_point          (GfsDomain * domain, 
 					       GtsPoint * p,
 					       gdouble dt);

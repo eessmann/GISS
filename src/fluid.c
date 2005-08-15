@@ -1833,23 +1833,11 @@ GtsSurface * gfs_cell_is_cut (FttCell * cell, GtsSurface * s)
   GtsSurface * s1 = NULL;
   gpointer data[2];
   GtsBBox bb;
-  FttVector p;
-  gdouble h;
 
   g_return_val_if_fail (cell != NULL, NULL);
   g_return_val_if_fail (s != NULL, NULL);
 
-  h = ftt_cell_size (cell)/1.99999;
-  ftt_cell_pos (cell, &p);
-  bb.x1 = p.x - h; bb.y1 = p.y - h;
-  bb.x2 = p.x + h; bb.y2 = p.y + h; 
-#if FTT_2D
-  bb.z1 = bb.z2 = 0.;
-#elif FTT_2D3
-  bb.z1 = p.z - 1./1.99999; bb.z2 = p.z + 1./1.99999;
-#else  /* 3D */
-  bb.z1 = p.z - h; bb.z2 = p.z + h;
-#endif /* 3D */
+  ftt_cell_bbox (cell, &bb);
   data[0] = &bb;
   data[1] = &s1;
   gts_surface_foreach_face (s, (GtsFunc) face_overlaps_box, data);
