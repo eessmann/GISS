@@ -1819,12 +1819,14 @@ GList * gfs_streamline_new (GfsDomain * domain,
 					       gpointer),
 			    gpointer data)
 {
-  GList * path;
+  GList * i, * path;
 
   g_return_val_if_fail (domain != NULL, NULL);
   g_return_val_if_fail (U != NULL, NULL);
 
-  path = grow_curve (domain, U, p, var, min, max, twist, NULL, 1., stop, data);
+  i = grow_curve (domain, U, p, var, min, max, twist, NULL, 1., stop, data);
+  path = g_list_remove_link (i, i);
+  g_list_free (i);
   path = grow_curve (domain, U, p, var, min, max, twist, path, -1., stop, data);
   return path;
 }
