@@ -85,6 +85,10 @@ void               gfs_draw_surface            (GfsDomain * domain,
 						gdouble min, 
 						gdouble max,
 						FILE * fp);
+void               gfs_extrude_profile         (GtsSurface * s,
+						GSList * profile,
+						gboolean closed,
+						GList * path);
 GList *            gfs_streamline_new          (GfsDomain * domain,
 						GfsVariable ** U,
 						FttVector p,

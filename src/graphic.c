@@ -1453,12 +1453,13 @@ static void edge_list (GtsMatrix * b, GtsPoint * o,
 {
   guint i;
   GtsVertex * vold = NULL;
+  GtsVertex * vfirst = NULL;
   gboolean colored = FALSE;
   GtsMatrix * c;
 
   if (GTS_IS_COLORED_VERTEX (o) && 
       gts_object_class_is_from_class (GTS_OBJECT_CLASS (s->vertex_class),
-			       GTS_OBJECT_CLASS (gts_colored_vertex_class ())))
+				      GTS_OBJECT_CLASS (gts_colored_vertex_class ())))
     colored = TRUE;
   if (GFS_IS_TWISTED_VERTEX (o)) {
     gdouble t = GFS_TWISTED_VERTEX (o)->theta;
@@ -1477,7 +1478,7 @@ static void edge_list (GtsMatrix * b, GtsPoint * o,
 			b[2][0], b[2][1], b[2][2], 0.,
 			0., 0., 0., 0.);
 
-  for (i = 0; i <= ne; i++, profile = profile->next) {
+  for (i = 0; i <= ne && profile; i++, profile = profile->next) {
     GtsPoint * p = profile->data;
     GtsVertex * v = gts_vertex_new (s->vertex_class, p->x, p->y, 0.);
 
@@ -1488,11 +1489,14 @@ static void edge_list (GtsMatrix * b, GtsPoint * o,
     GTS_POINT (v)->x += o->x;
     GTS_POINT (v)->y += o->y;
     GTS_POINT (v)->z += o->z;
+
     if (vold != NULL)
       e[i-1] = gts_edge_new (s->edge_class, vold, v);
     vold = v;
+    if (!vfirst) vfirst = v;
   }
-
+  if (i <= ne && vold)
+    e[i-1] = gts_edge_new (s->edge_class, vold, vfirst);
   gts_matrix_destroy (c);
 }
 
@@ -1538,9 +1542,10 @@ static GList * next_far_enough (GList * p, gdouble size)
   return pf;
 }
 
-static void gts_extrude_profile (GtsSurface * s,
-				 GSList * profile,
-				 GList * path)
+void gfs_extrude_profile (GtsSurface * s,
+			  GSList * profile,
+			  gboolean closed,
+			  GList * path)
 {
   GtsMatrix * r;
   GtsPoint * p0, * p1, * p2;
@@ -1559,7 +1564,7 @@ static void gts_extrude_profile (GtsSurface * s,
     size = bb->y2 - bb->y1;
   gts_object_destroy (GTS_OBJECT (bb));
 
-size /= 4.;
+  size /= 4.;
 
   p0 = path->data;
   path = next_far_enough (path, size);
@@ -1567,7 +1572,7 @@ size /= 4.;
     return;
   p1 = path->data;
   r = gts_matrix_identity (NULL);
-  ne = g_slist_length (profile) - 1;
+  ne = closed ? g_slist_length (profile) : g_slist_length (profile) - 1;
   e1 = g_malloc (sizeof (GtsEdge *)*ne);
   e2 = g_malloc (sizeof (GtsEdge *)*ne);
 
@@ -1591,6 +1596,7 @@ size /= 4.;
 
   g_free (e1);
   g_free (e2);
+  gts_matrix_destroy (r);
 }
 
 static gdouble triangle_area (FttVector p1, FttVector p2, FttVector p3)
@@ -1624,13 +1630,10 @@ static GSList * circle_profile (GtsPointClass * klass,
   GSList * lp = NULL;
   guint i;
 
-  for (i = 0; i <= np; i++) {
+  for (i = 0; i < np; i++) {
     gdouble a = 2.*M_PI*i/(gdouble) np;
 
-    lp = g_slist_prepend (lp, gts_point_new (klass, 
-					     radius*cos (a), 
-					     radius*sin(a), 
-					     0.));
+    lp = g_slist_prepend (lp, gts_point_new (klass, radius*cos (a), radius*sin(a), 0.));
   }
   return lp;
 }
@@ -1924,7 +1927,7 @@ void gfs_draw_stream_cylinder (GfsDomain * domain,
   path = gfs_streamline_new (domain, gfs_domain_velocity (domain), p, var, min, max, FALSE, 
 			     NULL, NULL);
   profile = circle_profile (gts_point_class (), radius, 10);
-  gts_extrude_profile (s, profile, path);
+  gfs_extrude_profile (s, profile, TRUE, path);
   gts_surface_write_oogl (s, fp);
   gts_object_destroy (GTS_OBJECT (s));
   gfs_streamline_destroy (path);
@@ -1954,7 +1957,7 @@ void gfs_draw_stream_ribbon (GfsDomain * domain,
   path = gfs_streamline_new (domain, gfs_domain_velocity (domain), p, var, min, max, TRUE, 
 			     NULL, NULL);
   profile = ribbon_profile (gts_point_class (), half_width);
-  gts_extrude_profile (s, profile, path);
+  gfs_extrude_profile (s, profile, FALSE, path);
   gts_surface_write_oogl (s, fp);
   gts_object_destroy (GTS_OBJECT (s));
   gfs_streamline_destroy (path);
