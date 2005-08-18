@@ -529,7 +529,7 @@ static void gfs_init_write (GtsObject * o, FILE * fp)
     fprintf (fp, "  %s =", v->v->name);
     gfs_function_write (v->f, fp);
     fputc ('\n', fp);
-    i = i->data;
+    i = i->next;
   }
   fputc ('}', fp);
 }
