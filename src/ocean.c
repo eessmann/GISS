@@ -219,7 +219,6 @@ static void gfs_free_surface_pressure (GfsDomain * domain,
 				       GfsVariable * res,
 				       gdouble G)
 {
-  guint minlevel, maxlevel;
   GfsDomain * toplayer;
   FreeSurfaceParams fp;
   GfsVariable * res1, * g[2];
@@ -263,14 +262,12 @@ static void gfs_free_surface_pressure (GfsDomain * domain,
   			    (FttCellTraverseFunc) scale_divergence_helmoltz, &fp);
   
   /* solve for pressure */
-  minlevel = toplayer->rootlevel;
-  if (par->minlevel > minlevel)
-    minlevel = par->minlevel;
-  maxlevel = gfs_domain_depth (toplayer);
+  par->depth = gfs_domain_depth (toplayer);
   gfs_residual (toplayer, 2, FTT_TRAVERSE_LEAFS, -1, p, fp.div, fp.dia, res1);
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (toplayer, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
   par->niter = 0;
+  par->dimension = 2;
   while (par->residual.infty > par->tolerance && par->niter < par->nitermax) {
 #if 0
     fprintf (stderr, "%d bias: %g first: %g second: %g infty: %g\n",
@@ -280,7 +277,7 @@ static void gfs_free_surface_pressure (GfsDomain * domain,
 	     par->residual.second, 
 	     par->residual.infty);
 #endif
-    gfs_poisson_cycle (toplayer, 2, minlevel, maxlevel, par->nrelax, p, fp.div, fp.dia, res1);
+    gfs_poisson_cycle (toplayer, par, p, fp.div, fp.dia, res1);
     par->residual = gfs_domain_norm_residual (toplayer, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
     par->niter++;
   }

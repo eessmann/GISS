@@ -707,8 +707,9 @@ static void stream_from_vorticity (GfsDomain * domain,
 				   gdouble tolerance)
 {
   GfsNorm norm;
-  guint maxlevel, maxit = 100;
+  guint maxit = 100;
   GfsVariable * res, * dia;
+  GfsMultilevelParams par;
 
   g_return_if_fail (domain != NULL);
 
@@ -722,9 +723,12 @@ static void stream_from_vorticity (GfsDomain * domain,
   res = gfs_temporary_variable (domain);
   gfs_residual (domain, FTT_DIMENSION, FTT_TRAVERSE_LEAFS, -1, stream, vorticity, dia, res);
   norm = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res);
-  maxlevel = gfs_domain_depth (domain);
+  par.depth = gfs_domain_depth (domain);
+  par.minlevel = 0;
+  par.nrelax = 4;
+  par.dimension = FTT_DIMENSION;
   while (norm.infty > tolerance && maxit) {
-    gfs_poisson_cycle (domain, FTT_DIMENSION, 0, maxlevel, 4, stream, vorticity, dia, res);
+    gfs_poisson_cycle (domain, &par, stream, vorticity, dia, res);
     norm = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res);
     maxit--;
   }

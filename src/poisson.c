@@ -22,6 +22,84 @@
 #include "solid.h"
 #include "source.h"
 
+/**
+ * gfs_multilevel_params_write:
+ * @par: the multilevel parameters.
+ * @fp: a file pointer.
+ *
+ * Writes in @fp a text representation of the multilevel parameters
+ * @par.  
+ */
+void gfs_multilevel_params_write (GfsMultilevelParams * par, FILE * fp)
+{
+  g_return_if_fail (par != NULL);
+  g_return_if_fail (fp != NULL);
+
+  fprintf (fp,
+           "{\n"
+	   "  tolerance = %g\n"
+	   "  nrelax    = %u\n"
+           "  erelax    = %u\n"
+	   "  minlevel  = %u\n"
+	   "  nitermax  = %u\n"
+	   "}",
+	   par->tolerance,
+	   par->nrelax,
+	   par->erelax,
+	   par->minlevel,
+	   par->nitermax);
+}
+
+void gfs_multilevel_params_init (GfsMultilevelParams * par)
+{
+  g_return_if_fail (par != NULL);
+
+  par->tolerance = 1e-3;
+  par->nrelax    = 4;
+  par->erelax    = 2;
+  par->minlevel  = 0;
+  par->nitermax  = 100;
+
+  par->dimension = FTT_DIMENSION;
+}
+
+void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
+{
+  GtsFileVariable var[] = {
+    {GTS_DOUBLE, "tolerance", TRUE},
+    {GTS_UINT,   "nrelax",    TRUE},
+    {GTS_UINT,   "erelax",    TRUE},
+    {GTS_UINT,   "minlevel",  TRUE},
+    {GTS_UINT,   "nitermax",  TRUE},
+    {GTS_NONE}
+  };
+
+  g_return_if_fail (par != NULL);
+  g_return_if_fail (fp != NULL);
+
+  var[0].data = &par->tolerance;
+  var[1].data = &par->nrelax;
+  var[2].data = &par->erelax;
+  var[3].data = &par->minlevel;
+  var[4].data = &par->nitermax;
+
+  gfs_multilevel_params_init (par);
+  gts_file_assign_variables (fp, var);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (par->tolerance <= 0.) {
+    gts_file_variable_error (fp, var, "tolerance",
+			     "tolerance `%g' must be strictly positive",
+			     par->tolerance);
+    return;
+  }
+  if (par->nrelax == 0)
+    gts_file_variable_error (fp, var, "nrelax", "nrelax must be non zero");
+  if (par->erelax == 0)
+    gts_file_variable_error (fp, var, "erelax", "erelax must be non zero");
+}
+
 #define FACE_GRADIENT(x, y, z, u) (gfs_face_weighted_gradient (x, y, z, u))
 //#define FACE_GRADIENT(x, y, z, u) (gfs_face_gradient_flux_centered (x, y, z, u))
 
@@ -490,10 +568,7 @@ static void get_from_above (FttCell * parent, GfsVariable * v)
 /**
  * gfs_poisson_cycle:
  * @domain: the domain on which to solve the Poisson equation.
- * @d: number of dimensions (2 or 3).
- * @levelmin: the top level of the multigrid hierarchy.
- * @depth: the total depth of the domain.
- * @nrelax: the number of relaxations to apply at each level.
+ * @p: the #GfsMultilevelParams.
  * @u: the variable to use as left-hand side.
  * @rhs: the variable to use as right-hand side.
  * @dia: the diagonal weight.
@@ -511,27 +586,26 @@ static void get_from_above (FttCell * parent, GfsVariable * v)
  * of @res (i.e. the cell tree is ready for another iteration).
  */
 void gfs_poisson_cycle (GfsDomain * domain,
-			guint d,
-			guint levelmin,
-			guint depth,
-			guint nrelax,
+			GfsMultilevelParams * p,
 			GfsVariable * u,
 			GfsVariable * rhs,
 			GfsVariable * dia,
 			GfsVariable * res)
 {
-  guint n, l;
+  guint n, l, nrelax, minlevel;
   GfsVariable * dp;
   gpointer data[2];
   
   g_return_if_fail (domain != NULL);
-  g_return_if_fail (d > 1 && d <= 3);
+  g_return_if_fail (p != NULL);
+  g_return_if_fail (p->dimension > 1 && p->dimension <= 3);
   g_return_if_fail (u != NULL);
   g_return_if_fail (rhs != NULL);
   g_return_if_fail (dia != NULL);
   g_return_if_fail (res != NULL);
 
   dp = gfs_temporary_variable (domain);
+  minlevel = MAX (domain->rootlevel, p->minlevel);
 
   /* compute residual on non-leafs cells */
   gfs_domain_cell_traverse (domain, 
@@ -540,20 +614,21 @@ void gfs_poisson_cycle (GfsDomain * domain,
 
   /* relax top level */
   gfs_domain_cell_traverse (domain, 
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, levelmin,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, minlevel,
 			    (FttCellTraverseFunc) gfs_cell_reset, dp);
-  for (l = levelmin; l < depth; l++)
-    nrelax *= 2;
+  nrelax = p->nrelax;
+  for (l = minlevel; l < p->depth; l++)
+    nrelax *= p->erelax;
   for (n = 0; n < nrelax; n++) {
     gfs_domain_homogeneous_bc (domain,
 			       FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-			       levelmin, dp, u);
-    gfs_relax (domain, d, levelmin, dp, res, dia);
+			       minlevel, dp, u);
+    gfs_relax (domain, p->dimension, minlevel, dp, res, dia);
   }
-  nrelax /= 2;
+  nrelax /= p->erelax;
 
   /* relax from top to bottom */
-  for (l = levelmin + 1; l <= depth; l++, nrelax /= 2) {
+  for (l = minlevel + 1; l <= p->depth; l++, nrelax /= p->erelax) {
     /* get initial guess from coarser grid */ 
     gfs_domain_cell_traverse (domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_NON_LEAFS, l - 1,
@@ -562,7 +637,7 @@ void gfs_poisson_cycle (GfsDomain * domain,
       gfs_domain_homogeneous_bc (domain, 
 				 FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 				 l, dp, u);
-      gfs_relax (domain, d, l, dp, res, dia);
+      gfs_relax (domain, p->dimension, l, dp, res, dia);
     }
   }
   /* correct on leaf cells */
@@ -572,7 +647,7 @@ void gfs_poisson_cycle (GfsDomain * domain,
 			    (FttCellTraverseFunc) correct, data);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, u);
   /* compute new residual on leaf cells */
-  gfs_residual (domain, d, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
+  gfs_residual (domain, p->dimension, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
 
   gts_object_destroy (GTS_OBJECT (dp));
 }

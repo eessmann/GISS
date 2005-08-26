@@ -26,27 +26,8 @@ extern "C" {
 
 #include "advection.h"
 #include "poisson.h"
-
-typedef struct _GfsMultilevelParams GfsMultilevelParams;
-
-struct _GfsMultilevelParams {
-  gdouble tolerance;
-  guint nrelax;
-  guint minlevel;
-  guint nitermax;
-
-  guint dimension;
-  guint niter;
-  GfsNorm residual_before, residual;
-};
-
 #include "variable.h"
 
-void          gfs_multilevel_params_init      (GfsMultilevelParams * par);
-void          gfs_multilevel_params_write     (GfsMultilevelParams * par, 
-					       FILE * fp);
-void          gfs_multilevel_params_read      (GfsMultilevelParams * par, 
-					       GtsFile * fp);
 void          gfs_correct_normal_velocities   (GfsDomain * domain,
 					       guint dimension,
 					       GfsVariable * p,

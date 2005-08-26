@@ -24,77 +24,6 @@
 #include "source.h"
 #include "solid.h"
 
-/**
- * gfs_multilevel_params_write:
- * @par: the multilevel parameters.
- * @fp: a file pointer.
- *
- * Writes in @fp a text representation of the multilevel parameters
- * @par.  
- */
-void gfs_multilevel_params_write (GfsMultilevelParams * par, FILE * fp)
-{
-  g_return_if_fail (par != NULL);
-  g_return_if_fail (fp != NULL);
-
-  fprintf (fp,
-           "{\n"
-	   "  tolerance = %g\n"
-	   "  nrelax    = %u\n"
-	   "  minlevel  = %u\n"
-	   "  nitermax  = %u\n"
-	   "}",
-	   par->tolerance,
-	   par->nrelax,
-	   par->minlevel,
-	   par->nitermax);
-}
-
-void gfs_multilevel_params_init (GfsMultilevelParams * par)
-{
-  g_return_if_fail (par != NULL);
-
-  par->tolerance = 1e-3;
-  par->nrelax    = 4;
-  par->minlevel  = 0;
-  par->nitermax  = 100;
-
-  par->dimension = FTT_DIMENSION;
-}
-
-void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
-{
-  GtsFileVariable var[] = {
-    {GTS_DOUBLE, "tolerance", TRUE},
-    {GTS_UINT,   "nrelax",    TRUE},
-    {GTS_UINT,   "minlevel",  TRUE},
-    {GTS_UINT,   "nitermax",  TRUE},
-    {GTS_NONE}
-  };
-
-  g_return_if_fail (par != NULL);
-  g_return_if_fail (fp != NULL);
-
-  var[0].data = &par->tolerance;
-  var[1].data = &par->nrelax;
-  var[2].data = &par->minlevel;
-  var[3].data = &par->nitermax;
-
-  gfs_multilevel_params_init (par);
-  gts_file_assign_variables (fp, var);
-  if (fp->type == GTS_ERROR)
-    return;
-
-  if (par->tolerance <= 0.) {
-    gts_file_variable_error (fp, var, "tolerance",
-			     "tolerance `%g' must be strictly positive",
-			     par->tolerance);
-    return;
-  }
-  if (par->nrelax == 0)
-    gts_file_variable_error (fp, var, "nrelax", "nrelax must be non zero");
-}
-
 static void reset_gradients (FttCell * cell, gpointer * data)
 {
   GfsVariable ** g = data[0];
@@ -262,7 +191,6 @@ void gfs_mac_projection (GfsDomain * domain,
 			 GfsVariable * p,
 			 GfsVariable ** g)
 {
-  guint minlevel, maxlevel;
   gdouble dt;
   gpointer data[2];
   GfsVariable * div, * dia, * res;
@@ -310,17 +238,14 @@ void gfs_mac_projection (GfsDomain * domain,
 #endif
 
   /* solve for pressure */
-  minlevel = domain->rootlevel;
-  if (par->minlevel > minlevel)
-    minlevel = par->minlevel;
-  maxlevel = gfs_domain_depth (domain);
+  par->depth = gfs_domain_depth (domain);
   gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res);
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res);
   par->niter = 0;
   while (par->residual.infty > par->tolerance && 
 	 par->niter < par->nitermax) {
-    gfs_poisson_cycle (domain, par->dimension, minlevel, maxlevel, par->nrelax, p, div, dia, res);
+    gfs_poisson_cycle (domain, par, p, div, dia, res);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res);
     par->niter++;
   }
@@ -425,7 +350,6 @@ void gfs_approximate_projection (GfsDomain * domain,
 				 GfsVariable * p,
 				 GfsVariable * res)
 {
-  guint minlevel, maxlevel;
   gpointer data[2];
   GfsVariable * dia, * div, * g[FTT_DIMENSION], * res1;
 
@@ -476,10 +400,7 @@ void gfs_approximate_projection (GfsDomain * domain,
 #endif
   
   /* solve for pressure */
-  minlevel = domain->rootlevel;
-  if (par->minlevel > minlevel)
-    minlevel = par->minlevel;
-  maxlevel = gfs_domain_depth (domain);
+  par->depth = gfs_domain_depth (domain);
   gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res1);
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
@@ -494,7 +415,7 @@ void gfs_approximate_projection (GfsDomain * domain,
 	     par->residual.second, 
 	     par->residual.infty);
 #endif
-    gfs_poisson_cycle (domain, par->dimension, minlevel, maxlevel, par->nrelax, p, div, dia, res1);
+    gfs_poisson_cycle (domain, par, p, div, dia, res1);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
     par->niter++;
   }

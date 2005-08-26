@@ -29,6 +29,26 @@ extern "C" {
 
 #include "domain.h"
 
+typedef struct _GfsMultilevelParams GfsMultilevelParams;
+
+struct _GfsMultilevelParams {
+  gdouble tolerance;
+  guint nrelax, erelax;
+  guint minlevel;
+  guint nitermax;
+
+  guint dimension;
+  guint niter;
+  guint depth;
+  GfsNorm residual_before, residual;
+};
+
+void                  gfs_multilevel_params_init     (GfsMultilevelParams * par);
+void                  gfs_multilevel_params_write    (GfsMultilevelParams * par, 
+						      FILE * fp);
+void                  gfs_multilevel_params_read     (GfsMultilevelParams * par, 
+						      GtsFile * fp);
+
 void                  gfs_relax                      (GfsDomain * domain,
 						      guint d,
 						      gint max_depth,
@@ -47,10 +67,7 @@ void                  gfs_poisson_coefficients       (GfsDomain * domain,
 						      GfsVariable * c,
 						      gdouble rho);
 void                  gfs_poisson_cycle              (GfsDomain * domain,
-						      guint d,
-						      guint levelmin,
-						      guint depth,
-						      guint nrelax,
+						      GfsMultilevelParams * p,
 						      GfsVariable * u,
 						      GfsVariable * rhs,
 						      GfsVariable * dia,

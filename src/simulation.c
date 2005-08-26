@@ -1331,7 +1331,6 @@ static void poisson_run (GfsSimulation * sim)
 {
   GfsDomain * domain;
   GfsVariable * dia, * div, * res = NULL, * res1, * p;
-  guint minlevel, maxlevel;
   GfsMultilevelParams * par = &sim->approx_projection_params;
   GSList * i;
 
@@ -1359,10 +1358,7 @@ static void poisson_run (GfsSimulation * sim)
   dia = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dia);
-  minlevel = domain->rootlevel;
-  if (par->minlevel > minlevel)
-    minlevel = par->minlevel;
-  maxlevel = gfs_domain_depth (domain);
+  par->depth = gfs_domain_depth (domain);
   gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res1);
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
@@ -1394,7 +1390,7 @@ static void poisson_run (GfsSimulation * sim)
     tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_domain_timer_start (domain, "poisson_cycle");
-    gfs_poisson_cycle (domain, par->dimension, minlevel, maxlevel, par->nrelax, p, div, dia, res1);
+    gfs_poisson_cycle (domain, par, p, div, dia, res1);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
     gfs_domain_timer_stop (domain, "poisson_cycle");
 
