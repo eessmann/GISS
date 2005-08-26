@@ -585,15 +585,15 @@ variable in time over the whole domain. You can do it like that:
   EventSum { start = 1 istep = 1 } U SUx
   EventSum { start = 1 istep = 1 } V SUy
   EventSum { start = 1 istep = 1 } W SUz
-  EventSum2 { start = 1 istep = 1 } U SU2x
-  EventSum2 { start = 1 istep = 1 } V SU2y
-  EventSum2 { start = 1 istep = 1 } W SU2z
+  EventSum { start = 1 istep = 1 } U*U SU2x
+  EventSum { start = 1 istep = 1 } V*V SU2y
+  EventSum { start = 1 istep = 1 } W*W SU2z
   OutputSimulation { start = end } simulation-sum { 
     variables = SUx,SUy,SUz,SU2x,SU2y,SU2z
   }
 \end{verbatim}
 which would add {\tt U} to {\tt SUx} at every timestep ({\tt istep = 1}) starting from
-time 1 ({\tt start = 1}) etc\dots and {\tt U2} to {\tt SU2x} at every timestep
+time 1 ({\tt start = 1}) etc\dots and {\tt U*U} to {\tt SU2x} at every timestep
 etc\dots The resulting sums are then written at the end of the
 simulation in the file {\tt simulation-sum}. This file can then be
 post-processed (using {\tt gfs2oogl} for example) to obtain averages,
@@ -748,7 +748,7 @@ comes to mind).
 
 \begin{verbatim}
 GfsBox {
-   top =    Boundary { BcDirichlet U 1 }
+   top =    Boundary { BcDirichlet U 0 }
    bottom = Boundary { BcDirichlet U 0 }
    left =   Boundary { BcDirichlet V 0 }
    right =  Boundary { BcDirichlet V 0 }
