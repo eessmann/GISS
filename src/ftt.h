@@ -578,7 +578,7 @@ FttCellFace ftt_cell_face (FttCell * cell,
 {
   FttCellFace f;
 
-  g_return_val_if_fail (cell != NULL, f);
+  g_assert (cell != NULL);
 
   f.cell = cell;
   f.neighbor = ftt_cell_neighbor (cell, d);

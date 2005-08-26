@@ -120,8 +120,6 @@ static GfsGradient interpolate_1D1 (FttCell * cell,
   GfsGradient p;
   FttCellFace f;
 
-  g_return_val_if_fail (cell != NULL, p);
-
   f = ftt_cell_face (cell, d);
   if (f.neighbor) {
     gdouble p2;
@@ -157,8 +155,6 @@ static GfsGradient interpolate_2D1 (FttCell * cell,
   gdouble a1, a2;
   FttCellFace f1, f2;
 
-  g_return_val_if_fail (cell != NULL, p);
-  
   f1 = ftt_cell_face (cell, d1);
   if (f1.neighbor)
     p1 = average_neighbor_value (&f1, v, &y1);
@@ -216,8 +212,8 @@ static Gradient gradient_fine_coarse (const FttCellFace * face,
   gint * dp;
 #endif /* FTT_3D */
 
-  g_return_val_if_fail (face != NULL, g);
-  g_return_val_if_fail (ftt_face_type (face) == FTT_FINE_COARSE, g);
+  g_assert (face != NULL);
+  g_assert (ftt_face_type (face) == FTT_FINE_COARSE);
 
   level = ftt_cell_level (face->cell);
   s = GFS_STATE (face->cell)->solid;

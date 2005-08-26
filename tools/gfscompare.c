@@ -61,7 +61,7 @@ GtsVertexClass * gfs_vertex_class (void)
 
 static void add_vertex (GSList * merged, GtsSurface * s)
 {
-  FttVector cm;
+  FttVector cm = {0., 0., 0.};
   gdouble ta = 0.;
   GtsVertex * v;
   GSList * i = merged;
