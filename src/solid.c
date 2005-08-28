@@ -740,22 +740,6 @@ void gfs_domain_init_solid_fractions (GfsDomain * domain,
     gts_object_destroy (GTS_OBJECT (p.status));
 }
 
-static gboolean pos_is_inside (FttVector * p, const FttCell * cell)
-{
-  FttVector p1, p2;
-  gdouble h = ftt_cell_size (cell)/2.;
-
-  ftt_cell_pos (cell, &p1);
-  p2.x = (p->x - p1.x)/h;
-  p2.y = (p->y - p1.y)/h;
-  p2.z = (p->z - p1.z)/h;
-  if (fabs (p2.x) > 1. || fabs (p2.y) > 1. || fabs (p2.z) > 1.) {
-    g_warning ("cell: (%g,%g,%g) p2: (%g,%g,%g)", p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
-    return FALSE;
-  }
-  return TRUE;
-}
-
 static gboolean check_area_fractions (const FttCell * root)
 {
   guint i, level;
@@ -768,13 +752,16 @@ static gboolean check_area_fractions (const FttCell * root)
   solid = GFS_STATE (root)->solid;
 
   if (solid) {
-    if (!pos_is_inside (&solid->cm, root)) {
+    GtsBBox bb;
+
+    ftt_cell_bbox (root, &bb);
+    if (!gts_bbox_point_is_inside (&bb, &solid->cm)) {
       g_warning ("file %s: line %d (%s): cm is not inside cell",
 		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION);
       ret = FALSE;
       g_assert_not_reached ();
     }
-    if (!pos_is_inside (&solid->ca, root)) {
+    if (!gts_bbox_point_is_inside (&bb, &solid->ca)) {
       g_warning ("file %s: line %d (%s): ca is not inside cell",
 		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION);
       ret = FALSE;
