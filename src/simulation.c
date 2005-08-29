@@ -939,13 +939,17 @@ void gfs_simulation_write (GfsSimulation * sim,
 
 static gdouble min_cfl (GfsSimulation * sim)
 {
-  gdouble cfl = sim->advection_params.cfl;
+  gdouble cfl = (sim->advection_params.scheme == GFS_NONE ?
+		 G_MAXDOUBLE :
+		 sim->advection_params.cfl);
   GSList * i = GFS_DOMAIN (sim)->variables;
   
   while (i) {
     GfsVariable * v = i->data;
 
-    if (GFS_IS_VARIABLE_TRACER (v) && GFS_VARIABLE_TRACER (v)->advection.cfl < cfl)
+    if (GFS_IS_VARIABLE_TRACER (v) && 
+	GFS_VARIABLE_TRACER (v)->advection.scheme != GFS_NONE &&
+	GFS_VARIABLE_TRACER (v)->advection.cfl < cfl)
       cfl = GFS_VARIABLE_TRACER (v)->advection.cfl;
     i = i->next;
   }
@@ -967,14 +971,16 @@ static gdouble min_cfl (GfsSimulation * sim)
  */
 void gfs_simulation_set_timestep (GfsSimulation * sim)
 {
-  gdouble t;
+  gdouble t, cfl;
   GSList * i;
 
   g_return_if_fail (sim != NULL);
 
   t = sim->time.t;
-  sim->advection_params.dt =
-    min_cfl (sim)*gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
+  if ((cfl = min_cfl (sim)) < G_MAXDOUBLE)
+    sim->advection_params.dt = cfl*gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
+  else
+    sim->advection_params.dt = G_MAXDOUBLE;
   if (sim->advection_params.dt > sim->time.dtmax)
     sim->advection_params.dt = sim->time.dtmax;
   sim->tnext = t + sim->advection_params.dt;
