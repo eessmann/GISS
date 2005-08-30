@@ -70,9 +70,9 @@ static void correct_normal_velocity (FttCellFace * face,
     GFS_VARIABLE (face->neighbor, gv[c]->i) += dp*GFS_FACE_FRACTION_RIGHT (face);
     break;
   case FTT_FINE_COARSE: {
-    /* fixme: does this work (FTT_CELLS/2?) for 2D3? */
     dp *= GFS_FACE_FRACTION_LEFT (face)/(FTT_CELLS/2);
     GFS_VARIABLE (face->neighbor, gv[c]->i) += dp;
+    g_assert (GFS_FACE_FRACTION_RIGHT (face) > 0.);
     GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp/GFS_FACE_FRACTION_RIGHT (face)*(*dt);
     break;
   }
@@ -90,8 +90,10 @@ static void scale_gradients (FttCell * cell, gpointer * data)
   if (GFS_IS_MIXED (cell)) {
     GfsSolidVector * s = GFS_STATE (cell)->solid;
 
-    for (c = 0; c < *dimension; c++)
+    for (c = 0; c < *dimension; c++) {
+      g_assert (s->s[2*c] + s->s[2*c + 1] > 0.);
       GFS_VARIABLE (cell, g[c]->i) /= s->s[2*c] + s->s[2*c + 1];
+    }
   }
   else {
     FttCellNeighbors n;

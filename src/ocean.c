@@ -302,14 +302,11 @@ static void gfs_free_surface_pressure (GfsDomain * domain,
   gfs_correct_centered_velocities (domain, 2, g, apar->dt/2.);
 }
 
-static void gfs_free_surface_divergence (GfsDomain * domain, GfsVariable * div)
+static void gfs_free_surface_divergence (GfsDomain * domain)
 {
-  GfsDomain * toplayer;
-
   g_return_if_fail (domain != NULL);
   g_return_if_fail (div != NULL);
 
-  toplayer = GFS_OCEAN (domain)->toplayer;
   gfs_domain_face_traverse (domain, FTT_XY,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
@@ -317,8 +314,6 @@ static void gfs_free_surface_divergence (GfsDomain * domain, GfsVariable * div)
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
 			    gfs_domain_velocity (domain));
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_normal_divergence_2D, div);
 }
 
 static void ocean_run (GfsSimulation * sim)
@@ -369,7 +364,9 @@ static void ocean_run (GfsSimulation * sim)
 
     gfs_simulation_set_timestep (sim);
 
-    gfs_free_surface_divergence (domain, div);
+    gfs_free_surface_divergence (domain);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_normal_divergence_2D, div);
 
     gfs_predicted_face_velocities (domain, 2, &sim->advection_params);
 
@@ -425,13 +422,7 @@ static void ocean_run (GfsSimulation * sim)
     sim->time.i++;
 
     gfs_domain_timer_start (domain, "free_surface_pressure");
-    gfs_domain_face_traverse (domain, FTT_XY,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
-    gfs_domain_face_traverse (domain, FTT_XY,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
-			      gfs_domain_velocity (domain));
+    gfs_free_surface_divergence (domain);
     gfs_free_surface_pressure (domain, &sim->approx_projection_params, &sim->advection_params,
 			       p, div, res, sim->physical_params.g);
     gfs_domain_timer_stop (domain, "free_surface_pressure");
@@ -992,7 +983,11 @@ static void ocean1_run (GfsSimulation * sim)
     tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_simulation_set_timestep (sim);
-    gfs_free_surface_divergence (domain, div);
+
+    gfs_free_surface_divergence (domain);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_normal_divergence_2D, div);
+
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
@@ -1019,13 +1014,7 @@ static void ocean1_run (GfsSimulation * sim)
     sim->time.i++;
 
     gfs_domain_timer_start (domain, "free_surface_pressure");
-    gfs_domain_face_traverse (domain, FTT_XY,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
-    gfs_domain_face_traverse (domain, FTT_XY,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity,
-			      gfs_domain_velocity (domain));
+    gfs_free_surface_divergence (domain);
     gfs_free_surface_pressure (domain, &sim->approx_projection_params, &sim->advection_params,
 			       p, div, res, sim->physical_params.g);
     gfs_domain_timer_stop (domain, "free_surface_pressure");
