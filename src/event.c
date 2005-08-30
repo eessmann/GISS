@@ -726,6 +726,7 @@ static void stream_from_vorticity (GfsDomain * domain,
   par.depth = gfs_domain_depth (domain);
   par.minlevel = 0;
   par.nrelax = 4;
+  par.erelax = 1;
   par.dimension = FTT_DIMENSION;
   while (norm.infty > tolerance && maxit) {
     gfs_poisson_cycle (domain, &par, stream, vorticity, dia, res);
