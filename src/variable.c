@@ -24,7 +24,6 @@
 static void variable_init_domain (GfsVariable * v, GfsDomain * domain)
 {
    v->i = gfs_domain_alloc (domain);
-   v->centered = TRUE;
    v->domain = domain;
 }
 
