@@ -565,7 +565,7 @@ static void cell_center (FttCell * cell, gpointer * data)
     GtsPoint * v;
 
     ftt_cell_pos (cell, &pos);
-    pos.z = /*-0.49;*/0.;
+    pos.z = 0.;
     v = gts_point_new (gts_point_class (), pos.x, pos.y, pos.z);
     if (gfs_domain_locate (domain, pos, -1) && 
 	closest_grid_is_insertable (grid, v, 0., 0.) == INSERTED)

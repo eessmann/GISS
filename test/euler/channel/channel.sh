@@ -14,7 +14,7 @@ for v in U V; do
     for level in 5 6; do
 	level1=`expr $level + 1`
 	echo -n "$level " >> order$v
-	if gfscompare2D -c -v sim-$level sim-$level1 $v 2>&1 | \
+	if gfscompare2D -v sim-$level sim-$level1 $v 2>&1 | \
 	    awk '{if ($1 == "total") print $4 " " $6 " " $8;}' >> order$v; then :
 	else
 	    exit 1
