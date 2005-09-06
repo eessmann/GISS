@@ -265,7 +265,8 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
   cc = g_strjoin (" ",
 		  cccommand, ftmpname, 
 		  "-o", foutname,
-		  "`awk '{"
+                  "`sed 's/@/#/g' <", finname,
+		  "| awk '{"
 		  "   if ($1 == \"#\" && $2 == \"link\") {"
 		  "     for (i = 3; i <= NF; i++) printf (\"%s \", $i);"
 		  "     print \"\" > \"/dev/stderr\";"
@@ -274,7 +275,7 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
 		  "     for (i = 2; i <= NF; i++) printf (\"%s \", $i);"
 		  "     print \"\" > \"/dev/stderr\";"
 		  "   } else print $0 > \"/dev/stderr\";"
-		  "}' <", finname, "2>", ftmpname, "` 2>",
+		  "}' 2>", ftmpname, "` 2>",
 		  ferrname, NULL);
   status = system (cc);
   g_free (cc);
