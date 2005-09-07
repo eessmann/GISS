@@ -2268,7 +2268,7 @@ static gboolean gfs_output_error_norm_event (GfsEvent * event,
     GfsNorm norm;
 
     if (v == NULL)
-      enorm->v = gfs_variable_new (gfs_variable_class (), GFS_DOMAIN (sim), NULL);
+      enorm->v = gfs_temporary_variable (GFS_DOMAIN (sim));
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
 			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
 			      output->maxlevel,
@@ -2359,24 +2359,24 @@ static gboolean gfs_output_correlation_event (GfsEvent * event,
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_error_norm_class ())->parent_class)->event)
       (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
-    GfsVariable * v = GFS_OUTPUT_ERROR_NORM (event)->v;
+    GfsOutputErrorNorm * enorm = GFS_OUTPUT_ERROR_NORM (event);
+    GfsVariable * v = enorm->v;
     gdouble bias = 0., sum = 0., sumref = 0.;
     gpointer data[4];
 
     if (GFS_DOMAIN (sim)->pid != -1)
       g_assert_not_implemented ();
 
-    if (GFS_OUTPUT_ERROR_NORM (event)->unbiased) {
-      GfsNorm enorm;
-
+    if (v == NULL)
+      enorm->v = gfs_temporary_variable (GFS_DOMAIN (sim));
+    if (enorm->unbiased) {
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER,
 				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
 				output->maxlevel,
 				(FttCellTraverseFunc) compute_error, output);
-      enorm = gfs_domain_norm_variable (GFS_DOMAIN (sim), v,
-					FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
-					output->maxlevel);
-      bias = enorm.bias;
+      bias = gfs_domain_norm_variable (GFS_DOMAIN (sim), enorm->v,
+				       FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
+				       output->maxlevel).bias;
     }
     data[0] = output;
     data[1] = &bias;
@@ -2386,6 +2386,10 @@ static gboolean gfs_output_correlation_event (GfsEvent * event,
 			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
 			      output->maxlevel,
 			      (FttCellTraverseFunc) compute_correlation, data);
+    if (v == NULL) {
+      gts_object_destroy (GTS_OBJECT (enorm->v));
+      enorm->v = NULL;
+    }
     fprintf (GFS_OUTPUT (event)->file->fp,
 	     "%s time: %g %10.3e\n",
 	     output->name, sim->time.t, sumref > 0. ? sum/sumref : 0.);
