@@ -56,7 +56,7 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
 
   par->tolerance = 1e-3;
   par->nrelax    = 4;
-  par->erelax    = 2;
+  par->erelax    = 1;
   par->minlevel  = 0;
   par->nitermax  = 100;
 
