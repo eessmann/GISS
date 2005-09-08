@@ -965,6 +965,8 @@ static void source_coriolis_destroy (GtsObject * o)
 
   if (GFS_SOURCE_CORIOLIS (o)->omegaz)
     gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CORIOLIS (o)->omegaz));
+  if (GFS_SOURCE_CORIOLIS (o)->drag)
+    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CORIOLIS (o)->drag));
 
   for (c = 0; c <  2; c++)
     if (GFS_SOURCE_CORIOLIS (o)->u[c])
@@ -1001,6 +1003,11 @@ static void gfs_source_coriolis_read (GtsObject ** o, GtsFile * fp)
   GFS_SOURCE_CORIOLIS (*o)->omegaz = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (GFS_SOURCE_CORIOLIS (*o)->omegaz, gfs_object_simulation (*o), fp);
 
+  if (fp->type != '\n') {
+    GFS_SOURCE_CORIOLIS (*o)->drag = gfs_function_new (gfs_function_class (), 0.);
+    gfs_function_read (GFS_SOURCE_CORIOLIS (*o)->drag, gfs_object_simulation (*o), fp);
+  }
+
 #if (!FTT_2D)
   gts_container_remove (GFS_SOURCE_VELOCITY (*o)->v[FTT_Z]->sources, GTS_CONTAINEE (*o));
 #endif /* 3D */ 
@@ -1011,8 +1018,12 @@ static void gfs_source_coriolis_read (GtsObject ** o, GtsFile * fp)
 
 static void gfs_source_coriolis_write (GtsObject * o, FILE * fp)
 {
+  GfsSourceCoriolis * s = GFS_SOURCE_CORIOLIS (o);
+
   (* GTS_OBJECT_CLASS (gfs_source_coriolis_class ())->parent_class->write) (o, fp);
-  gfs_function_write (GFS_SOURCE_CORIOLIS (o)->omegaz, fp);
+  gfs_function_write (s->omegaz, fp);
+  if (s->drag)
+    gfs_function_write (s->drag, fp);
 }
 
 static gdouble gfs_source_coriolis_mac_value (GfsSourceGeneric * s,
@@ -1129,8 +1140,15 @@ static void implicit_coriolis (FttCell * cell, GfsSourceCoriolis * s)
   c = sim->advection_params.dt*gfs_function_value (s->omegaz, cell)/2.;
   u = GFS_VARIABLE (cell, sv->v[0]->i);
   v = GFS_VARIABLE (cell, sv->v[1]->i);
-  GFS_VARIABLE (cell, sv->v[0]->i) = (u + c*v)/(1. + c*c);
-  GFS_VARIABLE (cell, sv->v[1]->i) = (v - c*u)/(1. + c*c);
+  if (s->drag) {
+    gdouble e = sim->advection_params.dt*gfs_function_value (s->drag, cell)/2.;
+    GFS_VARIABLE (cell, sv->v[0]->i) = (u + c*v/(1. + e))/((1. + e) + c*c/(1. + e));
+    GFS_VARIABLE (cell, sv->v[1]->i) = (v - c*u/(1. + e))/((1. + e) + c*c/(1. + e));
+  }
+  else {
+    GFS_VARIABLE (cell, sv->v[0]->i) = (u + c*v)/(1. + c*c);
+    GFS_VARIABLE (cell, sv->v[1]->i) = (v - c*u)/(1. + c*c);
+  }
 }
 
 /**

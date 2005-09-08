@@ -280,7 +280,7 @@ struct _GfsSourceCoriolis {
   GfsVariable * u[2];
 
   /*< public >*/
-  GfsFunction * omegaz;
+  GfsFunction * omegaz, * drag;
 };
 
 #define GFS_SOURCE_CORIOLIS(obj)            GTS_OBJECT_CAST (obj,\
