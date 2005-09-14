@@ -1205,13 +1205,13 @@ gdouble gfs_cell_dirichlet_value (FttCell * cell,
       return 0.;
 
     v0 = GFS_VARIABLE (cell, v->i);
-    p.x = (s->ca.x - p.x)/size;
-    p.y = (s->ca.y - p.y)/size;
     for (i = 0; i < N_CELLS - 1; i++) {
       a[i] = 0.;
       for (j = 0; j < N_CELLS - 1; j++)
 	a[i] += m[i][j]*(GFS_VARIABLE (n[j + 1], v->i) - v0);
     }
+    p.x = (s->ca.x - p.x)/size;
+    p.y = (s->ca.y - p.y)/size;
 #if FTT_2D
     return (a[0]*p.x + a[1]*p.y + a[2]*p.x*p.y + v0);
 #else /* 3D */
