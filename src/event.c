@@ -1821,7 +1821,9 @@ static void filter (FttCell * cell, GfsEventFilter * f)
 
 static void filtered (FttCell * cell, GfsEventFilter * f)
 {
-  GFS_VARIABLE (cell, f->v->i) = GFS_VARIABLE (cell, f->tmp->i);
+  gdouble dt = gfs_object_simulation (f)->advection_params.dt/f->scale;
+  GFS_VARIABLE (cell, f->v->i) = ((1. - dt)*GFS_VARIABLE (cell, f->v->i) +
+				  dt*GFS_VARIABLE (cell, f->tmp->i));
 }
 
 static gboolean gfs_event_filter_event (GfsEvent * event, GfsSimulation * sim)
@@ -1863,6 +1865,16 @@ static void gfs_event_filter_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   gts_file_next_token (fp);
+  
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (time scale)");
+    return;
+  }
+  if ((GFS_EVENT_FILTER (*o)->scale = atof (fp->token->str)) <= 0.) {
+    gts_file_error (fp, "time scale must be strictly positive");
+    return;
+  }  
+  gts_file_next_token (fp);
 }
 
 static void gfs_event_filter_write (GtsObject * o, FILE * fp)
@@ -1870,7 +1882,7 @@ static void gfs_event_filter_write (GtsObject * o, FILE * fp)
   if (GTS_OBJECT_CLASS (gfs_event_filter_class ())->parent_class->write)
     (* GTS_OBJECT_CLASS (gfs_event_filter_class ())->parent_class->write) 
       (o, fp);
-  fprintf (fp, " %s", GFS_EVENT_FILTER (o)->v->name);
+  fprintf (fp, " %s %g", GFS_EVENT_FILTER (o)->v->name, GFS_EVENT_FILTER (o)->scale);
 }
 
 static void gfs_event_filter_class_init (GfsEventClass * klass)

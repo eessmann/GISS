@@ -309,6 +309,7 @@ struct _GfsEventFilter {
 
   /*< public >*/
   GfsVariable * v;
+  gdouble scale;
 };
 
 #define GFS_EVENT_FILTER(obj)            GTS_OBJECT_CAST (obj,\

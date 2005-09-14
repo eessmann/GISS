@@ -200,6 +200,7 @@ void gfs_init (int * argc, char *** argv)
         gfs_source_hydrostatic_class ();
     gfs_remove_droplets_class ();
     gfs_remove_ponds_class ();
+    gfs_event_filter_class ();
    
     gfs_output_class ();
       gfs_output_time_class ();
