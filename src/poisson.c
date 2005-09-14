@@ -42,12 +42,14 @@ void gfs_multilevel_params_write (GfsMultilevelParams * par, FILE * fp)
            "  erelax    = %u\n"
 	   "  minlevel  = %u\n"
 	   "  nitermax  = %u\n"
+	   "  weighted  = %d\n"
 	   "}",
 	   par->tolerance,
 	   par->nrelax,
 	   par->erelax,
 	   par->minlevel,
-	   par->nitermax);
+	   par->nitermax,
+	   par->weighted);
 }
 
 void gfs_multilevel_params_init (GfsMultilevelParams * par)
@@ -61,6 +63,7 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
   par->nitermax  = 100;
 
   par->dimension = FTT_DIMENSION;
+  par->weighted = FALSE;
 }
 
 void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
@@ -71,6 +74,7 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
     {GTS_UINT,   "erelax",    TRUE},
     {GTS_UINT,   "minlevel",  TRUE},
     {GTS_UINT,   "nitermax",  TRUE},
+    {GTS_INT,    "weighted",  TRUE},
     {GTS_NONE}
   };
 
@@ -82,8 +86,8 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
   var[2].data = &par->erelax;
   var[3].data = &par->minlevel;
   var[4].data = &par->nitermax;
+  var[5].data = &par->weighted;
 
-  gfs_multilevel_params_init (par);
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR)
     return;

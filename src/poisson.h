@@ -40,6 +40,7 @@ struct _GfsMultilevelParams {
   guint dimension;
   guint niter;
   guint depth;
+  gboolean weighted;
   GfsNorm residual_before, residual;
 };
 
