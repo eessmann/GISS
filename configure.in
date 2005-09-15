@@ -421,9 +421,6 @@ src/dx3D.mdf
 tools/Makefile
 test/Makefile
 modules/Makefile
-test/poisson/Makefile
-test/poisson/convergence/Makefile
-test/poisson/order/Makefile
 test/advection/Makefile
 test/advection/graphic/Makefile
 test/advection/order/Makefile

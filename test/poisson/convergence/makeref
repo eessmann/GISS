@@ -1,8 +1,0 @@
-with G0
-autoscale
-with G1
-autoscale
-with G2
-autoscale
-saveall "/tmp/makeref.xmgr"
-exit
