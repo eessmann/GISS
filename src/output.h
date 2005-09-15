@@ -227,10 +227,6 @@ struct _GfsOutputScalarHistogram {
 
 GfsOutputClass * gfs_output_scalar_histogram_class  (void);
 
-/* GfsOutputEnergy: Header */
-
-GfsOutputClass * gfs_output_energy_class  (void);
-
 /* GfsOutputErrorNorm: Header */
 
 typedef struct _GfsOutputErrorNorm        GfsOutputErrorNorm;

@@ -215,7 +215,6 @@ void gfs_init (int * argc, char *** argv)
       gfs_output_location_class ();
       gfs_output_simulation_class ();
       gfs_output_boundaries_class ();
-      gfs_output_energy_class ();
       gfs_output_particle_class ();
 
       gfs_output_scalar_class ();
