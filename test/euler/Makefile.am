@@ -1,14 +1,15 @@
 ## Process this file with automake to produce Makefile.in
 
 TESTDIRS = \
+	poisson \
+	circle \
 	reynolds \
 	periodic \
 	merging \
 	boundaries \
 	channel \
 	spurious \
-	poisson \
-	circle
+	waves
 
 EXTRA_DIST = \
 	template.tex \
