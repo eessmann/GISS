@@ -138,7 +138,7 @@ EXTRA_DIST = \
 	dx.c \
 	isocube.h
 
-bin_PROGRAMS = gerris2D gerris3D gerris2D3 gerris2D_dir gerris3D_dir
+bin_PROGRAMS = gerris2D gerris3D gerris2D3
 
 gerris2D_SOURCES = gerris.c
 gerris2D_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
@@ -150,13 +150,6 @@ gerris3D_LDADD = $(GFS3D_LIBS)
 gerris2D3_SOURCES = gerris.c
 gerris2D3_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 gerris2D3_LDADD = $(GFS2D3_LIBS)
-
-gerris2D_dir_SOURCES = gerris_dir.c
-gerris2D_dir_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
-gerris2D_dir_LDADD = $(GFS2D_LIBS)
-
-gerris3D_dir_SOURCES = gerris_dir.c
-gerris3D_dir_LDADD = $(GFS3D_LIBS)
 
 .mdf.c:
 	$(MDF2C) $^ > $@
