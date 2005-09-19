@@ -68,7 +68,10 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-if (Curve('res-7',1,3) - Curve('res-7.ref',1,3)).max() > 1e-8 or\
+c = Curve()
+for p in Curve('res-7.ref',1,3).l:
+    c.l.append((p[0]+0.1, p[1]))
+if (Curve('res-7',1,3) - c).max() > 1e-8 or\
    (Curve('error',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
     exit(1)
 EOF
