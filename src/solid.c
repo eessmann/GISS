@@ -206,7 +206,6 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
   solid->a = a;
 }
 
-#if FTT_2D
 static void triangle_face_intersection (GtsTriangle * t, CellFace * f)
 {
   guint i;
@@ -222,15 +221,26 @@ static void triangle_face_intersection (GtsTriangle * t, CellFace * f)
   }
 }
 
-static void set_solid_fractions_from_surface (FttCell * cell,
+/**
+ * gfs_set_2D_solid_fractions_from_surface:
+ * @cell: a #FttCell.
+ * @s: a #GtsSurface.
+ *
+ * Sets the 2D volume fractions of @cell cut by @s.
+ */
+void gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
 					      GtsSurface * s)
 {
-  GfsSolidVector * solid = GFS_STATE (cell)->solid;
+  GfsSolidVector * solid;
   FttVector h;
   FttVector p;
   CellFace f;
   guint i, n1 = 0;
 
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (s != NULL);
+
+  solid = GFS_STATE (cell)->solid;
   ftt_cell_pos (cell, &p);
   h.x = h.y = ftt_cell_size (cell);
   f.p[0].x = p.x - h.x/2.; f.p[0].y = p.y - h.y/2.; f.p[0].z = 0.;
@@ -269,6 +279,9 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 	   "the surface is probably not closed (n1 = %d)", n1);
   }
 }
+
+#if FTT_2D /* 2D */
+# define set_solid_fractions_from_surface gfs_set_2D_solid_fractions_from_surface
 #else /* 2D3 or 3D */
 #include "isocube.h"
 
@@ -327,7 +340,7 @@ static void cell_size (FttCell * cell, FttVector * h)
 #endif /* 3D */
 }
 
-static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
+static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
   CellCube cube;
@@ -482,6 +495,8 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s)
     }
   }
 }
+
+# define set_solid_fractions_from_surface set_solid_fractions_from_surface3D
 #endif /* 2D3 or 3D */
 
 static gdouble solid_sa (GfsSolidVector * s)
@@ -756,8 +771,11 @@ static gboolean check_area_fractions (const FttCell * root)
 
     ftt_cell_bbox (root, &bb);
     if (!gts_bbox_point_is_inside (&bb, &solid->cm)) {
-      g_warning ("file %s: line %d (%s): cm is not inside cell",
-		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION);
+      g_warning ("file %s: line %d (%s): cm (%g,%g,%g) is not inside cell [(%g,%g,%g),(%g,%g,%g)]",
+		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		 solid->cm.x, solid->cm.y, solid->cm.z,
+		 bb.x1, bb.y1, bb.z1, 
+		 bb.x2, bb.y2, bb.z2);
       ret = FALSE;
       g_assert_not_reached ();
     }
