@@ -388,16 +388,19 @@ static void refine_height_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_refine_height_class ())->parent_class->destroy) (object);
 }
 
-static gdouble point_height (GtsPoint * p, GtsSurface * surface, GtsFace ** guess)
+static gdouble interpolated_value (GtsSurface * s, FttVector * p)
 {
-  GtsFace * f = gts_point_locate (p, surface, *guess);
+  GtsPoint q;
+  GtsFace * t;
 
-  if (f != NULL) {
-    *guess = f;
-    gts_triangle_interpolate_height (GTS_TRIANGLE (f), p);
-    return p->z;
+  q.x = p->x; q.y = p->y;
+  t = gts_point_locate (&q, s, NULL);
+  if (t == NULL) {
+    g_warning ("cannot locate point (%g,%g)", p->x, p->y);
+    return 0.;
   }
-  return 0.;
+  gts_triangle_interpolate_height (GTS_TRIANGLE (t), &q);
+  return q.z;
 }
 
 static gdouble cell_height (FttCell * cell, 
@@ -405,22 +408,9 @@ static gdouble cell_height (FttCell * cell,
 			    GfsSimulation * sim,
 			    GfsRefineSurface * refine)
 {
-  GtsFace * guess = NULL;
-  gdouble h = ftt_cell_size (cell)/2.;
   FttVector pos;
-  GtsPoint p;
-  static guint dp[4][2] = {{ -1, -1}, {1, -1}, {1, 1}, {-1, 1}}, i;
-  gdouble min = G_MAXDOUBLE;
-
   ftt_cell_pos (cell, &pos);
-  for (i = 0; i < 4; i++) {
-    gdouble v;
-    p.x = pos.x + h*dp[i][0]; p.y = pos.y + h*dp[i][1];
-    v = point_height (&p, refine->surface, &guess);
-    if (v < min)
-      min = v;
-  }
-  return min;
+  return interpolated_value (refine->surface, &pos);
 }
 
 static void refine_height_read (GtsObject ** o, GtsFile * fp)
@@ -434,12 +424,6 @@ static void refine_height_read (GtsObject ** o, GtsFile * fp)
   }
 
   (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->read) (o, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-  
-  if (gts_surface_volume (GFS_REFINE_SURFACE (*o)->surface) < 0.)
-    gts_surface_foreach_face (GFS_REFINE_SURFACE (*o)->surface, 
-			      (GtsFunc) gts_triangle_revert, NULL);
 }
 
 static void gfs_refine_height_class_init (GfsRefineClass * klass)
