@@ -137,7 +137,6 @@ void gfs_init (int * argc, char *** argv)
   /* Instantiates classes before reading any domain or simulation file */
   gfs_simulation_class ();
     gfs_ocean_class ();
-    gfs_ocean1_class ();
     gfs_advection_class ();
     gfs_poisson_class ();
 
@@ -197,7 +196,9 @@ void gfs_init (int * argc, char *** argv)
         gfs_source_friction_class ();
         gfs_source_coriolis_class ();
         gfs_source_tension_class ();
+#if !FTT_2D
         gfs_source_hydrostatic_class ();
+#endif /* 2D3 or 3D */
     gfs_remove_droplets_class ();
     gfs_remove_ponds_class ();
     gfs_event_filter_class ();

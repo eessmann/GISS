@@ -46,6 +46,9 @@ struct _GfsOcean {
 						 gfs_ocean_class ()))
 
 GfsSimulationClass * gfs_ocean_class          (void);
+
+#if !FTT_2D
+
 void                 gfs_hydrostatic_pressure (GfsDomain * domain,
 					       GfsVariable * p,
 					       GfsVariable * rho,
@@ -72,6 +75,8 @@ struct _GfsSourceHydrostatic {
 						 gfs_source_hydrostatic_class ()))
 
 GfsSourceGenericClass * gfs_source_hydrostatic_class    (void);
+
+#endif /* 2D3 or 3D */
 
 /* GfsSourceFriction: Header */
 
@@ -115,10 +120,6 @@ struct _GfsBcFlather {
 						 gfs_bc_flather_class ()))
 
 GfsBcClass * gfs_bc_flather_class  (void);
-
-/* GfsOcean1: Header */
-
-GfsSimulationClass * gfs_ocean1_class          (void);
 
 #ifdef __cplusplus
 }
