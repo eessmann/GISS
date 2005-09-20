@@ -640,6 +640,39 @@ static gdouble cell_z (FttCell * cell, FttCellFace * face)
   return p.z;
 }
 
+static gdouble cell_cx (FttCell * cell, FttCellFace * face)
+{
+  FttVector p;
+
+  if (face && face->d/2 == 0)
+    ftt_face_pos (face, &p);
+  else
+    ftt_cell_pos (cell, &p);
+  return p.x;
+}
+
+static gdouble cell_cy (FttCell * cell, FttCellFace * face)
+{
+  FttVector p;
+
+  if (face && face->d/2 == 1)
+    ftt_face_pos (face, &p);
+  else
+    ftt_cell_pos (cell, &p);
+  return p.y;
+}
+
+static gdouble cell_cz (FttCell * cell, FttCellFace * face)
+{
+  FttVector p;
+
+  if (face && face->d/2 == 2)
+    ftt_face_pos (face, &p);
+  else
+    ftt_cell_pos (cell, &p);
+  return p.z;
+}
+
 static gdouble cell_t (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   return sim->time.t;
@@ -699,6 +732,9 @@ static void gfs_simulation_init (GfsSimulation * object)
     { "x",          cell_x },
     { "y",          cell_y },
     { "z",          cell_z },
+    { "cx",         cell_cx },
+    { "cy",         cell_cy },
+    { "cz",         cell_cz },
     { "t",          cell_t },
     { "Vorticity",  cell_vorticity },
     { "Divergence", cell_divergence },

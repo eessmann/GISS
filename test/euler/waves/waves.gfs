@@ -51,8 +51,8 @@
     P = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x);
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx);
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -106,8 +106,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -30*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -30*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -120,8 +120,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -29*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -29*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -134,8 +134,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -28*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -28*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -148,8 +148,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -27*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -27*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -162,8 +162,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -26*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -26*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -176,8 +176,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -25*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -25*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -190,8 +190,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -24*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -24*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -204,8 +204,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -23*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -23*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -218,8 +218,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -22*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -22*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -232,8 +232,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -21*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -21*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -246,8 +246,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -20*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -20*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -260,8 +260,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -19*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -19*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -274,8 +274,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -18*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -18*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -288,8 +288,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -17*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -17*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -302,8 +302,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -16*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -16*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -316,8 +316,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -15*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -15*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -330,8 +330,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -14*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -14*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -344,8 +344,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -13*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -13*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -358,8 +358,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -12*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -12*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -372,8 +372,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -11*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -11*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -386,8 +386,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -10*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -10*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -400,8 +400,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -9*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -9*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -414,8 +414,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -8*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -8*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -428,8 +428,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -7*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -7*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -442,8 +442,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -6*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -6*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -456,8 +456,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -5*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -5*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -470,8 +470,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -4*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -4*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -484,8 +484,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -3*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -3*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -498,8 +498,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -2*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -2*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -512,8 +512,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + -1*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + -1*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -526,8 +526,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 0*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 0*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -540,8 +540,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 0.1*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 0.1*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -554,8 +554,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 0.2*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 0.2*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -568,8 +568,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 0.3*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 0.3*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -582,8 +582,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 0.4*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 0.4*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -596,8 +596,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 0.5*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 0.5*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -610,8 +610,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 0.6*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 0.6*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -624,8 +624,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 0.7*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 0.7*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -638,8 +638,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 0.8*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 0.8*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -652,8 +652,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 0.9*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 0.9*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -666,8 +666,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 1*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 1*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -680,8 +680,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 1.1*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 1.1*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -694,8 +694,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 1.2*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 1.2*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -708,8 +708,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 1.3*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 1.3*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -722,8 +722,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 1.4*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 1.4*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -736,8 +736,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 1.5*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 1.5*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -750,8 +750,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 1.6*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 1.6*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -764,8 +764,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 1.7*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 1.7*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -778,8 +778,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 1.8*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 1.8*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -792,8 +792,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 1.9*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 1.9*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -806,8 +806,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 2*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 2*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -820,8 +820,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 2.1*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 2.1*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -834,8 +834,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 2.2*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 2.2*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -848,8 +848,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 2.3*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 2.3*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -862,8 +862,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 2.4*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 2.4*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -876,8 +876,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 2.5*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 2.5*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -890,8 +890,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 2.6*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 2.6*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -904,8 +904,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 2.7*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 2.7*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -918,8 +918,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 2.8*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 2.8*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -932,8 +932,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 2.9*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 2.9*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -946,8 +946,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 3*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 3*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -960,8 +960,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 3.1*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 3.1*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -974,8 +974,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 3.2*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 3.2*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -988,8 +988,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 3.3*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 3.3*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1002,8 +1002,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 3.4*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 3.4*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1016,8 +1016,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 3.5*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 3.5*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1030,8 +1030,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 3.6*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 3.6*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1044,8 +1044,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 3.7*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 3.7*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1058,8 +1058,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 3.8*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 3.8*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1072,8 +1072,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 3.9*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 3.9*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1086,8 +1086,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 4*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 4*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1100,8 +1100,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 4.1*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 4.1*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1114,8 +1114,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 4.2*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 4.2*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1128,8 +1128,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 4.3*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 4.3*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1142,8 +1142,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 4.4*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 4.4*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1156,8 +1156,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 4.5*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 4.5*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1170,8 +1170,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 4.6*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 4.6*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1184,8 +1184,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 4.7*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 4.7*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1198,8 +1198,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 4.8*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 4.8*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1212,8 +1212,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 4.9*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 4.9*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1226,8 +1226,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 5*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 5*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1240,8 +1240,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 6*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 6*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1254,8 +1254,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 7*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 7*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1268,8 +1268,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 8*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 8*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1282,8 +1282,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 9*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 9*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1296,8 +1296,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 10*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 10*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1310,8 +1310,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 11*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 11*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1324,8 +1324,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 12*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 12*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1338,8 +1338,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 13*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 13*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1352,8 +1352,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 14*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 14*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1366,8 +1366,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 15*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 15*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1380,8 +1380,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 16*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 16*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1394,8 +1394,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 17*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 17*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1408,8 +1408,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 18*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 18*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1422,8 +1422,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 19*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 19*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1436,8 +1436,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 20*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 20*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1450,8 +1450,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 21*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 21*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1464,8 +1464,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 22*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 22*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1478,8 +1478,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 23*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 23*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1492,8 +1492,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 24*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 24*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1506,8 +1506,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 25*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 25*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1520,8 +1520,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 26*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 26*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1534,8 +1534,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 27*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 27*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1548,8 +1548,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 28*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 28*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1562,8 +1562,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 29*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 29*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
@@ -1576,8 +1576,8 @@
     s = {
       @include <gsl/gsl_sf_bessel.h>
       @link -lgsl -lgslcblas
-      double theta = atan2(y,x) + 30*M_PI/180.;
-      double r = sqrt (x*x + y*y);
+      double theta = atan2(cy,cx) + 30*M_PI/180.;
+      double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
       double A = 1./2555510.;
