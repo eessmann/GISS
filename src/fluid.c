@@ -1820,11 +1820,12 @@ static void face_overlaps_box (GtsTriangle * t, gpointer * data)
  * gfs_cell_is_cut:
  * @cell: a #FttCell.
  * @s: a #GtsSurface.
+ * @flatten: if set to %TRUE, @cell is flattened in the z direction.
  *
  * Returns: a new #GtsSurface containing the faces of @s which may
  * intersect @cell or %NULL if no faces of @s intersects @cell.
  */
-GtsSurface * gfs_cell_is_cut (FttCell * cell, GtsSurface * s)
+GtsSurface * gfs_cell_is_cut (FttCell * cell, GtsSurface * s, gboolean flatten)
 {
   GtsSurface * s1 = NULL;
   gpointer data[2];
@@ -1834,6 +1835,8 @@ GtsSurface * gfs_cell_is_cut (FttCell * cell, GtsSurface * s)
   g_return_val_if_fail (s != NULL, NULL);
 
   ftt_cell_bbox (cell, &bb);
+  if (flatten)
+    bb.z1 = bb.z2 = 0.;
   data[0] = &bb;
   data[1] = &s1;
   gts_surface_foreach_face (s, (GtsFunc) face_overlaps_box, data);
@@ -1845,9 +1848,10 @@ static void cell_traverse_cut (FttCell * cell,
 			       FttTraverseType order,
 			       FttTraverseFlags flags,
 			       FttCellTraverseCutFunc func,
-			       gpointer data)
+			       gpointer data,
+			       gboolean flatten)
 {
-  GtsSurface * s1 = gfs_cell_is_cut (cell, s);
+  GtsSurface * s1 = gfs_cell_is_cut (cell, s, flatten);
 
   if (s1 == NULL)
     return;
@@ -1864,7 +1868,7 @@ static void cell_traverse_cut (FttCell * cell,
       FttCell * c = &(children->cell[n]);
 
       if (!FTT_CELL_IS_DESTROYED (c))
-	cell_traverse_cut (c, s1, order, flags, func, data);
+	cell_traverse_cut (c, s1, order, flags, func, data, flatten);
     }
   }
   if (order == FTT_POST_ORDER &&
@@ -1899,7 +1903,36 @@ void gfs_cell_traverse_cut (FttCell * root,
   g_return_if_fail (s != NULL);
   g_return_if_fail (func != NULL);
 
-  cell_traverse_cut (root, s, order, flags, func, data);
+  cell_traverse_cut (root, s, order, flags, func, data, FALSE);
+}
+
+/**
+ * gfs_cell_traverse_cut_2D:
+ * @root: the root #FttCell of the tree to traverse.
+ * @s: a #GtsSurface.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ * 
+ * Traverses a cell tree starting at the given root #FttCell. Calls
+ * the given function for each cell cut by @s.
+ *
+ * The cells are "flattened" in the z-direction.
+ */
+void gfs_cell_traverse_cut_2D (FttCell * root,
+			       GtsSurface * s,
+			       FttTraverseType order,
+			       FttTraverseFlags flags,
+			       FttCellTraverseCutFunc func,
+			       gpointer data)
+{
+  g_return_if_fail (root != NULL);
+  g_return_if_fail (s != NULL);
+  g_return_if_fail (func != NULL);
+
+  cell_traverse_cut (root, s, order, flags, func, data, TRUE);
 }
 
 /**

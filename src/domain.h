@@ -124,6 +124,12 @@ void         gfs_domain_traverse_cut          (GfsDomain * domain,
 					       FttTraverseFlags flags,
 					       FttCellTraverseCutFunc func,
 					       gpointer data);
+void         gfs_domain_traverse_cut_2D       (GfsDomain * domain,
+					       GtsSurface * s,
+					       FttTraverseType order,
+					       FttTraverseFlags flags,
+					       FttCellTraverseCutFunc func,
+					       gpointer data);
 void         gfs_domain_face_traverse         (GfsDomain * domain,
 					       FttComponent c,
 					       FttTraverseType order,
