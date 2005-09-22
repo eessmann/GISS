@@ -173,7 +173,7 @@ struct _GfsEventHarmonic {
   GfsEvent parent;
 
   GArray * omega;
-  GfsVariable * v, * z, ** A, ** B;
+  GfsVariable * v, * z, * e, ** A, ** B;
   gdouble * vsin, * vcos, ** M, ** iM, ** Mn, * x, * a;
   gchar * Aname, * Bname;
   gboolean invertible;
