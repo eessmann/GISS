@@ -18,7 +18,7 @@ if ! $donotrun; then
     done
 fi
 
-echo "Save solution.eps { format = EPS }" | gfsview-batch2D -S sim-7 solution.gfv
+echo "Save solution.eps { format = EPS }" | gfsview-batch2D sim-7 solution.gfv
 
 awk 'BEGIN {
   print "\\begin{tabular}{|c|c|c|}"
