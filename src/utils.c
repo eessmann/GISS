@@ -432,18 +432,20 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	fprintf (fin, "  double %s;\n", v->name);
 	i = i->next;
       }
-      fputs ("  if (cell) {\n", fin);
-      i = lv;
-      while (i) {
-	GfsVariable * v = i->data;
-	fprintf (fin, "    %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
-	i = i->next;
+      if (lv) {
+	fputs ("  g_return_val_if_fail (cell != NULL, 0.);\n", fin);
+	i = lv;
+	while (i) {
+	  GfsVariable * v = i->data;
+	  fprintf (fin, "  %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
+	  i = i->next;
+	}
+	g_slist_free (lv);
       }
-      g_slist_free (lv);
       i = ldv;
       while (i) {
 	GfsDerivedVariable * v = i->data;
-	fprintf (fin, "    %s = (* (Func) %p) (cell, face, sim, ", v->name, v->func);
+	fprintf (fin, "  %s = (* (Func) %p) (cell, face, sim, ", v->name, v->func);
 	if (v->data)
 	  fprintf (fin, "%p);\n", v->data);
 	else
@@ -451,7 +453,6 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	i = i->next;
       }
       g_slist_free (ldv);
-      fputs ("  }\n", fin);
     }
     fprintf (fin, "#line %d \"GfsFunction\"\n", fp->line);
 

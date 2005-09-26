@@ -611,6 +611,8 @@ static gdouble cell_x (FttCell * cell, FttCellFace * face)
 {
   FttVector p;
 
+  g_return_val_if_fail (cell != NULL || face != NULL, 0.);
+
   if (face && face->d/2 == 0)
     ftt_face_pos (face, &p);
   else
@@ -621,6 +623,8 @@ static gdouble cell_x (FttCell * cell, FttCellFace * face)
 static gdouble cell_y (FttCell * cell, FttCellFace * face)
 {
   FttVector p;
+
+  g_return_val_if_fail (cell != NULL || face != NULL, 0.);
 
   if (face && face->d/2 == 1)
     ftt_face_pos (face, &p);
@@ -633,6 +637,8 @@ static gdouble cell_z (FttCell * cell, FttCellFace * face)
 {
   FttVector p;
 
+  g_return_val_if_fail (cell != NULL || face != NULL, 0.);
+
   if (face && face->d/2 == 2)
     ftt_face_pos (face, &p);
   else
@@ -643,6 +649,8 @@ static gdouble cell_z (FttCell * cell, FttCellFace * face)
 static gdouble cell_cx (FttCell * cell, FttCellFace * face)
 {
   FttVector p;
+
+  g_return_val_if_fail (cell != NULL || face != NULL, 0.);
 
   if (face && face->d/2 == 0)
     ftt_face_pos (face, &p);
@@ -655,6 +663,8 @@ static gdouble cell_cy (FttCell * cell, FttCellFace * face)
 {
   FttVector p;
 
+  g_return_val_if_fail (cell != NULL || face != NULL, 0.);
+
   if (face && face->d/2 == 1)
     ftt_face_pos (face, &p);
   else
@@ -665,6 +675,8 @@ static gdouble cell_cy (FttCell * cell, FttCellFace * face)
 static gdouble cell_cz (FttCell * cell, FttCellFace * face)
 {
   FttVector p;
+
+  g_return_val_if_fail (cell != NULL || face != NULL, 0.);
 
   if (face && face->d/2 == 2)
     ftt_face_pos (face, &p);
@@ -705,6 +717,7 @@ static gdouble cell_level (FttCell * cell)
 
 static gdouble cell_fraction (FttCell * cell)
 {
+  g_return_val_if_fail (cell != NULL, 0.);
   return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
 }
 
