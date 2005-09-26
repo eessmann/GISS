@@ -213,8 +213,8 @@ struct _GfsOutputScalarHistogram {
   GfsOutputScalar parent;
   
   /*< public >*/
-  gdouble * x, * y, W;
-  GfsFunction * w;
+  gdouble * x, * y, * w, W;
+  GfsFunction * wf, * yf;
   gdouble last, dt;
   guint n;
 };

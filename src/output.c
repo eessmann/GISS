@@ -1881,9 +1881,13 @@ static void gfs_output_scalar_histogram_destroy (GtsObject * o)
   GfsOutputScalarHistogram * output = GFS_OUTPUT_SCALAR_HISTOGRAM (o);
 
   g_free (output->x);
-  g_free (output->y);
-  if (output->w)
-    gts_object_destroy (GTS_OBJECT (output->w));
+  g_free (output->w);
+  if (output->wf)
+    gts_object_destroy (GTS_OBJECT (output->wf));
+  if (output->yf) {
+    gts_object_destroy (GTS_OBJECT (output->yf));
+    g_free (output->y);
+  }
 
   (* GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class->destroy) (o);
 }
@@ -1938,8 +1942,18 @@ static void gfs_output_scalar_histogram_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
       gts_file_next_token (fp);
-      output->w = gfs_function_new (gfs_function_class (), 0.);
-      gfs_function_read (output->w, gfs_object_simulation (*o), fp);
+      output->wf = gfs_function_new (gfs_function_class (), 0.);
+      gfs_function_read (output->wf, gfs_object_simulation (*o), fp);
+    }
+    else if (!strcmp (fp->token->str, "y")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      output->yf = gfs_function_new (gfs_function_class (), 0.);
+      gfs_function_read (output->yf, gfs_object_simulation (*o), fp);
     }
     else {
       gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
@@ -1956,7 +1970,9 @@ static void gfs_output_scalar_histogram_read (GtsObject ** o, GtsFile * fp)
   gts_file_next_token (fp);
 
   output->x = g_malloc0 (output->n*sizeof (gdouble));
-  output->y = g_malloc0 (output->n*sizeof (gdouble));
+  output->w = g_malloc0 (output->n*sizeof (gdouble));
+  if (output->yf)
+    output->y = g_malloc0 (output->n*sizeof (gdouble));
 }
 
 static void gfs_output_scalar_histogram_write (GtsObject * o, FILE * fp)
@@ -1966,9 +1982,13 @@ static void gfs_output_scalar_histogram_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_output_scalar_histogram_class ())->parent_class->write) (o, fp);
 
   fprintf (fp, " { n = %d", output->n);
-  if (output->w) {
+  if (output->wf) {
     fputs (" w = ", fp);
-    gfs_function_write (output->w, fp);
+    gfs_function_write (output->wf, fp);
+  }
+  if (output->yf) {
+    fputs (" y = ", fp);
+    gfs_function_write (output->yf, fp);
   }
   fputs (" }", fp);
 }
@@ -1982,14 +2002,16 @@ static void update_histogram (FttCell * cell, GfsOutputScalar * h)
   if (i >= 0 && i < hi->n) {
     gdouble w = hi->dt;
 
-    if (hi->w)
-      w *= gfs_function_value (hi->w, cell);
+    if (hi->wf)
+      w *= gfs_function_value (hi->wf, cell);
     else
       w *= gfs_cell_volume (cell);
 
     hi->W += w;
+    hi->w[i] += w;
     hi->x[i] += v*w;
-    hi->y[i] += w;
+    if (hi->yf)
+      hi->y[i] += w*gfs_function_value (hi->yf, cell);
   }
 }
 
@@ -2017,8 +2039,12 @@ static gboolean gfs_output_scalar_histogram_event (GfsEvent * event,
       if (output->file && !output->dynamic)
 	output->file->fp = freopen (output->format, "w", output->file->fp);
       for (i = 0; i < h->n; i++)
-	if (h->y[i] > 0.)
-	  fprintf (output->file->fp, "%g %g\n", h->x[i]/h->y[i], h->y[i]/h->W);
+	if (h->w[i] > 0.) {
+	  fprintf (output->file->fp, "%g %g", h->x[i]/h->w[i], h->w[i]/h->W);
+	  if (h->yf)
+	    fprintf (output->file->fp, " %g", h->y[i]/h->w[i]);
+	  fputc ('\n', output->file->fp);
+	}
       if (output->file && !output->dynamic)
 	fflush (output->file->fp);
     }
@@ -2041,7 +2067,6 @@ static void gfs_output_scalar_histogram_init (GfsOutputScalarHistogram * object)
   GFS_OUTPUT_SCALAR (object)->min = -1.;
   GFS_OUTPUT_SCALAR (object)->max =  1.;
   GFS_OUTPUT_SCALAR (object)->autoscale = FALSE;
-  object->x = object->y = NULL;
   object->n = 100;
   object->W = 0.;
   object->last = -1.;
