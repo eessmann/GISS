@@ -143,6 +143,7 @@ void gfs_init (int * argc, char *** argv)
   gfs_variable_class ();
     gfs_variable_tracer_class ();
     gfs_variable_residual_class ();
+    gfs_variable_filtered_class ();
 
   gfs_surface_bc_class ();
 

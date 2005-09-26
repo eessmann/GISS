@@ -107,6 +107,27 @@ GfsVariableClass * gfs_variable_tracer_class  (void);
 
 GfsVariableClass * gfs_variable_residual_class  (void);
 
+/* GfsVariableFiltered: header */
+
+typedef struct _GfsVariableFiltered                GfsVariableFiltered;
+
+struct _GfsVariableFiltered {
+  /*< private >*/
+  GfsVariable parent;
+
+  /*< public >*/
+  GfsVariable * v;
+  guint niter;
+};
+
+#define GFS_VARIABLE_FILTERED(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsVariableFiltered,\
+					           gfs_variable_filtered_class ())
+#define GFS_IS_VARIABLE_FILTERED(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_filtered_class ()))
+
+GfsVariableClass * gfs_variable_filtered_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

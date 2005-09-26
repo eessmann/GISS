@@ -307,3 +307,124 @@ GfsVariableClass * gfs_variable_residual_class (void)
 
   return klass;
 }
+
+/* GfsVariableFiltered: object */
+
+static void variable_filtered_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsDomain * domain;
+
+  (* GTS_OBJECT_CLASS (gfs_variable_filtered_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (v)");
+    return;
+  }
+  domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  if (!(GFS_VARIABLE_FILTERED (*o)->v = 
+	gfs_variable_from_name (domain->variables, fp->token->str))) {
+    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+
+  if (fp->type != GTS_INT) {
+    gts_file_error (fp, "expecting a number (niter)");
+    return;
+  }
+  GFS_VARIABLE_FILTERED (*o)->niter = atoi (fp->token->str);
+  gts_file_next_token (fp);
+}
+
+static void variable_filtered_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_filtered_class ())->parent_class->write) (o, fp);
+
+  fprintf (fp, " %s %d", GFS_VARIABLE_FILTERED (o)->v->name, GFS_VARIABLE_FILTERED (o)->niter);
+}
+
+static void filter (FttCell * cell, gpointer * data)
+{
+  FttDirection d[4*(FTT_DIMENSION - 1)][FTT_DIMENSION] = {
+#if FTT_2D
+    {FTT_RIGHT, FTT_TOP}, {FTT_RIGHT, FTT_BOTTOM}, {FTT_LEFT, FTT_TOP}, {FTT_LEFT, FTT_BOTTOM}
+#else
+    {FTT_RIGHT, FTT_TOP, FTT_FRONT}, {FTT_RIGHT, FTT_BOTTOM, FTT_FRONT}, 
+    {FTT_LEFT, FTT_TOP, FTT_FRONT}, {FTT_LEFT, FTT_BOTTOM, FTT_FRONT},
+    {FTT_RIGHT, FTT_TOP, FTT_BACK}, {FTT_RIGHT, FTT_BOTTOM, FTT_BACK}, 
+    {FTT_LEFT, FTT_TOP, FTT_BACK}, {FTT_LEFT, FTT_BOTTOM, FTT_BACK}
+#endif
+  };
+  guint i;
+  gdouble val = 0.;
+  GfsVariable * a = data[0];
+  GfsVariable * b = data[1];
+
+  for (i = 0; i < 4*(FTT_DIMENSION - 1); i++)
+    val += gfs_cell_corner_value (cell, d[i], a, -1);
+  GFS_VARIABLE (cell, b->i) = val/(4*(FTT_DIMENSION - 1));
+}
+
+static void variable_filtered_event_half (GfsEvent * event, GfsSimulation * sim)
+{
+  guint n, niter = 2*GFS_VARIABLE_FILTERED (event)->niter;
+  gpointer data[2], tmp;
+
+  data[0] = GFS_VARIABLE_FILTERED (event)->v;
+  data[1] = event;
+  gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) filter, data);
+  gfs_domain_copy_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1,
+		      GFS_VARIABLE_FILTERED (event)->v, data[1]);
+  data[0] = event;
+  data[1] = gfs_temporary_variable (GFS_DOMAIN (sim));
+  for (n = 0; n < niter; n++) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) filter, data);
+    gfs_domain_copy_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, 
+			GFS_VARIABLE_FILTERED (event)->v, data[1]);
+    tmp = data[0]; data[0] = data[1]; data[1] = tmp;
+  }
+  gts_object_destroy (data[1]);  
+}
+
+static gboolean variable_filtered_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_filtered_class ())->parent_class)->event)
+      (event, sim)) {
+    variable_filtered_event_half (event, sim);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void variable_filtered_class_init (GtsObjectClass * klass)
+{
+  klass->read = variable_filtered_read;
+  klass->write = variable_filtered_write;
+  GFS_EVENT_CLASS (klass)->event = variable_filtered_event;
+  GFS_EVENT_CLASS (klass)->event_half = variable_filtered_event_half;
+}
+
+GfsVariableClass * gfs_variable_filtered_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_filtered_info = {
+      "GfsVariableFiltered",
+      sizeof (GfsVariableFiltered),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_filtered_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
+				  &gfs_variable_filtered_info);
+  }
+
+  return klass;
+}
