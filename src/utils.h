@@ -63,6 +63,8 @@ struct _GfsFunctionClass {
 GfsFunctionClass * gfs_function_class       (void);
 GfsFunction *      gfs_function_new         (GfsFunctionClass * klass,
 					     gdouble val);
+GfsFunction *      gfs_function_new_from_variable (GfsFunctionClass * klass, 
+						   GfsVariable * v);
 gchar *            gfs_function_description (GfsFunction * f,
 					     gboolean truncate);
 gdouble            gfs_function_face_value  (GfsFunction * f,

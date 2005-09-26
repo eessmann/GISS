@@ -278,6 +278,7 @@ static void normal_velocities (GfsDomain * domain, GfsVariable ** u)
 static void ocean_run (GfsSimulation * sim)
 {
   GfsVariable * p, * div, * H, * res = NULL;
+  GfsFunction * fH;
   GfsDomain * domain;
   GSList * i;
 
@@ -302,6 +303,7 @@ static void ocean_run (GfsSimulation * sim)
   g_assert (p);
   H = gfs_variable_from_name (domain->variables, "H");
   g_assert (H);
+  fH = gfs_function_new_from_variable (gfs_function_class (), H);
 
   div = gfs_temporary_variable (domain);
 
@@ -340,12 +342,14 @@ static void ocean_run (GfsSimulation * sim)
 					       &sim->diffusion_params,
 					       g);
 
-    gfs_poisson_coefficients (domain, H, 0.);
-    gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., sim->approx_projection_params.weighted);
+    gfs_poisson_coefficients (domain, fH);
+    gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., 
+					    sim->approx_projection_params.weighted);
     if (gfs_has_source_coriolis (domain)) {
       gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt);
       gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
-      gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., sim->approx_projection_params.weighted);
+      gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., 
+					      sim->approx_projection_params.weighted);
       gfs_correct_centered_velocities (domain, 2, g, -sim->advection_params.dt/2.);
     }
     else
@@ -375,6 +379,7 @@ static void ocean_run (GfsSimulation * sim)
 			 (GtsFunc) gts_object_destroy, NULL);
 
   gts_object_destroy (GTS_OBJECT (div));
+  gts_object_destroy (GTS_OBJECT (fH));
 }
 
 static void gfs_ocean_class_init (GfsSimulationClass * klass)
@@ -608,6 +613,7 @@ static void free_solid (FttCell * cell, GfsVariable * solid)
 static void ocean_run (GfsSimulation * sim)
 {
   GfsVariable * p, * div, * H, * res = NULL, * solid = NULL;
+  GfsFunction * fH;
   GfsDomain * domain, * toplayer;
   GSList * i;
 
@@ -618,6 +624,7 @@ static void ocean_run (GfsSimulation * sim)
 
   H = gfs_variable_from_name (domain->variables, "H");
   g_assert (H);
+  fH = gfs_function_new_from_variable (gfs_function_class (), H);
 
   gfs_domain_cell_traverse (toplayer, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) compute_H, H);
@@ -646,9 +653,11 @@ static void ocean_run (GfsSimulation * sim)
 			      (FttCellTraverseFunc) gfs_cell_reset, solid);
     set_solid2D (sim, solid);
     gfs_domain_traverse_cut_2D (toplayer, sim->surface, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-				(FttCellTraverseCutFunc) gfs_set_2D_solid_fractions_from_surface, NULL);
+				(FttCellTraverseCutFunc) gfs_set_2D_solid_fractions_from_surface,
+				NULL);
     gfs_domain_cell_traverse (toplayer, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_init_solid_fractions_from_children, NULL);
+			      (FttCellTraverseFunc) gfs_cell_init_solid_fractions_from_children,
+			      NULL);
     set_solid3D (sim, solid);
   }
 
@@ -685,7 +694,7 @@ static void ocean_run (GfsSimulation * sim)
     gfs_predicted_face_velocities (domain, 2, &sim->advection_params);
 
     gfs_domain_timer_start (domain, "correct_normal_velocities");
-    gfs_poisson_coefficients (domain, NULL, 0.);
+    gfs_poisson_coefficients (domain, NULL);
     gfs_correct_normal_velocities (domain, 2, p, g, sim->advection_params.dt/2.);
     gfs_domain_cell_traverse_boundary (domain, FTT_BACK,
 				       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -721,12 +730,14 @@ static void ocean_run (GfsSimulation * sim)
 
     /* barotropic pressure and Coriolis terms */
     set_solid2D (sim, solid);
-    gfs_poisson_coefficients (toplayer, H, 0.);
-    gfs_correct_normal_velocities_weighted1 (toplayer, 2, p, g, 0., sim->approx_projection_params.weighted, H);
+    gfs_poisson_coefficients (toplayer, fH);
+    gfs_correct_normal_velocities_weighted1 (toplayer, 2, p, g, 0., 
+					     sim->approx_projection_params.weighted, H);
     if (gfs_has_source_coriolis (domain)) {
       gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt);
       gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
-      gfs_correct_normal_velocities_weighted1 (toplayer, 2, p, g, 0., sim->approx_projection_params.weighted, H);
+      gfs_correct_normal_velocities_weighted1 (toplayer, 2, p, g, 0., 
+					       sim->approx_projection_params.weighted, H);
       gfs_correct_centered_velocities (domain, 2, g, -sim->advection_params.dt/2.);
     }
     else
@@ -739,7 +750,8 @@ static void ocean_run (GfsSimulation * sim)
     normal_velocities (toplayer, gfs_domain_velocity (domain), H);
     gfs_free_surface_pressure (toplayer, &sim->approx_projection_params, &sim->advection_params,
 			       p, div, res, sim->physical_params.g/GFS_OCEAN (domain)->layer->len);
-    gfs_correct_normal_velocities_weighted1 (toplayer, 2, p, g, 0., sim->approx_projection_params.weighted, H);
+    gfs_correct_normal_velocities_weighted1 (toplayer, 2, p, g, 0., 
+					     sim->approx_projection_params.weighted, H);
     gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt/2.);
     set_solid3D (sim, solid);
     gfs_domain_timer_stop (domain, "free_surface_pressure");
@@ -756,6 +768,7 @@ static void ocean_run (GfsSimulation * sim)
 			 (GtsFunc) gts_object_destroy, NULL);
 
   gts_object_destroy (GTS_OBJECT (div));
+  gts_object_destroy (GTS_OBJECT (fH));
   if (sim->surface) {
     gfs_domain_traverse_mixed (GFS_OCEAN (sim)->toplayer, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
 			       (FttCellTraverseFunc) free_solid, solid);

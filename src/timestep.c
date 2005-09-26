@@ -147,6 +147,7 @@ static void scale_divergence (FttCell * cell, gpointer * data)
  * @par: the projection control parameters.
  * @apar: the advection parameters.
  * @p: the pressure.
+ * @alpha: the Poisson equation gradient weight.
  * @g: where to store the pressure gradient.
  *
  * Corrects the face-centered velocity field (MAC field) on the leaf
@@ -169,6 +170,7 @@ void gfs_mac_projection (GfsDomain * domain,
 			 GfsMultilevelParams * par,
 			 GfsAdvectionParams * apar,
 			 GfsVariable * p,
+			 GfsFunction * alpha,
 			 GfsVariable ** g)
 {
   gdouble dt;
@@ -192,7 +194,7 @@ void gfs_mac_projection (GfsDomain * domain,
   apar->dt /= 2.;
 
   /* Initialize face coefficients */
-  gfs_poisson_coefficients (domain, apar->c, apar->rho);
+  gfs_poisson_coefficients (domain, alpha);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dia);
 
@@ -305,6 +307,7 @@ void gfs_correct_centered_velocities (GfsDomain * domain,
  * @par: the projection control parameters.
  * @apar: the advection parameters.
  * @p: the pressure.
+ * @alpha: the Poisson equation gradient weight.
  * @res: the residual or %NULL.
  *
  * Corrects the centered velocity field on the leaf level of @domain
@@ -328,6 +331,7 @@ void gfs_approximate_projection (GfsDomain * domain,
 				 GfsMultilevelParams * par,
 				 GfsAdvectionParams * apar,
 				 GfsVariable * p,
+				 GfsFunction * alpha,
 				 GfsVariable * res)
 {
   gpointer data[2];
@@ -345,7 +349,7 @@ void gfs_approximate_projection (GfsDomain * domain,
   res1 = res ? res : gfs_temporary_variable (domain);
 
   /* Initialize face coefficients */
-  gfs_poisson_coefficients (domain, apar->c, apar->rho);
+  gfs_poisson_coefficients (domain, alpha);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dia);
 
@@ -562,18 +566,13 @@ static void variable_diffusion (GfsDomain * domain,
 				GfsSourceDiffusion * d,
 				GfsAdvectionParams * par,
 				GfsMultilevelParams * dpar,
-				GfsVariable * rhs,
-				GfsVariable * c,
-				gdouble rho)
+				GfsVariable * rhs)
 {
   GfsVariable * dia;
 
   dia = gfs_temporary_variable (domain);
 
-  if (c != NULL)
-    gfs_viscosity_coefficients (domain, d, par->dt, c, rho, dia);
-  else
-    gfs_diffusion_coefficients (domain, d, par->dt, dia);
+  gfs_diffusion_coefficients (domain, d, par->dt, dia);
   gfs_domain_surface_bc (domain, par->v);
   gfs_diffusion_rhs (domain, par->v, rhs, dia);
   /* fixme: time shoud be set to t + dt here in case boundary values are
@@ -636,7 +635,7 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
       variable_sources (domain, apar, rhs, g);
       gts_object_destroy (GTS_OBJECT (g[c]));
       g[c] = NULL;
-      variable_diffusion (domain, d, apar, dpar, rhs, apar->c, apar->rho);
+      variable_diffusion (domain, d, apar, dpar, rhs);
       gts_object_destroy (GTS_OBJECT (rhs));
     }
     else {
@@ -708,7 +707,7 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, rhs);
     variable_sources (domain, par, rhs, NULL);
-    variable_diffusion (domain, d, par, dpar, rhs, NULL, 0.);
+    variable_diffusion (domain, d, par, dpar, rhs);
     gts_object_destroy (GTS_OBJECT (rhs));
   }
   else {

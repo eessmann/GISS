@@ -408,7 +408,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
     /* ------------ GfsPhysicalParams ------------ */
     else if (strmatch (fp->token->str, "GfsPhysicalParams")) {
       gts_file_next_token (fp);
-      gfs_physical_params_read (&sim->physical_params, fp);
+      gfs_physical_params_read (&sim->physical_params, GFS_DOMAIN (sim), fp);
       if (fp->type == GTS_ERROR)
 	return;
     }
@@ -491,7 +491,6 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   sim->adapts->items = g_slist_reverse (sim->adapts->items);
   sim->events->items = g_slist_reverse (sim->events->items);
   sim->modules = g_slist_reverse (sim->modules);
-  sim->advection_params.rho = sim->physical_params.rho;
 }
 
 static void simulation_run (GfsSimulation * sim)
@@ -523,18 +522,14 @@ static void simulation_run (GfsSimulation * sim)
   gfs_approximate_projection (domain,
       			      &sim->approx_projection_params,
       			      &sim->advection_params,
-			      p, res);
+			      p, sim->physical_params.alpha, res);
 
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
     GfsVariable * g[FTT_DIMENSION];
     gdouble tstart;
 
-    i = domain->variables;
-    while (i) {
-      gfs_event_do (GFS_EVENT (i->data), sim);
-      i = i->next;
-    }
+    g_slist_foreach (domain->variables, (GFunc) gfs_event_do, sim);
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
@@ -549,7 +544,7 @@ static void simulation_run (GfsSimulation * sim)
     gfs_mac_projection (domain,
     			&sim->projection_params, 
     			&sim->advection_params,
-			p, g);
+			p, sim->physical_params.alpha, g);
 
     i = domain->variables;
     while (i) {
@@ -570,6 +565,7 @@ static void simulation_run (GfsSimulation * sim)
       i = i->next;
     }
 
+    g_slist_foreach (domain->variables, (GFunc) gfs_event_half_do, sim);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
     gfs_centered_velocity_advection_diffusion (domain,
@@ -581,7 +577,7 @@ static void simulation_run (GfsSimulation * sim)
     gfs_simulation_adapt (sim, NULL);
     gfs_approximate_projection (domain,
    				&sim->approx_projection_params, 
-    				&sim->advection_params, p, res);
+    				&sim->advection_params, p, sim->physical_params.alpha, res);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
@@ -1151,7 +1147,12 @@ void gfs_physical_params_write (GfsPhysicalParams * p, FILE * fp)
   g_return_if_fail (p != NULL);
   g_return_if_fail (fp != NULL);
 
-  fprintf (fp, "{ rho = %g sigma = %g g = %g }", p->rho, p->sigma, p->g);
+  fprintf (fp, "{ g = %g", p->g);
+  if (p->alpha) {
+    fputs (" alpha =", fp);
+    gfs_function_write (p->alpha, fp);
+  }
+  fputs (" }", fp);
 }
 
 /**
@@ -1164,40 +1165,81 @@ void gfs_physical_params_init (GfsPhysicalParams * p)
 {
   g_return_if_fail (p != NULL);
   
-  p->rho = 1.;
-  p->sigma = 0.;
   p->g = 1.;
+  p->alpha = NULL;
 }
 
 /**
  * gfs_physical_params_read:
  * @p: the #GfsPhysicalParams.
+ * @domain: a #GfsDomain.
  * @fp: the #GtsFile.
  *
  * Reads a physical parameters structure from @fp and puts it in @p.
  */
-void gfs_physical_params_read (GfsPhysicalParams * p, GtsFile * fp)
+void gfs_physical_params_read (GfsPhysicalParams * p, GfsDomain * domain, GtsFile * fp)
 {
-  GtsFileVariable var[] = {
-    {GTS_DOUBLE, "rho",   TRUE},
-    {GTS_DOUBLE, "sigma", TRUE},
-    {GTS_DOUBLE, "g",     TRUE},
-    {GTS_NONE}
-  };
-
   g_return_if_fail (p != NULL);
+  g_return_if_fail (domain != NULL);
   g_return_if_fail (fp != NULL);
 
-  var[0].data = &p->rho;
-  var[1].data = &p->sigma;
-  var[2].data = &p->g;
+  if (fp->type != '{') {
+    gts_file_error (fp, "expecting an opening brace");
+    return;
+  }
+  fp->scope_max++;
+  gts_file_next_token (fp);
+  while (fp->type != GTS_ERROR && fp->type != '}') {
+    if (fp->type == '\n') {
+      gts_file_next_token (fp);
+      continue;
+    }
+    if (fp->type != GTS_STRING) {
+      gts_file_error (fp, "expecting a keyword");
+      return;
+    }
+    else {
+      gchar * id = g_strdup (fp->token->str);
 
-  gfs_physical_params_init (p);
-  gts_file_assign_variables (fp, var);
-  if (p->rho <= 0.)
-    gts_file_variable_error (fp, var, "rho", "rho must be strictly positive");
-  if (p->sigma < 0.)
-    gts_file_variable_error (fp, var, "sigma", "sigma must be positive");
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting `='");
+	return;
+      }
+      gts_file_next_token (fp);
+
+      if (!strcmp (id, "g")) {
+	if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+	  g_free (id);
+	  gts_file_error (fp, "expecting a number");
+	  return;
+	}
+	p->g = atof (fp->token->str);
+	gts_file_next_token (fp);
+      }
+      else if (!strcmp (id, "alpha")) {
+	p->alpha = gfs_function_new (gfs_function_class (), 0.);
+	gfs_function_read (p->alpha, domain, fp);
+	if (fp->type == GTS_ERROR) {
+	  g_free (id);
+	  gts_object_destroy (GTS_OBJECT (p->alpha));
+	  return;
+	}
+      }
+      else {
+	g_free (id);
+	gts_file_error (fp, "unknown keyword `%s'", id);
+	return;
+      }
+      g_free (id);
+    }
+  }
+  if (fp->type != '}') {
+    gts_file_error (fp, "expecting a closing brace");
+    return;
+  }
+  fp->scope_max--;
+  gts_file_next_token (fp);
 }
 
 /**
@@ -1408,7 +1450,7 @@ static void poisson_run (GfsSimulation * sim)
   p = gfs_variable_from_name (domain->variables, "P");
   div = gfs_temporary_variable (domain);
   correct_div (domain, gfs_variable_from_name (domain->variables, "Div"), div);
-  gfs_poisson_coefficients (domain, NULL, 0.);
+  gfs_poisson_coefficients (domain, NULL);
   res1 = gfs_temporary_variable (domain);
   dia = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,

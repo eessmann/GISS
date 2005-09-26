@@ -65,8 +65,7 @@ void                  gfs_residual                   (GfsDomain * domain,
 						      GfsVariable * dia,
 						      GfsVariable * res);
 void                  gfs_poisson_coefficients       (GfsDomain * domain,
-						      GfsVariable * c,
-						      gdouble rho);
+						      GfsFunction * alpha);
 void                  gfs_poisson_cycle              (GfsDomain * domain,
 						      GfsMultilevelParams * p,
 						      GfsVariable * u,
@@ -77,12 +76,6 @@ void                  gfs_poisson_cycle              (GfsDomain * domain,
 void                  gfs_diffusion_coefficients     (GfsDomain * domain,
 						      GfsSourceDiffusion * d,
 						      gdouble dt,
-						      GfsVariable * dia);
-void                  gfs_viscosity_coefficients     (GfsDomain * domain,
-						      GfsSourceDiffusion * d,
-						      gdouble dt,
-						      GfsVariable * c,
-						      gdouble rho,
 						      GfsVariable * dia);
 void                  gfs_diffusion_rhs              (GfsDomain * domain,
 						      GfsVariable * v,

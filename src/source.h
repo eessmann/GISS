@@ -158,7 +158,7 @@ struct _GfsDiffusion {
   GfsEvent parent;
 
   /*< public >*/
-  gdouble val;
+  GfsFunction * val;
 };
 
 typedef struct _GfsDiffusionClass    GfsDiffusionClass;

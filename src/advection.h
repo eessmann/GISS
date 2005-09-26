@@ -51,8 +51,6 @@ struct _GfsAdvectionParams {
   GfsUpwinding upwinding;
   GfsFaceAdvectionFluxFunc flux;
   GfsAdvectionScheme scheme;
-  gdouble rho;
-  GfsVariable * c;
 };
 
 void         gfs_advection_params_init        (GfsAdvectionParams * par);

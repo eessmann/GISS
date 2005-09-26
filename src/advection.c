@@ -850,8 +850,6 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->upwinding = GFS_FACE_UPWINDING;
   par->use_centered_velocity = TRUE;
   par->scheme = GFS_GODUNOV;
-  par->rho = 1.;
-  par->c = NULL;
 }
 
 void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)

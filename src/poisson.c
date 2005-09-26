@@ -427,25 +427,30 @@ static void poisson_coeff (FttCellFace * face, gdouble * lambda2)
   }
 }
 
-static void poisson_density_coeff (FttCellFace * face,
-				   gpointer * data)
+static void reset_alpha_coeff (FttCell * cell, gpointer * data)
 {
-  GfsVariable * c = data[0];
-  gdouble * rho = data[1];
-  gdouble * lambda2 = data[2];
-  gdouble v = lambda2[face->d/2], cval;
+  FttDirection d;
+  GfsFaceStateVector * f = GFS_STATE (cell)->f;
+  GfsFunction * alpha = data[0];
+  GfsVariable * a = data[1];
+  
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    f[d].v = 0.;
+  GFS_VARIABLE (cell, a->i) = gfs_function_value (alpha, cell);
+}
+
+static void poisson_alpha_coeff (FttCellFace * face,
+				 gpointer * data)
+{
+  gdouble * lambda2 = data[0];
+  GfsVariable * alpha = data[1];
+  gdouble v = lambda2[face->d/2];
   GfsStateVector * s = GFS_STATE (face->cell);
 
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
-  cval = gfs_face_interpolated_value (face, c->i);
-#if 1
-  v *= cval;
-#else /* fixme */
-  v /= 1. + (cval > 1. ? 1. : cval < 0. ? 0. : cval)*(*rho - 1.);
-#endif
+  v *= gfs_face_interpolated_value (face, alpha->i);
   s->f[face->d].v = v;
-
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
@@ -481,14 +486,15 @@ static void face_coeff_from_below (FttCell * cell)
 /**
  * gfs_poisson_coefficients:
  * @domain: a #GfsDomain.
- * @c: the volume fraction.
- * @rho: the relative density.
+ * @alpha: the density or %NULL.
  *
- * Initializes the face coefficients for the Poisson equation.
+ * Initializes the face coefficients for the Poisson equation
+ * $\nabla\cdot\alpha\nabla p=\dots$.
+ *
+ * If @alpha is %NULL, it is taken to be unity.
  */
 void gfs_poisson_coefficients (GfsDomain * domain,
-			       GfsVariable * c,
-			       gdouble rho)
+			       GfsFunction * alpha)
 {
   gdouble lambda2[FTT_DIMENSION];
   FttComponent i;
@@ -500,23 +506,28 @@ void gfs_poisson_coefficients (GfsDomain * domain,
 
     lambda2[i] = lambda*lambda;
   }
-  gfs_domain_cell_traverse (domain,
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_coeff, NULL);
-  if (c == NULL || rho == 1.)
+  if (alpha == NULL) {
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) reset_coeff, NULL);
     gfs_domain_face_traverse (domain, FTT_XYZ, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) poisson_coeff, lambda2);
+  }
   else {
-    gpointer data[3];
+    gpointer data[2];
 
-    data[0] = c;
-    data[1] = &rho;
-    data[2] = lambda2;
+    data[0] = alpha;
+    data[1] = gfs_temporary_variable (domain);
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) reset_alpha_coeff, data);
+    data[0] = lambda2;
     gfs_domain_face_traverse (domain, FTT_XYZ, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) poisson_density_coeff, 
+			      (FttFaceTraverseFunc) poisson_alpha_coeff, 
 			      data);
+    gts_object_destroy (data[1]);
   }
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
@@ -736,55 +747,6 @@ void gfs_diffusion_coefficients (GfsDomain * domain,
 			    NULL);
 }
 
-static void density (FttCell * cell, gpointer * data)
-{
-  GfsVariable * v = data[0];
-  gdouble c = GFS_VARIABLE (cell, v->i);
-  gdouble * rho = data[1];
-
-  GFS_VARIABLE (cell, GFS_VARIABLE1 (data[2])->i) = 1. + *rho*(c > 1. ? 1. : c < 0. ? 0. : c);
-}
-
-/**
- * gfs_viscosity_coefficients:
- * @domain: a #GfsDomain.
- * @d: a #GfsSourceDiffusion.
- * @dt: the time-step.
- * @c: the volume fraction (at t+dt/2).
- * @rho: the relative density.
- * @dia: where to store the diagonal weight.
- *
- * Initializes the face coefficients for the diffusion equation for
- * the velocity.
- */
-void gfs_viscosity_coefficients (GfsDomain * domain,
-				 GfsSourceDiffusion * d,
-				 gdouble dt,
-				 GfsVariable * c,
-				 gdouble rho,
-				 GfsVariable * dia)
-{
-  g_return_if_fail (domain != NULL);
-  g_return_if_fail (d != NULL);
-  g_return_if_fail (c != NULL);
-  g_return_if_fail (dia != NULL);
-
-  gfs_diffusion_coefficients (domain, d, dt, dia);
-  if (rho != 1.) {
-    gpointer data[3];
-
-    rho -= 1.;
-    data[0] = c;
-    data[1] = &rho;
-    data[2] = dia;
-    gfs_domain_cell_traverse (domain,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) density, data);
-    gfs_domain_cell_traverse (domain,
-			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_get_from_below_intensive, dia);
-  }
-}
 
 static void diffusion_rhs (FttCell * cell, RelaxParams * p)
 {

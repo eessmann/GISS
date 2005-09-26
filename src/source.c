@@ -401,38 +401,46 @@ GfsSourceGenericClass * gfs_source_control_class (void)
 
 /* GfsDiffusion: Object */
 
+static void diffusion_destroy (GtsObject * o)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_DIFFUSION (o)->val));
+
+  (* GTS_OBJECT_CLASS (gfs_diffusion_class ())->parent_class->destroy) (o);
+}
+
 static void diffusion_read (GtsObject ** o, GtsFile * fp)
 {
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (D)");
-    return;
-  }
-  GFS_DIFFUSION (*o)->val = atof (fp->token->str);
-  gts_file_next_token (fp);
+  gfs_function_read (GFS_DIFFUSION (*o)->val, gfs_object_simulation (*o), fp);
 }
 
 static void diffusion_write (GtsObject * o, FILE * fp)
 {
-  fprintf (fp, " %g", GFS_DIFFUSION (o)->val);
+  gfs_function_write (GFS_DIFFUSION (o)->val, fp);
 }
 
 static gdouble diffusion_face (GfsDiffusion * d, FttCellFace * f)
 {
-  return d->val;
+  return gfs_function_face_value (d->val, f);
 }
 
 static gdouble diffusion_cell (GfsDiffusion * d, FttCell * cell)
 {
-  return d->val;
+  return gfs_function_value (d->val, cell);
 }
 
 static void diffusion_class_init (GfsDiffusionClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->destroy = diffusion_destroy;
   GTS_OBJECT_CLASS (klass)->read = diffusion_read;
   GTS_OBJECT_CLASS (klass)->write = diffusion_write;
   GFS_EVENT_CLASS (klass)->event = NULL;
   klass->face = diffusion_face;
   klass->cell = diffusion_cell;
+}
+
+static void diffusion_init (GfsDiffusion * d)
+{
+  d->val = gfs_function_new (gfs_function_class (), 0.);
 }
 
 GfsDiffusionClass * gfs_diffusion_class (void)
@@ -445,7 +453,7 @@ GfsDiffusionClass * gfs_diffusion_class (void)
       sizeof (GfsDiffusion),
       sizeof (GfsDiffusionClass),
       (GtsObjectClassInitFunc) diffusion_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) diffusion_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -711,7 +719,7 @@ static void source_diffusion_class_init (GfsSourceGenericClass * klass)
 
 static void source_diffusion_init (GfsSourceDiffusion * d)
 {
-  d->D = GFS_DIFFUSION (gts_object_new (GTS_OBJECT_CLASS (gfs_diffusion_multi_class ())));
+  d->D = GFS_DIFFUSION (gts_object_new (GTS_OBJECT_CLASS (gfs_diffusion_class ())));
 }
 
 GfsSourceGenericClass * gfs_source_diffusion_class (void)
@@ -933,7 +941,7 @@ static void source_viscosity_class_init (GfsSourceGenericClass * klass)
 
 static void source_viscosity_init (GfsSourceViscosity * s)
 {
-  s->D = GFS_DIFFUSION (gts_object_new (GTS_OBJECT_CLASS (gfs_diffusion_multi_class ())));
+  s->D = GFS_DIFFUSION (gts_object_new (GTS_OBJECT_CLASS (gfs_diffusion_class ())));
 }
 
 GfsSourceGenericClass * gfs_source_viscosity_class (void)

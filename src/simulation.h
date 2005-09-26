@@ -42,7 +42,8 @@ struct _GfsTime {
 };
 
 struct _GfsPhysicalParams {
-  gdouble rho, sigma, g;
+  gdouble g;
+  GfsFunction * alpha;
 };
 
 struct _GfsAdaptStats {
@@ -115,6 +116,7 @@ void                 gfs_physical_params_init    (GfsPhysicalParams * p);
 void                 gfs_physical_params_write   (GfsPhysicalParams * p, 
 						  FILE * fp);
 void                 gfs_physical_params_read    (GfsPhysicalParams * p,
+						  GfsDomain * domain,
 						  GtsFile * fp);
 void                 gfs_simulation_run          (GfsSimulation * sim);
 #define              gfs_object_simulation(o)     GFS_SIMULATION(GTS_OBJECT (o)->reserved)
