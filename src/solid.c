@@ -714,6 +714,37 @@ static void foreach_box (GfsBox * box, InitSolidParams * p)
   solid_fractions_from_children (box->root, p);
 }
 
+static void match_fractions (FttCell * cell, GfsVariable * status)
+{
+  if (GFS_IS_MIXED (cell)) {
+    FttCellNeighbors neighbor;
+    guint level = ftt_cell_level (cell);
+    FttDirection d;
+
+    ftt_cell_neighbors (cell, &neighbor);
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      if (neighbor.c[d] &&
+	  !GFS_CELL_IS_BOUNDARY (neighbor.c[d]) &&
+	  GFS_VARIABLE (neighbor.c[d], status->i) != 1.) {
+	if (!FTT_CELL_IS_LEAF (neighbor.c[d])) {
+	  FttCellChildren child;
+	  FttDirection od = FTT_OPPOSITE_DIRECTION (d);
+	  guint i, n = ftt_cell_children_direction (neighbor.c[d], od, &child);
+	  gdouble s = 0.;
+
+	  for (i = 0; i < n; i++)
+	    if (child.c[i] && GFS_VARIABLE (child.c[i], status->i) != 1.)
+	      s += GFS_IS_MIXED (child.c[i]) ? GFS_STATE (child.c[i])->solid->s[od] : 1.;
+	  GFS_STATE (cell)->solid->s[d] = s/n;
+	}
+	else if (!GFS_IS_MIXED (neighbor.c[d]) && GFS_STATE (cell)->solid->s[d] < 1.) {
+	  g_assert (ftt_cell_level (neighbor.c[d]) == level - 1);
+	  GFS_STATE (cell)->solid->s[d] = 1.;
+	}
+      }
+  }
+}
+
 /**
  * gfs_domain_init_solid_fractions:
  * @domain: a #GfsDomain.
@@ -750,6 +781,8 @@ void gfs_domain_init_solid_fractions (GfsDomain * domain,
 			    (FttCellTraverseFunc) gfs_cell_reset, p.status);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) paint_mixed_leaf, p.status);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) match_fractions, p.status);
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) foreach_box, &p);
   if (status == NULL)
     gts_object_destroy (GTS_OBJECT (p.status));
