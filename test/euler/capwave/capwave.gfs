@@ -1,0 +1,84 @@
+# Title: Planar capillary waves
+#
+# Description:
+#
+# A small amplitude sinusoidal wave oscillates under surface
+# tension. Prosperetti \cite{prosperetti81} found a solution to this
+# initial value problem in the limit of a vanishingly small initial
+# amplitude.
+#
+# Table \ref{convergence} shows the convergence of various
+# solvers as a function of resolution: Gerris, the marker technique of
+# \cite{popinet99} and Surfer \cite{gueyffier98}.
+#
+# The time-evolution of the amplitude given by Prosperetti's theory
+# and Gerris ($128^2$) is given on Figure
+# \ref{amplitude}.
+#
+# \begin{table}[htbp]
+# \begin{center}
+# \begin{tabular}{|l|ccccc|} \hline
+# Method & $8^2$ & $16^2$ & $32^2$ & $64^2$ & $128^2$ \\ \hline
+# \input{convergence.tex} \\
+# Markers & 0.3018 & 0.0778 & 0.0131 & 0.0082 & 0.00645 \\
+# Surfer & - & - & 0.1168 & 0.0132 & 0.007 \\ \hline
+# \end{tabular}
+# \end{center}
+# \caption{Convergence of the relative error between the analytical
+# solution and simulation results from various solvers.}
+# \end{table}
+#
+# \begin{figure}[htbp]
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{amplitude.eps}
+# \end{center}
+# \caption{Evolution of the amplitude of the capillary wave as a
+# function of non-dimensional time $\tau=\omega_0 t$.}
+# \label{amplitude}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: sh capwave.sh capwave.gfs
+# Version: 0.6.4
+# Required files: capwave.sh convergence.ref
+# Running time: 3 minutes
+# Generated files: convergence.tex amplitude.eps
+#
+1 1 GfsSimulation GfsBox GfsGEdge {} {
+  Time {
+    end = 2.2426211256
+    dtmax = 1.01430173026e-3
+  }
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
+  Refine LEVEL
+  VariableTracer {} T { scheme = vof }
+  SourceTension {} T 1
+  AdvectionParams { scheme = none }
+  SourceDiffusion {} U 0.0182571749236
+  SourceDiffusion {} V 0.0182571749236
+  InitFraction {} T wave.gts
+  OutputSimulation { istep = 3 } sim-%ld.gfs { binary = 1 }
+  EventScript { istep = 3 } {
+    echo $GfsTime | awk -v level=LEVEL '{printf ("%g ", $1*11.1366559937) >> ("wave-" level) }'
+    gfs2oogl2D -g -c T < sim-$GfsIter.gfs | sort -n +1 -2 | awk -v level=LEVEL 'BEGIN {
+      n = exp (level*log (2.));
+      x = 1./(n + 1.);
+      c1 = c2 = 0.;
+    }
+    {
+      if ($1 > 0. && $1 < x) {
+        if (c1 + c2 < 1. && c2 + $4 > 1.) {
+          print y2+(0.5-c2)/n >> ("wave-" level);
+          exit 0;
+        }
+        c1 = c2;
+        c2 = $4;
+        y2 = $2;
+      }
+    }'
+    rm -f sim-$GfsIter.gfs
+  }
+}
+GfsBox {}
+1 1 right

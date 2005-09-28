@@ -9,6 +9,7 @@ TESTDIRS = \
 	boundaries \
 	channel \
 	spurious \
+	capwave \
 	waves
 
 EXTRA_DIST = \
