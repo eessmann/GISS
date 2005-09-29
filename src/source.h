@@ -136,9 +136,6 @@ struct _GfsSourceControl {
   /*< private >*/
   GfsSource parent;
   gdouble s;
-
-  /*< public >*/
-  GfsFunction * delay;
 };
 
 #define GFS_SOURCE_CONTROL(obj)            GTS_OBJECT_CAST (obj,\
