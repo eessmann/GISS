@@ -56,7 +56,7 @@ if cat <<EOF | gnuplot ; then :
     set output 'amplitude.eps'
     set xlabel 'tau'
     set ylabel 'Relative amplitude'
-    plot 'prosperetti' w l t "Prosperetti", 'wave-5' every 10 w p t "Gerris"
+    plot 'prosperetti' w l t "Prosperetti", 'wave-7' every 10 w p t "Gerris"
 EOF
 else
     exit 1
