@@ -48,7 +48,7 @@ for d in sys.argv[1:]:
     os.symlink(os.getcwd() + "/" + example.name, wdname + "/" + example.name)
     if os.system("rm -r -f " + example.name + ".pdf " + example.name + "_html" +\
               "&& cd " + wdname + \
-              "&& latex -interaction=nonstopmode > /dev/null 2>&1 " + example.name + ".tex" +\
+              "&& latex -interaction=nonstopmode 2>&1 " + example.name + ".tex" +\
               "&& latex -interaction=nonstopmode " + example.name + ".tex") or \
        os.system("cd " + wdname + \
               "&& dvips -Ppdf -G0 " + example.name + ".dvi -o " + example.name + ".ps" +\

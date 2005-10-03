@@ -4,6 +4,7 @@ EXAMPLES = \
 	cylinder \
 	lid \
 	shear \
+	rt \
 	boussinesq
 
 EXTRA_DIST = \
