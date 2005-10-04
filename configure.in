@@ -421,11 +421,7 @@ src/dx3D.mdf
 tools/Makefile
 test/Makefile
 modules/Makefile
-test/advection/Makefile
-test/advection/graphic/Makefile
-test/advection/order/Makefile
 test/euler/Makefile
-test/ocean/Makefile
 doc/Makefile
 doc/tutorial/Makefile
 doc/examples/Makefile
