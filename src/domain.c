@@ -1698,7 +1698,7 @@ static void box_split (GfsBox * box, gpointer * data)
 	  FttCell * neighbor = ftt_cell_neighbor (child.c[i], d);
 	  GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], newboxp->i));
 	  GfsBoundaryClass * klass = GFS_BOUNDARY_CLASS (GTS_OBJECT (boundary)->klass);
-	  GfsBoundary * newboundary = gfs_boundary_new (klass, newbox, d);
+	  GtsObject * newboundary = GTS_OBJECT (gfs_boundary_new (klass, newbox, d));
 	  gchar fname[] = "/tmp/XXXXXX";
 	  gint fd = mkstemp (fname);
 	  FILE * fp = fdopen (fd, "w");
@@ -1710,13 +1710,13 @@ static void box_split (GfsBox * box, gpointer * data)
 	  fp = fopen (fname, "r");
 	  unlink (fname);
 	  gfp = gts_file_new (fp);
-	  (* GTS_OBJECT_CLASS (klass)->read) ((GtsObject **) &newboundary, gfp);
+	  (* GTS_OBJECT_CLASS (klass)->read) (&newboundary, gfp);
 	  g_assert (gfp->type != GTS_ERROR);
 	  gts_file_destroy (gfp);
 	  fclose (fp);
 
 	  g_assert (neighbor);
-	  newboundary->root = neighbor;
+	  GFS_BOUNDARY (newboundary)->root = neighbor;
 	}
       gts_object_destroy (GTS_OBJECT (boundary));
     }
