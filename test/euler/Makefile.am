@@ -3,6 +3,7 @@
 TESTDIRS = \
 	poisson \
 	circle \
+	advection \
 	reynolds \
 	periodic \
 	merging \
