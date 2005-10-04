@@ -86,13 +86,16 @@ static void foreach_cell_tension (FttCell * cell, GfsSourceTension * s)
 {
   gdouble h = ftt_cell_size (cell);
   FttVector nx, ny, nxy;
+  GfsSimulation * sim = gfs_object_simulation (s);
+  gdouble alpha = sim->physical_params.alpha ? 
+    gfs_function_value (sim->physical_params.alpha, cell) : 1.;
 
   gfs_youngs_normal (cell, s->g[0], &nx);
   gfs_youngs_normal (cell, s->g[1], &ny);
   gfs_youngs_normal (cell, s->g[2], &nxy);
 
-  GFS_VARIABLE (cell, s->t[0]->i) = (ny.x - nxy.y)/h;
-  GFS_VARIABLE (cell, s->t[1]->i) = (nx.y - nxy.x)/h;
+  GFS_VARIABLE (cell, s->t[0]->i) = alpha*(ny.x - nxy.y)/h;
+  GFS_VARIABLE (cell, s->t[1]->i) = alpha*(nx.y - nxy.x)/h;
 }
 
 static void gfs_source_tension_event (GfsEvent * event, 
