@@ -3,7 +3,7 @@
 import sys
 import os
 import os.path
-sys.path.append("../../doc/examples")
+sys.path.append("../doc/examples")
 import gfs2tex
 
 dists = ""

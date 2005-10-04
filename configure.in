@@ -419,9 +419,8 @@ src/dx2D.mdf
 src/dx2D3.mdf
 src/dx3D.mdf
 tools/Makefile
-test/Makefile
 modules/Makefile
-test/euler/Makefile
+test/Makefile
 doc/Makefile
 doc/tutorial/Makefile
 doc/examples/Makefile

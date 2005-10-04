@@ -4,14 +4,14 @@ import sys
 import os
 import os.path
 import glob
-sys.path.append("../../doc/examples")
+sys.path.append("../doc/examples")
 import gfs2tex
 
 if not os.access("tests",os.F_OK):
     os.mkdir("tests")
 
 dico = {}
-for f in glob.glob("../../doc/html/*.html"):
+for f in glob.glob("../doc/html/*.html"):
     gfs2tex.dictionary(dico,open(f))
 
 for start in sys.argv[1:]:
