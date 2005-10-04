@@ -10,7 +10,8 @@ TESTDIRS = \
 	channel \
 	spurious \
 	capwave \
-	waves
+	waves \
+	geo
 
 EXTRA_DIST = \
 	template.tex \
