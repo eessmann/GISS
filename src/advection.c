@@ -516,7 +516,10 @@ void gfs_face_advected_normal_velocity (const FttCellFace * face,
   if (GFS_FACE_FRACTION (face) == 0.)
     return;
 
-  GFS_FACE_NORMAL_VELOCITY_LEFT (face) = u = gfs_face_upwinded_value (face, par->upwinding, par->u);
+  GFS_FACE_NORMAL_VELOCITY_LEFT (face) = u =
+    GFS_CELL_IS_BOUNDARY (face->neighbor) ?
+    GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v :
+    gfs_face_upwinded_value (face, par->upwinding, par->u);
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
