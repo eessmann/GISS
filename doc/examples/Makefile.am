@@ -60,7 +60,10 @@ examples.tex: template.tex Makefile.deps
 	python gfs2tex $(EXAMPLES)
 	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < template.tex > examples.tex
 
-Makefile.deps: Makefile.am depend.py
+Makefile.deps: Makefile depend.py
 	python depend.py $(EXAMPLES) > Makefile.deps
 
 -include Makefile.deps
+
+examples.tar.gz: examples.ps.gz examples.pdf examples $(DOCS)
+	tar czf examples.tar.gz examples.ps.gz examples.pdf examples $(DOCS)
