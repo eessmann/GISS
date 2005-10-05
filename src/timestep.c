@@ -566,13 +566,14 @@ static void variable_diffusion (GfsDomain * domain,
 				GfsSourceDiffusion * d,
 				GfsAdvectionParams * par,
 				GfsMultilevelParams * dpar,
-				GfsVariable * rhs)
+				GfsVariable * rhs,
+				GfsFunction * alpha)
 {
   GfsVariable * dia;
 
   dia = gfs_temporary_variable (domain);
 
-  gfs_diffusion_coefficients (domain, d, par->dt, dia);
+  gfs_diffusion_coefficients (domain, d, par->dt, dia, alpha);
   gfs_domain_surface_bc (domain, par->v);
   gfs_diffusion_rhs (domain, par->v, rhs, dia);
   /* fixme: time shoud be set to t + dt here in case boundary values are
@@ -590,6 +591,7 @@ static void variable_diffusion (GfsDomain * domain,
  * @apar: the advection parameters.
  * @dpar: the multilevel solver parameters for the diffusion equation.
  * @g: the pressure gradient.
+ * @alpha: the inverse of density or %NULL.
  *
  * Advects the (centered) velocity field using the current
  * face-centered (MAC) velocity field and @par->flux to compute the
@@ -608,7 +610,8 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 						guint dimension,
 						GfsAdvectionParams * apar,
 						GfsMultilevelParams * dpar,
-						GfsVariable ** g)
+						GfsVariable ** g,
+						GfsFunction * alpha)
 {
   FttComponent c;
   GfsVariable ** v;
@@ -635,7 +638,7 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
       variable_sources (domain, apar, rhs, g);
       gts_object_destroy (GTS_OBJECT (g[c]));
       g[c] = NULL;
-      variable_diffusion (domain, d, apar, dpar, rhs);
+      variable_diffusion (domain, d, apar, dpar, rhs, alpha);
       gts_object_destroy (GTS_OBJECT (rhs));
     }
     else {
@@ -707,7 +710,7 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, rhs);
     variable_sources (domain, par, rhs, NULL);
-    variable_diffusion (domain, d, par, dpar, rhs);
+    variable_diffusion (domain, d, par, dpar, rhs, NULL);
     gts_object_destroy (GTS_OBJECT (rhs));
   }
   else {

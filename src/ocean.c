@@ -337,7 +337,8 @@ static void ocean_run (GfsSimulation * sim)
     gfs_centered_velocity_advection_diffusion (domain, 2,
 					       &sim->advection_params,
 					       &sim->diffusion_params,
-					       g);
+					       g,
+					       sim->physical_params.alpha);
 
     gfs_poisson_coefficients (domain, fH);
     gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., 
@@ -720,7 +721,8 @@ static void ocean_run (GfsSimulation * sim)
     gfs_centered_velocity_advection_diffusion (domain, 2,
 					       &sim->advection_params,
 					       &sim->diffusion_params,
-					       g);
+					       g,
+					       sim->physical_params.alpha);
 
     /* barotropic pressure and Coriolis terms */
     set_solid2D (sim, solid);

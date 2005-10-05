@@ -572,7 +572,8 @@ static void simulation_run (GfsSimulation * sim)
 					       FTT_DIMENSION,
 					       &sim->advection_params,
 					       &sim->diffusion_params,
-					       g);
+					       g,
+					       sim->physical_params.alpha);
 
     gfs_simulation_adapt (sim, NULL);
     gfs_approximate_projection (domain,

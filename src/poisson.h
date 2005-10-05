@@ -76,7 +76,8 @@ void                  gfs_poisson_cycle              (GfsDomain * domain,
 void                  gfs_diffusion_coefficients     (GfsDomain * domain,
 						      GfsSourceDiffusion * d,
 						      gdouble dt,
-						      GfsVariable * dia);
+						      GfsVariable * dia,
+						      GfsFunction * alpha);
 void                  gfs_diffusion_rhs              (GfsDomain * domain,
 						      GfsVariable * v,
 						      GfsVariable * rhs,

@@ -62,7 +62,8 @@ void          gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 							 guint dimension,
 							 GfsAdvectionParams * apar,
 							 GfsMultilevelParams * dpar,
-							 GfsVariable ** g);
+							 GfsVariable ** g,
+							 GfsFunction * alpha);
 void          gfs_tracer_advection_diffusion  (GfsDomain * domain,
 					       GfsAdvectionParams * par,
 					       GfsMultilevelParams * dpar,

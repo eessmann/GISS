@@ -376,14 +376,26 @@ GfsSourceGenericClass * gfs_source_control_class (void)
 
 static void diffusion_destroy (GtsObject * o)
 {
-  gts_object_destroy (GTS_OBJECT (GFS_DIFFUSION (o)->val));
+  GfsDiffusion * d = GFS_DIFFUSION (o);
+
+  if (d->mu != gfs_function_get_variable (d->val))
+    gts_object_destroy (GTS_OBJECT (d->mu));
+  gts_object_destroy (GTS_OBJECT (d->val));
 
   (* GTS_OBJECT_CLASS (gfs_diffusion_class ())->parent_class->destroy) (o);
 }
 
 static void diffusion_read (GtsObject ** o, GtsFile * fp)
 {
-  gfs_function_read (GFS_DIFFUSION (*o)->val, gfs_object_simulation (*o), fp);
+  GfsDiffusion * d = GFS_DIFFUSION (*o);
+
+  gfs_function_read (d->val, gfs_object_simulation (*o), fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (gfs_function_get_constant_value (d->val) == G_MAXDOUBLE &&
+      (d->mu = gfs_function_get_variable (d->val)) == NULL)
+    d->mu = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
 }
 
 static void diffusion_write (GtsObject * o, FILE * fp)
@@ -391,14 +403,34 @@ static void diffusion_write (GtsObject * o, FILE * fp)
   gfs_function_write (GFS_DIFFUSION (o)->val, fp);
 }
 
+static void update_mu (FttCell * cell, GfsDiffusion * d)
+{
+  GFS_VARIABLE (cell, d->mu->i) = gfs_function_value (d->val, cell);
+}
+
+static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
+{
+  GfsDiffusion * d = GFS_DIFFUSION (event);
+
+  if (d->mu != gfs_function_get_variable (d->val)) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) update_mu, event);
+    gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, d->mu);
+    return TRUE;
+  }
+  return FALSE;
+}
+
 static gdouble diffusion_face (GfsDiffusion * d, FttCellFace * f)
 {
-  return gfs_function_face_value (d->val, f);
+  return d->mu ? gfs_face_interpolated_value (f, d->mu->i) :
+    gfs_function_get_constant_value (d->val);
 }
 
 static gdouble diffusion_cell (GfsDiffusion * d, FttCell * cell)
 {
-  return gfs_function_value (d->val, cell);
+  return d->mu ? GFS_VARIABLE (cell, d->mu->i) :
+    gfs_function_get_constant_value (d->val);
 }
 
 static void diffusion_class_init (GfsDiffusionClass * klass)
@@ -406,7 +438,7 @@ static void diffusion_class_init (GfsDiffusionClass * klass)
   GTS_OBJECT_CLASS (klass)->destroy = diffusion_destroy;
   GTS_OBJECT_CLASS (klass)->read = diffusion_read;
   GTS_OBJECT_CLASS (klass)->write = diffusion_write;
-  GFS_EVENT_CLASS (klass)->event = NULL;
+  GFS_EVENT_CLASS (klass)->event = diffusion_event;
   klass->face = diffusion_face;
   klass->cell = diffusion_cell;
 }
@@ -414,6 +446,7 @@ static void diffusion_class_init (GfsDiffusionClass * klass)
 static void diffusion_init (GfsDiffusion * d)
 {
   d->val = gfs_function_new (gfs_function_class (), 0.);
+  d->mu = NULL;
 }
 
 GfsDiffusionClass * gfs_diffusion_class (void)
@@ -445,136 +478,6 @@ gdouble gfs_diffusion_face (GfsDiffusion * d, FttCellFace * f)
 gdouble gfs_diffusion_cell (GfsDiffusion * d, FttCell * cell)
 {
   return (* GFS_DIFFUSION_CLASS (GTS_OBJECT (d)->klass)->cell) (d, cell);
-}
-
-/* GfsDiffusionMulti: Object */
-
-static void diffusion_multi_destroy (GtsObject * object)
-{
-  g_slist_foreach (GFS_DIFFUSION_MULTI (object)->d, (GFunc) gts_object_destroy, NULL);
-  g_slist_free (GFS_DIFFUSION_MULTI (object)->d);
-
-  (* GTS_OBJECT_CLASS (gfs_diffusion_multi_class ())->parent_class->destroy) 
-    (object);
-}
-
-static void diffusion_multi_read (GtsObject ** o, GtsFile * fp)
-{
-  GfsDiffusionMulti * m = GFS_DIFFUSION_MULTI (*o);
-  gboolean constant = TRUE;
-  
-  while (fp->type != GTS_ERROR && fp->type != '\n') {
-    GtsObject * d = gts_object_new (GTS_OBJECT_CLASS (gfs_diffusion_class ()));
-
-    (* d->klass->read) (&d, fp);
-    if (m->d || d->klass != GTS_OBJECT_CLASS (gfs_diffusion_class ()))
-      constant = FALSE;
-    m->d = g_slist_prepend (m->d, d);
-  }
-  m->d = g_slist_reverse (m->d);
-  if (fp->type != GTS_ERROR && m->d->next)
-    m->c = gfs_variable_from_name (GFS_DOMAIN (gfs_object_simulation (m))->variables, "C");
-  if (!constant) {
-    m->mu = gfs_domain_add_variable (GFS_DOMAIN (gfs_object_simulation (m)), 
-				     "_gfs_diffusion_multi");
-    g_assert (m->mu);
-  }
-}
-
-static void diffusion_multi_write (GtsObject * o, FILE * fp)
-{
-  GSList * i = GFS_DIFFUSION_MULTI (o)->d;
-
-  while (i) {
-    (* GTS_OBJECT (i->data)->klass->write) (i->data, fp);
-    i = i->next;
-  }
-}
-
-static gdouble diffusion_multi_face (GfsDiffusion * d, FttCellFace * f)
-{
-  gdouble mu1 = gfs_diffusion_face (GFS_DIFFUSION_MULTI (d)->d->data, f);
-
-  if (!GFS_DIFFUSION_MULTI (d)->d->next)
-    return mu1;
-  else {
-    /* fixme: c should be evaluated at t or t + dt/2 */
-    gdouble c = gfs_face_interpolated_value (f, GFS_DIFFUSION_MULTI (d)->c->i);
-    gdouble mu2 = gfs_diffusion_face (GFS_DIFFUSION_MULTI (d)->d->next->data, f);
-
-    return mu1 + c*(mu2 - mu1);
-  }
-}
-
-static gdouble diffusion_multi_cell (GfsDiffusion * d, FttCell * cell)
-{
-  gdouble mu1 = gfs_diffusion_cell (GFS_DIFFUSION_MULTI (d)->d->data, cell);
-
-  if (!GFS_DIFFUSION_MULTI (d)->d->next)
-    return mu1;
-  else {
-    /* fixme: c should be evaluated at t or t + dt/2 */
-    gdouble c = GFS_VARIABLE (cell, GFS_DIFFUSION_MULTI (d)->c->i);
-    gdouble mu2 = gfs_diffusion_cell (GFS_DIFFUSION_MULTI (d)->d->next->data, cell);
-    
-    return mu1 + c*(mu2 - mu1);
-  }
-}
-
-static void set_mu (FttCell * cell, GfsDiffusion * d)
-{
-  GFS_VARIABLE (cell, GFS_DIFFUSION_MULTI (d)->mu->i) = diffusion_multi_cell (d, cell);
-}
-
-static gboolean diffusion_multi_event (GfsEvent * event, GfsSimulation * sim)
-{
-  GfsDiffusionMulti * m = GFS_DIFFUSION_MULTI (event);
-  GSList * i = m->d;
-
-  while (i) {
-    if (GFS_EVENT_CLASS (GTS_OBJECT (i->data)->klass)->event)
-      (* GFS_EVENT_CLASS (GTS_OBJECT (i->data)->klass)->event) (event, sim);
-    i = i->next;
-  }
-
-  if (m->mu) {
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) set_mu, m);
-    gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, m->mu);
-  }
-  
-  return TRUE;
-}
-
-static void diffusion_multi_class_init (GfsDiffusionClass * klass)
-{
-  GTS_OBJECT_CLASS (klass)->read = diffusion_multi_read;
-  GTS_OBJECT_CLASS (klass)->write = diffusion_multi_write;
-  GTS_OBJECT_CLASS (klass)->destroy = diffusion_multi_destroy;
-  GFS_EVENT_CLASS (klass)->event = diffusion_multi_event;
-  klass->face = diffusion_multi_face;
-  klass->cell = diffusion_multi_cell;
-}
-
-GfsDiffusionClass * gfs_diffusion_multi_class (void)
-{
-  static GfsDiffusionClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo diffusion_multi_info = {
-      "GfsDiffusionMulti",
-      sizeof (GfsDiffusionMulti),
-      sizeof (GfsDiffusionClass),
-      (GtsObjectClassInitFunc) diffusion_multi_class_init,
-      (GtsObjectInitFunc) NULL,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_diffusion_class ()),
-				  &diffusion_multi_info);
-  }
-
-  return klass;
 }
 
 /* GfsSourceDiffusion: Object */
@@ -809,71 +712,62 @@ GfsSourceGenericClass * gfs_source_diffusion_explicit_class (void)
 
 /* GfsSourceViscosity: Object */
 
-static void source_viscosity_destroy (GtsObject * o)
-{
-  gts_object_destroy (GTS_OBJECT (GFS_SOURCE_VISCOSITY (o)->D));
-
-  (* GTS_OBJECT_CLASS (gfs_source_viscosity_class ())->parent_class->destroy) (o);
-}
-
 static void source_viscosity_read (GtsObject ** o, GtsFile * fp)
 {
+  GfsSourceViscosity * source;
+  GfsSourceDiffusion * d;
+  GfsDomain * domain;
   FttComponent c;
-  GfsSourceViscosity * s;
 
-  (* GTS_OBJECT_CLASS (gfs_source_viscosity_class ())->parent_class->read) (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_source_velocity_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
+  source = GFS_SOURCE_VISCOSITY (*o);
+  domain =  GFS_DOMAIN (gfs_object_simulation (source));
+  if (!(source->v = gfs_domain_velocity (domain))) {
+    gts_file_error (fp, "cannot find velocity components");
+    return;
+  }
   for (c = 0; c < FTT_DIMENSION; c++) {
-    GfsVariable * v = GFS_SOURCE_VELOCITY (*o)->v[c];
-
-    if (v->sources) {
-      GSList * i = GTS_SLIST_CONTAINER (v->sources)->items;
-      
-      while (i) {
-	if (i->data != *o && GFS_IS_SOURCE_DIFFUSION (i->data)) {
-	  gts_file_error (fp, "variable '%s' cannot have multiple diffusion source terms", v->name);
-	  return;
-	}
-	i = i->next;
-      }
-    }
+    if (source->v[c]->sources == NULL)
+      source->v[c]->sources = 
+	gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
+    gts_container_add (source->v[c]->sources, GTS_CONTAINEE (source));
   }
 
-  s = GFS_SOURCE_VISCOSITY (*o);
-  gfs_object_simulation_set (s->D, gfs_object_simulation (s));
-  (* GTS_OBJECT (s->D)->klass->read) ((GtsObject **) &s->D, fp);
+  d = GFS_SOURCE_DIFFUSION (*o);
+  gfs_object_simulation_set (d->D, gfs_object_simulation (d));
+  (* GTS_OBJECT (d->D)->klass->read) ((GtsObject **) &d->D, fp);
 }
 
 static void source_viscosity_write (GtsObject * o, FILE * fp)
 {
-  GfsSourceViscosity * s = GFS_SOURCE_VISCOSITY (o);
+  GfsSourceDiffusion * d = GFS_SOURCE_DIFFUSION (o);
 
-  (* GTS_OBJECT_CLASS (gfs_source_viscosity_class ())->parent_class->write) (o, fp);
-  (* GTS_OBJECT (s->D)->klass->write) (GTS_OBJECT (s->D), fp);
+  (* GTS_OBJECT_CLASS (gfs_source_velocity_class ())->parent_class->write) (o, fp);
+  (* GTS_OBJECT (d->D)->klass->write) (GTS_OBJECT (d->D), fp);
 }
 
 static gdouble source_viscosity_non_diffusion_value (GfsSourceGeneric * s,
 						     FttCell * cell,
 						     GfsVariable * v)
 {
-  GfsVariable * mu = GFS_DIFFUSION_MULTI (GFS_SOURCE_DIFFUSION (s)->D)->mu;
+  GfsVariable * mu = GFS_SOURCE_DIFFUSION (s)->D->mu;
 
   if (mu == NULL)
     return 0.;
   else {
-    GfsVariable ** u = GFS_SOURCE_VELOCITY (s)->v;
+    GfsVariable ** u = GFS_SOURCE_VISCOSITY (s)->v;
     FttComponent c = v->component, j;
-    gdouble rho = 1.
-      /* fixme: + GFS_STATE (cell)->c*(gfs_object_simulation (s)->physical_params.rho - 1.)*/;
+    GfsFunction * alpha = gfs_object_simulation (s)->physical_params.alpha;
     gdouble h = ftt_cell_size (cell);
     gdouble a = 0.;
 
     for (j = 0; j < FTT_DIMENSION; j++)
       a += (gfs_center_gradient (cell, c, u[j]->i)*
 	    gfs_center_gradient (cell, j, mu->i));
-    return a/(rho*h*h);
+    return a*(alpha ? gfs_function_value (alpha, cell) : 1.)/(h*h);
   }
 }
 
@@ -881,40 +775,19 @@ static gdouble source_viscosity_value (GfsSourceGeneric * s,
 				       FttCell * cell,
 				       GfsVariable * v)
 {
-  gdouble rho = 1.
-    /* fixme: + GFS_STATE (cell)->c*(gfs_object_simulation (s)->physical_params.rho - 1.)*/;
+  GfsFunction * alpha = gfs_object_simulation (s)->physical_params.alpha;
 
-  return (source_diffusion_value (s, cell, v)/rho +
+  return (source_diffusion_value (s, cell, v)*(alpha ? gfs_function_value (alpha, cell) : 1.) +
 	  source_viscosity_non_diffusion_value (s, cell, v));
-}
-
-static gboolean source_viscosity_event (GfsEvent * event, GfsSimulation * sim)
-{
-  if ((* gfs_event_class ()->event) (event, sim)) {
-    GfsSourceViscosity * s = GFS_SOURCE_VISCOSITY (event);
-
-    if ((* GFS_EVENT_CLASS (GTS_OBJECT (s->D)->klass)->event))
-      (* GFS_EVENT_CLASS (GTS_OBJECT (s->D)->klass)->event) (GFS_EVENT (s->D), sim);
-    return TRUE;
-  }
-  return FALSE;
 }
 
 static void source_viscosity_class_init (GfsSourceGenericClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->destroy = source_viscosity_destroy;
   GTS_OBJECT_CLASS (klass)->read = source_viscosity_read;
   GTS_OBJECT_CLASS (klass)->write = source_viscosity_write;
-  
-  GFS_EVENT_CLASS (klass)->event = source_viscosity_event;
 
   klass->mac_value = source_viscosity_value;
   klass->centered_value = source_viscosity_non_diffusion_value;
-}
-
-static void source_viscosity_init (GfsSourceViscosity * s)
-{
-  s->D = GFS_DIFFUSION (gts_object_new (GTS_OBJECT_CLASS (gfs_diffusion_class ())));
 }
 
 GfsSourceGenericClass * gfs_source_viscosity_class (void)
@@ -927,11 +800,11 @@ GfsSourceGenericClass * gfs_source_viscosity_class (void)
       sizeof (GfsSourceViscosity),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) source_viscosity_class_init,
-      (GtsObjectInitFunc) source_viscosity_init,
+      (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_velocity_class ()),
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_diffusion_class ()),
 				  &source_viscosity_info);
   }
 

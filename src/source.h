@@ -156,6 +156,7 @@ struct _GfsDiffusion {
 
   /*< public >*/
   GfsFunction * val;
+  GfsVariable * mu;
 };
 
 typedef struct _GfsDiffusionClass    GfsDiffusionClass;
@@ -183,27 +184,6 @@ gdouble             gfs_diffusion_face   (GfsDiffusion * d,
 					  FttCellFace * f);
 gdouble             gfs_diffusion_cell   (GfsDiffusion * d, 
 					  FttCell * cell);
-
-/* GfsDiffusionMulti: Header */
-
-typedef struct _GfsDiffusionMulti         GfsDiffusionMulti;
-
-struct _GfsDiffusionMulti {
-  /*< private >*/
-  GfsDiffusion parent;
-
-  /*< public >*/
-  GSList * d;
-  GfsVariable * c, * mu;
-};
-
-#define GFS_DIFFUSION_MULTI(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsDiffusionMulti,\
-					         gfs_diffusion_multi_class ())
-#define GFS_IS_DIFFUSION_MULTI(obj)         (gts_object_is_from_class (obj,\
-						 gfs_diffusion_multi_class ()))
-
-GfsDiffusionClass * gfs_diffusion_multi_class  (void);
 
 /* GfsSourceDiffusion: Header */
 
@@ -253,10 +233,10 @@ typedef struct _GfsSourceViscosity         GfsSourceViscosity;
 
 struct _GfsSourceViscosity {
   /*< private >*/
-  GfsSourceVelocity parent;
+  GfsSourceDiffusion parent;
 
   /*< public >*/
-  GfsDiffusion * D;
+  GfsVariable ** v;
 };
 
 #define GFS_SOURCE_VISCOSITY(obj)            GTS_OBJECT_CAST (obj,\

@@ -486,7 +486,7 @@ static void face_coeff_from_below (FttCell * cell)
 /**
  * gfs_poisson_coefficients:
  * @domain: a #GfsDomain.
- * @alpha: the density or %NULL.
+ * @alpha: the inverse of density or %NULL.
  *
  * Initializes the face coefficients for the Poisson equation
  * $\nabla\cdot\alpha\nabla p=\dots$.
@@ -701,7 +701,8 @@ static void diffusion_mixed_coef (FttCell * cell, gpointer * data)
 
     GFS_STATE (cell)->solid->v = *dt*gfs_source_diffusion_cell (d, cell);
   }
-  GFS_VARIABLE (cell, GFS_VARIABLE1 (data[3])->i) = 1.;
+  GFS_VARIABLE (cell, GFS_VARIABLE1 (data[3])->i) =
+    data[4] ? 1./gfs_function_value (data[4], cell) : 1.;
 }
 
 /**
@@ -710,16 +711,18 @@ static void diffusion_mixed_coef (FttCell * cell, gpointer * data)
  * @d: a #GfsSourceDiffusion.
  * @dt: the time-step.
  * @dia: where to store the diagonal weight.
+ * @alpha: the inverse of density or %NULL.
  *
  * Initializes the face coefficients for the diffusion equation.
  */
 void gfs_diffusion_coefficients (GfsDomain * domain,
 				 GfsSourceDiffusion * d,
 				 gdouble dt,
-				 GfsVariable * dia)
+				 GfsVariable * dia,
+				 GfsFunction * alpha)
 {
   gdouble lambda2[FTT_DIMENSION];
-  gpointer data[4];
+  gpointer data[5];
   FttComponent i;
 
   g_return_if_fail (domain != NULL);
@@ -735,6 +738,7 @@ void gfs_diffusion_coefficients (GfsDomain * domain,
   data[1] = lambda2;
   data[2] = &dt;
   data[3] = dia;
+  data[4] = alpha;
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) diffusion_mixed_coef, data);
