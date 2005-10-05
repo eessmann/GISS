@@ -18,7 +18,7 @@
 # \end{figure}
 #
 # Velocity profiles are generated automatically and compared to the
-# benchmark results of Ghia et al. (J. Comp. Phys. 1982) on
+# benchmark results of Ghia et al. \cite{ghia82} on
 # Figures \ref{xprof} and \ref{yprof}.
 #
 # \begin{figure}[htbp]
@@ -40,7 +40,7 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: gerris2D lid.gfs
+# Command: sh lid.sh lid.gfs
 # Version: 0.6.4
 # Required files: xprofile yprofile xprof.ghia yprof.ghia
 # Running time: 70 minutes
@@ -52,19 +52,13 @@
   # Stop the simulation at t = 300 if convergence has not been reached before
   Time { end = 300 }
 
-  # Use an initial refinement of 7 levels (i.e. 2^7=128x128)
-  Refine 7
+  # Use an initial refinement of 6 levels (i.e. 2^6=64x64)
+  Refine 6
 
   # Set a viscosity source term on the velocity vector with x-component U
   # The Reynolds number is Re = L*U/Nu = 1*1/1e-3 = 1000
   SourceDiffusion {} U 1e-3
   SourceDiffusion {} V 1e-3
-
-  # Writes the time and timestep every 10 timesteps on standard error
-  OutputTime { istep = 10 } stderr
-
-  # Writes info about the convergence of the Poisson solver on standard error
-  OutputProjectionStats { istep = 10 } stderr
 
   # Stops the simulation if the maximum of the absolute value of the
   # difference between the current U field and the U field 10 timesteps
@@ -73,6 +67,8 @@
   # Stores this difference in the DU field (this can be used for
   # monitoring the convergence of the simulation).
   EventStop { istep = 10 } U 1e-4 DU
+
+  OutputScalarNorm { istep = 10 } du { v = DU }
 
   # Pipes a bitmap PPM image representation of the velocity field at the end of the simulation
   # into the ImageMagick converter "convert" to create the
@@ -102,9 +98,6 @@
     plot [-0.5:0.5]'yprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'yprof' u 2:7 w l title "Gerris"
 EOF
   }
-
-  # Outputs profiling information at the end of the simulation to standard error
-  OutputTiming { start = end } stderr
 }
 GfsBox {
 

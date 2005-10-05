@@ -6,7 +6,8 @@ class Curve:
 		line = file.readline()
 		while line:
 			record = line.split()
-			self.l.append((float(record[x-1]),float(record[y-1])))
+			if record[0] != "#":
+				self.l.append((float(record[x-1]),float(record[y-1])))
 			line = file.readline()
 	def __init__(self,f=None,x=1,y=2):
 		self.l = []

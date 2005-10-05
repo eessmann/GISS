@@ -12,7 +12,8 @@ TESTDIRS = \
 	spurious \
 	capwave \
 	waves \
-	geo
+	geo \
+	lid
 
 EXTRA_DIST = \
 	template.tex \
@@ -56,7 +57,7 @@ tests.tex: template.tex Makefile.deps
 	python gfs2tex $(TESTDIRS)
 	cp -f template.tex tests.tex
 
-Makefile.deps: Makefile.am depend.py
+Makefile.deps: Makefile depend.py
 	python depend.py $(TESTDIRS) > Makefile.deps
 
 -include Makefile.deps

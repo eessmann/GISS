@@ -2,7 +2,6 @@
 
 EXAMPLES = \
 	cylinder \
-	lid \
 	shear \
 	rt \
 	boussinesq
