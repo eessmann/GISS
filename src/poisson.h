@@ -41,6 +41,7 @@ struct _GfsMultilevelParams {
   guint niter;
   guint depth;
   gboolean weighted;
+  gdouble beta;
   GfsNorm residual_before, residual;
 };
 
@@ -77,11 +78,13 @@ void                  gfs_diffusion_coefficients     (GfsDomain * domain,
 						      GfsSourceDiffusion * d,
 						      gdouble dt,
 						      GfsVariable * dia,
-						      GfsFunction * alpha);
+						      GfsFunction * alpha,
+						      gdouble beta);
 void                  gfs_diffusion_rhs              (GfsDomain * domain,
 						      GfsVariable * v,
 						      GfsVariable * rhs,
-						      GfsVariable * dia);
+						      GfsVariable * dia,
+						      gdouble beta);
 void                  gfs_diffusion_residual         (GfsDomain * domain,
 						      GfsVariable * u,
 						      GfsVariable * rhs,

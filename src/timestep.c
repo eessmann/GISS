@@ -573,9 +573,9 @@ static void variable_diffusion (GfsDomain * domain,
 
   dia = gfs_temporary_variable (domain);
 
-  gfs_diffusion_coefficients (domain, d, par->dt, dia, alpha);
+  gfs_diffusion_coefficients (domain, d, par->dt, dia, alpha, dpar->beta);
   gfs_domain_surface_bc (domain, par->v);
-  gfs_diffusion_rhs (domain, par->v, rhs, dia);
+  gfs_diffusion_rhs (domain, par->v, rhs, dia, dpar->beta);
   /* fixme: time shoud be set to t + dt here in case boundary values are
      time-dependent in the call below */
   gfs_domain_surface_bc (domain, par->v);

@@ -43,13 +43,15 @@ void gfs_multilevel_params_write (GfsMultilevelParams * par, FILE * fp)
 	   "  minlevel  = %u\n"
 	   "  nitermax  = %u\n"
 	   "  weighted  = %d\n"
+	   "  beta      = %g\n"
 	   "}",
 	   par->tolerance,
 	   par->nrelax,
 	   par->erelax,
 	   par->minlevel,
 	   par->nitermax,
-	   par->weighted);
+	   par->weighted,
+	   par->beta);
 }
 
 void gfs_multilevel_params_init (GfsMultilevelParams * par)
@@ -64,6 +66,7 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
 
   par->dimension = FTT_DIMENSION;
   par->weighted = FALSE;
+  par->beta = 0.5;
 }
 
 void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
@@ -75,6 +78,7 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
     {GTS_UINT,   "minlevel",  TRUE},
     {GTS_UINT,   "nitermax",  TRUE},
     {GTS_INT,    "weighted",  TRUE},
+    {GTS_DOUBLE, "beta",      TRUE},
     {GTS_NONE}
   };
 
@@ -87,6 +91,7 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
   var[3].data = &par->minlevel;
   var[4].data = &par->nitermax;
   var[5].data = &par->weighted;
+  var[6].data = &par->beta;
 
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR)
@@ -102,6 +107,8 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
     gts_file_variable_error (fp, var, "nrelax", "nrelax must be non zero");
   if (par->erelax == 0)
     gts_file_variable_error (fp, var, "erelax", "erelax must be non zero");
+  if (par->beta < 0.5 || par->beta > 1.)
+    gts_file_variable_error (fp, var, "beta", "beta must be in [0.5,1]");
 }
 
 #define FACE_GRADIENT(x, y, z, u) (gfs_face_weighted_gradient (x, y, z, u))
@@ -217,6 +224,7 @@ void gfs_face_gradient_flux_centered (const FttCellFace * face,
 typedef struct {
   guint u, rhs, dia, res;
   gint maxlevel;
+  gdouble beta;
 } RelaxParams;
 
 static void relax (FttCell * cell, RelaxParams * p)
@@ -667,13 +675,18 @@ void gfs_poisson_cycle (GfsDomain * domain,
   gts_object_destroy (GTS_OBJECT (dp));
 }
 
-static void diffusion_coef (FttCellFace * face, gpointer * data)
+typedef struct {
+  GfsSourceDiffusion * d;
+  gdouble lambda2[FTT_DIMENSION];
+  gdouble dt;
+  GfsVariable * dia;
+  GfsFunction * alpha;
+} DiffusionCoeff;
+
+static void diffusion_coef (FttCellFace * face, DiffusionCoeff * c)
 {
-  GfsSourceDiffusion * d = data[0];
-  gdouble * lambda2 = data[1];
-  gdouble * dt = data[2];
   GfsStateVector * s = GFS_STATE (face->cell);
-  gdouble v = lambda2[face->d/2]*(*dt)*gfs_source_diffusion_face (d, face);
+  gdouble v = c->lambda2[face->d/2]*c->dt*gfs_source_diffusion_face (c->d, face);
 
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
@@ -692,17 +705,12 @@ static void diffusion_coef (FttCellFace * face, gpointer * data)
   }
 }
 
-static void diffusion_mixed_coef (FttCell * cell, gpointer * data)
+static void diffusion_mixed_coef (FttCell * cell, DiffusionCoeff * c)
 {
   reset_coeff (cell);
-  if (GFS_IS_MIXED (cell)) {
-    GfsSourceDiffusion * d = data[0];
-    gdouble * dt = data[2];
-
-    GFS_STATE (cell)->solid->v = *dt*gfs_source_diffusion_cell (d, cell);
-  }
-  GFS_VARIABLE (cell, GFS_VARIABLE1 (data[3])->i) =
-    data[4] ? 1./gfs_function_value (data[4], cell) : 1.;
+  if (GFS_IS_MIXED (cell))
+    GFS_STATE (cell)->solid->v = c->dt*gfs_source_diffusion_cell (c->d, cell);
+  GFS_VARIABLE (cell, c->dia->i) = c->alpha ? 1./gfs_function_value (c->alpha, cell) : 1.;
 }
 
 /**
@@ -712,6 +720,7 @@ static void diffusion_mixed_coef (FttCell * cell, gpointer * data)
  * @dt: the time-step.
  * @dia: where to store the diagonal weight.
  * @alpha: the inverse of density or %NULL.
+ * @beta: the implicitness parameter (0.5 Crank-Nicholson, 1. backward Euler).
  *
  * Initializes the face coefficients for the diffusion equation.
  */
@@ -719,32 +728,32 @@ void gfs_diffusion_coefficients (GfsDomain * domain,
 				 GfsSourceDiffusion * d,
 				 gdouble dt,
 				 GfsVariable * dia,
-				 GfsFunction * alpha)
+				 GfsFunction * alpha,
+				 gdouble beta)
 {
-  gdouble lambda2[FTT_DIMENSION];
-  gpointer data[5];
+  DiffusionCoeff coef;
   FttComponent i;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (d != NULL);
   g_return_if_fail (dia != NULL);
+  g_return_if_fail (beta >= 0.5 && beta <= 1.);
 
   for (i = 0; i < FTT_DIMENSION; i++) {
     gdouble lambda = (&domain->lambda.x)[i];
 
-    lambda2[i] = lambda*lambda;
+    coef.lambda2[i] = lambda*lambda;
   }
-  data[0] = d;
-  data[1] = lambda2;
-  data[2] = &dt;
-  data[3] = dia;
-  data[4] = alpha;
+  coef.d = d;
+  coef.dt = beta*dt;
+  coef.dia = dia;
+  coef.alpha = alpha;
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) diffusion_mixed_coef, data);
+			    (FttCellTraverseFunc) diffusion_mixed_coef, &coef);
   gfs_domain_face_traverse (domain, FTT_XYZ, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttFaceTraverseFunc) diffusion_coef, data);
+			    (FttFaceTraverseFunc) diffusion_coef, &coef);
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) face_coeff_from_below, 
@@ -780,7 +789,7 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
     gfs_face_gradient_flux (&face, &g, p->u, -1);
     f += g.b - g.a*val;
   }
-  GFS_VARIABLE (cell, p->rhs) += val + f/(2.*h*h*a);
+  GFS_VARIABLE (cell, p->rhs) += val + p->beta*f/(h*h*a);
 }
 
 /**
@@ -789,6 +798,7 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
  * @v: a #GfsVariable.
  * @rhs: a #GfsVariable.
  * @dia: the diagonal weight.
+ * @beta: the implicitness parameter (0.5 Crank-Nicholson, 1. backward Euler).
  *
  * Adds to the @rhs variable of @cell the right-hand side of the
  * diffusion equation for variable @v.
@@ -796,7 +806,9 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
  * The diffusion coefficients must have been already set using
  * gfs_diffusion_coefficients().
  */
-void gfs_diffusion_rhs (GfsDomain * domain, GfsVariable * v, GfsVariable * rhs, GfsVariable * dia)
+void gfs_diffusion_rhs (GfsDomain * domain, 
+			GfsVariable * v, GfsVariable * rhs, GfsVariable * dia,
+			gdouble beta)
 {
   RelaxParams p;
 
@@ -804,10 +816,12 @@ void gfs_diffusion_rhs (GfsDomain * domain, GfsVariable * v, GfsVariable * rhs, 
   g_return_if_fail (v != NULL);
   g_return_if_fail (rhs != NULL);
   g_return_if_fail (dia != NULL);
+  g_return_if_fail (beta >= 0.5 && beta <= 1.);
 
   p.u = v->i;
   p.rhs = rhs->i;
   p.dia = dia->i;
+  p.beta = (1. - beta)/beta;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) diffusion_rhs, &p);
 }
@@ -838,7 +852,7 @@ static void diffusion_relax (FttCell * cell, RelaxParams * p)
     g.a += ng.a;
     g.b += ng.b;
   }
-  a *= 2.*h*h;
+  a *= h*h;
   g_assert (a > 0.);
   g.a = 1. + g.a/a;
   g.b = GFS_VARIABLE (cell, p->res) + g.b/a;
@@ -875,7 +889,7 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
     g.a += ng.a;
     g.b += ng.b;
   }
-  a *= 2.*h*h;
+  a *= h*h;
   g_assert (a > 0.);
   g.a = 1. + g.a/a;
   g.b = GFS_VARIABLE (cell, p->rhs) + g.b/a;
