@@ -412,10 +412,14 @@ static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
 {
   GfsDiffusion * d = GFS_DIFFUSION (event);
 
-  if (d->mu != gfs_function_get_variable (d->val)) {
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) update_mu, event);
-    gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, d->mu);
+  if (d->mu) {
+    if (d->mu != gfs_function_get_variable (d->val))
+      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) update_mu, event);
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_get_from_below_intensive, d->mu);
+    gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, d->mu);
     return TRUE;
   }
   return FALSE;
