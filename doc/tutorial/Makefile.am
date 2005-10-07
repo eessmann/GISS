@@ -7,7 +7,8 @@ clean-generic:
 	$(RM) *.dvi *.aux *.log *.toc *.out \
 	boundaries.pdf direction.eps direction.pdf dxscreen.eps dxscreen.pdf \
 	gfs2oogl.pdf half-cylinder.eps half-cylinder.pdf refined1.pdf refined1_cells.pdf \
-	refined2.pdf vorticity.eps vorticity.pdf gfsview.eps tutorial1.tex
+	refined2.pdf vorticity.eps vorticity.pdf gfsview.eps tutorial1.tex \
+	Makefile.deps
 
 tutorial.tar.gz: tutorial.ps.gz
 	rm -r -f tutorial

@@ -27,7 +27,7 @@ bin_SCRIPTS = \
 BUILT_SOURCES= \
 	gfs2doc
 
-CLEANFILES = $(BUILT_SOURCES)
+CLEANFILES = $(BUILT_SOURCES) Makefile.deps
 
 dist_pkglib_DATA = gfs2tex.py
 

@@ -31,7 +31,7 @@ test.sh: $(TESTDIRS)
 	@chmod +x test.sh
 
 clean-generic:
-	$(RM) *.dvi *.aux *.log *.toc *.out tests.tex *.pyc test.sh *.bbl *.blg
+	$(RM) *.dvi *.aux *.log *.toc *.out tests.tex *.pyc test.sh *.bbl *.blg Makefile.deps
 
 tests: tests.ps.gz l2hconf.pm
 	latex2html -no_math -html_version 3.2,math -address "" -info "" -split +3 -show_section_numbers -toc_depth 5 -t "Gerris Tests" -local_icons -white tests.tex
