@@ -132,6 +132,9 @@ void                  gfs_cell_dirichlet_gradient    (FttCell * cell,
 						      gint max_level,
 						      gdouble v0,
 						      FttVector * grad);
+gdouble               gfs_mixed_cell_gradient        (FttCell * cell,
+						      FttComponent c,
+						      guint v);
 gdouble               gfs_cell_dirichlet_gradient_flux (FttCell * cell,
 							guint v,
 							gint max_level,
@@ -221,6 +224,11 @@ gdouble               gfs_center_curvature          (FttCell * cell,
 						     guint v);
 gdouble               gfs_streamline_curvature      (FttCell * cell,
 						     GfsVariable ** v);
+void                  gfs_shear_strain_rate_tensor  (FttCell * cell, 
+						     GfsVariable ** u,
+						     gdouble t[FTT_DIMENSION][FTT_DIMENSION]);
+gdouble               gfs_2nd_principal_invariant   (FttCell * cell, 
+						     GfsVariable ** u);
 
 typedef struct {
 #if FTT_2D

@@ -1140,6 +1140,145 @@ void gfs_cell_dirichlet_gradient (FttCell * cell,
   }
 }
 
+static gboolean face_is_mixed (FttCellFace * f)
+{
+  if (!GFS_IS_MIXED (f->neighbor))
+    return FALSE;
+  if (FTT_CELL_IS_LEAF (f->neighbor))
+    return TRUE;
+  else {
+    FttCellChildren child;
+    FttCell * cell = NULL;
+    gdouble amin = G_MAXDOUBLE;
+    guint i, n;
+
+    g_assert (ftt_cell_level (f->cell) == ftt_cell_level (f->neighbor));
+    n = ftt_cell_children_direction (f->neighbor, FTT_OPPOSITE_DIRECTION (f->d), &child);
+    for (i = 0; i < n; i++)
+      if (child.c[i]) {
+	gdouble a = GFS_IS_MIXED (child.c[i]) ? GFS_STATE (child.c[i])->solid->a : 1.;
+	if (a < amin) {
+	  amin = a;
+	  cell = child.c[i];
+	}
+      }
+    if (GFS_IS_MIXED (cell)) {
+      f->neighbor = cell;
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+static gdouble mixed_face_gradient1 (FttCellFace * f,
+				     FttComponent c,
+				     guint v)
+{
+  FttCell * n[N_CELLS];
+  gdouble m[N_CELLS - 1][N_CELLS - 1];
+  FttVector p;
+  gdouble v0, g = 0.;
+  guint i;
+
+  ftt_cell_pos (f->cell, &p);
+  g_assert (face_bilinear (f, n, &p, gfs_cell_cm, -1, m));
+  
+  v0 = GFS_VARIABLE (f->cell, v);
+  for (i = 0; i < N_CELLS - 1; i++)
+    g += m[c][i]*(GFS_VARIABLE (n[i + 1], v) - v0);
+
+  return g;
+}
+
+/**
+ * gfs_mixed_cell_gradient:
+ * @cell: a #FttCell.
+ * @c: a component.
+ * @v: a #GfsVariable index.
+ *
+ * For full cells this function is identical to
+ * gfs_center_gradient(). For mixed cells, bilinear interpolation is
+ * used.
+ *
+ * The gradient is normalized by the size of the cell.
+ *
+ * Returns: the value of the @c component of the gradient of variable @v
+ * at the center of mass of the cell.
+ */
+gdouble gfs_mixed_cell_gradient (FttCell * cell,
+				 FttComponent c,
+				 guint v)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (c < FTT_DIMENSION, 0.);
+
+  if (GFS_IS_MIXED (cell)) {
+    FttCell * n[N_CELLS];
+    gdouble m[N_CELLS - 1][N_CELLS - 1];
+    gdouble v0, g = 0.;
+    guint i;
+
+    g_assert (cell_bilinear (cell, n, &GFS_STATE (cell)->solid->cm,
+			     gfs_cell_cm, -1, m));
+    
+    v0 = GFS_VARIABLE (cell, v);
+    for (i = 0; i < N_CELLS - 1; i++)
+      g += m[c][i]*(GFS_VARIABLE (n[i + 1], v) - v0);
+
+    return g;
+  }
+  else {
+    FttDirection d = 2*c;
+    FttCellFace f1;
+    gdouble v0;
+
+    f1 = ftt_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+    if (f1.neighbor == cell) /* periodic */
+      return 0.;
+    v0 = GFS_VARIABLE (cell, v);
+    if (f1.neighbor) {
+      if (face_is_mixed (&f1))
+	return mixed_face_gradient1 (&f1, c, v);
+      else {
+	FttCellFace f2 = ftt_cell_face (cell, d);
+	gdouble x1 = 1., v1;
+      
+	v1 = neighbor_value (&f1, v, &x1);
+	if (f2.neighbor) {
+	  if (face_is_mixed (&f2))
+	    return mixed_face_gradient1 (&f2, c, v);
+	  else {
+	    /* two neighbors: second-order differencing (parabola) */
+	    gdouble x2 = 1., v2;
+	  
+	    v2 = neighbor_value (&f2, v, &x2);
+	    return (x1*x1*(v2 - v0) + x2*x2*(v0 - v1))/(x1*x2*(x2 + x1));
+	  }
+	}
+	else
+	  /* one neighbor: first-order differencing */
+	  return (v0 - v1)/x1;
+      }
+    }
+    else {
+      FttCellFace f2 = ftt_cell_face (cell, d);
+      
+      if (f2.neighbor) {
+	if (face_is_mixed (&f2))
+	  return mixed_face_gradient1 (&f2, c, v);	  
+	else {
+	  gdouble x2 = 1.;
+	  
+	  /* one neighbor: first-order differencing */
+	  return (neighbor_value (&f2, v, &x2) - v0)/x2;
+	}
+      }
+    }
+    /* no neighbors */
+    return 0.;
+  }
+}
+
 /**
  * gfs_cell_dirichlet_gradient_flux:
  * @cell: a #FttCell.
@@ -1221,6 +1360,59 @@ gdouble gfs_cell_dirichlet_value (FttCell * cell,
 	    a[6]*p.x*p.y*p.z + v0);
 #endif /* 3D */
   }
+}
+
+/**
+ * gfs_shear_strain_rate_tensor:
+ * @cell: a #FttCell.
+ * @u: the velocity.
+ * @t: the shear strain rate tensor t[i][j] = (d_iu_j+d_ju_i)/2.
+ *
+ * Fills @t with the shear strain rate tensor for @cell, normalised by
+ * the size of the cell.
+ */
+void gfs_shear_strain_rate_tensor (FttCell * cell, 
+				   GfsVariable ** u,
+				   gdouble t[FTT_DIMENSION][FTT_DIMENSION])
+{
+  guint i, j;
+
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (u != NULL);
+
+  for (i = 0; i < FTT_DIMENSION; i++) {
+    t[i][i] = gfs_mixed_cell_gradient (cell, i, u[i]->i);
+    for (j = i + 1; j < FTT_DIMENSION; j++)
+      t[i][j] = (gfs_mixed_cell_gradient (cell, i, u[j]->i) +
+		 gfs_mixed_cell_gradient (cell, j, u[i]->i))/2.;
+  }
+  for (i = 0; i < FTT_DIMENSION; i++)
+    for (j = 0; j < i; j++)
+      t[i][j] = t[j][i];
+}
+
+/**
+ * gfs_2nd_principal_invariant:
+ * @cell: a #FttCell.
+ * @u: the velocity.
+ *
+ * Returns: the second principal invariant of the shear strain rate
+ * tensor of @cell: sqrt(D:D).
+ */
+gdouble gfs_2nd_principal_invariant (FttCell * cell, GfsVariable ** u)
+{
+  gdouble t[FTT_DIMENSION][FTT_DIMENSION];
+  gdouble D = 0.;
+  guint i, j;
+
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (u != NULL, 0.);
+
+  gfs_shear_strain_rate_tensor (cell, u, t);
+  for (i = 0; i < FTT_DIMENSION; i++)
+    for (j = 0; j < FTT_DIMENSION; j++)
+      D += t[i][j]*t[i][j];
+  return sqrt (D);
 }
 
 /**

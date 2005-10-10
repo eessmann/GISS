@@ -642,6 +642,27 @@ static gdouble cell_z (FttCell * cell, FttCellFace * face)
   return p.z;
 }
 
+static gdouble cell_ax (FttCell * cell)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->ca.x : 0.;
+}
+
+static gdouble cell_ay (FttCell * cell)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->ca.y : 0.;
+}
+
+static gdouble cell_az (FttCell * cell)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->ca.z : 0.;
+}
+
 static gdouble cell_cx (FttCell * cell, FttCellFace * face)
 {
   FttVector p;
@@ -734,6 +755,11 @@ static gdouble cell_streamline_curvature (FttCell * cell, FttCellFace * face, Gf
   return gfs_streamline_curvature (cell, gfs_domain_velocity (domain));
 }
 
+static gdouble cell_2nd_principal_invariant (FttCell * cell, FttCellFace * face, GfsDomain * domain)
+{
+  return gfs_2nd_principal_invariant (cell, gfs_domain_velocity (domain))/ftt_cell_size (cell);
+}
+
 static void gfs_simulation_init (GfsSimulation * object)
 {
   GfsDomain * domain = GFS_DOMAIN (object);
@@ -741,6 +767,9 @@ static void gfs_simulation_init (GfsSimulation * object)
     { "x",          cell_x },
     { "y",          cell_y },
     { "z",          cell_z },
+    { "ax",         cell_ax },
+    { "ay",         cell_ay },
+    { "az",         cell_az },
     { "cx",         cell_cx },
     { "cy",         cell_cy },
     { "cz",         cell_cz },
@@ -754,6 +783,7 @@ static void gfs_simulation_init (GfsSimulation * object)
     { "S",          cell_solid_area },
     { "Lambda2",    cell_velocity_lambda2 },
     { "Curvature",  cell_streamline_curvature },
+    { "D2",         cell_2nd_principal_invariant },
     { NULL, NULL}
   };
   GfsDerivedVariable * v = derived_variable;
