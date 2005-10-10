@@ -89,7 +89,6 @@ struct _GfsVariableTracer {
 
   /*< public >*/
   GfsAdvectionParams advection;
-  GfsMultilevelParams diffusion;
 };
 
 #define GFS_VARIABLE_TRACER(obj)            GTS_OBJECT_CAST (obj,\

@@ -393,6 +393,12 @@ static void diffusion_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
+  if (fp->type == '{') {
+    gfs_multilevel_params_read (&d->par, fp);
+    if (fp->type == GTS_ERROR)
+    return;
+  }
+
   if (gfs_function_get_constant_value (d->val) == G_MAXDOUBLE &&
       (d->mu = gfs_function_get_variable (d->val)) == NULL)
     d->mu = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
@@ -401,6 +407,8 @@ static void diffusion_read (GtsObject ** o, GtsFile * fp)
 static void diffusion_write (GtsObject * o, FILE * fp)
 {
   gfs_function_write (GFS_DIFFUSION (o)->val, fp);
+  fputc (' ', fp);
+  gfs_multilevel_params_write (&GFS_DIFFUSION (o)->par, fp);
 }
 
 static void update_mu (FttCell * cell, GfsDiffusion * d)
@@ -449,6 +457,8 @@ static void diffusion_class_init (GfsDiffusionClass * klass)
 
 static void diffusion_init (GfsDiffusion * d)
 {
+  gfs_multilevel_params_init (&d->par);
+  d->par.tolerance = 1e-6;
   d->val = gfs_function_new (gfs_function_class (), 0.);
   d->mu = NULL;
 }

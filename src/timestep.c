@@ -565,7 +565,6 @@ static void variable_sources (GfsDomain * domain,
 static void variable_diffusion (GfsDomain * domain,
 				GfsSourceDiffusion * d,
 				GfsAdvectionParams * par,
-				GfsMultilevelParams * dpar,
 				GfsVariable * rhs,
 				GfsFunction * alpha)
 {
@@ -573,13 +572,13 @@ static void variable_diffusion (GfsDomain * domain,
 
   dia = gfs_temporary_variable (domain);
 
-  gfs_diffusion_coefficients (domain, d, par->dt, dia, alpha, dpar->beta);
+  gfs_diffusion_coefficients (domain, d, par->dt, dia, alpha, d->D->par.beta);
   gfs_domain_surface_bc (domain, par->v);
-  gfs_diffusion_rhs (domain, par->v, rhs, dia, dpar->beta);
+  gfs_diffusion_rhs (domain, par->v, rhs, dia, d->D->par.beta);
   /* fixme: time shoud be set to t + dt here in case boundary values are
      time-dependent in the call below */
   gfs_domain_surface_bc (domain, par->v);
-  gfs_diffusion (domain, dpar, par->v, rhs, dia);
+  gfs_diffusion (domain, &d->D->par, par->v, rhs, dia);
 
   gts_object_destroy (GTS_OBJECT (dia));
 }
@@ -589,7 +588,6 @@ static void variable_diffusion (GfsDomain * domain,
  * @domain: a #GfsDomain.
  * @dimension: the number of dimensions (2 or 3).
  * @apar: the advection parameters.
- * @dpar: the multilevel solver parameters for the diffusion equation.
  * @g: the pressure gradient.
  * @alpha: the inverse of density or %NULL.
  *
@@ -609,7 +607,6 @@ static void variable_diffusion (GfsDomain * domain,
 void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 						guint dimension,
 						GfsAdvectionParams * apar,
-						GfsMultilevelParams * dpar,
 						GfsVariable ** g,
 						GfsFunction * alpha)
 {
@@ -618,7 +615,6 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (apar != NULL);
-  g_return_if_fail (dpar != NULL);
   g_return_if_fail (g != NULL);
 
   gfs_domain_timer_start (domain, "centered_velocity_advection_diffusion");
@@ -638,7 +634,7 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
       variable_sources (domain, apar, rhs, g);
       gts_object_destroy (GTS_OBJECT (g[c]));
       g[c] = NULL;
-      variable_diffusion (domain, d, apar, dpar, rhs, alpha);
+      variable_diffusion (domain, d, apar, rhs, alpha);
       gts_object_destroy (GTS_OBJECT (rhs));
     }
     else {
@@ -673,7 +669,6 @@ static void average_previous (FttCell * cell, gpointer * data)
  * gfs_tracer_advection_diffusion:
  * @domain: a #GfsDomain.
  * @par: the advection parameters.
- * @dpar: the multilevel solver parameters for the diffusion equation.
  * @half: a #GfsVariable or %NULL.
  *
  * Advects the @v field of @par using the current face-centered (MAC)
@@ -684,7 +679,6 @@ static void average_previous (FttCell * cell, gpointer * data)
  */
 void gfs_tracer_advection_diffusion (GfsDomain * domain,
 				     GfsAdvectionParams * par,
-				     GfsMultilevelParams * dpar,
 				     GfsVariable * half)
 {
   gpointer data[2];
@@ -692,7 +686,6 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
-  g_return_if_fail (dpar != NULL);
 
   gfs_domain_timer_start (domain, "tracer_advection_diffusion");
 
@@ -710,7 +703,7 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, rhs);
     variable_sources (domain, par, rhs, NULL);
-    variable_diffusion (domain, d, par, dpar, rhs, NULL);
+    variable_diffusion (domain, d, par, rhs, NULL);
     gts_object_destroy (GTS_OBJECT (rhs));
   }
   else {

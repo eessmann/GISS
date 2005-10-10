@@ -554,7 +554,7 @@ static void simulation_run (GfsSimulation * sim)
 	t->advection.dt = sim->advection_params.dt;
 	switch (t->advection.scheme) {
 	case GFS_GODUNOV: case GFS_NONE:
-	  gfs_tracer_advection_diffusion (domain, &t->advection, &t->diffusion, NULL);
+	  gfs_tracer_advection_diffusion (domain, &t->advection, NULL);
 	  break;
 	case GFS_VOF:
 	  gfs_tracer_vof_advection (domain, &t->advection, NULL);
@@ -571,7 +571,6 @@ static void simulation_run (GfsSimulation * sim)
     gfs_centered_velocity_advection_diffusion (domain,
 					       FTT_DIMENSION,
 					       &sim->advection_params,
-					       &sim->diffusion_params,
 					       g,
 					       sim->physical_params.alpha);
 
@@ -776,8 +775,6 @@ static void gfs_simulation_init (GfsSimulation * object)
 
   gfs_advection_params_init (&object->advection_params);
   object->advection_params.flux = gfs_face_velocity_advection_flux;
-  gfs_multilevel_params_init (&object->diffusion_params);
-  object->diffusion_params.tolerance = 1e-6;
 
   gfs_multilevel_params_init (&object->projection_params);
   gfs_multilevel_params_init (&object->approx_projection_params);
@@ -1315,7 +1312,7 @@ static void advection_run (GfsSimulation * sim)
 	t->advection.dt = sim->advection_params.dt;
 	switch (t->advection.scheme) {
 	case GFS_GODUNOV:
-	  gfs_tracer_advection_diffusion (domain, &t->advection, &t->diffusion, NULL);
+	  gfs_tracer_advection_diffusion (domain, &t->advection, NULL);
 	  break;
 	case GFS_VOF:
 	  gfs_tracer_vof_advection (domain, &t->advection, NULL);

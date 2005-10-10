@@ -336,7 +336,6 @@ static void ocean_run (GfsSimulation * sim)
     // has sthg to free
     gfs_centered_velocity_advection_diffusion (domain, 2,
 					       &sim->advection_params,
-					       &sim->diffusion_params,
 					       g,
 					       sim->physical_params.alpha);
 
@@ -704,7 +703,7 @@ static void ocean_run (GfsSimulation * sim)
 	t->advection.dt = sim->advection_params.dt;
 	switch (t->advection.scheme) {
 	case GFS_GODUNOV: case GFS_NONE:
-	  gfs_tracer_advection_diffusion (domain, &t->advection, &t->diffusion, NULL);
+	  gfs_tracer_advection_diffusion (domain, &t->advection, NULL);
 	  break;
 	case GFS_VOF:
 	  gfs_tracer_vof_advection (domain, &t->advection, NULL);
@@ -720,7 +719,6 @@ static void ocean_run (GfsSimulation * sim)
 
     gfs_centered_velocity_advection_diffusion (domain, 2,
 					       &sim->advection_params,
-					       &sim->diffusion_params,
 					       g,
 					       sim->physical_params.alpha);
 

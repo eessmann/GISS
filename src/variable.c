@@ -211,7 +211,8 @@ static void variable_tracer_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == '{')
     gfs_advection_params_read (&GFS_VARIABLE_TRACER (*o)->advection, fp);
   if (fp->type == '{')
-    gfs_multilevel_params_read (&GFS_VARIABLE_TRACER (*o)->diffusion, fp);
+    g_warning ("%d:%d: specifying diffusion parameters is not done here anymore!",
+	       fp->line, fp->pos);
 }
 
 static void variable_tracer_write (GtsObject * o, FILE * fp)
@@ -220,8 +221,6 @@ static void variable_tracer_write (GtsObject * o, FILE * fp)
 
   fputc (' ', fp);
   gfs_advection_params_write (&GFS_VARIABLE_TRACER (o)->advection, fp);
-  fputc (' ', fp);
-  gfs_multilevel_params_write (&GFS_VARIABLE_TRACER (o)->diffusion, fp);
 }
 
 static void variable_tracer_class_init (GtsObjectClass * klass)
@@ -237,9 +236,6 @@ static void variable_tracer_init (GfsVariableTracer * v)
   v->advection.flux = gfs_face_advection_flux;
   v->advection.v = GFS_VARIABLE1 (v);
   v->advection.fv = NULL;
-
-  gfs_multilevel_params_init (&v->diffusion);
-  v->diffusion.tolerance = 1e-6;
 }
 
 GfsVariableClass * gfs_variable_tracer_class (void)

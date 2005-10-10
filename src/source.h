@@ -157,6 +157,7 @@ struct _GfsDiffusion {
   /*< public >*/
   GfsFunction * val;
   GfsVariable * mu;
+  GfsMultilevelParams par;
 };
 
 typedef struct _GfsDiffusionClass    GfsDiffusionClass;

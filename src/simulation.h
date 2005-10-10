@@ -63,7 +63,6 @@ struct _GfsSimulation {
   GfsMultilevelParams approx_projection_params;
 
   GfsAdvectionParams advection_params;
-  GfsMultilevelParams diffusion_params;
 
   GtsSurface * surface;
   gboolean output_surface;

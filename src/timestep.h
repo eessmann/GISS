@@ -61,12 +61,10 @@ void          gfs_diffusion                   (GfsDomain * domain,
 void          gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 							 guint dimension,
 							 GfsAdvectionParams * apar,
-							 GfsMultilevelParams * dpar,
 							 GfsVariable ** g,
 							 GfsFunction * alpha);
 void          gfs_tracer_advection_diffusion  (GfsDomain * domain,
 					       GfsAdvectionParams * par,
-					       GfsMultilevelParams * dpar,
 					       GfsVariable * half);
 
 /* GfsSurfaceGenericBc: Header */
