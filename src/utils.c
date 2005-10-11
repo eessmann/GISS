@@ -458,8 +458,14 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 
     if (isexpr)
       fprintf (fin, "return %s;\n}\n", f->expr->str);
-    else
-      fprintf (fin, "%s\n}\n", f->expr->str);
+    else {
+      gchar * s = f->expr->str;
+      guint len = strlen (s);
+      g_assert (s[0] == '{' && s[len-1] == '}');
+      s[len-1] = '\0';
+      fprintf (fin, "%s\n}\n", &s[1]);
+      s[len-1] = '}';
+    }
     fclose (fin);
     close (find);
 
