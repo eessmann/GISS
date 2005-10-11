@@ -13,7 +13,8 @@ TESTDIRS = \
 	capwave \
 	waves \
 	geo \
-	lid
+	lid \
+	couette
 
 EXTRA_DIST = \
 	template.tex \
