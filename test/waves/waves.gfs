@@ -55,8 +55,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     U = {
       @include <gsl/gsl_sf_bessel.h>
@@ -68,10 +68,10 @@
       double D = 8.83906519983e-2;
       double k = 3.;
       double sigma = 0.4986;
-      double A = 1./2555510.;
-      double ur = -A*D*D/5.87060327757e-3*sin (k*theta)*(sigma*Ik (k, r, D) - 
+      double a = 1./2555510.;
+      double ur = -a*D*D/5.87060327757e-3*sin (k*theta)*(sigma*Ik (k, r, D) - 
         	                                               k/r*gsl_sf_bessel_Inu (k, r/D));
-      double vt =  A*D*D/5.87060327757e-3*cos (k*theta)*(Ik (k, r, D) - 
+      double vt =  a*D*D/5.87060327757e-3*cos (k*theta)*(Ik (k, r, D) - 
        	                                               k*sigma/r*gsl_sf_bessel_Inu (k, r/D));
       return ur*cos (theta) - vt*sin (theta);
     }
@@ -85,10 +85,10 @@
       double D = 8.83906519983e-2;
       double k = 3.;
       double sigma = 0.4986;
-      double A = 1./2555510.;
-      double ur = -A*D*D/5.87060327757e-3*sin (k*theta)*(sigma*Ik (k, r, D) - 
+      double a = 1./2555510.;
+      double ur = -a*D*D/5.87060327757e-3*sin (k*theta)*(sigma*Ik (k, r, D) - 
         	                                               k/r*gsl_sf_bessel_Inu (k, r/D));
-      double vt =  A*D*D/5.87060327757e-3*cos (k*theta)*(Ik (k, r, D) - 
+      double vt =  a*D*D/5.87060327757e-3*cos (k*theta)*(Ik (k, r, D) - 
         	                                               k*sigma/r*gsl_sf_bessel_Inu (k, r/D));
       return ur*sin (theta) + vt*cos (theta);
     }
@@ -110,8 +110,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -124,8 +124,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -138,8 +138,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -152,8 +152,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -166,8 +166,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -180,8 +180,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -194,8 +194,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -208,8 +208,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -222,8 +222,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -236,8 +236,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -250,8 +250,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -264,8 +264,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -278,8 +278,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -292,8 +292,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -306,8 +306,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -320,8 +320,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -334,8 +334,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -348,8 +348,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -362,8 +362,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -376,8 +376,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -390,8 +390,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -404,8 +404,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -418,8 +418,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -432,8 +432,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -446,8 +446,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -460,8 +460,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -474,8 +474,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -488,8 +488,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -502,8 +502,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -516,8 +516,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -530,8 +530,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -544,8 +544,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -558,8 +558,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -572,8 +572,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -586,8 +586,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -600,8 +600,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -614,8 +614,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -628,8 +628,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -642,8 +642,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -656,8 +656,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -670,8 +670,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -684,8 +684,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -698,8 +698,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -712,8 +712,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -726,8 +726,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -740,8 +740,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -754,8 +754,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -768,8 +768,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -782,8 +782,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -796,8 +796,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -810,8 +810,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -824,8 +824,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -838,8 +838,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -852,8 +852,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -866,8 +866,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -880,8 +880,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -894,8 +894,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -908,8 +908,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -922,8 +922,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -936,8 +936,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -950,8 +950,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -964,8 +964,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -978,8 +978,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -992,8 +992,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1006,8 +1006,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1020,8 +1020,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1034,8 +1034,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1048,8 +1048,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1062,8 +1062,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1076,8 +1076,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1090,8 +1090,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1104,8 +1104,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1118,8 +1118,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1132,8 +1132,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1146,8 +1146,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1160,8 +1160,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1174,8 +1174,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1188,8 +1188,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1202,8 +1202,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1216,8 +1216,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1230,8 +1230,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1244,8 +1244,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1258,8 +1258,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1272,8 +1272,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1286,8 +1286,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1300,8 +1300,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1314,8 +1314,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1328,8 +1328,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1342,8 +1342,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1356,8 +1356,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1370,8 +1370,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1384,8 +1384,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1398,8 +1398,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1412,8 +1412,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1426,8 +1426,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1440,8 +1440,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1454,8 +1454,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1468,8 +1468,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1482,8 +1482,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1496,8 +1496,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1510,8 +1510,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1524,8 +1524,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1538,8 +1538,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1552,8 +1552,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1566,8 +1566,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
@@ -1580,8 +1580,8 @@
       double r = sqrt (cx*cx + cy*cy);
       double D = 8.83906519983e-2;
       double k = 3.;
-      double A = 1./2555510.;
-      return A*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
+      double a = 1./2555510.;
+      return a*cos (k*theta)*gsl_sf_bessel_Inu (k, r/D);
     }
     unbiased = 1
   }
