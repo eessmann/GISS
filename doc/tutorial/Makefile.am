@@ -3,6 +3,9 @@
 EXTRA_DIST=tutorial.ps.gz tutorial.pdf tutorial.tar.gz half-cylinder.gts \
 	gfs2D.net
 
+Makefile.deps: Makefile.am tutorial.tex
+	awk -f depend.awk file="tutorial" < tutorial.tex > Makefile.deps
+
 clean-generic:
 	$(RM) *.dvi *.aux *.log *.toc *.out \
 	boundaries.pdf direction.eps direction.pdf dxscreen.eps dxscreen.pdf \
@@ -20,7 +23,7 @@ tutorial.tar.gz: tutorial.ps.gz
 	tar cf tutorial.tar tutorial
 	gzip -f --best tutorial.tar
 
-tutorial1.dvi: tutorial.tex
+tutorial1.dvi: tutorial.tex Makefile.deps
 	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < tutorial.tex > tutorial1.tex
 	latex -interaction=nonstopmode tutorial1.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode tutorial1.tex > /dev/null 2>&1
@@ -71,8 +74,5 @@ tutorial.pdf: tutorial1.dvi
 
 %.pdf: %.eps
 	epstopdf $<
-
-depend:
-	awk -f depend.awk file="tutorial" < tutorial.tex > Makefile.deps
 
 -include Makefile.deps

@@ -22,11 +22,11 @@ templates: scan
 	gtkdoc-mktmpl --module=$(DOC_MODULE)
 	sort -f $(DOC_MODULE)-unused.txt > /tmp/toto; mv -f /tmp/toto $(DOC_MODULE)-unused.txt
 
-sgml:
+sgml: templates
 	gtkdoc-mkdb --module=$(DOC_MODULE) --source-dir=$(DOC_SOURCE_DIR)
 	sort -f $(DOC_MODULE)-undocumented.txt > /tmp/toto; mv -f /tmp/toto $(DOC_MODULE)-undocumented.txt
 
-html:
+html: sgml
 	if ! test -d html ; then mkdir html ; fi
 	-cd html && gtkdoc-mkhtml $(DOC_MODULE) ../$(DOC_MAIN_SGML_FILE)
 
