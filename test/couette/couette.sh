@@ -29,14 +29,14 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-print (Curve('prof-0',2,7) - Curve('prof-0.ref',1,2)).normi(),\
-   (Curve('prof-1',2,7) - Curve('prof-1.ref',1,2)).normi(),\
-   (Curve('prof-2',2,7) - Curve('prof-2.ref',1,2)).normi(),\
-   (Curve('prof-3',2,7) - Curve('prof-3.ref',1,2)).normi()
-if (Curve('prof-0',2,7) - Curve('prof-0.ref',1,2)).normi() > 1.8e-3 or \
-   (Curve('prof-1',2,7) - Curve('prof-1.ref',1,2)).normi() > 1.8e-3 or \
-   (Curve('prof-2',2,7) - Curve('prof-2.ref',1,2)).normi() > 3.2e-3 or \
-   (Curve('prof-3',2,7) - Curve('prof-3.ref',1,2)).normi() > 7.8e-3:
+print (Curve('prof-0',2,7) - Curve('prof-0.ref',1,2)).norm2(),\
+   (Curve('prof-1',2,7) - Curve('prof-1.ref',1,2)).norm2(),\
+   (Curve('prof-2',2,7) - Curve('prof-2.ref',1,2)).norm2(),\
+   (Curve('prof-3',2,7) - Curve('prof-3.ref',1,2)).norm2()
+if (Curve('prof-0',2,7) - Curve('prof-0.ref',1,2)).norm2() > 3.6e-4 or \
+   (Curve('prof-1',2,7) - Curve('prof-1.ref',1,2)).norm2() > 6.3e-4 or \
+   (Curve('prof-2',2,7) - Curve('prof-2.ref',1,2)).norm2() > 21e-4 or \
+   (Curve('prof-3',2,7) - Curve('prof-3.ref',1,2)).norm2() > 22e-4:
     exit(1)
 EOF
 else
