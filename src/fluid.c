@@ -914,7 +914,7 @@ static gboolean face_bilinear (const FttCellFace * face,
   return TRUE;
 }
 
-/* grad(v) = = -a*v(cell) + b*v(neighbor) + c */
+/* grad(v) = -a*v(cell) + b*v(neighbor) + c */
 static gboolean mixed_face_gradient (const FttCellFace * face,
 				     Gradient * g,
 				     guint v,
@@ -1140,142 +1140,61 @@ void gfs_cell_dirichlet_gradient (FttCell * cell,
   }
 }
 
-static gboolean face_is_mixed (FttCellFace * f)
-{
-  if (!GFS_IS_MIXED (f->neighbor))
-    return FALSE;
-  if (FTT_CELL_IS_LEAF (f->neighbor))
-    return TRUE;
-  else {
-    FttCellChildren child;
-    FttCell * cell = NULL;
-    gdouble amin = G_MAXDOUBLE;
-    guint i, n;
-
-    g_assert (ftt_cell_level (f->cell) == ftt_cell_level (f->neighbor));
-    n = ftt_cell_children_direction (f->neighbor, FTT_OPPOSITE_DIRECTION (f->d), &child);
-    for (i = 0; i < n; i++)
-      if (child.c[i]) {
-	gdouble a = GFS_IS_MIXED (child.c[i]) ? GFS_STATE (child.c[i])->solid->a : 1.;
-	if (a < amin) {
-	  amin = a;
-	  cell = child.c[i];
-	}
-      }
-    if (GFS_IS_MIXED (cell)) {
-      f->neighbor = cell;
-      return TRUE;
-    }
-  }
-  return FALSE;
-}
-
-static gdouble mixed_face_gradient1 (FttCellFace * f,
-				     FttComponent c,
-				     guint v)
+/**
+ * gfs_mixed_cell_gradient:
+ * @cell: a mixed #FttCell.
+ * @v: a #GfsVariable.
+ * @g: the gradient.
+ *
+ * Fills @g with the components of the gradient of @v at the center of
+ * mass of @cell.
+ *
+ * The gradient is normalized by the size of the cell.
+ */
+void gfs_mixed_cell_gradient (FttCell * cell,
+			      GfsVariable * v,
+			      FttVector * g)
 {
   FttCell * n[N_CELLS];
   gdouble m[N_CELLS - 1][N_CELLS - 1];
-  FttVector p;
-  gdouble v0, g = 0.;
+  gdouble v0, h;
+  FttVector * o, cm;
   guint i;
 
-  ftt_cell_pos (f->cell, &p);
-  g_assert (face_bilinear (f, n, &p, gfs_cell_cm, -1, m));
-  
-  v0 = GFS_VARIABLE (f->cell, v);
-  for (i = 0; i < N_CELLS - 1; i++)
-    g += m[c][i]*(GFS_VARIABLE (n[i + 1], v) - v0);
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (GFS_IS_MIXED (cell));
+  g_return_if_fail (v != NULL);
+  g_return_if_fail (g != NULL);
 
-  return g;
-}
+  g->x = g->y = g->z = 0.;
 
-/**
- * gfs_mixed_cell_gradient:
- * @cell: a #FttCell.
- * @c: a component.
- * @v: a #GfsVariable index.
- *
- * For full cells this function is identical to
- * gfs_center_gradient(). For mixed cells, bilinear interpolation is
- * used.
- *
- * The gradient is normalized by the size of the cell.
- *
- * Returns: the value of the @c component of the gradient of variable @v
- * at the center of mass of the cell.
- */
-gdouble gfs_mixed_cell_gradient (FttCell * cell,
-				 FttComponent c,
-				 guint v)
-{
-  g_return_val_if_fail (cell != NULL, 0.);
-  g_return_val_if_fail (c < FTT_DIMENSION, 0.);
+  o = &GFS_STATE (cell)->solid->cm;
+  v0 = GFS_VARIABLE (cell, v->i);
+  cm = *o;
 
-  if (GFS_IS_MIXED (cell)) {
-    FttCell * n[N_CELLS];
-    gdouble m[N_CELLS - 1][N_CELLS - 1];
-    gdouble v0, g = 0.;
-    guint i;
-
-    g_assert (cell_bilinear (cell, n, &GFS_STATE (cell)->solid->cm,
-			     gfs_cell_cm, -1, m));
-    
-    v0 = GFS_VARIABLE (cell, v);
-    for (i = 0; i < N_CELLS - 1; i++)
-      g += m[c][i]*(GFS_VARIABLE (n[i + 1], v) - v0);
-
-    return g;
+  if (v->surface_bc) {
+    (* GFS_SURFACE_GENERIC_BC_CLASS (GTS_OBJECT (v->surface_bc)->klass)->bc) (cell, v->surface_bc);
+    if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0) {
+      o = &GFS_STATE (cell)->solid->ca;
+      v0 = GFS_STATE (cell)->solid->fv;
+    }
   }
-  else {
-    FttDirection d = 2*c;
-    FttCellFace f1;
-    gdouble v0;
-
-    f1 = ftt_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
-    if (f1.neighbor == cell) /* periodic */
-      return 0.;
-    v0 = GFS_VARIABLE (cell, v);
-    if (f1.neighbor) {
-      if (face_is_mixed (&f1))
-	return mixed_face_gradient1 (&f1, c, v);
-      else {
-	FttCellFace f2 = ftt_cell_face (cell, d);
-	gdouble x1 = 1., v1;
-      
-	v1 = neighbor_value (&f1, v, &x1);
-	if (f2.neighbor) {
-	  if (face_is_mixed (&f2))
-	    return mixed_face_gradient1 (&f2, c, v);
-	  else {
-	    /* two neighbors: second-order differencing (parabola) */
-	    gdouble x2 = 1., v2;
-	  
-	    v2 = neighbor_value (&f2, v, &x2);
-	    return (x1*x1*(v2 - v0) + x2*x2*(v0 - v1))/(x1*x2*(x2 + x1));
-	  }
-	}
-	else
-	  /* one neighbor: first-order differencing */
-	  return (v0 - v1)/x1;
-      }
-    }
-    else {
-      FttCellFace f2 = ftt_cell_face (cell, d);
-      
-      if (f2.neighbor) {
-	if (face_is_mixed (&f2))
-	  return mixed_face_gradient1 (&f2, c, v);	  
-	else {
-	  gdouble x2 = 1.;
-	  
-	  /* one neighbor: first-order differencing */
-	  return (neighbor_value (&f2, v, &x2) - v0)/x2;
-	}
-      }
-    }
-    /* no neighbors */
-    return 0.;
+  g_assert (cell_bilinear (cell, n, o, gfs_cell_cm, -1, m));
+  
+  h = ftt_cell_size (cell);
+  cm.x = (cm.x - o->x)/h;
+  cm.y = (cm.y - o->y)/h;
+  cm.z = (cm.z - o->z)/h;
+  for (i = 0; i < N_CELLS - 1; i++) {
+    gdouble val = GFS_VARIABLE (n[i + 1], v->i) - v0;
+#if FTT_2D
+    g->x += (m[0][i] + m[2][i]*cm.y)*val;
+    g->y += (m[1][i] + m[2][i]*cm.x)*val;
+#else /* 3D */
+    g->x += (m[0][i] + m[3][i]*cm.y + m[4][i]*cm.z + m[6][i]*cm.y*cm.z)*val;
+    g->y += (m[1][i] + m[3][i]*cm.x + m[5][i]*cm.z + m[6][i]*cm.x*cm.z)*val;
+    g->z += (m[2][i] + m[4][i]*cm.x + m[5][i]*cm.y + m[6][i]*cm.x*cm.y)*val;
+#endif /* 3D */
   }
 }
 
@@ -1368,23 +1287,30 @@ gdouble gfs_cell_dirichlet_value (FttCell * cell,
  * @u: the velocity.
  * @t: the shear strain rate tensor t[i][j] = (d_iu_j+d_ju_i)/2.
  *
- * Fills @t with the shear strain rate tensor for @cell, normalised by
- * the size of the cell.
+ * Fills @t with the shear strain rate tensor at the center of mass of
+ * @cell, normalised by the size of the cell.
  */
 void gfs_shear_strain_rate_tensor (FttCell * cell, 
 				   GfsVariable ** u,
 				   gdouble t[FTT_DIMENSION][FTT_DIMENSION])
 {
   guint i, j;
+  FttVector g[FTT_DIMENSION];
 
   g_return_if_fail (cell != NULL);
   g_return_if_fail (u != NULL);
 
+  for (i = 0; i < FTT_DIMENSION; i++)
+    if (GFS_IS_MIXED (cell))
+      gfs_mixed_cell_gradient (cell, u[i], &g[i]);
+    else
+      for (j = 0; j < FTT_DIMENSION; j++)
+	(&g[i].x)[j] = gfs_center_gradient (cell, j, u[i]->i);			     
+
   for (i = 0; i < FTT_DIMENSION; i++) {
-    t[i][i] = gfs_mixed_cell_gradient (cell, i, u[i]->i);
+    t[i][i] = (&g[i].x)[i];
     for (j = i + 1; j < FTT_DIMENSION; j++)
-      t[i][j] = (gfs_mixed_cell_gradient (cell, i, u[j]->i) +
-		 gfs_mixed_cell_gradient (cell, j, u[i]->i))/2.;
+      t[i][j] = ((&g[j].x)[i] + (&g[i].x)[j])/2.;
   }
   for (i = 0; i < FTT_DIMENSION; i++)
     for (j = 0; j < i; j++)
