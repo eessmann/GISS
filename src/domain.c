@@ -2427,13 +2427,18 @@ GfsVariable * gfs_domain_add_variable (GfsDomain * domain,
 static void add_pressure_force (FttCell * cell, gpointer * data)
 {
   gdouble * f = data[0];
-  GfsVariable * p = data[1];
-  FttVector ff;
+  gdouble * m = data[1];
+  gdouble * r = &GFS_STATE (cell)->solid->ca.x;
+  GfsVariable * p = data[2];
+  FttVector ff, mm;
   FttComponent c;
 
   gfs_pressure_force (cell, p, &ff);
-  for (c = 0; c < FTT_DIMENSION; c++)
+  gts_vector_cross (&mm.x, r, &ff.x);
+  for (c = 0; c < FTT_DIMENSION; c++) {
     f[c] += (&ff.x)[c];
+    m[c] += (&mm.x)[c];
+  }
 }
 
 static GfsSourceDiffusion * source_diffusion (GfsVariable * v)
@@ -2454,28 +2459,32 @@ static GfsSourceDiffusion * source_diffusion (GfsVariable * v)
 
 static void add_viscous_force (FttCell * cell, gpointer * data)
 {
-  FttVector * f = data[0];
-  GfsVariable * v = data[1];
-  GfsSourceDiffusion * d = data[2];
+  gdouble * f = data[0];
+  gdouble * m = data[1];
+  GfsVariable * v = data[2];
+  GfsSourceDiffusion * d = data[3];
   gdouble D;
   GfsSolidVector * s = GFS_STATE (cell)->solid;
-  FttVector n, g;
+  gdouble * r = &s->ca.x;
+  FttVector ff, mm, n, g;
+  FttComponent c;
 
   g_assert (((cell)->flags & GFS_FLAG_DIRICHLET) != 0);
   gfs_cell_dirichlet_gradient (cell, v->i, -1, s->fv, &g);
 
-  D = gfs_source_diffusion_cell (d, cell);
+  D = - gfs_source_diffusion_cell (d, cell);
   n.x = s->s[1] - s->s[0];
   n.y = s->s[3] - s->s[2];
 #if FTT_2D
+  ff.z = 0.;
   switch (v->component) {
   case FTT_X:
-    f->x -= D*(2.*g.x*n.x + g.y*n.y);
-    f->y -= D*g.y*n.x;
+    ff.x = D*(2.*g.x*n.x + g.y*n.y);
+    ff.y = D*g.y*n.x;
     break;
   case FTT_Y:
-    f->x -= D*g.x*n.y;
-    f->y -= D*(2.*g.y*n.y + g.x*n.x);
+    ff.x = D*g.x*n.y;
+    ff.y = D*(2.*g.y*n.y + g.x*n.x);
     break;
   default:
     g_assert_not_reached ();
@@ -2485,24 +2494,29 @@ static void add_viscous_force (FttCell * cell, gpointer * data)
   D *= ftt_cell_size (cell);
   switch (v->component) {
   case FTT_X:
-    f->x -= D*(2.*g.x*n.x + g.y*n.y + g.z*n.z);
-    f->y -= D*g.y*n.x;
-    f->z -= D*g.z*n.x;
+    ff.x = D*(2.*g.x*n.x + g.y*n.y + g.z*n.z);
+    ff.y = D*g.y*n.x;
+    ff.z = D*g.z*n.x;
     break;
   case FTT_Y:
-    f->y -= D*(2.*g.y*n.y + g.x*n.x + g.z*n.z);
-    f->x -= D*g.x*n.y;
-    f->z -= D*g.z*n.y;
+    ff.y = D*(2.*g.y*n.y + g.x*n.x + g.z*n.z);
+    ff.x = D*g.x*n.y;
+    ff.z = D*g.z*n.y;
     break;
   case FTT_Z:
-    f->z -= D*(2.*g.z*n.z + g.x*n.x + g.y*n.y);
-    f->x -= D*g.x*n.z;
-    f->y -= D*g.y*n.z;
+    ff.z = D*(2.*g.z*n.z + g.x*n.x + g.y*n.y);
+    ff.x = D*g.x*n.z;
+    ff.y = D*g.y*n.z;
     break;
   default:
     g_assert_not_reached ();
   }
 #endif /* 3D */
+  gts_vector_cross (&mm.x, r, &ff.x);
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    f[c] += (&ff.x)[c];
+    m[c] += (&mm.x)[c];
+  }
 }
 
 /**
@@ -2510,41 +2524,54 @@ static void add_viscous_force (FttCell * cell, gpointer * data)
  * @domain: a #GfsDomain.
  * @pf: a #FttVector.
  * @vf: a #FttVector.
+ * @pm: a #FttVector.
+ * @vm: a #FttVector.
  *
- * Fills @pf and @vf with the components of the net pressure and
- * viscous forces applied by the fluid on the solid surface embbeded
- * in @domain.
+ * Fills @pf and @vf (resp. @pm and @vm) with the components of the
+ * net pressure and viscous forces (resp. pressure and viscous
+ * moments) applied by the fluid on the solid surface embbeded in
+ * @domain.
+ *
+ * The reference point for the moments is the origin of the coordinate system.
  */
 void gfs_domain_solid_force (GfsDomain * domain, 
 			     FttVector * pf,
-			     FttVector * vf)
+			     FttVector * vf,
+			     FttVector * pm,
+			     FttVector * vm)
 {
   FttComponent c;
   GfsVariable ** v;
-  gpointer data[2];
+  gpointer data[3];
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (pf != NULL);
   g_return_if_fail (vf != NULL);
+  g_return_if_fail (pm != NULL);
+  g_return_if_fail (vm != NULL);
 
   pf->x = pf->y = pf->z = 0.;
+  pm->x = pm->y = pm->z = 0.;
   data[0] = pf;
-  data[1] = gfs_variable_from_name (domain->variables, "P");
+  data[1] = pm;
+  data[2] = gfs_variable_from_name (domain->variables, "P");
   gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			     (FttCellTraverseFunc) add_pressure_force, data);
 
   vf->x = vf->y = vf->z = 0.;
+  vm->x = vm->y = vm->z = 0.;
   v = gfs_domain_velocity (domain);
   for (c = 0; c < FTT_DIMENSION; c++) {
     GfsSourceDiffusion * D = source_diffusion (v[c]);
 
     if (D) {
-      gpointer data[3];
+      gpointer data[4];
 
       gfs_domain_surface_bc (domain, v[c]);
       data[0] = vf;
-      data[1] = v[c];
-      data[2] = D;
+      data[1] = vm;
+      data[2] = v[c];
+      data[3] = D;
       gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 				 (FttCellTraverseFunc) add_viscous_force, data);
     }

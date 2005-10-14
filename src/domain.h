@@ -231,7 +231,9 @@ GfsVariable * gfs_domain_add_variable         (GfsDomain * domain,
 					       const gchar * name);
 void         gfs_domain_solid_force           (GfsDomain * domain, 
 					       FttVector * pf,
-					       FttVector * vf);
+					       FttVector * vf,
+					       FttVector * pm,
+					       FttVector * vm);
 void         gfs_domain_remove_droplets       (GfsDomain * domain,
 					       GfsVariable * c,
 					       gint min);

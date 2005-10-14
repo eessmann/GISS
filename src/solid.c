@@ -1053,7 +1053,9 @@ void gfs_solid_normal (const FttCell * cell, FttVector * n)
 
 #if (!FTT_2D)
     size *= size;
-#endif /* 3D */
+#else /* 2D */
+    n->z = 0.;
+#endif /* 2D */
 
     for (c = 0; c < FTT_DIMENSION; c++)
       (&n->x)[c] = (s->s[2*c + 1] - s->s[2*c])*size;

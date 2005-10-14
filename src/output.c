@@ -1010,16 +1010,19 @@ static gboolean gfs_output_solid_force_event (GfsEvent * event,
       sim->advection_params.dt > 0.) {
     GfsDomain * domain = GFS_DOMAIN (sim);
     FILE * fp = GFS_OUTPUT (event)->file->fp;
-    FttVector pf, vf;
+    FttVector pf, vf, pm, vm;
 
     if (GFS_OUTPUT (event)->first_call)
-      fputs ("# 1: T (2,3,4): Pressure force (5,6,7): Viscous force\n", fp);
+      fputs ("# 1: T (2,3,4): Pressure force (5,6,7): Viscous force "
+	     "(8,9,10): Pressure moment (11,12,13): Viscous moment\n", fp);
     
-    gfs_domain_solid_force (domain, &pf, &vf);
-    fprintf (fp, "%g %g %g %g %g %g %g\n",
+    gfs_domain_solid_force (domain, &pf, &vf, &pm, &vm);
+    fprintf (fp, "%g %g %g %g %g %g %g %g %g %g %g %g %g\n",
 	     sim->time.t,
 	     pf.x, pf.y, pf.z,
-	     vf.x, vf.y, vf.z);
+	     vf.x, vf.y, vf.z,
+	     pm.x, pm.y, pm.z,
+	     vm.x, vm.y, vm.z);
     return TRUE;
   }
   return FALSE;
