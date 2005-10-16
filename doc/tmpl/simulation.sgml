@@ -14,6 +14,9 @@ Simulations
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_SIMULATION_CLASS ##### -->
 <para>
 
@@ -57,7 +60,6 @@ Simulations
 @projection_params: 
 @approx_projection_params: 
 @advection_params: 
-@diffusion_params: 
 @surface: 
 @output_surface: 
 @interface: 
@@ -89,9 +91,8 @@ Simulations
 
 </para>
 
-@rho: 
-@sigma: 
 @g: 
+@alpha: 
 
 <!-- ##### FUNCTION gfs_init ##### -->
 <para>
@@ -221,6 +222,7 @@ Simulations
 </para>
 
 @p: 
+@domain: 
 @fp: 
 
 

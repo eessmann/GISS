@@ -14,6 +14,9 @@ Fluid domain
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_DOMAIN_CLASS ##### -->
 <para>
 
@@ -355,6 +358,8 @@ Fluid domain
 @domain: 
 @pf: 
 @vf: 
+@pm: 
+@vm: 
 
 
 <!-- ##### FUNCTION gfs_domain_init_fraction ##### -->

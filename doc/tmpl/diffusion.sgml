@@ -14,6 +14,9 @@ Diffusion solver
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### FUNCTION gfs_diffusion_rhs ##### -->
 <para>
 
@@ -23,6 +26,7 @@ Diffusion solver
 @v: 
 @rhs: 
 @dia: 
+@beta: 
 <!-- # Unused Parameters # -->
 @cell: 
 
@@ -51,6 +55,8 @@ Diffusion solver
 @d: 
 @dt: 
 @dia: 
+@alpha: 
+@beta: 
 
 
 <!-- ##### FUNCTION gfs_diffusion_cycle ##### -->

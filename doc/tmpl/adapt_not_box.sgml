@@ -14,6 +14,9 @@ Non-adaptive fluid box node
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_ADAPT_NOT_BOX ##### -->
 <para>
 

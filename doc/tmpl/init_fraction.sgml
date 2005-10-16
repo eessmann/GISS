@@ -23,6 +23,9 @@ where C is a variable name and surface.gts is an orientable surface.
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_INIT_FRACTION_CLASS ##### -->
 <para>
 

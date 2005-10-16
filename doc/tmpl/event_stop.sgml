@@ -23,6 +23,9 @@ where NAME is the name of a variable and MIN is the threshold.
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_EVENT_STOP ##### -->
 <para>
 

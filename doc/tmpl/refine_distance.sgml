@@ -21,6 +21,9 @@ The syntax in parameter files is as follows:
 <para>
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_REFINE_DISTANCE ##### -->
 <para>
 

@@ -14,6 +14,9 @@ Topological relationships
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO FTT_CELLS ##### -->
 <para>
 Evaluates to the maximum number of children of a #FttCell (4 in 2D, 8 in 3D).

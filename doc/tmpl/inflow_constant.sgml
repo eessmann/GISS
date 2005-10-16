@@ -14,6 +14,9 @@ Constant inflow boundary
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_BOUNDARY_INFLOW_CONSTANT_CLASS ##### -->
 <para>
 

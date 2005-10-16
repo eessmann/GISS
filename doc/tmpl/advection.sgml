@@ -14,6 +14,9 @@ Advection scheme
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### STRUCT GfsAdvectionParams ##### -->
 <para>
 
@@ -30,8 +33,6 @@ Advection scheme
 @upwinding: 
 @flux: 
 @scheme: 
-@rho: 
-@c: 
 
 <!-- ##### FUNCTION gfs_advection_params_init ##### -->
 <para>

@@ -469,6 +469,14 @@ Evaluates to the index of the neighboring direction opposite to @i.
 
 @intensity: 
 
+<!-- ##### USER_FUNCTION GfsVariableDerivedFunc ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
+
 <!-- ##### FUNCTION gfs_boundary_inflow_class ##### -->
 <para>
 
@@ -652,6 +660,14 @@ Evaluates to the index of the neighboring direction opposite to @i.
 </para>
 
 @Returns: 
+
+<!-- ##### FUNCTION gfs_get_from_above ##### -->
+<para>
+
+</para>
+
+@cell: 
+@v: 
 
 <!-- ##### FUNCTION gfs_gradient ##### -->
 <para>

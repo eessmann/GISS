@@ -14,6 +14,9 @@ Fluid cell
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_VARIABLE ##### -->
 <para>
 Evaluates to the value of variable @index in @cell.
@@ -97,7 +100,6 @@ The fluid variables associated with a fluid cell.
 @component: 
 @name: 
 @centered: 
-@derived: 
 @fine_coarse: 
 @sources: 
 @surface_bc: 
@@ -107,15 +109,6 @@ The fluid variables associated with a fluid cell.
 <para>
 
 </para>
-
-
-<!-- ##### USER_FUNCTION GfsVariableDerivedFunc ##### -->
-<para>
-
-</para>
-
-@cell: 
-@v: 
 
 
 <!-- ##### USER_FUNCTION GfsVariableFineCoarseFunc ##### -->
@@ -135,6 +128,7 @@ The fluid variables associated with a fluid cell.
 @GFS_FLAG_USED: 
 @GFS_FLAG_BOUNDARY: 
 @GFS_FLAG_DIRICHLET: 
+@GFS_FLAG_GRADIENT_BOUNDARY: 
 @GFS_FLAG_USER: 
 
 <!-- ##### FUNCTION gfs_cell_init ##### -->
@@ -269,15 +263,6 @@ The fluid variables associated with a fluid cell.
 
 
 <!-- ##### FUNCTION gfs_get_from_below_extensive ##### -->
-<para>
-
-</para>
-
-@cell: 
-@v: 
-
-
-<!-- ##### FUNCTION gfs_get_from_above ##### -->
 <para>
 
 </para>

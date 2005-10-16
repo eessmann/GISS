@@ -14,6 +14,9 @@ Advection
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### FUNCTION gfs_set_merged ##### -->
 <para>
 
@@ -68,9 +71,10 @@ Advection
 @domain: 
 @dimension: 
 @apar: 
-@dpar: 
 @g: 
+@alpha: 
 <!-- # Unused Parameters # -->
+@dpar: 
 @par: 
 
 
@@ -81,8 +85,9 @@ Advection
 
 @domain: 
 @par: 
-@dpar: 
 @half: 
+<!-- # Unused Parameters # -->
+@dpar: 
 
 
 <!-- ##### FUNCTION gfs_predicted_face_velocities ##### -->

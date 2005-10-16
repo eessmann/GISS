@@ -51,6 +51,9 @@ If neither max nor min are specified the bounding values are calculated before e
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_OUTPUT_SCALAR ##### -->
 <para>
 

@@ -14,6 +14,9 @@ Poisson solver
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### STRUCT GfsMultilevelParams ##### -->
 <para>
 
@@ -21,10 +24,14 @@ Poisson solver
 
 @tolerance: 
 @nrelax: 
+@erelax: 
 @minlevel: 
 @nitermax: 
 @dimension: 
 @niter: 
+@depth: 
+@weighted: 
+@beta: 
 @residual_before: 
 @residual: 
 
@@ -94,6 +101,8 @@ Poisson solver
 </para>
 
 @domain: 
+@alpha: 
+<!-- # Unused Parameters # -->
 @dia: 
 @c: 
 @rho: 
@@ -105,14 +114,16 @@ Poisson solver
 </para>
 
 @domain: 
-@d: 
-@levelmin: 
-@depth: 
-@nrelax: 
+@p: 
 @u: 
 @rhs: 
 @dia: 
 @res: 
+<!-- # Unused Parameters # -->
+@d: 
+@levelmin: 
+@depth: 
+@nrelax: 
 
 
 <!-- ##### FUNCTION gfs_correct_normal_velocities ##### -->
@@ -139,6 +150,7 @@ Poisson solver
 @par: 
 @apar: 
 @p: 
+@alpha: 
 @g: 
 
 
@@ -151,6 +163,7 @@ Poisson solver
 @par: 
 @apar: 
 @p: 
+@alpha: 
 @res: 
 
 

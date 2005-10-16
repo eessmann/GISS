@@ -26,6 +26,9 @@ If the variables do not already exist at the time of initialisation, they are cr
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_IS_INIT ##### -->
 <para>
 

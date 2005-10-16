@@ -14,6 +14,9 @@ Solid boundaries
 
 </para>
 
+<!-- ##### SECTION Stability_Level ##### -->
+
+
 <!-- ##### MACRO GFS_IS_FLUID ##### -->
 <para>
 Evaluates to %TRUE if @cell is entirely contained in the fluid, %FALSE otherwise.
