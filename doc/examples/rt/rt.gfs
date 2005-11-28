@@ -34,7 +34,7 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: shapes rayleigh-taylor | transform --sy 2. | transform --ty 0.5 > rt.gts && gerris2D rt.gfs | gfsview2D rt.gfv
+# Command: shapes rayleigh-taylor | transform -M 2. | transform -u 0.5 > rt.gts && gerris2D rt.gfs | gfsview2D rt.gfv
 # Version: 0.8.0
 # Required files: rt.gfv
 # Running time: 16 minutes
