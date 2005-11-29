@@ -839,7 +839,7 @@ static void fill_heaps (FttCell * cell, AdaptParams * p)
     if (level < maxlevel (cell, p->sim))
       GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, p->hcoarsev->i)) = 
 	gts_eheap_insert_with_key (p->hcoarse, cell, - CELL_COST (cell));
-    if (parent && GFS_VARIABLE (parent, p->hfinev->i) == 0. && !GFS_IS_MIXED (parent) && 
+    if (parent && !GFS_IS_MIXED (parent) && GFS_VARIABLE (parent, p->hfinev->i) == 0. &&
 	level > minlevel (parent, p->sim))
       GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (parent, p->hfinev->i)) = 
 	gts_eheap_insert_with_key (p->hfine, parent, CELL_COST (parent));
