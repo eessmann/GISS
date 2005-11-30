@@ -1,0 +1,13 @@
+usr/bin/*
+usr/include/*
+usr/lib/*.so.*
+usr/lib/*.so
+usr/lib/*.a
+usr/lib/*.la
+usr/lib/gerris/*.so
+usr/lib/gerris/*.so.*
+usr/lib/gerris/*.a
+usr/lib/gerris/*.la
+usr/lib/pkgconfig/*.pc
+../../doc/tutorial/tutorial.pdf usr/share/doc/gerris
+../../doc/tutorial/half-cylinder.gts usr/share/doc/gerris
