@@ -25,15 +25,7 @@ if ( darcs get $repo $package && \
      cd $package && \
      sh autogen.sh && \
      make dist && \
-     tar xzf $package-*.tar.gz && \
-     pdir=`echo $package-*.tar.gz | sed 's/.tar.gz//'` && \
-     cd $pdir && \
-     ./configure && make -k && \
-     cd .. && rm -r -f $pdir && tar xzf $package-*.tar.gz && \
-     mv -f $pdir $package-`date +%y-%m-%d` && \
-     tar cf $package-snapshot.tar $package-`date +%y-%m-%d` && \
-     gzip -f --best $package-snapshot.tar && \
-     scp -q $package-snapshot.tar.gz $url/$package-snapshot.tar.gz ) > msg 2>&1; then
+     scp -q $package-*.tar.gz $url/$package-snapshot.tar.gz ) > msg 2>&1; then
     rm -f msg
     status=0
 else
