@@ -14,6 +14,7 @@ Architecture: any
 Depends: \${shlibs:Depends}, libgts-snapshot (>= $GTS_VERSION)
 Conflicts: gerris
 Replaces: gerris
+Suggests: gfsview-snapshot
 Description: Gerris Flow Solver (development snapshot)
  Gerris is a system for the solution of the partial differential
  equations describing fluid flow.
