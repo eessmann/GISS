@@ -10,3 +10,11 @@ dist-hook:
 
 ChangeLog:
 	darcs changes > ChangeLog
+
+debian-snapshot:
+	sh debian/changelog.sh
+	sh debian/control.sh
+	dpkg-buildpackage -rfakeroot -b -d
+	rm -f debian/repo/*
+	mv -f ../*.changes ../*.deb debian/repo
+	cd debian/repo && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz

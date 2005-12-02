@@ -8,6 +8,6 @@ usr/lib/gerris/*.so
 usr/lib/gerris/*.so.*
 usr/lib/gerris/*.a
 usr/lib/gerris/*.la
+usr/lib/gerris/*.mdf
+usr/lib/gerris/*.py
 usr/lib/pkgconfig/*.pc
-../../doc/tutorial/tutorial.pdf usr/share/doc/gerris
-../../doc/tutorial/half-cylinder.gts usr/share/doc/gerris
