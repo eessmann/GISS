@@ -1,0 +1,5 @@
+gerris-snapshot (0.8.1) testing; urgency=low
+
+  * gerris-snapshot release (based on Marcelo's official debian)
+
+ -- Stephane Popinet <popinet@users.sf.net>  Mon,  5 Dec 2005 10:37:20 +1300

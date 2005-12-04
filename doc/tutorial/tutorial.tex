@@ -90,6 +90,27 @@ compile Gerris from source) type:
 \end{verbatim}
 In all cases, this will also install the required version of Glib.
 
+If you don't want to wait for an updated version of the official
+Debian package for Gerris, you can follow the development version of
+Gerris by using the unofficial Debian packages which are built every
+night automatically (see next section for more info). To do this just
+add the following lines to your {\tt apt-get} repository list (usually
+{\tt /etc/apt/sources.list}):
+\begin{verbatim}
+# GTS
+deb http://gts.sourceforge.net/debian/ ./
+# Gerris
+deb http://gfs.sourceforge.net/debian/ ./
+\end{verbatim}
+then do:
+\begin{verbatim}
+% apt-get update
+% apt-get install gts-snapshot gerris-snapshot gfsview-snapshot
+\end{verbatim}
+this will install all the required libraries. When a new development
+version becomes available, doing an {\tt apt-get upgrade} will
+automatically upgrade your versions of GTS, Gerris and GfsView.
+
 \subsubsection{Which sources?}
 
 When installing from source, you will need to decide which version of
