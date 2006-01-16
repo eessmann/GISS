@@ -1853,8 +1853,13 @@ void gfs_pressure_force (FttCell * cell,
   g_return_if_fail (f != NULL);
 
   if ((s = GFS_STATE (cell)->solid)) {
-    gdouble pv = gfs_cell_dirichlet_value (cell, p, -1);
+    gdouble size = ftt_cell_size (cell);
+    gdouble pv = gfs_cell_dirichlet_value (cell, p, -1)*size;
     FttComponent c;
+
+#if (!FTT_2D)
+    pv *= size;
+#endif /* 3D */
 
     gfs_solid_normal (cell, f);
     for (c = 0; c < FTT_DIMENSION; c++)

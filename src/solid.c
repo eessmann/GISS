@@ -1048,17 +1048,14 @@ void gfs_solid_normal (const FttCell * cell, FttVector * n)
   g_return_if_fail (n != NULL);
 
   if ((s = GFS_STATE (cell)->solid)) {
-    gdouble size = ftt_cell_size (cell);
     FttComponent c;
 
-#if (!FTT_2D)
-    size *= size;
-#else /* 2D */
+#if (FTT_2D)
     n->z = 0.;
 #endif /* 2D */
 
     for (c = 0; c < FTT_DIMENSION; c++)
-      (&n->x)[c] = (s->s[2*c + 1] - s->s[2*c])*size;
+      (&n->x)[c] = (s->s[2*c + 1] - s->s[2*c]);
   }
   else
     n->x = n->y = n->z = 0.;
