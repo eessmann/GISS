@@ -204,6 +204,27 @@ GfsOutputClass * gfs_output_scalar_stats_class  (void);
 
 GfsOutputClass * gfs_output_scalar_sum_class  (void);
 
+/* GfsOutputScalarMaxima: Header */
+
+typedef struct _GfsOutputScalarMaxima         GfsOutputScalarMaxima;
+
+struct _GfsOutputScalarMaxima {
+  /*< private >*/
+  GfsOutputScalar parent;
+  
+  /*< public >*/
+  guint N;
+  gdouble * m[4];
+};
+
+#define GFS_OUTPUT_SCALAR_MAXIMA(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsOutputScalarMaxima,\
+					         gfs_output_scalar_maxima_class ())
+#define GFS_IS_OUTPUT_SCALAR_MAXIMA(obj)         (gts_object_is_from_class (obj,\
+						 gfs_output_scalar_maxima_class ()))
+
+GfsOutputClass * gfs_output_scalar_maxima_class  (void);
+
 /* GfsOutputScalarHistogram: Header */
 
 typedef struct _GfsOutputScalarHistogram         GfsOutputScalarHistogram;

@@ -1897,6 +1897,120 @@ GfsOutputClass * gfs_output_scalar_sum_class (void)
   return klass;
 }
 
+/* GfsOutputScalarMaxima: Object */
+
+static void gfs_output_scalar_maxima_destroy (GtsObject * o)
+{
+  guint i;
+
+  for (i = 0; i < 4; i++)
+    g_free (GFS_OUTPUT_SCALAR_MAXIMA (o)->m[i]);
+
+  (* GTS_OBJECT_CLASS (gfs_output_scalar_maxima_class ())->parent_class->destroy) (o);
+}
+
+static void gfs_output_scalar_maxima_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsOutputScalarMaxima * m;
+  guint i;
+
+  (* GTS_OBJECT_CLASS (gfs_output_scalar_maxima_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_INT) {
+    gts_file_error (fp, "expecting an integer (N)");
+    return;
+  }
+  m = GFS_OUTPUT_SCALAR_MAXIMA (*o);
+  m->N = atoi (fp->token->str);
+  gts_file_next_token (fp);
+
+  for (i = 0; i < 4; i++)
+    m->m[i] = g_malloc (sizeof (gdouble)*m->N);
+}
+
+static void gfs_output_scalar_maxima_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_output_scalar_maxima_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %d", GFS_OUTPUT_SCALAR_MAXIMA (o)->N);
+}
+
+static void maxima (FttCell * cell, GfsOutputScalarMaxima * m)
+{
+  guint i;
+
+  for (i = 0; i < m->N; i++) {
+    gdouble v = GFS_VARIABLE (cell, GFS_OUTPUT_SCALAR (m)->v->i);
+
+    if (v > m->m[3][i]) {
+      FttVector p;
+
+      gfs_cell_cm (cell, &p);
+      m->m[0][i] = p.x; m->m[1][i] = p.y; m->m[2][i] = p.z;
+      m->m[3][i] = v;
+      return;
+    }
+  }
+}
+
+static gboolean gfs_output_scalar_maxima_event (GfsEvent * event, 
+						GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_maxima_class ())->parent_class)->event)
+      (event, sim)) {
+    GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
+    GfsOutputScalarMaxima * m = GFS_OUTPUT_SCALAR_MAXIMA (event);
+    guint i;
+
+    for (i = 0; i < m->N; i++)
+      m->m[3][i] = -G_MAXDOUBLE;
+
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+			      FTT_PRE_ORDER, 
+			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
+			      output->maxlevel,
+			      (FttCellTraverseFunc) maxima, m);
+    for (i = 0; i < m->N; i++)
+      fprintf (GFS_OUTPUT (event)->file->fp, 
+	       "%s time: %g #: %d x: %g y: %g z: %g value: %g\n", 
+	       output->name, sim->time.t, i,
+	       m->m[0][i], m->m[1][i], m->m[2][i],
+	       m->m[3][i]);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_output_scalar_maxima_class_init (GfsOutputClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_output_scalar_maxima_destroy;
+  GTS_OBJECT_CLASS (klass)->read = gfs_output_scalar_maxima_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_output_scalar_maxima_write;
+  GFS_EVENT_CLASS (klass)->event = gfs_output_scalar_maxima_event;
+}
+
+GfsOutputClass * gfs_output_scalar_maxima_class (void)
+{
+  static GfsOutputClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_output_scalar_maxima_info = {
+      "GfsOutputScalarMaxima",
+      sizeof (GfsOutputScalarMaxima),
+      sizeof (GfsOutputClass),
+      (GtsObjectClassInitFunc) gfs_output_scalar_maxima_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_output_scalar_class ()),
+				  &gfs_output_scalar_maxima_info);
+  }
+
+  return klass;
+}
+
 /* GfsOutputScalarHistogram: Object */
 
 static void gfs_output_scalar_histogram_destroy (GtsObject * o)
