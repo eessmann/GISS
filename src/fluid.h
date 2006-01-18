@@ -85,8 +85,6 @@ typedef enum {
                                  GFS_STATE (cell)->solid == NULL)
 #define GFS_IS_MIXED(cell)      ((cell) != NULL &&\
                                  GFS_STATE (cell)->solid != NULL)
-#define GFS_IS_SMALL(cell)      (GFS_IS_MIXED (cell) &&\
-                                 GFS_STATE (cell)->solid->a < 0.5)
 #define GFS_CELL_IS_BOUNDARY(cell) (((cell)->flags & GFS_FLAG_BOUNDARY) != 0)
 #define GFS_CELL_IS_GRADIENT_BOUNDARY(cell) (((cell)->flags & GFS_FLAG_GRADIENT_BOUNDARY) != 0)
 

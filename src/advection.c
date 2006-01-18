@@ -21,9 +21,6 @@
 #include "advection.h"
 #include "source.h"
 
-
-#include "solid.h"
-
 static gdouble transverse_term (FttCell * cell,
 				gdouble size,
 				FttComponent c,
@@ -583,11 +580,27 @@ void gfs_face_reset_normal_velocity (const FttCellFace * face)
     GFS_FACE_NORMAL_VELOCITY_LEFT (face) = 0.;
 }
 
+static gboolean is_small (FttCell * cell)
+{
+  GfsSolidVector * solid = GFS_STATE (cell)->solid;
+
+  if (solid) {
+    FttDirection d;
+    FttCellNeighbors n;
+
+    ftt_cell_neighbors (cell, &n);
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      if (n.c[d] && solid->s[d] > 0. && solid->a/solid->s[d] < 0.5)
+	return TRUE;
+  }
+  return FALSE;
+}
+
 static void set_merged (FttCell * cell)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
 
-  if (!GFS_IS_SMALL (cell))
+  if (!is_small (cell))
     solid->merged = NULL;
   else {
     FttCellNeighbors neighbor;
