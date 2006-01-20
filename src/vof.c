@@ -617,3 +617,57 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
 
   gfs_domain_timer_stop (domain, "tracer_vof_advection");
 }
+
+/**
+ * gfs_vof_coarse_fine:
+ * @parent: a #FttCell.
+ * @v: a #GfsVariable.
+ *
+ * Fills the @v variable of the children of @parent with
+ * VOF-interpolated values.
+ */
+void gfs_vof_coarse_fine (FttCell * parent, GfsVariable * v)
+{
+  gdouble f;
+  FttCellChildren child;
+  guint i;
+
+  g_return_if_fail (parent != NULL);
+  g_return_if_fail (!FTT_CELL_IS_LEAF (parent));
+  g_return_if_fail (v != NULL);
+
+  ftt_cell_children (parent, &child);
+
+  f = GFS_VARIABLE (parent, v->i);
+  THRESHOLD (f);
+
+  if (f < 1e-6 || 1. - f < 1.e-6)
+    for (i = 0; i < FTT_CELLS; i++)
+      GFS_VARIABLE (child.c[i], v->i) = f;
+  else {
+    FttVector m, m1;
+    FttComponent c;
+    gdouble n = 0., alpha;
+
+    gfs_youngs_normal (parent, v, &m);
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      (&m1.x)[c] = fabs ((&m.x)[c]);
+      n += (&m1.x)[c];
+    }
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&m1.x)[c] /= n;
+    alpha = gfs_plane_alpha (&m1, f);
+
+    for (i = 0; i < FTT_CELLS; i++) {
+      gdouble alpha1 = alpha;
+      FttVector p;
+
+      ftt_cell_relative_pos (child.c[i], &p);
+      for (c = 0; c < FTT_DIMENSION; c++) {
+	(&p.x)[c] = (&m.x)[c] < 0. ? (&p.x)[c] + 0.25 : 0.25 - (&p.x)[c];
+	alpha1 -= (&m1.x)[c]*(&p.x)[c];
+      }
+      GFS_VARIABLE (child.c[i], v->i) = gfs_plane_volume (&m1, 2.*alpha1, 1.);
+    }
+  }
+}

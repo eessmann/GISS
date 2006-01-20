@@ -58,6 +58,8 @@ void    gfs_cell_vof_advection     (FttCell * cell,
 void    gfs_tracer_vof_advection   (GfsDomain * domain,
 				    GfsAdvectionParams * par,
 				    GfsVariable * half);
+void    gfs_vof_coarse_fine        (FttCell * parent, 
+				    GfsVariable * v);
 
 #ifdef __cplusplus
 }
