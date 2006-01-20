@@ -54,55 +54,30 @@ void gfs_cell_coarse_init (FttCell * cell, GfsDomain * domain)
 
 /**
  * gfs_cell_fine_init:
- * @cell: a #FttCell.
- * @domain: a #GfsDomain containing @cell.
+ * @parent: a #FttCell.
+ * @domain: a #GfsDomain containing @parent.
  *
- * Initializes the variables of @cell using interpolation from its
- * parent cell.
- *
- * First-order interpolation (straight injection) is used for boundary
- * cells and second-order interpolation for the other cells.  
+ * Initialises the children of @parent.
  */
-void gfs_cell_fine_init (FttCell * cell, GfsDomain * domain)
+void gfs_cell_fine_init (FttCell * parent, GfsDomain * domain)
 {
-  FttCell * parent;
   GSList * i;
 
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (!FTT_CELL_IS_ROOT (cell));
+  g_return_if_fail (parent != NULL);
+  g_return_if_fail (!FTT_CELL_IS_LEAF (parent));
   g_return_if_fail (domain != NULL);
 
-  parent = ftt_cell_parent (cell);
   /* refinement of mixed cell is not implemented (yet) */
   g_assert (GFS_CELL_IS_BOUNDARY (parent) || GFS_IS_FLUID (parent));
 
-  gfs_cell_init (cell, domain);
+  gfs_cell_init (parent, domain);
+
   i = domain->variables;
   while (i) {
     GfsVariable * v = i->data;
-
-    GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (parent, v->i);
+  
+    (* v->coarse_fine) (parent, v);
     i = i->next;
-  }
-
-  if (!GFS_CELL_IS_BOUNDARY (parent)) {
-    FttVector p;
-    FttComponent c;
-    
-    ftt_cell_relative_pos (cell, &p);
-    i = domain->variables;
-    while (i) {
-      GfsVariable * v = i->data;
-
-      for (c = 0; c < FTT_DIMENSION; c++)
-	GFS_VARIABLE (cell, v->i) += (&p.x)[c]*
-#if 1
-	  gfs_center_van_leer_gradient (parent, c, v->i);
-#else
-          gfs_center_gradient (parent, c, v->i);
-#endif
-      i = i->next;
-    }
   }
 }
 

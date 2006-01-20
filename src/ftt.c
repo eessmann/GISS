@@ -516,8 +516,7 @@ static void oct_new (FttCell * parent,
   parent->children = oct;
 
   if (init)
-    for (n = 0; n < FTT_CELLS; n++)
-      (* init) (&(oct->cell[n]), data);
+    (* init) (parent, data);
 }
 
 /**

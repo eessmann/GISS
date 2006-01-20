@@ -1321,6 +1321,7 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
   s->max = atof (fp->token->str);
   s->oldv = gfs_temporary_variable (domain);
   s->oldv->fine_coarse = s->v->fine_coarse;
+  s->oldv->coarse_fine = s->v->coarse_fine;
 
   if (fp->next_token != '\n') {
     gts_file_next_token (fp);
@@ -1334,6 +1335,7 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     s->diff->fine_coarse = s->v->fine_coarse;
+    s->diff->coarse_fine = s->v->coarse_fine;
   }
   gts_file_next_token (fp);
 }

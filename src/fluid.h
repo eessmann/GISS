@@ -95,6 +95,8 @@ void                  gfs_get_from_below_intensive  (FttCell * cell,
 						     const GfsVariable * v);
 void                  gfs_get_from_below_extensive  (FttCell * cell, 
 						     const GfsVariable * v);
+void                  gfs_cell_coarse_fine          (FttCell * cell,
+						     GfsVariable * v);
 gdouble               gfs_face_interpolated_value   (const FttCellFace * face,
 						     guint v);
 typedef gdouble    (* GfsCenterGradient)            (FttCell * cell,

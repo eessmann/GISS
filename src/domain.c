@@ -2077,15 +2077,27 @@ gdouble gfs_domain_cfl (GfsDomain * domain,
  * @cell: a #FttCell.
  * @domain: a #GfsDomain containing @cell.
  *
- * Allocates the memory for fluid state data associated to @cell.
+ * Allocates the memory for fluid state data associated to @cell or its children.
  */
 void gfs_cell_init (FttCell * cell, GfsDomain * domain)
 {
   g_return_if_fail (cell != NULL);
-  g_return_if_fail (cell->data == NULL);
   g_return_if_fail (domain != NULL);
 
-  cell->data = g_malloc0 (gfs_domain_variables_size (domain));
+  if (FTT_CELL_IS_LEAF (cell)) {
+    g_return_if_fail (cell->data == NULL);
+    cell->data = g_malloc0 (gfs_domain_variables_size (domain));
+  }
+  else {
+    FttCellChildren child;
+    guint n;
+
+    ftt_cell_children (cell, &child);
+    for (n = 0; n < FTT_CELLS; n++) {
+      g_return_if_fail (child.c[n]->data == NULL);
+      child.c[n]->data = g_malloc0 (gfs_domain_variables_size (domain));
+    }
+  }
 }
 
 /**

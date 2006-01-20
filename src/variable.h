@@ -42,7 +42,7 @@ struct _GfsVariable {
   FttComponent component;
   gchar * name;
   gboolean centered;
-  GfsVariableFineCoarseFunc fine_coarse;
+  GfsVariableFineCoarseFunc fine_coarse, coarse_fine;
   GtsContainer * sources;
   GfsSurfaceGenericBc * surface_bc;
   GfsDomain * domain;

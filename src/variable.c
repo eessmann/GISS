@@ -95,6 +95,7 @@ static void gfs_variable_init (GfsVariable * v)
   v->centered = FALSE;
   v->component = FTT_DIMENSION;
   v->fine_coarse = (GfsVariableFineCoarseFunc) gfs_get_from_below_intensive;
+  v->coarse_fine = (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine;
 }
 
 GfsVariableClass * gfs_variable_class (void)
