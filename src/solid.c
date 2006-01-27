@@ -566,13 +566,19 @@ void gfs_cell_init_solid_fractions_from_children (FttCell * cell)
     if (solid == NULL)
       GFS_STATE (cell)->solid = solid = g_malloc0 (sizeof (GfsSolidVector));
 
-    solid->a = w/FTT_CELLS; 
-    solid->cm.x = cm.x/w;
-    solid->cm.y = cm.y/w;
-    solid->cm.z = cm.z/w;
+    solid->a = w/FTT_CELLS;
+    g_assert (wa > 0.);
     solid->ca.x = ca.x/wa;
     solid->ca.y = ca.y/wa;
     solid->ca.z = ca.z/wa;
+    if (w > 0.) {
+      solid->cm.x = cm.x/w;
+      solid->cm.y = cm.y/w;
+      solid->cm.z = cm.z/w;
+    }
+    else
+      ftt_cell_pos (cell, &solid->cm);
+
     for (i = 0; i < FTT_NEIGHBORS; i++) {
       guint n = ftt_cell_children_direction (cell, i, &child);
 
