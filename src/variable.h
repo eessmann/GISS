@@ -77,6 +77,8 @@ GfsVariable *         gfs_variable_from_name        (GSList * i,
 GSList *              gfs_variables_from_list       (GSList * i,
 						     gchar * list,
 						     gchar ** error);
+void                  gfs_variables_swap            (GfsVariable * v1, 
+						     GfsVariable * v2);
 #define gfs_variable_set_vector(v, c)  ((v)->component = (c))
 
 /* GfsVariableTracer: header */

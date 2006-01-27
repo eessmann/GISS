@@ -495,7 +495,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 
 static void simulation_run (GfsSimulation * sim)
 {
-  GfsVariable * p, * res = NULL;
+  GfsVariable * p, * pmac, * res = NULL;
   GfsDomain * domain;
   GSList * i;
 
@@ -503,6 +503,7 @@ static void simulation_run (GfsSimulation * sim)
 
   p = gfs_variable_from_name (domain->variables, "P");
   g_assert (p);
+  pmac = gfs_temporary_variable (domain);
 
   gfs_simulation_refine (sim);
 
@@ -541,10 +542,12 @@ static void simulation_run (GfsSimulation * sim)
 
     gfs_predicted_face_velocities (domain, FTT_DIMENSION, &sim->advection_params);
     
+    gfs_variables_swap (p, pmac);
     gfs_mac_projection (domain,
     			&sim->projection_params, 
     			&sim->advection_params,
 			p, sim->physical_params.alpha, g);
+    gfs_variables_swap (p, pmac);
 
     i = domain->variables;
     while (i) {
@@ -590,6 +593,7 @@ static void simulation_run (GfsSimulation * sim)
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
   gts_container_foreach (GTS_CONTAINER (sim->events),
 			 (GtsFunc) gts_object_destroy, NULL);
+  gts_object_destroy (GTS_OBJECT (pmac));
 }
 
 static void gfs_simulation_class_init (GfsSimulationClass * klass)

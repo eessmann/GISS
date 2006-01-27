@@ -202,6 +202,24 @@ GSList * gfs_variables_from_list (GSList * i,
   return var;
 }
 
+/**
+ * gfs_variables_swap:
+ * @v1: a #GfsVariable.
+ * @v2: a #GfsVariable.
+ *
+ * Swaps the values of @v1 and @v2, belonging to the same #GfsDomain.
+ */
+void gfs_variables_swap (GfsVariable * v1, GfsVariable * v2)
+{
+  guint i;
+
+  g_return_if_fail (v1 != NULL);
+  g_return_if_fail (v2 != NULL);
+  g_return_if_fail (v1->domain == v2->domain);
+
+  i = v1->i; v1->i = v2->i; v2->i = i;
+}
+
 /* GfsVariableTracer: object */
 
 static void variable_tracer_read (GtsObject ** o, GtsFile * fp)
