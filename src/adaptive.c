@@ -850,10 +850,15 @@ static void fine_cell_cleanup (FttCell * cell, AdaptParams * p)
 
 static void cell_fine_init (FttCell * cell, AdaptParams * p)
 {
+  FttCellChildren child;
+  guint n;
+
   gfs_cell_fine_init (cell, GFS_DOMAIN (p->sim));
-  CELL_COST (cell) = G_MAXDOUBLE;
-  if (!GFS_CELL_IS_BOUNDARY (ftt_cell_parent (cell)))
-    p->nc++;
+  ftt_cell_children (cell, &child);
+  for (n = 0; n < FTT_CELLS; n++)
+    CELL_COST (child.c[n]) = G_MAXDOUBLE;
+  if (!GFS_CELL_IS_BOUNDARY (cell))
+    p->nc += FTT_CELLS;
 }
 
 /**
