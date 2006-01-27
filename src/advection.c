@@ -610,11 +610,18 @@ static void set_merged (FttCell * cell)
     ftt_cell_neighbors (cell, &neighbor);
     for (i = 0; i < FTT_NEIGHBORS && abest < 1.; i++)
       if (neighbor.c[i] && !GFS_CELL_IS_BOUNDARY (neighbor.c[i]) && solid->s[i] > 0.) {
-	gdouble a = GFS_IS_MIXED (neighbor.c[i]) ? GFS_STATE (neighbor.c[i])->solid->a : 1.;
+	if (GFS_IS_MIXED (neighbor.c[i])) {
+	  gdouble a = GFS_STATE (neighbor.c[i])->solid->a;
 	
-	if (a > abest) {
-	  abest = a;
+	  if (a > abest) {
+	    abest = a;
+	    solid->merged = neighbor.c[i];
+	  }
+	}
+	else {
+	  g_assert (FTT_CELL_IS_LEAF (neighbor.c[i]));
 	  solid->merged = neighbor.c[i];
+	  return;
 	}
       }
     if (abest == 0.)
@@ -649,7 +656,7 @@ static void add_merged (GSList ** merged, FttCell * cell)
     *merged = g_slist_prepend (*merged, cell);
     cell->flags |= GFS_FLAG_USED;
 
-    if (GFS_IS_MIXED (cell) && solid->merged)
+    if (solid && solid->merged)
       add_merged (merged, solid->merged);
 
     ftt_cell_neighbors (cell, &neighbor);
@@ -666,7 +673,7 @@ static void add_merged (GSList ** merged, FttCell * cell)
 	    if (GFS_IS_MIXED (child.c[j]) &&
 		GFS_STATE (child.c[j])->solid->merged == cell)
 	      add_merged (merged, child.c[j]);
-	}	
+	}
 	else if (GFS_IS_MIXED (neighbor.c[i]) && 
 		 GFS_STATE (neighbor.c[i])->solid->merged == cell)
 	  add_merged (merged, neighbor.c[i]);
@@ -750,6 +757,7 @@ void gfs_advection_update (GSList * merged, const GfsAdvectionParams * par)
 
     if (GFS_IS_MIXED (cell)) {
 #if 1
+      g_assert (!is_small (cell));
       GFS_VARIABLE (cell, par->v->i) += 
 	GFS_VARIABLE (cell, par->fv->i)/GFS_STATE (cell)->solid->a;
 #else /* D. Calhoun approach */
