@@ -655,7 +655,7 @@ gdouble gfs_source_diffusion_cell (GfsSourceDiffusion * d, FttCell * cell)
 static void explicit_diffusion (FttCell * cell, GfsSourceGeneric * s)
 {
   GFS_VARIABLE (cell, GFS_SOURCE_DIFFUSION_EXPLICIT (s)->s->i) = 
-    source_diffusion_value (s, cell, s->v);
+    source_diffusion_value (s, cell, GFS_SOURCE_SCALAR (s)->v);
 }
 
 static gboolean gfs_source_diffusion_explicit_event (GfsEvent * event, GfsSimulation * sim)
