@@ -134,7 +134,7 @@ static void gfs_correct_normal_velocities_weighted (GfsDomain * domain,
 						    gboolean weighted)
 {
   if (!weighted)
-    gfs_correct_normal_velocities (domain, dimension, p, g, dt);
+    gfs_correct_normal_velocities (domain, dimension, p, g, dt, NULL);
   else {
     gpointer data[3];
     FttComponent c;
@@ -688,7 +688,7 @@ static void ocean_run (GfsSimulation * sim)
 
     gfs_domain_timer_start (domain, "correct_normal_velocities");
     gfs_poisson_coefficients (domain, NULL);
-    gfs_correct_normal_velocities (domain, 2, p, g, sim->advection_params.dt/2.);
+    gfs_correct_normal_velocities (domain, 2, p, g, sim->advection_params.dt/2., NULL);
     gfs_domain_cell_traverse_boundary (domain, FTT_BACK,
 				       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				       (FttCellTraverseFunc) compute_w, 

@@ -39,10 +39,8 @@ static void correct_normal_velocity (FttCellFace * face,
 {
   GfsGradient g;
   gdouble dp;
-  FttFaceType type;
   GfsStateVector * s;
-  GfsVariable * p = data[0];
-  GfsVariable ** gv = data[1];
+  GfsVariable * p = data[0], ** gv = data[1], * w = data[3];
   gdouble * dt = data[2];
   FttComponent c;
 
@@ -50,11 +48,12 @@ static void correct_normal_velocity (FttCellFace * face,
     return;
 
   s = GFS_STATE (face->cell);
-  type = ftt_face_type (face);
   c = face->d/2;
 
   gfs_face_weighted_gradient (face, &g, p->i, -1);
   dp = (g.b - g.a*GFS_VARIABLE (face->cell, p->i))/ftt_cell_size (face->cell);
+  if (w)
+    dp *= gfs_face_interpolated_value (face, w->i);
   if (!FTT_FACE_DIRECT (face))
     dp = - dp;
 
@@ -62,12 +61,14 @@ static void correct_normal_velocity (FttCellFace * face,
     dp /= s->solid->s[face->d];
 
   GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= dp*(*dt);
-  GFS_VARIABLE (face->cell, gv[c]->i) += dp;
+  if (gv)
+    GFS_VARIABLE (face->cell, gv[c]->i) += dp;
 
-  if (type == FTT_FINE_COARSE)
+  if (ftt_face_type (face) == FTT_FINE_COARSE)
     dp *= GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*FTT_CELLS/2);
   GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*(*dt);
-  GFS_VARIABLE (face->neighbor, gv[c]->i) += dp;
+  if (gv)
+    GFS_VARIABLE (face->neighbor, gv[c]->i) += dp;
 }
 
 static void scale_gradients (FttCell * cell, gpointer * data)
@@ -91,46 +92,53 @@ static void scale_gradients (FttCell * cell, gpointer * data)
  * @domain: a #GfsDomain.
  * @dimension: the number of dimensions (2 or 3).
  * @p: the pressure field.
- * @g: where to store the pressure gradient.
+ * @g: where to store the pressure gradient or %NULL.
  * @dt: the timestep.
+ * @w: an optional weight to apply to the correction.
  *
  * Corrects the normal velocity field of @domain using @p and and @dt.
  *
- * Also allocates the @g variables and fills them with the centered gradient of @p.
+ * Also allocates the @g variables (if @g is not %NULL) and fills them
+ * with the centered gradient of @p.
  */
 void gfs_correct_normal_velocities (GfsDomain * domain,
 				    guint dimension,
 				    GfsVariable * p,
 				    GfsVariable ** g,
-				    gdouble dt)
+				    gdouble dt,
+				    GfsVariable * w)
 {
-  gpointer data[3];
+  gpointer data[4];
   FttComponent c;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (p != NULL);
-  g_return_if_fail (g != NULL);
 
-  for (c = 0; c < dimension; c++) {
-    g[c] = gfs_temporary_variable (domain);
-    gfs_variable_set_vector (g[c], c);
+  if (g) {
+    for (c = 0; c < dimension; c++) {
+      g[c] = gfs_temporary_variable (domain);
+      gfs_variable_set_vector (g[c], c);
+    }
+    data[0] = g;
+    data[1] = &dimension;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) reset_gradients, data);
   }
-  data[0] = g;
-  data[1] = &dimension;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_gradients, data);
   data[0] = p;
   data[1] = g;
   data[2] = &dt;
+  data[3] = w;
   gfs_domain_face_traverse (domain, dimension == 2 ? FTT_XY : FTT_XYZ,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) correct_normal_velocity, data);
-  data[0] = g;
-  data[1] = &dimension;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) scale_gradients, data);
-  for (c = 0; c < dimension; c++)
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, g[c]);
+  if (g) {
+    data[0] = g;
+    data[1] = &dimension;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) scale_gradients, data);
+    for (c = 0; c < dimension; c++)
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, g[c]);
+  }
 }
 
 static void scale_divergence (FttCell * cell, gpointer * data)
@@ -236,7 +244,7 @@ void gfs_mac_projection (GfsDomain * domain,
   gts_object_destroy (GTS_OBJECT (dia));
   gts_object_destroy (GTS_OBJECT (res));
 
-  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
+  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt, NULL);
 
 #if 0
   {
@@ -409,7 +417,7 @@ void gfs_approximate_projection (GfsDomain * domain,
   if (!res)
     gts_object_destroy (GTS_OBJECT (res1));
 
-  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
+  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt, NULL);
   gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
 
   gfs_domain_timer_stop (domain, "approximate_projection");

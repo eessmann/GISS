@@ -32,7 +32,8 @@ void          gfs_correct_normal_velocities   (GfsDomain * domain,
 					       guint dimension,
 					       GfsVariable * p,
 					       GfsVariable ** g,
-					       gdouble dt);
+					       gdouble dt,
+					       GfsVariable * w);
 void          gfs_mac_projection              (GfsDomain * domain,
 					       GfsMultilevelParams * par,
 					       GfsAdvectionParams * apar,
