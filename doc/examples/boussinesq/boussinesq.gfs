@@ -24,7 +24,7 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: gerris2D boussinesq.gfs | gfsview2D | ppmtoy4m -F 24:1 -v 0 | mpeg2enc -v 0 -o t.mpg
+# Command: gerris2D boussinesq.gfs | gfsview2D boussinesq.gfv | ppmtoy4m -F 24:1 -v 0 | mpeg2enc -v 0 -o t.mpg
 # Version: 0.6.4
 # Required files: cylinder.gts boussinesq.gfv
 # Running time: 60 minutes
@@ -75,9 +75,6 @@
 
   # Outputs the simulation every 4 timesteps
   OutputSimulation { istep = 4 } stdout { binary = 1 }
- 
-  # boussinesq.gfv contains the visualisation parameters used by GfsView
-  EventScript { start = 0 } { cat boussinesq.gfv }
  
   # Every 4 timesteps, GfsView will read the following command, after having read
   # the simulation file and will output a PPM screenshot on its standard output
