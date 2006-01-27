@@ -18,7 +18,7 @@
 #
 # Figure \ref{laplace} illustrates the independence of the asymptotic
 # ($t\rightarrow\infty$) non-dimensional capillary number
-# $Ca=\max(|{\bf u}|)/\sigma$ from the Laplace number $La=\sigma\rho
+# $Ca=\max(|{\bf u}|)\mu/\sigma$ from the Laplace number $La=\sigma\rho
 # D/\mu^2$. The asymptotic value of $Ca$ is a measure of the accuracy
 # of the numerical scheme (the smaller the better).
 #
