@@ -993,8 +993,9 @@ static gdouble min_cfl (GfsSimulation * sim)
  * @sim: a #GfsSimulation.
  *
  * Sets the time step for the next iteration of @sim using the CFL
- * (computed using gfs_domain_cfl()) and taking into account the
- * timings of the various #GfsEvent associated to @sim.
+ * (computed using gfs_domain_cfl()), the stability conditions for
+ * source terms and taking into account the timings of the various
+ * #GfsEvent associated to @sim.
  *
  * More precisely, the time step is adjusted (if necessary) so that
  * the time of the closest event is exactly reached after the
@@ -1011,6 +1012,25 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
     sim->advection_params.dt = cfl*gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
   else
     sim->advection_params.dt = G_MAXDOUBLE;
+
+  i = GFS_DOMAIN (sim)->variables;
+  while (i) {
+    GfsVariable * v = i->data;
+    if (v->sources) {
+      GSList * j = GTS_SLIST_CONTAINER (v->sources)->items;
+      while (j) {
+	GfsSourceGeneric * s = j->data;
+	if (GFS_SOURCE_GENERIC_CLASS (GTS_OBJECT (s)->klass)->stability) {
+	  gdouble dt = (* GFS_SOURCE_GENERIC_CLASS (GTS_OBJECT (s)->klass)->stability) (s, sim);
+	  if (dt < sim->advection_params.dt)
+	    sim->advection_params.dt = dt;
+	}
+	j = j->next;
+      }
+    }
+    i = i->next;
+  }
+  
   if (sim->advection_params.dt > sim->time.dtmax)
     sim->advection_params.dt = sim->time.dtmax;
 

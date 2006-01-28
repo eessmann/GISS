@@ -52,9 +52,8 @@ struct _GfsSourceGenericClass {
 
   /*< public >*/
   gdouble (* mac_value)      (GfsSourceGeneric *, FttCell *, GfsVariable *);
-  gdouble (* centered_value) (GfsSourceGeneric *, 
-			      FttCell *, 
-			      GfsVariable *);
+  gdouble (* centered_value) (GfsSourceGeneric *, FttCell *, GfsVariable *);
+  gdouble (* stability)      (GfsSourceGeneric *, GfsSimulation *);
 };
 
 #define GFS_SOURCE_GENERIC(obj)            GTS_OBJECT_CAST (obj,\
