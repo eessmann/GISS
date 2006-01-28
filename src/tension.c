@@ -188,6 +188,10 @@ static void gfs_source_tension_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
     return;
   }
+  if (!GFS_IS_VARIABLE_CURVATURE (s->k)) {
+    gts_file_error (fp, "variable `%s' is not a VariableCurvature", fp->token->str);
+    return;
+  }
   gts_file_next_token (fp);
 }
 
@@ -197,10 +201,53 @@ static void gfs_source_tension_write (GtsObject * o, FILE * fp)
   fprintf (fp, " %s %s", GFS_SOURCE_TENSION (o)->c->name, GFS_SOURCE_TENSION (o)->k->name);
 }
 
+typedef struct {
+  gdouble amin, amax;
+  guint depth;
+  GfsFunction * alpha;
+  GfsVariable * c;
+} StabilityParams;
+
+static void min_max_alpha (FttCell * cell, StabilityParams * p)
+{
+  guint level = ftt_cell_level (cell);
+  if (level > p->depth && 
+      GFS_VARIABLE (cell, p->c->i) > 1e-3 && 
+      GFS_VARIABLE (cell, p->c->i) < 1. - 1.e-3)
+    p->depth = level;
+  if (p->alpha) {
+    gdouble a = gfs_function_value (p->alpha, cell);
+    if (a < p->amin) p->amin = a;
+    if (a > p->amax) p->amax = a;
+  }
+}
+
+static gdouble gfs_source_tension_stability (GfsSourceGeneric * s,
+					     GfsSimulation * sim)
+{
+  GfsSourceTension * t = GFS_SOURCE_TENSION (s);
+  gdouble sigma = GFS_VARIABLE_CURVATURE (t->k)->sigma, h;
+  StabilityParams p = { G_MAXDOUBLE, -G_MAXDOUBLE, 0 };
+
+  p.alpha = sim->physical_params.alpha;
+  p.c = t->c;
+  gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) min_max_alpha, &p);
+  h = ftt_level_size (p.depth);
+  if (p.alpha) {
+    gdouble rhom = (1./p.amin + 1./p.amax)/2.;
+    gdouble rhod = p.amin < p.amax ? p.amin/p.amax : p.amax/p.amin;
+    return sqrt (rhom*rhod*h*h*h/(2.*M_PI*sigma));
+  }
+  else
+    return sqrt (h*h*h/(2.*M_PI*sigma));
+}
+
 static void gfs_source_tension_class_init (GfsSourceGenericClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read =       gfs_source_tension_read;
   GTS_OBJECT_CLASS (klass)->write =      gfs_source_tension_write;
+  klass->stability = gfs_source_tension_stability;
 }
 
 GfsSourceGenericClass * gfs_source_tension_class (void)
