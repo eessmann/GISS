@@ -67,6 +67,8 @@ struct _GfsSourceGenericClass {
 						 gfs_source_generic_class ()))
 
 GfsSourceGenericClass * gfs_source_generic_class  (void);
+GfsSourceGeneric *      gfs_source_find           (GfsVariable * v,
+						   GfsSourceGenericClass * klass);
 
 /* GfsSourceScalar: Header */
 

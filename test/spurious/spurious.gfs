@@ -55,7 +55,6 @@
 # Command: sh spurious.sh spurious.gfs
 # Version: 0.6.4
 # Required files: spurious.sh vectors.gfv convergence.ref
-# Running time: 3 minutes
 # Generated files: laplace.eps convergence.eps vectors.eps
 #
 1 2 GfsSimulation GfsBox GfsGEdge {} {
@@ -67,7 +66,9 @@
   AdvectionParams { scheme = none }
 
   VariableTracer {} T { scheme = vof }
-  SourceTension {} T 1
+  VariableFiltered {} T1 T 0
+  VariableCurvature {} K T1
+  SourceTension {} T K
   SourceDiffusion {} U MU
   SourceDiffusion {} V MU
 

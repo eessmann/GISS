@@ -26,11 +26,11 @@ extern "C" {
 
 #include "source.h"
 
-/* GfsSourceTension: Header */
+/* GfsSourceTensionCSS: Header */
 
-typedef struct _GfsSourceTension         GfsSourceTension;
+typedef struct _GfsSourceTensionCSS         GfsSourceTensionCSS;
 
-struct _GfsSourceTension {
+struct _GfsSourceTensionCSS {
   /*< private >*/
   GfsSourceVelocity parent;
   GfsVariable * g[3];
@@ -38,6 +38,26 @@ struct _GfsSourceTension {
   /*< public >*/
   GfsVariable * c, * t[FTT_DIMENSION];
   gdouble sigma;
+};
+
+#define GFS_SOURCE_TENSION_CSS(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourceTensionCSS,\
+					         gfs_source_tension_css_class ())
+#define GFS_IS_SOURCE_TENSION_CSS(obj)         (gts_object_is_from_class (obj,\
+						 gfs_source_tension_css_class ()))
+
+GfsSourceGenericClass * gfs_source_tension_css_class (void);
+
+/* GfsSourceTension: Header */
+
+typedef struct _GfsSourceTension         GfsSourceTension;
+
+struct _GfsSourceTension {
+  /*< private >*/
+  GfsSourceVelocity parent;
+  
+  /*< public >*/
+  GfsVariable * c, * k;
 };
 
 #define GFS_SOURCE_TENSION(obj)            GTS_OBJECT_CAST (obj,\

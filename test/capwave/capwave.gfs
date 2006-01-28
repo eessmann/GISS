@@ -40,7 +40,6 @@
 # Command: sh capwave.sh capwave.gfs
 # Version: 0.6.4
 # Required files: capwave.sh convergence.ref
-# Running time: 3 minutes
 # Generated files: convergence.tex amplitude.eps
 #
 1 1 GfsSimulation GfsBox GfsGEdge {} {
@@ -52,7 +51,9 @@
   ProjectionParams { tolerance = 1e-6 }
   Refine LEVEL
   VariableTracer {} T { scheme = vof }
-  SourceTension {} T 1
+  VariableFiltered {} T1 T 0
+  VariableCurvature {} K T1
+  SourceTension {} T K
   AdvectionParams { scheme = none }
   SourceDiffusion {} U 0.0182571749236
   SourceDiffusion {} V 0.0182571749236

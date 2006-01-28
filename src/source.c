@@ -132,6 +132,33 @@ GfsSourceGenericClass * gfs_source_generic_class (void)
   return klass;
 }
 
+/**
+ * gfs_source_find:
+ * @v: a #GfsVariable.
+ * @klass: a #GfsSourceGenericClass.
+ *
+ * Returns: the first source of @v descendant of @klass, or %NULL if
+ * none was found.
+ */
+GfsSourceGeneric * gfs_source_find (GfsVariable * v, GfsSourceGenericClass * klass)
+{
+  g_return_val_if_fail (v != NULL, NULL);
+  g_return_val_if_fail (klass != NULL, NULL);
+
+  if (v->sources) {
+    GSList * i = GTS_SLIST_CONTAINER (v->sources)->items;
+    
+    while (i) {
+      GtsObject * o = i->data;
+      
+      if (gts_object_is_from_class (o, klass))
+        return GFS_SOURCE_GENERIC (o);
+      i = i->next;
+    }
+  }
+  return NULL;
+}
+
 /* GfsSourceScalar: Object */
 
 static void source_scalar_write (GtsObject * o, FILE * fp)
