@@ -92,22 +92,42 @@ static void min_max (FttCell * cell, GfsVariableLevelSet * v)
   GFS_VARIABLE (cell, v->max->i) = max;
 }
 
-static guint inter (FttVector * p1, FttVector * p2, GtsPoint * m, gdouble z)
+static guint inter (FttVector * p1, FttVector * p2, gint * o, GtsPoint * m, gdouble z)
 {
   if ((p1->z > z && p2->z <= z) || (p1->z <= z && p2->z > z)) {
     gdouble a = (z - p1->z)/(p2->z - p1->z);
     m->x = p1->x + a*(p2->x - p1->x);
     m->y = p1->y + a*(p2->y - p1->y);
     m->z = 0.;
+    *o = p1->z > z ? 1 : -1;
     return 1;
   }
   return 0;
 }
 
+static guint intersections (FttCell * cell, GfsVariableLevelSet * v,
+			    GtsPoint m[4], gint o[4])
+{
+  FttVector p[4];
+  guint n = 0, i;
+  
+  for (i = 0; i < 4; i++) {
+    ftt_corner_pos (cell, corner[i], &p[i]);
+    p[i].z = gfs_cell_corner_value (cell, corner[i], v->v, -1);
+  }
+  
+  n += inter (&p[0], &p[1], &o[n], &m[n], v->level);
+  n += inter (&p[1], &p[2], &o[n], &m[n], v->level);
+  n += inter (&p[2], &p[3], &o[n], &m[n], v->level);
+  n += inter (&p[3], &p[0], &o[n], &m[n], v->level);
+  g_assert (n % 2 == 0);
+
+  return n;
+}
+
 static gdouble isoline_distance2 (FttCell * cell, GtsPoint * t, gpointer v1)
 {
   GfsVariableLevelSet * v = GFS_VARIABLE_LEVELSET (v1);
-  GfsVariable * c = v->v;
   gdouble z = v->level;
 
   if (GFS_VARIABLE (cell, v->min->i) > z || GFS_VARIABLE (cell, v->max->i) < z)
@@ -115,21 +135,10 @@ static gdouble isoline_distance2 (FttCell * cell, GtsPoint * t, gpointer v1)
   if (!FTT_CELL_IS_LEAF (cell))
     return ftt_cell_point_distance2_min (cell, t);
   else {
-    FttVector p[4];
     GtsPoint m[4];
-    guint n = 0, i;
+    gint o[4];
     gdouble d2 = G_MAXDOUBLE;
-
-    for (i = 0; i < 4; i++) {
-      ftt_corner_pos (cell, corner[i], &p[i]);
-      p[i].z = gfs_cell_corner_value (cell, corner[i], c, -1);
-    }
-
-    n += inter (&p[0], &p[1], &m[n], z);
-    n += inter (&p[1], &p[2], &m[n], z);
-    n += inter (&p[2], &p[3], &m[n], z);
-    n += inter (&p[3], &p[0], &m[n], z);
-    g_assert (n % 2 == 0);
+    guint i, n = intersections (cell, v, m ,o);
 
     for (i = 0; i < n; i += 2) {
       GtsSegment s;
@@ -148,12 +157,43 @@ static gdouble isoline_distance2 (FttCell * cell, GtsPoint * t, gpointer v1)
 static void levelset (FttCell * cell, GfsVariable * v)
 {
   GfsVariableLevelSet * l = GFS_VARIABLE_LEVELSET (v);
+  FttCell * closest = NULL;
   GtsPoint p;
   gdouble d2;
   
   ftt_cell_pos (cell, (FttVector *) &p.x);
-  d2 = gfs_domain_cell_point_distance2 (v->domain, &p, isoline_distance2, v, NULL);
-  GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (cell, l->v->i) > l->level ? sqrt (d2) : -sqrt (d2);
+  d2 = gfs_domain_cell_point_distance2 (v->domain, &p, isoline_distance2, v, &closest);
+  if (closest != cell) /* finding the sign is easy */
+    GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (cell, l->v->i) > l->level ? sqrt (d2) : -sqrt (d2);
+  else { /* need to check orientation to find sign */
+    GtsPoint m[4];
+    gint o[4];
+    guint n = intersections (cell, l, m ,o);
+
+    if (n == 4) /* ambiguous interface orientation */
+      GFS_VARIABLE (cell, v->i) = sqrt (d2);
+    else {
+      GtsVector AB;
+      gdouble ABn;
+
+      g_assert (n == 2);
+      gts_vector_init (AB, &m[0], &m[1]);
+      ABn = gts_vector_norm (AB);
+      if (ABn == 0.)
+	GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (cell, l->v->i) > l->level ? 
+	  sqrt (d2) : -sqrt (d2);
+      else {
+	GtsVector AP;
+	GtsVector ABAP;
+	gdouble d;
+
+	gts_vector_init (AP, &m[0], &p);
+	gts_vector_cross (ABAP,AB,AP);
+	d = ABAP[2]/ABn;
+	GFS_VARIABLE (cell, v->i) = d*o[0];
+      }
+    }
+  }
 }
 
 static void variable_levelset_event_half (GfsEvent * event, GfsSimulation * sim)
