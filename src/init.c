@@ -36,6 +36,7 @@
 #include "source.h"
 #include "tension.h"
 #include "ocean.h"
+#include "levelset.h"
 
 #include "modules.h"
 

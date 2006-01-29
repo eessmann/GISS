@@ -1907,7 +1907,7 @@ static void bubble_sort (GPtrArray * a, gdouble * d)
  * For non-leafs cells @distance2 must return a lower-bound for the
  * minimum distance (using for example ftt_cell_point_distance2_min()).
  *
- * Returns: square of the minimum distance measured according to
+ * Returns: the square of the minimum distance measured according to
  * @distance2 between @p and a leaf cell of @domain.
  */
 gdouble gfs_domain_cell_point_distance2 (GfsDomain * domain,

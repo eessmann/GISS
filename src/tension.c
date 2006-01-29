@@ -99,7 +99,7 @@ static void foreach_cell_tension_css (FttCell * cell, GfsSourceTensionCSS * s)
 }
 
 static void gfs_source_tension_css_event (GfsEvent * event, 
-				      GfsSimulation * sim)
+					  GfsSimulation * sim)
 {
   GfsSourceTensionCSS * s = GFS_SOURCE_TENSION_CSS (event);
   guint i;
@@ -123,8 +123,8 @@ static void gfs_source_tension_css_event (GfsEvent * event,
 }
 
 static gdouble gfs_source_tension_css_value (GfsSourceGeneric * s, 
-					 FttCell * cell,
-					 GfsVariable * v)
+					     FttCell * cell,
+					     GfsVariable * v)
 {
   return GFS_VARIABLE (cell, GFS_SOURCE_TENSION_CSS (s)->t[v->component]->i);
 }
