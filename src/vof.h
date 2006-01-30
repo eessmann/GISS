@@ -60,6 +60,12 @@ void    gfs_tracer_vof_advection   (GfsDomain * domain,
 				    GfsVariable * half);
 void    gfs_vof_coarse_fine        (FttCell * parent, 
 				    GfsVariable * v);
+gboolean gfs_vof_plane             (FttCell * cell, 
+				    GfsVariable * v,
+				    FttVector * m, 
+				    gdouble * alpha);
+GSList * gfs_vof_facet             (FttCell * cell, 
+				    GfsVariable * v);
 
 #ifdef __cplusplus
 }

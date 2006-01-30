@@ -671,3 +671,105 @@ void gfs_vof_coarse_fine (FttCell * parent, GfsVariable * v)
     }
   }
 }
+
+/**
+ * gfs_vof_plane:
+ * @cell: a #FttCell.
+ * @v: a #GfsVariable.
+ * @m: a #FttVector.
+ * @alpha: a double.
+ *
+ * If @cell is cut by the interface defined by @v, fills @m and @alpha
+ * with the equation of the VOF-reconstructed interface.
+ *
+ * Returns: %TRUE if @cell is cut by the interface, %FALSE otherwise.
+ */
+gboolean gfs_vof_plane (FttCell * cell, GfsVariable * v,
+			FttVector * m, gdouble * alpha)
+{
+  gdouble f;
+
+  g_return_val_if_fail (cell != NULL, FALSE);
+  g_return_val_if_fail (v != NULL, FALSE);
+  g_return_val_if_fail (m != NULL, FALSE);
+  g_return_val_if_fail (alpha != NULL, FALSE);
+
+  f = GFS_VARIABLE (cell, v->i);
+  THRESHOLD (f);
+
+  if (f < 1e-6 || 1. - f < 1.e-6)
+    return FALSE;
+  else {
+    FttVector m1;
+    FttComponent c;
+    gdouble n = 0.;
+
+    gfs_youngs_normal (cell, v, m);
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      (&m1.x)[c] = fabs ((&m->x)[c]);
+      n += (&m1.x)[c];
+    }
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      (&m1.x)[c] /= n;
+      (&m->x)[c] /= n;
+    }
+    *alpha = gfs_plane_alpha (&m1, f);
+
+    for (c = 0; c < FTT_DIMENSION; c++)
+      if ((&m->x)[c] < 0.)
+	*alpha += (&m->x)[c];
+    return TRUE;
+  }
+}
+
+/**
+ * gfs_vof_facet:
+ * @cell: a #FttCell.
+ * @v: a #GfsVariable.
+ *
+ * Returns: a list of newly allocated #GtsPoint defining the
+ * VOF-reconstructed interface facet defined by @v, or %NULL if @cell
+ * is not cut by the interface.
+ */
+GSList * gfs_vof_facet (FttCell * cell, GfsVariable * v)
+{
+  FttVector m;
+  gdouble alpha;
+
+  g_return_val_if_fail (cell != NULL, NULL);
+  g_return_val_if_fail (v != NULL, NULL);
+
+#if FTT_3D
+  g_assert_not_implemented ();
+#endif  
+
+  if (!gfs_vof_plane (cell, v, &m, &alpha))
+    return NULL;
+  else {
+    GSList * l = NULL;
+    gdouble x, y;
+
+    if (m.y != 0.) {
+      y = alpha/m.y;
+      if (y >= 0. && y <= 1.)
+	l = g_slist_prepend (l, gts_point_new (gts_point_class (), 0.5, 0.5 - y, 0.));
+    }
+    if (m.x != 0.) {
+      x = alpha/m.x;
+      if (x >= 0. && x <= 1.)
+	l = g_slist_prepend (l, gts_point_new (gts_point_class (), 0.5 - x, 0.5, 0.));
+    }
+    if (m.y != 0.) {
+      y = (alpha - m.x)/m.y;
+      if (y >= 0. && y <= 1.)
+	l = g_slist_prepend (l, gts_point_new (gts_point_class (), -0.5, 0.5 - y, 0.));
+    }
+    if (m.x != 0.) {
+      x = (alpha - m.y)/m.x;
+      if (x >= 0. && x <= 1.)
+	l = g_slist_prepend (l, gts_point_new (gts_point_class (), 0.5 - x, -0.5, 0.));
+    }
+    g_assert (g_slist_length (l) == 2);
+    return l;
+  }
+}
