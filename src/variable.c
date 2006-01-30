@@ -396,56 +396,15 @@ static void filter (FttCell * cell, gpointer * data)
   GFS_VARIABLE (cell, b->i) = val/(4*(FTT_DIMENSION - 1));
 }
 
-static void K8 (FttCell * cell, gpointer * data)
-{
-  GfsVariable * a = data[0];
-  gdouble * w = data[2], * eps = data[4], * val = data[5];
-  FttVector * c = data[3], p;
-  gdouble r2, eps2 = (*eps)*(*eps);
-
-  ftt_cell_pos (cell, &p);
-  r2 = ((p.x - c->x)*(p.x - c->x) + 
-	(p.y - c->y)*(p.y - c->y) +
-	(p.z - c->z)*(p.z - c->z));
-  if (r2 < eps2) {
-    gdouble w1 = (1. - r2/eps2);
-
-    w1 = w1*w1*w1*w1;
-    *val += w1*GFS_VARIABLE (cell, a->i);
-    *w += w1;
-  }
-}
-
-static void filter_K8 (FttCell * cell, gpointer * data)
-{
-  GfsVariable * a = data[0];
-  GfsVariable * b = data[1];
-  FttVector p;
-  gdouble w = 0., eps = 2./32., val = 0.;
-  GtsBBox bb;
-
-  ftt_cell_pos (cell, &p);
-  bb.x1 = p.x - eps; bb.y1 = p.y - eps; bb.z1 = p.z - eps;
-  bb.x2 = p.x + eps; bb.y2 = p.y + eps; bb.z2 = p.z + eps;
-  data[2] = &w;
-  data[3] = &p;
-  data[4] = &eps;
-  data[5] = &val;
-  gfs_domain_cell_traverse_box (a->domain, &bb, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) K8, data);
-  g_assert (w > 0.);
-  GFS_VARIABLE (cell, b->i) = val/w;
-}
-
 static void variable_filtered_event_half (GfsEvent * event, GfsSimulation * sim)
 {
   guint n, niter = GFS_VARIABLE_FILTERED (event)->niter - 1;
-  gpointer data[6];
+  gpointer data[2];
 
   data[0] = GFS_VARIABLE_FILTERED (event)->v;
   data[1] = event;
   gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) filter_K8, data);
+			    (FttCellTraverseFunc) filter, data);
   gfs_domain_copy_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, data[0], data[1]);
   if (niter > 0) {
     data[0] = event;
