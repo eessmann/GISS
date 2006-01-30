@@ -520,9 +520,12 @@ static void curvature (FttCell * cell, gpointer * data)
   GfsVariable * v = data[1];
   gdouble kappa = 0.;
   FttComponent c;
-  
-  for (c = 0; c < FTT_DIMENSION; c++)
-    kappa += gfs_center_gradient (cell, c, nv[c]->i);
+  GtsVector n = { 0., 0., 0. };
+
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    gfs_youngs_normal (cell, nv[c], (FttVector *) n);
+    kappa += n[c];
+  }
   GFS_VARIABLE (cell, v->i) = GFS_VARIABLE_CURVATURE (v)->sigma*kappa/ftt_cell_size (cell);
 }
 
