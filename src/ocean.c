@@ -312,7 +312,6 @@ static void ocean_run (GfsSimulation * sim)
     GfsVariable * g[2];
     gdouble tstart;
 
-    g_slist_foreach (domain->variables, (GFunc) gfs_event_do, sim);
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
@@ -328,7 +327,6 @@ static void ocean_run (GfsSimulation * sim)
 
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p);
 
-    g_slist_foreach (domain->variables, (GFunc) gfs_event_half_do, sim);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
     gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., FALSE); 
@@ -663,7 +661,6 @@ static void ocean_run (GfsSimulation * sim)
     GfsVariable * g[2];
     gdouble tstart;
 
-    g_slist_foreach (domain->variables, (GFunc) gfs_event_do, sim);
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
@@ -714,7 +711,6 @@ static void ocean_run (GfsSimulation * sim)
       i = i->next;
     }
 
-    g_slist_foreach (domain->variables, (GFunc) gfs_event_half_do, sim);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
     gfs_centered_velocity_advection_diffusion (domain, 2,
