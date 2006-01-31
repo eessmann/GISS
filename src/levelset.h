@@ -34,6 +34,7 @@ struct _GfsVariableLevelSet {
   /*< private >*/
   GfsVariable parent;
   GfsVariable * min, * max;
+  gboolean first_done;
 
   /*< public >*/
   GfsVariable * v;

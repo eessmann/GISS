@@ -265,7 +265,10 @@ static gboolean variable_levelset_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_levelset_class ())->parent_class)->event)
       (event, sim)) {
-    variable_levelset_event_half (event, sim);
+    if (!GFS_VARIABLE_LEVELSET (event)->first_done) {
+      variable_levelset_event_half (event, sim);
+      GFS_VARIABLE_LEVELSET (event)->first_done = TRUE;
+    }
     return TRUE;
   }
   return FALSE;

@@ -518,15 +518,17 @@ static void curvature (FttCell * cell, gpointer * data)
 {
   GfsVariable ** nv = data[0];
   GfsVariable * v = data[1];
+  GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
   gdouble kappa = 0.;
   FttComponent c;
   GtsVector n = { 0., 0., 0. };
-
+  
   for (c = 0; c < FTT_DIMENSION; c++) {
     gfs_youngs_normal (cell, nv[c], (FttVector *) n);
     kappa += n[c];
   }
-  GFS_VARIABLE (cell, v->i) = GFS_VARIABLE_CURVATURE (v)->sigma*kappa/ftt_cell_size (cell);
+  GFS_VARIABLE (cell, v->i) = (k->theta*k->sigma*kappa/ftt_cell_size (cell) +
+			       (1. - k->theta)*GFS_VARIABLE (cell, v->i));
 }
 
 static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim)
@@ -557,7 +559,9 @@ static gboolean variable_curvature_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_curvature_class ())->parent_class)->event)
       (event, sim)) {
+    GFS_VARIABLE_CURVATURE (event)->theta = 1.;
     variable_curvature_event_half (event, sim);
+    GFS_VARIABLE_CURVATURE (event)->theta = 0.5;
     return TRUE;
   }
   return FALSE;

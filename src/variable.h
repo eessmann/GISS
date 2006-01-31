@@ -138,6 +138,7 @@ typedef struct _GfsVariableCurvature                GfsVariableCurvature;
 struct _GfsVariableCurvature {
   /*< private >*/
   GfsVariable parent;
+  gdouble theta;
 
   /*< public >*/
   GfsVariable * v;
