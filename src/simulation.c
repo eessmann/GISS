@@ -528,14 +528,12 @@ static void simulation_run (GfsSimulation * sim)
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
     GfsVariable * g[FTT_DIMENSION];
-    gdouble tstart;
+    gdouble tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
-
-    tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_simulation_set_timestep (sim);
 
@@ -1312,14 +1310,12 @@ static void advection_run (GfsSimulation * sim)
 
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
-    gdouble tstart;
+    gdouble tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
-
-    tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_simulation_set_timestep (sim);
 
@@ -1489,7 +1485,7 @@ static void poisson_run (GfsSimulation * sim)
 	 sim->time.i < sim->time.iend &&
 	 sim->time.i < par->nitermax &&
 	 par->residual.infty > par->tolerance) {
-    gdouble tstart;
+    gdouble tstart = gfs_clock_elapsed (domain->timer);
 
     if (res) {
       gpointer data[2];
@@ -1503,8 +1499,6 @@ static void poisson_run (GfsSimulation * sim)
     			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
     			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
-
-    tstart = gfs_clock_elapsed (domain->timer);
 
     gfs_domain_timer_start (domain, "poisson_cycle");
     gfs_poisson_cycle (domain, par, p, div, dia, res1);
