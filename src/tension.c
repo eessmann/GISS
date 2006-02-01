@@ -233,7 +233,7 @@ static gdouble gfs_source_tension_stability (GfsSourceGeneric * s,
   p.c = t->c;
   gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) min_max_alpha, &p);
-  h = ftt_level_size (p.depth);
+  h = 2.*ftt_level_size (p.depth);
   if (p.alpha) {
     gdouble rhom = (1./p.amin + 1./p.amax)/2.;
     gdouble rhod = p.amin < p.amax ? p.amin/p.amax : p.amax/p.amin;
