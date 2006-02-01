@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include "levelset.h"
+#include "vof.h"
 
 /* GfsVariableLevelSet: object */
 
@@ -154,7 +155,45 @@ static gdouble isoline_distance2 (FttCell * cell, GtsPoint * t, gpointer v1)
   }
 }
 
+static gdouble vof_distance2 (FttCell * cell, GtsPoint * t, gpointer v)
+{
+  gdouble f = GFS_VARIABLE (cell, GFS_VARIABLE1 (v)->i);
+  
+  if (f < 1e-6 || 1. - f < 1.e-6)
+    return G_MAXDOUBLE;
+  if (!FTT_CELL_IS_LEAF (cell))
+    return ftt_cell_point_distance2_min (cell, t);
+  else {
+    gdouble h = ftt_cell_size (cell), d2;
+    GSList * l = gfs_vof_facet (cell, v);
+    GtsPoint * p1 = l->data, * p2 = l->next->data;
+    GtsSegment s;
+    FttVector p;
+
+    ftt_cell_pos (cell, &p);
+    p1->x = p.x + h*p1->x; p1->y = p.y + h*p1->y;
+    p2->x = p.x + h*p2->x; p2->y = p.y + h*p2->y;
+    s.v1 = (GtsVertex *) p1; s.v2 = (GtsVertex *) p2;
+    d2 = gts_point_segment_distance2 (t, &s);
+    gts_object_destroy (GTS_OBJECT (p1));
+    gts_object_destroy (GTS_OBJECT (p2));
+    g_slist_free (l);
+    return d2;
+  }
+}
+
 static void levelset (FttCell * cell, GfsVariable * v)
+{
+  GfsVariableLevelSet * l = GFS_VARIABLE_LEVELSET (v);
+  GtsPoint p;
+  gdouble d2;
+  
+  ftt_cell_pos (cell, (FttVector *) &p.x);
+  d2 = gfs_domain_cell_point_distance2 (v->domain, &p, vof_distance2, l->v, NULL);
+  GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (cell, l->v->i) > 0.5 ? sqrt (d2) : -sqrt (d2);
+}
+
+static void levelset1 (FttCell * cell, GfsVariable * v)
 {
   GfsVariableLevelSet * l = GFS_VARIABLE_LEVELSET (v);
   FttCell * closest = NULL;
@@ -209,6 +248,8 @@ static void variable_levelset_event_half (GfsEvent * event, GfsSimulation * sim)
 
   v->min = gfs_temporary_variable (domain);
   v->max = gfs_temporary_variable (domain);
+  gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+  			    (FttCellTraverseFunc) v->v->fine_coarse, v->v);
   gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_ALL, -1,
   			    (FttCellTraverseFunc) min_max, v);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
