@@ -138,11 +138,11 @@ typedef struct _GfsVariableCurvature                GfsVariableCurvature;
 struct _GfsVariableCurvature {
   /*< private >*/
   GfsVariable parent;
-  gdouble theta;
+  gdouble a;
 
   /*< public >*/
   GfsVariable * v;
-  gdouble sigma;
+  gdouble sigma, theta;
 };
 
 #define GFS_VARIABLE_CURVATURE(obj)            GTS_OBJECT_CAST (obj,\
