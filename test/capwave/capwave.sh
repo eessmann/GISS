@@ -1,15 +1,18 @@
 levels="3 4 5 6 7"
 
 if ! $donotrun; then
-    file=`mktemp /tmp/wave.XXXXXX`
-    awk 'BEGIN{
-      print "0.51 -0.51"
-      for (x = 0.51; x >= -0.51; x -= 0.01) 
-        print x " " 0.01*cos (2.*3.14159265359*x);
-      print "-0.51 -0.51"
-    }' > $file
-    shapes $file > wave.gts
-    rm -f $file
+    if test -f wave.gts; then :
+    else
+	file=`mktemp /tmp/wave.XXXXXX`
+	awk 'BEGIN{
+          print "0.51 -0.51"
+          for (x = 0.51; x >= -0.51; x -= 0.01) 
+            print x " " 0.01*cos (2.*3.14159265359*x);
+          print "-0.51 -0.51"
+        }' > $file
+	shapes $file > wave.gts
+	rm -f $file
+    fi
 
     for level in $levels; do
 	rm -f wave-$level

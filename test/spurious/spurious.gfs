@@ -66,16 +66,18 @@
   AdvectionParams { scheme = none }
 
   VariableTracer {} T { scheme = vof }
-  VariableFiltered {} T1 T 0
-  VariableCurvature {} K T1
+  VariableFiltered {} T1 T 1
+  VariableLevelSet {} L T 0.5
+  VariableCurvature {} K L
   SourceTension {} T K
   SourceDiffusion {} U MU
   SourceDiffusion {} V MU
 
   InitFraction {} T circle.gts
+  
+  AdaptGradient { istep = 1 } { cmax = 1e-6 maxlevel = LEVEL } T1
 
   OutputSimulation { start = end } sim-LEVEL {}
-
   OutputScalarNorm { istep = 1 } stdout { v = Velocity }
 }
 GfsBox {}
