@@ -238,7 +238,8 @@ static void gfs_free_surface_pressure (GfsDomain * toplayer,
     gfs_domain_norm_residual (toplayer, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
   par->niter = 0;
   par->dimension = 2;
-  while (par->residual.infty > par->tolerance && par->niter < par->nitermax) {
+  while (par->niter < par->nitermin ||
+	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
 #if 0
     fprintf (stderr, "%d bias: %g first: %g second: %g infty: %g\n",
 	     par->niter, 

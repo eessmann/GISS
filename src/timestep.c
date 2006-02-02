@@ -233,8 +233,8 @@ void gfs_mac_projection (GfsDomain * domain,
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res);
   par->niter = 0;
-  while (par->residual.infty > par->tolerance && 
-	 par->niter < par->nitermax) {
+  while (par->niter < par->nitermin ||
+	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
     gfs_poisson_cycle (domain, par, p, div, dia, res);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res);
     par->niter++;
@@ -397,8 +397,8 @@ void gfs_approximate_projection (GfsDomain * domain,
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
   par->niter = 0;
-  while (par->residual.infty > par->tolerance && 
-	 par->niter < par->nitermax) {
+  while (par->niter < par->nitermin ||
+	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
 #if 0
     fprintf (stderr, "%d bias: %g first: %g second: %g infty: %g\n",
 	     par->niter, 
@@ -512,8 +512,8 @@ void gfs_diffusion (GfsDomain * domain,
   par->residual_before = par->residual = 
     gfs_domain_norm_variable (domain, res, FTT_TRAVERSE_LEAFS, -1);
   par->niter = 0;
-  while (par->residual.infty > par->tolerance && 
-	 par->niter < par->nitermax) {
+  while (par->niter < par->nitermin ||
+	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
     gfs_diffusion_cycle (domain, minlevel, maxlevel, par->nrelax, v, rhs, dia, res);
     par->residual = gfs_domain_norm_variable (domain, res, FTT_TRAVERSE_LEAFS, -1);
     par->niter++;

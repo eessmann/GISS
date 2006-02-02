@@ -35,7 +35,7 @@ struct _GfsMultilevelParams {
   gdouble tolerance;
   guint nrelax, erelax;
   guint minlevel;
-  guint nitermax;
+  guint nitermax, nitermin;
 
   guint dimension;
   guint niter;
