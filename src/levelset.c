@@ -212,25 +212,13 @@ static void levelset1 (FttCell * cell, GfsVariable * v)
     if (n == 4) /* ambiguous interface orientation */
       GFS_VARIABLE (cell, v->i) = sqrt (d2);
     else {
-      GtsVector AB;
-      gdouble ABn;
+      GtsVector AB, AP, ABAP;
 
       g_assert (n == 2);
       gts_vector_init (AB, &m[0], &m[1]);
-      ABn = gts_vector_norm (AB);
-      if (ABn == 0.)
-	GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (cell, l->v->i) > l->level ? 
-	  sqrt (d2) : -sqrt (d2);
-      else {
-	GtsVector AP;
-	GtsVector ABAP;
-	gdouble d;
-
-	gts_vector_init (AP, &m[0], &p);
-	gts_vector_cross (ABAP,AB,AP);
-	d = ABAP[2]/ABn;
-	GFS_VARIABLE (cell, v->i) = d*o[0];
-      }
+      gts_vector_init (AP, &m[0], &p);
+      gts_vector_cross (ABAP,AB,AP);
+      GFS_VARIABLE (cell, v->i) = ABAP[2]*o[0] > 0. ? sqrt (d2) : -sqrt (d2);
     }
   }
 }
