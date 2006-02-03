@@ -2,8 +2,8 @@ if ! $donotrun; then
     shapes ellipse | transform --scale 0.8 > circle.gts
     for La in 12000 1200 120; do
 	mu=`echo $La | awk '{print sqrt (0.4/$1)}'`
-	tmax=`echo $mu | awk '{print 500.*$1*0.4}'`
-	if sed "s/LEVEL/6/g" < $1 |\
+	tmax=`echo $mu | awk '{print 1000.*$1*0.4}'`
+	if sed "s/LEVEL/5/g" < $1 |\
            sed "s/MU/$mu/g" |\
            sed "s/TMAX/$tmax/g" | gerris2D - | awk -v mu=$mu -v D=0.4 '{
              print $3/(mu*D) " " $9*mu;
@@ -17,7 +17,7 @@ if ! $donotrun; then
     for level in 5 6 7; do
         La=12000
         mu=`echo $La | awk '{print sqrt (0.4/$1)}'`
-	tmax=`echo $mu | awk '{print 500.*$1*0.4}'`
+	tmax=`echo $mu | awk '{print 1000.*$1*0.4}'`
 	if sed "s/LEVEL/$level/g" < $1 |\
            sed "s/MU/$mu/g" |\
            sed "s/TMAX/$tmax/g" | gerris2D - | awk -v mu=$mu -v level=$level -v D=0.4 '{ 

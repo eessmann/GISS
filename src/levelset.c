@@ -21,13 +21,13 @@
 #include "levelset.h"
 #include "vof.h"
 
-/* GfsVariableLevelSet: object */
+/* GfsVariableDistance: object */
 
-static void variable_levelset_read (GtsObject ** o, GtsFile * fp)
+static void variable_distance_read (GtsObject ** o, GtsFile * fp)
 {
   GfsDomain * domain;
 
-  (* GTS_OBJECT_CLASS (gfs_variable_levelset_class ())->parent_class->read) (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_variable_distance_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
@@ -36,26 +36,19 @@ static void variable_levelset_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   domain = GFS_DOMAIN (gfs_object_simulation (*o));
-  if (!(GFS_VARIABLE_LEVELSET (*o)->v = 
+  if (!(GFS_VARIABLE_DISTANCE (*o)->v = 
 	gfs_variable_from_name (domain->variables, fp->token->str))) {
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
     return;
   }
   gts_file_next_token (fp);
-
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (level)");
-    return;
-  }
-  GFS_VARIABLE_LEVELSET (*o)->level = atof (fp->token->str);
-  gts_file_next_token (fp);
 }
 
-static void variable_levelset_write (GtsObject * o, FILE * fp)
+static void variable_distance_write (GtsObject * o, FILE * fp)
 {
-  (* GTS_OBJECT_CLASS (gfs_variable_levelset_class ())->parent_class->write) (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_variable_distance_class ())->parent_class->write) (o, fp);
 
-  fprintf (fp, " %s %g", GFS_VARIABLE_LEVELSET (o)->v->name, GFS_VARIABLE_LEVELSET (o)->level);
+  fprintf (fp, " %s", GFS_VARIABLE_DISTANCE (o)->v->name);
 }
 
 static gdouble vof_distance2 (FttCell * cell, GtsPoint * t, gpointer v)
@@ -89,9 +82,9 @@ static gdouble vof_distance2 (FttCell * cell, GtsPoint * t, gpointer v)
   }
 }
 
-static void levelset (FttCell * cell, GfsVariable * v)
+static void distance (FttCell * cell, GfsVariable * v)
 {
-  GfsVariableLevelSet * l = GFS_VARIABLE_LEVELSET (v);
+  GfsVariableDistance * l = GFS_VARIABLE_DISTANCE (v);
   GtsPoint p;
   gdouble d2;
   
@@ -100,59 +93,59 @@ static void levelset (FttCell * cell, GfsVariable * v)
   GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (cell, l->v->i) > 0.5 ? sqrt (d2) : -sqrt (d2);
 }
 
-static void variable_levelset_event_half (GfsEvent * event, GfsSimulation * sim)
+static void variable_distance_event_half (GfsEvent * event, GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
-  GfsVariableLevelSet * v = GFS_VARIABLE_LEVELSET (event);
+  GfsVariableDistance * v = GFS_VARIABLE_DISTANCE (event);
 
-  gfs_domain_timer_start (domain, "levelset");
+  gfs_domain_timer_start (domain, "distance");
 
   gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
   			    (FttCellTraverseFunc) v->v->fine_coarse, v->v);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) levelset, event);
+			    (FttCellTraverseFunc) distance, event);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
 
-  gfs_domain_timer_stop (domain, "levelset");
+  gfs_domain_timer_stop (domain, "distance");
 }
 
-static gboolean variable_levelset_event (GfsEvent * event, GfsSimulation * sim)
+static gboolean variable_distance_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_levelset_class ())->parent_class)->event)
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_distance_class ())->parent_class)->event)
       (event, sim)) {
-    if (!GFS_VARIABLE_LEVELSET (event)->first_done) {
-      variable_levelset_event_half (event, sim);
-      GFS_VARIABLE_LEVELSET (event)->first_done = TRUE;
+    if (!GFS_VARIABLE_DISTANCE (event)->first_done) {
+      variable_distance_event_half (event, sim);
+      GFS_VARIABLE_DISTANCE (event)->first_done = TRUE;
     }
     return TRUE;
   }
   return FALSE;
 }
 
-static void variable_levelset_class_init (GtsObjectClass * klass)
+static void variable_distance_class_init (GtsObjectClass * klass)
 {
-  klass->read = variable_levelset_read;
-  klass->write = variable_levelset_write;
-  GFS_EVENT_CLASS (klass)->event = variable_levelset_event;
-  GFS_EVENT_CLASS (klass)->event_half = variable_levelset_event_half;
+  klass->read = variable_distance_read;
+  klass->write = variable_distance_write;
+  GFS_EVENT_CLASS (klass)->event = variable_distance_event;
+  GFS_EVENT_CLASS (klass)->event_half = variable_distance_event_half;
 }
 
-GfsVariableClass * gfs_variable_levelset_class (void)
+GfsVariableClass * gfs_variable_distance_class (void)
 {
   static GfsVariableClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_variable_levelset_info = {
-      "GfsVariableLevelSet",
-      sizeof (GfsVariableLevelSet),
+    GtsObjectClassInfo gfs_variable_distance_info = {
+      "GfsVariableDistance",
+      sizeof (GfsVariableDistance),
       sizeof (GfsVariableClass),
-      (GtsObjectClassInitFunc) variable_levelset_class_init,
+      (GtsObjectClassInitFunc) variable_distance_class_init,
       (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
-				  &gfs_variable_levelset_info);
+				  &gfs_variable_distance_info);
   }
 
   return klass;
@@ -178,8 +171,8 @@ static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
     return;
   }
-  if (!GFS_IS_VARIABLE_LEVELSET (GFS_VARIABLE_CURVATURE (*o)->d)) {
-    gts_file_error (fp, "variable `%s' is not a GfsVariableLevelSet", fp->token->str);
+  if (!GFS_IS_VARIABLE_DISTANCE (GFS_VARIABLE_CURVATURE (*o)->d)) {
+    gts_file_error (fp, "variable `%s' is not a GfsVariableDistance", fp->token->str);
     return;
   }
   gts_file_next_token (fp);
@@ -236,7 +229,7 @@ static void interface_curvature (FttCell * cell, gpointer * data)
 {
   GfsVariable * v = data[1];
   GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
-  gdouble f = GFS_VARIABLE (cell, GFS_VARIABLE_LEVELSET (k->d)->v->i);
+  gdouble f = GFS_VARIABLE (cell, GFS_VARIABLE_DISTANCE (k->d)->v->i);
 
   if (GFS_IS_FULL (f))
     GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;

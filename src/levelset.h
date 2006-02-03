@@ -26,27 +26,26 @@ extern "C" {
 
 #include "variable.h"
 
-/* GfsVariableLevelSet: header */
+/* GfsVariableDistance: header */
 
-typedef struct _GfsVariableLevelSet                GfsVariableLevelSet;
+typedef struct _GfsVariableDistance                GfsVariableDistance;
 
-struct _GfsVariableLevelSet {
+struct _GfsVariableDistance {
   /*< private >*/
   GfsVariable parent;
   gboolean first_done;
 
   /*< public >*/
   GfsVariable * v;
-  gdouble level;
 };
 
-#define GFS_VARIABLE_LEVELSET(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsVariableLevelSet,\
-					           gfs_variable_levelset_class ())
-#define GFS_IS_VARIABLE_LEVELSET(obj)         (gts_object_is_from_class (obj,\
-					     gfs_variable_levelset_class ()))
+#define GFS_VARIABLE_DISTANCE(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsVariableDistance,\
+					           gfs_variable_distance_class ())
+#define GFS_IS_VARIABLE_DISTANCE(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_distance_class ()))
 
-GfsVariableClass * gfs_variable_levelset_class  (void);
+GfsVariableClass * gfs_variable_distance_class  (void);
 
 /* GfsVariableCurvature: header */
 

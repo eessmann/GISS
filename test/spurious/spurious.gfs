@@ -67,7 +67,7 @@
 
   VariableTracer {} T { scheme = vof }
   VariableFiltered {} T1 T 1
-  VariableLevelSet {} L T 0.5
+  VariableDistance {} L T
   VariableCurvature {} K L
   SourceTension {} T K
   SourceDiffusion {} U MU
