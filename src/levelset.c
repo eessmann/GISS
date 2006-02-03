@@ -208,7 +208,8 @@ static void normal (FttCell * cell, gpointer * data)
   GtsVector n = { 0., 0., 0. };
   FttComponent c;
 
-  gfs_youngs_normal (cell, d, (FttVector *) n);
+  for (c = 0; c < FTT_DIMENSION; c++)
+    n[c] = gfs_center_gradient (cell, c, d->i);
   gts_vector_normalize (n);
   for (c = 0; c < FTT_DIMENSION; c++)
     GFS_VARIABLE (cell, nv[c]->i) = n[c];
