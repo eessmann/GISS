@@ -153,27 +153,6 @@ struct _GfsVariableCurvature {
 
 GfsVariableClass * gfs_variable_curvature_class  (void);
 
-/* GfsDerivedVariable: Header */
-
-struct _GfsDerivedVariable {
-  /*< private >*/
-  GtsObject parent;
-
-  /*< public >*/
-  gchar * name, * description;
-  gpointer func, data;
-};
-
-#define GFS_DERIVED_VARIABLE(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsDerivedVariable,\
-					         gfs_derived_variable_class ())
-#define GFS_IS_DERIVED_VARIABLE(obj)         (gts_object_is_from_class (obj,\
-						 gfs_derived_variable_class ()))
-
-GtsObjectClass *     gfs_derived_variable_class            (void);
-GfsDerivedVariable * gfs_derived_variable_from_name        (GSList * i, 
-							    const gchar * name);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

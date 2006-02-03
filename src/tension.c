@@ -22,6 +22,7 @@
 
 #include "tension.h"
 #include "vof.h"
+#include "levelset.h"
 
 /* GfsSourceTensionCSS: Object */
 

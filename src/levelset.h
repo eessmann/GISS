@@ -48,6 +48,28 @@ struct _GfsVariableLevelSet {
 
 GfsVariableClass * gfs_variable_levelset_class  (void);
 
+/* GfsVariableCurvature: header */
+
+typedef struct _GfsVariableCurvature                GfsVariableCurvature;
+
+struct _GfsVariableCurvature {
+  /*< private >*/
+  GfsVariable parent;
+  gdouble a;
+
+  /*< public >*/
+  GfsVariable * d;
+  gdouble sigma, theta;
+};
+
+#define GFS_VARIABLE_CURVATURE(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsVariableCurvature,\
+					           gfs_variable_curvature_class ())
+#define GFS_IS_VARIABLE_CURVATURE(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_curvature_class ()))
+
+GfsVariableClass * gfs_variable_curvature_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
