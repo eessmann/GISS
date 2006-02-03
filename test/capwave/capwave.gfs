@@ -52,8 +52,7 @@
   Refine LEVEL
   VariableTracer {} T { scheme = vof }
   VariableLevelSet {} L T 0.5
-  # The explicit scheme seems to be more accurate for this test case
-  VariableCurvature {} K L { theta = 0. }
+  VariableCurvature {} K L
   SourceTension {} T K
   AdvectionParams { scheme = none }
   SourceDiffusion {} U 0.0182571749236
