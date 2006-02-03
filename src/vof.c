@@ -427,7 +427,7 @@ static void gfs_cell_vof_advected_face_values (FttCell * cell,
   else
     GFS_VARIABLE (cell, par->fv->i) = f*(u_right - u_left);
 
-  if (f < 1e-6 || 1. - f < 1e-6) {
+  if (GFS_IS_FULL (f)) {
     GFS_STATE (cell)->f[right].v = f;
     GFS_STATE (cell)->f[left].v = f;
   }
@@ -641,7 +641,7 @@ void gfs_vof_coarse_fine (FttCell * parent, GfsVariable * v)
   f = GFS_VARIABLE (parent, v->i);
   THRESHOLD (f);
 
-  if (f < 1e-6 || 1. - f < 1.e-6)
+  if (GFS_IS_FULL (f))
     for (i = 0; i < FTT_CELLS; i++)
       GFS_VARIABLE (child.c[i], v->i) = f;
   else {
@@ -697,7 +697,7 @@ gboolean gfs_vof_plane (FttCell * cell, GfsVariable * v,
   f = GFS_VARIABLE (cell, v->i);
   THRESHOLD (f);
 
-  if (f < 1e-6 || 1. - f < 1.e-6)
+  if (GFS_IS_FULL (f))
     return FALSE;
   else {
     FttVector m1;

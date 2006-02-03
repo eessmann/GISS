@@ -33,7 +33,6 @@ typedef struct _GfsVariableLevelSet                GfsVariableLevelSet;
 struct _GfsVariableLevelSet {
   /*< private >*/
   GfsVariable parent;
-  GfsVariable * min, * max;
   gboolean first_done;
 
   /*< public >*/

@@ -26,6 +26,8 @@ extern "C" {
 
 #include "advection.h"
 
+#define GFS_IS_FULL(f)             ((f) < 1e-6 || (f) > 1. - 1.e-6)
+
 gdouble gfs_line_area              (FttVector * m, 
 				    gdouble alpha, 
 				    gdouble c1);
