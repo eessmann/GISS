@@ -82,29 +82,75 @@ static gdouble vof_distance2 (FttCell * cell, GtsPoint * t, gpointer v)
   }
 }
 
-static void distance (FttCell * cell, GfsVariable * v)
+static void distance (FttCell * cell, gpointer * data)
 {
-  GfsVariableDistance * l = GFS_VARIABLE_DISTANCE (v);
-  GtsPoint p;
-  gdouble d2;
+  GfsVariable * v = data[0];
+  GfsVariable * s2 = data[2];
+
+  if (GFS_VARIABLE (cell, s2->i)) {
+    GfsVariableDistance * l = GFS_VARIABLE_DISTANCE (v);
+    GtsPoint p;
+    gdouble d2;
+    
+    ftt_cell_pos (cell, (FttVector *) &p.x);
+    d2 = gfs_domain_cell_point_distance2 (v->domain, &p, vof_distance2, l->v, NULL);
+    GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (cell, l->v->i) > 0.5 ? sqrt (d2) : -sqrt (d2);
+  }
+  else
+    GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
+}
+
+static void stencil_interpolate (FttCell * cell, gpointer * data)
+{
+  GfsVariableDistance * v = data[0];
+  gdouble f = GFS_VARIABLE (cell, v->v->i);
   
-  ftt_cell_pos (cell, (FttVector *) &p.x);
-  d2 = gfs_domain_cell_point_distance2 (v->domain, &p, vof_distance2, l->v, NULL);
-  GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (cell, l->v->i) > 0.5 ? sqrt (d2) : -sqrt (d2);
+  if (!GFS_IS_FULL (f))
+    gfs_interpolate_stencil (cell, data[1]);
+}
+
+static void stencil_gradient (FttCell * cell, gpointer * data)
+{
+  GfsVariable * s1 = data[1];
+  GfsVariable * s2 = data[2];
+  FttComponent c;
+
+  if (GFS_VARIABLE (cell, s1->i))
+    for (c = 0; c < FTT_DIMENSION; c++)
+      gfs_center_gradient_stencil (cell, c, s2->i);
 }
 
 static void variable_distance_event_half (GfsEvent * event, GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
   GfsVariableDistance * v = GFS_VARIABLE_DISTANCE (event);
+  gpointer data[3], tmp;
 
   gfs_domain_timer_start (domain, "distance");
+
+  data[0] = v;
+  data[1] = gfs_temporary_variable (domain);
+  data[2] = gfs_temporary_variable (domain);
+  gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, data[1]);
+  gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) stencil_interpolate, data);
+  gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, data[2]);
+  gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) stencil_gradient, data);
+  tmp = data[1]; data[1] = data[2]; data[2] = tmp;
+  gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) stencil_gradient, data);
 
   gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
   			    (FttCellTraverseFunc) v->v->fine_coarse, v->v);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) distance, event);
+			    (FttCellTraverseFunc) distance, data);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+
+  gts_object_destroy (data[1]);
+  gts_object_destroy (data[2]);
 
   gfs_domain_timer_stop (domain, "distance");
 }
