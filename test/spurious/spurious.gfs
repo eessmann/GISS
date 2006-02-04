@@ -2,11 +2,11 @@
 #
 # Description:
 #
-# A circular "bubble" of diameter $D=0.4$ is initialised in the middle of
-# the unit box. Surface tension is imposed on the interface. The exact
-# solution is given by Laplace's law: uniform zero velocity and a
-# pressure jump accross the interface exactly balancing the surface
-# tension force.
+# A circular "bubble" of diameter $D=0.8$ is initialised centered on
+# the top-left corner of the unit box. Surface tension is imposed on
+# the interface. The exact solution is given by Laplace's law: uniform
+# zero velocity and a pressure jump accross the interface exactly
+# balancing the surface tension force.
 #
 # This test case uses a continuum formulation for surface tension,
 # which induces numerical errors leading to a non-exact balance of
@@ -21,11 +21,6 @@
 # $Ca=\max(|{\bf u}|)\mu/\sigma$ from the Laplace number $La=\sigma\rho
 # D/\mu^2$. The asymptotic value of $Ca$ is a measure of the accuracy
 # of the numerical scheme (the smaller the better).
-#
-# An annoying property of simple continuum formulations for surface
-# tension is that they are in effect of order 0 i.e. they do not
-# converge with resolution as demonstrated on figure
-# \ref{convergence}.
 #
 # \begin{figure}[htbp]
 # \caption{\label{vectors}Spurious currents at equilibrium for $La=12000$.}
@@ -49,20 +44,23 @@
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{convergence.eps}
 # \end{center}
+# \caption{Poor convergence of the capillary number with increased
+# resolution. The diameter is given in number of grid points.}
+# \label{convergence}
 # \end{figure}
 #
 # Author: St\'ephane Popinet
 # Command: sh spurious.sh spurious.gfs
-# Version: 0.6.4
+# Version: 0.9.0
 # Required files: spurious.sh vectors.gfv convergence.ref
 # Generated files: laplace.eps convergence.eps vectors.eps
 #
-1 2 GfsSimulation GfsBox GfsGEdge {} {
-  Time { end = TMAX dtmax = 1e-3 }
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+  Time { end = TMAX dtmax = 2e-3 }
   Refine LEVEL
 
-  ApproxProjectionParams { tolerance = 1e-6 }
-  ProjectionParams { tolerance = 1e-6 }
+  ApproxProjectionParams { tolerance = 1e-6 nitermin = 1 }
+  ProjectionParams { tolerance = 1e-6 nitermin = 1 }
   AdvectionParams { scheme = none }
 
   VariableTracer {} T { scheme = vof }
@@ -78,8 +76,9 @@
   AdaptGradient { istep = 1 } { cmax = 1e-6 maxlevel = LEVEL } T1
 
   OutputSimulation { start = end } sim-LEVEL {}
-  OutputScalarNorm { istep = 1 } stdout { v = Velocity }
+  OutputScalarNorm { istep = 1 } { awk '{ print $3/(MU*0.8) " " $9*MU }' } { v = Velocity }
 }
-GfsBox {}
-1 1 right
-1 1 top
+GfsBox {
+  top = Boundary
+  left = Boundary
+}

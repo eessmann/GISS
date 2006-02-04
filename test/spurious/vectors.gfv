@@ -20,7 +20,7 @@ Vectors {
   amax = 1
   cmap = Jet
 } U V {
-  scale = 1.2
+  scale = 1074
   use_scalar = 0
 }
 Isoline {
