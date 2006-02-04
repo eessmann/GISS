@@ -299,7 +299,7 @@ static void interface_curvature (FttCell * cell, gpointer * data)
 
 static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim)
 {
-  GfsVariable * n[FTT_DIMENSION + 1];
+  GfsVariable * n[FTT_DIMENSION + 1], * kappa;
   GfsDomain * domain = GFS_DOMAIN (sim);
   gpointer data[2];
   FttComponent c;
@@ -308,6 +308,7 @@ static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim
     n[c] = gfs_temporary_variable (domain);
     gfs_variable_set_vector (n[c], c);
   }
+  kappa = n[FTT_DIMENSION];
   data[0] = n;
   data[1] = event;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -316,6 +317,7 @@ static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, n[c]);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) curvature, data);
+  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, kappa);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) interface_curvature, data);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
