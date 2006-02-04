@@ -86,6 +86,31 @@ static gdouble average_neighbor_value (const FttCellFace * face,
   }
 }
 
+static void average_neighbor_value_stencil (const FttCellFace * face, guint v)
+{
+  /* check for corner refinement violation (topology.fig) */
+  g_assert (ftt_cell_level (face->neighbor) == ftt_cell_level (face->cell));
+  
+  if (FTT_CELL_IS_LEAF (face->neighbor))
+    GFS_VARIABLE (face->neighbor, v) = 1.;
+  else {
+    FttCellChildren children;
+    gdouble a = 0.;
+    guint i, n;
+    
+    n = ftt_cell_children_direction (face->neighbor,
+				     FTT_OPPOSITE_DIRECTION (face->d),
+				     &children);
+    for (i = 0; i < n; i++)
+      if (children.c[i]) {
+	a += 1.;
+	GFS_VARIABLE (children.c[i], v) = 1.;
+      }
+    if (a == 0.)
+      GFS_VARIABLE (face->cell, v) = 1.;
+  }
+}
+
 #if (FTT_2D || FTT_2D3)
 
 /* v = a*v(cell) + b 
@@ -159,6 +184,18 @@ static GfsGradient interpolate_1D1 (FttCell * cell,
   return p;
 }
 
+static void interpolate_1D1_stencil (FttCell * cell,
+				     FttDirection d,
+				     guint v)
+{
+  FttCellFace f;
+
+  GFS_VARIABLE (cell, v) = 1.;
+  f = ftt_cell_face (cell, d);
+  if (f.neighbor)
+    average_neighbor_value_stencil (&f, v);
+}
+
 #else /* not FTT_2D */
 
 /* v = a*v(cell) + b 
@@ -199,6 +236,21 @@ static GfsGradient interpolate_2D1 (FttCell * cell,
     p.a += a2;
   
   return p;
+}
+
+static void interpolate_2D1_stencil (FttCell * cell,
+				     FttDirection d1, FttDirection d2,
+				     guint v)
+{
+  FttCellFace f1, f2;
+
+  GFS_VARIABLE (cell, v) = 1.;
+  f1 = ftt_cell_face (cell, d1);
+  if (f1.neighbor)
+    average_neighbor_value_stencil (&f1, v);
+  f2 = ftt_cell_face (cell, d2);
+  if (f2.neighbor)
+    average_neighbor_value_stencil (&f2, v);
 }
 
 #endif /* not FTT_2D */
@@ -361,6 +413,31 @@ static gdouble neighbor_value (const FttCellFace * face,
   }
 }
 
+static void neighbor_value_stencil (const FttCellFace * face, guint v)
+{
+#if (FTT_2D || FTT_2D3)
+  gint dp;
+#else  /* FTT_3D */
+  gint * dp;
+#endif /* FTT_3D */
+
+  if (ftt_cell_level (face->neighbor) == ftt_cell_level (face->cell))
+    /* neighbor at same level */
+    average_neighbor_value_stencil (face, v);
+  else {
+    /* neighbor at coarser level */
+    dp = perpendicular[face->d][FTT_CELL_ID (face->cell)];
+#if (FTT_2D || FTT_2D3)
+    g_assert (dp >= 0);
+    interpolate_1D1_stencil (face->neighbor, dp, v);
+#else  /* FTT_3D */
+    g_assert (dp[0] >= 0 && dp[1] >= 0);
+    interpolate_2D1_stencil (face->neighbor, dp[0], dp[1], v);
+#endif /* FTT_3D */
+    GFS_VARIABLE (face->neighbor, v) = 1.;
+  }
+}
+
 /**
  * gfs_center_gradient:
  * @cell: a #FttCell.
@@ -415,6 +492,39 @@ gdouble gfs_center_gradient (FttCell * cell,
   }
   /* no neighbors */
   return 0.;
+}
+
+/**
+ * gfs_center_gradient_stencil:
+ * @cell: a #FttCell.
+ * @c: a component.
+ * @v: a #GfsVariable index.
+ *
+ * Sets to 1. the @v variable of all the cells which would be used if
+ * gfs_center_gradient() was called with identical arguments.
+ */
+void gfs_center_gradient_stencil (FttCell * cell,
+				  FttComponent c,
+				  guint v)
+{
+  FttDirection d = 2*c;
+  FttCellFace f1, f2;
+
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (c < FTT_DIMENSION);
+
+  f1 = ftt_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+  if (f1.neighbor == cell) /* periodic */
+    return;
+  if (f1.neighbor) {
+    GFS_VARIABLE (cell, v) = 1.;
+    neighbor_value_stencil (&f1, v);
+  }
+  f2 = ftt_cell_face (cell, d);
+  if (f2.neighbor) {
+    GFS_VARIABLE (cell, v) = 1.;
+    neighbor_value_stencil (&f2, v);
+  }
 }
 
 /**
@@ -2122,6 +2232,26 @@ void gfs_cell_traverse_cut_2D (FttCell * root,
   cell_traverse_cut (root, s, order, flags, func, data, TRUE);
 }
 
+#if FTT_2D
+static FttDirection corner[4][FTT_DIMENSION] = {
+  { FTT_LEFT,  FTT_BOTTOM },
+  { FTT_RIGHT, FTT_BOTTOM },
+  { FTT_RIGHT, FTT_TOP },
+  { FTT_LEFT,  FTT_TOP }
+};
+#else  /* 3D */
+static FttDirection corner[8][FTT_DIMENSION] = {
+  { FTT_LEFT,  FTT_BOTTOM, FTT_FRONT },
+  { FTT_RIGHT, FTT_BOTTOM, FTT_FRONT },
+  { FTT_RIGHT, FTT_TOP,    FTT_FRONT },
+  { FTT_LEFT,  FTT_TOP,    FTT_FRONT },
+  { FTT_LEFT,  FTT_BOTTOM, FTT_BACK },
+  { FTT_RIGHT, FTT_BOTTOM, FTT_BACK },
+  { FTT_RIGHT, FTT_TOP,    FTT_BACK },
+  { FTT_LEFT,  FTT_TOP,    FTT_BACK }
+};
+#endif /* 3D */
+
 /**
  * gfs_interpolate:
  * @cell: a #FttCell containing location @p.
@@ -2139,10 +2269,11 @@ gdouble gfs_interpolate (FttCell * cell,
 			 GfsVariable * v)
 {
   FttVector o;
-  FttDirection e[FTT_DIMENSION];
   gdouble size;
+  guint i;
 
   g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
 
   ftt_cell_pos (cell, &o);
   size = ftt_cell_size (cell)/2.;
@@ -2151,19 +2282,15 @@ gdouble gfs_interpolate (FttCell * cell,
 #if FTT_2D
   {
     gdouble f[4], a, b, c, d;
-    
-    e[0] = FTT_LEFT; e[1] = FTT_BOTTOM;
-    f[0] = gfs_cell_corner_value (cell, e, v, -1);
-    e[0] = FTT_RIGHT; e[1] = FTT_BOTTOM;
-    f[1] = gfs_cell_corner_value (cell, e, v, -1);
-    e[0] = FTT_RIGHT; e[1] = FTT_TOP;
-    f[2] = gfs_cell_corner_value (cell, e, v, -1);
-    e[0] = FTT_LEFT; e[1] = FTT_TOP;
-    f[3] = gfs_cell_corner_value (cell, e, v, -1);
+
+    for (i = 0; i < 4; i++)
+      f[i] = gfs_cell_corner_value (cell, corner[i], v, -1);
+
     a = f[1] + f[2] - f[0] - f[3];
     b = f[2] + f[3] - f[0] - f[1];
     c = f[0] - f[1] + f[2] - f[3];
     d = f[0] + f[1] + f[2] + f[3];
+
     return (a*p.x + b*p.y + c*p.x*p.y + d)/4.;
   }
 #else  /* 3D */
@@ -2171,23 +2298,8 @@ gdouble gfs_interpolate (FttCell * cell,
     gdouble f[8], c[8];
     
     p.z = (p.z - o.z)/size;
-    e[0] = FTT_LEFT; e[1] = FTT_BOTTOM; e[2] = FTT_FRONT;
-    f[0] = gfs_cell_corner_value (cell, e, v, -1);
-    e[0] = FTT_RIGHT; e[1] = FTT_BOTTOM;
-    f[1] = gfs_cell_corner_value (cell, e, v, -1);
-    e[0] = FTT_RIGHT; e[1] = FTT_TOP;
-    f[2] = gfs_cell_corner_value (cell, e, v, -1);
-    e[0] = FTT_LEFT; e[1] = FTT_TOP;
-    f[3] = gfs_cell_corner_value (cell, e, v, -1);
-    
-    e[0] = FTT_LEFT; e[1] = FTT_BOTTOM; e[2] = FTT_BACK;
-    f[4] = gfs_cell_corner_value (cell, e, v, -1);
-    e[0] = FTT_RIGHT; e[1] = FTT_BOTTOM;
-    f[5] = gfs_cell_corner_value (cell, e, v, -1);
-    e[0] = FTT_RIGHT; e[1] = FTT_TOP;
-    f[6] = gfs_cell_corner_value (cell, e, v, -1);
-    e[0] = FTT_LEFT; e[1] = FTT_TOP;
-    f[7] = gfs_cell_corner_value (cell, e, v, -1);
+    for (i = 0; i < 8; i++)
+      f[i] = gfs_cell_corner_value (cell, corner[i], v, -1);
 
     c[0] = - f[0] + f[1] + f[2] - f[3] - f[4] + f[5] + f[6] - f[7];
     c[1] = - f[0] - f[1] + f[2] + f[3] - f[4] - f[5] + f[6] + f[7];
@@ -2204,6 +2316,32 @@ gdouble gfs_interpolate (FttCell * cell,
 	    c[7])/8.;
   }
 #endif /* 3D */
+}
+
+/**
+ * gfs_interpolate_stencil:
+ * @cell: a #FttCell.
+ * @v: a #GfsVariable.
+ *
+ * Sets to 1. the @v variable of all the cells which would be used by
+ * a call to gfs_interpolate().
+ */
+void gfs_interpolate_stencil (FttCell * cell,
+			      GfsVariable * v)
+{
+  guint i;
+
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (v != NULL);
+
+  for (i = 0; i < (FTT_DIMENSION == 2 ? 4 : 8); i++) {
+    GfsInterpolator inter;
+    guint j;
+
+    gfs_cell_corner_interpolator (cell, corner[i], -1, TRUE, &inter);
+    for (j = 0; j < inter.n; j++)
+      GFS_VARIABLE (inter.c[j], v->i) = 1.;
+  }
 }
 
 /**

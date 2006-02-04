@@ -107,6 +107,9 @@ typedef gdouble    (* GfsCenterGradient)            (FttCell * cell,
 gdouble               gfs_center_gradient           (FttCell * cell,
 						     FttComponent c,
 						     guint v);
+void                  gfs_center_gradient_stencil   (FttCell * cell,
+						     FttComponent c,
+						     guint v);
 gdouble               gfs_center_van_leer_gradient  (FttCell * cell,
 						     FttComponent c,
 						     guint v);
@@ -217,6 +220,8 @@ void                  gfs_cell_traverse_cut_2D      (FttCell * root,
 						     gpointer data);
 gdouble               gfs_interpolate               (FttCell * cell,
 						     FttVector p,
+						     GfsVariable * v);
+void                  gfs_interpolate_stencil       (FttCell * cell,
 						     GfsVariable * v);
 void                  ftt_cell_refine_corners       (FttCell * cell,
 						     FttCellInitFunc init,
