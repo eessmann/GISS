@@ -201,6 +201,7 @@ GfsVariableClass * gfs_variable_distance_class (void)
 
 static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
 {
+  GfsVariableCurvature * v = GFS_VARIABLE_CURVATURE (*o);
   GfsDomain * domain;
 
   (* GTS_OBJECT_CLASS (gfs_variable_curvature_class ())->parent_class->read) (o, fp);
@@ -212,28 +213,15 @@ static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   domain = GFS_DOMAIN (gfs_object_simulation (*o));
-  if (!(GFS_VARIABLE_CURVATURE (*o)->d = 
-	gfs_variable_from_name (domain->variables, fp->token->str))) {
+  if (!(v->d = gfs_variable_from_name (domain->variables, fp->token->str))) {
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
     return;
   }
-  if (!GFS_IS_VARIABLE_DISTANCE (GFS_VARIABLE_CURVATURE (*o)->d)) {
+  if (!GFS_IS_VARIABLE_DISTANCE (v->d)) {
     gts_file_error (fp, "variable `%s' is not a GfsVariableDistance", fp->token->str);
     return;
   }
   gts_file_next_token (fp);
-
-  if (fp->type == '{') {
-    GtsFileVariable var[] = {
-      {GTS_DOUBLE, "sigma", TRUE},
-      {GTS_DOUBLE, "theta", TRUE},
-      {GTS_NONE}
-    };
-
-    var[0].data = &GFS_VARIABLE_CURVATURE (*o)->sigma;
-    var[1].data = &GFS_VARIABLE_CURVATURE (*o)->theta;
-    gts_file_assign_variables (fp, var);
-  }
 }
 
 static void variable_curvature_write (GtsObject * o, FILE * fp)
@@ -243,8 +231,6 @@ static void variable_curvature_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_variable_curvature_class ())->parent_class->write) (o, fp);
 
   fprintf (fp, " %s", v->d->name);
-  if (v->sigma != 1. || v->theta != 0.5)
-    fprintf (fp, " { sigma = %g theta = %g }", v->sigma, v->theta);
 }
 
 static void normal (FttCell * cell, gpointer * data)
@@ -284,22 +270,17 @@ static void interface_curvature (FttCell * cell, gpointer * data)
     GfsVariable ** nv = data[0];
     FttComponent c;
     FttVector p;
-    gdouble kappa;
 
     ftt_cell_pos (cell, &p);
     for (c = 0; c < FTT_DIMENSION; c++)
       (&p.x)[c] -= GFS_VARIABLE (cell, k->d->i)*GFS_VARIABLE (cell, nv[c]->i);
-    kappa = k->sigma*gfs_interpolate (cell, p, nv[FTT_DIMENSION]);
-    if (GFS_VARIABLE (cell, v->i) < G_MAXDOUBLE)
-      GFS_VARIABLE (cell, v->i) = (k->a*kappa + (1. - k->a)*GFS_VARIABLE (cell, v->i));
-    else
-      GFS_VARIABLE (cell, v->i) = kappa;
+    GFS_VARIABLE (cell, v->i) = gfs_interpolate (cell, p, nv[FTT_DIMENSION]);
   }
 }
 
 static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim)
 {
-  GfsVariable * n[FTT_DIMENSION + 1], * kappa;
+  GfsVariable * n[FTT_DIMENSION + 1];
   GfsDomain * domain = GFS_DOMAIN (sim);
   gpointer data[2];
   FttComponent c;
@@ -308,7 +289,6 @@ static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim
     n[c] = gfs_temporary_variable (domain);
     gfs_variable_set_vector (n[c], c);
   }
-  kappa = n[FTT_DIMENSION];
   data[0] = n;
   data[1] = event;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -317,7 +297,8 @@ static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, n[c]);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) curvature, data);
-  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, kappa);
+  gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, 
+		      GFS_VARIABLE1 (event), n[FTT_DIMENSION]);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) interface_curvature, data);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
@@ -329,9 +310,10 @@ static gboolean variable_curvature_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_curvature_class ())->parent_class)->event)
       (event, sim)) {
-    GFS_VARIABLE_CURVATURE (event)->a = 1.;
-    variable_curvature_event_half (event, sim);
-    GFS_VARIABLE_CURVATURE (event)->a = GFS_VARIABLE_CURVATURE (event)->theta;
+    if (!GFS_VARIABLE_CURVATURE (event)->first_done) {
+      variable_curvature_event_half (event, sim);
+      GFS_VARIABLE_CURVATURE (event)->first_done = TRUE;
+    }
     return TRUE;
   }
   return FALSE;
@@ -347,8 +329,6 @@ static void variable_curvature_class_init (GtsObjectClass * klass)
 
 static void variable_curvature_init (GfsVariableCurvature * v)
 {
-  v->sigma = 1.;
-  v->theta = 0.5;
 }
 
 GfsVariableClass * gfs_variable_curvature_class (void)
