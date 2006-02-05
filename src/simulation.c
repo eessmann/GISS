@@ -491,7 +491,8 @@ static void simulation_run (GfsSimulation * sim)
 
   p = gfs_variable_from_name (domain->variables, "P");
   g_assert (p);
-  pmac = gfs_temporary_variable (domain);
+  pmac = gfs_variable_from_name (domain->variables, "Pmac");
+  g_assert (pmac);
 
   gfs_simulation_refine (sim);
 
@@ -576,7 +577,6 @@ static void simulation_run (GfsSimulation * sim)
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
   gts_container_foreach (GTS_CONTAINER (sim->events),
 			 (GtsFunc) gts_object_destroy, NULL);
-  gts_object_destroy (GTS_OBJECT (pmac));
 }
 
 static void gfs_simulation_class_init (GfsSimulationClass * klass)
@@ -776,6 +776,7 @@ static void gfs_simulation_init (GfsSimulation * object)
   GfsDerivedVariable * v = derived_variable;
 
   gfs_domain_add_variable (domain, "P")->centered = TRUE;
+  gfs_domain_add_variable (domain, "Pmac")->centered = TRUE;
   gfs_variable_set_vector (gfs_domain_add_variable (domain, "U"), FTT_X);
   gfs_variable_set_vector (gfs_domain_add_variable (domain, "V"), FTT_Y);
 #if (!FTT_2D)
