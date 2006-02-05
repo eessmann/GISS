@@ -41,7 +41,7 @@ static void correct_normal_velocity (FttCellFace * face,
   GfsGradient g;
   gdouble dp;
   GfsStateVector * s;
-  GfsVariable * p = data[0], ** gv = data[1], * w = data[3];
+  GfsVariable * p = data[0], ** gv = data[1];
   gdouble * dt = data[2];
   FttComponent c;
 
@@ -53,8 +53,6 @@ static void correct_normal_velocity (FttCellFace * face,
 
   gfs_face_weighted_gradient (face, &g, p->i, -1);
   dp = (g.b - g.a*GFS_VARIABLE (face->cell, p->i))/ftt_cell_size (face->cell);
-  if (w)
-    dp *= gfs_face_interpolated_value (face, w->i);
   if (!FTT_FACE_DIRECT (face))
     dp = - dp;
 
@@ -107,7 +105,6 @@ static void scale_gradients (FttCell * cell, gpointer * data)
  * @p: the pressure field.
  * @g: where to store the pressure gradient or %NULL.
  * @dt: the timestep.
- * @w: an optional weight to apply to the correction.
  *
  * Corrects the normal velocity field of @domain using @p and and @dt.
  *
@@ -118,10 +115,9 @@ void gfs_correct_normal_velocities (GfsDomain * domain,
 				    guint dimension,
 				    GfsVariable * p,
 				    GfsVariable ** g,
-				    gdouble dt,
-				    GfsVariable * w)
+				    gdouble dt)
 {
-  gpointer data[4];
+  gpointer data[3];
   FttComponent c;
 
   g_return_if_fail (domain != NULL);
@@ -140,7 +136,6 @@ void gfs_correct_normal_velocities (GfsDomain * domain,
   data[0] = p;
   data[1] = g;
   data[2] = &dt;
-  data[3] = w;
   gfs_domain_face_traverse (domain, dimension == 2 ? FTT_XY : FTT_XYZ,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) correct_normal_velocity, data);
@@ -215,16 +210,17 @@ void gfs_mac_projection (GfsDomain * domain,
   dt = apar->dt;
   apar->dt /= 2.;
 
+  /* Add surface tension */
+  if ((s = gfs_source_find (apar->v, gfs_source_tension_class ()))) {
+    gfs_source_tension_coefficients (GFS_SOURCE_TENSION (s), domain, alpha);
+    gfs_correct_normal_velocities (domain, FTT_DIMENSION,
+				   GFS_SOURCE_TENSION (s)->c,
+				   NULL, apar->dt);
+  }
   /* Initialize face coefficients */
   gfs_poisson_coefficients (domain, alpha);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dia);
-  /* Add surface tension */
-  if ((s = gfs_source_find (apar->v, gfs_source_tension_class ())))
-    gfs_correct_normal_velocities (domain, FTT_DIMENSION,
-				   GFS_SOURCE_TENSION (s)->c,
-				   NULL, apar->dt,
-				   GFS_SOURCE_TENSION (s)->k);
   /* compute MAC divergence */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_normal_divergence, div);
@@ -263,7 +259,7 @@ void gfs_mac_projection (GfsDomain * domain,
   gts_object_destroy (GTS_OBJECT (dia));
   gts_object_destroy (GTS_OBJECT (res));
 
-  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt, NULL);
+  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
 
 #if 0
   {
@@ -374,9 +370,6 @@ void gfs_approximate_projection (GfsDomain * domain,
 
   gfs_domain_timer_start (domain, "approximate_projection");
   
-  /* Initialize face coefficients */
-  gfs_poisson_coefficients (domain, alpha);
-
   /* compute MAC velocities from centered velocities */
   gfs_domain_face_traverse (domain, FTT_XYZ,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -387,16 +380,18 @@ void gfs_approximate_projection (GfsDomain * domain,
 			    gfs_domain_velocity (domain));
   /* Add surface tension */
   if ((s = gfs_source_find (gfs_domain_velocity (domain)[0], gfs_source_tension_class ()))) {
+    gfs_source_tension_coefficients (GFS_SOURCE_TENSION (s), domain, alpha);
     gfs_correct_normal_velocities (domain, FTT_DIMENSION,
 				   GFS_SOURCE_TENSION (s)->c,
-				   g, apar->dt,
-				   GFS_SOURCE_TENSION (s)->k);
+				   g, apar->dt);
     gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
   }
 
   div = gfs_temporary_variable (domain);
   dia = gfs_temporary_variable (domain);
   res1 = res ? res : gfs_temporary_variable (domain);
+  /* Initialize face coefficients */
+  gfs_poisson_coefficients (domain, alpha);
 
   /* Initialize diagonal coefficient */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
@@ -449,7 +444,7 @@ void gfs_approximate_projection (GfsDomain * domain,
   if (!res)
     gts_object_destroy (GTS_OBJECT (res1));
 
-  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt, NULL);
+  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
   gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
 
   gfs_domain_timer_stop (domain, "approximate_projection");

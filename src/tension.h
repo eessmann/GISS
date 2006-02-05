@@ -66,7 +66,10 @@ struct _GfsSourceTension {
 #define GFS_IS_SOURCE_TENSION(obj)         (gts_object_is_from_class (obj,\
 						 gfs_source_tension_class ()))
 
-GfsSourceGenericClass * gfs_source_tension_class (void);
+GfsSourceGenericClass * gfs_source_tension_class        (void);
+void                    gfs_source_tension_coefficients (GfsSourceTension * s,
+							 GfsDomain * domain,
+							 GfsFunction * alpha);
 
 #ifdef __cplusplus
 }

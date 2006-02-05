@@ -21,6 +21,8 @@
 #include "poisson.h"
 #include "solid.h"
 #include "source.h"
+#include "tension.h"
+#include "vof.h"
 
 /**
  * gfs_multilevel_params_write:
@@ -443,6 +445,94 @@ void gfs_poisson_coefficients (GfsDomain * domain,
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) face_coeff_from_below, NULL);
+}
+
+static void tension_coeff (FttCellFace * face, gpointer * data)
+{
+  gdouble * lambda2 = data[0];
+  GfsStateVector * s = GFS_STATE (face->cell);
+  gdouble v = lambda2[face->d/2];
+  GfsSourceTension * t = data[1];
+  gdouble c1 = GFS_VARIABLE (face->cell, t->c->i);
+  gdouble c2 = GFS_VARIABLE (face->neighbor, t->c->i);
+  gdouble w1 = GFS_IS_FULL (c1) ? 0. : c1*(1. - c1);
+  gdouble w2 = GFS_IS_FULL (c2) ? 0. : c2*(1. - c2);
+
+  if (w1 + w2 > 0.) {
+    GfsVariable * alpha = data[2];
+
+    v *= (w1*GFS_VARIABLE (face->cell, t->k->i) +
+	  w2*GFS_VARIABLE (face->neighbor, t->k->i))/(w1 + w2);
+    if (alpha)
+      v *= gfs_face_interpolated_value (face, alpha->i);
+  }
+  else
+    v = 0.;
+
+  if (GFS_IS_MIXED (face->cell))
+    v *= s->solid->s[face->d];
+  s->f[face->d].v = v;
+
+  switch (ftt_face_type (face)) {
+  case FTT_FINE_FINE:
+    GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v = v;
+    break;
+  case FTT_FINE_COARSE:
+    GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v = G_MAXDOUBLE;
+    break;
+  default:
+    g_assert_not_reached ();
+  }
+}
+
+/**
+ * gfs_source_tension_coefficients:
+ * @s: a #GfsSourceTension.
+ * @domain: a #GfsDomain.
+ * @alpha: the inverse of density or %NULL.
+ *
+ * Initializes the face coefficients with the surface tension term
+ * (interface curvature times surface tension coefficient).
+ *
+ * If @alpha is %NULL, it is taken to be unity.
+ */
+void gfs_source_tension_coefficients (GfsSourceTension * s,
+				      GfsDomain * domain,
+				      GfsFunction * alpha)
+{
+  gdouble lambda2[FTT_DIMENSION];
+  gpointer data[3];
+  FttComponent i;
+
+  g_return_if_fail (s != NULL);
+  g_return_if_fail (domain != NULL);
+
+  for (i = 0; i < FTT_DIMENSION; i++) {
+    gdouble lambda = (&domain->lambda.x)[i];
+
+    lambda2[i] = lambda*lambda;
+  }
+  if (alpha) {
+    data[0] = alpha;
+    data[1] = gfs_temporary_variable (domain);
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) reset_alpha_coeff, data);
+    data[2] = data[1];
+  }
+  else {
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) reset_coeff, NULL);
+    data[2] = NULL;
+  }
+  data[0] = lambda2;
+  data[1] = s;
+  gfs_domain_face_traverse (domain, FTT_XYZ, 
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttFaceTraverseFunc) tension_coeff, data);
+  if (alpha)
+    gts_object_destroy (data[2]);
 }
 
 static void correct (FttCell * cell, gpointer * data)

@@ -227,7 +227,7 @@ static gdouble gfs_source_tension_stability (GfsSourceGeneric * s,
 					     GfsSimulation * sim)
 {
   GfsSourceTension * t = GFS_SOURCE_TENSION (s);
-  gdouble sigma = GFS_VARIABLE_CURVATURE (t->k)->sigma, h;
+  gdouble h, sigma = 1.;
   StabilityParams p = { G_MAXDOUBLE, -G_MAXDOUBLE, 0 };
 
   p.alpha = sim->physical_params.alpha;
