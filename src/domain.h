@@ -81,6 +81,7 @@ struct _GfsDomainClass {
 #define GFS_IS_DOMAIN(obj)         (gts_object_is_from_class (obj,\
 						   gfs_domain_class ()))
 
+#define gfs_domain_variables_number(d) ((d)->allocated->len - 1)
 #define gfs_domain_variables_size(d)   (sizeof (GfsStateVector) +\
                                         sizeof (gdouble)*((d)->allocated->len - 1))
      

@@ -889,7 +889,8 @@ static gboolean timing_event (GfsEvent * event, GfsSimulation * sim)
 	       "  timestep:\n"
 	       "      min: %9.3f avg: %9.3f         | %7.3f max: %9.3f\n"
                "  domain size:\n"
-	       "      min: %9.0f avg: %9.0f         | %7.0f max: %9.0f\n",
+	       "      min: %9.0f avg: %9.0f         | %7.0f max: %9.0f\n"
+	       "  maximum number of variables: %d\n",
 	       domain->timestep.n,
 	       domain->size.mean/domain->timestep.mean,
 	       domain->timestep.min,
@@ -899,7 +900,8 @@ static gboolean timing_event (GfsEvent * event, GfsSimulation * sim)
 	       domain->size.min,
 	       domain->size.mean,
 	       domain->size.stddev, 
-	       domain->size.max);
+	       domain->size.max,
+	       gfs_domain_variables_number (domain));
       data[0] = fp;
       data[1] = domain;
       g_hash_table_foreach (domain->timers, (GHFunc) timer_print, data);
