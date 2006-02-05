@@ -327,8 +327,50 @@ static void variable_curvature_class_init (GtsObjectClass * klass)
   GFS_EVENT_CLASS (klass)->event_half = variable_curvature_event_half;
 }
 
+static void curvature_coarse_fine (FttCell * parent, GfsVariable * v)
+{
+  FttCellChildren child;
+  guint n;
+
+  ftt_cell_children (parent, &child);
+  for (n = 0; n < FTT_CELLS; n++) {
+    GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
+    gdouble f = GFS_VARIABLE (child.c[n], GFS_VARIABLE_DISTANCE (k->d)->v->i);
+
+    GFS_VARIABLE (child.c[n], v->i) = GFS_VARIABLE (parent, v->i);
+    if (!GFS_IS_FULL (f))
+      g_assert (fabs (GFS_VARIABLE (child.c[n], v->i)) < G_MAXDOUBLE);
+  }
+}
+
+static void curvature_fine_coarse (FttCell * parent, GfsVariable * v)
+{
+  GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
+  GfsVariable * t = GFS_VARIABLE_DISTANCE (k->d)->v;
+  FttCellChildren child;
+  gdouble val = 0., sa = 0.;
+  guint i;
+
+  ftt_cell_children (parent, &child);
+  for (i = 0; i < FTT_CELLS; i++)
+    if (child.c[i] && !GFS_IS_FULL (GFS_VARIABLE (child.c[i], t->i))) {
+      gdouble a = GFS_IS_MIXED (child.c[i]) ? GFS_STATE (child.c[i])->solid->a : 1.;
+
+      val += GFS_VARIABLE (child.c[i], v->i)*a;
+      sa += a;
+    }
+  if (sa > 0.)
+    GFS_VARIABLE (parent, v->i) = val/sa;
+  else {
+    GFS_VARIABLE (parent, v->i) = G_MAXDOUBLE;
+    g_assert (GFS_IS_FULL (GFS_VARIABLE (parent, t->i)));
+  }
+}
+
 static void variable_curvature_init (GfsVariableCurvature * v)
 {
+  GFS_VARIABLE1 (v)->coarse_fine = curvature_coarse_fine;
+  GFS_VARIABLE1 (v)->fine_coarse = curvature_fine_coarse;
 }
 
 GfsVariableClass * gfs_variable_curvature_class (void)
