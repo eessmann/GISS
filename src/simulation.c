@@ -45,13 +45,10 @@ static void simulation_destroy (GtsObject * object)
 			 (GtsFunc) gts_object_destroy, NULL);
   gts_object_destroy (GTS_OBJECT (sim->refines));
 
-  gts_container_foreach (GTS_CONTAINER (sim->adapts),
-			 (GtsFunc) gts_object_destroy, NULL);
-  gts_object_destroy (GTS_OBJECT (sim->adapts));
-
   gts_container_foreach (GTS_CONTAINER (sim->events),
 			 (GtsFunc) gts_object_destroy, NULL);
   gts_object_destroy (GTS_OBJECT (sim->events));
+  gts_object_destroy (GTS_OBJECT (sim->adapts));
 
   i = sim->modules;
   while (i) {
@@ -123,17 +120,6 @@ static void simulation_write (GtsObject * object, FILE * fp)
       fputc ('\n', fp);
       i = i->next;
     }
-  }
-
-  i = sim->adapts->items;
-  while (i) {
-    GtsObject * object = i->data;
-
-    fputs ("  ", fp);
-    g_assert (object->klass->write);
-    (* object->klass->write) (object, fp);
-    fputc ('\n', fp);
-    i = i->next;
   }
 
   i = sim->events->items;
@@ -462,8 +448,10 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 
       if (GFS_IS_REFINE (object))
 	gts_container_add (GTS_CONTAINER (sim->refines), GTS_CONTAINEE (object));
-      else if (GFS_IS_ADAPT (object))
+      else if (GFS_IS_ADAPT (object)) {
 	gts_container_add (GTS_CONTAINER (sim->adapts), GTS_CONTAINEE (object));
+	gts_container_add (GTS_CONTAINER (sim->events), GTS_CONTAINEE (object));
+      }
       else if (GFS_IS_EVENT (object))
 	gts_container_add (GTS_CONTAINER (sim->events), GTS_CONTAINEE (object));
       else if (GFS_IS_SURFACE_GENERIC_BC (object))
@@ -508,7 +496,6 @@ static void simulation_run (GfsSimulation * sim)
   gfs_simulation_refine (sim);
 
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
-  gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
 
   gfs_set_merged (domain);
   i = domain->variables;
@@ -1298,7 +1285,6 @@ static void advection_run (GfsSimulation * sim)
   gfs_simulation_refine (sim);
 
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
-  gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
 
   gfs_set_merged (domain);
   i = domain->variables;
@@ -1457,7 +1443,6 @@ static void poisson_run (GfsSimulation * sim)
   gfs_simulation_refine (sim);
 
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
-  gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
 
   i = domain->variables;
   while (i) {

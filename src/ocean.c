@@ -288,7 +288,6 @@ static void ocean_run (GfsSimulation * sim)
   gfs_simulation_refine (sim);
 
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
-  gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
 
   gfs_set_merged (domain);
   i = domain->variables;
@@ -624,7 +623,6 @@ static void ocean_run (GfsSimulation * sim)
 			    (FttCellTraverseFunc) compute_H, H);
 
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
-  gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_init, sim);
 
   gfs_set_merged (domain);
   i = domain->variables;

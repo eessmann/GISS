@@ -890,8 +890,6 @@ void gfs_simulation_adapt (GfsSimulation * simulation,
 
   gfs_domain_timer_start (domain, "adapt");
 
-  gts_container_foreach (GTS_CONTAINER (simulation->adapts), (GtsFunc) gfs_event_do, simulation);
-
   i = simulation->adapts->items;
   while (i) {
     GfsAdapt * a = i->data;
