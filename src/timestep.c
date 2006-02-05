@@ -211,7 +211,7 @@ void gfs_mac_projection (GfsDomain * domain,
 			    (FttCellTraverseFunc) gfs_normal_divergence, div);
   data[0] = div;
   data[1] = &apar->dt;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
   			    (FttCellTraverseFunc) scale_divergence, data);
 
 #if 0
@@ -375,7 +375,7 @@ void gfs_approximate_projection (GfsDomain * domain,
 			    (FttCellTraverseFunc) gfs_normal_divergence, div);
   data[0] = div;
   data[1] = &apar->dt;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
   			    (FttCellTraverseFunc) scale_divergence, data);
 
 #if 0
