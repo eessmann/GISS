@@ -1253,6 +1253,21 @@ static void output_simulation_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->destroy) (object);
 }
 
+static void write_text (FttCell * cell, GfsOutputSimulation * output)
+{
+  GSList * i = GFS_DOMAIN (gfs_object_simulation (output))->variables_io;
+  FILE * fp = GFS_OUTPUT (output)->file->fp;
+  FttVector p;
+
+  gfs_cell_cm (cell, &p);
+  fprintf (fp, "%g %g %g", p.x, p.y, p.z);
+  while (i) {
+    fprintf (fp, " %g", GFS_VARIABLE (cell, GFS_VARIABLE1 (i->data)->i));
+    i = i->next;
+  }
+  fputc ('\n', fp);
+}
+
 static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
@@ -1263,9 +1278,30 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
     domain->variables_io = output->var;
     domain->binary =       output->binary;
     sim->output_surface =  output->surface;
-    gfs_simulation_write (sim,
-			  output->max_depth,
-			  GFS_OUTPUT (event)->file->fp);
+    switch (output->format) {
+    case GFS:
+      gfs_simulation_write (sim,
+			    output->max_depth,
+			    GFS_OUTPUT (event)->file->fp);
+      break;
+    case GFS_TEXT: {
+      FILE * fp = GFS_OUTPUT (event)->file->fp;
+      GSList * i = domain->variables_io;
+      guint nv = 4;
+
+      fputs ("# 1:X 2:Y: 3:Z", fp);
+      while (i) {
+	fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
+	i = i->next;
+      }
+      fputc ('\n', fp);
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) write_text, event);
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+    }
     domain->variables_io = NULL;
     domain->binary =       TRUE;
     sim->output_surface =  TRUE;
@@ -1297,6 +1333,8 @@ static void output_simulation_write (GtsObject * o, FILE * fp)
     fputs (" binary = 0", fp);
   if (!output->surface)
     fputs (" surface = 0", fp);
+  if (output->format == GFS_TEXT)
+    fputs (" format = text", fp);
   fputs (" }", fp);
 }
 
@@ -1307,9 +1345,10 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
     {GTS_STRING, "variables",TRUE},
     {GTS_INT,    "binary",   TRUE},
     {GTS_INT,    "surface",  TRUE},
+    {GTS_STRING, "format",   TRUE},
     {GTS_NONE}
   };
-  gchar * variables = NULL;
+  gchar * variables = NULL, * format = NULL;
   GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (*o);
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (output));
 
@@ -1322,6 +1361,7 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
   var[1].data = &variables;
   var[2].data = &output->binary;
   var[3].data = &output->surface;
+  var[4].data = &format;
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR) {
     g_free (variables);
@@ -1345,6 +1385,20 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
   }
   else if (output->var == NULL)
     output->var = g_slist_copy (domain->variables);
+
+  if (format != NULL) {
+    if (!strcmp (format, "gfs"))
+      output->format = GFS;
+    else if (!strcmp (format, "text"))
+      output->format = GFS_TEXT;
+    else {
+      gts_file_variable_error (fp, var, "format",
+			       "unknown format `%s'", format);
+      g_free (format);
+      return;
+    }
+    g_free (format);
+  }
 }
 
 static void gfs_output_simulation_class_init (GfsEventClass * klass)
@@ -1361,6 +1415,7 @@ static void gfs_output_simulation_init (GfsOutputSimulation * object)
   object->var = NULL;
   object->binary = 1;
   object->surface = 1;
+  object->format = GFS;
 }
 
 GfsOutputClass * gfs_output_simulation_class (void)

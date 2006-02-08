@@ -142,6 +142,7 @@ GfsOutputClass * gfs_output_location_class  (void);
 /* GfsOutputSimulation: Header */
 
 typedef struct _GfsOutputSimulation         GfsOutputSimulation;
+typedef enum   { GFS, GFS_TEXT }            GfsOutputSimulationFormat;
 
 struct _GfsOutputSimulation {
   GfsOutput parent;
@@ -149,6 +150,7 @@ struct _GfsOutputSimulation {
   gint max_depth;
   GSList * var;
   gboolean binary, surface;
+  GfsOutputSimulationFormat format;
 };
 
 #define GFS_OUTPUT_SIMULATION(obj)            GTS_OBJECT_CAST (obj,\
