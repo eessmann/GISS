@@ -5,13 +5,13 @@ Source: gerris-snapshot
 Section: math
 Priority: extra
 Maintainer: Stephane Popinet <popinet@users.sf.net>
-Build-Depends: debhelper (>> 4), libgts-snapshot-dev (>= $GTS_VERSION), libglib2.0-dev, autotools-dev
+Build-Depends: debhelper (>> 4), autotools-dev
 
 Package: gerris-snapshot
 Section: math
 Priority: extra
 Architecture: any
-Depends: \${shlibs:Depends}, libgts-snapshot (>= $GTS_VERSION)
+Depends: \${shlibs:Depends}, libgts-snapshot-dev (>= $GTS_VERSION), pkg-config
 Conflicts: gerris
 Replaces: gerris
 Suggests: gfsview-snapshot
