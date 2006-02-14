@@ -1544,7 +1544,8 @@ GfsNorm gfs_domain_norm_residual (GfsDomain * domain,
   domain_norm_reduce (domain, &n);
 #endif /* HAVE_MPI */
   gfs_norm_update (&n);
-  
+
+  dt *= dt;
   n.bias *= dt;
   n.first *= dt;
   n.second *= dt;
