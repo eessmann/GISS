@@ -27,12 +27,11 @@
  * gfs_line_area:
  * @m: normal to the line.
  * @alpha: line constant.
- * @c1: width of the cell.
  *
- * Returns: the area of the fraction of a rectangular cell (c1,1)
- * lying under the line (@m,@alpha).
+ * Returns: the area of the fraction of a cell lying under the line
+ * (@m,@alpha).
  */
-gdouble gfs_line_area (FttVector * m, gdouble alpha, gdouble c1)
+gdouble gfs_line_area (FttVector * m, gdouble alpha)
 {
   FttVector n;
   gdouble a, v;
@@ -43,14 +42,14 @@ gdouble gfs_line_area (FttVector * m, gdouble alpha, gdouble c1)
   if (alpha <= 0.)
     return 0.;
 
-  if (alpha >= m->x*c1 + m->y || c1 == 0.)
-    return c1;
+  if (alpha >= m->x + m->y)
+    return 1.;
 
   n = *m; n.x += 1e-4; n.y += 1e-4;
 
   v = alpha*alpha;
 
-  a = alpha - n.x*c1;
+  a = alpha - n.x;
   if (a > 0.)
     v -= a*a;
 
@@ -117,12 +116,10 @@ void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
  * gfs_plane_volume:
  * @m: normal to the plane.
  * @alpha: plane constant.
- * @c1: width of the cell.
  *
- * Returns: the volume of a parallelepipedic cell (c1,1,1) lying under
- * the plane (@m,@alpha).
+ * Returns: the volume of a cell lying under the plane (@m,@alpha).
  */
-gdouble gfs_plane_volume (FttVector * m, gdouble alpha, gdouble c1)
+gdouble gfs_plane_volume (FttVector * m, gdouble alpha)
 {
   FttVector n;
   gdouble a, amax, v;
@@ -135,29 +132,23 @@ gdouble gfs_plane_volume (FttVector * m, gdouble alpha, gdouble c1)
   if (alpha <= 0.)
     return 0.;
 
-  if (alpha >= m->x*c1 + m->y + m->z || c1 == 0.)
-    return c1;
+  if (alpha >= m->x + m->y + m->z)
+    return 1.;
 
   n = *m; n.x += 1e-4; n.y += 1e-4; n.z += 1e-4;
-  amax = n.x*c1 + n.y + n.z;
+  amax = n.x + n.y + n.z;
 
   md = &n.x;
   v = alpha*alpha*alpha;
 
-  a = alpha - n.x*c1;
-  if (a > 0.)
-    v -= a*a*a;
-  for (j = 1; j < 3; j++) {
+  for (j = 0; j < 3; j++) {
     a = alpha - md[j];
     if (a > 0.)
       v -= a*a*a;
   }
 
   amax = alpha - amax;
-  a = amax + n.x*c1;
-  if (a > 0.)
-    v += a*a*a;
-  for (j = 1; j < 3; j++) {
+  for (j = 0; j < 3; j++) {
     a = amax + md[j];
     if (a > 0.)
       v += a*a*a;
@@ -470,15 +461,19 @@ static void gfs_cell_vof_advected_face_values (FttCell * cell,
     m.x /= 1. + u_right - u_left;
     alpha += m.x*u_left;
 
-    if (u_left < 0.)
-      GFS_STATE (cell)->f[left].v =
-	- gfs_plane_volume (&m, alpha - m.x*u_left, - u_left)/u_left;
+    if (u_left < 0.) {
+      m1 = m;
+      m1.x *= - u_left;
+      GFS_STATE (cell)->f[left].v = gfs_plane_volume (&m1, alpha + m1.x);
+    }
     else
       GFS_STATE (cell)->f[left].v = f;
 
-    if (u_right > 0.)
-      GFS_STATE (cell)->f[right].v =
-	gfs_plane_volume (&m, alpha - m.x, u_right)/u_right;
+    if (u_right > 0.) {
+      m1 = m;
+      m1.x *= u_right;
+      GFS_STATE (cell)->f[right].v = gfs_plane_volume (&m1, alpha - m.x);
+    }
     else
       GFS_STATE (cell)->f[right].v = f;
   }
@@ -667,7 +662,7 @@ void gfs_vof_coarse_fine (FttCell * parent, GfsVariable * v)
 	(&p.x)[c] = (&m.x)[c] < 0. ? (&p.x)[c] + 0.25 : 0.25 - (&p.x)[c];
 	alpha1 -= (&m1.x)[c]*(&p.x)[c];
       }
-      GFS_VARIABLE (child.c[i], v->i) = gfs_plane_volume (&m1, 2.*alpha1, 1.);
+      GFS_VARIABLE (child.c[i], v->i) = gfs_plane_volume (&m1, 2.*alpha1);
     }
   }
 }

@@ -627,18 +627,25 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s, In
 	sym[c] = FALSE;
       n += (&m.x)[c];
     }
-    g_assert (n > 0.);
-    m.x /= n; m.y /= n; m.z /= n;
-    alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
-    solid->a = gfs_plane_volume (&m, alpha, 1.);
-    gfs_plane_center (&m, alpha, solid->a, &solid->cm);
-    for (c = 0; c < FTT_DIMENSION; c++)
-      (&solid->cm.x)[c] = (&o.x)[c] + 
-	(sym[c] ? 1. - (&solid->cm.x)[c] : (&solid->cm.x)[c])*(&h.x)[c];
-  }
-  else { /* this is a "thin" cell */
-    p->thin++;
-    deal_with_thin_cell (cell, p);
+    if (n > 0.) {
+      m.x /= n; m.y /= n; m.z /= n;
+      alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
+      solid->a = gfs_plane_volume (&m, alpha, 1.);
+      gfs_plane_center (&m, alpha, solid->a, &solid->cm);
+      for (c = 0; c < FTT_DIMENSION; c++)
+	(&solid->cm.x)[c] = (&o.x)[c] + 
+	  (sym[c] ? 1. - (&solid->cm.x)[c] : (&solid->cm.x)[c])*(&h.x)[c];
+    }
+    else { /* degenerate intersections */
+      solid->a = 0.;
+      for (i = 0; i < FTT_NEIGHBORS; i++)
+	solid->a += solid->s[i];
+      solid->a /= FTT_NEIGHBORS;
+      if (solid->a == 0. || solid->a == 1.) {
+	g_free (solid);
+	GFS_STATE (cell)->solid = NULL;
+      }
+    }
   }
   if (solid->a == 0.)
     GFS_VARIABLE (cell, p->status->i) = 1.;

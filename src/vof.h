@@ -29,8 +29,7 @@ extern "C" {
 #define GFS_IS_FULL(f)             ((f) < 1e-6 || (f) > 1. - 1.e-6)
 
 gdouble gfs_line_area              (FttVector * m, 
-				    gdouble alpha, 
-				    gdouble c1);
+				    gdouble alpha);
 void    gfs_line_center            (FttVector * m, 
 				    gdouble alpha, 
 				    gdouble a, 
@@ -42,8 +41,7 @@ gdouble gfs_line_alpha             (FttVector * m,
 #  define gfs_plane_alpha          gfs_line_alpha
 #else /* 3D */
 gdouble gfs_plane_volume           (FttVector * m, 
-				    gdouble alpha, 
-				    gdouble c1);
+				    gdouble alpha);
 gdouble gfs_plane_alpha            (FttVector * m, 
 				    gdouble c);
 void    gfs_plane_center           (FttVector * m, 
