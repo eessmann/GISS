@@ -20,6 +20,8 @@ for start in sys.argv[1:]:
                 dists += "\\\n\t" + example.path + "/" + f
             for f in example.generated:
                 depends += "\\\n\t" + example.path + "/" + f
+                if f[-4:] == ".mpg":
+                    docs += "\\\n\t" + example.path + "/" + f
 
 print "DOCS = " + docs + dists
 print ""
