@@ -55,6 +55,8 @@
     U = (1. - 2.*cos (2.*M_PI*x)*sin (2.*M_PI*y))
     V = (1. + 2.*sin (2.*M_PI*x)*cos (2.*M_PI*y))
   }
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
   OutputErrorNorm { start = end } stdout { v = U } {
     s = (1. - 2.*cos (2.*M_PI*(x - t))*sin (2.*M_PI*(y - t)))
   }

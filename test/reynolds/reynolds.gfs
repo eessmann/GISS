@@ -65,6 +65,8 @@
     U = (- cos (2.*M_PI*x)*sin (2.*M_PI*y))
     V = (sin (2.*M_PI*x)*cos (2.*M_PI*y))
   }
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
   OutputScalarNorm { istep = 1 } divLEVEL { v = Divergence }
   OutputScalarSum { istep = 1 } kineticLEVEL { v = Velocity2 }
   OutputScalarSum { istep = 1 } stdout { v = Velocity2 }

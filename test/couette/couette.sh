@@ -17,10 +17,10 @@ set ylabel 'Tangential velocity'
 powerlaw(r,N)=r*((0.5/r)**(2./N) - 1.)/((0.5/0.25)**(2./N) - 1.)
 hb(r,Rl)=(r > Rl ? 0. : r*sqrt(2.)*0.12*0.12/(4.*0.0672*0.0672)*(3./4.+(Rl/r)**4/4.-(Rl/r)**2+log(Rl/r)))
 bingham(r,Rl)=(r > Rl ? 0. : r*sqrt(2.)*10./4.*((Rl/r)**2-2.*log(Rl/r)-1.))
-plot [0.25:0.5][0:0.25]powerlaw(x,1.) t "Newtonian", 'prof-0' u 2:7 w p ps 2 pt 9 t "",\
-               powerlaw(x,0.5) t "Power law", 'prof-1' u 2:7 w p ps 2 pt 9 t "",\
-               hb(x,0.4637) t "Herschel-Bulkley", 'prof-2' u 2:7 w p ps 2 pt 9 t "",\
-               bingham(x,0.34924) t "Bingham", 'prof-3' u 2:7 w p ps 2 pt 9 t ""
+plot [0.25:0.5][0:0.25]powerlaw(x,1.) t "Newtonian", 'prof-0' u 2:8 w p ps 2 pt 9 t "",\
+               powerlaw(x,0.5) t "Power law", 'prof-1' u 2:8 w p ps 2 pt 9 t "",\
+               hb(x,0.4637) t "Herschel-Bulkley", 'prof-2' u 2:8 w p ps 2 pt 9 t "",\
+               bingham(x,0.34924) t "Bingham", 'prof-3' u 2:8 w p ps 2 pt 9 t ""
 EOF
 else
    exit 1
@@ -29,14 +29,14 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-print (Curve('prof-0',2,7) - Curve('prof-0.ref',1,2)).norm2(),\
-   (Curve('prof-1',2,7) - Curve('prof-1.ref',1,2)).norm2(),\
-   (Curve('prof-2',2,7) - Curve('prof-2.ref',1,2)).norm2(),\
-   (Curve('prof-3',2,7) - Curve('prof-3.ref',1,2)).norm2()
-if (Curve('prof-0',2,7) - Curve('prof-0.ref',1,2)).norm2() > 3.6e-4 or \
-   (Curve('prof-1',2,7) - Curve('prof-1.ref',1,2)).norm2() > 6.3e-4 or \
-   (Curve('prof-2',2,7) - Curve('prof-2.ref',1,2)).norm2() > 21e-4 or \
-   (Curve('prof-3',2,7) - Curve('prof-3.ref',1,2)).norm2() > 22e-4:
+print (Curve('prof-0',2,8) - Curve('prof-0.ref',1,2)).norm2(),\
+   (Curve('prof-1',2,8) - Curve('prof-1.ref',1,2)).norm2(),\
+   (Curve('prof-2',2,8) - Curve('prof-2.ref',1,2)).norm2(),\
+   (Curve('prof-3',2,8) - Curve('prof-3.ref',1,2)).norm2()
+if (Curve('prof-0',2,8) - Curve('prof-0.ref',1,2)).norm2() > 3.6e-4 or \
+   (Curve('prof-1',2,8) - Curve('prof-1.ref',1,2)).norm2() > 6.3e-4 or \
+   (Curve('prof-2',2,8) - Curve('prof-2.ref',1,2)).norm2() > 21e-4 or \
+   (Curve('prof-3',2,8) - Curve('prof-3.ref',1,2)).norm2() > 22e-4:
     exit(1)
 EOF
 else

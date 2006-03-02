@@ -31,7 +31,8 @@
 4 3 GfsSimulation GfsBox GfsGEdge {} {
   Time { end = 1 }
   AdvectionParams { cfl = 0.9 }
-#  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
+  ApproxProjectionParams { tolerance = 1e-6 }
   Refine LEVEL
   GtsSurfaceFile channel.gts
   Init {} { U = 1 }

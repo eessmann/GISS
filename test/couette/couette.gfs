@@ -43,7 +43,7 @@
   Refine 6
   GtsSurfaceFile outer.gts
   GtsSurfaceFile inner.gts
-  AdvectionParams { scheme = none }
+  ApproxProjectionParams { tolerance = 1e-6 }
   SourceViscosity {} {
     double mu, ty, N, mumax = 1000.;
     double m;

@@ -91,11 +91,11 @@
     set output 'xprof.eps'
     set xlabel 'Y'
     set ylabel 'U'
-    plot [-0.5:0.5]'xprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'xprof' u 3:6 w l title "Gerris"
+    plot [-0.5:0.5]'xprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'xprof' u 3:7 w l title "Gerris"
     set output 'yprof.eps'
     set xlabel 'X'
     set ylabel 'V'
-    plot [-0.5:0.5]'yprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'yprof' u 2:7 w l title "Gerris"
+    plot [-0.5:0.5]'yprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'yprof' u 2:8 w l title "Gerris"
 EOF
   }
 }
