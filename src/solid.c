@@ -340,6 +340,28 @@ static void cell_size (FttCell * cell, FttVector * h)
 #endif /* 3D */
 }
 
+/* Returns: the number of closed loops for the given isocube */
+static guint topology (CellCube * cube)
+{
+  guint l, nl = 0;
+
+  for (l = 0; l < 12; l++) {
+    guint nv = 0, e = l;
+    
+    while (cube->n[e]) {
+      guint m = 0, * ne = connect[e][cube->inside[e] > 0];
+
+      nv++;
+      cube->n[e] = 0;
+      while (m < 3 && !cube->n[e])
+	e = ne[m++];
+    }
+    if (nv > 2)
+      nl++;
+  }
+  return nl;
+}
+
 static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
@@ -450,13 +472,10 @@ static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
   }
 
   /* now compute cell fraction, center of area, center of mass */
-
-  /* fixme: the calculation of ca below is not strictly equivalent to
-     the true center of area of the piece of surface contained in the
-     cell if there are more than 4 intersection points (n1 > 4) */
   ca.x /= n1; ca.y /= n1; ca.z /= n1; 
   solid->ca = ca;
-  {
+  switch (topology (&cube)) {
+  case 1: {
     FttVector m;
     gdouble alpha, n = 0.;
     gboolean sym[FTT_DIMENSION];
@@ -474,25 +493,29 @@ static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
 	sym[c] = FALSE;
       n += (&m.x)[c];
     }
-    if (n > 0.) {
-      m.x /= n; m.y /= n; m.z /= n;
-      alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
-      solid->a = gfs_plane_volume (&m, alpha, 1.);
-      gfs_plane_center (&m, alpha, solid->a, &solid->cm);
-      for (c = 0; c < FTT_DIMENSION; c++)
-	(&solid->cm.x)[c] = (&o.x)[c] + 
-	  (sym[c] ? 1. - (&solid->cm.x)[c] : (&solid->cm.x)[c])*(&h.x)[c];
+    g_assert (n > 0.);
+    m.x /= n; m.y /= n; m.z /= n;
+    alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
+    solid->a = gfs_plane_volume (&m, alpha, 1.);
+    gfs_plane_center (&m, alpha, solid->a, &solid->cm);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&solid->cm.x)[c] = (&o.x)[c] + 
+	(sym[c] ? 1. - (&solid->cm.x)[c] : (&solid->cm.x)[c])*(&h.x)[c];
+    break;
+  }
+  case 2:
+    solid->cm = solid->ca;
+    solid->a = 0.;
+    for (i = 0; i < FTT_NEIGHBORS; i++)
+      solid->a += solid->s[i];
+    solid->a /= FTT_NEIGHBORS;
+    if (solid->a == 0. || solid->a == 1.) {
+      g_free (solid);
+      GFS_STATE (cell)->solid = NULL;
     }
-    else { /* degenerate intersections */
-      solid->a = 0.;
-      for (i = 0; i < FTT_NEIGHBORS; i++)
-	solid->a += solid->s[i];
-      solid->a /= FTT_NEIGHBORS;
-      if (solid->a == 0. || solid->a == 1.) {
-	g_free (solid);
-	GFS_STATE (cell)->solid = NULL;
-      }
-    }
+    break;
+  default:
+    g_assert_not_reached ();
   }
 }
 
