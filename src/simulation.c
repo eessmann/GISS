@@ -148,13 +148,6 @@ static void simulation_write (GtsObject * object, FILE * fp)
       gts_surface_write (sim->surface, fp);
     fputs ("}\n", fp);
   }
-#if 1
-  if (sim->interface) {
-    fputs ("  GtsInterface { ", fp);
-    gts_surface_write (sim->interface, fp);
-    fputs ("}\n", fp);
-  }
-#endif
   fputc ('}', fp);
 }
 
@@ -323,36 +316,6 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       gts_file_next_token (fp);
     }
 
-    /* ------------ GtsInterface ------------ */
-    else if (strmatch (fp->token->str, "GtsInterface")) {
-      GtsSurface * s;
-
-      if (!sim->interface)
-	sim->interface = gts_surface_new (gts_surface_class (),
-					  gts_face_class (),
-					  gts_edge_class (),
-					  gts_vertex_normal_class ());
-      if ((s = read_surface (fp, sim->interface)) == NULL)
-	return;
-      sim->interface = s;
-      gts_file_next_token (fp);
-    }
-
-    /* ------------ GtsInterfaceFile ------------ */
-    else if (strmatch (fp->token->str, "GtsInterfaceFile")) {
-      GtsSurface * s;
-
-      if (!sim->interface)
-	sim->interface = gts_surface_new (gts_surface_class (),
-					  gts_face_class (),
-					  gts_edge_class (),
-					  gts_vertex_normal_class ());
-      if ((s = read_surface_file (fp, sim->interface)) == NULL)
-	return;
-      sim->interface = s;
-      gts_file_next_token (fp);
-    }
-
     /* ------------ GModule ------------ */
     else if (strmatch (fp->token->str, "GModule")) {
       gts_file_next_token (fp);
@@ -468,13 +431,6 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   fp->scope_max--;
   gts_file_next_token (fp);
 
-  if (sim->interface) {
-    if (sim->itree)
-      gts_bb_tree_destroy (sim->itree, TRUE);
-    sim->itree = gts_bb_tree_surface (sim->interface);
-    if (gts_surface_volume (sim->interface) < 0.)
-      sim->i_is_open = TRUE;
-  }
   sim->refines->items = g_slist_reverse (sim->refines->items);
   sim->adapts->items = g_slist_reverse (sim->adapts->items);
   sim->events->items = g_slist_reverse (sim->events->items);
@@ -799,10 +755,6 @@ static void gfs_simulation_init (GfsSimulation * object)
 
   object->surface = NULL;
   object->output_surface = TRUE;
-
-  object->interface = NULL;
-  object->itree = NULL;
-  object->i_is_open = FALSE;
 
   object->refines = GTS_SLIST_CONTAINER (gts_container_new
 					 (GTS_CONTAINER_CLASS

@@ -67,10 +67,6 @@ struct _GfsSimulation {
   GtsSurface * surface;
   gboolean output_surface;
 
-  GtsSurface * interface;
-  GNode * itree;
-  gboolean i_is_open;
-
   GtsSListContainer * refines;
 
   GtsSListContainer * adapts;
