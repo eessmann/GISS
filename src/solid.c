@@ -340,21 +340,35 @@ static void cell_size (FttCell * cell, FttVector * h)
 #endif /* 3D */
 }
 
-/* Returns: the number of closed loops for the given isocube */
+/* Returns: the number of closed loops for the given isocube
+ * 
+ * Fixme: this algorithm is not correct in general. This has no
+ * consequence for this particular application because we also check
+ * that the isosurface is "planar" together with use of topology() in
+ * set_solid_fractions_from_surface3D(), however this is important in
+ * general.
+ *
+ * The bug is triggered for certain configurations of "non-planar"
+ * isosurfaces.
+ */
 static guint topology (CellCube * cube)
 {
   guint l, nl = 0;
-
+  gboolean used[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
+  
   for (l = 0; l < 12; l++) {
-    guint nv = 0, e = l;
+    guint nv = 0, e = l, cut = cube->n[e];
     
-    while (cube->n[e]) {
+    while (cut && !used[e]) {
       guint m = 0, * ne = connect[e][cube->inside[e] > 0];
 
       nv++;
-      cube->n[e] = 0;
-      while (m < 3 && !cube->n[e])
+      used[e] = TRUE;
+      cut = 0;
+      while (m < 3 && !cut) {
 	e = ne[m++];
+	cut = cube->n[e];
+      }
     }
     if (nv > 2)
       nl++;
@@ -369,6 +383,7 @@ static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
   FttVector o, ca = {0., 0., 0.}, h;
   guint i, n1 = 0;
   gint inside[8] = {0,0,0,0,0,0,0,0};
+  gboolean planar = TRUE;
 
   ftt_cell_pos (cell, &o);
   cell_size (cell, &h);
@@ -455,7 +470,10 @@ static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
       solid->s[i] = ins > 0 ? 0. : 1.;
       break;
     }
-    case 2: case 4: { /* the face is cut 2 or 4 times */
+    case 4:
+      planar = FALSE;
+      /* fall through */
+    case 2: { /* the face is cut 2 or 4 times */
       GfsSolidVector sol;
       FttVector h1;
 
@@ -474,8 +492,7 @@ static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
   /* now compute cell fraction, center of area, center of mass */
   ca.x /= n1; ca.y /= n1; ca.z /= n1; 
   solid->ca = ca;
-  switch (topology (&cube)) {
-  case 1: {
+  if (planar && topology (&cube) == 1) {
     FttVector m;
     gdouble alpha, n = 0.;
     gboolean sym[FTT_DIMENSION];
@@ -501,9 +518,8 @@ static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
     for (c = 0; c < FTT_DIMENSION; c++)
       (&solid->cm.x)[c] = (&o.x)[c] + 
 	(sym[c] ? 1. - (&solid->cm.x)[c] : (&solid->cm.x)[c])*(&h.x)[c];
-    break;
   }
-  case 2:
+  else {
     solid->cm = solid->ca;
     solid->a = 0.;
     for (i = 0; i < FTT_NEIGHBORS; i++)
@@ -513,9 +529,6 @@ static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
       g_free (solid);
       GFS_STATE (cell)->solid = NULL;
     }
-    break;
-  default:
-    g_assert_not_reached ();
   }
 }
 
