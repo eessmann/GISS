@@ -875,7 +875,6 @@ void gfs_simulation_refine (GfsSimulation * sim)
     gfs_domain_init_solid_fractions (domain, sim->surface, TRUE,
 				     (FttCellCleanupFunc) gfs_cell_cleanup, NULL, 
 				     NULL);
-    gfs_domain_remove_specks (domain);
     gfs_domain_match (domain);
     gfs_domain_timer_stop (domain, "solid_fractions");
   }
