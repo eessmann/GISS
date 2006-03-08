@@ -39,8 +39,8 @@ static void reset_gradients (FttCell * cell, gpointer * data)
     GFS_VARIABLE (cell, g[c]->i) = 0.;
 }
 
-static void correct_normal_velocity_weighted (FttCellFace * face,
-					      gpointer * data)
+static void correct_normal_velocity (FttCellFace * face,
+				     gpointer * data)
 {
   GfsGradient g;
   gdouble dp;
@@ -67,49 +67,27 @@ static void correct_normal_velocity_weighted (FttCellFace * face,
     dp /= s->solid->s[face->d];
 
   GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= dp*(*dt);
-  GFS_VARIABLE (face->cell, gv[c]->i) += dp*GFS_FACE_FRACTION_LEFT (face);
+  GFS_VARIABLE (face->cell, gv[c]->i) += dp;
 
-  switch (type) {
-  case FTT_FINE_FINE:
-    GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*(*dt);
-    GFS_VARIABLE (face->neighbor, gv[c]->i) += dp*GFS_FACE_FRACTION_RIGHT (face);
-    break;
-  case FTT_FINE_COARSE: {
-    dp *= GFS_FACE_FRACTION_LEFT (face)/(FTT_CELLS/2);
-    GFS_VARIABLE (face->neighbor, gv[c]->i) += dp;
-    g_assert (GFS_FACE_FRACTION_RIGHT (face) > 0.);
-    GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp/GFS_FACE_FRACTION_RIGHT (face)*(*dt);
-    break;
-  }
-  default:
-    g_assert_not_reached ();
-  }
+  if (ftt_face_type (face) == FTT_FINE_COARSE)
+    dp *= GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*FTT_CELLS/2);
+  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*(*dt);
+  GFS_VARIABLE (face->neighbor, gv[c]->i) += dp;
 }
 
-static void scale_gradients_weighted (FttCell * cell, gpointer * data)
+static void scale_gradients (FttCell * cell, gpointer * data)
 {
   GfsVariable ** g = data[0];
   guint * dimension = data[1];
+  FttCellNeighbors n;
   FttComponent c;
 
-  if (GFS_IS_MIXED (cell)) {
-    GfsSolidVector * s = GFS_STATE (cell)->solid;
-
-    for (c = 0; c < *dimension; c++) {
-      g_assert (s->s[2*c] + s->s[2*c + 1] > 0.);
-      GFS_VARIABLE (cell, g[c]->i) /= s->s[2*c] + s->s[2*c + 1];
-    }
-  }
-  else {
-    FttCellNeighbors n;
-
-    ftt_cell_neighbors (cell, &n);
-    for (c = 0; c < *dimension; c++) {
-      FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
-
-      if (c1 && c2 && !GFS_CELL_IS_GRADIENT_BOUNDARY (c1) && !GFS_CELL_IS_GRADIENT_BOUNDARY (c2))
-	GFS_VARIABLE (cell, g[c]->i) /= 2.;
-    }
+  ftt_cell_neighbors (cell, &n);
+  for (c = 0; c < *dimension; c++) {
+    FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
+    
+    if (c1 && c2 && !GFS_CELL_IS_GRADIENT_BOUNDARY (c1) && !GFS_CELL_IS_GRADIENT_BOUNDARY (c2))
+      GFS_VARIABLE (cell, g[c]->i) /= 2.;
   }
 }
 
@@ -133,7 +111,7 @@ static void gfs_correct_normal_velocities_weighted (GfsDomain * domain,
 						    gdouble dt,
 						    gboolean weighted)
 {
-  if (!weighted)
+  if (weighted)
     gfs_correct_normal_velocities (domain, dimension, p, g, dt, NULL);
   else {
     gpointer data[3];
@@ -156,11 +134,11 @@ static void gfs_correct_normal_velocities_weighted (GfsDomain * domain,
     data[2] = &dt;
     gfs_domain_face_traverse (domain, dimension == 2 ? FTT_XY : FTT_XYZ,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) correct_normal_velocity_weighted, data);
+			      (FttFaceTraverseFunc) correct_normal_velocity, data);
     data[0] = g;
     data[1] = &dimension;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) scale_gradients_weighted, data);
+			      (FttCellTraverseFunc) scale_gradients, data);
     for (c = 0; c < dimension; c++)
       gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, g[c]);
   }
@@ -680,7 +658,7 @@ static void ocean_run (GfsSimulation * sim)
 
     gfs_domain_timer_start (domain, "correct_normal_velocities");
     gfs_poisson_coefficients (domain, NULL);
-    gfs_correct_normal_velocities (domain, 2, p, g, sim->advection_params.dt/2., NULL);
+    gfs_correct_normal_velocities_weighted (domain, 2, p, g, sim->advection_params.dt/2., FALSE);
     gfs_domain_cell_traverse_boundary (domain, FTT_BACK,
 				       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				       (FttCellTraverseFunc) compute_w, 

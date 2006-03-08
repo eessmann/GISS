@@ -62,28 +62,39 @@ static void correct_normal_velocity (FttCellFace * face,
 
   GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= dp*(*dt);
   if (gv)
-    GFS_VARIABLE (face->cell, gv[c]->i) += dp;
+    GFS_VARIABLE (face->cell, gv[c]->i) += dp*GFS_FACE_FRACTION_LEFT (face);
 
   if (ftt_face_type (face) == FTT_FINE_COARSE)
     dp *= GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*FTT_CELLS/2);
   GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*(*dt);
   if (gv)
-    GFS_VARIABLE (face->neighbor, gv[c]->i) += dp;
+    GFS_VARIABLE (face->neighbor, gv[c]->i) += dp*GFS_FACE_FRACTION_RIGHT (face);
 }
 
 static void scale_gradients (FttCell * cell, gpointer * data)
 {
   GfsVariable ** g = data[0];
   guint * dimension = data[1];
-  FttCellNeighbors n;
   FttComponent c;
 
-  ftt_cell_neighbors (cell, &n);
-  for (c = 0; c < *dimension; c++) {
-    FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
+  if (GFS_IS_MIXED (cell)) {
+    GfsSolidVector * s = GFS_STATE (cell)->solid;
+
+    for (c = 0; c < *dimension; c++) {
+      g_assert (s->s[2*c] + s->s[2*c + 1] > 0.);
+      GFS_VARIABLE (cell, g[c]->i) /= s->s[2*c] + s->s[2*c + 1];
+    }
+  }
+  else {
+    FttCellNeighbors n;
     
-    if (c1 && c2 && !GFS_CELL_IS_GRADIENT_BOUNDARY (c1) && !GFS_CELL_IS_GRADIENT_BOUNDARY (c2))
-      GFS_VARIABLE (cell, g[c]->i) /= 2.;
+    ftt_cell_neighbors (cell, &n);
+    for (c = 0; c < *dimension; c++) {
+      FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
+      
+      if (c1 && c2 && !GFS_CELL_IS_GRADIENT_BOUNDARY (c1) && !GFS_CELL_IS_GRADIENT_BOUNDARY (c2))
+	GFS_VARIABLE (cell, g[c]->i) /= 2.;
+    }
   }
 }
 

@@ -14,7 +14,8 @@ TESTDIRS = \
 	waves \
 	geo \
 	lid \
-	couette
+	couette \
+	plate
 
 EXTRA_DIST = \
 	template.tex \
