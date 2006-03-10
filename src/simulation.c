@@ -464,6 +464,7 @@ static void simulation_run (GfsSimulation * sim)
     i = i->next;
   }
 
+  gfs_simulation_set_timestep (sim);
   gfs_approximate_projection (domain,
       			      &sim->approx_projection_params,
       			      &sim->advection_params,
