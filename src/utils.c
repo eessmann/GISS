@@ -445,11 +445,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       i = ldv;
       while (i) {
 	GfsDerivedVariable * v = i->data;
-	fprintf (fin, "  %s = (* (Func) %p) (cell, face, sim, ", v->name, v->func);
-	if (v->data)
-	  fprintf (fin, "%p);\n", v->data);
-	else
-	  fprintf (fin, "NULL);\n");
+	fprintf (fin, "  %s = (* (Func) %p) (cell, face, sim, ((GfsDerivedVariable *) %p)->data);\n", 
+		 v->name, v->func, v);
 	i = i->next;
       }
       g_slist_free (ldv);

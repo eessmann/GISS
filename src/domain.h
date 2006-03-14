@@ -257,8 +257,8 @@ void         gfs_domain_combine_traverse      (GfsDomain * domain1,
 					       gpointer idata,
 					       FttCellTraverseFunc outside,
 					       gpointer odata);
-gboolean     gfs_domain_add_derived_variable  (GfsDomain * domain, 
-					       GfsDerivedVariable v);
+GfsDerivedVariable * gfs_domain_add_derived_variable  (GfsDomain * domain, 
+						       GfsDerivedVariable v);
 gboolean     gfs_domain_remove_derived_variable (GfsDomain * domain, 
 						 const gchar * name);
 

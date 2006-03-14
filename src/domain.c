@@ -3091,20 +3091,22 @@ void gfs_domain_combine_traverse (GfsDomain * domain1,
  *
  * Adds @v to @domain.
  *
- * Returns: %TRUE if the variable was successfully added to @domain or
- * %FALSE if a variable with the same name already exists.
+ * Returns: the #GfsDerivedVariable if the variable was successfully
+ * added to @domain or %NULL if a variable with the same name already
+ * exists.
  */
-gboolean gfs_domain_add_derived_variable (GfsDomain * domain, GfsDerivedVariable v)
+GfsDerivedVariable * gfs_domain_add_derived_variable (GfsDomain * domain, GfsDerivedVariable v)
 {
-  g_return_val_if_fail (domain != NULL, FALSE);
+  GfsDerivedVariable * v1;
 
-  if (gfs_variable_from_name (domain->variables, v.name))
-    return FALSE;
-  if (gfs_derived_variable_from_name (domain->derived_variables, v.name))
-    return FALSE;
-  domain->derived_variables = g_slist_prepend (domain->derived_variables, 
-					       g_memdup (&v, sizeof (GfsDerivedVariable)));
-  return TRUE;
+  g_return_val_if_fail (domain != NULL, NULL);
+
+  if (gfs_variable_from_name (domain->variables, v.name) ||
+      gfs_derived_variable_from_name (domain->derived_variables, v.name))
+    return NULL;
+  v1 = g_memdup (&v, sizeof (GfsDerivedVariable));
+  domain->derived_variables = g_slist_prepend (domain->derived_variables, v1);
+  return v1;
 }
 
 /**
