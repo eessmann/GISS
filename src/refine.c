@@ -136,13 +136,72 @@ GfsRefine * gfs_refine_new (GfsRefineClass * klass)
 
 /* GfsRefineSolid: Object */
 
+typedef struct _GfsRefineSolid           GfsRefineSolid;
+
+struct _GfsRefineSolid {
+  GfsRefine parent;
+
+  GfsDerivedVariable * v;
+};
+  
+#define GFS_REFINE_SOLID(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsRefineSolid,\
+					           gfs_refine_solid_class ())
+
+static void refine_solid_destroy (GtsObject * object)
+{
+  gfs_domain_remove_derived_variable (GFS_DOMAIN (gfs_object_simulation (object)), 
+				      "SolidCurvature");
+
+  (* GTS_OBJECT_CLASS (gfs_refine_solid_class ())->parent_class->destroy) (object);
+}
+
+static void max_kappa (GtsVertex * v, gpointer * data)
+{
+  GtsSurface * s = data[0];
+  gdouble * max = data[1];
+  GtsVector Kh;
+
+  if (gts_vertex_mean_curvature_normal (v, s, Kh)) {
+    gdouble kappa = gts_vector_norm (Kh)/(FTT_DIMENSION - 1);
+    if (kappa > *max)
+      *max = kappa;
+  }
+}
+
+static gdouble solid_curvature (FttCell * cell, FttCellFace * face, 
+				GfsDomain * domain, GtsSurface * s)
+{
+  gdouble kappa = gfs_solid_is_thin (cell, s) ? 1./ftt_cell_size (cell) : 0.;
+  gpointer data[] = {GTS_OBJECT (s)->reserved, &kappa};
+  gts_surface_foreach_vertex (s, (GtsFunc) max_kappa, data);
+  return kappa;
+}
+
+static void refine_solid_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsDerivedVariable v = { "SolidCurvature", solid_curvature };
+  GfsRefineSolid * refine = GFS_REFINE_SOLID (*o);
+
+  refine->v = gfs_domain_add_derived_variable (GFS_DOMAIN (gfs_object_simulation (*o)), v);
+  if (!refine->v) {
+    gts_file_error (fp, "derived variable `SolidCurvature' already defined");
+    return;
+  }
+
+  (* GTS_OBJECT_CLASS (gfs_refine_solid_class ())->parent_class->read) (o, fp);
+}
+
 static void refine_cut_cell (FttCell * cell, GtsSurface * s, gpointer * data)
 {
   GfsRefine * refine = data[0];
   GfsDomain * domain = data[1];
 
+  GTS_OBJECT (s)->reserved = GFS_SIMULATION (domain)->surface;
+  GFS_REFINE_SOLID (refine)->v->data = s;
   if (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, cell))
     ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
+  GFS_REFINE_SOLID (refine)->v->data = NULL;
 }
 
 static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
@@ -151,7 +210,7 @@ static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
     gpointer data[2];
 
     data[0] = refine;
-    data[1] = sim;    
+    data[1] = sim;
     gfs_domain_traverse_cut (GFS_DOMAIN (sim), sim->surface, 
 			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			     (FttCellTraverseCutFunc) refine_cut_cell, data);
@@ -161,6 +220,8 @@ static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
 static void gfs_refine_solid_class_init (GfsRefineClass * klass)
 {
   klass->refine = gfs_refine_solid_refine;
+  GTS_OBJECT_CLASS (klass)->destroy = refine_solid_destroy;
+  GTS_OBJECT_CLASS (klass)->read = refine_solid_read;
 }
 
 GfsRefineClass * gfs_refine_solid_class (void)
@@ -170,7 +231,7 @@ GfsRefineClass * gfs_refine_solid_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo gfs_refine_solid_info = {
       "GfsRefineSolid",
-      sizeof (GfsRefine),
+      sizeof (GfsRefineSolid),
       sizeof (GfsRefineClass),
       (GtsObjectClassInitFunc) gfs_refine_solid_class_init,
       (GtsObjectInitFunc) NULL,
@@ -423,7 +484,7 @@ static void refine_height_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
-  (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->read) (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_refine_height_class ())->parent_class->read) (o, fp);
 }
 
 static void gfs_refine_height_class_init (GfsRefineClass * klass)
