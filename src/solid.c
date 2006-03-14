@@ -221,6 +221,42 @@ static void triangle_face_intersection (GtsTriangle * t, CellFace * f)
   }
 }
 
+static void face_new (CellFace * f, FttCell * cell, GtsSurface * s, FttVector * h)
+{
+  FttVector p;
+
+  ftt_cell_pos (cell, &p);
+  f->p[0].x = p.x - h->x/2.; f->p[0].y = p.y - h->y/2.; f->p[0].z = 0.;
+  f->p[1].x = p.x + h->x/2.; f->p[1].y = p.y - h->y/2.; f->p[1].z = 0.;
+  f->p[2].x = p.x + h->x/2.; f->p[2].y = p.y + h->y/2.; f->p[2].z = 0.;
+  f->p[3].x = p.x - h->x/2.; f->p[3].y = p.y + h->y/2.; f->p[3].z = 0.;
+  f->x[0] = f->x[1] = f->x[2] = f->x[3] = 0.;
+  f->n[0] = f->n[1] = f->n[2] = f->n[3] = 0;
+  f->inside[0] = f->inside[1] = f->inside[2] = f->inside[3] = 0;
+
+  gts_surface_foreach_face (s, (GtsFunc) triangle_face_intersection, f);
+}
+
+static gboolean solid_face_is_thin (CellFace * f)
+{
+  guint odd = 0, even = 0, i;
+
+  for (i = 0; i < 4; i++)
+    if (f->n[i]) {
+      if (f->n[i] % 2 != 0)
+	odd++;
+      else
+	even++;
+    }
+  if (odd == 2 && even == 1) {
+    for (i = 0; i < 4; i++)
+      if (f->n[i] % 2 != 0 && f->n[(i + 2) % 4] % 2 != 0)
+	return FALSE;
+    return TRUE;
+  }
+  return (odd > 2 || even > 1);
+}
+
 /**
  * gfs_set_2D_solid_fractions_from_surface:
  * @cell: a #FttCell.
@@ -233,26 +269,15 @@ void gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
 {
   GfsSolidVector * solid;
   FttVector h;
-  FttVector p;
   CellFace f;
   guint i, n1 = 0;
 
   g_return_if_fail (cell != NULL);
   g_return_if_fail (s != NULL);
 
-  solid = GFS_STATE (cell)->solid;
-  ftt_cell_pos (cell, &p);
   h.x = h.y = ftt_cell_size (cell);
-  f.p[0].x = p.x - h.x/2.; f.p[0].y = p.y - h.y/2.; f.p[0].z = 0.;
-  f.p[1].x = p.x + h.x/2.; f.p[1].y = p.y - h.y/2.; f.p[1].z = 0.;
-  f.p[2].x = p.x + h.x/2.; f.p[2].y = p.y + h.y/2.; f.p[2].z = 0.;
-  f.p[3].x = p.x - h.x/2.; f.p[3].y = p.y + h.y/2.; f.p[3].z = 0.;
-  f.x[0] = f.x[1] = f.x[2] = f.x[3] = 0.;
-  f.n[0] = f.n[1] = f.n[2] = f.n[3] = 0;
-  f.inside[0] = f.inside[1] = f.inside[2] = f.inside[3] = 0;
-
-  gts_surface_foreach_face (s, (GtsFunc) triangle_face_intersection, &f);
-
+  face_new (&f, cell, s, &h);
+  
   for (i = 0; i < 4; i++)
     if (f.n[i] % 2 != 0) {
       f.x[i] /= f.n[i];
@@ -261,6 +286,7 @@ void gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
     else
       f.n[i] = 0;
 
+  solid = GFS_STATE (cell)->solid;
   switch (n1) {
   case 0:
     if (solid) {
@@ -281,7 +307,33 @@ void gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
 }
 
 #if FTT_2D /* 2D */
+
 # define set_solid_fractions_from_surface gfs_set_2D_solid_fractions_from_surface
+
+/**
+ * gfs_solid_is_thin:
+ * @cell: a #FttCell.
+ * @s: a #GtsSurface.
+ *
+ * @s is "thin" relative to @cell if the miminum distance between
+ * non-connected faces of @s cutting @cell is smaller than the size of
+ * @cell (see doc/figures/thin.fig).
+ *
+ * Returns: %TRUE if @s is a thin surface, %FALSE otherwise.
+ */
+gboolean gfs_solid_is_thin (FttCell * cell, GtsSurface * s)
+{
+  CellFace f;
+  FttVector h;
+
+  g_return_val_if_fail (cell != NULL, FALSE);
+  g_return_val_if_fail (s != NULL, FALSE);
+
+  h.x = h.y = ftt_cell_size (cell);
+  face_new (&f, cell, s, &h);
+  return solid_face_is_thin (&f);
+}
+
 #else /* 2D3 or 3D */
 #include "isocube.h"
 
@@ -357,7 +409,7 @@ static guint topology (CellCube * cube)
   gboolean used[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
   
   for (l = 0; l < 12; l++) {
-    guint nv = 0, e = l, cut = cube->n[e];
+    guint nv = 0, e = l, cut = cube->n[e] % 2;
     
     while (cut && !used[e]) {
       guint m = 0, * ne = connect[e][cube->inside[e] > 0];
@@ -367,13 +419,31 @@ static guint topology (CellCube * cube)
       cut = 0;
       while (m < 3 && !cut) {
 	e = ne[m++];
-	cut = cube->n[e];
+	cut = cube->n[e] % 2;
       }
     }
     if (nv > 2)
       nl++;
   }
   return nl;
+}
+
+static void cube_new (CellCube * cube, FttCell * cell, GtsSurface * s, FttVector * o, FttVector * h)
+{
+  guint i;
+
+  for (i = 0; i < FTT_DIMENSION; i++)
+    (&o->x)[i] -= (&h->x)[i]/2.;
+  for (i = 0; i < 12; i++) {
+    cube->x[i] = 0.; cube->n[i] = 0; cube->inside[i] = 0;
+  }
+  for (i = 0; i < 8; i++) { /* for each vertex of the cube */
+    cube->p[i].x = o->x + h->x*vertex[i].x;
+    cube->p[i].y = o->y + h->y*vertex[i].y;
+    cube->p[i].z = o->z + h->z*vertex[i].z;
+  }
+
+  gts_surface_foreach_face (s, (GtsFunc) triangle_cube_intersection, cube);  
 }
 
 static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
@@ -387,18 +457,7 @@ static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
 
   ftt_cell_pos (cell, &o);
   cell_size (cell, &h);
-  for (i = 0; i < FTT_DIMENSION; i++)
-    (&o.x)[i] -= (&h.x)[i]/2.;
-  for (i = 0; i < 12; i++) {
-    cube.x[i] = 0.; cube.n[i] = 0; cube.inside[i] = 0;
-  }
-  for (i = 0; i < 8; i++) { /* for each vertex of the cube */
-    cube.p[i].x = o.x + h.x*vertex[i].x;
-    cube.p[i].y = o.y + h.y*vertex[i].y;
-    cube.p[i].z = o.z + h.z*vertex[i].z;
-  }
-
-  gts_surface_foreach_face (s, (GtsFunc) triangle_cube_intersection, &cube);
+  cube_new (&cube, cell, s, &o, &h);
 
   for (i = 0; i < 12; i++) /* for each edge of the cube */
     if (cube.n[i] % 2 != 0) { /* only for odd number of intersections */
@@ -532,7 +591,43 @@ static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
   }
 }
 
+/**
+ * gfs_solid_is_thin:
+ * @cell: a #FttCell.
+ * @s: a #GtsSurface.
+ *
+ * @s is "thin" relative to @cell if the miminum distance between
+ * non-connected faces of @s cutting @cell is smaller than the size of
+ * @cell (see doc/figures/thin.fig).
+ *
+ * Returns: %TRUE if @s is a thin surface, %FALSE otherwise.
+ */
+gboolean gfs_solid_is_thin (FttCell * cell, GtsSurface * s)
+{
+  CellCube cube;
+  FttVector o, h;
+  guint i;
+
+  g_return_val_if_fail (cell != NULL, FALSE);
+  g_return_val_if_fail (s != NULL, FALSE);
+
+  ftt_cell_pos (cell, &o);
+  cell_size (cell, &h);
+  cube_new (&cube, cell, s, &o, &h);
+  for (i = 0; i < FTT_NEIGHBORS; i++) {
+    CellFace f;
+    guint j;
+
+    for (j = 0; j < 4; j++)
+      f.n[j] = cube.n[face[i][j][0]];
+    if (solid_face_is_thin (&f))
+      return TRUE;
+  }
+  return (topology (&cube) > 1);
+}
+
 # define set_solid_fractions_from_surface set_solid_fractions_from_surface3D
+
 #endif /* 2D3 or 3D */
 
 static gdouble solid_sa (GfsSolidVector * s)
