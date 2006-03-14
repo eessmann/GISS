@@ -88,6 +88,8 @@ typedef enum {
 #define GFS_CELL_IS_BOUNDARY(cell) (((cell)->flags & GFS_FLAG_BOUNDARY) != 0)
 #define GFS_CELL_IS_GRADIENT_BOUNDARY(cell) (((cell)->flags & GFS_FLAG_GRADIENT_BOUNDARY) != 0)
 
+FttCellFace           gfs_cell_face                 (FttCell * cell,
+						     FttDirection d);
 void                  gfs_cell_cleanup              (FttCell * cell);
 void                  gfs_cell_reset                (FttCell * cell, 
 						     GfsVariable * v);

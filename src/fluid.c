@@ -26,6 +26,28 @@
 #include "domain.h"
 #include "solid.h"
 
+/**
+ * gfs_cell_face:
+ * @cell: a #FttCell.
+ * @d: a direction.
+ *
+ * This function is different from ftt_cell_face() because it takes
+ * into account the solid fractions.
+ *
+ * Returns: the face of @cell in direction @d.
+ */
+FttCellFace gfs_cell_face (FttCell * cell,
+			   FttDirection d)
+{
+  FttCellFace f = {cell, NULL, d};
+
+  g_return_val_if_fail (cell != NULL, f);
+
+  if (!GFS_IS_MIXED (cell) || GFS_STATE (cell)->solid->s[d] > 0.)
+    f.neighbor = ftt_cell_neighbor (cell, d);
+  return f;
+}
+
 typedef struct _Gradient Gradient;
 
 /* grad(p) = -a*p(cell) + b*p(neighbor) + c */
@@ -45,15 +67,15 @@ static gdouble average_neighbor_value (const FttCellFace * face,
   else {
     FttCellChildren children;
     gdouble av = 0., a = 0.;
+    FttDirection od = FTT_OPPOSITE_DIRECTION (face->d);
     guint i, n;
     
-    n = ftt_cell_children_direction (face->neighbor,
-				     FTT_OPPOSITE_DIRECTION (face->d),
-				     &children);
-    for (i = 0; i < n; i++) 
+    n = ftt_cell_children_direction (face->neighbor, od, &children);
+    for (i = 0; i < n; i++)
       if (children.c[i]) {
-	a += 1.;
-	av += GFS_VARIABLE (children.c[i], v);
+	gdouble w = GFS_IS_MIXED (children.c[i]) ? GFS_STATE (children.c[i])->solid->s[od] : 1.;
+	a += w;
+	av += w*GFS_VARIABLE (children.c[i], v);
       }
     if (a > 0.) {
       *x = 3./4.;
@@ -84,10 +106,10 @@ static GfsGradient interpolate_1D2 (FttCell * cell,
   g_return_val_if_fail (cell != NULL, p);
   g_return_val_if_fail (!GFS_IS_MIXED (cell), p);
   
-  f1 = ftt_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
   if (f1.neighbor)
     p1 = average_neighbor_value (&f1, v, &x1);
-  f2 = ftt_cell_face (cell, d);
+  f2 = gfs_cell_face (cell, d);
   if (f2.neighbor)
     p2 = average_neighbor_value (&f2, v, &x2);
 
@@ -120,7 +142,7 @@ static GfsGradient interpolate_1D1 (FttCell * cell,
   GfsGradient p;
   FttCellFace f;
 
-  f = ftt_cell_face (cell, d);
+  f = gfs_cell_face (cell, d);
   if (f.neighbor) {
     gdouble p2;
     gdouble x2 = 1.;
@@ -155,10 +177,10 @@ static GfsGradient interpolate_2D1 (FttCell * cell,
   gdouble a1, a2;
   FttCellFace f1, f2;
 
-  f1 = ftt_cell_face (cell, d1);
+  f1 = gfs_cell_face (cell, d1);
   if (f1.neighbor)
     p1 = average_neighbor_value (&f1, v, &y1);
-  f2 = ftt_cell_face (cell, d2);
+  f2 = gfs_cell_face (cell, d2);
   if (f2.neighbor)
     p2 = average_neighbor_value (&f2, v, &x2);
 
@@ -249,11 +271,13 @@ static Gradient gradient_fine_coarse (const FttCellFace * face,
     g.a = 2./9.;
     g.b = 14.*p.a/27.;
     g.c = 0.;
-    for (i = 0; i < j; i++) 
+    for (i = 0; i < j; i++)
       if (children.c[i]) {
-	g.c += GFS_VARIABLE (children.c[i], v);
-	sa += 1.;
+	gdouble w = GFS_IS_MIXED (children.c[i]) ? GFS_STATE (children.c[i])->solid->s[face->d] : 1.;
+	g.c += w*GFS_VARIABLE (children.c[i], v);
+	sa += w;
       }
+    g_assert (sa > 0.);
     g.c = (14.*p.b - 8.*g.c/sa)/27.;
   }
 
@@ -359,12 +383,12 @@ gdouble gfs_center_gradient (FttCell * cell,
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (c < FTT_DIMENSION, 0.);
 
-  f1 = ftt_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
   if (f1.neighbor == cell) /* periodic */
     return 0.;
   v0 = GFS_VARIABLE (cell, v);
   if (f1.neighbor) {
-    FttCellFace f2 = ftt_cell_face (cell, d);
+    FttCellFace f2 = gfs_cell_face (cell, d);
     gdouble x1 = 1., v1;
     
     v1 = neighbor_value (&f1, v, &x1);
@@ -380,7 +404,7 @@ gdouble gfs_center_gradient (FttCell * cell,
       return (v0 - v1)/x1;
   }
   else {
-    FttCellFace f2 = ftt_cell_face (cell, d);
+    FttCellFace f2 = gfs_cell_face (cell, d);
 
     if (f2.neighbor) {
       gdouble x2 = 1.;
@@ -415,11 +439,11 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (c < FTT_DIMENSION, 0.);
 
-  f1 = ftt_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
   if (f1.neighbor == cell) /* periodic */
     return 0.;
   if (f1.neighbor) {
-    FttCellFace f2 = ftt_cell_face (cell, d);
+    FttCellFace f2 = gfs_cell_face (cell, d);
     
     if (f2.neighbor) {
       /* two neighbors: second-order differencing (parabola)
@@ -429,7 +453,7 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
       
       v0 = GFS_VARIABLE (cell, v);
       v1 = neighbor_value (&f1, v, &x1);
-      v2 = neighbor_value (&f2, v, &x2);      
+      v2 = neighbor_value (&f2, v, &x2);
       
       s1 = 2.*(v0 - v1);
       s2 = 2.*(v2 - v0);
@@ -498,9 +522,9 @@ void gfs_face_gradient (const FttCellFace * face,
       f.d = FTT_OPPOSITE_DIRECTION (face->d);
       n = ftt_cell_children_direction (face->neighbor, f.d, &children);
       f.neighbor = face->cell;
-      for (i = 0; i < n; i++) 
+      for (i = 0; i < n; i++)
 	if ((f.cell = children.c[i])) {
-	  Gradient gcf;	  
+	  Gradient gcf;
 	  gcf = gradient_fine_coarse (&f, v, max_level);
 	  s = GFS_FACE_FRACTION (&f);
 	  g->a += s*gcf.b;
@@ -1664,7 +1688,7 @@ gdouble gfs_face_interpolated_value (const FttCellFace * face,
 
   v0 = GFS_VARIABLE (face->cell, v);
   v1 = neighbor_value (face, v, &x1);
-  f2 = ftt_cell_face (face->cell, FTT_OPPOSITE_DIRECTION (face->d));
+  f2 = gfs_cell_face (face->cell, FTT_OPPOSITE_DIRECTION (face->d));
   if (f2.neighbor) {
     gdouble x2 = 1.;
     gdouble v2 = neighbor_value (&f2, v, &x2);
