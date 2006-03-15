@@ -263,17 +263,20 @@ static gboolean solid_face_is_thin (CellFace * f)
  * @s: a #GtsSurface.
  *
  * Sets the 2D volume fractions of @cell cut by @s.
+ *
+ * Returns: %TRUE if the cell is thin, %FALSE otherwise;
  */
-void gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
-					      GtsSurface * s)
+gboolean gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
+						  GtsSurface * s)
 {
   GfsSolidVector * solid;
   FttVector h;
   CellFace f;
   guint i, n1 = 0;
+  gboolean thin = FALSE;
 
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (s != NULL);
+  g_return_val_if_fail (cell != NULL, FALSE);
+  g_return_val_if_fail (s != NULL, FALSE);
 
   h.x = h.y = ftt_cell_size (cell);
   face_new (&f, cell, s, &h);
@@ -294,7 +297,10 @@ void gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
       GFS_STATE (cell)->solid = NULL;
     }
     break;
-  case 2: case 4: {
+  case 4:
+    thin = TRUE;
+    /* fall through */
+  case 2: {
     if (!solid)
       GFS_STATE (cell)->solid = solid = g_malloc (sizeof (GfsSolidVector));
     face_fractions (&f, solid, &h);
@@ -304,11 +310,28 @@ void gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
     g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
 	   "the surface is probably not closed (n1 = %d)", n1);
   }
+  return thin;
 }
+
+typedef struct {
+  gboolean destroy_solid;
+  FttCellCleanupFunc cleanup;
+  gpointer data;
+  GfsVariable * status;
+  guint thin;
+} InitSolidParams;
 
 #if FTT_2D /* 2D */
 
-# define set_solid_fractions_from_surface gfs_set_2D_solid_fractions_from_surface
+static void set_solid_fractions_from_surface (FttCell * cell,
+					      GtsSurface * s,
+					      InitSolidParams * p)
+{
+  if (gfs_set_2D_solid_fractions_from_surface (cell, s)) {
+    GFS_VARIABLE (cell, p->status->i) = 1.;
+    p->thin++;
+  }
+}
 
 /**
  * gfs_solid_is_thin:
@@ -446,7 +469,7 @@ static void cube_new (CellCube * cube, FttCell * cell, GtsSurface * s, FttVector
   gts_surface_foreach_face (s, (GtsFunc) triangle_cube_intersection, cube);  
 }
 
-static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
+static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s, InitSolidParams * p)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
   CellCube cube;
@@ -581,13 +604,8 @@ static void set_solid_fractions_from_surface3D (FttCell * cell, GtsSurface * s)
   else {
     solid->cm = solid->ca;
     solid->a = 0.;
-    for (i = 0; i < FTT_NEIGHBORS; i++)
-      solid->a += solid->s[i];
-    solid->a /= FTT_NEIGHBORS;
-    if (solid->a == 0. || solid->a == 1.) {
-      g_free (solid);
-      GFS_STATE (cell)->solid = NULL;
-    }
+    GFS_VARIABLE (cell, p->status->i) = 1.;
+    p->thin++;
   }
 }
 
@@ -625,8 +643,6 @@ gboolean gfs_solid_is_thin (FttCell * cell, GtsSurface * s)
   }
   return (topology (&cube) > 1);
 }
-
-# define set_solid_fractions_from_surface set_solid_fractions_from_surface3D
 
 #endif /* 2D3 or 3D */
 
@@ -752,7 +768,7 @@ static void push_leaf (GtsFifo * fifo, FttCell * cell, FttDirection d, gdouble a
 	GFS_VARIABLE (child.c[i], status->i) = a;
 	gts_fifo_push (fifo, child.c[i]);
       }
-  }  
+  }
 }
 
 static void paint_leaf (GtsFifo * fifo, gdouble a, GfsVariable * status)
@@ -803,13 +819,6 @@ static void paint_mixed_leaf (FttCell * cell, GfsVariable * status)
   }
 }
 
-typedef struct {
-  gboolean destroy_solid;
-  FttCellCleanupFunc cleanup;
-  gpointer data;
-  GfsVariable * status;
-} InitSolidParams;
-
 static void solid_fractions_from_children (FttCell * cell, InitSolidParams * p)
 {
   if (!FTT_CELL_IS_LEAF (cell)) {
@@ -856,28 +865,33 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
   if (GFS_IS_MIXED (cell)) {
     FttCellNeighbors neighbor;
     guint level = ftt_cell_level (cell);
+    GfsSolidVector * solid = GFS_STATE (cell)->solid;
     FttDirection d;
 
     ftt_cell_neighbors (cell, &neighbor);
     for (d = 0; d < FTT_NEIGHBORS; d++)
       if (neighbor.c[d] &&
-	  !GFS_CELL_IS_BOUNDARY (neighbor.c[d]) &&
-	  GFS_VARIABLE (neighbor.c[d], status->i) != 1.) {
+	  !GFS_CELL_IS_BOUNDARY (neighbor.c[d])) {
 	if (!FTT_CELL_IS_LEAF (neighbor.c[d])) {
 	  FttCellChildren child;
 	  FttDirection od = FTT_OPPOSITE_DIRECTION (d);
 	  guint i, n = ftt_cell_children_direction (neighbor.c[d], od, &child);
 	  gdouble s = 0.;
 
+	  g_assert (GFS_VARIABLE (neighbor.c[d], status->i) != 1.);
 	  for (i = 0; i < n; i++)
 	    if (child.c[i] && GFS_VARIABLE (child.c[i], status->i) != 1.)
 	      s += GFS_IS_MIXED (child.c[i]) ? GFS_STATE (child.c[i])->solid->s[od] : 1.;
-	  GFS_STATE (cell)->solid->s[d] = s/n;
+	  solid->s[d] = s/n;
 	}
-	else if (!GFS_IS_MIXED (neighbor.c[d]) && GFS_STATE (cell)->solid->s[d] < 1.) {
-	  g_assert (ftt_cell_level (neighbor.c[d]) == level - 1);
-	  GFS_STATE (cell)->solid->s[d] = 1.;
+	else if (GFS_VARIABLE (neighbor.c[d], status->i) != 1.) {
+	  if (!GFS_IS_MIXED (neighbor.c[d]) && solid->s[d] < 1.) {
+	    g_assert (ftt_cell_level (neighbor.c[d]) == level - 1);
+	    solid->s[d] = 1.;
+	  }
 	}
+	else if (GFS_IS_MIXED (neighbor.c[d])) /* this is a thin cell */
+	  solid->s[d] = 0.;
       }
   }
 }
@@ -895,27 +909,30 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
  *
  * If @destroy_solid is set to %TRUE, the cells entirely contained in
  * the solid are destroyed using @cleanup as cleanup function.  
+ *
+ * Returns: the number of thin cells.
  */
-void gfs_domain_init_solid_fractions (GfsDomain * domain,
-				      GtsSurface * s,
-				      gboolean destroy_solid,
-				      FttCellCleanupFunc cleanup,
-				      gpointer data,
-				      GfsVariable * status)
+guint gfs_domain_init_solid_fractions (GfsDomain * domain,
+				       GtsSurface * s,
+				       gboolean destroy_solid,
+				       FttCellCleanupFunc cleanup,
+				       gpointer data,
+				       GfsVariable * status)
 {
   InitSolidParams p;
 
-  g_return_if_fail (domain != NULL);
-  g_return_if_fail (s != NULL);
+  g_return_val_if_fail (domain != NULL, 0);
+  g_return_val_if_fail (s != NULL, 0);
 
   p.destroy_solid = destroy_solid;
   p.cleanup = cleanup;
   p.data = data;
   p.status = status ? status : gfs_temporary_variable (domain);
-  gfs_domain_traverse_cut (domain, s, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			   (FttCellTraverseCutFunc) set_solid_fractions_from_surface, NULL);
+  p.thin = 0;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, p.status);
+  gfs_domain_traverse_cut (domain, s, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			   (FttCellTraverseCutFunc) set_solid_fractions_from_surface, &p);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) paint_mixed_leaf, p.status);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -923,6 +940,8 @@ void gfs_domain_init_solid_fractions (GfsDomain * domain,
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) foreach_box, &p);
   if (status == NULL)
     gts_object_destroy (GTS_OBJECT (p.status));
+
+  return p.thin;
 }
 
 static gboolean check_area_fractions (const FttCell * root)

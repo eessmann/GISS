@@ -749,10 +749,12 @@ static gboolean gfs_output_solid_stats_event (GfsEvent * event,
 	     "Total merged solid volume fraction\n"
 	     "    min: %10.3e avg: %10.3e | %10.3e max: %10.3e n: %10d\n"
 	     "Number of cells merged per merged cell\n"
-	     "    min: %10.0f avg: %10.3f | %10.3f max: %10.0f n: %10d\n",
+	     "    min: %10.0f avg: %10.3f | %10.3f max: %10.0f n: %10d\n"
+	     "Number of \"thin\" cells removed: %10d\n",
 	     stats.min, stats.mean, stats.stddev, stats.max, stats.n,
 	     ma.min, ma.mean, ma.stddev, ma.max, ma.n,
-	     mn.min, mn.mean, mn.stddev, mn.max, mn.n);
+	     mn.min, mn.mean, mn.stddev, mn.max, mn.n,
+	     sim->thin);
     return TRUE;
   }
   return FALSE;

@@ -80,10 +80,11 @@ static void scale_gradients (FttCell * cell, gpointer * data)
   if (GFS_IS_MIXED (cell)) {
     GfsSolidVector * s = GFS_STATE (cell)->solid;
 
-    for (c = 0; c < *dimension; c++) {
-      g_assert (s->s[2*c] + s->s[2*c + 1] > 0.);
-      GFS_VARIABLE (cell, g[c]->i) /= s->s[2*c] + s->s[2*c + 1];
-    }
+    for (c = 0; c < *dimension; c++)
+      if (s->s[2*c] + s->s[2*c + 1] > 0.)
+	GFS_VARIABLE (cell, g[c]->i) /= s->s[2*c] + s->s[2*c + 1];
+      else
+	g_assert (GFS_VARIABLE (cell, g[c]->i) == 0.);
   }
   else {
     FttCellNeighbors n;

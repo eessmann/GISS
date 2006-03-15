@@ -65,6 +65,7 @@ struct _GfsSimulation {
   GfsAdvectionParams advection_params;
 
   GtsSurface * surface;
+  guint thin;
   gboolean output_surface;
 
   GtsSListContainer * refines;

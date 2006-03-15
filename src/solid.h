@@ -31,9 +31,9 @@ extern "C" {
 void         gfs_cell_fluid                              (FttCell * cell);
 gboolean     gfs_solid_is_thin                           (FttCell * cell, 
 							  GtsSurface * s);
-void         gfs_set_2D_solid_fractions_from_surface     (FttCell * cell,
+gboolean     gfs_set_2D_solid_fractions_from_surface     (FttCell * cell,
 							  GtsSurface * s);
-void         gfs_domain_init_solid_fractions             (GfsDomain * domain,
+guint        gfs_domain_init_solid_fractions             (GfsDomain * domain,
 							  GtsSurface * s,
 							  gboolean destroy_solid,
 							  FttCellCleanupFunc cleanup,
