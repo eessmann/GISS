@@ -518,6 +518,15 @@ static void simulation_run (GfsSimulation * sim)
 					       g,
 					       sim->physical_params.alpha);
 
+    if (gfs_has_source_coriolis (domain)) {
+      gfs_poisson_coefficients (domain, sim->physical_params.alpha);
+      gfs_correct_normal_velocities (domain, 2, p, g, 0., NULL);
+      gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt);
+      gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
+      gfs_correct_normal_velocities (domain, 2, p, g, 0., NULL);
+      gfs_correct_centered_velocities (domain, 2, g, -sim->advection_params.dt);
+    }
+
     gfs_simulation_adapt (sim, NULL);
     gfs_approximate_projection (domain,
    				&sim->approx_projection_params, 
