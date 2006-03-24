@@ -116,116 +116,6 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
     gts_file_variable_error (fp, var, "beta", "beta must be in [0.5,1]");
 }
 
-#define FACE_GRADIENT(x, y, z, u) (gfs_face_weighted_gradient (x, y, z, u))
-//#define FACE_GRADIENT(x, y, z, u) (gfs_face_gradient_flux_centered (x, y, z, u))
-
-void gfs_face_gradient_flux_centered (const FttCellFace * face,
-				      GfsGradient * g,
-				      guint v,
-				      gint max_level)
-{
-  guint level;
-
-  g_return_if_fail (face != NULL);
-
-  g->a = g->b = 0.;
-  if (face->neighbor == NULL)
-    return;
-
-  level = ftt_cell_level (face->cell);
-  if (ftt_cell_level (face->neighbor) < level) {
-    g_assert_not_implemented ();
-#if 0
-    /* neighbor is at a shallower level */
-    Gradient gcf;
-    gdouble w = GFS_STATE (face->cell)->f[face->d].v;
-
-    gcf = gradient_flux_fine_coarse (face, v, max_level);
-    g->a = w*gcf.a;
-    g->b = w*(gcf.b*GFS_VARIABLE (face->neighbor, v) + gcf.c);
-#endif
-  }
-  else {
-    if (level == max_level || FTT_CELL_IS_LEAF (face->neighbor)) {
-      /* neighbor is at the same level */
-      gdouble w = GFS_STATE (face->cell)->f[face->d].v;
-
-      if (!GFS_IS_MIXED (face->cell) || !GFS_IS_MIXED (face->neighbor)) {
-	g->a = w;
-	g->b = w*GFS_VARIABLE (face->neighbor, v);
-      }
-      else {
-	FttComponent c = face->d/2;
-	FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
-	FttCell * n[4];
-	gdouble ye = (1. - GFS_FACE_FRACTION (face))/2.;
-	GfsSolidVector * s = GFS_STATE (face->cell)->solid;
-
-	n[0] = face->cell; n[1] = face->neighbor;
-	if ((s->s[2*cp] == 1. && s->s[2*cp + 1] < 1.) ||
-	    (s->s[2*cp + 1] == 0. && 
-	     s->s[2*cp] < 1. && s->s[2*cp] > 0.)) {
-	  n[2] = ftt_cell_neighbor (n[0], 2*cp);
-	  n[3] = ftt_cell_neighbor (n[1], 2*cp);
-	}
-	else if ((s->s[2*cp + 1] == 1. && s->s[2*cp] < 1.) ||
-		 (s->s[2*cp] == 0. && 
-		  s->s[2*cp + 1] < 1. && s->s[2*cp + 1] > 0.)) {
-	  n[2] = ftt_cell_neighbor (n[0], 2*cp + 1);
-	  n[3] = ftt_cell_neighbor (n[1], 2*cp + 1);
-	}
-	else {
-	  g->a = w;
-	  g->b = w*GFS_VARIABLE (n[1], v);
-	  return;
-	}
-
-	//	g_assert (n[2] && n[3]);
-	if (n[2] && n[3]) {
-	  g->a = w*(1. - ye);
-	  g->b = w*(1. - ye)*GFS_VARIABLE (n[1], v) + 
-	    w*ye*(GFS_VARIABLE (n[3], v) - GFS_VARIABLE (n[2], v));
-	}
-	else {
-	  g->a = w;
-	  g->b = w*GFS_VARIABLE (n[1], v);
-	}
-      }
-    }
-    else {
-    g_assert_not_implemented ();
-#if 0
-      /* neighbor is at a deeper level */
-      FttCellChildren children;
-      FttCellFace f;
-      guint i, n;
-      
-      f.d = FTT_OPPOSITE_DIRECTION (face->d);
-      n = ftt_cell_children_direction (face->neighbor, f.d, &children);
-      f.neighbor = face->cell;
-      for (i = 0; i < n; i++) {
-	Gradient gcf;
-	gdouble w;
-
-	f.cell = children.c[i];
-	w = GFS_STATE (f.cell)->f[f.d].v;
-	
-	/* check for mixed cell refinement violation (topology.fig) */
-	g_assert (f.cell);
-	
-	gcf = gradient_fine_coarse (&f, v, max_level);
-	g->a += w*gcf.b;
-	g->b += w*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
-      }
-#endif
-#if (!FTT_2D && !FTT_2D3)
-      g->a /= 2.;
-      g->b /= 2.;
-#endif /* not 2D and not 2D3 */
-    }
-  }
-}
-
 typedef struct {
   guint u, rhs, dia, res;
   gint maxlevel;
@@ -246,7 +136,7 @@ static void relax (FttCell * cell, RelaxParams * p)
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      FACE_GRADIENT (&f, &ng, p->u, p->maxlevel);
+      gfs_face_weighted_gradient (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
@@ -271,7 +161,7 @@ static void relax2D (FttCell * cell, RelaxParams * p)
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      FACE_GRADIENT (&f, &ng, p->u, p->maxlevel);
+      gfs_face_weighted_gradient (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
@@ -336,7 +226,7 @@ static void residual_set (FttCell * cell, RelaxParams * p)
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      FACE_GRADIENT (&f, &ng, p->u, p->maxlevel);
+      gfs_face_weighted_gradient (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
@@ -359,7 +249,7 @@ static void residual_set2D (FttCell * cell, RelaxParams * p)
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      FACE_GRADIENT (&f, &ng, p->u, p->maxlevel);
+      gfs_face_weighted_gradient (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
@@ -641,8 +531,8 @@ void gfs_poisson_cycle (GfsDomain * domain,
 			    (FttCellTraverseFunc) gfs_get_from_below_extensive, res);
 
   /* relax top level */
-  gfs_domain_cell_traverse (domain, 
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, minlevel,
+  gfs_domain_cell_traverse (domain,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, minlevel,
 			    (FttCellTraverseFunc) gfs_cell_reset, dp);
   nrelax = p->nrelax;
   for (l = minlevel; l < p->depth; l++)
