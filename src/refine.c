@@ -386,12 +386,14 @@ static gdouble cell_distance (FttCell * cell,
 			      GfsRefineDistance * refine)
 {
   FttVector pos;
+  gdouble h = GFS_DIAGONAL*ftt_cell_size (cell), d;
   GtsPoint p;
 
   ftt_cell_pos (cell, &pos);
   p.x = pos.x; p.y = pos.y; p.z = pos.z;
-  return gts_bb_tree_point_distance (refine->stree, &p,
-				     (GtsBBoxDistFunc) gts_point_triangle_distance, NULL);
+  d = gts_bb_tree_point_distance (refine->stree, &p,
+				  (GtsBBoxDistFunc) gts_point_triangle_distance, NULL);
+  return d > h ? d - h : 0.;
 }
 
 static void refine_distance_read (GtsObject ** o, GtsFile * fp)

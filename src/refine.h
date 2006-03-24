@@ -26,6 +26,12 @@ extern "C" {
 
 #include "simulation.h"
 
+#if FTT_2D
+# define GFS_DIAGONAL 0.707106781187
+#else /* 3D */
+# define GFS_DIAGONAL 0.866025403785
+#endif /* 3D */
+
 /* GfsRefine: Header */
 
 typedef struct _GfsRefine             GfsRefine;
