@@ -331,6 +331,8 @@ static void set_solid_fractions_from_surface (FttCell * cell,
     GFS_VARIABLE (cell, p->status->i) = 1.;
     p->thin++;
   }
+  else if (GFS_STATE (cell)->solid && GFS_STATE (cell)->solid->a == 0.)
+    GFS_VARIABLE (cell, p->status->i) = 1.;
 }
 
 /**
@@ -604,9 +606,10 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s, In
   else {
     solid->cm = solid->ca;
     solid->a = 0.;
-    GFS_VARIABLE (cell, p->status->i) = 1.;
     p->thin++;
   }
+  if (solid->a == 0.)
+    GFS_VARIABLE (cell, p->status->i) = 1.;
 }
 
 /**
@@ -960,9 +963,9 @@ static gboolean check_area_fractions (const FttCell * root)
 
     ftt_cell_bbox (root, &bb);
     if (!gts_bbox_point_is_inside (&bb, &solid->cm)) {
-      g_warning ("file %s: line %d (%s): cm (%g,%g,%g) is not inside cell [(%g,%g,%g),(%g,%g,%g)]",
+      g_warning ("file %s: line %d (%s): cm (%g,%g,%g)/%d is not inside cell [(%g,%g,%g),(%g,%g,%g)]",
 		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
-		 solid->cm.x, solid->cm.y, solid->cm.z,
+		 solid->cm.x, solid->cm.y, solid->cm.z, ftt_cell_level (root),
 		 bb.x1, bb.y1, bb.z1, 
 		 bb.x2, bb.y2, bb.z2);
       ret = FALSE;
@@ -986,9 +989,9 @@ static gboolean check_area_fractions (const FttCell * root)
 	      1. - nsolid->s[FTT_OPPOSITE_DIRECTION (i)] >= 1e-10) {
 	    FttVector p;
 	    ftt_cell_pos (root, &p);
-	    g_warning ("file %s: line %d (%s): (%g,%g,%g): s[%d]: %g",		       
+	    g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
 		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
-		       p.x, p.y, p.z,
+		       p.x, p.y, p.z, ftt_cell_level (root),
 		       FTT_OPPOSITE_DIRECTION (i),
 		       nsolid->s[FTT_OPPOSITE_DIRECTION (i)]);
 	    ret = FALSE;
@@ -1000,9 +1003,9 @@ static gboolean check_area_fractions (const FttCell * root)
 		    nsolid->s[FTT_OPPOSITE_DIRECTION (i)]) >= 1e-10) {
 	    FttVector p;
 	    ftt_cell_pos (root, &p);
-	    g_warning ("file %s: line %d (%s): (%g,%g,%g): s[%d]: %g neighbor->s[%d]: %g",
+	    g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g neighbor->s[%d]: %g",
 		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
-		       p.x, p.y, p.z,
+		       p.x, p.y, p.z, ftt_cell_level (root),
 		       i, solid->s[i],		       
 		       FTT_OPPOSITE_DIRECTION (i),
 		       nsolid->s[FTT_OPPOSITE_DIRECTION (i)]);
@@ -1013,9 +1016,9 @@ static gboolean check_area_fractions (const FttCell * root)
 	else if (1. - solid->s[i] >= 1e-10) {
 	  FttVector p;
 	  ftt_cell_pos (root, &p);
-	  g_warning ("file %s: line %d (%s): (%g,%g,%g): s[%d]: %g",		     
+	  g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
 		     __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
-		     p.x, p.y, p.z,
+		     p.x, p.y, p.z, ftt_cell_level (root),
 		     i, solid->s[i]);
 	  ret = FALSE;
 	  solid->s[i] = 1.;
@@ -1026,9 +1029,9 @@ static gboolean check_area_fractions (const FttCell * root)
 	if (GFS_IS_FLUID (neighbor.c[i]) && GFS_IS_MIXED (root) && 1. - solid->s[i] >= 1e-10) {
 	  FttVector p;
 	  ftt_cell_pos (root, &p);
-	  g_warning ("file %s: line %d (%s): (%g,%g,%g): s[%d]: %g",
+	  g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
 		     __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
-		     p.x, p.y, p.z,
+		     p.x, p.y, p.z, ftt_cell_level (root),
 		     i, solid->s[i]);
 	  ret = FALSE;
 	  solid->s[i] = 1.;
