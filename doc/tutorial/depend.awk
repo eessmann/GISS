@@ -11,13 +11,10 @@ BEGIN {
 	   $1 == "\\includegraphics*[height" ||
 	   $1 == "\\includegraphics*[angle") {
     for (i = 2; i <= NF; i++)
-      if (match ($i, "\\gfx"))
+      if (match ($i, "eps"))
 	depeps = depeps " " $i;
   }
 }
 END {
-  gsub("\\\\gfx", "eps", depeps);
   print file "1.dvi: " depeps;
-#  gsub("eps", "pdf", depeps);
-#  print "\n" file ".pdf: " depeps;
 }

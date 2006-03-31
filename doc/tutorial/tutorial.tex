@@ -2,7 +2,7 @@
 \usepackage{html}
 \usepackage{color}
 \pagecolor{white}
-\input{pdf.tex}
+\usepackage{graphicx}
 
 \oddsidemargin=4mm
 \evensidemargin=-1mm
@@ -394,7 +394,7 @@ containing one node (a {\tt GfsBox}) connected with itself in both the
 horizontal ({\tt right}) and vertical ({\tt top}) directions.
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=0.4\hsize]{direction.\gfx}
+\includegraphics[width=0.4\hsize]{direction.eps}
 \end{center}
 \caption{Definition of spatial directions}
 \label{direction}
@@ -716,7 +716,7 @@ you will get the image on figure \ref{vorticity} at $t=18$ (resolution
 has been increased to $128\times 128$).
 \begin{figure}
 \begin{center}
-\includegraphics[width=0.4\hsize]{vorticity.\gfx}
+\includegraphics[width=0.4\hsize]{vorticity.eps}
 \end{center}
 \caption{Vorticity field for the initial random vorticity problem at
 $t=18$.}
@@ -876,7 +876,7 @@ manual for details), you should see something like the image on figure
 \ref{half-cylinder}.
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=0.3\hsize]{half-cylinder.\gfx}
+\includegraphics[width=0.3\hsize]{half-cylinder.eps}
 \end{center}
 \caption{Geomview representation of {\tt half-cylinder.gts}}
 \label{half-cylinder}
@@ -957,7 +957,7 @@ to disable automatic normalization in Geomview by selecting
 Inspect$\rightarrow$Appearance$\rightarrow$Normalize$\rightarrow$None).
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[angle=90,width=0.8\hsize]{boundaries.\gfx}
+\includegraphics[angle=90,width=0.8\hsize]{boundaries.eps}
 \end{center}
 \caption{Representation of boundary conditions and solid boundaries}
 \label{boundaries}
@@ -1084,7 +1084,7 @@ dragging the left button.
 \begin{figure}[htbp]
 \begin{center}
 \htmlimage{scale=2.0,external,thumbnail=1}
-\includegraphics[width=\hsize]{gfsview.\gfx}
+\includegraphics[width=\hsize]{gfsview.eps}
 \end{center}
 \caption{Screenshot of a GfsView session.}
 \label{gfsview}
@@ -1131,7 +1131,7 @@ and zooming around (and possibly tune things like face shading) you
 should get an image looking like figure \ref{gfs2oogl}.
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[angle=90,width=0.6\hsize]{gfs2oogl.\gfx}
+\includegraphics[angle=90,width=0.6\hsize]{gfs2oogl.eps}
 \end{center}
 \caption{Scalar and vector representation generated using {\tt
 gfs2oogl}.}
@@ -1188,7 +1188,7 @@ menu should bring up windows looking like figure \ref{dx-screen}.
 \begin{figure}[htbp]
 \begin{center}
 \htmlimage{scale=2.0,external,thumbnail=1}
-\includegraphics[width=\hsize]{dxscreen.\gfx}
+\includegraphics[width=\hsize]{dxscreen.eps}
 \end{center}
 \caption{Screenshot of an OpenDX session using the ImportGfs2D module.}
 \label{dx-screen}
@@ -1306,7 +1306,7 @@ as usual, but also the boundaries (thin black lines) between different
 levels of refinement.
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[angle=90,width=0.6\hsize]{refined1.\gfx}
+\includegraphics[angle=90,width=0.6\hsize]{refined1.eps}
 \end{center}
 \caption{Dynamic adaptive mesh refinement $t=0.1$}
 \label{refined1}
@@ -1320,7 +1320,7 @@ will get a picture looking like figure \ref{refined1-cells}, showing
 all the cells used for the discretisation.
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[angle=90,width=0.6\hsize]{refined1_cells.\gfx}
+\includegraphics[angle=90,width=0.6\hsize]{refined1_cells.eps}
 \end{center}
 \caption{Dynamic adaptive mesh refinement $t=0.1$. Detail of the cells.}
 \label{refined1-cells}
@@ -1337,7 +1337,7 @@ domains to avoid any contamination of the solution by the boundary
 conditions.
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[angle=90,width=0.8\hsize]{refined2.\gfx}
+\includegraphics[angle=90,width=0.8\hsize]{refined2.eps}
 \end{center}
 \caption{Dynamic adaptive mesh refinement $t=9$.}
 \label{refined2}
