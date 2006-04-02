@@ -87,6 +87,7 @@ with
 @var: 
 @binary: 
 @surface: 
+@format: 
 
 <!-- ##### FUNCTION gfs_output_simulation_class ##### -->
 <para>

@@ -58,14 +58,6 @@ Evaluates to the value of variable @index in @cell.
 @fa: 
 
 
-<!-- ##### MACRO GFS_IS_SMALL ##### -->
-<para>
-
-</para>
-
-@cell: 
-
-
 <!-- ##### MACRO GFS_CELL_IS_BOUNDARY ##### -->
 <para>
 
@@ -101,6 +93,7 @@ The fluid variables associated with a fluid cell.
 @name: 
 @centered: 
 @fine_coarse: 
+@coarse_fine: 
 @sources: 
 @surface_bc: 
 @domain: 

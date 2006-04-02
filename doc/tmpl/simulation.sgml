@@ -61,10 +61,8 @@ Simulations
 @approx_projection_params: 
 @advection_params: 
 @surface: 
+@thin: 
 @output_surface: 
-@interface: 
-@itree: 
-@i_is_open: 
 @refines: 
 @adapts: 
 @adapts_stats: 

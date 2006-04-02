@@ -27,6 +27,7 @@ Poisson solver
 @erelax: 
 @minlevel: 
 @nitermax: 
+@nitermin: 
 @dimension: 
 @niter: 
 @depth: 
@@ -136,6 +137,7 @@ Poisson solver
 @p: 
 @g: 
 @dt: 
+@w: 
 <!-- # Unused Parameters # -->
 @face: 
 @par: 

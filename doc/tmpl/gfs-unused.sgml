@@ -274,6 +274,13 @@ Evaluates to the index of the neighboring direction opposite to @i.
 
 @obj: 
 
+<!-- ##### MACRO GFS_IS_SMALL ##### -->
+<para>
+
+</para>
+
+@cell: 
+
 <!-- ##### MACRO GFS_IS_SOURCE_CONSTANT ##### -->
 <para>
 

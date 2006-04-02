@@ -1,3 +1,31 @@
+03/04/2006: Release 0.9.2
+
+The most significant improvements in this release are:
+
+- Important bug fixes and improvements for the multilevel Poisson
+  solver can reduce the overall computational cost by a factor of five
+  or more depending on the problem.
+- Variable mesh resolution along solid boundaries is now allowed and
+  has been well tested (note however that time-adaptive variable
+  resolution is not allowed on solid boundaries yet).
+- The robustness of the solution procedure has been much improved in
+  the case of very complex solid boundaries.
+
+Other improvements include:
+
+- Debian package snapshots.
+- Adaptive refinement of VOF-advected tracers.
+- Preliminary implementation of CSF surface tension using Renardy et
+  al. "proper discretisation".
+- Solid boundaries can be refined according to the local curvature.
+- Implicit Coriolis terms work with the Navier-Stokes solver.
+- Support for "thin" 3D domains.
+
+Bug fixes:
+
+- Several bug fixes for special cases of solid boundaries.
+- Bug fixes for "GfsAdapt" events.
+
 17/10/2005: Release 0.8.0
 
 Quite a lot of important new features and bug fixes in this release. I
