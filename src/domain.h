@@ -271,9 +271,13 @@ GfsDerivedVariable * gfs_domain_add_derived_variable  (GfsDomain * domain,
 						       GfsDerivedVariableInfo info);
 gboolean     gfs_domain_remove_derived_variable (GfsDomain * domain, 
 						 const gchar * name);
+void         gfs_domain_sum                     (GfsDomain * domain, 
+						 FttDirection d, 
+						 GfsFunction * f, 
+						 GfsVariable * v);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* __DOMAINGRAPH_H__ */
+#endif /* __DOMAIN_H__ */

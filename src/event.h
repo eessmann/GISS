@@ -165,6 +165,24 @@ struct _GfsEventSum {
 
 GfsEventClass * gfs_event_sum_class  (void);
 
+/* GfsEventSumDirection: Header */
+
+typedef struct _GfsEventSumDirection         GfsEventSumDirection;
+
+struct _GfsEventSumDirection {
+  GfsEventSum parent;
+
+  FttDirection d;
+};
+
+#define GFS_EVENT_SUM_DIRECTION(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsEventSumDirection,\
+					         gfs_event_sum_direction_class ())
+#define GFS_IS_EVENT_SUM_DIRECTION(obj)         (gts_object_is_from_class (obj,\
+						 gfs_event_sum_direction_class ()))
+
+GfsEventClass * gfs_event_sum_direction_class  (void);
+
 /* GfsEventHarmonic: Header */
 
 typedef struct _GfsEventHarmonic         GfsEventHarmonic;

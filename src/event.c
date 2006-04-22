@@ -930,6 +930,78 @@ GfsEventClass * gfs_event_sum_class (void)
   return klass;
 }
 
+/* GfsEventSumDirection: Object */
+
+static void gfs_event_sum_direction_write (GtsObject * o, FILE * fp)
+{
+  GfsEventSumDirection * s = GFS_EVENT_SUM_DIRECTION (o);
+
+  (* GTS_OBJECT_CLASS (gfs_event_sum_direction_class ())->parent_class->write) (o, fp);
+
+  fprintf (fp, " %s", ftt_direction_name [s->d]);
+}
+
+static void gfs_event_sum_direction_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsEventSumDirection * s = GFS_EVENT_SUM_DIRECTION (*o);
+
+  (* GTS_OBJECT_CLASS (gfs_event_sum_direction_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (direction)");
+    return;
+  }
+  s->d = ftt_direction_from_name (fp->token->str);
+  if (s->d >= FTT_NEIGHBORS) {
+    gts_file_error (fp, "unknown direction `%s'", fp->token->str);
+    s->d = 0;
+    return;
+  }
+  gts_file_next_token (fp);
+}
+
+static gboolean gfs_event_sum_direction_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class)->event) 
+      (event, sim)) {
+    GfsEventSumDirection * s = GFS_EVENT_SUM_DIRECTION (event);
+
+    gfs_domain_sum (GFS_DOMAIN (sim), s->d, GFS_EVENT_SUM (event)->v, GFS_EVENT_SUM (event)->sv);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_event_sum_direction_class_init (GfsEventClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = gfs_event_sum_direction_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_event_sum_direction_write;
+  GFS_EVENT_CLASS (klass)->event = gfs_event_sum_direction_event;
+}
+
+GfsEventClass * gfs_event_sum_direction_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_event_sum_direction_info = {
+      "GfsEventSumDirection",
+      sizeof (GfsEventSumDirection),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_event_sum_direction_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_sum_class ()),
+				  &gfs_event_sum_direction_info);
+  }
+
+  return klass;
+}
+
 /* GfsEventHarmonic: Object */
 
 static void gfs_event_harmonic_destroy (GtsObject * o)

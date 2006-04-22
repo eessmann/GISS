@@ -3193,3 +3193,60 @@ gboolean gfs_domain_remove_derived_variable (GfsDomain * domain, const gchar * n
   return FALSE;
 }
 
+typedef struct {
+  FttDirection d;
+  GfsFunction * f;
+  GfsVariable * v;
+} SumData;
+
+static gdouble product (FttCell * cell, GfsFunction * f)
+{
+  GfsSolidVector * solid = GFS_STATE (cell)->solid;
+  return ftt_cell_volume (cell)*(solid ? solid->a : 1.)*gfs_function_value (f, cell);
+}
+
+static void sum (FttCell * cell, SumData * data)
+{
+  FttCell * n = ftt_cell_neighbor (cell, data->d);
+  GfsSolidVector * solid = GFS_STATE (cell)->solid;
+
+  if (!n || GFS_CELL_IS_BOUNDARY (n) || (solid && solid->s[data->d] == 0.)) {
+    gdouble s = 0.;
+
+    n = cell;
+    do {
+      /* fixme: does not work if the resolution varies along data->d */
+      g_assert (ftt_cell_level (n) == ftt_cell_level (cell));
+      s += product (n, data->f);
+      GFS_VARIABLE (n, data->v->i) = s;
+      n = ftt_cell_neighbor (n, FTT_OPPOSITE_DIRECTION (data->d));
+    } while (n && !GFS_CELL_IS_BOUNDARY (n) && 
+	     (!GFS_IS_MIXED (n) || GFS_STATE (n)->solid->s[data->d] > 0.));
+  }
+}
+
+/**
+ * gfs_domain_sum:
+ * @domain: a #GfsDomain.
+ * @d: the #FttDirection.
+ * @f: a #GfsFunction.
+ * @v: a #GfsVariable.
+ *
+ * Fills variable @v of each cell of @domain with the sum in direction
+ * @d of the volume-weighted function @f.
+ */
+void gfs_domain_sum (GfsDomain * domain, FttDirection d, GfsFunction * f, GfsVariable * v)
+{
+  SumData data;
+
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (d >= 0 && d < FTT_NEIGHBORS);
+  g_return_if_fail (f != NULL);
+  g_return_if_fail (v != NULL);
+
+  data.d = d;
+  data.f = f;
+  data.v = v;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) sum, &data);
+}
