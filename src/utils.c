@@ -403,8 +403,20 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	   "                         gpointer data);\n"
 	   "static double Dirichlet = 1.;\n"
 	   "static double Neumann = 0.;\n"
-	   "double f (FttCell * cell, FttCellFace * face, GfsSimulation * sim) {\n",
-	   fin);
+	   "double f (FttCell * cell, FttCellFace * face, GfsSimulation * sim) {\n"
+	   "  double dd (const gchar * name, FttComponent c) {\n"
+	   "    GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, name);\n"
+	   "    if (v == NULL)\n"
+	   "      return 0.;\n"
+	   "    g_return_val_if_fail (cell != NULL, 0.);\n"
+ 	   "    return gfs_center_gradient (cell, c, v->i)/ftt_cell_size (cell);\n"
+	   "  }\n"
+	   "  double dx (const gchar * name) { return dd (name, FTT_X); }\n"
+	   "  double dy (const gchar * name) { return dd (name, FTT_Y); }\n"
+#if !FTT_2D
+	   "  double dz (const gchar * name) { return dd (name, FTT_Z); }\n"
+#endif /* 3D */
+	   , fin);
     i = domain->variables;
     while (i) {
       if (find_identifier (f->expr->str, GFS_VARIABLE1 (i->data)->name))
