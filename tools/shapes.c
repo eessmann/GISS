@@ -552,7 +552,8 @@ int main (int argc, char * argv[])
     surface_add_ellipse_shape (s, 0., 0., 0.25, 0.001, 2.*PI,
 			       1., - 1., 1., number, closed);
   }
-  else if ((sfp = fopen (shape, "rt")) != NULL) {
+  else if ((!strcmp (shape, "-") && (sfp = stdin)) || 
+	   (sfp = fopen (shape, "rt")) != NULL) {
     while (!feof (sfp))
       if (!surface_add_file_shape (s, -1., 1., zextrude, sfp)) {
 	fprintf (stderr, 

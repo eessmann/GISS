@@ -15,7 +15,8 @@ TESTDIRS = \
 	geo \
 	lid \
 	couette \
-	plate
+	plate \
+	dumbell
 
 EXTRA_DIST = \
 	template.tex \
