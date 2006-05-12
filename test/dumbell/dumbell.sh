@@ -3,7 +3,7 @@
 bottom=.255
 top=.49
 
-tac <<EOF | shapes -v - > dumbell.gts
+tac <<EOF | shapes - > dumbell.gts
 -0.51 -0.51
 -0.51 $bottom
 -0.1 $bottom

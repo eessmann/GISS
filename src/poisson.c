@@ -372,6 +372,7 @@ static void face_coeff_from_below (FttCell * cell)
 {
   FttDirection d;
   GfsFaceStateVector * f = GFS_STATE (cell)->f;
+  guint neighbors = 0;
 
   for (d = 0; d < FTT_NEIGHBORS; d++) {
     FttCellChildren child;
@@ -383,7 +384,14 @@ static void face_coeff_from_below (FttCell * cell)
       if (child.c[i])
 	f[d].v += GFS_STATE (child.c[i])->f[d].v;
     f[d].v /= n;
+
+    if (f[d].v > 0. && !GFS_CELL_IS_BOUNDARY (ftt_cell_neighbor (cell, d)))
+      neighbors++;
   }
+
+  if (neighbors == 1)
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      f[d].v = 0.;
 }
 
 /**
