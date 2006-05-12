@@ -805,29 +805,8 @@ fprintf (stderr, "%g %g %g\n",
     else
       GFS_VARIABLE (cell, par->v->i) += GFS_VARIABLE (cell, par->fv->i);
   }
-  else {
-#if 0 /* J.J. Quirk volume-weighted values */
-    GSList * i = merged;
-    gdouble w = 0., total_vol = 0.;
-
-    while (i) {
-      FttCell * cell = i->data;
-      gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
-      
-      total_vol += a;
-      w += GFS_VARIABLE (cell, par->fv->i);
-      i = i->next;
-    }
-    w /= total_vol;
-
-    i = merged;
-    while (i) {
-      FttCell * cell = i->data;
-
-      GFS_VARIABLE (cell, par->v->i) += w;
-      i = i->next;
-    }
-#else /* average value */
+  else if (par->average) {
+    /* average value */
     GSList * i = merged;
     gdouble w = 0., total_vol = 0.;
 
@@ -850,7 +829,29 @@ fprintf (stderr, "%g %g %g\n",
       GFS_VARIABLE (cell, par->v->i) = w;
       i = i->next;
     }
-#endif
+  }
+  else {
+    /* J.J. Quirk volume-weighted values */
+    GSList * i = merged;
+    gdouble w = 0., total_vol = 0.;
+
+    while (i) {
+      FttCell * cell = i->data;
+      gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
+      
+      total_vol += a;
+      w += GFS_VARIABLE (cell, par->fv->i);
+      i = i->next;
+    }
+    w /= total_vol;
+
+    i = merged;
+    while (i) {
+      FttCell * cell = i->data;
+
+      GFS_VARIABLE (cell, par->v->i) += w;
+      i = i->next;
+    }
   }
 }
 
@@ -863,7 +864,8 @@ void gfs_advection_params_write (GfsAdvectionParams * par, FILE * fp)
            "{\n"
 	   "  cfl      = %g\n"
 	   "  gradient = %s\n"
-	   "  flux     = %s\n",
+	   "  flux     = %s\n"
+	   "  average  = %d\n",
 	   par->cfl,
 	   par->gradient == gfs_center_gradient ? 
 	   "gfs_center_gradient" :
@@ -873,7 +875,8 @@ void gfs_advection_params_write (GfsAdvectionParams * par, FILE * fp)
 	   par->flux == gfs_face_velocity_advection_flux ?
 	   "gfs_face_velocity_advection_flux" :
 	   par->flux == gfs_face_velocity_convective_flux ?
-	   "gfs_face_velocity_convective_flux" : "NULL");
+	   "gfs_face_velocity_convective_flux" : "NULL",
+	   par->average);
   switch (par->scheme) {
   case GFS_GODUNOV: fputs ("  scheme   = godunov\n", fp); break;
   case GFS_VOF:     fputs ("  scheme   = vof\n", fp); break;
@@ -895,6 +898,7 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->upwinding = GFS_FACE_UPWINDING;
   par->use_centered_velocity = TRUE;
   par->scheme = GFS_GODUNOV;
+  par->average = FALSE;
 }
 
 void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
@@ -904,6 +908,7 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
     {GTS_STRING, "gradient", TRUE},
     {GTS_STRING, "flux",     TRUE},
     {GTS_STRING, "scheme",   TRUE},
+    {GTS_INT,    "average",  TRUE},
     {GTS_NONE}
   };
   gchar * gradient = NULL, * flux = NULL, * scheme = NULL;
@@ -915,6 +920,7 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
   var[1].data = &gradient;
   var[2].data = &flux;
   var[3].data = &scheme;
+  var[4].data = &par->average;
 
   gfs_advection_params_init (par);
   gts_file_assign_variables (fp, var);

@@ -762,6 +762,7 @@ static void gfs_simulation_init (GfsSimulation * object)
 
   gfs_advection_params_init (&object->advection_params);
   object->advection_params.flux = gfs_face_velocity_advection_flux;
+  object->advection_params.average = TRUE;
 
   gfs_multilevel_params_init (&object->projection_params);
   gfs_multilevel_params_init (&object->approx_projection_params);
