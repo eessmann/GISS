@@ -55,19 +55,23 @@ gdouble gfs_line_area (FttVector * m, gdouble alpha)
   if (alpha1 >= n.x + n.y)
     return 1.;
 
-  n.x += 1e-4; n.y += 1e-4;
+  if (n.x == 0.)
+    return alpha1/n.y;
+  else if (n.y == 0.)
+    return alpha1/n.x;
+  else {
+    v = alpha1*alpha1;
 
-  v = alpha1*alpha1;
+    a = alpha1 - n.x;
+    if (a > 0.)
+      v -= a*a;
+    
+    a = alpha1 - n.y;
+    if (a > 0.)
+      v -= a*a;
 
-  a = alpha1 - n.x;
-  if (a > 0.)
-    v -= a*a;
-
-  a = alpha1 - n.y;
-  if (a > 0.)
-    v -= a*a;
-
-  return v/(2.*n.x*n.y);
+    return v/(2.*n.x*n.y);
+  }
 }
 
 /**
@@ -261,30 +265,6 @@ void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 }
 #endif /* 3D */
 
-static gdouble line_area_derivative_ratio (FttVector * m, 
-					   gdouble alpha, 
-					   gdouble c)
-{
-  gdouble a, v, vp;
-
-  vp = alpha;
-  v = vp*vp;
-
-  a = alpha - m->x;
-  if (a > 0.) {
-    vp -= a;
-    v -= a*a;
-  }
-
-  a = alpha - m->y;
-  if (a > 0.) {
-    vp -= a;
-    v -= a*a;
-  }
-
-  return (v - c)/(2.*vp);
-}
-
 /**
  * gfs_line_alpha:
  * @m: a #FttVector.
@@ -295,23 +275,24 @@ static gdouble line_area_derivative_ratio (FttVector * m,
  */
 gdouble gfs_line_alpha (FttVector * m, gdouble c)
 {
-  gdouble alpha, dalpha;
-  FttVector n;
+  gdouble alpha, m1, m2, v1;
 
   g_return_val_if_fail (m != NULL, 0.);
   g_return_val_if_fail (c >= 0. && c <= 1., 0.);
-
-  n.x = fabs (m->x); n.y = fabs (m->y);
-  if (n.x*n.y < 1e-6)
-    alpha = c;
-  else {
-    c *= 2.*n.x*n.y;
-    alpha = (n.x + n.y)/2.;
-    do {
-      dalpha = line_area_derivative_ratio (&n, alpha, c);
-      alpha -= dalpha;
-    } while (fabs (dalpha) > 1e-6);
+  
+  m1 = fabs (m->x); m2 = fabs (m->y);
+  if (m1 > m2) {
+    v1 = m1; m1 = m2; m2 = v1;
   }
+  
+  v1 = m1/2.;
+  if (c <= v1/m2)
+    alpha = sqrt (2.*c*m1*m2);
+  else if (c <= 1. - v1/m2)
+    alpha = c*m2 + v1;
+  else
+    alpha = m1 + m2 - sqrt (2.*m1*m2*(1. - c));
+
   if (m->x < 0.)
     alpha += m->x;
   if (m->y < 0.)
