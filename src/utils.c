@@ -378,7 +378,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
   }
 
   if (!HAVE_PKG_CONFIG) {
-    gts_file_error (fp, "expecting a number, variable or GTS surface (val)");
+    gts_file_error (fp, "expecting a number, variable or GTS surface (val)\n"
+		    "(functions are not supported on this system)");
     return;
   }
   else {
