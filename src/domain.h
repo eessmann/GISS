@@ -229,7 +229,8 @@ guint        gfs_domain_alloc                 (GfsDomain * domain);
 void         gfs_domain_free                  (GfsDomain * domain, 
 					       guint i);
 GfsVariable * gfs_domain_add_variable         (GfsDomain * domain, 
-					       const gchar * name);
+					       const gchar * name,
+					       const gchar * description);
 void         gfs_domain_solid_force           (GfsDomain * domain, 
 					       FttVector * pf,
 					       FttVector * vf,

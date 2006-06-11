@@ -40,7 +40,7 @@ struct _GfsVariable {
   /*< public >*/
   guint i;
   FttComponent component;
-  gchar * name;
+  gchar * name, * description;
   gboolean centered;
   GfsVariableFineCoarseFunc fine_coarse, coarse_fine;
   GtsContainer * sources;
@@ -69,9 +69,10 @@ struct _GfsVariableClass {
 GfsVariableClass *    gfs_variable_class            (void);
 GfsVariable *         gfs_variable_new              (GfsVariableClass * klass,
 						     GfsDomain * domain,
-						     const gchar * name);
+						     const gchar * name,
+						     const gchar * description);
 #define               gfs_temporary_variable(d)     (gfs_variable_new (gfs_variable_class (),\
-                                                                      (d), NULL))
+                                                                      (d), NULL, NULL))
 GfsVariable *         gfs_variable_from_name        (GSList * i,
 						     const gchar * name);
 GSList *              gfs_variables_from_list       (GSList * i,

@@ -749,7 +749,7 @@ static void gfs_ocean_class_init (GfsSimulationClass * klass)
 
 static void gfs_ocean_init (GfsOcean * object)
 {
-  gfs_domain_add_variable (GFS_DOMAIN (object), "H");
+  gfs_domain_add_variable (GFS_DOMAIN (object), "H", "Depth");
   GFS_SIMULATION (object)->approx_projection_params.weighted = 1;
   object->layer = g_ptr_array_new ();
   new_layer (object);
@@ -867,7 +867,7 @@ static void gfs_source_hydrostatic_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   if (!(sh->ph = gfs_variable_from_name (domain->variables, fp->token->str)) &&
-      !(sh->ph = gfs_domain_add_variable (domain, fp->token->str))) {
+      !(sh->ph = gfs_domain_add_variable (domain, fp->token->str, "Hydrostatic pressure"))) {
     gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
     return;
   }

@@ -1726,7 +1726,7 @@ static gboolean gfs_output_scalar_event (GfsEvent * event,
     GfsDomain * domain = GFS_DOMAIN (sim);
 
     if (!(output->v = gfs_function_get_variable (output->f))) {
-      output->v = gfs_variable_new (gfs_variable_class (), domain, NULL);
+      output->v = gfs_variable_new (gfs_variable_class (), domain, NULL, NULL);
       gfs_domain_cell_traverse (domain,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) update_v, output);
@@ -2362,7 +2362,7 @@ static void output_error_norm_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
       if (!(n->v = gfs_variable_from_name (domain->variables, fp->token->str)) &&
-	  !(n->v = gfs_domain_add_variable (domain, fp->token->str))) {
+	  !(n->v = gfs_domain_add_variable (domain, fp->token->str, "Error field"))) {
 	gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
 	return;
       }

@@ -71,6 +71,7 @@ static void gfs_variable_destroy (GtsObject * object)
   GfsVariable * v = GFS_VARIABLE1 (object);
 
   g_free (v->name);
+  g_free (v->description);
   if (v->sources)
     gts_object_destroy (GTS_OBJECT (v->sources));
   if (v->surface_bc)
@@ -124,13 +125,15 @@ GfsVariableClass * gfs_variable_class (void)
  * @klass: a #GfsVariableClass.
  * @domain: a #GfsDomain.
  * @name: the name of the variable or %NULL.
+ * @description: the variable description or %NULL.
  *
  * Returns: a newly allocated #GfsVariable or %NULL if a variable
  * named @name already exists in @domain.
  */
 GfsVariable * gfs_variable_new (GfsVariableClass * klass,
 				GfsDomain * domain,
-				const gchar * name)
+				const gchar * name,
+				const gchar * description)
 {
   GfsVariable * v;
 
@@ -145,6 +148,8 @@ GfsVariable * gfs_variable_new (GfsVariableClass * klass,
   v = GFS_VARIABLE1 (gts_object_new (GTS_OBJECT_CLASS (klass)));
   if (name)
     v->name = g_strdup (name);
+  if (description)
+    v->description = g_strdup (description);
   variable_init_domain (v, domain);
 
   return v;

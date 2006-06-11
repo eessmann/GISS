@@ -48,7 +48,7 @@ static void gfs_source_tension_read (GtsObject ** o, GtsFile * fp)
   for (c = 0; c < FTT_DIMENSION; c++) {
     static gchar * name[3] = {"_Tx", "_Ty", "_Tz"};
     if ((s->t[c] = gfs_variable_from_name (domain->variables, name[c])) == NULL)
-      s->t[c] = gfs_domain_add_variable (domain, name[c]);
+      s->t[c] = gfs_domain_add_variable (domain, name[c], NULL);
   }
 
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {

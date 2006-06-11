@@ -215,7 +215,8 @@ static void gfs_adapt_read (GtsObject ** o, GtsFile * fp)
       }
       domain = GFS_DOMAIN (gfs_object_simulation (*o));
       a->c = gfs_variable_from_name (domain->variables, fp->token->str);
-      if (!a->c && !(a->c = gfs_domain_add_variable (domain, fp->token->str))) {
+      if (!a->c && !(a->c = gfs_domain_add_variable (domain, fp->token->str, 
+						     "Adaptive refinement cost"))) {
 	gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
 	return;
       }
