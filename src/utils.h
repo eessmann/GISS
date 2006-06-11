@@ -31,16 +31,6 @@ extern "C" {
 
 gboolean gfs_char_in_string (char c, const char * s);
 
-/* Derived variables */
-
-typedef struct {
-  gchar * name;
-  gpointer func;
-  gpointer data;
-} GfsDerivedVariable;
-
-GfsDerivedVariable * gfs_derived_variable_from_name (GSList * i, const gchar * name);
-
 /* GfsFunction: Header */
 
 typedef struct _GfsFunction         GfsFunction;

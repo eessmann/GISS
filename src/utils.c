@@ -769,26 +769,6 @@ void gfs_function_write (GfsFunction * f, FILE * fp)
 }
 
 /**
- * gfs_derived_variable_from_name:
- * @i: a list of #GfsDerivedVariable.
- * @name: a name.
- *
- * Returns: the #GfsDerivedVariable @name of @list or %NULL.
- */
-GfsDerivedVariable * gfs_derived_variable_from_name (GSList * i, const gchar * name)
-{
-  g_return_val_if_fail (name != NULL, NULL);
-
-  while (i) {
-    GfsDerivedVariable * v = i->data;
-    if (!strcmp (v->name, name))
-      return v;
-    i = i->next;
-  }
-  return NULL;
-}
-
-/**
  * gfs_object_class_from_name:
  * @name: the name of the class.
  *

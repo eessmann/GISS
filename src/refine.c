@@ -180,7 +180,8 @@ static gdouble solid_curvature (FttCell * cell, FttCellFace * face,
 
 static void refine_solid_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsDerivedVariable v = { "SolidCurvature", solid_curvature };
+  GfsDerivedVariableInfo v = { "SolidCurvature", "curvature of the solid boundary",
+			       solid_curvature };
   GfsRefineSolid * refine = GFS_REFINE_SOLID (*o);
 
   refine->v = gfs_domain_add_derived_variable (GFS_DOMAIN (gfs_object_simulation (*o)), v);
@@ -398,7 +399,8 @@ static gdouble cell_distance (FttCell * cell,
 
 static void refine_distance_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsDerivedVariable v = { "Distance", cell_distance };
+  GfsDerivedVariableInfo v = { "Distance", "distance to the surface", 
+			       cell_distance };
 
   v.data = *o;
   if (!gfs_domain_add_derived_variable (GFS_DOMAIN (gfs_object_simulation (*o)), v)) {
@@ -478,7 +480,8 @@ static gdouble cell_height (FttCell * cell,
 
 static void refine_height_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsDerivedVariable v = { "Height", cell_height };
+  GfsDerivedVariableInfo v = { "Height", "vertical distance to the surface", 
+			       cell_height };
 
   v.data = *o;
   if (!gfs_domain_add_derived_variable (GFS_DOMAIN (gfs_object_simulation (*o)), v)) {

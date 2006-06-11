@@ -239,8 +239,13 @@ static void domain_destroy (GtsObject * o)
   }
   g_assert (domain->variables == NULL);
 
-  g_slist_foreach (domain->derived_variables, (GFunc) g_free, NULL);
-  g_slist_free (domain->derived_variables);
+  i = domain->derived_variables;
+  while (i) {
+    GSList * next = i->next;
+    gts_object_destroy (i->data);
+    i = next;
+  }
+  g_assert (domain->derived_variables == NULL);
 
   g_array_free (domain->allocated, TRUE);
 
@@ -3087,26 +3092,31 @@ void gfs_domain_combine_traverse (GfsDomain * domain1,
 /**
  * gfs_domain_add_derived_variable:
  * @domain: a #GfsDomain.
- * @v: the #GfsDerivedVariable.
+ * @info: the #GfsDerivedVariableInfo.
  *
- * Adds @v to @domain.
+ * Adds a derived variable described by @info to @domain.
  *
  * Returns: the #GfsDerivedVariable if the variable was successfully
  * added to @domain or %NULL if a variable with the same name already
  * exists.
  */
-GfsDerivedVariable * gfs_domain_add_derived_variable (GfsDomain * domain, GfsDerivedVariable v)
+GfsDerivedVariable * gfs_domain_add_derived_variable (GfsDomain * domain, 
+						      GfsDerivedVariableInfo info)
 {
-  GfsDerivedVariable * v1;
+  GfsDerivedVariable * v;
 
   g_return_val_if_fail (domain != NULL, NULL);
 
-  if (gfs_variable_from_name (domain->variables, v.name) ||
-      gfs_derived_variable_from_name (domain->derived_variables, v.name))
+  if (gfs_variable_from_name (domain->variables, info.name) ||
+      gfs_derived_variable_from_name (domain->derived_variables, info.name))
     return NULL;
-  v1 = g_memdup (&v, sizeof (GfsDerivedVariable));
-  domain->derived_variables = g_slist_prepend (domain->derived_variables, v1);
-  return v1;
+  v = GFS_DERIVED_VARIABLE (gts_object_new (GTS_OBJECT_CLASS (gfs_derived_variable_class ())));
+  v->name = g_strdup (info.name);
+  v->description = info.description ? g_strdup (info.description) : NULL;
+  v->func = info.func;
+  v->data = info.data;
+  domain->derived_variables = g_slist_prepend (domain->derived_variables, v);
+  return v;
 }
 
 /**
@@ -3131,7 +3141,7 @@ gboolean gfs_domain_remove_derived_variable (GfsDomain * domain, const gchar * n
     GfsDerivedVariable * u = i->data;
 
     if (!strcmp (u->name, name)) {
-      g_free (u);
+      gts_object_destroy (GTS_OBJECT (u));
       domain->derived_variables = g_slist_remove_link (domain->derived_variables, i);
       g_slist_free (i);
       return TRUE;

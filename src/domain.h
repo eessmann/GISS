@@ -257,8 +257,14 @@ void         gfs_domain_combine_traverse      (GfsDomain * domain1,
 					       gpointer idata,
 					       FttCellTraverseFunc outside,
 					       gpointer odata);
+
+typedef struct {
+  gchar * name, * description;
+  gpointer func, data;
+} GfsDerivedVariableInfo;
+
 GfsDerivedVariable * gfs_domain_add_derived_variable  (GfsDomain * domain, 
-						       GfsDerivedVariable v);
+						       GfsDerivedVariableInfo info);
 gboolean     gfs_domain_remove_derived_variable (GfsDomain * domain, 
 						 const gchar * name);
 

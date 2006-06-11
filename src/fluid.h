@@ -29,7 +29,8 @@ extern "C" {
 
 #include "ftt.h"
 
-typedef struct _GfsVariable        GfsVariable;
+typedef struct _GfsVariable               GfsVariable;
+typedef struct _GfsDerivedVariable        GfsDerivedVariable;
 
 typedef struct _GfsStateVector     GfsStateVector;
 typedef struct _GfsSolidVector     GfsSolidVector;

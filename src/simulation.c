@@ -716,30 +716,30 @@ static gdouble cell_2nd_principal_invariant (FttCell * cell, FttCellFace * face,
 static void gfs_simulation_init (GfsSimulation * object)
 {
   GfsDomain * domain = GFS_DOMAIN (object);
-  static GfsDerivedVariable derived_variable[] = {
-    { "x",          cell_x },
-    { "y",          cell_y },
-    { "z",          cell_z },
-    { "ax",         cell_ax },
-    { "ay",         cell_ay },
-    { "az",         cell_az },
-    { "cx",         cell_cx },
-    { "cy",         cell_cy },
-    { "cz",         cell_cz },
-    { "t",          cell_t },
-    { "Vorticity",  cell_vorticity },
-    { "Divergence", cell_divergence },
-    { "Velocity",   cell_velocity_norm },
-    { "Velocity2",  cell_velocity_norm2 },
-    { "Level",      cell_level },
-    { "A",          cell_fraction },
-    { "S",          cell_solid_area },
-    { "Lambda2",    cell_velocity_lambda2 },
-    { "Curvature",  cell_streamline_curvature },
-    { "D2",         cell_2nd_principal_invariant },
-    { NULL, NULL}
+  static GfsDerivedVariableInfo derived_variable[] = {
+    { "x", "x-coordinate of the center of mass of the cell", cell_x },
+    { "y", "y-coordinate of the center of mass of the cell", cell_y },
+    { "z", "z-coordinate of the center of mass of the cell", cell_z },
+    { "ax", "x-coordinate of the center of area of the solid surface", cell_ax },
+    { "ay", "y-coordinate of the center of area of the solid surface", cell_ay },
+    { "az", "z-coordinate of the center of area of the solid surface", cell_az },
+    { "cx", "x-coordinate of the center of the cell", cell_cx },
+    { "cy", "y-coordinate of the center of the cell", cell_cy },
+    { "cz", "z-coordinate of the center of the cell", cell_cz },
+    { "t",  "Physical time", cell_t },
+    { "Vorticity", "Norm of the vorticity vector of the velocity field", cell_vorticity },
+    { "Divergence", "Divergence of the velocity field", cell_divergence },
+    { "Velocity", "Norm of the velocity vector", cell_velocity_norm },
+    { "Velocity2", "Squared norm of the velocity vector", cell_velocity_norm2 },
+    { "Level", "Quad/octree level of the cell", cell_level },
+    { "A", "Fluid fraction of the cell", cell_fraction },
+    { "S", "Area of the solid contained in the cell", cell_solid_area },
+    { "Lambda2", "Vortex-detection criterion of Jeong & Hussein", cell_velocity_lambda2 },
+    { "Curvature",  "Curvature of the local streamline", cell_streamline_curvature },
+    { "D2", "Second principal invariant of the deformation tensor", cell_2nd_principal_invariant },
+    { NULL, NULL, NULL}
   };
-  GfsDerivedVariable * v = derived_variable;
+  GfsDerivedVariableInfo * v = derived_variable;
 
   gfs_domain_add_variable (domain, "P")->centered = TRUE;
   gfs_domain_add_variable (domain, "Pmac")->centered = TRUE;
