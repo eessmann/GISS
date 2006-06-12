@@ -42,7 +42,7 @@
 # Author: St\'ephane Popinet
 # Command: sh lid.sh lid.gfs
 # Version: 0.6.4
-# Required files: xprofile yprofile xprof.ghia yprof.ghia
+# Required files: lid.sh xprofile yprofile xprof.ghia yprof.ghia
 # Running time: 70 minutes
 # Generated files: xprof yprof xprof.eps yprof.eps velocity.eps
 #
