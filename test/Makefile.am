@@ -30,7 +30,7 @@ EXTRA_DIST = \
 TESTS = test.sh
 
 test.sh: $(TESTDIRS)
-	@echo "python test.py $(TESTDIRS)" > test.sh
+	@echo "python -u test.py $(TESTDIRS)" > test.sh
 	@chmod +x test.sh
 
 clean-generic:
