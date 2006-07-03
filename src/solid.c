@@ -164,7 +164,7 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
       solid->s[etod[i]] = 0.;
   }
 
-  a = solid->a/(2.*h->x*h->y);
+  a = solid->a < 0. ? 0. : solid->a/(2.*h->x*h->y);
   if (a > 1e-4) {
     solid->cm.x /= 3.*solid->a;
     solid->cm.y /= 3.*solid->a;
