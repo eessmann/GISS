@@ -922,7 +922,6 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
   var[3].data = &scheme;
   var[4].data = &par->average;
 
-  gfs_advection_params_init (par);
   gts_file_assign_variables (fp, var);
 
   if (fp->type != GTS_ERROR && (par->cfl <= 0. || par->cfl > 1.))
