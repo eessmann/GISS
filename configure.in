@@ -382,7 +382,7 @@ __EOF
 
 __EOF
 	if test "$have_gmodule" = "no"; then
-	  for file in modules/*.mod; do
+	  for file in `ls modules/*.mod`; do
 		name=`basename $file .mod`
 		echo "void gfs_init_$name (void);" >> src/modules.h
 		echo "gfs_init_$name ();" >> src/modules.c
@@ -395,7 +395,7 @@ __EOF
 dnl export MODULES for src/Makefile.am
 MODULES=""
 if test "$have_gmodule" = "no"; then
-  for file in modules/*.mod; do
+  for file in `ls modules/*.mod`; do
 	name=`basename $file .mod`
 	MODULES=" $MODULES ../modules/$name.o"
   done	
