@@ -775,9 +775,7 @@ example and do something like:
   GtsSurfaceFile half-cylinder.gts
   Init {} { U = 1 }
   OutputProjectionStats { step = 0.02 } stderr
-  OutputSimulation { step = 1 } simulation-%d-%3.1f {
-    variables = U,V,P,C
-  }
+  OutputSimulation { step = 1 } simulation-%d-%3.1f {}
   OutputTiming { start = end } stderr
 }
 GfsBox { pid = 0 left = BoundaryInflowConstant 1 }
