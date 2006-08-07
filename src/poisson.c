@@ -65,7 +65,7 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
   par->erelax    = 1;
   par->minlevel  = 0;
   par->nitermax  = 100;
-  par->nitermin  = 0;
+  par->nitermin  = 1;
 
   par->dimension = FTT_DIMENSION;
   par->weighted = FALSE;
