@@ -1,6 +1,0 @@
-MODULE ImportGfs2D
-CATEGORY Import and Export 
-DESCRIPTION Imports a Gerris Flow Solver 2D simulation file
-LOADABLE "@prefix@/lib/gerris/libdx2D.so"
-INPUT name; string; (none); file name
-OUTPUT result; group; imported group

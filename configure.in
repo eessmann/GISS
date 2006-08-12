@@ -250,29 +250,6 @@ AC_ARG_ENABLE(modules,
 AC_SUBST(have_gmodule)
 AM_CONDITIONAL(HAVE_MODULES, test "$have_gmodule" = "yes")
 
-# check if DX support is disabled
-AC_ARG_ENABLE(dx,
-[  --disable-dx            do not compile DX support],
-[ case "${enableval}" in
-	yes) ;;
-	*) with_dx=no ;;
-  esac])
-
-AC_ARG_WITH(dx,
-              [  --with-dx=path          pick a specific path to OpenDX],
-              [with_dx=$withval],
-              [with_dx=''])
-if test "x$with_dx" != "xno" -a "x$have_gmodule" = "xyes"; then
-  if test "x$with_dx" != "x"; then
-    ac_cv_dx_install_path=$with_dx
-  fi
-  DX_INSTALL_PATH
-fi
-AM_CONDITIONAL(HAVE_DX, test x$ac_cv_dx_install_path != x)
-AC_SUBST(DX_PATH)
-DX_CFLAGS="-I$ac_cv_dx_install_path/include"
-AC_SUBST(DX_CFLAGS)
-
 AC_SUBST(CFLAGS)
 AC_SUBST(CPPFLAGS)
 AC_SUBST(LDFLAGS)
@@ -415,9 +392,6 @@ src/gfs-config
 src/gerris2D.pc
 src/gerris2D3.pc
 src/gerris3D.pc
-src/dx2D.mdf
-src/dx2D3.mdf
-src/dx3D.mdf
 tools/Makefile
 modules/Makefile
 test/Makefile

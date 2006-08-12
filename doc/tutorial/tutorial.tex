@@ -1021,10 +1021,6 @@ restart the simulation from where you left it.
 
 \subsection{Visualisation}
 
-Several tools can be used to visualise Gerris simulation files, either
-the standalone GfsView which interfaces directly with Gerris or
-external viewers such as geomview, openDX or MayaVi.
-
 \subsubsection{GfsView}
 
 GfsView is a tool written specifically to visualise Gerris simulation
@@ -1136,62 +1132,6 @@ should get an image looking like figure \ref{gfs2oogl}.
 \caption{Scalar and vector representation generated using {\tt
 gfs2oogl}.}
 \label{gfs2oogl}
-\end{figure}
-
-\subsubsection{Visualisation with OpenDX}
-
-If you have \htmladdnormallinkfoot{OpenDX}{http://www.opendx.org}
-installed on your system, the installation process described above
-should have compiled and installed an OpenDX module which allows
-direct import of Gerris simulation files into an OpenDX visual
-program.
-
-In order to be able to use this module you need to start OpenDX with a
-command line looking like:
-\begin{verbatim}
-% dx -mdf /home/joe/local/lib/gerris/dx2D.mdf
-\end{verbatim}
-if you want to import a 2D simulation file or
-\begin{verbatim}
-% dx -mdf /home/joe/local/lib/gerris/dx3D.mdf
-\end{verbatim}
-for a 3D simulation file (where {\tt /home/joe/local} should be
-replaced with the proper installation directory). This tells OpenDX to
-load the module described by the given {\em Module Description File}.
-
-If everything went correctly, within the OpenDX Visual Program Editor
-you should be able to select a tool named ``ImportGfs2D''
-(resp. ``ImportGfs3D'') belonging to the ``Import and Export''
-category. As its name suggests this tool reads a Gerris Flow Solver
-simulation file and produces a group containing named fields. A field
-called ``solid'' contains the geometry of the solid boundaries. The
-other fields represent the scalar or vector data contained in the
-simulation file. Vector fields are constructed from the velocity
-components (the resulting vector field is called ``U'' in OpenDX) and
-from any three components with names ending in ``x'', ``y'' or ``z''
-and with a common root. This common root is used as the OpenDX field
-name. All the remaining fields are considered as scalar fields.
-
-If you are not familiar with OpenDX, you should read the available
-\htmladdnormallinkfoot{documentation}{http://www.opendx.org/support.html\#docs}
-and go through the integrated tutorial. You can use the visual program
-called \htmladdnormallinkfoot{{\tt
-gfs2D.net}}{\gfsweb/gfs2D.net} provided with this tutorial
-as a starting point. Typing
-\begin{verbatim}
-% dx -mdf /home/joe/local/lib/gerris/dx2D.mdf -program gfs2D.net
-\end{verbatim}
-in the directory containing your {\tt half-cylinder-0.5.gfs} file (you
-also need to add the path to {\tt gfs2D.net} if it is not contained in
-the same directory) and selecting the Execute$\rightarrow$Execute Once
-menu should bring up windows looking like figure \ref{dx-screen}.
-\begin{figure}[htbp]
-\begin{center}
-\htmlimage{scale=2.0,external,thumbnail=1}
-\includegraphics[width=\hsize]{dxscreen.eps}
-\end{center}
-\caption{Screenshot of an OpenDX session using the ImportGfs2D module.}
-\label{dx-screen}
 \end{figure}
 
 \subsection{Using dynamic adaptive mesh refinement}
