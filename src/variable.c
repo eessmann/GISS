@@ -366,10 +366,6 @@ static void variable_filtered_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   v->niter = atoi (fp->token->str);
-  if (v->niter <= 0) {
-    gts_file_error (fp, "'niter' must be larger than zero");
-    return;
-  }
   gts_file_next_token (fp);
 
   if (GFS_VARIABLE1 (v)->description)
@@ -384,49 +380,12 @@ static void variable_filtered_write (GtsObject * o, FILE * fp)
   fprintf (fp, " %s %d", GFS_VARIABLE_FILTERED (o)->v->name, GFS_VARIABLE_FILTERED (o)->niter);
 }
 
-static void filter (FttCell * cell, gpointer * data)
-{
-  FttDirection d[4*(FTT_DIMENSION - 1)][FTT_DIMENSION] = {
-#if FTT_2D
-    {FTT_RIGHT, FTT_TOP}, {FTT_RIGHT, FTT_BOTTOM}, {FTT_LEFT, FTT_TOP}, {FTT_LEFT, FTT_BOTTOM}
-#else
-    {FTT_RIGHT, FTT_TOP, FTT_FRONT}, {FTT_RIGHT, FTT_BOTTOM, FTT_FRONT}, 
-    {FTT_LEFT, FTT_TOP, FTT_FRONT}, {FTT_LEFT, FTT_BOTTOM, FTT_FRONT},
-    {FTT_RIGHT, FTT_TOP, FTT_BACK}, {FTT_RIGHT, FTT_BOTTOM, FTT_BACK}, 
-    {FTT_LEFT, FTT_TOP, FTT_BACK}, {FTT_LEFT, FTT_BOTTOM, FTT_BACK}
-#endif
-  };
-  guint i;
-  gdouble val = 0.;
-  GfsVariable * a = data[0];
-  GfsVariable * b = data[1];
-
-  for (i = 0; i < 4*(FTT_DIMENSION - 1); i++)
-    val += gfs_cell_corner_value (cell, d[i], a, -1);
-  GFS_VARIABLE (cell, b->i) = val/(4*(FTT_DIMENSION - 1));
-}
-
 static void variable_filtered_event_half (GfsEvent * event, GfsSimulation * sim)
 {
-  guint n, niter = GFS_VARIABLE_FILTERED (event)->niter - 1;
-  gpointer data[2];
+  guint n = GFS_VARIABLE_FILTERED (event)->niter;
 
-  data[0] = GFS_VARIABLE_FILTERED (event)->v;
-  data[1] = event;
-  gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) filter, data);
-  gfs_domain_copy_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, data[0], data[1]);
-  if (niter > 0) {
-    data[0] = event;
-    data[1] = gfs_temporary_variable (GFS_DOMAIN (sim));
-    for (n = 0; n < niter; n++) {
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) filter, data);
-      gfs_domain_copy_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, data[0], data[1]);
-      gfs_variables_swap (data[0], data[1]);
-    }
-    gts_object_destroy (data[1]);
-  }
+  while (n--)
+    gfs_domain_filter (GFS_DOMAIN (sim), GFS_VARIABLE_FILTERED (event)->v, GFS_VARIABLE1 (event));
 }
 
 static gboolean variable_filtered_event (GfsEvent * event, GfsSimulation * sim)

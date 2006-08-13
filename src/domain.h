@@ -275,6 +275,9 @@ void         gfs_domain_sum                     (GfsDomain * domain,
 						 FttDirection d, 
 						 GfsFunction * f, 
 						 GfsVariable * v);
+void         gfs_domain_filter                  (GfsDomain * domain, 
+						 GfsVariable * v,
+						 GfsVariable * fv);
 
 #ifdef __cplusplus
 }

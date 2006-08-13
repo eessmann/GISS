@@ -3250,3 +3250,55 @@ void gfs_domain_sum (GfsDomain * domain, FttDirection d, GfsFunction * f, GfsVar
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) sum, &data);
 }
+
+static void filter (FttCell * cell, gpointer * data)
+{
+  FttDirection d[4*(FTT_DIMENSION - 1)][FTT_DIMENSION] = {
+#if FTT_2D
+    {FTT_RIGHT, FTT_TOP}, {FTT_RIGHT, FTT_BOTTOM}, {FTT_LEFT, FTT_TOP}, {FTT_LEFT, FTT_BOTTOM}
+#else
+    {FTT_RIGHT, FTT_TOP, FTT_FRONT}, {FTT_RIGHT, FTT_BOTTOM, FTT_FRONT}, 
+    {FTT_LEFT, FTT_TOP, FTT_FRONT}, {FTT_LEFT, FTT_BOTTOM, FTT_FRONT},
+    {FTT_RIGHT, FTT_TOP, FTT_BACK}, {FTT_RIGHT, FTT_BOTTOM, FTT_BACK}, 
+    {FTT_LEFT, FTT_TOP, FTT_BACK}, {FTT_LEFT, FTT_BOTTOM, FTT_BACK}
+#endif
+  };
+  guint i;
+  gdouble val = 0.;
+  GfsVariable * a = data[0];
+  GfsVariable * b = data[1];
+
+  for (i = 0; i < 4*(FTT_DIMENSION - 1); i++)
+    val += gfs_cell_corner_value (cell, d[i], a, -1);
+  GFS_VARIABLE (cell, b->i) = val/(4*(FTT_DIMENSION - 1));
+}
+
+/**
+ * gfs_domain_filter:
+ * @domain: a #GfsDomain.
+ * @v: a #GfsVariable.
+ * @fv: the filtered variable or %NULL.
+ *
+ * Apply a "corner-averaging" filter to variable @v on all leaf cells
+ * of @domain.
+ *
+ * If @fv is %NULL, @v is replaced by its filtered value.
+ */
+void gfs_domain_filter (GfsDomain * domain, GfsVariable * v, GfsVariable * fv)
+{
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (v != NULL);
+
+  gpointer data[2];
+  data[0] = v;
+  data[1] = fv ? fv : gfs_temporary_variable (domain);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) filter, data);
+  if (fv == NULL) {
+    gfs_variables_swap (data[0], data[1]);
+    gts_object_destroy (data[1]);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v);
+  }
+  else
+    gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, v, fv);
+}
