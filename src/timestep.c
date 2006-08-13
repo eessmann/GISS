@@ -687,53 +687,23 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
   gfs_domain_timer_stop (domain, "centered_velocity_advection_diffusion");
 }
 
-static void save_previous (FttCell * cell, gpointer * data)
-{
-  GfsVariable * v = data[0];
-  GfsVariable * vh = data[1];
-
-  GFS_VARIABLE (cell, vh->i) = GFS_VARIABLE (cell, v->i);
-}
-
-static void average_previous (FttCell * cell, gpointer * data)
-{
-  GfsVariable * v = data[0];
-  GfsVariable * vh = data[1];
-
-  GFS_VARIABLE (cell, vh->i) = (GFS_VARIABLE (cell, vh->i) +
-				GFS_VARIABLE (cell, v->i))/2.;
-}
-
 /**
  * gfs_tracer_advection_diffusion:
  * @domain: a #GfsDomain.
  * @par: the advection parameters.
- * @half: a #GfsVariable or %NULL.
  *
  * Advects the @v field of @par using the current face-centered (MAC)
  * velocity field.
- *
- * If @half is not %NULL, the half-timestep value of @par->v is
- * stored in the corresponding variable.  
  */
 void gfs_tracer_advection_diffusion (GfsDomain * domain,
-				     GfsAdvectionParams * par,
-				     GfsVariable * half)
+				     GfsAdvectionParams * par)
 {
-  gpointer data[2];
   GfsSourceDiffusion * d;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
 
   gfs_domain_timer_start (domain, "tracer_advection_diffusion");
-
-  if (half) {
-    data[0] = par->v;
-    data[1] = half;
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) save_previous, data);
-  }
 
   if ((d = source_diffusion (par->v))) {
     GfsVariable * rhs;
@@ -748,12 +718,6 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
   else {
     variable_sources (domain, par, par->v, NULL);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, par->v);
-  }
-
-  if (half) {
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) average_previous, data);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, half);
   }
 
   gfs_domain_timer_stop (domain, "tracer_advection_diffusion");
