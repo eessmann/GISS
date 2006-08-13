@@ -461,8 +461,6 @@ gdouble gfs_center_gradient (FttCell * cell,
   g_return_val_if_fail (c < FTT_DIMENSION, 0.);
 
   f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
-  if (f1.neighbor == cell) /* periodic */
-    return 0.;
   v0 = GFS_VARIABLE (cell, v);
   if (f1.neighbor) {
     FttCellFace f2 = gfs_cell_face (cell, d);
@@ -550,8 +548,6 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
   g_return_val_if_fail (c < FTT_DIMENSION, 0.);
 
   f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
-  if (f1.neighbor == cell) /* periodic */
-    return 0.;
   if (f1.neighbor) {
     FttCellFace f2 = gfs_cell_face (cell, d);
     
@@ -971,7 +967,6 @@ static gboolean face_bilinear (const FttCellFace * face,
 
     for (j = 0; j < FTT_DIMENSION; j++) {
       (&cm.x)[j] -= (&o->x)[j];
-      /* fixme: this does not work for periodic boundaries */      
       (&cm.x)[j] /= size;
       g_assert (fabs ((&cm.x)[j]) <= 4.);
     }
@@ -1027,7 +1022,6 @@ static gboolean face_bilinear (const FttCellFace * face,
 
     for (j = 0; j < FTT_DIMENSION; j++) {
       (&cm.x)[j] -= (&o->x)[j];
-      /* fixme: this does not work for periodic boundaries */      
       (&cm.x)[j] /= size;
       if (fabs ((&cm.x)[j]) > 4.)
 	output_error_mesh (n);
@@ -2602,7 +2596,6 @@ static gdouble distance (FttVector * c, FttCell * cell, gboolean centered)
   else {
     FttVector cm;
     gfs_cell_cm (cell, &cm);
-    /* fixme: what about periodic boundaries? */
     return sqrt ((cm.x - c->x)*(cm.x - c->x) + (cm.y - c->y)*(cm.y - c->y)
 #if (!FTT_2D)
       + (cm.z - c->z)*(cm.z - c->z)

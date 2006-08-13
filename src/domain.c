@@ -151,9 +151,19 @@ static void removed_list (GfsBox * box, gpointer * data)
   GfsDomain * domain = data[0];
   GSList ** removed = data[1];
   guint * np = data[2];
-
   if (box->pid != domain->pid)
     *removed = g_slist_prepend (*removed, box);
+  else {
+    FttDirection d;
+    GfsBox * matching;
+
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      if (GFS_IS_BOUNDARY_PERIODIC (box->neighbor[d]) &&
+	  (matching = GFS_BOUNDARY_PERIODIC (box->neighbor[d])->matching)->pid != domain->pid) {
+	gts_object_destroy (GTS_OBJECT (box->neighbor[d]));
+	gfs_boundary_mpi_new (gfs_boundary_mpi_class (), box, d, matching->pid, matching->id);
+      }
+  }
   if (box->pid > *np)
     *np = box->pid;
 }
@@ -166,8 +176,7 @@ static void mpi_links (GfsBox * box, GfsDomain * domain)
   gint id = box->id;
 
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (GFS_IS_BOX (box->neighbor[d]) && 
-	GFS_BOX (box->neighbor[d])->pid == domain->pid)
+    if (GFS_IS_BOX (box->neighbor[d]) && GFS_BOX (box->neighbor[d])->pid == domain->pid)
       neighbor[d] = box->neighbor[d];
     else
       neighbor[d] = NULL;
@@ -591,14 +600,13 @@ void gfs_domain_face_bc (GfsDomain * domain,
   datum[1] = &max_depth;
   datum[2] = v;
   datum[3] = &c;
-
   gts_container_foreach (GTS_CONTAINER (domain), 
 			 (GtsFunc) box_face_bc, datum);
   gts_container_foreach (GTS_CONTAINER (domain), 
 			 (GtsFunc) box_receive_bc, datum);
   gts_container_foreach (GTS_CONTAINER (domain),
 			 (GtsFunc) box_synchronize, &c);
-  
+
   if (domain->profile_bc)
     gfs_domain_timer_stop (domain, "face_bc");
 }

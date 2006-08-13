@@ -799,8 +799,7 @@ static void gfs_boundary_inflow_constant_class_init (GtsObjectClass * klass)
   klass->color   = inflow_color;
 }
 
-static void gfs_boundary_inflow_constant_init 
-  (GfsBoundaryInflowConstant * object)
+static void gfs_boundary_inflow_constant_init (GfsBoundaryInflowConstant * object)
 {
   object->un = gfs_function_new (gfs_function_class (), 0.);
 }
@@ -884,6 +883,300 @@ GfsBoundaryOutflowClass * gfs_boundary_outflow_class (void)
   return klass;
 }
 
+/* GfsBoundaryPeriodic: object */
+
+static void boundary_periodic_destroy (GtsObject * object)
+{
+  GfsBoundaryPeriodic * boundary = GFS_BOUNDARY_PERIODIC (object);
+
+  g_array_free (boundary->sndbuf, TRUE);
+  g_array_free (boundary->rcvbuf, TRUE);
+  
+  (* GTS_OBJECT_CLASS (gfs_boundary_periodic_class ())->parent_class->destroy) 
+    (object);
+}
+
+static void boundary_periodic_read (GtsObject ** object, GtsFile * fp)
+{
+  boundary_periodic_destroy (*object);
+}
+
+static void center_periodic (FttCellFace * face, GfsBc * b)
+{
+  GfsBoundaryPeriodic * boundary_periodic = GFS_BOUNDARY_PERIODIC (b->b);
+
+  g_assert (boundary_periodic->sndcount < boundary_periodic->sndbuf->len);
+  g_assert (ftt_face_type (face) == FTT_FINE_FINE);
+  g_assert (!FTT_CELL_IS_LEAF (face->cell) || FTT_CELL_IS_LEAF (face->neighbor));
+  g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =
+    GFS_VARIABLE (face->neighbor, b->v->i);
+}
+
+static void face_periodic (FttCellFace * face, GfsBc * b)
+{
+  GfsBoundaryPeriodic * boundary_periodic = GFS_BOUNDARY_PERIODIC (b->b);
+
+  g_assert (boundary_periodic->sndcount < boundary_periodic->sndbuf->len);
+  g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =
+    GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v;
+}
+
+static void boundary_size (FttCell * cell, guint * count)
+{
+  (*count)++;
+}
+
+static void set_buffers_size (GfsBoundaryPeriodic * boundary)
+{
+  guint count = 0;
+
+  ftt_cell_traverse (GFS_BOUNDARY (boundary)->root, 
+		     FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+		     (FttCellTraverseFunc) boundary_size, &count);
+  g_array_set_size (boundary->rcvbuf, count);
+  g_array_set_size (boundary->sndbuf, count);
+}
+
+static void boundary_tree (FttCell * cell, GfsBoundaryPeriodic * boundary)
+{
+  gdouble is_leaf = FTT_CELL_IS_LEAF (cell);
+
+  if (boundary->sndcount == boundary->sndbuf->len)
+    g_array_append_val (boundary->sndbuf, is_leaf);
+  else
+    g_array_index (boundary->sndbuf, gdouble, boundary->sndcount) = is_leaf;
+  boundary->sndcount++;
+
+  if (!is_leaf) {
+    FttCellChildren child;
+    guint i, n;
+
+    n = ftt_cell_children_direction (cell, GFS_BOUNDARY (boundary)->d, &child);
+    for (i = 0; i < n; i++) {
+      gdouble is_destroyed = (child.c[i] == NULL);
+      
+      if (boundary->sndcount == boundary->sndbuf->len)
+	g_array_append_val (boundary->sndbuf, is_destroyed);
+      else
+	g_array_index (boundary->sndbuf, gdouble, boundary->sndcount) = is_destroyed;
+      boundary->sndcount++;
+    }
+  }
+}
+
+static void periodic_match (GfsBoundary * boundary)
+{
+  (* gfs_boundary_class ()->match) (boundary);
+
+  g_assert (GFS_BOUNDARY_PERIODIC (boundary)->sndcount == 0);
+  ftt_cell_traverse (boundary->root,
+		     FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+		     (FttCellTraverseFunc) boundary_tree, boundary);
+}
+
+static void send (GfsBoundary * bb)
+{
+  GfsBoundaryPeriodic * boundary = GFS_BOUNDARY_PERIODIC (bb);
+  GfsBoundaryPeriodic * matching = GFS_BOUNDARY_PERIODIC (boundary->matching->neighbor[bb->d]);
+
+  g_assert (GFS_IS_BOUNDARY_PERIODIC (matching));
+  g_assert (boundary->sndcount <= boundary->sndbuf->len);
+  
+  if (GFS_BOUNDARY (boundary)->type == GFS_BOUNDARY_MATCH_VARIABLE) {
+    if (boundary->sndcount > matching->rcvbuf->len)
+      g_array_set_size (matching->rcvbuf, boundary->sndcount);
+  }
+  memcpy (matching->rcvbuf->data, boundary->sndbuf->data, boundary->sndcount*sizeof (gdouble));
+}
+
+static void center_update (FttCell * cell,
+			   GfsBoundaryPeriodic * boundary)
+{
+  g_assert (boundary->rcvcount < boundary->rcvbuf->len);
+  GFS_VARIABLE (cell, GFS_BOUNDARY (boundary)->v->i) =
+    g_array_index (boundary->rcvbuf, gdouble, boundary->rcvcount++);
+}
+
+static void face_update (FttCellFace * face,
+			 GfsBoundaryPeriodic * boundary)
+{
+  g_assert (boundary->rcvcount < boundary->rcvbuf->len);
+  GFS_STATE (face->cell)->f[face->d].v = 
+    g_array_index (boundary->rcvbuf, gdouble, boundary->rcvcount++);
+}
+
+static void match_ignore (GfsBoundaryPeriodic * boundary)
+{
+  gboolean is_leaf;
+
+  g_assert (boundary->rcvcount < boundary->rcvbuf->len);
+  is_leaf = g_array_index (boundary->rcvbuf, gdouble, boundary->rcvcount++);
+
+  if (!is_leaf) {
+    gboolean is_destroyed[FTT_CELLS/2];
+    guint i;
+
+    for (i = 0; i < FTT_CELLS/2; i++) {
+      g_assert (boundary->rcvcount < boundary->rcvbuf->len);
+      is_destroyed[i] = g_array_index (boundary->rcvbuf, gdouble, boundary->rcvcount++);
+    }
+    for (i = 0; i < FTT_CELLS/2; i++)
+      if (!is_destroyed[i])
+	match_ignore (boundary);
+  }
+}
+
+static void match_update (FttCell * cell,
+			  GfsBoundaryPeriodic * boundary)
+{
+  gboolean is_leaf;
+
+  g_assert (boundary->rcvcount < boundary->rcvbuf->len);
+  is_leaf = g_array_index (boundary->rcvbuf, gdouble, boundary->rcvcount++);
+
+  if (!is_leaf) {
+    GfsDomain * domain = gfs_box_domain (GFS_BOUNDARY (boundary)->box);
+    FttCellChildren child;
+    gboolean is_destroyed[FTT_CELLS/2];
+    guint i, n;
+
+    if (FTT_CELL_IS_LEAF (cell)) {
+      FttCell * neighbor = ftt_cell_neighbor (cell, GFS_BOUNDARY (boundary)->d);
+
+      g_assert (neighbor);
+      ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
+      if (FTT_CELL_IS_LEAF (neighbor))
+	ftt_cell_refine_single (neighbor, (FttCellInitFunc) gfs_cell_fine_init, domain);
+      /* what about solid fractions? */
+      GFS_BOUNDARY (boundary)->changed = TRUE;
+    }
+    n = ftt_cell_children_direction (cell, GFS_BOUNDARY (boundary)->d, &child);
+    for (i = 0; i < n; i++) {
+      g_assert (boundary->rcvcount < boundary->rcvbuf->len);
+      is_destroyed[i] = g_array_index (boundary->rcvbuf, gdouble, boundary->rcvcount++);
+      if (is_destroyed[i] && child.c[i]) {
+	ftt_cell_destroy (child.c[i], (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+	child.c[i] = NULL;
+	GFS_BOUNDARY (boundary)->changed = TRUE;
+      }
+    }
+    for (i = 0; i < n; i++)
+      if (!is_destroyed[i]) {
+	if (child.c[i])
+	  match_update (child.c[i], boundary);
+	else
+	  match_ignore (boundary);
+      }
+  }
+}
+
+static void receive (GfsBoundary * bb,
+		     FttTraverseFlags flags,
+		     gint max_depth)
+{
+  GfsBoundaryPeriodic * boundary = GFS_BOUNDARY_PERIODIC (bb);
+
+  boundary->rcvcount = 0;
+  switch (GFS_BOUNDARY (boundary)->type) {
+  case GFS_BOUNDARY_FACE_VARIABLE:
+    ftt_face_traverse_boundary (GFS_BOUNDARY (boundary)->root,
+				GFS_BOUNDARY (boundary)->d,
+				FTT_PRE_ORDER, flags, max_depth,
+				(FttFaceTraverseFunc) face_update, boundary);
+    break;
+
+  case GFS_BOUNDARY_MATCH_VARIABLE:
+    match_update (GFS_BOUNDARY (boundary)->root, boundary);
+    ftt_cell_flatten (GFS_BOUNDARY (boundary)->root, 
+		      GFS_BOUNDARY (boundary)->d,
+		      (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+    break;
+
+  default:
+    ftt_cell_traverse (GFS_BOUNDARY (boundary)->root,
+		       FTT_PRE_ORDER, flags, max_depth,
+		       (FttCellTraverseFunc) center_update, boundary);
+  }
+}
+
+static void synchronize (GfsBoundary * bb)
+{
+  GfsBoundaryPeriodic * boundary = GFS_BOUNDARY_PERIODIC (bb);
+
+  boundary->sndcount = 0;
+  if (bb->type == GFS_BOUNDARY_MATCH_VARIABLE)
+    set_buffers_size (boundary);
+}
+
+static GtsColor periodic_color (GtsObject * o)
+{
+  GtsColor c = { 1., 0., 0. }; /* red */
+
+  return c;
+}
+
+static void gfs_boundary_periodic_class_init (GfsBoundaryClass * klass)
+{
+  GfsBoundaryClass * parent_class = GFS_BOUNDARY_CLASS (klass);
+
+  parent_class->match             = periodic_match;
+  parent_class->send              = send;
+  parent_class->receive           = receive;
+  parent_class->synchronize       = synchronize;
+
+  GTS_OBJECT_CLASS (klass)->color =   periodic_color;
+  GTS_OBJECT_CLASS (klass)->destroy = boundary_periodic_destroy;
+  GTS_OBJECT_CLASS (klass)->read    = boundary_periodic_read;
+}
+
+static void gfs_boundary_periodic_init (GfsBoundaryPeriodic * boundary)
+{
+  GfsBc * b = GFS_BOUNDARY (boundary)->default_bc;
+
+  b->bc                = (FttFaceTraverseFunc) center_periodic;
+  b->homogeneous_bc    = (FttFaceTraverseFunc) center_periodic;
+  b->face_bc           = (FttFaceTraverseFunc) face_periodic;
+
+  boundary->sndbuf = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  boundary->rcvbuf = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  boundary->sndcount = boundary->rcvcount = 0;
+}
+
+GfsBoundaryClass * gfs_boundary_periodic_class (void)
+{
+  static GfsBoundaryClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_boundary_periodic_info = {
+      "GfsBoundaryPeriodic",
+      sizeof (GfsBoundaryPeriodic),
+      sizeof (GfsBoundaryClass),
+      (GtsObjectClassInitFunc) gfs_boundary_periodic_class_init,
+      (GtsObjectInitFunc) gfs_boundary_periodic_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_boundary_class ()),
+				  &gfs_boundary_periodic_info);
+  }
+
+  return klass;
+}
+
+GfsBoundaryPeriodic * gfs_boundary_periodic_new (GfsBoundaryClass * klass,
+						 GfsBox * box,
+						 FttDirection d,
+						 GfsBox * matching)
+{
+  GfsBoundaryPeriodic * boundary;
+
+  boundary = GFS_BOUNDARY_PERIODIC (gfs_boundary_new (klass, box, d));
+  set_buffers_size (boundary);
+  boundary->matching = matching;
+
+  return boundary;
+}
+
 /* GfsGEdge: Object */
 
 static void gfs_gedge_write (GtsObject * object, FILE * fp)
@@ -963,12 +1256,22 @@ void gfs_gedge_link_boxes (GfsGEdge * edge)
   g_return_if_fail (b1->neighbor[edge->d] == NULL);
   g_return_if_fail (b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] == NULL);
 
-  ftt_cell_set_neighbor (b1->root, b2->root, edge->d, 
-			 (FttCellInitFunc) gfs_cell_init, gfs_box_domain (b1));
-  b1->neighbor[edge->d] = GTS_OBJECT (b2);
-  b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] = GTS_OBJECT (b1);
-  if (b1 != b2)
+  GtsObject * periodic = GTS_OBJECT (b1);
+  while (periodic && GFS_IS_BOX (periodic) && GFS_BOX (periodic) != b2)
+    periodic = GFS_BOX (periodic)->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)];
+
+  if (GFS_BOX (periodic) == b2) {
+    gfs_boundary_periodic_new (gfs_boundary_periodic_class (), b1, edge->d, b2);
+    gfs_boundary_periodic_new (gfs_boundary_periodic_class (), b2, 
+			       FTT_OPPOSITE_DIRECTION (edge->d), b1);
+  }
+  else {
+    ftt_cell_set_neighbor (b1->root, b2->root, edge->d, 
+			   (FttCellInitFunc) gfs_cell_init, gfs_box_domain (b1));
+    b1->neighbor[edge->d] = GTS_OBJECT (b2);
+    b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] = GTS_OBJECT (b1);
     gfs_box_set_relative_pos (b2, b1, edge->d);
+  }
 }
 
 /**

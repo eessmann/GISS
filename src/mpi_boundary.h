@@ -28,41 +28,30 @@ extern "C" {
 #endif /* __cplusplus */
 
 typedef struct _GfsBoundaryMpi         GfsBoundaryMpi;
-typedef struct _GfsBoundaryMpiClass    GfsBoundaryMpiClass;
 
 struct _GfsBoundaryMpi {
   /*< private >*/
-  GfsBoundary parent;
+  GfsBoundaryPeriodic parent;
 
   MPI_Comm comm;
   gint process, id;
 
   MPI_Request request[2];
   guint nrequest;
-
-  GArray * sndbuf, * rcvbuf;
-  unsigned int sndcount, rcvcount;
-};
-
-struct _GfsBoundaryMpiClass {
-  GfsBoundaryClass parent_class;
 };
 
 #define GFS_BOUNDARY_MPI(obj)            GTS_OBJECT_CAST (obj,\
 					           GfsBoundaryMpi,\
 					           gfs_boundary_mpi_class ())
-#define GFS_BOUNDARY_MPI_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
-						       GfsBoundaryMpiClass,\
-						       gfs_boundary_mpi_class())
 #define GFS_IS_BOUNDARY_MPI(obj)         (gts_object_is_from_class (obj,\
 						   gfs_boundary_mpi_class ()))
      
-GfsBoundaryMpiClass * gfs_boundary_mpi_class    (void);
-GfsBoundaryMpi *      gfs_boundary_mpi_new      (GfsBoundaryMpiClass * klass,
-					       GfsBox * box,
-					       FttDirection d,
-					       gint process,
-					       gint id);
+GfsBoundaryClass *    gfs_boundary_mpi_class    (void);
+GfsBoundaryMpi *      gfs_boundary_mpi_new      (GfsBoundaryClass * klass,
+						 GfsBox * box,
+						 FttDirection d,
+						 gint process,
+						 gint id);
 
 #ifdef __cplusplus
 }

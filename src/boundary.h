@@ -214,6 +214,33 @@ struct _GfsBoundaryOutflowClass {
      
 GfsBoundaryOutflowClass * gfs_boundary_outflow_class    (void);
 
+/* GfsBoundaryPeriodic: Header */
+
+typedef struct _GfsBoundaryPeriodic         GfsBoundaryPeriodic;
+
+struct _GfsBoundaryPeriodic {
+  /*< private >*/
+  GfsBoundary parent;
+
+  GfsBox * matching;
+  GArray * sndbuf, * rcvbuf;
+  guint sndcount, rcvcount;
+};
+
+#define GFS_BOUNDARY_PERIODIC(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsBoundaryPeriodic,\
+					           gfs_boundary_periodic_class ())
+#define GFS_IS_BOUNDARY_PERIODIC(obj)         (gts_object_is_from_class (obj,\
+						   gfs_boundary_periodic_class ()))
+     
+GfsBoundaryClass *    gfs_boundary_periodic_class    (void);
+GfsBoundaryPeriodic * gfs_boundary_periodic_new      (GfsBoundaryClass * klass,
+						      GfsBox * box,
+						      FttDirection d,
+						      GfsBox * matching);
+
+/* GfsGEdge: Header */
+  
 typedef struct _GfsGEdge         GfsGEdge;
 typedef struct _GfsGEdgeClass    GfsGEdgeClass;
 
