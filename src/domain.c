@@ -1637,6 +1637,10 @@ GfsDomain * gfs_domain_read (GtsFile * fp)
     return NULL;
 
   (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->post_read) (domain, fp);
+  if (fp->type == GTS_ERROR) {
+    gts_object_destroy (GTS_OBJECT (domain));
+    return NULL;
+  }
 
   return domain;
 }
