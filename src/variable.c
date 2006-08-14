@@ -458,146 +458,58 @@ GfsVariableClass * gfs_variable_filtered_class (void)
   return klass;
 }
 
-/* GfsVariableCurvature: object */
+/* GfsDerivedVariable: object */
 
-static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
+static void gfs_derived_variable_destroy (GtsObject * object)
 {
-  GfsDomain * domain;
+  g_free (GFS_DERIVED_VARIABLE (object)->name);
+  g_free (GFS_DERIVED_VARIABLE (object)->description);
 
-  (* GTS_OBJECT_CLASS (gfs_variable_curvature_class ())->parent_class->read) (o, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-
-  if (fp->type != GTS_STRING) {
-    gts_file_error (fp, "expecting a string (v)");
-    return;
-  }
-  domain = GFS_DOMAIN (gfs_object_simulation (*o));
-  if (!(GFS_VARIABLE_CURVATURE (*o)->v = 
-	gfs_variable_from_name (domain->variables, fp->token->str))) {
-    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
-    return;
-  }
-  gts_file_next_token (fp);
-
-  if (fp->type == '{') {
-    GtsFileVariable var[] = {
-      {GTS_DOUBLE, "sigma", TRUE},
-      {GTS_DOUBLE, "theta", TRUE},
-      {GTS_NONE}
-    };
-
-    var[0].data = &GFS_VARIABLE_CURVATURE (*o)->sigma;
-    var[1].data = &GFS_VARIABLE_CURVATURE (*o)->theta;
-    gts_file_assign_variables (fp, var);
-  }
+  (* GTS_OBJECT_CLASS (gfs_derived_variable_class ())->parent_class->destroy) (object);
 }
 
-static void variable_curvature_write (GtsObject * o, FILE * fp)
+static void gfs_derived_variable_class_init (GtsObjectClass * klass)
 {
-  GfsVariableCurvature * v = GFS_VARIABLE_CURVATURE (o);
-
-  (* GTS_OBJECT_CLASS (gfs_variable_curvature_class ())->parent_class->write) (o, fp);
-
-  fprintf (fp, " %s", v->v->name);
-  if (v->sigma != 1. || v->theta != 0.5)
-    fprintf (fp, " { sigma = %g theta = %g }", v->sigma, v->theta);
+  klass->destroy = gfs_derived_variable_destroy;
 }
 
-static void normal (FttCell * cell, gpointer * data)
+GtsObjectClass * gfs_derived_variable_class (void)
 {
-  GfsVariable ** nv = data[0];
-  GfsVariable * v = GFS_VARIABLE_CURVATURE (data[1])->v;
-  GtsVector n = { 0., 0., 0. };
-  FttComponent c;
-
-  gfs_youngs_normal (cell, v, (FttVector *) n);
-  gts_vector_normalize (n);
-  for (c = 0; c < FTT_DIMENSION; c++)
-    GFS_VARIABLE (cell, nv[c]->i) = n[c];
-}
-
-static void curvature (FttCell * cell, gpointer * data)
-{
-  GfsVariable ** nv = data[0];
-  GfsVariable * v = data[1];
-  GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
-  gdouble kappa = 0.;
-  FttComponent c;
-
-  for (c = 0; c < FTT_DIMENSION; c++)
-    kappa += gfs_center_gradient (cell, c, nv[c]->i);
-  GFS_VARIABLE (cell, v->i) = (k->a*k->sigma*kappa/ftt_cell_size (cell) +
-			       (1. - k->a)*GFS_VARIABLE (cell, v->i));
-}
-
-static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim)
-{
-  GfsVariable * n[FTT_DIMENSION];
-  GfsDomain * domain = GFS_DOMAIN (sim);
-  gpointer data[2];
-  FttComponent c;
-
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    n[c] = gfs_temporary_variable (domain);
-    gfs_variable_set_vector (n[c], c);
-  }
-  data[0] = n;
-  data[1] = event;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) normal, data);
-  for (c = 0; c < FTT_DIMENSION; c++)
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, n[c]);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) curvature, data);
-  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
-  for (c = 0; c < FTT_DIMENSION; c++)
-    gts_object_destroy (GTS_OBJECT (n[c]));
-}
-
-static gboolean variable_curvature_event (GfsEvent * event, GfsSimulation * sim)
-{
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_curvature_class ())->parent_class)->event)
-      (event, sim)) {
-    GFS_VARIABLE_CURVATURE (event)->a = 1.;
-    variable_curvature_event_half (event, sim);
-    GFS_VARIABLE_CURVATURE (event)->a = GFS_VARIABLE_CURVATURE (event)->theta;
-    return TRUE;
-  }
-  return FALSE;
-}
-
-static void variable_curvature_class_init (GtsObjectClass * klass)
-{
-  klass->read = variable_curvature_read;
-  klass->write = variable_curvature_write;
-  GFS_EVENT_CLASS (klass)->event = variable_curvature_event;
-  GFS_EVENT_CLASS (klass)->event_half = variable_curvature_event_half;
-}
-
-static void variable_curvature_init (GfsVariableCurvature * v)
-{
-  v->sigma = 1.;
-  v->theta = 0.5;
-}
-
-GfsVariableClass * gfs_variable_curvature_class (void)
-{
-  static GfsVariableClass * klass = NULL;
+  static GtsObjectClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_variable_curvature_info = {
-      "GfsVariableCurvature",
-      sizeof (GfsVariableCurvature),
-      sizeof (GfsVariableClass),
-      (GtsObjectClassInitFunc) variable_curvature_class_init,
-      (GtsObjectInitFunc) variable_curvature_init,
+    GtsObjectClassInfo gfs_derived_variable_info = {
+      "GfsDerivedVariable",
+      sizeof (GfsDerivedVariable),
+      sizeof (GtsObjectClass),
+      (GtsObjectClassInitFunc) gfs_derived_variable_class_init,
+      (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
-				  &gfs_variable_curvature_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_object_class ()), 
+				  &gfs_derived_variable_info);
   }
 
   return klass;
+}
+
+/**
+ * gfs_derived_variable_from_name:
+ * @i: a list of #GfsDerivedVariable.
+ * @name: a name.
+ *
+ * Returns: the #GfsDerivedVariable @name of @list or %NULL.
+ */
+GfsDerivedVariable * gfs_derived_variable_from_name (GSList * i, const gchar * name)
+{
+  g_return_val_if_fail (name != NULL, NULL);
+
+  while (i) {
+    GfsDerivedVariable * v = i->data;
+    if (!strcmp (v->name, name))
+      return v;
+    i = i->next;
+  }
+  return NULL;
 }

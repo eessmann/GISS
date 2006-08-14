@@ -130,28 +130,26 @@ struct _GfsVariableFiltered {
 
 GfsVariableClass * gfs_variable_filtered_class  (void);
 
+/* GfsDerivedVariable: Header */
 
-/* GfsVariableCurvature: header */
-
-typedef struct _GfsVariableCurvature                GfsVariableCurvature;
-
-struct _GfsVariableCurvature {
+struct _GfsDerivedVariable {
   /*< private >*/
-  GfsVariable parent;
-  gdouble a;
+  GtsObject parent;
 
   /*< public >*/
-  GfsVariable * v;
-  gdouble sigma, theta;
+  gchar * name, * description;
+  gpointer func, data;
 };
 
-#define GFS_VARIABLE_CURVATURE(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsVariableCurvature,\
-					           gfs_variable_curvature_class ())
-#define GFS_IS_VARIABLE_CURVATURE(obj)         (gts_object_is_from_class (obj,\
-					     gfs_variable_curvature_class ()))
+#define GFS_DERIVED_VARIABLE(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsDerivedVariable,\
+					         gfs_derived_variable_class ())
+#define GFS_IS_DERIVED_VARIABLE(obj)         (gts_object_is_from_class (obj,\
+						 gfs_derived_variable_class ()))
 
-GfsVariableClass * gfs_variable_curvature_class  (void);
+GtsObjectClass *     gfs_derived_variable_class            (void);
+GfsDerivedVariable * gfs_derived_variable_from_name        (GSList * i, 
+							    const gchar * name);
 
 #ifdef __cplusplus
 }
