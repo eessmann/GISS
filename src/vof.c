@@ -423,250 +423,183 @@ void gfs_youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
   n->y = (2.*f[1][2] + f[2][2] + f[0][2] - f[2][0] - 2.*f[1][0] - f[0][0])/8.;
 } 
 
-static void neighbor_full_face_values (FttCell * cell, FttDirection right, gdouble f)
+static gdouble plane_volume_shifted (FttVector m, gdouble alpha, FttVector p[2])
 {
-  FttCell * neighbor = ftt_cell_neighbor (cell, right);
-  
-  GFS_STATE (cell)->f[right].v = f;
-  if (neighbor) {
-    FttDirection left = FTT_OPPOSITE_DIRECTION (right);
+  FttComponent c;
 
-    if (FTT_CELL_IS_LEAF (neighbor))
-      GFS_STATE (neighbor)->f[left].v = f;
-    else {
-      FttCellChildren child;
-      guint i, n = ftt_cell_children_direction (neighbor, left, &child);
-      
-      for (i = 0; i < n; i++)
-	if (child.c[i])
-	  GFS_STATE (child.c[i])->f[left].v = f;
-    }
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    alpha -= (&m.x)[c]*(&p[0].x)[c];
+    (&m.x)[c] *= (&p[1].x)[c] - (&p[0].x)[c];
   }
+  return gfs_plane_volume (&m, alpha);
 }
 
-static void neighbor_partial_face_values (FttCell * cell, FttDirection right,
-					  FttVector * m, gdouble alpha)
+typedef struct {
+  GfsVariable * m[FTT_DIMENSION], * alpha;
+  GfsAdvectionParams * par;
+  FttComponent c;
+} VofParms;
+
+static void vof_plane (FttCell * cell, VofParms * p)
 {
-  FttCell * neighbor = ftt_cell_neighbor (cell, right);
-
-  GFS_STATE (cell)->f[right].v = gfs_plane_volume (m, alpha);
-  if (neighbor) {
-    FttDirection left = FTT_OPPOSITE_DIRECTION (right);
-
-    if (FTT_CELL_IS_LEAF (neighbor))
-      GFS_STATE (neighbor)->f[left].v = GFS_STATE (cell)->f[right].v;
-    else {
-      FttCellChildren child;
-      guint i, n = ftt_cell_children_direction (neighbor, left, &child);
-      FttComponent c = right/2, j;
-      FttVector m1;
-
-      m1 = *m;
-      for (j = 0; j < FTT_DIMENSION; j++)
-	if (j != c)
-	  (&m1.x)[j] *= 0.5;
-      for (i = 0; i < n; i++)
-	if (child.c[i]) {
-	  gdouble alpha1 = alpha;
-	  FttVector p;
-	  ftt_cell_relative_pos (child.c[i], &p);
-
-	  for (j = 0; j < FTT_DIMENSION; j++)
-	    if (j != c)
-	      alpha1 -= (&m->x)[j]*(0.25 + (&p.x)[j]);
-	  GFS_STATE (child.c[i])->f[left].v = gfs_plane_volume (&m1, alpha1);
-	}
-    }
-  }
-}
-
-static void gfs_cell_vof_advected_face_values (FttCell * cell,
-					       FttComponent c,
-					       GfsAdvectionParams * par)
-{
-  gdouble f, dt, u_right, u_left;
-  FttDirection right = 2*c, left = 2*c + 1;
-
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (par != NULL);
-
-  f = GFS_VARIABLE (cell, par->v->i);
-  THRESHOLD (f);
-
-  dt = par->dt/ftt_cell_size (cell);
-  u_right = GFS_STATE (cell)->f[right].un*dt;
-  u_left = GFS_STATE (cell)->f[left].un*dt;
+  FttVector m;
+  gdouble alpha;
 
   if (GFS_IS_MIXED (cell))
-    GFS_VARIABLE (cell, par->fv->i) = 
-      f*(GFS_STATE (cell)->solid->s[right]*u_right - 
-	 GFS_STATE (cell)->solid->s[left]*u_left);
-  else
-    GFS_VARIABLE (cell, par->fv->i) = f*(u_right - u_left);
+    g_assert_not_implemented ();
 
-  if (GFS_IS_FULL (f)) {
-    if (u_left < 0.)
-      neighbor_full_face_values (cell, left, f);
-    if (u_right > 0.)
-      neighbor_full_face_values (cell, right, f);
+  if (gfs_vof_plane (cell, p->par->v, &m, &alpha)) {
+    FttComponent c;
+
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      GFS_VARIABLE (cell, p->m[c]->i) = - (&m.x)[c];
+      alpha -= (&m.x)[c];
+    }
+    GFS_VARIABLE (cell, p->alpha->i) = alpha;
   }
+}
+
+static gdouble fine_fraction (FttCellFace * face, VofParms * p, gdouble un)
+{
+  gdouble f = GFS_VARIABLE (face->cell, p->par->v->i);
+  if (f == 0. || f == 1.)
+    return f;
   else {
+    FttVector q[2] = {{0., 0., 0.},{1., 1., 1.}};
+    FttComponent c;
     FttVector m;
-    gdouble alpha, n;
-    FttComponent i;
-
-    gfs_youngs_normal (cell, par->v, &m);
+    gdouble alpha = GFS_VARIABLE (face->cell, p->alpha->i);
     
-    /* normalize */
-    n = 0.;
-    for (i = 0; i < FTT_DIMENSION; i++) {
-      (&m.x)[i] = - (&m.x)[i];
-      n += fabs ((&m.x)[i]);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&m.x)[c] = GFS_VARIABLE (face->cell, p->m[c]->i);
+    if (!FTT_FACE_DIRECT (face)) {
+      (&m.x)[face->d/2] = - (&m.x)[face->d/2];
+      alpha += (&m.x)[face->d/2];
     }
-    for (i = 0; i < FTT_DIMENSION; i++)
-      (&m.x)[i] /= n;
-    
-    alpha = gfs_plane_alpha (&m, f);
-    
-    /* advect interface */
-    (&m.x)[c] /= 1. + u_right - u_left;
-    alpha += (&m.x)[c]*u_left;
-
-    if (u_left < 0.) {
-      FttVector m1 = m;
-      (&m1.x)[c] *= - u_left;
-      neighbor_partial_face_values (cell, left, &m1, alpha + (&m1.x)[c]);
-    }
-
-    if (u_right > 0.) {
-      FttVector m1 = m;
-      (&m1.x)[c] *= u_right;
-      neighbor_partial_face_values (cell, right, &m1, alpha - (&m.x)[c]);
-    }
+    (&q[0].x)[face->d/2] = 1. - un; (&q[1].x)[face->d/2] = 1.;
+    return plane_volume_shifted (m, alpha, q);
   }
 }
 
-static void save_previous (FttCell * cell, gpointer * data)
+static gdouble coarse_fraction (FttCellFace * face, VofParms * p, gdouble un)
 {
-  GfsVariable * v = data[0];
-  GfsVariable * vh = data[1];
-
-  GFS_VARIABLE (cell, vh->i) = GFS_VARIABLE (cell, v->i);
+  gdouble f = GFS_VARIABLE (face->neighbor, p->par->v->i);
+  if (f == 0. || f == 1.)
+    return f;
+  else {
+    FttVector q[2] = {{0., 0., 0.},{1., 1., 1.}};
+    FttComponent c;
+    FttVector m, o;
+    gdouble alpha = GFS_VARIABLE (face->neighbor, p->alpha->i);
+    
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&m.x)[c] = GFS_VARIABLE (face->neighbor, p->m[c]->i);
+    if (!FTT_FACE_DIRECT (face)) {
+      (&m.x)[face->d/2] = - (&m.x)[face->d/2];
+      alpha += (&m.x)[face->d/2];
+    }
+    
+    /* shift interface perpendicularly */
+    ftt_cell_relative_pos (face->cell, &o);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      if (c != face->d/2) {
+	(&q[0].x)[c] = (&o.x)[c] + 0.25;
+	(&q[1].x)[c] = (&o.x)[c] + 0.75;
+      }
+    (&q[1].x)[face->d/2] = un;
+    return plane_volume_shifted (m, alpha, q);
+  }
 }
-
-static void average_previous (FttCell * cell, gpointer * data)
+  
+static void vof_flux (FttCellFace * face, VofParms * p)
 {
-  GfsVariable * v = data[0];
-  GfsVariable * vh = data[1];
-
-  GFS_VARIABLE (cell, vh->i) = (GFS_VARIABLE (cell, vh->i) +
-				GFS_VARIABLE (cell, v->i))/2.;
-}
-
-static void vof_face_values (FttCell * cell, gpointer * data)
-{
-  GfsAdvectionParams * par = data[0];
-  FttComponent * c = data[1];
-
-  gfs_cell_vof_advected_face_values (cell, *c, par);
-}
-
-/**
- * gfs_face_vof_advection_flux:
- * @face: a #FttCellFace.
- * @par: the advection parameters.
- *
- * Adds to variable @par->fv, the value of the (conservative)
- * advection flux of the face variable through @face.
- *
- * This function assumes that the face variable has been previously
- * defined using gfs_cell_vof_advected_face_values().
- */
-static void gfs_face_vof_advection_flux (const FttCellFace * face,
-					 const GfsAdvectionParams * par)
-{
-  gdouble un, flux = 0.;
-
-  g_return_if_fail (face != NULL);
-  g_return_if_fail (par != NULL);
-
-  un = GFS_FACE_NORMAL_VELOCITY (face);
+  gdouble un = GFS_FACE_NORMAL_VELOCITY (face)*p->par->dt/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
     un = - un;
-  flux = GFS_STATE (face->cell)->f[face->d].v*
-    GFS_FACE_FRACTION (face)*un*par->dt/ftt_cell_size (face->cell);
-  GFS_VARIABLE (face->cell, par->fv->i) -= flux;
 
   switch (ftt_face_type (face)) {
-  case FTT_FINE_FINE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += flux;
+  case FTT_FINE_FINE: {
+    if (un < 0.) {
+      FttCell * tmp = face->cell;
+      face->cell = face->neighbor;
+      face->neighbor = tmp;
+      face->d = FTT_OPPOSITE_DIRECTION (face->d);
+      un = - un;
+    }
+    gdouble f = fine_fraction (face, p, un);
+    GFS_VARIABLE (face->cell, p->par->fv->i) += 
+      (GFS_VARIABLE (face->cell, p->par->v->i) - f)*un;
+    GFS_VARIABLE (face->neighbor, p->par->fv->i) -= 
+      (GFS_VARIABLE (face->neighbor, p->par->v->i) - f)*un;
     break;
-  case FTT_FINE_COARSE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += flux/FTT_CELLS;
+  }
+  case FTT_FINE_COARSE: {
+    GFS_VARIABLE (face->cell, p->par->fv->i) += GFS_VARIABLE (face->cell, p->par->v->i)*un;
+    GFS_VARIABLE (face->neighbor, p->par->fv->i) -= coarse_fraction (face, p, 1.)*un/FTT_CELLS;
+
+    gdouble flux = un > 0. ? fine_fraction (face, p, un)*un : coarse_fraction (face, p, -un/2.)*un;
+    GFS_VARIABLE (face->cell, p->par->fv->i) -= flux;
+    GFS_VARIABLE (face->neighbor, p->par->fv->i) += flux/FTT_CELLS;
     break;
+  }
   default:
     g_assert_not_reached ();
   }
+}
+
+static void vof_update (FttCell * cell, GfsAdvectionParams * par)
+{
+  gdouble f = GFS_VARIABLE (cell, par->v->i) + GFS_VARIABLE (cell, par->fv->i);
+  GFS_VARIABLE (cell, par->v->i) = f < 0. ? 0. : f > 1. ? 1. : f;
 }
 
 /**
  * gfs_tracer_vof_advection:
  * @domain: a #GfsDomain.
  * @par: the advection parameters.
- * @half: a #GfsVariable or %NULL.
  *
  * Advects the @v field of @par using the current face-centered (MAC)
  * velocity field.
- *
- * If @half is not %NULL, the half-timestep value of @par->v is
- * stored in the corresponding variable.  
  */
 void gfs_tracer_vof_advection (GfsDomain * domain,
-			       GfsAdvectionParams * par,
-			       GfsVariable * half)
+			       GfsAdvectionParams * par)
 {
-  gpointer data[2];
+  VofParms p;
   static FttComponent cstart = 0;
-  FttComponent c, c1;
+  FttComponent c;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
 
   gfs_domain_timer_start (domain, "tracer_vof_advection");
 
-  if (half) {
-    data[0] = par->v;
-    data[1] = half;
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) save_previous, data);
-  }
+  p.par = par;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    p.m[c] = gfs_temporary_variable (domain);
+  p.alpha = gfs_temporary_variable (domain);
   par->fv = gfs_temporary_variable (domain);
-  data[0] = par;
-  data[1] = &c1;
   for (c = 0; c < FTT_DIMENSION; c++) {
-    c1 = (cstart + c) % FTT_DIMENSION;
+    p.c = (cstart + c) % FTT_DIMENSION;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) vof_face_values, data);
-    gfs_domain_face_bc (domain, c1, par->v);
-    gfs_domain_face_traverse (domain, c1,
+			      (FttCellTraverseFunc) vof_plane, &p);
+    /* fixme: boundary conditions for (m, alpha) */
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
+    gfs_domain_face_traverse (domain, p.c,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-	(FttFaceTraverseFunc) gfs_face_vof_advection_flux, par);
-    gfs_domain_traverse_merged (domain,
-				(GfsMergedTraverseFunc) gfs_advection_update,
-				par);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, par->v);
+			      (FttFaceTraverseFunc) vof_flux, &p);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) vof_update, par);
+    gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) par->v->fine_coarse, par->v);
+    gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, par->v);
   }
   cstart = (cstart + 1) % FTT_DIMENSION;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    gts_object_destroy (GTS_OBJECT (p.m[c]));
+  gts_object_destroy (GTS_OBJECT (p.alpha));
   gts_object_destroy (GTS_OBJECT (par->fv));
   par->fv = NULL;
-
-  if (half) {
-    data[0] = par->v;
-    data[1] = half;
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) average_previous, data);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, half);
-  }
 
   gfs_domain_timer_stop (domain, "tracer_vof_advection");
 }
@@ -681,8 +614,9 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
  */
 void gfs_vof_coarse_fine (FttCell * parent, GfsVariable * v)
 {
-  gdouble f;
   FttCellChildren child;
+  FttVector m;
+  gdouble alpha;
   guint i;
 
   g_return_if_fail (parent != NULL);
@@ -690,27 +624,10 @@ void gfs_vof_coarse_fine (FttCell * parent, GfsVariable * v)
   g_return_if_fail (v != NULL);
 
   ftt_cell_children (parent, &child);
-
-  f = GFS_VARIABLE (parent, v->i);
-  THRESHOLD (f);
-
-  if (GFS_IS_FULL (f))
-    for (i = 0; i < FTT_CELLS; i++)
-      GFS_VARIABLE (child.c[i], v->i) = f;
-  else {
-    FttVector m;
-    FttComponent c;
-    gdouble n = 0., alpha;
-
-    gfs_youngs_normal (parent, v, &m);
-    for (c = 0; c < FTT_DIMENSION; c++)
-      n += fabs ((&m.x)[c]);
-    for (c = 0; c < FTT_DIMENSION; c++)
-      (&m.x)[c] /= n;
-    alpha = gfs_plane_alpha (&m, f);
-
+  if (gfs_vof_plane (parent, v, &m, &alpha))
     for (i = 0; i < FTT_CELLS; i++) {
       gdouble alpha1 = alpha;
+      FttComponent c;
       FttVector p;
 
       ftt_cell_relative_pos (child.c[i], &p);
@@ -718,6 +635,10 @@ void gfs_vof_coarse_fine (FttCell * parent, GfsVariable * v)
 	alpha1 -= (&m.x)[c]*(0.25 - (&p.x)[c]);
       GFS_VARIABLE (child.c[i], v->i) = gfs_plane_volume (&m, 2.*alpha1);
     }
+  else {
+    gdouble f = GFS_VARIABLE (parent, v->i);
+    for (i = 0; i < FTT_CELLS; i++)
+      GFS_VARIABLE (child.c[i], v->i) = f;
   }
 }
 

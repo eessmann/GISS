@@ -26,7 +26,7 @@ extern "C" {
 
 #include "advection.h"
 
-#define GFS_IS_FULL(f)             ((f) < 1e-6 || (f) > 1. - 1.e-6)
+#define GFS_IS_FULL(f)             ((f) == 0. || (f) == 1.)
 
 gdouble gfs_line_area              (FttVector * m, 
 				    gdouble alpha);
@@ -56,8 +56,7 @@ void    gfs_cell_vof_advection     (FttCell * cell,
 				    FttComponent c,
 				    GfsAdvectionParams * par);
 void    gfs_tracer_vof_advection   (GfsDomain * domain,
-				    GfsAdvectionParams * par,
-				    GfsVariable * half);
+				    GfsAdvectionParams * par);
 void    gfs_vof_coarse_fine        (FttCell * parent, 
 				    GfsVariable * v);
 gboolean gfs_vof_plane             (FttCell * cell, 
