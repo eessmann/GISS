@@ -237,11 +237,10 @@ static gdouble gfs_source_tension_stability (GfsSourceGeneric * s,
   h = ftt_level_size (p.depth);
   if (p.alpha) {
     gdouble rhom = (1./p.amin + 1./p.amax)/2.;
-    gdouble rhod = p.amin < p.amax ? p.amin/p.amax : p.amax/p.amin;
-    return 3.*sqrt (rhom*rhod*h*h*h/sigma);
+    return sqrt (rhom*h*h*h/(2.*M_PI*sigma));
   }
   else
-    return 3.*sqrt (h*h*h/sigma);
+    return sqrt (h*h*h/(2.*M_PI*sigma));
 }
 
 static void gfs_source_tension_class_init (GfsSourceGenericClass * klass)
