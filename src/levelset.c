@@ -278,6 +278,44 @@ static void interface_curvature (FttCell * cell, gpointer * data)
   }
 }
 
+#define THETA 0.5
+
+static void filter (FttCell * cell, gpointer * data)
+{
+  GfsVariable * tmp = data[0], * v = data[1];
+  GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
+  GfsVariable * t = GFS_VARIABLE_DISTANCE (k->d)->v;
+  gdouble c = GFS_VARIABLE (cell, t->i);
+
+  if (GFS_IS_FULL (c))
+    GFS_VARIABLE (cell, tmp->i) = G_MAXDOUBLE;
+  else {
+    gdouble h = ftt_cell_size (cell);
+    guint level = ftt_cell_level (cell);
+    FttVector p;
+    gint x, y;
+    gdouble w = 0., st = 0.;
+    
+    ftt_cell_pos (cell, &p);
+    for (x = -1; x <= 1; x++)
+      for (y = -1; y <= 1; y++) 
+	if (x != 0 || y != 0) {
+	  FttVector o;
+	  o.x = p.x + h*x; o.y = p.y + h*y; o.z = 0.;
+	  FttCell * neighbor = gfs_domain_locate (v->domain, o, level);
+	  g_assert (neighbor);
+	  g_assert (ftt_cell_level (neighbor) == level);
+	  c = GFS_VARIABLE (neighbor, t->i);
+	  if (!GFS_IS_FULL (c)) {
+	    w += c*(1. - c);
+	    st += c*(1. - c)*GFS_VARIABLE (neighbor, v->i);
+	  }
+	}
+    g_assert (w > 0.);
+    GFS_VARIABLE (cell, tmp->i) = (1. - THETA)*GFS_VARIABLE (cell, v->i) + THETA*st/w;
+  }
+}
+
 static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim)
 {
   GfsVariable * n[FTT_DIMENSION + 1];
@@ -301,6 +339,16 @@ static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim
 		      GFS_VARIABLE1 (event), n[FTT_DIMENSION]);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) interface_curvature, data);
+
+  data[0] = gfs_temporary_variable (domain);
+  guint i = 0;
+  while (i--) {
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) filter, data);
+    gfs_variables_swap (GFS_VARIABLE1 (event), data[0]);
+  }
+  gts_object_destroy (data[0]);
+
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
   for (c = 0; c < FTT_DIMENSION + 1; c++)
     gts_object_destroy (GTS_OBJECT (n[c]));
