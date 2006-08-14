@@ -385,35 +385,43 @@ gdouble gfs_plane_alpha (FttVector * m, gdouble c)
  */
 void gfs_youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 {
-  static FttDirection d[(FTT_DIMENSION - 1)*4][FTT_DIMENSION] = {
-#if FTT_2D
-    {FTT_RIGHT, FTT_TOP}, {FTT_LEFT, FTT_TOP}, {FTT_LEFT, FTT_BOTTOM}, {FTT_RIGHT, FTT_BOTTOM}
-#else  /* 3D */
-    {FTT_RIGHT, FTT_TOP, FTT_FRONT}, {FTT_LEFT, FTT_TOP, FTT_FRONT}, 
-    {FTT_LEFT, FTT_BOTTOM, FTT_FRONT}, {FTT_RIGHT, FTT_BOTTOM, FTT_FRONT},
-    {FTT_RIGHT, FTT_TOP, FTT_BACK}, {FTT_LEFT, FTT_TOP, FTT_BACK}, 
-    {FTT_LEFT, FTT_BOTTOM, FTT_BACK}, {FTT_RIGHT, FTT_BOTTOM, FTT_BACK},
-#endif /* 3D */
-  };
-  gdouble u[(FTT_DIMENSION - 1)*4];
-  guint i;
+  gdouble h = ftt_cell_size (cell), f[3][3];
+  guint level = ftt_cell_level (cell);
+  FttVector p;
+  gint x, y;
 
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (v != NULL);
-  g_return_if_fail (n != NULL);
+  f[1][1] = GFS_VARIABLE (cell, v->i);
+  ftt_cell_pos (cell, &p);
+  for (x = -1; x <= 1; x++)
+    for (y = -1; y <= 1; y++)
+      if (x != 0 || y != 0) {
+	FttVector o;
+	o.x = p.x + h*x; o.y = p.y + h*y; o.z = 0.;
+	FttCell * neighbor = gfs_domain_locate (v->domain, o, level);
+	g_assert (neighbor);
 
-  for (i = 0; i < (FTT_DIMENSION - 1)*4; i++)
-    u[i] = gfs_cell_corner_value (cell, d[i], v, -1);
+	guint l = ftt_cell_level (neighbor);
+	FttVector m;
+	gdouble alpha;
+	if (l == level || !gfs_vof_plane (neighbor, v, &m, &alpha))
+	  f[x + 1][y + 1] = GFS_VARIABLE (neighbor, v->i);
+	else {
+	  FttComponent c;
+	  FttVector q;
 
-#if FTT_2D
-  n->x = (u[0] + u[3] - u[1] - u[2])/2.;
-  n->y = (u[0] + u[1] - u[2] - u[3])/2.;
-#else  /* 3D */
-  n->x = (u[0] + u[3] + u[4] + u[7] - u[1] - u[2] - u[5] - u[6])/4.;
-  n->y = (u[0] + u[1] + u[4] + u[5] - u[2] - u[3] - u[6] - u[7])/4.;
-  n->z = (u[0] + u[1] + u[2] + u[3] - u[4] - u[5] - u[6] - u[7])/4.;
-#endif /* 3D */
-}
+	  g_assert (l == level - 1);
+	  ftt_cell_pos (neighbor, &q);
+	  for (c = 0; c < FTT_DIMENSION; c++) {
+	    gdouble a = ((&o.x)[c] - (&q.x)[c])/h;
+	    g_assert (fabs (a) == 0.5);
+	    alpha -= (&m.x)[c]*(0.25 - a/2.);
+	  }
+	  f[x + 1][y + 1] = gfs_plane_volume (&m, 2.*alpha);
+	}
+      }
+  n->x = (2.*f[2][1] + f[2][2] + f[2][0] - f[0][2] - 2.*f[0][1] - f[0][0])/8.;
+  n->y = (2.*f[1][2] + f[2][2] + f[0][2] - f[2][0] - 2.*f[1][0] - f[0][0])/8.;
+} 
 
 static void neighbor_full_face_values (FttCell * cell, FttDirection right, gdouble f)
 {
