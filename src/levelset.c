@@ -209,16 +209,12 @@ static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
     return;
 
   if (fp->type != GTS_STRING) {
-    gts_file_error (fp, "expecting a string (d)");
+    gts_file_error (fp, "expecting a string (f)");
     return;
   }
   domain = GFS_DOMAIN (gfs_object_simulation (*o));
-  if (!(v->d = gfs_variable_from_name (domain->variables, fp->token->str))) {
+  if (!(v->f = gfs_variable_from_name (domain->variables, fp->token->str))) {
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
-    return;
-  }
-  if (!GFS_IS_VARIABLE_DISTANCE (v->d)) {
-    gts_file_error (fp, "variable `%s' is not a GfsVariableDistance", fp->token->str);
     return;
   }
   gts_file_next_token (fp);
@@ -230,52 +226,18 @@ static void variable_curvature_write (GtsObject * o, FILE * fp)
 
   (* GTS_OBJECT_CLASS (gfs_variable_curvature_class ())->parent_class->write) (o, fp);
 
-  fprintf (fp, " %s", v->d->name);
+  fprintf (fp, " %s", v->f->name);
 }
 
-static void normal (FttCell * cell, gpointer * data)
+static void curvature (FttCell * cell, GfsVariable * v)
 {
-  GfsVariable ** nv = data[0];
-  GfsVariable * d = GFS_VARIABLE_CURVATURE (data[1])->d;
-  GtsVector n = { 0., 0., 0. };
-  FttComponent c;
-
-  for (c = 0; c < FTT_DIMENSION; c++)
-    n[c] = gfs_center_gradient (cell, c, d->i);
-  gts_vector_normalize (n);
-  for (c = 0; c < FTT_DIMENSION; c++)
-    GFS_VARIABLE (cell, nv[c]->i) = n[c];
-}
-
-static void curvature (FttCell * cell, gpointer * data)
-{
-  GfsVariable ** nv = data[0];
-  gdouble kappa = 0.;
-  FttComponent c;
-
-  for (c = 0; c < FTT_DIMENSION; c++)
-    kappa += gfs_center_gradient (cell, c, nv[c]->i);
-  GFS_VARIABLE (cell, nv[FTT_DIMENSION]->i) = kappa/ftt_cell_size (cell);
-}
-
-static void interface_curvature (FttCell * cell, gpointer * data)
-{
-  GfsVariable * v = data[1];
-  GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
-  gdouble f = GFS_VARIABLE (cell, GFS_VARIABLE_DISTANCE (k->d)->v->i);
+  GfsVariable * t = GFS_VARIABLE_CURVATURE (v)->f;
+  gdouble f = GFS_VARIABLE (cell, t->i);
 
   if (GFS_IS_FULL (f))
     GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
-  else {
-    GfsVariable ** nv = data[0];
-    FttComponent c;
-    FttVector p;
-
-    ftt_cell_pos (cell, &p);
-    for (c = 0; c < FTT_DIMENSION; c++)
-      (&p.x)[c] -= GFS_VARIABLE (cell, k->d->i)*GFS_VARIABLE (cell, nv[c]->i);
-    GFS_VARIABLE (cell, v->i) = gfs_interpolate (cell, p, nv[FTT_DIMENSION]);
-  }
+  else
+    GFS_VARIABLE (cell, v->i) = gfs_height_curvature (cell, t);
 }
 
 #define THETA 0.5
@@ -283,11 +245,10 @@ static void interface_curvature (FttCell * cell, gpointer * data)
 static void filter (FttCell * cell, gpointer * data)
 {
   GfsVariable * tmp = data[0], * v = data[1];
-  GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
-  GfsVariable * t = GFS_VARIABLE_DISTANCE (k->d)->v;
-  gdouble c = GFS_VARIABLE (cell, t->i);
+  GfsVariable * t = GFS_VARIABLE_CURVATURE (v)->f;
+  gdouble f = GFS_VARIABLE (cell, t->i);
 
-  if (GFS_IS_FULL (c))
+  if (GFS_IS_FULL (f))
     GFS_VARIABLE (cell, tmp->i) = G_MAXDOUBLE;
   else {
     gdouble h = ftt_cell_size (cell);
@@ -305,10 +266,10 @@ static void filter (FttCell * cell, gpointer * data)
 	  FttCell * neighbor = gfs_domain_locate (v->domain, o, level);
 	  g_assert (neighbor);
 	  g_assert (ftt_cell_level (neighbor) == level);
-	  c = GFS_VARIABLE (neighbor, t->i);
-	  if (!GFS_IS_FULL (c)) {
-	    w += c*(1. - c);
-	    st += c*(1. - c)*GFS_VARIABLE (neighbor, v->i);
+	  f = GFS_VARIABLE (neighbor, t->i);
+	  if (!GFS_IS_FULL (f)) {
+	    w += f*(1. - f);
+	    st += f*(1. - f)*GFS_VARIABLE (neighbor, v->i);
 	  }
 	}
     g_assert (w > 0.);
@@ -316,42 +277,29 @@ static void filter (FttCell * cell, gpointer * data)
   }
 }
 
-static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim)
+static void filter_curvature (GfsDomain * domain, GfsVariable * k)
 {
-  GfsVariable * n[FTT_DIMENSION + 1];
-  GfsDomain * domain = GFS_DOMAIN (sim);
   gpointer data[2];
-  FttComponent c;
-
-  for (c = 0; c < FTT_DIMENSION + 1; c++) {
-    n[c] = gfs_temporary_variable (domain);
-    gfs_variable_set_vector (n[c], c);
-  }
-  data[0] = n;
-  data[1] = event;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) normal, data);
-  for (c = 0; c < FTT_DIMENSION; c++)
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, n[c]);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) curvature, data);
-  gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, 
-		      GFS_VARIABLE1 (event), n[FTT_DIMENSION]);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) interface_curvature, data);
 
   data[0] = gfs_temporary_variable (domain);
-  guint i = 0;
+  data[1] = k;
+  guint i = 1;
   while (i--) {
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) filter, data);
-    gfs_variables_swap (GFS_VARIABLE1 (event), data[0]);
+    gfs_variables_swap (data[1], data[0]);
   }
-  gts_object_destroy (data[0]);
+  gts_object_destroy (data[0]);  
+}
 
+static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim)
+{
+  GfsDomain * domain = GFS_DOMAIN (sim);
+
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) curvature, event);
+  // filter_curvature (domain, GFS_VARIABLE1 (event));
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
-  for (c = 0; c < FTT_DIMENSION + 1; c++)
-    gts_object_destroy (GTS_OBJECT (n[c]));
 }
 
 static gboolean variable_curvature_event (GfsEvent * event, GfsSimulation * sim)
@@ -383,7 +331,7 @@ static void curvature_coarse_fine (FttCell * parent, GfsVariable * v)
   ftt_cell_children (parent, &child);
   for (n = 0; n < FTT_CELLS; n++) {
     GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
-    gdouble f = GFS_VARIABLE (child.c[n], GFS_VARIABLE_DISTANCE (k->d)->v->i);
+    gdouble f = GFS_VARIABLE (child.c[n], k->f->i);
 
     GFS_VARIABLE (child.c[n], v->i) = GFS_VARIABLE (parent, v->i);
     if (!GFS_IS_FULL (f))
@@ -394,7 +342,7 @@ static void curvature_coarse_fine (FttCell * parent, GfsVariable * v)
 static void curvature_fine_coarse (FttCell * parent, GfsVariable * v)
 {
   GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
-  GfsVariable * t = GFS_VARIABLE_DISTANCE (k->d)->v;
+  GfsVariable * t = k->f;
   FttCellChildren child;
   gdouble val = 0., sa = 0.;
   guint i;

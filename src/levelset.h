@@ -57,7 +57,7 @@ struct _GfsVariableCurvature {
   gboolean first_done;
 
   /*< public >*/
-  GfsVariable * d;
+  GfsVariable * f;
 };
 
 #define GFS_VARIABLE_CURVATURE(obj)            GTS_OBJECT_CAST (obj,\
