@@ -423,6 +423,56 @@ void gfs_youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
   n->y = (2.*f[1][2] + f[2][2] + f[0][2] - f[2][0] - 2.*f[1][0] - f[0][0])/8.;
 } 
 
+void gfs_column_normal (FttCell * cell, GfsVariable * v, FttVector * n)
+{
+  gdouble h = ftt_cell_size (cell), f[3][3], s1, s2;
+  guint level = ftt_cell_level (cell);
+  FttVector p;
+  gint x, y;
+
+  f[1][1] = GFS_VARIABLE (cell, v->i);
+  ftt_cell_pos (cell, &p);
+  for (x = -1; x <= 1; x++)
+    for (y = -1; y <= 1; y++)
+      if (x != 0 || y != 0) {
+	FttVector o;
+	o.x = p.x + h*x; o.y = p.y + h*y; o.z = 0.;
+	FttCell * neighbor = gfs_domain_locate (v->domain, o, level);
+	//g_assert (neighbor);
+
+	if (neighbor) {
+	  guint l = ftt_cell_level (neighbor);
+	  FttVector m;
+	  gdouble alpha;
+	  if (l == level || !gfs_vof_plane (neighbor, v, &m, &alpha))
+	    f[x + 1][y + 1] = GFS_VARIABLE (neighbor, v->i);
+	  else {
+	    FttComponent c;
+	    FttVector q;
+	        
+	    g_assert (l == level - 1);
+	    ftt_cell_pos (neighbor, &q);
+	    for (c = 0; c < FTT_DIMENSION; c++) {
+	      gdouble a = ((&o.x)[c] - (&q.x)[c])/h;
+	      g_assert (fabs (a) == 0.5);
+	      alpha -= (&m.x)[c]*(0.25 - a/2.);
+	    }
+	    f[x + 1][y + 1] = gfs_plane_volume (&m, 2.*alpha);
+	  }
+	}
+	else
+	  f[x + 1][y + 1] =  f[1][1];
+      }
+  s1 = f[2][0] + f[2][1] + f[2][2] - f[0][0] - f[0][1] - f[0][2];
+  s2 = f[0][2] + f[1][2] + f[2][2] - f[0][0] - f[1][0] - f[2][0];
+  if (fabs (s2) > fabs (s1)) {
+    n->x = s1; n->y = s2 < 0. ? -2. : 2.;
+  }
+  else {
+    n->y = s2; n->x = s1 < 0. ? - 2. : 2.;
+  }
+} 
+
 static gdouble plane_volume_shifted (FttVector m, gdouble alpha, FttVector p[2])
 {
   FttComponent c;
