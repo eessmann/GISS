@@ -784,3 +784,81 @@ GSList * gfs_vof_facet (FttCell * cell, GfsVariable * v)
     return l;
   }
 }
+
+#define WIDTH 3
+
+gdouble gfs_height_curvature (FttCell * cell, GfsVariable * v)
+{
+  gdouble f[2*WIDTH + 1][2*WIDTH + 1], f1[2*WIDTH + 1][2*WIDTH + 1], h = ftt_cell_size (cell);
+  guint level = ftt_cell_level (cell);
+  FttVector pos;
+  gint x, y;
+
+  ftt_cell_pos (cell, &pos);
+  for (x = -WIDTH; x <= WIDTH; x++)
+    for (y = -WIDTH; y <= WIDTH; y++) {
+      FttVector o;
+      o.x = pos.x + h*x; o.y = pos.y + h*y; o.z = 0.;
+      FttCell * neighbor = gfs_domain_locate (v->domain, o, level);
+
+      g_assert (neighbor);
+      g_assert (ftt_cell_level (neighbor) == level);
+
+      f[x + WIDTH][y + WIDTH] = GFS_VARIABLE (neighbor, v->i);
+    }
+  g_assert (f[WIDTH][WIDTH] > 0. && f[WIDTH][WIDTH] < 1.);
+
+  gdouble s1 = 0.;
+  for (x = WIDTH - 1; x <= WIDTH + 1; x++)
+    for (y = 0; y <= WIDTH - 1; y++) {
+      s1 += f[x][y];
+    }
+  for (x = 0; x <= 2*WIDTH; x++)
+    for (y = 0; y <= 2*WIDTH; y++)
+      f1[x][y] = f[x][y];
+
+  gdouble s2 = 0.;
+  for (x = WIDTH - 1; x <= WIDTH + 1; x++)
+    for (y = WIDTH + 1; y <= 2*WIDTH; y++) {
+      s2 += f[x][y];
+    }
+  if (s2 > s1) {
+    s1 = s2;
+    for (x = 0; x <= 2*WIDTH; x++)
+      for (y = 0; y <= 2*WIDTH; y++)
+	f1[x][y] = f[x][y];
+  }
+
+  gdouble s3 = 0.;
+  for (y = WIDTH - 1; y <= WIDTH + 1; y++)
+    for (x = 0; x <= WIDTH - 1; x++)
+      s3 += f[x][y];
+  if (s3 > s1) {
+    s1 = s3;
+    for (x = 0; x <= 2*WIDTH; x++)
+      for (y = 0; y <= 2*WIDTH; y++)
+	f1[x][y] = f[y][x];
+  }
+
+  gdouble s4 = 0.;
+  for (y = WIDTH - 1; y <= WIDTH + 1; y++)
+    for (x = WIDTH + 1; x <= 2*WIDTH; x++)
+      s4 += f[x][y];
+  if (s4 > s1) {
+    s1 = s4;
+    for (x = 0; x <= 2*WIDTH; x++)
+      for (y = 0; y <= 2*WIDTH; y++)
+	f1[x][y] = f[y][x];
+  }
+
+  gdouble FL = 0., FC = 0., FR = 0.;
+  for (y = 0; y <= 2*WIDTH; y++) {
+    FL += f1[WIDTH - 1][y];
+    FC += f1[WIDTH][y];
+    FR += f1[WIDTH + 1][y];
+  }
+
+  gdouble p = fabs ((FR - FL)/2.);
+  p = 1 + p*p;
+  return (FL + FR - 2.*FC)/(sqrt (p*p*p)*h);
+}
