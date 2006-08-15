@@ -453,6 +453,7 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   GfsStateVector * s = GFS_STATE (face->cell);
   gdouble v = lambda2[face->d/2];
   GfsSourceTension * t = data[1];
+  GfsVariable * alpha = data[2];
   gdouble c1 = GFS_VARIABLE (face->cell, t->c->i);
   gdouble c2 = GFS_VARIABLE (face->neighbor, t->c->i);
   gdouble w1 = GFS_IS_FULL (c1) ? 0. : c1*(1. - c1);
@@ -469,6 +470,8 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   else
     v = 0.;
 
+  if (alpha)
+      v *= gfs_face_interpolated_value (face, alpha->i);
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
   s->f[face->d].v = v;
