@@ -190,6 +190,9 @@ void         gfs_domain_split                 (GfsDomain * domain,
 FttCell *    gfs_domain_locate                (GfsDomain * domain,
 					       FttVector target,
 					       gint max_depth);
+FttCell *    gfs_domain_boundary_locate       (GfsDomain * domain,
+					       FttVector target,
+					       gint max_depth);
 gdouble      gfs_domain_cell_point_distance2  (GfsDomain * domain,
 					       GtsPoint * p,
 					       gdouble (* distance2) (FttCell *, 

@@ -1834,14 +1834,16 @@ void gfs_domain_split (GfsDomain * domain, gboolean one_box_per_pe)
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) get_ref_pos, &domain->refpos);
 }
 
-static void box_locate (GfsBox * box, gpointer * data)
-{
-  FttVector * target = data[0];
-  gint * max_depth = data[1];
-  FttCell ** cell = data[2];
+typedef struct {
+  FttVector target;
+  gint max_depth;
+  FttCell * cell;
+} LocateArgs;
 
-  if (*cell == NULL)
-    *cell = ftt_cell_locate (box->root, *target, *max_depth);
+static void box_locate (GfsBox * box, LocateArgs * a)
+{
+  if (a->cell == NULL)
+    a->cell = ftt_cell_locate (box->root, a->target, a->max_depth);
 }
 
 /**
@@ -1862,17 +1864,53 @@ FttCell * gfs_domain_locate (GfsDomain * domain,
 			     FttVector target,
 			     gint max_depth)
 {
-  FttCell * cell = NULL;
-  gpointer data[3];
+  LocateArgs a;
 
   g_return_val_if_fail (domain != NULL, NULL);
 
-  data[0] = &target;
-  data[1] = &max_depth;
-  data[2] = &cell;
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_locate, data);
+  a.target = target;
+  a.max_depth = max_depth;
+  a.cell = NULL;
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_locate, &a);
 
-  return cell;
+  return a.cell;
+}
+
+static void box_boundary_locate (GfsBox * box, LocateArgs * a)
+{
+  FttDirection d;
+
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (a->cell == NULL && box->neighbor[d] && GFS_IS_BOUNDARY (box->neighbor[d]))
+      a->cell = ftt_cell_locate (GFS_BOUNDARY (box->neighbor[d])->root, a->target, a->max_depth);
+}
+
+/**
+ * gfs_domain_boundary_locate:
+ * @domain: a #GfsDomain.
+ * @target: position of the point to look for.
+ * @max_depth: maximum depth to consider (-1 means no restriction).
+ *
+ * Locates the cell of the boundary of @domain containing @target.
+ *
+ * Returns: a #FttCell of the boundary of @domain containing the
+ * point defined by @target or %NULL if @target is not contained in
+ * any cell of the boundary of @domain.  
+ */
+FttCell * gfs_domain_boundary_locate (GfsDomain * domain,
+				      FttVector target,
+				      gint max_depth)
+{
+  LocateArgs a;
+
+  g_return_val_if_fail (domain != NULL, NULL);
+
+  a.target = target;
+  a.max_depth = max_depth;
+  a.cell = NULL;
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_boundary_locate, &a);
+
+  return a.cell;
 }
 
 static void box_distance2 (GfsBox * box, GPtrArray * a)

@@ -398,13 +398,8 @@ void gfs_youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 	FttVector o;
 	o.x = p.x + h*x; o.y = p.y + h*y; o.z = 0.;
 	FttCell * neighbor = gfs_domain_locate (v->domain, o, level);
-	g_assert (neighbor);
-
-	guint l = ftt_cell_level (neighbor);
-	FttVector m;
-	gdouble alpha;
-	if (l == level || !gfs_vof_plane (neighbor, v, &m, &alpha))
-	  f[x + 1][y + 1] = GFS_VARIABLE (neighbor, v->i);
+	if (!neighbor) /* fixme: boundary conditions */
+	  f[x + 1][y + 1] = f[1][1];
 	else {
 	  FttComponent c;
 	  FttVector q;
