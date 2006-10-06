@@ -6,6 +6,24 @@ test -z "$srcdir" && srcdir=.
 
 DIE=0
 
+# a fix for Mac OS X (Darwin)
+
+system=`uname -s`
+libtoolize=libtoolize
+libtool=libtool
+case $system in
+    Darwin)
+	libtoolize=glibtoolize
+	libtool=glibtool
+    ;;
+esac
+
+# On Mac OS fink is often used and installs stuff in /sw, so we search there
+if [ -d "/sw" ]; then
+	ACLOCAL_FLAGS="-I /sw/share/aclocal $ACLOCAL_FLAGS"
+fi
+# end of Mac OS X (Darwin) fix
+
 if [ -n "$GNOME2_DIR" ]; then
 	ACLOCAL_FLAGS="-I $GNOME2_DIR/share/aclocal $ACLOCAL_FLAGS"
 	LD_LIBRARY_PATH="$GNOME2_DIR/lib:$LD_LIBRARY_PATH"
@@ -49,7 +67,7 @@ fi
 }
 
 (grep "^AM_PROG_LIBTOOL" $srcdir/configure.in >/dev/null) && {
-  (libtool --version) < /dev/null > /dev/null 2>&1 || {
+  ($libtool --version) < /dev/null > /dev/null 2>&1 || {
     echo
     echo "**Error**: You must have \`libtool' installed."
     echo "You can get it from: ftp://ftp.gnu.org/pub/gnu/"
@@ -131,7 +149,7 @@ do
       if grep "^AM_PROG_LIBTOOL" configure.in >/dev/null; then
 	if test -z "$NO_LIBTOOLIZE" ; then 
 	  echo "Running libtoolize..."
-	  libtoolize --force --copy
+	  $libtoolize --force --copy
 	fi
       fi
       echo "Running aclocal $aclocalinclude ..."
