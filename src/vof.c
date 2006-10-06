@@ -374,22 +374,13 @@ gdouble gfs_plane_alpha (FttVector * m, gdouble c)
 }
 #endif /* 3D */
 
-/**
- * gfs_youngs_normal:
- * @cell: a #FttCell.
- * @v: a #GfsVariable.
- * @n: a #FttVector.
- *
- * Fills @n with the Youngs-averaged gradients of @v 
- * normalised by the size of @cell.
- */
-void gfs_youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
+static void stencil (FttCell * cell, GfsVariable * v, gdouble f[3][3])
 {
-  gdouble h = ftt_cell_size (cell), f[3][3];
+  gdouble h = ftt_cell_size (cell);
   guint level = ftt_cell_level (cell);
   FttVector p;
   gint x, y;
-
+  
   f[1][1] = GFS_VARIABLE (cell, v->i);
   ftt_cell_pos (cell, &p);
   for (x = -1; x <= 1; x++)
@@ -401,41 +392,6 @@ void gfs_youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 	if (!neighbor) /* fixme: boundary conditions */
 	  f[x + 1][y + 1] = f[1][1];
 	else {
-	  FttComponent c;
-	  FttVector q;
-
-	  g_assert (l == level - 1);
-	  ftt_cell_pos (neighbor, &q);
-	  for (c = 0; c < FTT_DIMENSION; c++) {
-	    gdouble a = ((&o.x)[c] - (&q.x)[c])/h;
-	    g_assert (fabs (a) == 0.5);
-	    alpha -= (&m.x)[c]*(0.25 - a/2.);
-	  }
-	  f[x + 1][y + 1] = gfs_plane_volume (&m, 2.*alpha);
-	}
-      }
-  n->x = (2.*f[2][1] + f[2][2] + f[2][0] - f[0][2] - 2.*f[0][1] - f[0][0])/8.;
-  n->y = (2.*f[1][2] + f[2][2] + f[0][2] - f[2][0] - 2.*f[1][0] - f[0][0])/8.;
-} 
-
-void gfs_column_normal (FttCell * cell, GfsVariable * v, FttVector * n)
-{
-  gdouble h = ftt_cell_size (cell), f[3][3], s1, s2;
-  guint level = ftt_cell_level (cell);
-  FttVector p;
-  gint x, y;
-
-  f[1][1] = GFS_VARIABLE (cell, v->i);
-  ftt_cell_pos (cell, &p);
-  for (x = -1; x <= 1; x++)
-    for (y = -1; y <= 1; y++)
-      if (x != 0 || y != 0) {
-	FttVector o;
-	o.x = p.x + h*x; o.y = p.y + h*y; o.z = 0.;
-	FttCell * neighbor = gfs_domain_locate (v->domain, o, level);
-	//g_assert (neighbor);
-
-	if (neighbor) {
 	  guint l = ftt_cell_level (neighbor);
 	  FttVector m;
 	  gdouble alpha;
@@ -444,7 +400,7 @@ void gfs_column_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 	  else {
 	    FttComponent c;
 	    FttVector q;
-	        
+	    
 	    g_assert (l == level - 1);
 	    ftt_cell_pos (neighbor, &q);
 	    for (c = 0; c < FTT_DIMENSION; c++) {
@@ -455,9 +411,31 @@ void gfs_column_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 	    f[x + 1][y + 1] = gfs_plane_volume (&m, 2.*alpha);
 	  }
 	}
-	else
-	  f[x + 1][y + 1] =  f[1][1];
-      }
+      }  
+}
+
+/**
+ * gfs_youngs_normal:
+ * @cell: a #FttCell.
+ * @v: a #GfsVariable.
+ * @n: a #FttVector.
+ *
+ * Fills @n with the Youngs-averaged gradients of @v 
+ * normalised by the size of @cell.
+ */
+void gfs_youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
+{
+  gdouble f[3][3];
+
+  stencil (cell, v, f);
+  n->x = (2.*f[2][1] + f[2][2] + f[2][0] - f[0][2] - 2.*f[0][1] - f[0][0])/8.;
+  n->y = (2.*f[1][2] + f[2][2] + f[0][2] - f[2][0] - 2.*f[1][0] - f[0][0])/8.;
+} 
+
+static void column_normal (gdouble f[3][3], FttVector * n)
+{
+  gdouble s1, s2;
+
   s1 = f[2][0] + f[2][1] + f[2][2] - f[0][0] - f[0][1] - f[0][2];
   s2 = f[0][2] + f[1][2] + f[2][2] - f[0][0] - f[1][0] - f[2][0];
   if (fabs (s2) > fabs (s1)) {
@@ -466,6 +444,14 @@ void gfs_column_normal (FttCell * cell, GfsVariable * v, FttVector * n)
   else {
     n->y = s2; n->x = s1 < 0. ? - 2. : 2.;
   }
+}
+
+void gfs_column_normal (FttCell * cell, GfsVariable * v, FttVector * n)
+{
+  gdouble f[3][3];
+
+  stencil (cell, v, f);
+  column_normal (f, n);
 } 
 
 static gdouble plane_volume_shifted (FttVector m, gdouble alpha, FttVector p[2])
@@ -789,6 +775,10 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariable * v)
   FttVector pos;
   gint x, y;
 
+#if FTT_3D
+  g_assert_not_implemented ();
+#endif
+
   ftt_cell_pos (cell, &pos);
   for (x = -WIDTH; x <= WIDTH; x++)
     for (y = -WIDTH; y <= WIDTH; y++) {
@@ -856,4 +846,173 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariable * v)
   gdouble p = fabs ((FR - FL)/2.);
   p = 1 + p*p;
   return (FL + FR - 2.*FC)/(sqrt (p*p*p)*h);
+}
+
+gdouble gfs_fit_curvature (FttCell * cell, GfsVariable * v)
+{
+  gdouble f[3][3];
+  static gdouble c[][3] = {
+    { +8.809173e-3, +8.744777e-3, +6.411956e-3 },
+    { -7.302646e-2, -4.773088e-2, -1.217681e-1 },
+    { +1.476918e-1, +1.911265e-1, +1.213353e-1 },
+    { +8.127531e-1, +1.051815e0,  +1.091137e0  },
+    { +1.662098e-1, +9.073978e-2, +3.268512e-1 },
+    { -3.158622e-1, -3.656622e-1, -1.658780e-1 },
+    { -7.899257e-2, -1.242422e-1, +9.856956e-2 },
+    { -2.954707e-1, -3.824833e-1, -2.427756e-1 },
+    { -8.268886e-1, -2.037791e-1, -1.522460e-1 },
+    { +1.961225e-2, -9.380094e-1, -8.981913e-1 },
+    { -1.107777e-1, -6.043060e-2, -2.178954e-1 },
+    { -4.160499e-4, -1.001143e-3, -2.737967e-4 },
+    { -1.507973e-2, -5.859334e-2, -2.349028e0  },
+    { -1.792648e-4, -3.742121e-4, -2.355644e-5 },
+    { +8.268877e-1, +2.037529e-1, +1.522527e-1 },
+    { +6.325443e-1, +7.331659e-1, +3.322431e-1 },
+    { -6.501391e-2, +4.143641e-1, +2.703116e-1 },
+    { +1.579836e-1, +2.482401e-1, -1.982763e-1 },
+    { +2.944518e-6, +3.065368e-4, +1.363379e-3 },
+    { +4.704595e-6, +1.256257e-4, -3.048371e-7 }
+  };
+
+  stencil (cell, v, f);
+  gdouble F = f[1][1];
+  
+  gdouble S = 0.;
+  guint i,j;
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++)
+      S += f[i][j];
+  
+  FttVector m;
+  gdouble alpha;
+  g_return_val_if_fail (gfs_vof_plane (cell, v, &m, &alpha), 0.);
+  alpha = (alpha + m.x + m.y)/3.;
+  S -= 9.*gfs_plane_volume (&m, alpha);
+
+  gdouble M = atan (MIN (fabs (m.x), fabs (m.y))/MAX (fabs (m.x), fabs (m.y)));
+
+  gdouble kappa = c[0][0] + (c[1][0]*F   + c[2][0]*M   + c[3][0]*S +
+			     c[4][0]*F*F + c[5][0]*M*M + c[6][0]*S*S +
+			     c[7][0]*F*M + c[8][0]*F*S + c[9][0]*M*S + 
+			     c[10][0]*F*F*F + c[11][0]*M*M*M + c[12][0]*S*S*S +
+			     c[13][0]*F*F*M + c[14][0]*F*F*S + c[15][0]*M*M*F +
+			     c[16][0]*M*M*S + c[17][0]*S*S*F + c[18][0]*S*S*M +
+			     c[19][0]*F*M*S);
+  if (fabs (kappa) < 0.4)
+    kappa = c[0][1] + (c[1][1]*F   + c[2][1]*M   + c[3][1]*S +
+		       c[4][1]*F*F + c[5][1]*M*M + c[6][1]*S*S +
+		       c[7][1]*F*M + c[8][1]*F*S + c[9][1]*M*S + 
+		       c[10][1]*F*F*F + c[11][1]*M*M*M + c[12][1]*S*S*S +
+		       c[13][1]*F*F*M + c[14][1]*F*F*S + c[15][1]*M*M*F +
+		       c[16][1]*M*M*S + c[17][1]*S*S*F + c[18][1]*S*S*M +
+		       c[19][1]*F*M*S);
+  if (fabs (kappa) < 0.1)
+    kappa = c[0][2] + (c[1][2]*F   + c[2][2]*M   + c[3][2]*S +
+		       c[4][2]*F*F + c[5][2]*M*M + c[6][2]*S*S +
+		       c[7][2]*F*M + c[8][2]*F*S + c[9][2]*M*S + 
+		       c[10][2]*F*F*F + c[11][2]*M*M*M + c[12][2]*S*S*S +
+		       c[13][2]*F*F*M + c[14][2]*F*F*S + c[15][2]*M*M*F +
+		       c[16][2]*M*M*S + c[17][2]*S*S*F + c[18][2]*S*S*M +
+		       c[19][2]*F*M*S);
+  return kappa/ftt_cell_size (cell);
+}
+
+#define HEIGHT 3
+
+static gdouble local_height (FttCell * cell,
+			     GfsVariable * v, 
+			     FttComponent c1)
+{
+  FttDirection d = 2*c1;
+  FttCell * n;
+  gdouble f;
+  guint i, j;
+   
+  f = GFS_VARIABLE (cell, v->i); 
+
+  for (i = 0; i < 2; i++) {      
+    n = cell; 
+    for (j = 1; j <= HEIGHT; j++) {
+      n = ftt_cell_neighbor (n, d);
+      g_assert (n);
+      f += GFS_VARIABLE (n, v->i);
+    }
+    d = d + 1;
+  }
+  return f;
+}
+
+gdouble gfs_shahriar_curvature (FttCell * cell, GfsVariable * v)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
+  
+  FttComponent c, c1, cp;
+  FttDirection d;
+  FttVector m;
+  gdouble max, dnm;
+  guint i;
+  FttCell * n; 
+      
+/*for (c = 0; c < FTT_DIMENSION; c++) 
+    (&m.x)[c] = gfs_youngs_gradient (cell, c, v->i); 
+    (&m.x)[c] = gfs_center_gradient (cell, c, v->i);*/
+    
+  gfs_youngs_normal (cell, v, &m);
+    
+  max = fabs (m.x);
+  c1 = 0;
+  
+  for (c = 1; c < FTT_DIMENSION; c++) 
+    if (fabs ((&m.x)[c]) > max) {
+      max = fabs ((&m.x)[c]); 
+      c1 = c;
+    }      
+          
+  gdouble height = local_height (cell, v, c1);
+      
+  cp = FTT_ORTHOGONAL_COMPONENT (c1);
+  d = 2*cp;  
+#ifdef FTT_2D    
+  gdouble h[2], hxx, hx;
+	  
+  for (i = 0; i < 2; i++) { 
+    n = ftt_cell_neighbor (cell, d);
+    g_assert (n);
+    h[i] = local_height (n, v, c1);
+    d = d + 1;
+  }
+  
+  hxx = h[0] - 2*height + h[1];
+  hx = (h[0] - h[1])/2.;
+  dnm = 1. + hx*hx;
+  
+  return hxx/(ftt_cell_size (cell)*sqrt (dnm*dnm*dnm));
+#else  /* FTT_3D */  
+  static FttDirection dp[3][4] =
+  {{ FTT_FRONT, FTT_BACK, FTT_BOTTOM, FTT_TOP },
+   { FTT_RIGHT, FTT_LEFT, FTT_BACK, FTT_FRONT },
+   { FTT_TOP, FTT_BOTTOM, FTT_LEFT, FTT_RIGHT }};  
+  gdouble h[8], hxx, hyy, hx, hy, hxy;
+    
+  for (i = 0; i < 4 ; i++) {
+    n = ftt_cell_neighbor (cell, d);
+    g_assert (n);
+    h[i] = local_height (n, v, c1);     
+    n = ftt_cell_neighbor (n, dp[c1][i]);
+    g_assert (n);
+    h[i + 4] = local_height (n, v, c1);
+    d = (d + 1)%6;   
+  }   
+  
+  hxx = h[0] - 2.*height + h[1];
+  hyy = h[2] - 2.*height + h[3];
+  hx = (h[0] - h[1])/2.;
+  hy = (h[2] - h[3])/2.;
+  hxy = (h[4] + h[5] - h[6] - h[7])/2.;
+  dnm = 1. + hx*hx + hy*hy;
+  
+  return (hxx + hyy + hxx*hy*hy + hyy*hx*hx - hxy*hx*hy)
+    /(ftt_cell_size (cell)*sqrt (dnm*dnm*dnm));  
+#endif  
 }
