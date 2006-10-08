@@ -2451,7 +2451,7 @@ static void add_pressure_force (FttCell * cell, gpointer * data)
 
   gfs_pressure_force (cell, p, &ff);
   gts_vector_cross (&mm.x, r, &ff.x);
-  for (c = 0; c < FTT_DIMENSION; c++) {
+  for (c = 0; c < 3; c++) {
     f[c] += (&ff.x)[c];
     m[c] += (&mm.x)[c];
   }
@@ -2529,7 +2529,7 @@ static void add_viscous_force (FttCell * cell, gpointer * data)
   }
 #endif /* 3D */
   gts_vector_cross (&mm.x, r, &ff.x);
-  for (c = 0; c < FTT_DIMENSION; c++) {
+  for (c = 0; c < 3; c++) {
     f[c] += (&ff.x)[c];
     m[c] += (&mm.x)[c];
   }
