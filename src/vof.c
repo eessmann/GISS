@@ -1016,3 +1016,43 @@ gdouble gfs_shahriar_curvature (FttCell * cell, GfsVariable * v)
     /(ftt_cell_size (cell)*sqrt (dnm*dnm*dnm));  
 #endif  
 }
+
+/**
+ * gfs_vof_interpolate:
+ * @cell: a #FttCell containing location @p.
+ * @p: the center of the virtual cell.
+ * @level: the level of the virtual cell.
+ * @v: a #GfsVariable (volume fraction).
+ *
+ * Computes the volume fraction of a virtual cell at @level centered
+ * on @p.
+ *
+ * Returns: the volume fraction of the virtual cell.
+ */
+gdouble gfs_vof_interpolate (FttCell * cell,
+			     FttVector p,
+			     guint level,
+			     GfsVariable * v)
+{
+  FttVector m;
+  gdouble alpha;
+
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (ftt_cell_level (cell) < level, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
+
+  if (!gfs_vof_plane (cell, v, &m, &alpha))
+    return GFS_VARIABLE (cell, v->i);
+  else {
+    gdouble h = ftt_level_size (level);
+    gdouble H = ftt_cell_size (cell);
+    FttComponent c;
+    FttVector q;
+
+    ftt_cell_pos (cell, &q);
+    alpha *= H;
+    for (c = 0; c < FTT_DIMENSION; c++)
+      alpha -= (&m.x)[c]*((&q.x)[c] + H/2 - (&p.x)[c] - h/2.);
+    return gfs_plane_volume (&m, alpha/h);
+  }
+}

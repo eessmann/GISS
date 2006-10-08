@@ -65,6 +65,10 @@ gboolean gfs_vof_plane             (FttCell * cell,
 				    gdouble * alpha);
 GSList * gfs_vof_facet             (FttCell * cell, 
 				    GfsVariable * v);
+gdouble  gfs_vof_interpolate       (FttCell * cell,
+				    FttVector p,
+				    guint level,
+				    GfsVariable * v);
 gdouble  gfs_height_curvature      (FttCell * cell, 
 				    GfsVariable * v);
 gdouble  gfs_fit_curvature         (FttCell * cell, 
