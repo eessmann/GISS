@@ -998,7 +998,6 @@ static gdouble min_cfl (GfsSimulation * sim)
 void gfs_simulation_set_timestep (GfsSimulation * sim)
 {
   gdouble t, cfl;
-  GSList * i;
 
   g_return_if_fail (sim != NULL);
 
@@ -1009,23 +1008,29 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
     sim->advection_params.dt = G_MAXDOUBLE;
   if (sim->advection_params.dt > sim->time.dtmax)
     sim->advection_params.dt = sim->time.dtmax;
-  sim->tnext = t + sim->advection_params.dt;
 
-  i = sim->events->items;
+  gdouble tnext = G_MAXDOUBLE;
+  GSList * i = sim->events->items;
   while (i) {
     GfsEvent * event = i->data;
-    GSList * next = i->next;
+    if (t < event->t && event->t < tnext)
+      tnext = event->t;
+    i = i->next;
+  }
+  if (sim->time.end < tnext)
+    tnext = sim->time.end;
 
-    if (t < event->t && sim->tnext > event->t - 1e-9) {
-      sim->advection_params.dt = event->t - t;
-      sim->tnext = event->t;
-    }
-    i = next;
+  if (tnext < G_MAXDOUBLE) {
+    gdouble n = ceil ((tnext - t)/sim->advection_params.dt);
+    sim->advection_params.dt = n > 0. ? (tnext - t)/n : 0.;
+    if (n == 1.)
+      sim->tnext = tnext;
+    else
+      sim->tnext = t + sim->advection_params.dt;
   }
-  if (sim->tnext > sim->time.end - 1e-9) {
-    sim->advection_params.dt = sim->time.end - t;
-    sim->tnext = sim->time.end;
-  }
+  else
+    sim->tnext = t + sim->advection_params.dt;
+
   if (sim->advection_params.dt < 1e-9)
     sim->advection_params.dt = 1e-9;
 }
