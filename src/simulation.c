@@ -1020,9 +1020,9 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
   if (sim->time.end < tnext)
     tnext = sim->time.end;
 
-  if (tnext < G_MAXDOUBLE) {
-    gdouble n = ceil ((tnext - t)/sim->advection_params.dt);
-    sim->advection_params.dt = n > 0. ? (tnext - t)/n : 0.;
+  gdouble n = ceil ((tnext - t)/sim->advection_params.dt);
+  if (n > 0. && n < 1e9) {
+    sim->advection_params.dt = (tnext - t)/n;
     if (n == 1.)
       sim->tnext = tnext;
     else
