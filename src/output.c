@@ -2843,7 +2843,11 @@ static gboolean gfs_output_ppm_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_ppm_class ())->parent_class)->event) 
       (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
+#if FTT_2D
+    GfsDomain * domain = GFS_DOMAIN (sim);
+#else /* 2D3 or 3D */
     GfsDomain * domain = GFS_IS_OCEAN (sim) ? GFS_OCEAN (sim)->toplayer : GFS_DOMAIN (sim);
+#endif /* 2D3 or 3D */
 
     gfs_write_ppm (domain,
 		   output->box,

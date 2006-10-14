@@ -34,9 +34,10 @@ typedef struct _GfsOcean         GfsOcean;
 
 struct _GfsOcean {
   GfsSimulation parent;
-
+#if !FTT_2D
   GPtrArray * layer;
   GfsDomain * toplayer;
+#endif /* 2D3 or 3D */
 };
 
 #define GFS_OCEAN(obj)            GTS_OBJECT_CAST (obj,\
