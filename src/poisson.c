@@ -456,26 +456,24 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   GfsVariable * alpha = data[2];
   gdouble c1 = GFS_VARIABLE (face->cell, t->c->i);
   gdouble c2 = GFS_VARIABLE (face->neighbor, t->c->i);
-  gdouble w1 = GFS_IS_FULL (c1) ? 0. : c1*(1. - c1);
-  gdouble w2 = GFS_IS_FULL (c2) ? 0. : c2*(1. - c2);
-#if 1
-#if 1
+  gdouble w1 = c1*(1. - c1);
+  gdouble w2 = c2*(1. - c2);
+
   if (w1 + w2 > 0.)
     v *= (w1*GFS_VARIABLE (face->cell, t->k->i) +
 	  w2*GFS_VARIABLE (face->neighbor, t->k->i))/(w1 + w2);
-  else
-#endif
-    v *= (GFS_VARIABLE (face->cell, t->k->i) +
-	  GFS_VARIABLE (face->neighbor, t->k->i))/2.;
-#else
-  if (w1 > 0. && w2 > 0.)
-    v *= (GFS_VARIABLE (face->cell, t->k->i) +
-	  GFS_VARIABLE (face->neighbor, t->k->i))/2.;
-  else if (w1 > 0.)
-    v *= GFS_VARIABLE (face->cell, t->k->i);
-  else if (w2 > 0.)
-    v *= GFS_VARIABLE (face->neighbor, t->k->i);
-#endif
+  else {
+    if (GFS_VARIABLE (face->cell, t->k->i) < G_MAXDOUBLE) {
+      if (GFS_VARIABLE (face->neighbor, t->k->i) < G_MAXDOUBLE)
+	v *= (GFS_VARIABLE (face->cell, t->k->i) + GFS_VARIABLE (face->neighbor, t->k->i))/2.;
+      else
+	v *= GFS_VARIABLE (face->cell, t->k->i);
+    }
+    else if (GFS_VARIABLE (face->neighbor, t->k->i) < G_MAXDOUBLE)
+      v *= GFS_VARIABLE (face->neighbor, t->k->i);
+    else
+      v = 1e6;
+  }
 
   if (alpha)
       v *= gfs_face_interpolated_value (face, alpha->i);

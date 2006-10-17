@@ -51,8 +51,7 @@
   ProjectionParams { tolerance = 1e-6 }
   Refine LEVEL
   VariableTracer {} T { scheme = vof }
-  VariableLevelSet {} L T 0.5
-  VariableCurvature {} K L
+  VariableCurvature {} K T
   SourceTension {} T K
   AdvectionParams { scheme = none }
   SourceDiffusion {} U 0.0182571749236

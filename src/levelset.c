@@ -237,69 +237,65 @@ static void curvature (FttCell * cell, GfsVariable * v)
   if (GFS_IS_FULL (f))
     GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
   else
-    GFS_VARIABLE (cell, v->i) = gfs_height_curvature (cell, t);
+    GFS_VARIABLE (cell, v->i) = gfs_shahriar_curvature (cell, t);
 }
 
-#define THETA 0.5
+typedef struct {
+  GfsVariable * v, * tmp;
+} DiffuseParms;
 
-static void filter (FttCell * cell, gpointer * data)
+static void diffuse (FttCell * cell, DiffuseParms * p)
 {
-  GfsVariable * tmp = data[0], * v = data[1];
-  GfsVariable * t = GFS_VARIABLE_CURVATURE (v)->f;
-  gdouble f = GFS_VARIABLE (cell, t->i);
-
-  if (GFS_IS_FULL (f))
-    GFS_VARIABLE (cell, tmp->i) = G_MAXDOUBLE;
+  if (GFS_VARIABLE (cell, p->v->i) < G_MAXDOUBLE)
+    GFS_VARIABLE (cell, p->tmp->i) = GFS_VARIABLE (cell, p->v->i);
   else {
-    gdouble h = ftt_cell_size (cell);
-    guint level = ftt_cell_level (cell);
-    FttVector p;
-    gint x, y;
-    gdouble w = 0., st = 0.;
-    
-    ftt_cell_pos (cell, &p);
-    for (x = -1; x <= 1; x++)
-      for (y = -1; y <= 1; y++) 
-	if (x != 0 || y != 0) {
-	  FttVector o;
-	  o.x = p.x + h*x; o.y = p.y + h*y; o.z = 0.;
-	  FttCell * neighbor = gfs_domain_locate (v->domain, o, level);
-	  g_assert (neighbor);
-	  g_assert (ftt_cell_level (neighbor) == level);
-	  f = GFS_VARIABLE (neighbor, t->i);
-	  if (!GFS_IS_FULL (f)) {
-	    w += f*(1. - f);
-	    st += f*(1. - f)*GFS_VARIABLE (neighbor, v->i);
-	  }
-	}
-    g_assert (w > 0.);
-    GFS_VARIABLE (cell, tmp->i) = (1. - THETA)*GFS_VARIABLE (cell, v->i) + THETA*st/w;
-  }
-}
+    FttCellNeighbors neighbor;
+    GfsVariable * t = GFS_VARIABLE_CURVATURE (p->v)->f;
+    gdouble sa = 0., s = 0.;
+    FttDirection d;
 
-static void filter_curvature (GfsDomain * domain, GfsVariable * k)
-{
-  gpointer data[2];
-
-  data[0] = gfs_temporary_variable (domain);
-  data[1] = k;
-  guint i = 1;
-  while (i--) {
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) filter, data);
-    gfs_variables_swap (data[1], data[0]);
+    ftt_cell_neighbors (cell, &neighbor);
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      if (neighbor.c[d] && GFS_VARIABLE (neighbor.c[d], p->v->i) < G_MAXDOUBLE) {
+	s += GFS_VARIABLE (neighbor.c[d], p->v->i);
+	sa += 1.;
+      }
+    if (sa > 0.)
+      GFS_VARIABLE (cell, p->tmp->i) = s/sa;
+    else
+      GFS_VARIABLE (cell, p->tmp->i) = G_MAXDOUBLE;
   }
-  gts_object_destroy (data[0]);  
 }
 
 static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
 
+  gfs_domain_timer_start (domain, "variable_curvature");
+
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) curvature, event);
-  // filter_curvature (domain, GFS_VARIABLE1 (event));
+  gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			    (FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+
+  DiffuseParms p;
+  p.v = GFS_VARIABLE1 (event);
+  p.tmp = gfs_temporary_variable (domain);
+  guint n = 2;
+
+  while (n--) {
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) diffuse, &p);
+    gfs_variables_swap (p.v, p.tmp);
+    gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) p.v->fine_coarse, p.v);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.v);
+  }
+
+  gts_object_destroy (GTS_OBJECT (p.tmp));
+
+  gfs_domain_timer_stop (domain, "variable_curvature");
 }
 
 static gboolean variable_curvature_event (GfsEvent * event, GfsSimulation * sim)
@@ -349,18 +345,14 @@ static void curvature_fine_coarse (FttCell * parent, GfsVariable * v)
 
   ftt_cell_children (parent, &child);
   for (i = 0; i < FTT_CELLS; i++)
-    if (child.c[i] && !GFS_IS_FULL (GFS_VARIABLE (child.c[i], t->i))) {
-      gdouble a = GFS_IS_MIXED (child.c[i]) ? GFS_STATE (child.c[i])->solid->a : 1.;
-
-      val += GFS_VARIABLE (child.c[i], v->i)*a;
-      sa += a;
+    if (child.c[i] && GFS_VARIABLE (child.c[i], v->i) < G_MAXDOUBLE) {
+      val += GFS_VARIABLE (child.c[i], v->i);
+      sa += 1.;
     }
   if (sa > 0.)
     GFS_VARIABLE (parent, v->i) = val/sa;
-  else {
+  else
     GFS_VARIABLE (parent, v->i) = G_MAXDOUBLE;
-    g_assert (GFS_IS_FULL (GFS_VARIABLE (parent, t->i)));
-  }
 }
 
 static void variable_curvature_init (GfsVariableCurvature * v)

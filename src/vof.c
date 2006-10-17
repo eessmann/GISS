@@ -374,6 +374,14 @@ gdouble gfs_plane_alpha (FttVector * m, gdouble c)
 }
 #endif /* 3D */
 
+static FttCell * domain_and_boundary_locate (GfsDomain * domain, FttVector p, guint level)
+{
+  FttCell * cell = gfs_domain_locate (domain, p, level);
+  if (cell)
+    return cell;
+  return gfs_domain_boundary_locate (domain, p, level);
+}
+
 static void stencil (FttCell * cell, GfsVariable * v, gdouble f[3][3])
 {
   gdouble h = ftt_cell_size (cell);
@@ -388,7 +396,7 @@ static void stencil (FttCell * cell, GfsVariable * v, gdouble f[3][3])
       if (x != 0 || y != 0) {
 	FttVector o;
 	o.x = p.x + h*x; o.y = p.y + h*y; o.z = 0.;
-	FttCell * neighbor = gfs_domain_locate (v->domain, o, level);
+	FttCell * neighbor = domain_and_boundary_locate (v->domain, o, level);
 	if (!neighbor) /* fixme: boundary conditions */
 	  f[x + 1][y + 1] = f[1][1];
 	else {
@@ -430,6 +438,7 @@ void gfs_youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
   stencil (cell, v, f);
   n->x = (2.*f[2][1] + f[2][2] + f[2][0] - f[0][2] - 2.*f[0][1] - f[0][0])/8.;
   n->y = (2.*f[1][2] + f[2][2] + f[0][2] - f[2][0] - 2.*f[1][0] - f[0][0])/8.;
+  n->z = 0.;
 } 
 
 static void column_normal (gdouble f[3][3], FttVector * n)
@@ -444,6 +453,7 @@ static void column_normal (gdouble f[3][3], FttVector * n)
   else {
     n->y = s2; n->x = s1 < 0. ? - 2. : 2.;
   }
+  n->z = 0.;
 }
 
 void gfs_column_normal (FttCell * cell, GfsVariable * v, FttVector * n)
@@ -850,6 +860,10 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariable * v)
 
 gdouble gfs_fit_curvature (FttCell * cell, GfsVariable * v)
 {
+#if !FTT_2D
+  g_assert_not_implemented ();
+#endif
+
   gdouble f[3][3];
   static gdouble c[][3] = {
     { +8.809173e-3, +8.744777e-3, +6.411956e-3 },
@@ -917,78 +931,430 @@ gdouble gfs_fit_curvature (FttCell * cell, GfsVariable * v)
   return kappa/ftt_cell_size (cell);
 }
 
-#define HEIGHT 3
-
-static gdouble local_height (FttCell * cell,
-			     GfsVariable * v, 
-			     FttComponent c1)
+static gdouble fraction (FttVector p,
+			 guint level,
+			 GfsVariable * v)
 {
-  FttDirection d = 2*c1;
-  FttCell * n;
-  gdouble f;
-  guint i, j;
-   
-  f = GFS_VARIABLE (cell, v->i); 
+  FttCell * cell = domain_and_boundary_locate (v->domain, p, level);
+  g_assert (cell);
+  return gfs_vof_interpolate (cell, p, level, v);
+}
 
-  for (i = 0; i < 2; i++) {      
-    n = cell; 
-    for (j = 1; j <= HEIGHT; j++) {
-      n = ftt_cell_neighbor (n, d);
-      g_assert (n);
-      f += GFS_VARIABLE (n, v->i);
-    }
-    d = d + 1;
+static guint local_height (FttVector p,
+			   FttVector o,
+			   guint level,
+			   GfsVariable * v,
+			   FttComponent c,
+			   gdouble * H)
+{
+  gdouble h = ftt_level_size (level);
+  gdouble f1 = fraction (p, level, v);
+  guint n = !GFS_IS_FULL (f1);
+
+  *H = f1;
+  FttVector i = p;
+  (&i.x)[c] -= h;
+  f1 = fraction (i, level, v);
+  while (!GFS_IS_FULL (f1)) {
+    //    fprintf (stderr, " f1: %g (%g,%g)\n", f1, i.x, i.y);
+    *H += f1; n++;
+    (&i.x)[c] -= h;
+    f1 = fraction (i, level, v);
   }
-  return f;
+  if (f1 > 0.5)
+    *H += ((&i.x)[c] - (&o.x)[c])/h + 0.5;
+
+  i = p;
+  (&i.x)[c] += h;
+  gdouble f2 = fraction (i, level, v);
+  while (!GFS_IS_FULL (f2)) {
+    //    fprintf (stderr, " f2: %g (%g,%g)\n", f2, i.x, i.y);
+    *H += f2; n++;
+    (&i.x)[c] += h;
+    f2 = fraction (i, level, v);
+  }
+  if (f2 > 0.5) {
+    if (f1 > 0.5)
+      return 0;
+    *H = 0.5 + *H - ((&i.x)[c] - (&o.x)[c])/h;
+  }
+  else if (f1 < 0.5)
+    return 0;
+
+  //  fprintf (stderr, " %d %g ", n, *H);
+
+  return n;
+}
+
+static gboolean local_height1 (FttVector p,
+			       guint level,
+			       GfsVariable * v,
+			       FttComponent c,
+			       gdouble * H)
+{
+  gdouble h = ftt_level_size (level);
+  FttVector i = p;
+  gint x;
+
+  for (x = -2; x <= 2; x++) {
+    (&i.x)[c] = (&p.x)[c] + h*x;
+    FttCell * cell = gfs_domain_locate (v->domain, i, -1);
+    gdouble alpha;
+    FttVector m;
+    if (gfs_vof_plane (cell, v, &m, &alpha)) {
+      FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
+      if ((&m.x)[c] != 0.) {
+	gdouble y = (alpha - (&m.x)[cp]/2.)/(&m.x)[c];
+	if (y >= 0. && y <= 1.) {
+	  *H = (&i.x)[c]/h + 0.5 - y;
+	  return TRUE;
+	}
+      }
+    }
+  }
+
+  return FALSE;
+}
+
+static gboolean height (FttVector p,
+			FttCell * cell,
+			GfsVariable * v,
+			FttDirection d,
+			gdouble * H)
+{
+  FttVector m;
+  gdouble alpha;
+
+  if (gfs_vof_plane (cell, v, &m, &alpha)) {
+    FttComponent c = d/2;
+    if ((&m.x)[c] != 0.) {
+      FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
+      FttVector i;
+      ftt_cell_pos (cell, &i);
+      gdouble h = ftt_cell_size (cell);
+      gdouble x = ((&p.x)[cp] - (&i.x)[cp])/h + 0.5;
+      gdouble y = (alpha - (&m.x)[cp]*x)/(&m.x)[c];
+      fprintf (stderr, "y %g\n", y);
+      if (y >= 0. && y <= 1.) {
+	*H = (&i.x)[c] + (0.5 - y)*h;
+	return TRUE;
+      }
+    }
+  }
+  return FALSE;
+}
+
+static gboolean is_interface (FttCell * cell, GfsVariable * v)
+{
+  gdouble f = GFS_VARIABLE (cell, v->i);
+  return !GFS_IS_FULL (f);
+}
+
+static gboolean local_height2 (FttCell * cell,
+			       GfsVariable * v,
+			       FttDirection d,
+			       gdouble * H)
+{
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  fprintf (stderr, "** %d ", is_interface (cell, v));
+  if (height (p, cell, v, d, H)) {
+    fprintf (stderr, "height %g\n", *H);
+    return TRUE;
+  }
+
+  gboolean interface = is_interface (cell, v);
+  FttCell * right = cell, * left = cell;
+  guint n = 0;
+  do {
+    right = ftt_cell_neighbor (right, d);
+    g_assert (right);
+    if (height (p, right, v, d, H)) {
+      fprintf (stderr, "height1 %g\n", *H);
+      return TRUE;
+    }
+    else {
+      interface = interface || is_interface (right, v);
+      left = ftt_cell_neighbor (left, FTT_OPPOSITE_DIRECTION (d));
+      g_assert (left);
+      if (height (p, left, v, d, H)) {
+	fprintf (stderr, "height2 %g\n", *H);
+	return TRUE;
+      }
+      interface = interface || is_interface (left, v);
+    }
+    n++;
+  } while (is_interface (right, v) || is_interface (left, v) || (!interface && n < 2));
+  fprintf (stderr, "No height\n");
+  return FALSE;
+}
+
+typedef struct {
+  FttVector p;
+  guint n;
+} InterfacePoints;
+
+guint interface_points1 (FttCell * cell, GfsVariable * v, FttDirection d, InterfacePoints ip[6])
+{
+  guint N = 0;
+
+  g_return_val_if_fail (cell != NULL, 0);
+  g_return_val_if_fail (v != NULL, 0);
+
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  guint level = ftt_cell_level (cell);
+  gdouble h = ftt_level_size (level);
+
+  FttComponent c = d/2;
+  //  for (c = 0; c < FTT_DIMENSION; c++)
+  {
+    FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
+    gint i;
+    for (i = -1.; i <= 1; i++) {
+      FttVector q = p;
+      guint n;
+
+      (&q.x)[cp] += h*i;
+      if ((n = local_height1 (q, level, v, d, &((&q.x)[c])))) {
+	(&q.x)[c] *= h;
+	ip[N].p = q;
+	ip[N++].n = n;
+      }
+    }
+  }
+
+  guint i;
+  for (i = 0; i < N; i++) {
+    ip[i].p.x = (ip[i].p.x - p.x)/h;
+    ip[i].p.y = (ip[i].p.y - p.y)/h;
+  }
+    
+  return N;
+}
+
+guint interface_points (FttCell * cell, GfsVariable * v, FttDirection d, InterfacePoints ip[6])
+{
+  guint N = 0;
+
+  g_return_val_if_fail (cell != NULL, 0);
+  g_return_val_if_fail (v != NULL, 0);
+
+  FttComponent c = d/2;
+  FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
+
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  gdouble h = ftt_cell_size (cell);
+
+  if (p.x > -0.2178 && p.y > -0.1547 && p.x < -0.189 && p.y < -0.1266) {
+    gdouble H;
+    gboolean ret = local_height2 (cell, v, d, &H);
+    fprintf (stderr, "tyty %d %d %g %d\n", d, ret, H,
+	     H > (&p.x)[c] - h/2. && H < (&p.x)[c] + h/2.);
+  }
+
+  ftt_cell_pos (cell, &ip[N].p);
+  if (local_height2 (cell, v, d, &((&ip[N].p.x)[c])) &&
+      (&ip[N].p.x)[c] > (&p.x)[c] - h/2. && (&ip[N].p.x)[c] < (&p.x)[c] + h/2.)
+    N++;
+  
+  FttCell * neighbor = ftt_cell_neighbor (cell, 2*cp);
+  g_assert (neighbor);
+  ftt_cell_pos (neighbor, &ip[N].p);
+  if (local_height2 (neighbor, v, d, &((&ip[N].p.x)[c])))
+    N++;
+
+  neighbor = ftt_cell_neighbor (cell, 2*cp + 1);
+  g_assert (neighbor);
+  ftt_cell_pos (neighbor, &ip[N].p);
+  if (local_height2 (neighbor, v, d, &((&ip[N].p.x)[c])))
+    N++;
+    
+  guint i;
+  for (i = 0; i < N; i++) {
+    ip[i].p.x = (ip[i].p.x - p.x)/h;
+    ip[i].p.y = (ip[i].p.y - p.y)/h;
+  }
+
+  fprintf (stderr, "N %d\n", N);
+
+  return N;
+}
+
+static FttDirection orientation (FttCell * cell, GfsVariable * v)
+{
+  FttVector m;      
+  gfs_youngs_normal (cell, v, &m);
+    
+  gdouble max = fabs (m.x);
+  FttComponent i;
+  FttDirection d = m.x > 0. ? 0 : 1;
+  for (i = 1; i < FTT_DIMENSION; i++)
+    if (fabs ((&m.x)[i]) > max) {
+      max = fabs ((&m.x)[i]);
+      d = (&m.x)[i] > 0. ? 2*i : 2*i + 1;
+    }
+  return d;
+}
+
+static gdouble curvature (FttVector * a, FttVector * b, FttVector * c)
+{
+  gdouble xd, yd, xe, ye;
+  gdouble xad, yad, xae, yae;
+  gdouble det;
+  
+  xd = (a->x + b->x)/2.; yd = (a->y + b->y)/2.;
+  xe = (a->x + c->x)/2.; ye = (a->y + c->y)/2.;
+  xad = xd - a->x; yad = yd - a->y;
+  xae = xe - a->x; yae = ye - a->y;
+  det = xad*yae - xae*yad;
+  if (det == 0.)
+    return 0.;
+  gdouble x = (yae*yad*(yd - ye) + xad*yae*xd - xae*yad*xe)/det - a->x;
+  gdouble y = -(xae*xad*(xd - xe) + yad*xae*yd - yae*xad*ye)/det - a->y;
+  return 1./sqrt (x*x + y*y);
+}
+
+static gboolean height_curvature (FttCell * cell, GfsVariable * v, FttDirection d, gdouble * k)
+{
+  InterfacePoints ip[6];
+  FttComponent or = d/2;
+  guint n = interface_points (cell, v, d, ip);
+
+  if (n < 3)
+    return FALSE;
+#if 0
+  *k = curvature (&ip[0].p, &ip[1].p, &ip[2].p)/ftt_cell_size (cell);
+  return TRUE;
+#else
+  FttVector m;
+  gfs_youngs_normal (cell, v, &m);
+  gts_vector_normalize (&m.x);
+
+  guint i;
+  GtsMatrix * o = gts_matrix_zero (NULL);
+  GtsVector rhs = {0., 0., 0.};
+
+  gdouble x0 = 0., y0 = 0.;
+#if 1
+  for (i = 0; i < n; i++) {
+    x0 += ip[i].p.x;
+    y0 += ip[i].p.y;
+  }
+  x0 /= n; y0 /= n;
+#else
+  (&m.x)[or] = (&m.x)[or] > 0. ? 1. : -1.;
+  (&m.x)[FTT_ORTHOGONAL_COMPONENT (or)] = 0.;
+#endif
+
+  for (i = 0; i < n; i++) {
+    gdouble x = - m.y*(ip[i].p.x - x0) + m.x*(ip[i].p.y - y0);
+    gdouble y = - m.x*(ip[i].p.x - x0) - m.y*(ip[i].p.y - y0);
+    o[0][0] += x*x*x*x; o[0][1] += x*x*x; o[0][2] += x*x;
+    o[1][2] += x;
+    rhs[0] += x*x*y;
+    rhs[1] += x*y;
+    rhs[2] += y;
+  }
+  o[1][0] = o[0][1];
+  o[1][1] = o[2][0] = o[0][2];
+  o[2][1] = o[1][2];
+  o[2][2] = n;
+
+  GtsMatrix * im = gts_matrix3_inverse (o);
+  g_assert (im);
+  gts_matrix_destroy (o);
+  
+  gdouble a = im[0][0]*rhs[0] + im[0][1]*rhs[1] + im[0][2]*rhs[2];
+  gdouble b = im[1][0]*rhs[0] + im[1][1]*rhs[1] + im[1][2]*rhs[2];
+  gdouble c = im[2][0]*rhs[0] + im[2][1]*rhs[1] + im[2][2]*rhs[2];
+  gts_matrix_destroy (im);
+
+  gdouble kappa = 1. + b*b;
+  kappa = 2.*a/(sqrt (kappa*kappa*kappa)*ftt_cell_size (cell));
+
+  fprintf (stderr, "unset label\n");
+  fprintf (stderr, "set title 'kappa=%g'\n", kappa);
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  gdouble h = ftt_cell_size (cell);
+  //  for (i = 0; i < n; i++)
+  //    fprintf (stderr, "set label \"%d\" at %g,%g\n", ip[i].n, p.x + h*ip[i].p.x, p.y + h*ip[i].p.y);
+  fprintf (stderr, "plot [%g:%g][%g:%g]'/tmp/toto.gnu' w l, '-' w p\n",
+	   p.x - 3.*h, p.x + 3.*h, p.y - 3.*h, p.y + 3.*h);
+  for (i = 0; i < n; i++)
+    fprintf (stderr, "%g %g\n", p.x + h*ip[i].p.x, p.y + h*ip[i].p.y);
+  fprintf (stderr, "%g %g\n", p.x, p.y);
+  fprintf (stderr, "e\npause -1\n");
+
+  *k = kappa;
+  return TRUE;
+#endif
+}
+
+gdouble gfs_shahriar1_curvature (FttCell * cell, GfsVariable * v)
+{
+  FttDirection d = orientation (cell, v);
+
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  fprintf (stderr, "%g %g %d\n", p.x, p.y, d);
+
+  gdouble k;
+
+  if (height_curvature (cell, v, d, &k))
+    return k;
+  else
+    return G_MAXDOUBLE;
 }
 
 gdouble gfs_shahriar_curvature (FttCell * cell, GfsVariable * v)
 {
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (v != NULL, 0.);
-  
-  FttComponent c, c1, cp;
-  FttDirection d;
-  FttVector m;
-  gdouble max, dnm;
-  guint i;
-  FttCell * n; 
+
+  FttComponent c = orientation (cell, v)/2;
+
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  //  fprintf (stderr, "(%g %g) %d ", p.x, p.y, c);
+  guint level = ftt_cell_level (cell);
+  gdouble size = ftt_level_size (level);
+  gdouble H;
+  if (!local_height (p, p, level, v, c, &H))
+    return G_MAXDOUBLE;
+  if (H < -0.5 || H > 0.5)
+    return G_MAXDOUBLE;
       
-/*for (c = 0; c < FTT_DIMENSION; c++) 
-    (&m.x)[c] = gfs_youngs_gradient (cell, c, v->i); 
-    (&m.x)[c] = gfs_center_gradient (cell, c, v->i);*/
-    
-  gfs_youngs_normal (cell, v, &m);
-    
-  max = fabs (m.x);
-  c1 = 0;
-  
-  for (c = 1; c < FTT_DIMENSION; c++) 
-    if (fabs ((&m.x)[c]) > max) {
-      max = fabs ((&m.x)[c]); 
-      c1 = c;
-    }      
-          
-  gdouble height = local_height (cell, v, c1);
-      
-  cp = FTT_ORTHOGONAL_COMPONENT (c1);
-  d = 2*cp;  
-#ifdef FTT_2D    
+  FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
+#ifdef FTT_2D
   gdouble h[2], hxx, hx;
-	  
-  for (i = 0; i < 2; i++) { 
-    n = ftt_cell_neighbor (cell, d);
-    g_assert (n);
-    h[i] = local_height (n, v, c1);
-    d = d + 1;
-  }
-  
-  hxx = h[0] - 2*height + h[1];
+  FttVector q = p, m;
+  gfs_youngs_normal (cell, v, &m);
+  gdouble slope = rint ((&m.x)[cp]/(&m.x)[c]);
+
+  (&q.x)[cp] += size;
+  (&q.x)[c] -= slope*size;
+  //  fprintf (stderr, "\n  (%g %g) ", q.x, q.y);
+  if (!local_height (q, p, level, v, c, &h[0]))
+    g_assert_not_reached ();
+
+  q = p;
+  (&q.x)[cp] -= size;
+  (&q.x)[c] += slope*size;
+  //  fprintf (stderr, "\n  (%g %g) ", q.x, q.y);
+  if (!local_height (q, p, level, v, c, &h[1]))
+    g_assert_not_reached ();
+
+  hxx = h[0] - 2*H + h[1];
   hx = (h[0] - h[1])/2.;
-  dnm = 1. + hx*hx;
-  
-  return hxx/(ftt_cell_size (cell)*sqrt (dnm*dnm*dnm));
+  gdouble dnm = 1. + hx*hx;
+  //  fprintf (stderr, " %g\n", hxx/(size*sqrt (dnm*dnm*dnm)));
+  return hxx/(size*sqrt (dnm*dnm*dnm));
 #else  /* FTT_3D */  
+  g_assert_not_implemented ();
+#if 0
   static FttDirection dp[3][4] =
   {{ FTT_FRONT, FTT_BACK, FTT_BOTTOM, FTT_TOP },
    { FTT_RIGHT, FTT_LEFT, FTT_BACK, FTT_FRONT },
@@ -1014,6 +1380,7 @@ gdouble gfs_shahriar_curvature (FttCell * cell, GfsVariable * v)
   
   return (hxx + hyy + hxx*hy*hy + hyy*hx*hx - hxy*hx*hy)
     /(ftt_cell_size (cell)*sqrt (dnm*dnm*dnm));  
+#endif
 #endif  
 }
 
@@ -1036,12 +1403,13 @@ gdouble gfs_vof_interpolate (FttCell * cell,
 {
   FttVector m;
   gdouble alpha;
+  guint l = ftt_cell_level (cell);
 
   g_return_val_if_fail (cell != NULL, 0.);
-  g_return_val_if_fail (ftt_cell_level (cell) < level, 0.);
+  g_return_val_if_fail (l <= level, 0.);
   g_return_val_if_fail (v != NULL, 0.);
 
-  if (!gfs_vof_plane (cell, v, &m, &alpha))
+  if (l == level || !gfs_vof_plane (cell, v, &m, &alpha))
     return GFS_VARIABLE (cell, v->i);
   else {
     gdouble h = ftt_level_size (level);

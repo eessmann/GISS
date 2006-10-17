@@ -46,7 +46,7 @@ void gfs_cell_coarse_init (FttCell * cell, GfsDomain * domain)
   i = domain->variables;
   while (i) {
     GfsVariable * v = i->data;
-  
+
     (* v->fine_coarse) (cell, v);
     i = i->next;
   }
