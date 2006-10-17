@@ -12,7 +12,7 @@ Package: gerris-snapshot
 Section: math
 Priority: extra
 Architecture: any
-Depends: \${shlibs:Depends}, libgts-snapshot-dev (>= $GTS_VERSION), pkg-config, gcc, sed, gawk
+Depends: libglib2.0-0, libgts-snapshot-dev (>= $GTS_VERSION), pkg-config, gcc, sed, gawk
 Conflicts: gerris
 Replaces: gerris
 Suggests: gfsview-snapshot
