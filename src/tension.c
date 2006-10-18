@@ -193,12 +193,20 @@ static void gfs_source_tension_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   gts_file_next_token (fp);
+
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (sigma)");
+    return;
+  }
+  s->sigma = atof (fp->token->str);
+  gts_file_next_token (fp);
 }
 
 static void gfs_source_tension_write (GtsObject * o, FILE * fp)
 {
+  GfsSourceTension * s = GFS_SOURCE_TENSION (o);
   (* GTS_OBJECT_CLASS (gfs_source_tension_class ())->parent_class->write) (o, fp);
-  fprintf (fp, " %s %s", GFS_SOURCE_TENSION (o)->c->name, GFS_SOURCE_TENSION (o)->k->name);
+  fprintf (fp, " %s %s %g", s->c->name, s->k->name, s->sigma);
 }
 
 typedef struct {
@@ -226,7 +234,7 @@ static gdouble gfs_source_tension_stability (GfsSourceGeneric * s,
 					     GfsSimulation * sim)
 {
   GfsSourceTension * t = GFS_SOURCE_TENSION (s);
-  gdouble h, sigma = 1.;
+  gdouble h;
   StabilityParams p = { G_MAXDOUBLE, -G_MAXDOUBLE, 0 };
 
   p.alpha = sim->physical_params.alpha;
@@ -236,10 +244,10 @@ static gdouble gfs_source_tension_stability (GfsSourceGeneric * s,
   h = ftt_level_size (p.depth);
   if (p.alpha) {
     gdouble rhom = (1./p.amin + 1./p.amax)/2.;
-    return sqrt (rhom*h*h*h/(2.*M_PI*sigma));
+    return sqrt (rhom*h*h*h/(2.*M_PI*t->sigma));
   }
   else
-    return sqrt (h*h*h/(2.*M_PI*sigma));
+    return sqrt (h*h*h/(2.*M_PI*t->sigma));
 }
 
 static void gfs_source_tension_class_init (GfsSourceGenericClass * klass)

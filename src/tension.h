@@ -58,6 +58,7 @@ struct _GfsSourceTension {
   
   /*< public >*/
   GfsVariable * c, * k;
+  gdouble sigma;
 };
 
 #define GFS_SOURCE_TENSION(obj)            GTS_OBJECT_CAST (obj,\
