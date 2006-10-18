@@ -43,10 +43,7 @@
 # Generated files: convergence.tex amplitude.eps
 #
 1 1 GfsSimulation GfsBox GfsGEdge {} {
-  Time {
-    end = 2.2426211256
-    dtmax = 1.01430173026e-3
-  }
+  Time { end = 2.2426211256 }
   ApproxProjectionParams { tolerance = 1e-6 }
   ProjectionParams { tolerance = 1e-6 }
   Refine LEVEL
@@ -57,8 +54,8 @@
   SourceDiffusion {} U 0.0182571749236
   SourceDiffusion {} V 0.0182571749236
   InitFraction {} T wave.gts
-  OutputSimulation { istep = 3 } sim-%ld.gfs { binary = 1 }
-  EventScript { istep = 3 } {
+  OutputSimulation { step = 3.04290519077e-3 } sim-%ld.gfs { binary = 1 }
+  EventScript { step = 3.04290519077e-3 } {
     echo $GfsTime | awk -v level=LEVEL '{printf ("%g ", $1*11.1366559937) >> ("wave-" level) }'
     gfs2oogl2D -g -c T < sim-$GfsIter.gfs | sort -n +1 -2 | awk -v level=LEVEL 'BEGIN {
       n = exp (level*log (2.));
