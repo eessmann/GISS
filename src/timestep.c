@@ -214,7 +214,7 @@ void gfs_mac_projection (GfsDomain * domain,
   if ((s = gfs_source_find (apar->v, gfs_source_tension_class ()))) {
     gfs_source_tension_coefficients (GFS_SOURCE_TENSION (s), domain, alpha);
     gfs_correct_normal_velocities (domain, FTT_DIMENSION,
-				   GFS_SOURCE_TENSION (s)->c,
+				   GFS_SOURCE_TENSION_GENERIC (s)->c,
 				   NULL, apar->dt);
   }
   /* Initialize face coefficients */
@@ -382,7 +382,7 @@ void gfs_approximate_projection (GfsDomain * domain,
   if ((s = gfs_source_find (gfs_domain_velocity (domain)[0], gfs_source_tension_class ()))) {
     gfs_source_tension_coefficients (GFS_SOURCE_TENSION (s), domain, alpha);
     gfs_correct_normal_velocities (domain, FTT_DIMENSION,
-				   GFS_SOURCE_TENSION (s)->c,
+				   GFS_SOURCE_TENSION_GENERIC (s)->c,
 				   g, apar->dt);
     gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
   }

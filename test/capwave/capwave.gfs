@@ -49,7 +49,7 @@
   Refine LEVEL
   VariableTracer {} T { scheme = vof }
   VariableCurvature {} K T
-  SourceTension {} T K 1
+  SourceTension {} T 1 K
   AdvectionParams { scheme = none }
   SourceDiffusion {} U 0.0182571749236
   SourceDiffusion {} V 0.0182571749236

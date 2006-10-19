@@ -374,6 +374,47 @@ gdouble gfs_plane_alpha (FttVector * m, gdouble c)
 }
 #endif /* 3D */
 
+/**
+ * gfs_youngs_gradient:
+ * @cell: a #FttCell.
+ * @v: a #GfsVariable.
+ * @g: a #FttVector.
+ *
+ * Fills @g with the Youngs-averaged gradients of @v 
+ * normalised by the size of @cell.
+ */
+void gfs_youngs_gradient (FttCell * cell, GfsVariable * v, FttVector * g)
+{
+  static FttDirection d[(FTT_DIMENSION - 1)*4][FTT_DIMENSION] = {
+#if FTT_2D
+    {FTT_RIGHT, FTT_TOP}, {FTT_LEFT, FTT_TOP}, {FTT_LEFT, FTT_BOTTOM}, {FTT_RIGHT, FTT_BOTTOM}
+#else  /* 3D */
+    {FTT_RIGHT, FTT_TOP, FTT_FRONT}, {FTT_LEFT, FTT_TOP, FTT_FRONT}, 
+    {FTT_LEFT, FTT_BOTTOM, FTT_FRONT}, {FTT_RIGHT, FTT_BOTTOM, FTT_FRONT},
+    {FTT_RIGHT, FTT_TOP, FTT_BACK}, {FTT_LEFT, FTT_TOP, FTT_BACK}, 
+    {FTT_LEFT, FTT_BOTTOM, FTT_BACK}, {FTT_RIGHT, FTT_BOTTOM, FTT_BACK},
+#endif /* 3D */
+  };
+  gdouble u[(FTT_DIMENSION - 1)*4];
+  guint i;
+
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (v != NULL);
+  g_return_if_fail (g != NULL);
+
+  for (i = 0; i < (FTT_DIMENSION - 1)*4; i++)
+    u[i] = gfs_cell_corner_value (cell, d[i], v, -1);
+
+#if FTT_2D
+  g->x = (u[0] + u[3] - u[1] - u[2])/2.;
+  g->y = (u[0] + u[1] - u[2] - u[3])/2.;
+#else  /* 3D */
+  g->x = (u[0] + u[3] + u[4] + u[7] - u[1] - u[2] - u[5] - u[6])/4.;
+  g->y = (u[0] + u[1] + u[4] + u[5] - u[2] - u[3] - u[6] - u[7])/4.;
+  g->z = (u[0] + u[1] + u[2] + u[3] - u[4] - u[5] - u[6] - u[7])/4.;
+#endif /* 3D */
+}
+
 static FttCell * domain_and_boundary_locate (GfsDomain * domain, FttVector p, guint level)
 {
   FttCell * cell = gfs_domain_locate (domain, p, level);
@@ -428,8 +469,8 @@ static void stencil (FttCell * cell, GfsVariable * v, gdouble f[3][3])
  * @v: a #GfsVariable.
  * @n: a #FttVector.
  *
- * Fills @n with the Youngs-averaged gradients of @v 
- * normalised by the size of @cell.
+ * Fills @n with the components of the normal to the interface defined
+ * by volume fraction @v. Youngs' method is used.
  */
 void gfs_youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 {

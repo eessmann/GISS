@@ -26,18 +26,38 @@ extern "C" {
 
 #include "source.h"
 
+/* GfsSourceTensionGeneric: Header */
+
+typedef struct _GfsSourceTensionGeneric         GfsSourceTensionGeneric;
+
+struct _GfsSourceTensionGeneric {
+  /*< private >*/
+  GfsSourceVelocity parent;
+  
+  /*< public >*/
+  GfsVariable * c;
+  gdouble sigma;
+};
+
+#define GFS_SOURCE_TENSION_GENERIC(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourceTensionGeneric,\
+					         gfs_source_tension_generic_class ())
+#define GFS_IS_SOURCE_TENSION_GENERIC(obj)         (gts_object_is_from_class (obj,\
+						 gfs_source_tension_generic_class ()))
+
+GfsSourceGenericClass * gfs_source_tension_generic_class (void);
+
 /* GfsSourceTensionCSS: Header */
 
 typedef struct _GfsSourceTensionCSS         GfsSourceTensionCSS;
 
 struct _GfsSourceTensionCSS {
   /*< private >*/
-  GfsSourceVelocity parent;
+  GfsSourceTensionGeneric parent;
   GfsVariable * g[3];
   
   /*< public >*/
-  GfsVariable * c, * t[FTT_DIMENSION];
-  gdouble sigma;
+  GfsVariable * t[FTT_DIMENSION];
 };
 
 #define GFS_SOURCE_TENSION_CSS(obj)            GTS_OBJECT_CAST (obj,\
@@ -54,11 +74,10 @@ typedef struct _GfsSourceTension         GfsSourceTension;
 
 struct _GfsSourceTension {
   /*< private >*/
-  GfsSourceVelocity parent;
+  GfsSourceTensionGeneric parent;
   
   /*< public >*/
-  GfsVariable * c, * k;
-  gdouble sigma;
+  GfsVariable * k;
 };
 
 #define GFS_SOURCE_TENSION(obj)            GTS_OBJECT_CAST (obj,\

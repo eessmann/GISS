@@ -49,6 +49,9 @@ void    gfs_plane_center           (FttVector * m,
 				    gdouble a,
 				    FttVector * p);
 #endif /* 3D */
+void    gfs_youngs_gradient        (FttCell * cell, 
+				    GfsVariable * v,
+				    FttVector * g);
 void    gfs_youngs_normal          (FttCell * cell, 
 				    GfsVariable * v,
 				    FttVector * n);

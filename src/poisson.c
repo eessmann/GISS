@@ -22,7 +22,6 @@
 #include "solid.h"
 #include "source.h"
 #include "tension.h"
-#include "vof.h"
 
 /**
  * gfs_multilevel_params_write:
@@ -451,26 +450,26 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
 {
   gdouble * lambda2 = data[0];
   GfsStateVector * s = GFS_STATE (face->cell);
-  GfsSourceTension * t = data[1];
+  GfsSourceTensionGeneric * t = data[1];
   gdouble v = lambda2[face->d/2]*t->sigma;
-  GfsVariable * alpha = data[2];
+  GfsVariable * alpha = data[2], * kappa = GFS_SOURCE_TENSION (data[1])->k;
   gdouble c1 = GFS_VARIABLE (face->cell, t->c->i);
   gdouble c2 = GFS_VARIABLE (face->neighbor, t->c->i);
   gdouble w1 = c1*(1. - c1);
   gdouble w2 = c2*(1. - c2);
 
   if (w1 + w2 > 0.)
-    v *= (w1*GFS_VARIABLE (face->cell, t->k->i) +
-	  w2*GFS_VARIABLE (face->neighbor, t->k->i))/(w1 + w2);
+    v *= (w1*GFS_VARIABLE (face->cell, kappa->i) +
+	  w2*GFS_VARIABLE (face->neighbor, kappa->i))/(w1 + w2);
   else {
-    if (GFS_VARIABLE (face->cell, t->k->i) < G_MAXDOUBLE) {
-      if (GFS_VARIABLE (face->neighbor, t->k->i) < G_MAXDOUBLE)
-	v *= (GFS_VARIABLE (face->cell, t->k->i) + GFS_VARIABLE (face->neighbor, t->k->i))/2.;
+    if (GFS_VARIABLE (face->cell, kappa->i) < G_MAXDOUBLE) {
+      if (GFS_VARIABLE (face->neighbor, kappa->i) < G_MAXDOUBLE)
+	v *= (GFS_VARIABLE (face->cell, kappa->i) + GFS_VARIABLE (face->neighbor, kappa->i))/2.;
       else
-	v *= GFS_VARIABLE (face->cell, t->k->i);
+	v *= GFS_VARIABLE (face->cell, kappa->i);
     }
-    else if (GFS_VARIABLE (face->neighbor, t->k->i) < G_MAXDOUBLE)
-      v *= GFS_VARIABLE (face->neighbor, t->k->i);
+    else if (GFS_VARIABLE (face->neighbor, kappa->i) < G_MAXDOUBLE)
+      v *= GFS_VARIABLE (face->neighbor, kappa->i);
     else
       v = 1e6;
   }
