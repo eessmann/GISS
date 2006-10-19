@@ -168,7 +168,7 @@ GfsVariable * gfs_variable_from_name (GSList * i,
 {
   g_return_val_if_fail (name != NULL, NULL);
 
-  while (i && strcmp (name, GFS_VARIABLE1 (i->data)->name))
+  while (i && (!GFS_VARIABLE1 (i->data)->name || strcmp (name, GFS_VARIABLE1 (i->data)->name)))
     i = i->next;
   return i ? GFS_VARIABLE1 (i->data) : NULL;
 }

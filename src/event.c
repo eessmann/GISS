@@ -1322,7 +1322,7 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   s->max = atof (fp->token->str);
-  s->oldv = gfs_temporary_variable (domain);
+  s->oldv = gfs_domain_add_variable (domain, NULL, NULL);
   s->oldv->fine_coarse = s->v->fine_coarse;
   s->oldv->coarse_fine = s->v->coarse_fine;
 
@@ -1338,8 +1338,6 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
       gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
       return;
     }
-    s->diff->fine_coarse = s->v->fine_coarse;
-    s->diff->coarse_fine = s->v->coarse_fine;
   }
   gts_file_next_token (fp);
 }
@@ -1362,36 +1360,31 @@ static void copy (FttCell * cell, GfsEventStop * s)
   GFS_VARIABLE (cell, s->oldv->i) = GFS_VARIABLE (cell, s->v->i);
 }
 
-static void copy_diff (FttCell * cell, GfsEventStop * s)
-{
-  GFS_VARIABLE (cell, s->diff->i) = GFS_VARIABLE (cell, s->oldv->i);
-}
-
 static gboolean gfs_event_stop_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_stop_class ())->parent_class)->event) 
       (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
     GfsEventStop * s = GFS_EVENT_STOP (event);
 
     if (s->last >= 0.) {
       GfsNorm n;
 
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+      gfs_domain_cell_traverse (domain,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) diff, s);
-      if (s->diff) {
-	gfs_domain_cell_traverse (GFS_DOMAIN (sim),
-				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				  (FttCellTraverseFunc) copy_diff, s);
-	gfs_domain_copy_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, s->v, s->diff);
-      }
-      n = gfs_domain_norm_variable (GFS_DOMAIN (sim), s->oldv, FTT_TRAVERSE_LEAFS, -1);
+      n = gfs_domain_norm_variable (domain, s->oldv, FTT_TRAVERSE_LEAFS, -1);
       if (n.infty <= s->max)
 	sim->time.end = sim->time.t;
+      if (s->diff) {
+	gfs_variables_swap (s->diff, s->oldv);
+	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, s->diff);
+      }
     }
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+    gfs_domain_cell_traverse (domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) copy, s);
+    gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, s->v, s->oldv);
     s->last = sim->time.t;
     return TRUE;
   }

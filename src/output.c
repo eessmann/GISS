@@ -1184,7 +1184,8 @@ static gboolean gfs_output_location_event (GfsEvent * event,
 
       fputs ("# 1:T 2:X 3:Y 4:Z", fp);
       while (i) {
-	fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
+	if (GFS_VARIABLE1 (i->data)->name)
+	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
 	i = i->next;
       }
       fputc ('\n', fp);
@@ -1198,7 +1199,8 @@ static gboolean gfs_output_location_event (GfsEvent * event,
 	
 	fprintf (fp, "%g %g %g %g", sim->time.t, p.x, p.y, p.z);
 	while (i) {
-	  fprintf (fp, " %g", gfs_interpolate (cell, p, i->data));
+	  if (GFS_VARIABLE1 (i->data)->name)
+	    fprintf (fp, " %g", gfs_interpolate (cell, p, i->data));
 	  i = i->next;
 	}
 	fputc ('\n', fp);
@@ -1264,7 +1266,8 @@ static void write_text (FttCell * cell, GfsOutputSimulation * output)
   gfs_cell_cm (cell, &p);
   fprintf (fp, "%g %g %g", p.x, p.y, p.z);
   while (i) {
-    fprintf (fp, " %g", GFS_VARIABLE (cell, GFS_VARIABLE1 (i->data)->i));
+    if (GFS_VARIABLE1 (i->data)->name)
+      fprintf (fp, " %g", GFS_VARIABLE (cell, GFS_VARIABLE1 (i->data)->i));
     i = i->next;
   }
   fputc ('\n', fp);
@@ -1293,7 +1296,8 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
 
       fputs ("# 1:X 2:Y: 3:Z", fp);
       while (i) {
-	fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
+	if (GFS_VARIABLE1 (i->data)->name)
+	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
 	i = i->next;
       }
       fputc ('\n', fp);
@@ -1385,8 +1389,15 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
     output->var = vars;
     g_free (variables);
   }
-  else if (output->var == NULL)
-    output->var = g_slist_copy (domain->variables);
+  else if (output->var == NULL) {
+    GSList * i = domain->variables;
+
+    while (i) {
+      if (GFS_VARIABLE1 (i->data)->name)
+	output->var = g_slist_append (output->var, i->data);
+      i = i->next;
+    }
+  }
 
   if (format != NULL) {
     if (!strcmp (format, "gfs"))

@@ -2436,7 +2436,6 @@ GfsVariable * gfs_domain_add_variable (GfsDomain * domain,
   GfsVariable * v;
 
   g_return_val_if_fail (domain != NULL, NULL);
-  g_return_val_if_fail (name != NULL, NULL);
 
   if ((v = gfs_variable_new (gfs_variable_class (), domain, name, description)) == NULL)
     return NULL;

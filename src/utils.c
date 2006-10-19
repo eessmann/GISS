@@ -420,7 +420,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	   , fin);
     i = domain->variables;
     while (i) {
-      if (find_identifier (f->expr->str, GFS_VARIABLE1 (i->data)->name))
+      if (GFS_VARIABLE1 (i->data)->name && 
+	  find_identifier (f->expr->str, GFS_VARIABLE1 (i->data)->name))
 	lv = g_slist_prepend (lv, i->data);
       i = i->next;
     }
