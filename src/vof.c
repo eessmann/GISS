@@ -966,15 +966,19 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariable * v)
   (&q.x)[cp] += size;
   (&q.x)[c] -= slope*size;
   //  fprintf (stderr, "\n  (%g %g) ", q.x, q.y);
-  if (!local_height (&q, &p, level, v, c, &h[0]))
+  if (!local_height (&q, &p, level, v, c, &h[0])) {
+    g_warning ("Failed to compute local height at (%g,%g)", q.x, q.y);
     return G_MAXDOUBLE;
+  }
 
   q = p;
   (&q.x)[cp] -= size;
   (&q.x)[c] += slope*size;
   //  fprintf (stderr, "\n  (%g %g) ", q.x, q.y);
-  if (!local_height (&q, &p, level, v, c, &h[1]))
+  if (!local_height (&q, &p, level, v, c, &h[1])) {
+    g_warning ("Failed to compute local height at (%g,%g)", q.x, q.y);
     return G_MAXDOUBLE;
+  }
 
   hxx = h[0] - 2*H + h[1];
   hx = (h[0] - h[1])/2.;
