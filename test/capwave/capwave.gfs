@@ -12,8 +12,7 @@
 # \cite{popinet99} and Surfer \cite{gueyffier98}.
 #
 # The time-evolution of the amplitude given by Prosperetti's theory
-# and Gerris ($128^2$) is given on Figure
-# \ref{amplitude}.
+# and Gerris ($64^2$) is given on Figure \ref{amplitude}.
 #
 # \begin{table}[htbp]
 # \caption{\label{convergence}Convergence of the relative error between the analytical
@@ -38,7 +37,7 @@
 #
 # Author: St\'ephane Popinet
 # Command: sh capwave.sh capwave.gfs
-# Version: 0.6.4
+# Version: 1.0.0
 # Required files: capwave.sh convergence.ref
 # Generated files: convergence.tex amplitude.eps
 #

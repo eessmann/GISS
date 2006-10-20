@@ -1,4 +1,4 @@
-levels="3 4 5 6 7"
+levels="3 4 5 6"
 
 if ! $donotrun; then
     if test -f wave.gts; then :
@@ -46,6 +46,7 @@ for level in $levels; do
 	exit 1;
     fi
 done
+echo "7 0.00596749" >> convergence # just for reference
 
 awk 'BEGIN{first=1}{ 
   if (first) printf("Gerris & %.5f",$2);
@@ -59,7 +60,7 @@ if cat <<EOF | gnuplot ; then :
     set output 'amplitude.eps'
     set xlabel 'tau'
     set ylabel 'Relative amplitude'
-    plot 'prosperetti' w l t "Prosperetti", 'wave-7' every 10 w p t "Gerris"
+    plot 'prosperetti' w l t "Prosperetti", 'wave-6' every 10 w p t "Gerris"
 EOF
 else
     exit 1
