@@ -547,18 +547,28 @@ static gdouble fine_fraction (FttCellFace * face, VofParms * p, gdouble un)
   if (f == 0. || f == 1.)
     return f;
   else {
-    FttVector q[2] = {{0., 0., 0.},{1., 1., 1.}};
+    FttCell * cell = face->cell;
+    FttDirection d = face->d;
+
+    if (GFS_CELL_IS_BOUNDARY (cell)) {
+      cell = face->neighbor;
+      d = FTT_OPPOSITE_DIRECTION (d);
+    }
+
     FttComponent c;
     FttVector m;
-    gdouble alpha = GFS_VARIABLE (face->cell, p->alpha->i);
-    
+    gdouble alpha = GFS_VARIABLE (cell, p->alpha->i);
+
     for (c = 0; c < FTT_DIMENSION; c++)
-      (&m.x)[c] = GFS_VARIABLE (face->cell, p->m[c]->i);
-    if (!FTT_FACE_DIRECT (face)) {
-      (&m.x)[face->d/2] = - (&m.x)[face->d/2];
-      alpha += (&m.x)[face->d/2];
+      (&m.x)[c] = GFS_VARIABLE (cell, p->m[c]->i);
+    if (d % 2 != 0) {
+      (&m.x)[d/2] = - (&m.x)[d/2];
+      alpha += (&m.x)[d/2];
     }
-    (&q[0].x)[face->d/2] = 1. - un; (&q[1].x)[face->d/2] = 1.;
+
+    FttVector q[2] = {{0., 0., 0.},{1., 1., 1.}};
+
+    (&q[0].x)[d/2] = 1. - un; (&q[1].x)[d/2] = 1.;
     return plane_volume_shifted (m, alpha, q);
   }
 }
@@ -664,7 +674,6 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
     p.c = (cstart + c) % FTT_DIMENSION;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) vof_plane, &p);
-    /* fixme: boundary conditions for (m, alpha) */
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
     gfs_domain_face_traverse (domain, p.c,
