@@ -1,32 +1,30 @@
-# Title: Amplitude of spurious currents
+# Title: Circular droplet in equilibrium
 #
 # Description:
 #
-# A circular "bubble" of diameter $D=0.8$ is initialised centered on
+# A circular droplet of diameter $D=0.8$ is initialised centered on
 # the top-left corner of the unit box. Surface tension is imposed on
 # the interface. The exact solution is given by Laplace's law: uniform
 # zero velocity and a pressure jump accross the interface exactly
 # balancing the surface tension force.
 #
-# This test case uses a continuum formulation for surface tension,
-# which induces numerical errors leading to a non-exact balance of
-# pressure gradient and surface tension forces. A measure of the
-# amplitude of this error is the amplitude of the resulting "spurious
-# currents" around the bubble (see for example \cite{popinet99} for
-# a detailed discussion). The pattern of spurious currents obtained
-# using Gerris is illustrated on figure \ref{vectors}.
+# The initial condition -- while close to the exact solution -- does
+# not guarantee the exact balance between the numerical
+# discretisations of surface tension and pressure gradient. However,
+# these small initial perturbations generate small capillary waves
+# which are progressively (on a timescale of order $D^2/\mu$) damped
+# by viscosity so that the exact (to round-off error) balance is
+# eventually obtained.
 #
-# Figure \ref{laplace} illustrates the independence of the asymptotic
-# ($t\rightarrow\infty$) non-dimensional capillary number
-# $Ca=\max(|{\bf u}|)\mu/\sigma$ from the Laplace number $La=\sigma\rho
-# D/\mu^2$. The asymptotic value of $Ca$ is a measure of the accuracy
-# of the numerical scheme (the smaller the better).
+# The convergence is obtained for a wide range of Laplace numbers
+# $La=\sigma\rho D/\mu^2$, as illustrated on Figure \ref{laplace}.
 #
 # \begin{figure}[htbp]
-# \caption{\label{vectors}Spurious currents at equilibrium for $La=12000$.}
 # \begin{center}
 # \includegraphics[width=0.6\hsize]{vectors.eps}
 # \end{center}
+# \caption{Spurious currents at equilibrium for $La=12000$.}
+# \label{vectors}
 # \end{figure}
 #
 # \begin{figure}[htbp]
@@ -36,6 +34,10 @@
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{laplace.eps}
 # \end{center}
+# \caption{Evolution of the capillary number $Ca$ as a function of
+# non-dimensional time $\tau=t\sigma/(\mu D)$ for the range of Laplace
+# numbers indicated in the legend.}
+# \label{laplace}
 # \end{figure}
 #
 # \begin{figure}[htbp]
@@ -51,32 +53,38 @@
 #
 # Author: St\'ephane Popinet
 # Command: sh spurious.sh spurious.gfs
-# Version: 0.9.0
-# Required files: spurious.sh vectors.gfv convergence.ref
-# Generated files: laplace.eps convergence.eps vectors.eps
+# Version: 1.0.0
+# Required files: spurious.sh convergence.ref
+# Generated files: laplace.eps convergence.eps
 #
 1 0 GfsSimulation GfsBox GfsGEdge {} {
-  Time { end = TMAX dtmax = 2e-3 }
+  Time { end = TMAX }
   Refine LEVEL
+  RefineSurface 10 circle.gts
 
-  ApproxProjectionParams { tolerance = 1e-6 nitermin = 1 }
-  ProjectionParams { tolerance = 1e-6 nitermin = 1 }
+  ApproxProjectionParams { tolerance = 1e-6 }
+  ProjectionParams { tolerance = 1e-6 }
   AdvectionParams { scheme = none }
 
   VariableTracer {} T { scheme = vof }
-  VariableFiltered {} T1 T 1
-  VariableDistance {} L T
-  VariableCurvature {} K L
-  SourceTension {} T K
+  VariableCurvature {} K T
+  SourceTension {} T 1 K
   SourceDiffusion {} U MU
   SourceDiffusion {} V MU
 
   InitFraction {} T circle.gts
-  
-  AdaptGradient { istep = 1 } { cmax = 1e-6 maxlevel = LEVEL } T1
+  Init {} { Tref = T }
 
-  OutputSimulation { start = end } sim-LEVEL {}
-  OutputScalarNorm { istep = 1 } { awk '{ print $3/(MU*0.8) " " $9*MU }' } { v = Velocity }
+  AdaptGradient { istep = 1 } { cmax = 1e-6 maxlevel = LEVEL } T
+  EventStop { istep = 10 } T DT
+
+  OutputSimulation { start = end } stdout { depth = LEVEL }
+  OutputScalarNorm { istep = 1 } {
+    awk '{ print MU*$3/(0.8*0.8) " " $9*sqrt(0.8) }' > La-LAPLACE-LEVEL
+  } { v = Velocity }
+  OutputScalarNorm { istep = 1 } {
+    awk '{ print MU*$3/(0.8*0.8) " " $5 " " $7 " " $9 }' > E-LAPLACE-LEVEL
+  } { v = (Tref - T) }
 }
 GfsBox {
   top = Boundary
