@@ -1228,6 +1228,29 @@ void gfs_physical_params_read (GfsPhysicalParams * p, GfsDomain * domain, GtsFil
   gts_file_next_token (fp);
 }
 
+static void error_handler (const gchar *log_domain,
+			   GLogLevelFlags log_level,
+			   const gchar *message,
+			   gpointer user_data)
+{
+  GfsDomain * domain = user_data;
+  g_slist_free (domain->variables_io);
+  domain->variables_io = NULL;
+  GSList * i = domain->variables;
+  while (i) {
+    if (GFS_VARIABLE1 (i->data)->name)
+      domain->variables_io = g_slist_append (domain->variables_io, i->data);
+    i = i->next;
+  }
+  FILE * fp = fopen ("error.gfs", "w");
+  if (fp) {
+    gfs_simulation_write (GFS_SIMULATION (domain), -1, fp);
+    fclose (fp);
+  }
+
+  g_log_default_handler (log_domain, log_level, message, NULL);
+}
+
 /**
  * gfs_simulation_run:
  * @sim: a #GfsSimulation.
@@ -1238,10 +1261,13 @@ void gfs_simulation_run (GfsSimulation * sim)
 {
   g_return_if_fail (sim != NULL);
 
+  guint id = g_log_set_handler ("Gfs", G_LOG_LEVEL_ERROR | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION,
+				error_handler, sim);
   gfs_clock_start (GFS_DOMAIN (sim)->timer);
   gts_range_init (&GFS_DOMAIN (sim)->mpi_wait);
   (* GFS_SIMULATION_CLASS (GTS_OBJECT (sim)->klass)->run) (sim);
   gfs_clock_stop (GFS_DOMAIN (sim)->timer);
+  g_log_remove_handler ("Gfs", id);
 }
 
 /* GfsAdvection: Object */
