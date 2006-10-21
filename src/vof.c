@@ -767,8 +767,11 @@ gboolean gfs_vof_plane (FttCell * cell, GfsVariable * v,
     gfs_youngs_normal (cell, v, m);
     for (c = 0; c < FTT_DIMENSION; c++)
       n += fabs ((&m->x)[c]);
-    for (c = 0; c < FTT_DIMENSION; c++)
-      (&m->x)[c] /= n;
+    if (n > 0.)
+      for (c = 0; c < FTT_DIMENSION; c++)
+	(&m->x)[c] /= n;
+    else /* fixme: this is a small fragment */
+      m->x = 1.;
     *alpha = gfs_plane_alpha (m, f);
     return TRUE;
   }
