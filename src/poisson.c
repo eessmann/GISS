@@ -434,6 +434,7 @@ void gfs_poisson_coefficients (GfsDomain * domain,
     gfs_domain_cell_traverse (domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) reset_alpha_coeff, data);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, data[1]);
     data[0] = lambda2;
     gfs_domain_face_traverse (domain, FTT_XYZ, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -525,6 +526,7 @@ void gfs_source_tension_coefficients (GfsSourceTension * s,
     gfs_domain_cell_traverse (domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) reset_alpha_coeff, data);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, data[1]);
     data[2] = data[1];
   }
   else {
