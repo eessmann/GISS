@@ -322,6 +322,11 @@ static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   gts_file_next_token (fp);
+  
+  if (GFS_VARIABLE1 (v)->description)
+    g_free (GFS_VARIABLE1 (v)->description);
+  GFS_VARIABLE1 (v)->description = g_strjoin (" ", "Curvature of the interface defined by tracer",
+					      v->f->name, NULL);
 }
 
 static void variable_curvature_write (GtsObject * o, FILE * fp)
@@ -456,10 +461,10 @@ static void curvature_fine_coarse (FttCell * parent, GfsVariable * v)
     GFS_VARIABLE (parent, v->i) = G_MAXDOUBLE;
 }
 
-static void variable_curvature_init (GfsVariableCurvature * v)
+static void variable_curvature_init (GfsVariable * v)
 {
-  GFS_VARIABLE1 (v)->coarse_fine = curvature_coarse_fine;
-  GFS_VARIABLE1 (v)->fine_coarse = curvature_fine_coarse;
+  v->coarse_fine = curvature_coarse_fine;
+  v->fine_coarse = curvature_fine_coarse;
 }
 
 GfsVariableClass * gfs_variable_curvature_class (void)

@@ -265,6 +265,7 @@ static void variable_tracer_init (GfsVariableTracer * v)
   v->advection.flux = gfs_face_advection_flux;
   v->advection.v = GFS_VARIABLE1 (v);
   v->advection.fv = NULL;
+  GFS_VARIABLE1 (v)->description = g_strdup ("Tracer");
 }
 
 GfsVariableClass * gfs_variable_tracer_class (void)
@@ -312,6 +313,11 @@ static void variable_residual_class_init (GfsEventClass * klass)
   klass->event = variable_residual_event;
 }
 
+static void variable_residual_init (GfsVariable * v)
+{
+  v->description = g_strdup ("Residual of the Poisson equation");
+}
+
 GfsVariableClass * gfs_variable_residual_class (void)
 {
   static GfsVariableClass * klass = NULL;
@@ -322,7 +328,7 @@ GfsVariableClass * gfs_variable_residual_class (void)
       sizeof (GfsVariable),
       sizeof (GfsVariableClass),
       (GtsObjectClassInitFunc) variable_residual_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) variable_residual_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -365,6 +371,10 @@ static void variable_filtered_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   gts_file_next_token (fp);
+
+  if (GFS_VARIABLE1 (v)->description)
+    g_free (GFS_VARIABLE1 (v)->description);
+  GFS_VARIABLE1 (v)->description = g_strjoin (" ", "Variable", v->v->name, "filtered", NULL);
 }
 
 static void variable_filtered_write (GtsObject * o, FILE * fp)
