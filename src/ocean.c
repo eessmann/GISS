@@ -306,8 +306,8 @@ static void ocean_run (GfsSimulation * sim)
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
     gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., FALSE); 
-    // just there so that the call below 
-    // has sthg to free
+    /* just there so that the call below 
+       has sthg to free */
     gfs_centered_velocity_advection_diffusion (domain, 2,
 					       &sim->advection_params,
 					       g,
@@ -790,7 +790,7 @@ static void hydrostatic_pressure (FttCell * cell, gpointer * data)
   while (f.neighbor) {
     g_assert (ftt_face_type (&f) == FTT_FINE_FINE);
     r1 = gfs_face_interpolated_value (&f, rho->i);
-    //    g_assert (r1 >= r);
+    /* g_assert (r1 >= r); */
     r = r1;
     GFS_VARIABLE (f.neighbor, vp->i) = p = p + (*g)*r;
     f.cell = f.neighbor;
