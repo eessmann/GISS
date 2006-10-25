@@ -321,6 +321,16 @@ typedef struct {
   guint thin;
 } InitSolidParams;
 
+static gboolean thin_cell_is_solid (FttCell * cell)
+{
+  gdouble sum = 0.;
+  FttDirection d;
+
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    sum += GFS_STATE (cell)->solid->s[d];
+  return (sum < FTT_NEIGHBORS/2);
+}
+
 #if FTT_2D /* 2D */
 
 static void set_solid_fractions_from_surface (FttCell * cell,
@@ -328,8 +338,13 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 					      InitSolidParams * p)
 {
   if (gfs_set_2D_solid_fractions_from_surface (cell, s)) {
-    GFS_VARIABLE (cell, p->status->i) = 1.;
     p->thin++;
+    if (thin_cell_is_solid (cell))
+      GFS_VARIABLE (cell, p->status->i) = 1.;
+    else {
+      g_free (GFS_STATE (cell)->solid);
+      GFS_STATE (cell)->solid = NULL;
+    }
   }
   else if (GFS_STATE (cell)->solid && GFS_STATE (cell)->solid->a == 0.)
     GFS_VARIABLE (cell, p->status->i) = 1.;
@@ -603,10 +618,17 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s, In
       (&solid->cm.x)[c] = (&o.x)[c] + 
 	(sym[c] ? 1. - (&solid->cm.x)[c] : (&solid->cm.x)[c])*(&h.x)[c];
   }
-  else {
-    solid->cm = solid->ca;
-    solid->a = 0.;
+  else { /* this is a "thin" cell */
     p->thin++;
+    if (thin_cell_is_solid (cell)) {
+      solid->cm = solid->ca;
+      solid->a = 0.;
+    }
+    else {
+      g_free (solid);
+      GFS_STATE (cell)->solid = NULL;
+      return;
+    }
   }
   if (solid->a == 0.)
     GFS_VARIABLE (cell, p->status->i) = 1.;
@@ -867,7 +889,6 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
 {
   if (GFS_IS_MIXED (cell)) {
     FttCellNeighbors neighbor;
-    guint level = ftt_cell_level (cell);
     GfsSolidVector * solid = GFS_STATE (cell)->solid;
     FttDirection d;
 
@@ -888,10 +909,8 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
 	  solid->s[d] = s/n;
 	}
 	else if (GFS_VARIABLE (neighbor.c[d], status->i) != 1.) {
-	  if (!GFS_IS_MIXED (neighbor.c[d]) && solid->s[d] < 1.) {
-	    g_assert (ftt_cell_level (neighbor.c[d]) == level - 1);
+	  if (!GFS_IS_MIXED (neighbor.c[d]) && solid->s[d] < 1.)
 	    solid->s[d] = 1.;
-	  }
 	}
 	else if (GFS_IS_MIXED (neighbor.c[d])) /* this is a thin cell */
 	  solid->s[d] = 0.;
