@@ -157,6 +157,14 @@ static void output_mixed_pressure (FttCell * cell, GfsVariable * p)
 	  gfs_cell_dirichlet_value (cell, p, -1));
 }
 
+static void output_mixed_variable (FttCell * cell, GfsVariable * v)
+{
+  GfsSolidVector * s = GFS_STATE (cell)->solid;
+
+  printf ("%g %g %g %g\n", s->ca.x, s->ca.y, s->ca.z,
+	  GFS_VARIABLE (cell, v->i));
+}
+
 /* SVertex: Header */
 
 typedef struct _SVertex         SVertex;
@@ -1033,12 +1041,17 @@ int main (int argc, char * argv[])
       stats.min = stats.max = 0.;
 
     if (var != NULL && gnuplot) {
-      if (level < 0)
-	gfs_write_gnuplot (domain, var, 
-			   FTT_TRAVERSE_LEAFS, -1, box, stdout);
-      else
-	gfs_write_gnuplot (domain, var, 
-			   FTT_TRAVERSE_LEVEL, level, box, stdout);
+      if (mixed)
+	gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+				   (FttCellTraverseFunc) output_mixed_variable, var);
+      else {
+	if (level < 0)
+	  gfs_write_gnuplot (domain, var, 
+			     FTT_TRAVERSE_LEAFS, -1, box, stdout);
+	else
+	  gfs_write_gnuplot (domain, var, 
+			     FTT_TRAVERSE_LEVEL, level, box, stdout);
+      }
     }
     else if (box && var != NULL) {
       if (squares) {
