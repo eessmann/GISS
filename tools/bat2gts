@@ -112,6 +112,7 @@ mapproject -Dc -C $proj $area |\
 transform --rz $angle | transform --revert --tz 0.5
 
 cat <<EOF > lolat2xy
+gmtset D_FORMAT = %.12lf
 mapproject -Dc -C $proj $area | awk '
 BEGIN {
   angle = $angle * 3.14159265359/180.;
@@ -132,6 +133,7 @@ EOF
 chmod +x lolat2xy
 
 cat <<EOF > xy2lolat
+gmtset D_FORMAT = %.12lf
 awk '
 BEGIN {
   angle = - $angle * 3.14159265359/180.;
