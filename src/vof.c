@@ -141,6 +141,17 @@ gdouble gfs_plane_volume (FttVector * m, gdouble alpha)
   guint j;
 
   g_return_val_if_fail (m != NULL, 0.);
+
+  if (m->x == 0.) {
+    n.x = m->y; n.y = m->z;
+    return gfs_line_area (&n, alpha);
+  }
+  if (m->y == 0.) {
+    n.x = m->x; n.y = m->z;
+    return gfs_line_area (&n, alpha);
+  }
+  if (m->z == 0.)
+    return gfs_line_area (m, alpha);
   
   n = *m;
   alpha1 = alpha;
@@ -163,7 +174,6 @@ gdouble gfs_plane_volume (FttVector * m, gdouble alpha)
   if (alpha1 >= n.x + n.y + n.z)
     return 1.;
 
-  n.x += 1e-4; n.y += 1e-4; n.z += 1e-4;
   amax = n.x + n.y + n.z;
 
   md = &n.x;
