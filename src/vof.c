@@ -75,6 +75,42 @@ gdouble gfs_line_area (FttVector * m, gdouble alpha)
 }
 
 /**
+ * gfs_line_alpha:
+ * @m: a #FttVector.
+ * @c: a volume fraction.
+ *
+ * Returns: the value @alpha such that the area of a square cell
+ * lying under the line defined by @m.@x = @alpha is equal to @c. 
+ */
+gdouble gfs_line_alpha (FttVector * m, gdouble c)
+{
+  gdouble alpha, m1, m2, v1;
+
+  g_return_val_if_fail (m != NULL, 0.);
+  g_return_val_if_fail (c >= 0. && c <= 1., 0.);
+  
+  m1 = fabs (m->x); m2 = fabs (m->y);
+  if (m1 > m2) {
+    v1 = m1; m1 = m2; m2 = v1;
+  }
+  
+  v1 = m1/2.;
+  if (c <= v1/m2)
+    alpha = sqrt (2.*c*m1*m2);
+  else if (c <= 1. - v1/m2)
+    alpha = c*m2 + v1;
+  else
+    alpha = m1 + m2 - sqrt (2.*m1*m2*(1. - c));
+
+  if (m->x < 0.)
+    alpha += m->x;
+  if (m->y < 0.)
+    alpha += m->y;
+
+  return alpha;
+}
+
+/**
  * gfs_line_center:
  * @m: normal to the line.
  * @alpha: line constant.
@@ -135,64 +171,130 @@ void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
  */
 gdouble gfs_plane_volume (FttVector * m, gdouble alpha)
 {
-  FttVector n;
-  gdouble alpha1, a, amax, v;
-  gdouble * md;
-  guint j;
-
   g_return_val_if_fail (m != NULL, 0.);
 
-  if (m->x == 0.) {
-    n.x = m->y; n.y = m->z;
-    return gfs_line_area (&n, alpha);
-  }
-  if (m->y == 0.) {
-    n.x = m->x; n.y = m->z;
-    return gfs_line_area (&n, alpha);
-  }
-  if (m->z == 0.)
-    return gfs_line_area (m, alpha);
-  
-  n = *m;
-  alpha1 = alpha;
-  if (n.x < 0.) {
-    alpha1 -= n.x;
-    n.x = - n.x;
-  }
-  if (n.y < 0.) {
-    alpha1 -= n.y;
-    n.y = - n.y;
-  }
-  if (n.z < 0.) {
-    alpha1 -= n.z;
-    n.z = - n.z;
-  }
-
-  if (alpha1 <= 0.)
+  gdouble al = alpha + MAX(0., -m->x) + MAX(0., -m->y) + MAX(0., -m->z);
+  if (al <= 0.)
     return 0.;
-
-  if (alpha1 >= n.x + n.y + n.z)
+  gdouble tmp = fabs(m->x) + fabs(m->y) + fabs(m->z);
+  if (al >= tmp)
     return 1.;
+  g_assert (tmp > 0.);
+  gdouble n1 = fabs(m->x)/tmp;
+  gdouble n2 = fabs(m->y)/tmp;
+  gdouble n3 = fabs(m->z)/tmp;
+  al = MAX(0., MIN(1., al/tmp));
+  gdouble al0 = MIN(al, 1. - al);
+  gdouble b1 = MIN(n1*1, n2);
+  gdouble b3 = MAX(n1*1, n2);
+  gdouble b2 = n3;
+  if (b2 < b1) {
+    tmp = b1;
+    b1 = b2;
+    b2 = tmp;
+  }
+  else if (b2 > b3) {
+    tmp = b3;
+    b3 = b2;
+    b2 = tmp;
+  }
+  gdouble b12 = b1 + b2;
+  gdouble bm = MIN(b12, b3);
+  gdouble pr = MAX(6.*b1*b2*b3, 1e-50);
+  if (al0 < b1)
+    tmp = al0*al0*al0/pr;
+  else if (al0 < b2)
+    tmp = 0.5*al0*(al0 - b1)/(b2*b3) +  b1*b1*b1/pr;
+  else if (al0 < bm)
+    tmp = (al0*al0*(3.*b12 - al0) + b1*b1*(b1 - 3.*al0) + b2*b2*(b2 - 3.*al0))/pr;
+  else if (b12 < b3)
+    tmp = (al0 - 0.5*bm)/b3;
+  else
+    tmp = (al0*al0*(3. - 2.*al0) + b1*b1*(b1 - 3.*al0) + 
+	   b2*b2*(b2 - 3.*al0) + b3*b3*(b3 - 3.*al0))/pr;
 
-  amax = n.x + n.y + n.z;
+  return al <= 0.5 ? tmp : 1. - tmp;
+}
 
-  md = &n.x;
-  v = alpha1*alpha1*alpha1;
+/**
+ * gfs_plane_alpha:
+ * @m: a #FttVector.
+ * @c: a volume fraction.
+ *
+ * Returns: the value @alpha such that the volume of a cubic cell
+ * lying under the plane defined by @m.@x = @alpha is equal to @c. 
+ */
+gdouble gfs_plane_alpha (FttVector * m, gdouble c)
+{
+  gdouble alpha;
+  FttVector n;
 
-  for (j = 0; j < 3; j++) {
-    a = alpha1 - md[j];
-    if (a > 0.)
-      v -= a*a*a;
+  g_return_val_if_fail (m != NULL, 0.);
+  g_return_val_if_fail (c >= 0. && c <= 1., 0.);
+
+  n.x = fabs (m->x); n.y = fabs (m->y); n.z = fabs (m->z);
+
+  gdouble m1, m2, m3;
+  m1 = MIN(n.x, n.y);
+  m3 = MAX(n.x, n.y);
+  m2 = n.z;
+  if (m2 < m1) {
+    gdouble tmp = m1;
+    m1 = m2;
+    m2 = tmp;
+  }
+  else if (m2 > m3) {
+    gdouble tmp = m3;
+    m3 = m2;
+    m2 = tmp;
+  }
+  gdouble m12 = m1 + m2;
+  gdouble pr = MAX(6.*m1*m2*m3, 1e-50);
+  gdouble V1 = m1*m1*m1/pr;
+  gdouble V2 = V1 + (m2 - m1)/(2.*m3), V3;
+  gdouble mm;
+  if (m3 < m12) {
+    mm = m3;
+    V3 = (m3*m3*(3.*m12 - m3) + m1*m1*(m1 - 3.*m3) + m2*m2*(m2 - 3.*m3))/pr;
+  }
+  else {
+    mm = m12;
+    V3 = mm/(2.*m3);
   }
 
-  amax = alpha1 - amax;
-  for (j = 0; j < 3; j++) {
-    a = amax + md[j];
-    if (a > 0.)
-      v += a*a*a;
+  gdouble ch = MIN(c, 1. - c);
+  if (ch < V1)
+    alpha = pow (pr*ch, 1./3.);
+  else if (ch < V2)
+    alpha = (m1 + sqrt(m1*m1 + 8.*m2*m3*(ch - V1)))/2.;
+  else if (ch < V3) {
+    gdouble p = 2.*m1*m2;
+    gdouble q = 3.*m1*m2*(m12 - 2.*m3*ch)/2.;
+    gdouble p12 = sqrt (p);
+    gdouble teta = acos(q/(p*p12))/3.;
+    gdouble cs = cos(teta);
+    alpha = p12*(sqrt(3.*(1. - cs*cs)) - cs) + m12;
   }
+  else if (m12 < m3)
+    alpha = m3*ch + mm/2.;
+  else {
+    gdouble p = m1*(m2 + m3) + m2*m3 - 1./4.;
+    gdouble q = 3.*m1*m2*m3*(1./2. - ch)/2.;
+    gdouble p12 = sqrt(p);
+    gdouble teta = acos(q/(p*p12))/3.;
+    gdouble cs = cos(teta);
+    alpha = p12*(sqrt(3.*(1. - cs*cs)) - cs) + 1./2.;
+  }
+  if (c > 1./2.) alpha = 1. - alpha;
 
-  return v/(6.*n.x*n.y*n.z);
+  if (m->x < 0.)
+    alpha += m->x;
+  if (m->y < 0.)
+    alpha += m->y;
+  if (m->z < 0.)
+    alpha += m->z;
+
+  return alpha;
 }
 
 /**
@@ -272,115 +374,6 @@ void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 
   b = 24.*n.x*n.y*n.z*a;
   p->x /= b*n.x; p->y /= b*n.y; p->z /= b*n.z;
-}
-#endif /* 3D */
-
-/**
- * gfs_line_alpha:
- * @m: a #FttVector.
- * @c: a volume fraction.
- *
- * Returns: the value @alpha such that the area of a square cell
- * lying under the line defined by @m.@x = @alpha is equal to @c. 
- */
-gdouble gfs_line_alpha (FttVector * m, gdouble c)
-{
-  gdouble alpha, m1, m2, v1;
-
-  g_return_val_if_fail (m != NULL, 0.);
-  g_return_val_if_fail (c >= 0. && c <= 1., 0.);
-  
-  m1 = fabs (m->x); m2 = fabs (m->y);
-  if (m1 > m2) {
-    v1 = m1; m1 = m2; m2 = v1;
-  }
-  
-  v1 = m1/2.;
-  if (c <= v1/m2)
-    alpha = sqrt (2.*c*m1*m2);
-  else if (c <= 1. - v1/m2)
-    alpha = c*m2 + v1;
-  else
-    alpha = m1 + m2 - sqrt (2.*m1*m2*(1. - c));
-
-  if (m->x < 0.)
-    alpha += m->x;
-  if (m->y < 0.)
-    alpha += m->y;
-
-  return alpha;
-}
-
-#if (!FTT_2D)
-static gdouble plane_volume_derivative_ratio (FttVector * m, 
-					      gdouble alpha, 
-					      gdouble c)
-{
-  gdouble amax, v, vp;
-  gdouble * md;
-  guint j;
-
-  md = &m->x;
-  vp = alpha*alpha;
-  v = alpha*vp;
-
-  for (j = 0; j < 3; j++) {
-    gdouble a = alpha - md[j];
-
-    if (a > 0.) {
-      vp -= a*a;
-      v -= a*a*a;
-    }
-  }
-
-  amax = alpha - m->x - m->y - m->z;
-  for (j = 0; j < 3; j++) {
-    gdouble a = amax + md[j];
-
-    if (a > 0.) {
-      vp += a*a;
-      v += a*a*a;
-    }
-  }
-
-  return (v - c)/(3.*vp);
-}
-
-/**
- * gfs_plane_alpha:
- * @m: a #FttVector.
- * @c: a volume fraction.
- *
- * Returns: the value @alpha such that the volume of a cubic cell
- * lying under the plane defined by @m.@x = @alpha is equal to @c. 
- */
-gdouble gfs_plane_alpha (FttVector * m, gdouble c)
-{
-  gdouble alpha, dalpha;
-  FttVector n;
-
-  g_return_val_if_fail (m != NULL, 0.);
-  g_return_val_if_fail (c >= 0. && c <= 1., 0.);
-
-  n.x = fabs (m->x); n.y = fabs (m->y); n.z = fabs (m->z);
-  if (n.x*n.y*n.z < 1e-9)
-    alpha = c;
-  else {
-    c *= 6.*n.x*n.y*n.z;
-    alpha = (n.x + n.y + n.z)/2.;
-    do {
-      dalpha = plane_volume_derivative_ratio (&n, alpha, c);
-      alpha -= dalpha;
-    } while (fabs (dalpha) > 1e-6);
-  }
-  if (m->x < 0.)
-    alpha += m->x;
-  if (m->y < 0.)
-    alpha += m->y;
-  if (m->z < 0.)
-    alpha += m->z;
-
-  return alpha;
 }
 #endif /* 3D */
 
