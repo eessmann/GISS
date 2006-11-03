@@ -978,12 +978,12 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariable * v)
   if (H < -0.5 || H > 0.5)
     return G_MAXDOUBLE;
       
+  gdouble size = ftt_level_size (level);
 #ifdef FTT_2D
   FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
-  gdouble h[2], hxx, hx;
+  gdouble h[2];
   FttVector q = p;
   gdouble slope = rint ((&m.x)[cp]/(&m.x)[c]);
-  gdouble size = ftt_level_size (level);
 
   (&q.x)[cp] += size;
   (&q.x)[c] -= slope*size;
@@ -1002,39 +1002,38 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariable * v)
     return G_MAXDOUBLE;
   }
 
-  hxx = h[0] - 2*H + h[1];
-  hx = (h[0] - h[1])/2.;
+  gdouble hxx = h[0] - 2*H + h[1];
+  gdouble hx = (h[0] - h[1])/2.;
   gdouble dnm = 1. + hx*hx;
   //  fprintf (stderr, " %g\n", hxx/(size*sqrt (dnm*dnm*dnm)));
   return hxx/(size*sqrt (dnm*dnm*dnm));
-#else  /* FTT_3D */  
-  g_assert_not_implemented ();
-#if 0
-  static FttDirection dp[3][4] =
-  {{ FTT_FRONT, FTT_BACK, FTT_BOTTOM, FTT_TOP },
-   { FTT_RIGHT, FTT_LEFT, FTT_BACK, FTT_FRONT },
-   { FTT_TOP, FTT_BOTTOM, FTT_LEFT, FTT_RIGHT }};  
-  gdouble h[8], hxx, hyy, hx, hy, hxy;
-    
-  for (i = 0; i < 4 ; i++) {
-    n = ftt_cell_neighbor (cell, d);
-    g_assert (n);
-    h[i] = local_height (n, v, c1);     
-    n = ftt_cell_neighbor (n, dp[c1][i]);
-    g_assert (n);
-    h[i + 4] = local_height (n, v, c1);
-    d = (d + 1)%6;   
-  }   
+#else  /* 3D */  
+  static FttComponent or[3][2] = { { FTT_Y, FTT_Z }, { FTT_X, FTT_Z }, { FTT_X, FTT_Y } };
+  gdouble h[3][3];
+  gint x, y;
+
+  for (x = -1; x <= 1; x++)
+    for (y = -1; y <= 1; y++)
+      if (x != 0 || y != 0) {
+	FttVector q = p;
+	gdouble slope = rint ((&m.x)[or[c][0]]/(&m.x)[c]*x + (&m.x)[or[c][1]]/(&m.x)[c]*y);
+
+	(&q.x)[or[c][0]] += size*x;
+	(&q.x)[or[c][1]] += size*y;
+	(&q.x)[c] -= slope*size;
+	guint n = local_height (&q, &p, level, v, c, &h[x + 1][y + 1]);
+	if (!n) {
+	  g_warning ("Failed to compute local height at (%g,%g,%g)", q.x, q.y, q.z);
+	  return G_MAXDOUBLE;
+	}
+      }
   
-  hxx = h[0] - 2.*height + h[1];
-  hyy = h[2] - 2.*height + h[3];
-  hx = (h[0] - h[1])/2.;
-  hy = (h[2] - h[3])/2.;
-  hxy = (h[4] + h[5] - h[6] - h[7])/2.;
-  dnm = 1. + hx*hx + hy*hy;
-  
-  return (hxx + hyy + hxx*hy*hy + hyy*hx*hx - hxy*hx*hy)
-    /(ftt_cell_size (cell)*sqrt (dnm*dnm*dnm));  
-#endif
-#endif  
+  gdouble hxx = h[2][1] - 2.*H + h[0][1];
+  gdouble hyy = h[1][2] - 2.*H + h[1][0];
+  gdouble hx = (h[2][1] - h[0][1])/2.;
+  gdouble hy = (h[1][2] - h[1][0])/2.;
+  gdouble hxy = (h[2][2] + h[0][0] - h[2][0] - h[0][2])/2.;
+  gdouble dnm = 1. + hx*hx + hy*hy; 
+  return (hxx + hyy + hxx*hy*hy + hyy*hx*hx - hxy*hx*hy)/(size*sqrt (dnm*dnm*dnm));  
+#endif /* 3D */
 }
