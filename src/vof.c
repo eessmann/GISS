@@ -887,6 +887,8 @@ static gdouble fraction (FttVector * p,
   return gfs_vof_interpolate (cell, p, level, v);
 }
 
+#define NMAX 10
+
 static guint local_height (FttVector * p,
 			   FttVector * origin,
 			   guint level,
@@ -902,7 +904,7 @@ static guint local_height (FttVector * p,
   FttVector i = *p;
   (&i.x)[c] -= h;
   f1 = fraction (&i, level, v);
-  while (!GFS_IS_FULL (f1)) {
+  while (!GFS_IS_FULL (f1) && n < NMAX) {
     //    fprintf (stderr, " f1: %g (%g,%g)\n", f1, i.x, i.y);
     *H += f1; n++;
     (&i.x)[c] -= h;
@@ -914,7 +916,7 @@ static guint local_height (FttVector * p,
   i = *p;
   (&i.x)[c] += h;
   gdouble f2 = fraction (&i, level, v);
-  while (!GFS_IS_FULL (f2)) {
+  while (!GFS_IS_FULL (f2) && n < NMAX) {
     //    fprintf (stderr, " f2: %g (%g,%g)\n", f2, i.x, i.y);
     *H += f2; n++;
     (&i.x)[c] += h;
@@ -930,7 +932,7 @@ static guint local_height (FttVector * p,
 
   //  fprintf (stderr, " %d %g ", n, *H);
 
-  return n;
+  return n >= NMAX ? 0 : n;
 }
 
 static FttComponent orientation (FttVector * m)
