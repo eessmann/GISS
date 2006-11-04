@@ -306,9 +306,13 @@ gboolean gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
     face_fractions (&f, solid, &h);
     break;
   }
-  default:
+  default: {
+    FttVector p;
+    ftt_cell_pos (cell, &p);
     g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
-	   "the surface is probably not closed (n1 = %d)", n1);
+	   "the surface may not be closed (n1 = %d)\n"
+	   "at (%g,%g,%g)", n1, p.x, p.y, p.z);
+  }
   }
   return thin;
 }
@@ -582,9 +586,13 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s, In
       solid->s[i] = sol.a;
       break;
     }
-    default:
+    default: {
+      FttVector p;
+      ftt_cell_pos (cell, &p);
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
-	     "the surface is probably not closed (n2 = %d)", n2);
+	     "the surface may not be closed (n2 = %d)\n"
+	     "at (%g,%g,%g)", n2, p.x, p.y, p.z);
+    }
     }
   }
 
