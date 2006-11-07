@@ -897,42 +897,41 @@ static guint local_height (FttVector * p,
 			   gdouble * H)
 {
   gdouble h = ftt_level_size (level);
-  gdouble f1 = fraction (p, level, v);
-  guint n = !GFS_IS_FULL (f1);
+  gdouble right = fraction (p, level, v), left = right;
+  FttVector pright = *p, pleft = pright;
+  guint n = 1;
 
-  *H = f1;
-  FttVector i = *p;
-  (&i.x)[c] -= h;
-  f1 = fraction (&i, level, v);
-  while (!GFS_IS_FULL (f1) && n < NMAX) {
-    //    fprintf (stderr, " f1: %g (%g,%g)\n", f1, i.x, i.y);
-    *H += f1; n++;
-    (&i.x)[c] -= h;
-    f1 = fraction (&i, level, v);
-  }
-  if (f1 > 0.5)
-    *H += ((&i.x)[c] - (&origin->x)[c])/h + 0.5;
-
-  i = *p;
-  (&i.x)[c] += h;
-  gdouble f2 = fraction (&i, level, v);
-  while (!GFS_IS_FULL (f2) && n < NMAX) {
-    //    fprintf (stderr, " f2: %g (%g,%g)\n", f2, i.x, i.y);
-    *H += f2; n++;
-    (&i.x)[c] += h;
-    f2 = fraction (&i, level, v);
-  }
-  if (f2 > 0.5) {
-    if (f1 > 0.5)
-      return 0;
-    *H = 0.5 + *H - ((&i.x)[c] - (&origin->x)[c])/h;
-  }
-  else if (f1 < 0.5)
+  *H = right;
+  while (fabs (right - left) < 1. && n < NMAX)
+    if (GFS_IS_FULL (left)) {
+      (&pright.x)[c] += h;
+      right = fraction (&pright, level, v); n++;
+      *H += right;
+      if (fabs (right - left) < 1.) {
+	(&pleft.x)[c] -= h;
+	left = fraction (&pleft, level, v); n++;
+	*H += left;
+      }
+    }
+    else {
+      (&pleft.x)[c] -= h;
+      left = fraction (&pleft, level, v); n++;
+      *H += left;
+      if (fabs (right - left) < 1.) {
+	(&pright.x)[c] += h;
+	right = fraction (&pright, level, v); n++;
+	*H += right;
+      }
+    }
+  if (fabs (right - left) < 1.)
     return 0;
-
-  //  fprintf (stderr, " %d %g ", n, *H);
-
-  return n >= NMAX ? 0 : n;
+  if (left > 0.5)
+    *H += ((&pleft.x)[c] - (&origin->x)[c])/h - 0.5;
+  else {
+    g_assert (right > 0.5);
+    *H -= ((&pright.x)[c] - (&origin->x)[c])/h + 0.5;
+  }
+  return n;
 }
 
 static FttComponent orientation (FttVector * m)
