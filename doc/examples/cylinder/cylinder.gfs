@@ -72,14 +72,14 @@
   SourceDiffusion {} U 0.00078125
   SourceDiffusion {} V 0.00078125
 
-  # Writes the time and timestep every 10 timesteps on standard output
-  OutputTime { istep = 10 } stdout
+  # Writes the time and timestep every 10 timesteps on standard error
+  OutputTime { istep = 10 } stderr
 
-  # Writes the simulation size every 10 timesteps on standard output
-  OutputBalance { istep = 10 } stdout
+  # Writes the simulation size every 10 timesteps on standard error
+  OutputBalance { istep = 10 } stderr
 
-  # Writes info about the convergence of the Poisson solver on standard output
-  OutputProjectionStats { istep = 10 } stdout
+  # Writes info about the convergence of the Poisson solver on standard error
+  OutputProjectionStats { istep = 10 } stderr
 
   # Pipes a bitmap PPM image representation of the vorticity field at every other timestep
   # into a MJPegTools conversion pipeline to create a MPEG movie called vort.mpg
@@ -107,8 +107,8 @@
     min = 0 max = 1 v = T
   }
 
-  # Outputs profiling information at the end of the simulation to standard output
-  OutputTiming { start = end } stdout
+  # Outputs profiling information at the end of the simulation to standard error
+  OutputTiming { start = end } stderr
 
 }
 GfsBox {
