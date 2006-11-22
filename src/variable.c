@@ -294,7 +294,7 @@ static void scale_residual (FttCell * cell, GfsVariable * res)
 {
   gdouble size = ftt_cell_size (cell);
   gdouble dt = GFS_SIMULATION (res->domain)->advection_params.dt;
-  GFS_VARIABLE (cell, res->i) *= dt/(size*size);
+  GFS_VARIABLE (cell, res->i) *= dt*dt/(size*size);
 }
 
 static gboolean variable_residual_event (GfsEvent * event, GfsSimulation * sim)
