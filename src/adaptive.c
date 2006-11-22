@@ -960,10 +960,11 @@ static void adapt_global (GfsSimulation * simulation,
 typedef struct {
   GfsSimulation * sim;
   guint depth;
-  GfsVariable * r;
+  GfsVariable * r, * c;
 } AdaptLocalParams;
 
 #define REFINABLE(cell, p) (GFS_VARIABLE (cell, (p)->r->i))
+#define COARSENABLE(cell, p) (GFS_VARIABLE (cell, (p)->c->i))
 
 static gboolean coarsen_cell (FttCell * cell, AdaptLocalParams * p)
 {
@@ -971,7 +972,7 @@ static gboolean coarsen_cell (FttCell * cell, AdaptLocalParams * p)
     return TRUE;
   if (GFS_IS_MIXED (cell))
     return FALSE;
-  return !REFINABLE (cell, p);
+  return COARSENABLE (cell, p);
 }
 
 static void coarsen_box (GfsBox * box, AdaptLocalParams * p)
@@ -996,16 +997,23 @@ static void refine_cell (FttCell * cell, AdaptLocalParams * p)
 static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
 {
   REFINABLE (cell, p) = FALSE;
+  COARSENABLE (cell, p) = TRUE;
   if (!GFS_IS_MIXED (cell)) {
     guint level = ftt_cell_level (cell);
     GSList * i = p->sim->adapts->items;
     while (i) {
       GfsAdapt * a = i->data;
-      if (a->active && level < gfs_function_value (a->maxlevel, cell) &&
-	  (level < gfs_function_value (a->minlevel, cell) ||
-	   (* a->cost) (cell, a) > a->cmax)) {
-	REFINABLE (cell, p) = TRUE;
-	break;
+      if (a->active) {
+	if (level < gfs_function_value (a->maxlevel, cell) &&
+	    (level < gfs_function_value (a->minlevel, cell) ||
+	     (* a->cost) (cell, a) > a->cmax)) {
+	  REFINABLE (cell, p) = TRUE;
+	  COARSENABLE (cell, p) = FALSE;
+	  return;
+	}
+	if (level < gfs_function_value (a->minlevel, cell) ||
+	    (* a->cost) (cell, a) > a->cmax/4.)
+	  COARSENABLE (cell, p) = FALSE;
       }
       i = i->next;
     }
@@ -1023,6 +1031,7 @@ static void adapt_local (GfsSimulation * sim, guint * depth)
   p.sim = sim;
   p.depth = *depth;
   p.r = gfs_temporary_variable (domain);
+  p.c = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) refine_cell_mark, &p);
@@ -1031,6 +1040,7 @@ static void adapt_local (GfsSimulation * sim, guint * depth)
 			    (FttCellTraverseFunc) refine_cell, &p);
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) coarsen_box, &p);
   gts_object_destroy (GTS_OBJECT (p.r));
+  gts_object_destroy (GTS_OBJECT (p.c));
   *depth = p.depth;
 }
 
