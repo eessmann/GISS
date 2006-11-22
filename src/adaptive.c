@@ -862,6 +862,178 @@ static void cell_fine_init (FttCell * cell, AdaptParams * p)
     p->nc += FTT_CELLS;
 }
 
+static void adapt_global (GfsSimulation * simulation,
+			  guint * depth,
+			  GfsAdaptStats * s,
+			  guint mincells, guint maxcells,
+			  GfsVariable * c,
+			  gdouble cmax)
+{
+  GfsDomain * domain = GFS_DOMAIN (simulation);
+  gint l;
+  gdouble ccoarse = 0., cfine = 0.;
+  FttCell * coarse, * fine;
+  gboolean changed = TRUE;
+  AdaptParams apar;
+  
+  apar.sim = simulation;
+  apar.nc = 0;
+  apar.costv = gfs_temporary_variable (domain);
+  apar.hcoarsev = gfs_temporary_variable (domain);
+  apar.hfinev = gfs_temporary_variable (domain);
+  apar.hcoarse = gts_eheap_new (NULL, NULL);
+  apar.hfine = gts_eheap_new (NULL, NULL);
+  apar.c = c;
+  
+  gfs_domain_cell_traverse (domain, 
+			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			    (FttCellTraverseFunc) cell_coarse_init, &apar);
+  for (l = *depth; l >= 0; l--)
+    gfs_domain_cell_traverse (domain, 
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
+			      (FttCellTraverseFunc) compute_cost, &apar);
+  if (apar.c)
+    gfs_domain_cell_traverse (domain, 
+			      FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) store_cost, &apar);
+  gts_eheap_freeze (apar.hcoarse);
+  gts_eheap_freeze (apar.hfine);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) fill_heaps, &apar);
+  gts_eheap_thaw (apar.hcoarse);
+  gts_eheap_thaw (apar.hfine);
+  coarse = remove_top_coarse (apar.hcoarse, &ccoarse, apar.hcoarsev);
+  fine = remove_top_fine (apar.hfine, &cfine, apar.hfinev);
+#ifdef DEBUG
+  fprintf (stderr, "initial: %g %g %d\n", cfine, -ccoarse, apar.nc);
+#endif /* DEBUG */
+  while (changed) {
+#ifdef DEBUG
+    fprintf (stderr, "%g %g %d\n", cfine, -ccoarse, apar.nc);
+#endif /* DEBUG */
+    changed = FALSE;
+    if (fine && ((cfine < -ccoarse && apar.nc > maxcells) || 
+		 (cfine < cmax && apar.nc >= mincells))) {
+      guint n = apar.nc;
+	
+      apar.clim = MIN (ccoarse, -cmax);
+      ftt_cell_coarsen (fine,
+			(FttCellCoarsenFunc) fine_cell_coarsenable, &apar,
+			(FttCellCleanupFunc) fine_cell_cleanup, &apar);
+#ifdef DEBUG
+      fprintf (stderr, "coarsen: %d\n", apar.nc);
+#endif /* DEBUG */
+      fine = remove_top_fine (apar.hfine, &cfine, apar.hfinev);
+      if (s)
+	gts_range_add_value (&s->removed, n - apar.nc);
+      changed = TRUE;
+    }
+    if (coarse && ((-ccoarse > cfine && apar.nc < mincells) ||
+		   (-ccoarse > cmax && apar.nc <= maxcells))) {
+      guint level = ftt_cell_level (coarse), n = apar.nc;
+	
+      ftt_cell_refine_corners (coarse, (FttCellInitFunc) cell_fine_init, &apar);
+      ftt_cell_refine_single (coarse, (FttCellInitFunc) cell_fine_init, &apar);
+      if (level + 1 > *depth)
+	*depth = level + 1;
+#ifdef DEBUG
+      fprintf (stderr, "refine: %d\n", apar.nc);
+#endif /* DEBUG */
+      coarse = remove_top_coarse (apar.hcoarse, &ccoarse, apar.hcoarsev);
+      if (s) 
+	gts_range_add_value (&s->created, apar.nc - n);
+      changed = TRUE;
+    }
+  }
+  if (s) {
+    gts_range_add_value (&s->cmax, -ccoarse);
+    gts_range_add_value (&s->ncells, apar.nc);
+  }
+
+  gts_eheap_destroy (apar.hcoarse);
+  gts_eheap_destroy (apar.hfine);
+  gts_object_destroy (GTS_OBJECT (apar.costv));
+  gts_object_destroy (GTS_OBJECT (apar.hcoarsev));
+  gts_object_destroy (GTS_OBJECT (apar.hfinev));  
+}
+
+typedef struct {
+  GfsSimulation * sim;
+  guint depth;
+  GfsVariable * r;
+} AdaptLocalParams;
+
+#define REFINABLE(cell, p) (GFS_VARIABLE (cell, (p)->r->i))
+
+static gboolean coarsen_cell (FttCell * cell, AdaptLocalParams * p)
+{
+  if (GFS_CELL_IS_BOUNDARY (cell))
+    return TRUE;
+  if (GFS_IS_MIXED (cell))
+    return FALSE;
+  return !REFINABLE (cell, p);
+}
+
+static void coarsen_box (GfsBox * box, AdaptLocalParams * p)
+{
+  ftt_cell_coarsen (box->root,
+		    (FttCellCoarsenFunc) coarsen_cell, p,
+		    (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+}
+
+static void refine_cell (FttCell * cell, AdaptLocalParams * p)
+{
+  if (REFINABLE (cell, p)) {
+    guint level = ftt_cell_level (cell);
+
+    ftt_cell_refine_corners (cell, (FttCellInitFunc) gfs_cell_fine_init, p->sim);
+    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, p->sim);
+    if (level + 1 > p->depth)
+      p->depth = level + 1;
+  }
+}
+
+static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
+{
+  REFINABLE (cell, p) = FALSE;
+  if (!GFS_IS_MIXED (cell)) {
+    guint level = ftt_cell_level (cell);
+    GSList * i = p->sim->adapts->items;
+    while (i) {
+      GfsAdapt * a = i->data;
+      if (a->active && level < gfs_function_value (a->maxlevel, cell) &&
+	  (level < gfs_function_value (a->minlevel, cell) ||
+	   (* a->cost) (cell, a) > a->cmax)) {
+	REFINABLE (cell, p) = TRUE;
+	break;
+      }
+      i = i->next;
+    }
+  }
+}
+
+static void adapt_local (GfsSimulation * sim, guint * depth)
+{
+  GfsDomain * domain = GFS_DOMAIN (sim);
+
+  gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			   (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
+
+  AdaptLocalParams p;
+  p.sim = sim;
+  p.depth = *depth;
+  p.r = gfs_temporary_variable (domain);
+  gfs_domain_cell_traverse (domain,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) refine_cell_mark, &p);
+  gfs_domain_cell_traverse (domain,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) refine_cell, &p);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) coarsen_box, &p);
+  gts_object_destroy (GTS_OBJECT (p.r));
+  *depth = p.depth;
+}
+
 /**
  * gfs_simulation_adapt:
  * @simulation: a #GfsSimulation.
@@ -878,7 +1050,6 @@ static void cell_fine_init (FttCell * cell, AdaptParams * p)
 void gfs_simulation_adapt (GfsSimulation * simulation,
 			   GfsAdaptStats * s)
 {
-  GSList * i;
   gboolean active = FALSE;
   guint mincells = 0, maxcells = G_MAXINT;
   GfsDomain * domain;
@@ -891,7 +1062,7 @@ void gfs_simulation_adapt (GfsSimulation * simulation,
 
   gfs_domain_timer_start (domain, "adapt");
 
-  i = simulation->adapts->items;
+  GSList * i = simulation->adapts->items;
   while (i) {
     GfsAdapt * a = i->data;
 
@@ -906,96 +1077,14 @@ void gfs_simulation_adapt (GfsSimulation * simulation,
     i = i->next;
   }
   if (active) {
-    guint depth;
+    guint depth = gfs_domain_depth (domain);
+
+    if (maxcells < G_MAXINT)
+      adapt_global (simulation, &depth, s, mincells, maxcells, c, cmax);
+    else
+      adapt_local (simulation, &depth);
+
     gint l;
-    GSList * i;
-    gdouble ccoarse = 0., cfine = 0.;
-    FttCell * coarse, * fine;
-    gboolean changed = TRUE;
-    AdaptParams apar;
-    
-    depth = gfs_domain_depth (domain);
-
-    apar.sim = simulation;
-    apar.nc = 0;
-    apar.costv = gfs_temporary_variable (domain);
-    apar.hcoarsev = gfs_temporary_variable (domain);
-    apar.hfinev = gfs_temporary_variable (domain);
-    apar.hcoarse = gts_eheap_new (NULL, NULL);
-    apar.hfine = gts_eheap_new (NULL, NULL);
-    apar.c = c;
-
-    gfs_domain_cell_traverse (domain, 
-			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) cell_coarse_init, &apar);
-    for (l = depth; l >= 0; l--)
-      gfs_domain_cell_traverse (domain, 
-				FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-				(FttCellTraverseFunc) compute_cost, &apar);
-    if (apar.c)
-      gfs_domain_cell_traverse (domain, 
-				FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-				(FttCellTraverseFunc) store_cost, &apar);
-    gts_eheap_freeze (apar.hcoarse);
-    gts_eheap_freeze (apar.hfine);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) fill_heaps, &apar);
-    gts_eheap_thaw (apar.hcoarse);
-    gts_eheap_thaw (apar.hfine);
-    coarse = remove_top_coarse (apar.hcoarse, &ccoarse, apar.hcoarsev);
-    fine = remove_top_fine (apar.hfine, &cfine, apar.hfinev);
-#ifdef DEBUG
-    fprintf (stderr, "initial: %g %g %d\n", cfine, -ccoarse, apar.nc);
-#endif /* DEBUG */
-    while (changed) {
-#ifdef DEBUG
-      fprintf (stderr, "%g %g %d\n", cfine, -ccoarse, apar.nc);
-#endif /* DEBUG */
-      changed = FALSE;
-      if (fine && ((cfine < -ccoarse && apar.nc > maxcells) || 
-		   (cfine < cmax && apar.nc >= mincells))) {
-	guint n = apar.nc;
-	
-	apar.clim = MIN (ccoarse, -cmax);
-	ftt_cell_coarsen (fine,
-			  (FttCellCoarsenFunc) fine_cell_coarsenable, &apar,
-			  (FttCellCleanupFunc) fine_cell_cleanup, &apar);
-#ifdef DEBUG
-	fprintf (stderr, "coarsen: %d\n", apar.nc);
-#endif /* DEBUG */
-	fine = remove_top_fine (apar.hfine, &cfine, apar.hfinev);
-	if (s)
-	  gts_range_add_value (&s->removed, n - apar.nc);
-	changed = TRUE;
-      }
-      if (coarse && ((-ccoarse > cfine && apar.nc < mincells) ||
-		     (-ccoarse > cmax && apar.nc <= maxcells))) {
-	guint level = ftt_cell_level (coarse), n = apar.nc;
-	
-	ftt_cell_refine_corners (coarse, (FttCellInitFunc) cell_fine_init, &apar);
-	ftt_cell_refine_single (coarse, (FttCellInitFunc) cell_fine_init, &apar);
-	if (level + 1 > depth)
-	  depth = level + 1;
-#ifdef DEBUG
-	fprintf (stderr, "refine: %d\n", apar.nc);
-#endif /* DEBUG */
-	coarse = remove_top_coarse (apar.hcoarse, &ccoarse, apar.hcoarsev);
-	if (s) 
-	  gts_range_add_value (&s->created, apar.nc - n);
-	changed = TRUE;
-      }
-    }
-    if (s) {
-      gts_range_add_value (&s->cmax, -ccoarse);
-      gts_range_add_value (&s->ncells, apar.nc);
-    }
-
-    gts_eheap_destroy (apar.hcoarse);
-    gts_eheap_destroy (apar.hfine);
-    gts_object_destroy (GTS_OBJECT (apar.costv));
-    gts_object_destroy (GTS_OBJECT (apar.hcoarsev));
-    gts_object_destroy (GTS_OBJECT (apar.hfinev));
-    
     for (l = depth - 2; l >= 0; l--)
       gfs_domain_cell_traverse (domain, 
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
