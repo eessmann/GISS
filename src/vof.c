@@ -663,6 +663,7 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
+  g_return_if_fail (par->cfl <= 0.5);
 
   gfs_domain_timer_start (domain, "tracer_vof_advection");
 
