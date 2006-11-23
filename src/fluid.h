@@ -20,7 +20,6 @@
 #ifndef __FLUID_H__
 #define __FLUID_H__
 
-#include <glib.h>
 #include <gts.h>
 
 #ifdef __cplusplus

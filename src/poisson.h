@@ -20,7 +20,6 @@
 #ifndef __POISSON_H__
 #define __POISSON_H__
 
-#include <glib.h>
 #include <gts.h>
 
 #ifdef __cplusplus
