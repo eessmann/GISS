@@ -260,10 +260,6 @@ static void gfs_source_tension_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
     return;
   }
-  if (!GFS_IS_VARIABLE_CURVATURE (s->k)) {
-    gts_file_error (fp, "variable `%s' is not a VariableCurvature", fp->token->str);
-    return;
-  }
   gts_file_next_token (fp);
 }
 
@@ -273,10 +269,20 @@ static void gfs_source_tension_write (GtsObject * o, FILE * fp)
   fprintf (fp, " %s", GFS_SOURCE_TENSION (o)->k->name);
 }
 
+static gdouble gfs_source_tension_stability (GfsSourceGeneric * s,
+					     GfsSimulation * sim)
+{
+  if (GFS_IS_VARIABLE_CURVATURE (GFS_SOURCE_TENSION (s)->k))
+    return gfs_source_tension_generic_stability (s, sim);
+  else
+    return G_MAXDOUBLE;
+}
+
 static void gfs_source_tension_class_init (GfsSourceGenericClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read =       gfs_source_tension_read;
   GTS_OBJECT_CLASS (klass)->write =      gfs_source_tension_write;
+  klass->stability =                     gfs_source_tension_stability;
 }
 
 GfsSourceGenericClass * gfs_source_tension_class (void)
