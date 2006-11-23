@@ -58,8 +58,7 @@
 # first twelve calculations. For fine enough grids close to
 # second-order convergence is obtained for both norms and for the two
 # discretisations used. The norms of the error on the various grids
-# are also comparable for a given resolution, but fine adaptive meshes
-# show a degradation in convergence due to the numerical noise.
+# are also comparable for a given resolution.
 #
 # \begin{table}
 # \begin{center}
