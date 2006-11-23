@@ -270,6 +270,8 @@ void gfs_mac_projection (GfsDomain * domain,
   apar->dt = dt;
 
   gfs_domain_timer_stop (domain, "mac_projection");
+
+  g_assert (par->residual.infty <= par->tolerance);
 }
 
 static void correct (FttCell * cell, gpointer * data)
@@ -433,6 +435,8 @@ void gfs_approximate_projection (GfsDomain * domain,
   gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
 
   gfs_domain_timer_stop (domain, "approximate_projection");
+
+  g_assert (par->residual.infty <= par->tolerance);
 }
 
 /**
@@ -532,6 +536,8 @@ void gfs_diffusion (GfsDomain * domain,
   }
 
   gts_object_destroy (GTS_OBJECT (res));
+
+  g_assert (par->residual.infty <= par->tolerance);
 }
 
 static GfsSourceDiffusion * source_diffusion (GfsVariable * v)
