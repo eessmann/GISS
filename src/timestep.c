@@ -157,6 +157,30 @@ static void scale_divergence (FttCell * cell, gpointer * data)
   GFS_VARIABLE (cell, div->i) /= *dt;
 }
 
+static void surface_tension (GfsDomain * domain,
+			     GfsVariable * u,
+			     gdouble dt,
+			     GfsFunction * alpha,
+			     GfsVariable ** g)
+{     
+  if (u->sources) {
+    GSList * i = GTS_SLIST_CONTAINER (u->sources)->items;
+    
+    while (i) {
+      if (GFS_IS_SOURCE_TENSION (i->data)) {
+	GfsSourceTension * s = i->data;
+	gfs_source_tension_coefficients (s, domain, alpha);
+	gfs_correct_normal_velocities (domain, FTT_DIMENSION,
+				       GFS_SOURCE_TENSION_GENERIC (s)->c,
+				       g, dt);
+	if (g)
+	  gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, dt);
+      }
+      i = i->next;
+    }
+  }
+}
+
 /**
  * gfs_mac_projection:
  * @domain: a #GfsDomain.
@@ -192,7 +216,6 @@ void gfs_mac_projection (GfsDomain * domain,
   gdouble dt;
   gpointer data[2];
   GfsVariable * div, * dia, * res;
-  GfsSourceGeneric * s;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
@@ -211,12 +234,7 @@ void gfs_mac_projection (GfsDomain * domain,
   apar->dt /= 2.;
 
   /* Add surface tension */
-  if ((s = gfs_source_find (apar->v, gfs_source_tension_class ()))) {
-    gfs_source_tension_coefficients (GFS_SOURCE_TENSION (s), domain, alpha);
-    gfs_correct_normal_velocities (domain, FTT_DIMENSION,
-				   GFS_SOURCE_TENSION_GENERIC (s)->c,
-				   NULL, apar->dt);
-  }
+  surface_tension (domain, apar->v, apar->dt, alpha, NULL);
   /* Initialize face coefficients */
   gfs_poisson_coefficients (domain, alpha);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
@@ -361,7 +379,6 @@ void gfs_approximate_projection (GfsDomain * domain,
 {
   gpointer data[2];
   GfsVariable * dia, * div, * g[FTT_DIMENSION], * res1;
-  GfsSourceGeneric * s;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
@@ -379,13 +396,7 @@ void gfs_approximate_projection (GfsDomain * domain,
 			    (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
 			    gfs_domain_velocity (domain));
   /* Add surface tension */
-  if ((s = gfs_source_find (gfs_domain_velocity (domain)[0], gfs_source_tension_class ()))) {
-    gfs_source_tension_coefficients (GFS_SOURCE_TENSION (s), domain, alpha);
-    gfs_correct_normal_velocities (domain, FTT_DIMENSION,
-				   GFS_SOURCE_TENSION_GENERIC (s)->c,
-				   g, apar->dt);
-    gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
-  }
+  surface_tension (domain, gfs_domain_velocity (domain)[0], apar->dt, alpha, g);
 
   div = gfs_temporary_variable (domain);
   dia = gfs_temporary_variable (domain);
