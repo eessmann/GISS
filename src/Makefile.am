@@ -31,7 +31,6 @@ endif
 
 GFS_HDS = \
 	ftt.h \
-	ftt_inline.h \
 	fluid.h \
 	variable.h \
 	output.h \

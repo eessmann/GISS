@@ -1376,30 +1376,3 @@ void gfs_box_set_relative_pos (GfsBox * box, GfsBox * reference, FttDirection d)
   pos.z += rpos[d].z*size;
   gfs_box_set_pos (box, &pos);
 }
-
-#ifndef G_CAN_INLINE
-/**
- * gfs_box_domain:
- * @box: a #GfsBox.
- *
- * Returns: the #GfsDomain to which @box belongs or %NULL if @box does not
- * belong to any domain.
- */
-GfsDomain * gfs_box_domain (GfsBox * box)
-{
-  GfsDomain * d;
-
-  g_return_val_if_fail (box != NULL, NULL);
-  
-  d = GTS_OBJECT (box)->reserved;
-  if (GTS_SLIST_CONTAINEE (box)->containers) {
-    GSList * i = GTS_SLIST_CONTAINEE (box)->containers;
-
-    while (i->next)
-      i = i->next;
-    d = i->data;
-  }
-  g_assert (GFS_IS_DOMAIN (d));
-  return d;
-}
-#endif /* not G_CAN_INLINE */

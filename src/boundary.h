@@ -272,11 +272,8 @@ void             gfs_box_set_pos              (GfsBox * box,
 void             gfs_box_set_relative_pos     (GfsBox * box, 
 					       GfsBox * reference, 
 					       FttDirection d);
-G_INLINE_FUNC
-GfsDomain *      gfs_box_domain               (GfsBox * box);
 
-#ifdef G_CAN_INLINE
-G_INLINE_FUNC
+static inline
 GfsDomain * gfs_box_domain (GfsBox * box)
 {
   GfsDomain * d;
@@ -293,7 +290,6 @@ GfsDomain * gfs_box_domain (GfsBox * box)
   }
   return d;
 }
-#endif /* G_CAN_INLINE */
 
 /* GfsBoxNotAdapt: Header */
 

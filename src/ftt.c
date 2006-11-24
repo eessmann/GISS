@@ -41,10 +41,6 @@ typedef struct _FttRootCell FttRootCell;
 
 #define FTT_ROOT_CELL(cell) ((FttRootCell *) cell)
 
-#ifndef G_CAN_INLINE
-# include "ftt_inline.h"
-#endif /* not G_CAN_INLINE */
-
 static void oct_new (FttCell * parent,
 		     gboolean check_neighbors,
 		     FttCellInitFunc init,
@@ -2403,22 +2399,6 @@ FttCellTraverse * ftt_cell_traverse_new (FttCell * root,
   g_ptr_array_free (a, FALSE);
   return t;
 }
-
-#ifndef G_CAN_INLINE
-/**
- * ftt_cell_traverse_next:
- * @t: a #FttCellTraverse.
- *
- * Returns: the next cell to visit or %NULL if all the cells have been
- * visited.  
- */
-FttCell * ftt_cell_traverse_next (FttCellTraverse * t)
-{
-  g_return_val_if_fail (t != NULL, NULL);
-
-  return *(t->current++);
-}
-#endif /* not G_CAN_INLINE */
 
 /**
  * ftt_cell_traverse_rewind:
