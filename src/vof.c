@@ -555,6 +555,8 @@ static gdouble fine_fraction (FttCellFace * face, VofParms * p, gdouble un)
   gdouble f = GFS_VARIABLE (face->cell, p->par->v->i);
   if (f == 0. || f == 1.)
     return f;
+  else if (GFS_CELL_IS_BOUNDARY (face->cell))
+    return GFS_STATE (face->cell)->f[face->d].v;
   else {
     FttComponent c;
     FttVector m;
@@ -677,12 +679,7 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
 
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) vof_plane, &p);
-    /* fixme: this does not work for all types of boundary conditions */
-    FttComponent i;
-    for (i = 0; i < FTT_DIMENSION; i++)
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.m[i]);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.alpha);
-
+    gfs_domain_face_bc (domain, c, par->v);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
     gfs_domain_face_traverse (domain, p.c,

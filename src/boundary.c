@@ -53,6 +53,11 @@ static void face_symmetry (FttCellFace * f, GfsBc * b)
       GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v;
 }
 
+static void face_symmetry_vof (FttCellFace * f, GfsBc * b)
+{
+  GFS_STATE (f->cell)->f[f->d].v = GFS_VARIABLE (f->neighbor, b->v->i);
+}
+
 static void bc_write (GtsObject * o, FILE * fp)
 {
   g_assert (GFS_BC (o)->v);
@@ -81,6 +86,9 @@ static void bc_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
   else
     gts_file_next_token (fp);
+
+  if (GFS_IS_VARIABLE_TRACER (bc->v) && GFS_VARIABLE_TRACER (bc->v)->advection.scheme == GFS_VOF)
+    bc->face_bc = (FttFaceTraverseFunc) face_symmetry_vof;
 }
 
 static void gfs_bc_class_init (GtsObjectClass * klass)
@@ -215,6 +223,11 @@ static void dirichlet (FttCellFace * f, GfsBc * b)
     - GFS_VARIABLE (f->neighbor, b->v->i);
 }
 
+static void dirichlet_vof (FttCellFace * f, GfsBc * b)
+{
+  GFS_VARIABLE (f->cell, b->v->i) = gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
+}
+
 static void homogeneous_dirichlet (FttCellFace * f, GfsBc * b)
 {
   GFS_VARIABLE (f->cell, b->v->i) = - GFS_VARIABLE (f->neighbor, b->v->i);
@@ -226,11 +239,29 @@ static void face_dirichlet (FttCellFace * f, GfsBc * b)
     gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
 }
 
+static void bc_dirichlet_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsBc * bc = GFS_BC (*o);
+
+  if (GTS_OBJECT_CLASS (gfs_bc_dirichlet_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_bc_dirichlet_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  
+  if (GFS_IS_VARIABLE_TRACER (bc->v) && GFS_VARIABLE_TRACER (bc->v)->advection.scheme == GFS_VOF)
+    bc->bc = (FttFaceTraverseFunc) dirichlet_vof;
+}
+
 static void gfs_bc_dirichlet_init (GfsBc * object)
 {
   object->bc =             (FttFaceTraverseFunc) dirichlet;
   object->homogeneous_bc = (FttFaceTraverseFunc) homogeneous_dirichlet;
   object->face_bc =        (FttFaceTraverseFunc) face_dirichlet;
+}
+
+static void gfs_bc_dirichlet_class_init (GtsObjectClass * klass)
+{
+  klass->read = bc_dirichlet_read;
 }
 
 GfsBcClass * gfs_bc_dirichlet_class (void)
@@ -242,7 +273,7 @@ GfsBcClass * gfs_bc_dirichlet_class (void)
       "GfsBcDirichlet",
       sizeof (GfsBcValue),
       sizeof (GfsBcClass),
-      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectClassInitFunc) gfs_bc_dirichlet_class_init,
       (GtsObjectInitFunc) gfs_bc_dirichlet_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
