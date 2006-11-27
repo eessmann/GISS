@@ -460,19 +460,20 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
     gdouble c2 = GFS_VARIABLE (face->neighbor, t->c->i);
     gdouble w1 = c1*(1. - c1);
     gdouble w2 = c2*(1. - c2);
+    gdouble k1 = GFS_VARIABLE (face->cell, kappa->i);
+    gdouble k2 = GFS_VARIABLE (face->neighbor, kappa->i);
     
     if (w1 + w2 > 0.)
-      v *= (w1*GFS_VARIABLE (face->cell, kappa->i) +
-	    w2*GFS_VARIABLE (face->neighbor, kappa->i))/(w1 + w2);
+      v *= (w1*k1 + w2*k2)/(w1 + w2);
     else {
-      if (GFS_VARIABLE (face->cell, kappa->i) < G_MAXDOUBLE) {
-	if (GFS_VARIABLE (face->neighbor, kappa->i) < G_MAXDOUBLE)
-	  v *= (GFS_VARIABLE (face->cell, kappa->i) + GFS_VARIABLE (face->neighbor, kappa->i))/2.;
+      if (k1 < G_MAXDOUBLE) {
+	if (k2 < G_MAXDOUBLE)
+	  v *= (k1 + k2)/2.;
 	else
-	  v *= GFS_VARIABLE (face->cell, kappa->i);
+	  v *= k1;
       }
-      else if (GFS_VARIABLE (face->neighbor, kappa->i) < G_MAXDOUBLE)
-	v *= GFS_VARIABLE (face->neighbor, kappa->i);
+      else if (k2 < G_MAXDOUBLE)
+	v *= k2;
       else
 	v = 1e6;
     }
