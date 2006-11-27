@@ -533,21 +533,19 @@ typedef struct {
 
 static void vof_plane (FttCell * cell, VofParms * p)
 {
+  FttComponent c;
   FttVector m;
   gdouble alpha;
 
   if (GFS_IS_MIXED (cell))
     g_assert_not_implemented ();
 
-  if (gfs_vof_plane (cell, p->par->v, &m, &alpha)) {
-    FttComponent c;
-
-    for (c = 0; c < FTT_DIMENSION; c++) {
-      GFS_VARIABLE (cell, p->m[c]->i) = - (&m.x)[c];
-      alpha -= (&m.x)[c];
-    }
-    GFS_VARIABLE (cell, p->alpha->i) = alpha;
+  gfs_vof_plane (cell, p->par->v, &m, &alpha);
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    GFS_VARIABLE (cell, p->m[c]->i) = - (&m.x)[c];
+    alpha -= (&m.x)[c];
   }
+  GFS_VARIABLE (cell, p->alpha->i) = alpha;
 }
 
 static gdouble fine_fraction (FttCellFace * face, VofParms * p, gdouble un)
@@ -754,6 +752,7 @@ void gfs_vof_coarse_fine (FttCell * parent, GfsVariable * v)
 gboolean gfs_vof_plane (FttCell * cell, GfsVariable * v,
 			FttVector * m, gdouble * alpha)
 {
+  FttComponent c;
   gdouble f;
 
   g_return_val_if_fail (cell != NULL, FALSE);
@@ -764,10 +763,14 @@ gboolean gfs_vof_plane (FttCell * cell, GfsVariable * v,
   f = GFS_VARIABLE (cell, v->i);
   THRESHOLD (f);
 
-  if (GFS_IS_FULL (f))
+  if (GFS_IS_FULL (f)) {
+    for (c = 1; c < FTT_DIMENSION; c++)
+      (&m->x)[c] = 0.;
+    m->x = 1.;
+    *alpha = f;
     return FALSE;
+  }
   else {
-    FttComponent c;
     gdouble n = 0.;
 
     gfs_youngs_normal (cell, v, m);
