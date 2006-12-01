@@ -603,8 +603,8 @@ static gdouble coarse_fraction (FttCellFace * face, VofParms * p, gdouble un)
     return plane_volume_shifted (m, alpha, q);
   }
 }
-  
-static void vof_flux (FttCellFace * face, VofParms * p)
+
+static void vof_face_value (FttCellFace * face, VofParms * p)
 {
   gdouble un = GFS_FACE_NORMAL_VELOCITY (face)*p->par->dt/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
@@ -619,7 +619,30 @@ static void vof_flux (FttCellFace * face, VofParms * p)
       face->d = FTT_OPPOSITE_DIRECTION (face->d);
       un = - un;
     }
-    gdouble f = fine_fraction (face, p, un);
+    GFS_STATE (face->cell)->f[face->d].v = fine_fraction (face, p, un);
+    break;
+  }
+  case FTT_FINE_COARSE: {
+    GFS_STATE (face->cell)->f[face->d].v = 
+      un > 0. ? fine_fraction (face, p, un) : coarse_fraction (face, p, -un/2.);
+    break;
+  }
+  default:
+    g_assert_not_reached ();
+  }
+}
+  
+static void vof_flux (FttCellFace * face, VofParms * p)
+{
+  gdouble un = GFS_FACE_NORMAL_VELOCITY (face)*p->par->dt/ftt_cell_size (face->cell);
+  if (!FTT_FACE_DIRECT (face))
+    un = - un;
+
+  switch (ftt_face_type (face)) {
+  case FTT_FINE_FINE: {
+    gdouble f = un > 0. ? 
+      GFS_STATE (face->cell)->f[face->d].v :
+      GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v;
     GFS_VARIABLE (face->cell, p->par->fv->i) += 
       (GFS_VARIABLE (face->cell, p->par->v->i) - f)*un;
     GFS_VARIABLE (face->neighbor, p->par->fv->i) -= 
@@ -630,7 +653,7 @@ static void vof_flux (FttCellFace * face, VofParms * p)
     GFS_VARIABLE (face->cell, p->par->fv->i) += GFS_VARIABLE (face->cell, p->par->v->i)*un;
     GFS_VARIABLE (face->neighbor, p->par->fv->i) -= coarse_fraction (face, p, 1.)*un/FTT_CELLS;
 
-    gdouble flux = un > 0. ? fine_fraction (face, p, un)*un : coarse_fraction (face, p, -un/2.)*un;
+    gdouble flux = GFS_STATE (face->cell)->f[face->d].v*un;
     GFS_VARIABLE (face->cell, p->par->fv->i) -= flux;
     GFS_VARIABLE (face->neighbor, p->par->fv->i) += flux/FTT_CELLS;
     break;
@@ -677,7 +700,10 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
 
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) vof_plane, &p);
-    gfs_domain_face_bc (domain, c, par->v);
+    gfs_domain_face_traverse (domain, p.c,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) vof_face_value, &p);
+    gfs_domain_face_bc (domain, p.c, par->v);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
     gfs_domain_face_traverse (domain, p.c,
