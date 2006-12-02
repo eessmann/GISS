@@ -550,17 +550,22 @@ static void init_vf (FttCell * cell, VarFunc * vf)
   GFS_VARIABLE (cell, vf->v->i) = gfs_function_value (vf->f, cell);
 }
 
+static void gfs_init_event_half (GfsEvent * event, GfsSimulation * sim)
+{
+  GSList * i = GFS_INIT (event)->f;
+  
+  while (i) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) init_vf, i->data);
+    i = i->next;
+  }
+}
+
 static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_class ())->parent_class)->event) 
       (event, sim)) {
-    GSList * i = GFS_INIT (event)->f;
-
-    while (i) {
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) init_vf, i->data);
-      i = i->next;
-    }
+    gfs_init_event_half (event, sim);
     return TRUE;
   }
   return FALSE;
@@ -569,6 +574,7 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
 static void gfs_init_class_init (GfsGenericInitClass * klass)
 {
   GFS_EVENT_CLASS (klass)->event = gfs_init_event;
+  GFS_EVENT_CLASS (klass)->event_half = gfs_init_event_half;
   GTS_OBJECT_CLASS (klass)->read = gfs_init_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_init_write;
   GTS_OBJECT_CLASS (klass)->destroy = gfs_init_destroy;
