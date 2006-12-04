@@ -4,7 +4,8 @@ EXAMPLES = \
 	cylinder \
 	shear \
 	rt \
-	boussinesq
+	boussinesq \
+	tangaroa
 
 EXTRA_DIST = \
 	template.tex \
