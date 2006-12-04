@@ -454,32 +454,27 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   GfsSourceTensionGeneric * t = data[1];
   gdouble v = lambda2[face->d/2]*t->sigma;
   GfsVariable * alpha = data[2], * kappa = GFS_SOURCE_TENSION (data[1])->k;
-
-  if (GFS_IS_VARIABLE_CURVATURE (kappa)) {
-    gdouble c1 = GFS_VARIABLE (face->cell, t->c->i);
-    gdouble c2 = GFS_VARIABLE (face->neighbor, t->c->i);
-    gdouble w1 = c1*(1. - c1);
-    gdouble w2 = c2*(1. - c2);
-    gdouble k1 = GFS_VARIABLE (face->cell, kappa->i);
-    gdouble k2 = GFS_VARIABLE (face->neighbor, kappa->i);
+  gdouble c1 = GFS_VARIABLE (face->cell, t->c->i);
+  gdouble c2 = GFS_VARIABLE (face->neighbor, t->c->i);
+  gdouble w1 = c1*(1. - c1);
+  gdouble w2 = c2*(1. - c2);
+  gdouble k1 = GFS_VARIABLE (face->cell, kappa->i);
+  gdouble k2 = GFS_VARIABLE (face->neighbor, kappa->i);
     
-    if (w1 + w2 > 0.)
-      v *= (w1*k1 + w2*k2)/(w1 + w2);
-    else {
-      if (k1 < G_MAXDOUBLE) {
-	if (k2 < G_MAXDOUBLE)
-	  v *= (k1 + k2)/2.;
-	else
-	  v *= k1;
-      }
-      else if (k2 < G_MAXDOUBLE)
-	v *= k2;
+  if (w1 + w2 > 0.)
+    v *= (w1*k1 + w2*k2)/(w1 + w2);
+  else {
+    if (k1 < G_MAXDOUBLE) {
+      if (k2 < G_MAXDOUBLE)
+	v *= (k1 + k2)/2.;
       else
-	v = 1e6;
+	v *= k1;
     }
+    else if (k2 < G_MAXDOUBLE)
+      v *= k2;
+    else
+      v = 1e6;
   }
-  else
-    v *= gfs_face_interpolated_value (face, kappa->i);
 
   if (alpha)
     v *= gfs_face_interpolated_value (face, alpha->i);
