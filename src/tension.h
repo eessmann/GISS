@@ -112,6 +112,26 @@ struct _GfsVariableCurvature {
 
 GfsVariableClass * gfs_variable_curvature_class  (void);
 
+/* GfsVariablePosition: header */
+
+typedef struct _GfsVariablePosition                GfsVariablePosition;
+
+struct _GfsVariablePosition {
+  /*< private >*/
+  GfsVariableCurvature parent;
+
+  /*< public >*/
+  FttComponent c;
+};
+
+#define GFS_VARIABLE_POSITION(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsVariablePosition,\
+					           gfs_variable_position_class ())
+#define GFS_IS_VARIABLE_POSITION(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_position_class ()))
+
+GfsVariableClass * gfs_variable_position_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

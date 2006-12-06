@@ -277,10 +277,13 @@ static void gfs_source_tension_write (GtsObject * o, FILE * fp)
 static gdouble gfs_source_tension_stability (GfsSourceGeneric * s,
 					     GfsSimulation * sim)
 {
-  if (GFS_IS_VARIABLE_CURVATURE (GFS_SOURCE_TENSION (s)->k))
+  if (GFS_IS_VARIABLE_POSITION (GFS_SOURCE_TENSION (s)->k))
+    /* reduced gravity */
+    return sqrt (ftt_level_size (gfs_domain_depth (GFS_DOMAIN (sim)))/
+		 fabs (GFS_SOURCE_TENSION_GENERIC (s)->sigma));
+  else 
+    /* surface tension */
     return gfs_source_tension_generic_stability (s, sim);
-  else
-    return G_MAXDOUBLE;
 }
 
 static void gfs_source_tension_class_init (GfsSourceGenericClass * klass)
@@ -493,6 +496,120 @@ GfsVariableClass * gfs_variable_curvature_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
 				  &gfs_variable_curvature_info);
+  }
+
+  return klass;
+}
+
+/* GfsVariablePosition: object */
+
+static void variable_position_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsVariablePosition * v = GFS_VARIABLE_POSITION (*o);
+
+  (* GTS_OBJECT_CLASS (gfs_variable_position_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (component)");
+    return;
+  }
+  if (!strcmp (fp->token->str, "x"))
+    v->c = FTT_X;
+  else if (!strcmp (fp->token->str, "y"))
+    v->c = FTT_Y;
+#if !FTT_2D
+  else if (!strcmp (fp->token->str, "z"))
+    v->c = FTT_Z;
+#endif /* 3D */
+  else {
+    gts_file_error (fp, "`%s' is not a valid component", fp->token->str);
+    return;
+  }
+  if (GFS_VARIABLE1 (v)->description)
+    g_free (GFS_VARIABLE1 (v)->description);
+  GFS_VARIABLE1 (v)->description = g_strjoin (" ", fp->token->str,
+					      "coordinate of the interface defined by tracer",
+					      GFS_VARIABLE_CURVATURE (v)->f->name, NULL);
+  gts_file_next_token (fp);  
+}
+
+static void variable_position_write (GtsObject * o, FILE * fp)
+{
+  GfsVariablePosition * v = GFS_VARIABLE_POSITION (o);
+
+  (* GTS_OBJECT_CLASS (gfs_variable_position_class ())->parent_class->write) (o, fp);
+
+  fprintf (fp, " %s", v->c == FTT_X ? "x" : v->c == FTT_Y ? "y" : "z");
+}
+
+static void position (FttCell * cell, GfsVariable * v)
+{
+  FttVector p;
+
+  if (gfs_vof_center (cell, GFS_VARIABLE_CURVATURE (v)->f, &p))
+    GFS_VARIABLE (cell, v->i) = (&p.x)[GFS_VARIABLE_POSITION (v)->c];
+  else
+    GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
+}
+
+static void variable_position_event_half (GfsEvent * event, GfsSimulation * sim)
+{
+  GfsDomain * domain = GFS_DOMAIN (sim);
+
+  gfs_domain_timer_start (domain, "variable_position");
+
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) position, event);
+  gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			    (FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
+  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+
+  gfs_domain_timer_stop (domain, "variable_position");
+}
+
+static gboolean variable_position_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class)->event)
+      (event, sim)) {
+    if (!GFS_VARIABLE_CURVATURE (event)->first_done) {
+      variable_position_event_half (event, sim);
+      GFS_VARIABLE_CURVATURE (event)->first_done = TRUE;
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void variable_position_class_init (GtsObjectClass * klass)
+{
+  klass->read = variable_position_read;
+  klass->write = variable_position_write;
+  GFS_EVENT_CLASS (klass)->event = variable_position_event;
+  GFS_EVENT_CLASS (klass)->event_half = variable_position_event_half;
+}
+
+static void variable_position_init (GfsVariable * v)
+{
+}
+
+GfsVariableClass * gfs_variable_position_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_position_info = {
+      "GfsVariablePosition",
+      sizeof (GfsVariablePosition),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_position_class_init,
+      (GtsObjectInitFunc) variable_position_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_curvature_class ()), 
+				  &gfs_variable_position_info);
   }
 
   return klass;

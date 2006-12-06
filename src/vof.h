@@ -70,6 +70,9 @@ guint    gfs_vof_facet             (FttCell * cell,
 				    GfsVariable * v,
 				    FttVector * p,
 				    FttVector * m);
+gboolean gfs_vof_center            (FttCell * cell, 
+				    GfsVariable * v, 
+				    FttVector * p);
 gdouble  gfs_vof_interpolate       (FttCell * cell,
 				    FttVector * p,
 				    guint level,

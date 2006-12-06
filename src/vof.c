@@ -893,6 +893,37 @@ guint gfs_vof_facet (FttCell * cell, GfsVariable * v, FttVector * p, FttVector *
 }
 
 /**
+ * gfs_vof_center:
+ * @cell: a #FttCell.
+ * @v: a #GfsVariable.
+ * @p: a #FttVector.
+ * @m: a #FttVector.
+ *
+ * Fills @p with the (approximate) coordinates of the center
+ * of mass of the VOF-reconstructed interface facet defined by @v.
+ *
+ * Returns: %TRUE if the cell contains the interface, %FALSE otherwise.
+ */
+gboolean gfs_vof_center (FttCell * cell, GfsVariable * v, FttVector * p)
+{
+  g_return_val_if_fail (cell != NULL, FALSE);
+  g_return_val_if_fail (v != NULL, FALSE);
+  g_return_val_if_fail (p != NULL, 0);
+
+  FttVector m, q[6];
+  guint i, nv = gfs_vof_facet (cell, v, q, &m);
+  if (nv > 0) {
+    p->x = p->y = p->z = 0.;
+    for (i = 0; i < nv; i++) {
+      p->x += q[i].x; p->y += q[i].y; p->z += q[i].z;
+    }
+    p->x /= nv; p->y /= nv; p->z /= nv;
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
  * gfs_vof_interpolate:
  * @cell: a #FttCell containing location @p.
  * @p: the center of the virtual cell.
