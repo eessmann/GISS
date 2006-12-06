@@ -66,8 +66,10 @@ gboolean gfs_vof_plane             (FttCell * cell,
 				    GfsVariable * v,
 				    FttVector * m, 
 				    gdouble * alpha);
-GSList * gfs_vof_facet             (FttCell * cell, 
-				    GfsVariable * v);
+guint    gfs_vof_facet             (FttCell * cell, 
+				    GfsVariable * v,
+				    FttVector * p,
+				    FttVector * m);
 gdouble  gfs_vof_interpolate       (FttCell * cell,
 				    FttVector * p,
 				    guint level,

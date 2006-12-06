@@ -20,6 +20,7 @@
 #include <math.h>
 #include "vof.h"
 #include "variable.h"
+#include "graphic.h"
 
 #define THRESHOLD(c) {if ((c) < 0.) c = 0.; else if ((c) > 1.) c = 1.;}
 
@@ -816,51 +817,78 @@ gboolean gfs_vof_plane (FttCell * cell, GfsVariable * v,
  * gfs_vof_facet:
  * @cell: a #FttCell.
  * @v: a #GfsVariable.
+ * @p: a #FttVector array (of size 2 in 2D and 6 in 3D)
+ * @m: a #FttVector.
  *
- * Returns: a list of newly allocated #GtsPoint defining the
- * VOF-reconstructed interface facet defined by @v, or %NULL if @cell
- * is not cut by the interface.
+ * Fills @p with the coordinates of points defining the
+ * VOF-reconstructed interface facet defined by @v.
+ *
+ * Fills @m with the normal to the interface.
+ *
+ * Returns: the number of points defining the facet.
  */
-GSList * gfs_vof_facet (FttCell * cell, GfsVariable * v)
+guint gfs_vof_facet (FttCell * cell, GfsVariable * v, FttVector * p, FttVector * m)
 {
-  FttVector m;
   gdouble alpha;
 
-  g_return_val_if_fail (cell != NULL, NULL);
-  g_return_val_if_fail (v != NULL, NULL);
+  g_return_val_if_fail (cell != NULL, 0);
+  g_return_val_if_fail (v != NULL, 0);
+  g_return_val_if_fail (p != NULL, 0);
+  g_return_val_if_fail (m != NULL, 0);
 
-#if FTT_3D
-  g_assert_not_implemented ();
-#endif  
-
-  if (!gfs_vof_plane (cell, v, &m, &alpha))
-    return NULL;
+  if (!gfs_vof_plane (cell, v, m, &alpha))
+    return 0;
   else {
-    GSList * l = NULL;
+    guint n = 0;
+    FttVector q;
+    ftt_cell_pos (cell, &q);
+    gdouble h = ftt_cell_size (cell);
+#if FTT_2D
     gdouble x, y;
 
-    if (m.y != 0.) {
-      y = alpha/m.y;
-      if (y >= 0. && y <= 1.)
-	l = g_slist_prepend (l, gts_point_new (gts_point_class (), 0.5, 0.5 - y, 0.));
+    if (m->y != 0.) {
+      y = alpha/m->y;
+      if (y >= 0. && y <= 1.) {
+	p[n].x = q.x + h/2.; p[n].y = q.y + h*(0.5 - y); p[n++].z = 0.;
+      }
     }
-    if (m.x != 0.) {
-      x = alpha/m.x;
-      if (x >= 0. && x <= 1.)
-	l = g_slist_prepend (l, gts_point_new (gts_point_class (), 0.5 - x, 0.5, 0.));
+    if (m->x != 0.) {
+      x = alpha/m->x;
+      if (x >= 0. && x <= 1.) {
+	p[n].x = q.x + h*(0.5 - x); p[n].y = q.y + h/2.; p[n++].z = 0.;
+      }
     }
-    if (m.y != 0.) {
-      y = (alpha - m.x)/m.y;
-      if (y >= 0. && y <= 1.)
-	l = g_slist_prepend (l, gts_point_new (gts_point_class (), -0.5, 0.5 - y, 0.));
+    if (m->y != 0.) {
+      y = (alpha - m->x)/m->y;
+      if (y >= 0. && y <= 1.) {
+	p[n].x = q.x - h/2.; p[n].y = q.y + h*(0.5 - y); p[n++].z = 0.;
+      }
     }
-    if (m.x != 0.) {
-      x = (alpha - m.y)/m.x;
-      if (x >= 0. && x <= 1.)
-	l = g_slist_prepend (l, gts_point_new (gts_point_class (), 0.5 - x, -0.5, 0.));
+    if (m->x != 0.) {
+      x = (alpha - m->y)/m->x;
+      if (x >= 0. && x <= 1.) {
+	p[n].x = q.x + h*(0.5 - x); p[n].y = q.y - h/2.; p[n++].z = 0.;
+      }
     }
-    g_assert (g_slist_length (l) == 2);
-    return l;
+    g_assert (n == 2);
+#else /* 3D */
+    gdouble max = fabs (m->x);
+    FttComponent c = FTT_X;
+    if (fabs (m->y) > max) {
+      max = fabs (m->y);
+      c = FTT_Y;
+    }
+    if (fabs (m->z) > max)
+      c = FTT_Z;
+    q.x -= h/2.; q.y -= h/2.; q.z -= h/2.;
+    (&q.x)[c] -= h*(alpha - m->x - m->y - m->z)/(&m->x)[c];
+    gts_vector_normalize (&m->x);
+
+    FttDirection d[12];
+    n = gfs_cut_cube_vertices (cell, -1, &q, m, p, d, NULL, NULL);
+    g_assert (n <= 6);
+#endif /* 3D */
+    return n;
   }
 }
 

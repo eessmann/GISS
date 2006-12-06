@@ -52,6 +52,7 @@ GFS_HDS = \
 	utils.h \
 	ocean.h \
 	levelset.h \
+	isocube.h \
 	$(MPI_HDS)
 
 pkginclude_HEADERS = \
@@ -90,7 +91,7 @@ SRC = \
 libgfs3D_la_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
 	-release $(LT_RELEASE) -export-dynamic
-libgfs3D_la_SOURCES = $(SRC) isocube.h
+libgfs3D_la_SOURCES = $(SRC)
 
 libgfs2D_la_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -101,7 +102,7 @@ libgfs2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 libgfs2D3_la_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
 	-release $(LT_RELEASE) -export-dynamic
-libgfs2D3_la_SOURCES = $(SRC) isocube.h
+libgfs2D3_la_SOURCES = $(SRC)
 libgfs2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 
 CLEANFILES = $(BUILT_SOURCES)
@@ -109,8 +110,7 @@ CLEANFILES = $(BUILT_SOURCES)
 EXTRA_DIST = \
 	mpi_boundary.c \
 	mpi_boundary.h \
-	ftt_internal.c \
-	isocube.h
+	ftt_internal.c
 
 bin_PROGRAMS = gerris2D gerris3D gerris2D3
 

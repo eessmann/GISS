@@ -123,6 +123,14 @@ void               gfs_draw_stream_ribbon      (GfsDomain * domain,
 void               gfs_draw_streamline         (GfsDomain * domain,
 						FttVector p,
 						FILE * fp);
+gboolean           gfs_plane_cuts_cell         (FttVector plane[3], 
+						FttCell * cell);
+guint              gfs_cut_cube_vertices       (FttCell * cell, 
+						gint maxlevel,
+						FttVector * p, FttVector * n,
+						FttVector v[12], FttDirection d[12],
+						GfsVariable * var,
+						gdouble val[12]);
 
 #ifdef __cplusplus
 }

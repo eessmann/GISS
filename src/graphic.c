@@ -26,6 +26,10 @@
 #include "solid.h"
 #include "variable.h"
 
+#if !FTT_2D
+#  include "isocube.h"
+#endif /* 3D */
+
 typedef struct {
   GPtrArray * colors;
   gboolean reversed;
@@ -1979,3 +1983,158 @@ void gfs_draw_streamline (GfsDomain * domain,
   gfs_streamline_draw (path, fp);
   gfs_streamline_destroy (path);
 }
+
+#if !FTT_2D
+
+static gdouble point_orientation (FttVector p[3], FttVector * c)
+{
+  gdouble adx, bdx, cdx;
+  gdouble ady, bdy, cdy;
+  gdouble adz, bdz, cdz;
+  
+  adx = p[0].x - c->x;
+  bdx = p[1].x - c->x;
+  cdx = p[2].x - c->x;
+  ady = p[0].y - c->y;
+  bdy = p[1].y - c->y;
+  cdy = p[2].y - c->y;
+  adz = p[0].z - c->z;
+  bdz = p[1].z - c->z;
+  cdz = p[2].z - c->z;
+  
+  return (adx * (bdy * cdz - bdz * cdy) +
+	  bdx * (cdy * adz - cdz * ady) +
+	  cdx * (ady * bdz - adz * bdy));
+}
+
+/**
+ * gfs_plane_cuts_cell:
+ * @plane: three points belonging to the plane.
+ * @cell: a #FttCell.
+ *
+ * Returns: %TRUE if @plane cuts @cell, %FALSE otherwise.
+ */
+gboolean gfs_plane_cuts_cell (FttVector plane[3], FttCell * cell)
+{
+  FttVector o;
+  gdouble h = ftt_cell_size (cell)*SLIGHTLY_LARGER;
+  guint i;
+
+  g_return_val_if_fail (cell != NULL, FALSE);
+
+  ftt_cell_pos (cell, &o);
+  o.x -= h/2.; o.y -= h/2.; o.z -= h/2.;
+  for (i = 0; i < 12; i++) {
+    FttVector e, d;
+    gdouble a, b;
+    d.x = o.x + h*edge[i][0].x; d.y = o.y + h*edge[i][0].y; d.z = o.z + h*edge[i][0].z;
+    e.x = o.x + h*edge[i][1].x; e.y = o.y + h*edge[i][1].y; e.z = o.z + h*edge[i][1].z;
+    a = point_orientation (plane, &e);
+    b = point_orientation (plane, &d);
+    if ((a <= 0. && b > 0.) || (a >= 0. && b < 0.))
+      return TRUE;
+  }
+  return FALSE;
+}
+
+static void cube_plane_intersection (FttCell * cell,
+				     FttVector * O,
+				     FttVector * n,
+				     FttVector p[12],
+				     gint orient[12],
+				     GfsVariable * var,
+				     gdouble v[12],
+				     gint max_level)
+{
+  FttVector o;
+  gdouble h = ftt_cell_size (cell)*SLIGHTLY_LARGER, vc[8];
+  guint i;
+
+  if (var)
+    for (i = 0; i < 8; i++)
+      vc[i] = G_MAXDOUBLE;
+
+  ftt_cell_pos (cell, &o);
+  o.x -= h/2.; o.y -= h/2.; o.z -= h/2.;
+  for (i = 0; i < 12; i++) {
+    FttVector e, d;
+    d.x = o.x + h*edge[i][0].x; d.y = o.y + h*edge[i][0].y; d.z = o.z + h*edge[i][0].z;
+    e.x = o.x + h*edge[i][1].x; e.y = o.y + h*edge[i][1].y; e.z = o.z + h*edge[i][1].z;
+    gdouble den = n->x*(e.x - d.x) + n->y*(e.y - d.y) + n->z*(e.z - d.z);
+    orient[i] = -1;
+    if (fabs (den) > 1e-10) {
+      gdouble t = (n->x*(O->x - d.x) + n->y*(O->y - d.y) + n->z*(O->z - d.z))/den;
+      if (t >= 0. && t < 1.) {
+	p[i].x = d.x + t*(e.x - d.x); p[i].y = d.y + t*(e.y - d.y); p[i].z = d.z + t*(e.z - d.z);
+	orient[i] = (n->x*(e.x - O->x) + n->y*(e.y - O->y) + n->z*(e.z - O->z) > 0.);
+	if (var) {
+	  guint j = edge1[i][0];
+	  if (vc[j] == G_MAXDOUBLE)
+	    vc[j] = gfs_cell_corner_value (cell, corner[j], var, max_level);
+	  d.z = vc[j];
+	  j = edge1[i][1];
+	  if (vc[j] == G_MAXDOUBLE)
+	    vc[j] = gfs_cell_corner_value (cell, corner[j], var, max_level);
+	  e.z = vc[j];
+	  v[i] = d.z + t*(e.z - d.z);
+	}
+      }
+    }
+  }
+}
+
+/**
+ * gfs_cut_cube_vertices:
+ * @cell: a #FttCell.
+ * @maxlevel: the maximum level to consider (or -1).
+ * @p: a point on the plane.
+ * @n: the normal to the plane.
+ * @v: where to return the vertices coordinates.
+ * @d: where to return the direction.
+ * @var: a #GfsVariable or %NULL.
+ * @val: where to return the values of @var or %NULL.
+ *
+ * Fills @v, @d and @val with the coordinates/values of the vertices,
+ * intersections of @cell with the plane defined by @p and @n.
+ *
+ * The vertices are ordered consistently to define a consistent,
+ * oriented polygon.
+ *
+ * Returns: the number of vertices (0 if the plane does not cut the cell).
+ */
+guint gfs_cut_cube_vertices (FttCell * cell, gint maxlevel,
+			     FttVector * p, FttVector * n,
+			     FttVector v[12], FttDirection d[12],
+			     GfsVariable * var,
+			     gdouble val[12])
+{
+  FttVector a[12];
+  gdouble vv[12];
+  gint orient[12];
+  guint i;
+
+  g_return_val_if_fail (cell != NULL, 0);
+  g_return_val_if_fail (p != NULL, 0);
+  g_return_val_if_fail (n != NULL, 0);
+  g_return_val_if_fail ((var == NULL && val == NULL) || (var != NULL && val != NULL), 0);
+
+  cube_plane_intersection (cell, p, n, a, orient, var, vv, maxlevel);
+  for (i = 0; i < 12; i++) {
+    guint nv = 0, e = i;
+    while (orient[e] >= 0) {
+      guint m = 0, * ne = connect[e][orient[e]];
+      d[nv] = ne[3];
+      if (var)
+	val[nv] = vv[e];
+      v[nv++] = a[e];
+      orient[e] = -1;
+      while (m < 3 && orient[e] < 0)
+	e = ne[m++];
+    }
+    if (nv > 2)
+      return nv;
+  }
+  return 0;
+}
+
+#endif /* 3D */
