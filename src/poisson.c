@@ -878,6 +878,7 @@ void gfs_diffusion_cycle (GfsDomain * domain,
   g_return_if_fail (res != NULL);
 
   dp = gfs_temporary_variable (domain);
+  dp->component = u->component;
 
   /* compute residual on non-leafs cells */
   gfs_domain_cell_traverse (domain, 
