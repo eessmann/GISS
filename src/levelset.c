@@ -41,6 +41,11 @@ static void variable_distance_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
     return;
   }
+  if (GFS_VARIABLE1 (*o)->description)
+    g_free (GFS_VARIABLE1 (*o)->description);
+  GFS_VARIABLE1 (*o)->description = g_strjoin (" ", 
+					       "Distance to the interface defined by tracer",
+					       fp->token->str, NULL);
   gts_file_next_token (fp);
 }
 
