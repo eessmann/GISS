@@ -95,10 +95,10 @@ static gdouble gfs_source_tension_generic_stability (GfsSourceGeneric * s,
   h = ftt_level_size (p.depth);
   if (p.alpha) {
     gdouble rhom = (1./p.amin + 1./p.amax)/2.;
-    return sqrt (rhom*h*h*h/(2.*M_PI*t->sigma));
+    return sqrt (rhom*h*h*h/(M_PI*t->sigma));
   }
   else
-    return sqrt (h*h*h/(2.*M_PI*t->sigma));
+    return sqrt (h*h*h/(M_PI*t->sigma));
 }
 
 static void gfs_source_tension_generic_class_init (GfsSourceGenericClass * klass)
