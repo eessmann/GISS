@@ -441,7 +441,7 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   gdouble w2 = c2*(1. - c2);
   gdouble k1 = GFS_VARIABLE (face->cell, kappa->i);
   gdouble k2 = GFS_VARIABLE (face->neighbor, kappa->i);
-    
+
   if (w1 + w2 > 0.)
     v *= (w1*k1 + w2*k2)/(w1 + w2);
   else {
@@ -456,6 +456,7 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
     else
       v = 1e6;
   }
+  g_assert (v <= 1e6);
 
   if (alpha)
     v *= gfs_function_face_value (alpha, face);

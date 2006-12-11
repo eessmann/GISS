@@ -22,6 +22,7 @@
 
 #include "tension.h"
 #include "vof.h"
+#include "levelset.h"
 
 /* GfsSourceTensionGeneric: Object */
 
@@ -327,7 +328,7 @@ static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
     return;
 
   if (fp->type != GTS_STRING) {
-    gts_file_error (fp, "expecting a string (f)");
+    gts_file_error (fp, "expecting a string (fraction or distance)");
     return;
   }
   domain = GFS_DOMAIN (gfs_object_simulation (*o));
@@ -335,12 +336,22 @@ static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
     return;
   }
-  gts_file_next_token (fp);
-  
   if (GFS_VARIABLE1 (v)->description)
     g_free (GFS_VARIABLE1 (v)->description);
-  GFS_VARIABLE1 (v)->description = g_strjoin (" ", "Curvature of the interface defined by tracer",
-					      v->f->name, NULL);
+  if (GFS_IS_VARIABLE_TRACER (v->f))
+    GFS_VARIABLE1 (v)->description = g_strjoin (" ", 
+						"Curvature of the interface defined by tracer",
+						v->f->name, NULL);
+  else if (GFS_IS_VARIABLE_DISTANCE (v->f))
+    GFS_VARIABLE1 (v)->description = g_strjoin (" ", 
+						"Curvature of the interface defined by distance",
+						v->f->name, NULL);
+  else {
+    GFS_VARIABLE1 (v)->description = NULL;
+    gts_file_error (fp, "variable `%s' is neither a tracer nor a distance", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);  
 }
 
 static void variable_curvature_write (GtsObject * o, FILE * fp)
@@ -389,18 +400,9 @@ static void diffuse (FttCell * cell, DiffuseParms * p)
   }
 }
 
-static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim)
+static void variable_curvature_diffuse (GfsEvent * event, GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
-
-  gfs_domain_timer_start (domain, "variable_curvature");
-
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) curvature, event);
-  gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			    (FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
-  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
-
   DiffuseParms p;
   p.v = GFS_VARIABLE1 (event);
   p.tmp = gfs_temporary_variable (domain);
@@ -415,9 +417,121 @@ static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.v);
   }
 
-  gts_object_destroy (GTS_OBJECT (p.tmp));
+  gts_object_destroy (GTS_OBJECT (p.tmp));  
+}
+
+static void variable_curvature_from_fraction (GfsEvent * event, GfsSimulation * sim)
+{
+  GfsDomain * domain = GFS_DOMAIN (sim);
+
+  gfs_domain_timer_start (domain, "variable_curvature");
+
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) curvature, event);
+  gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			    (FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
+  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+  variable_curvature_diffuse (event, sim);
 
   gfs_domain_timer_stop (domain, "variable_curvature");
+}
+
+
+static void normal (FttCell * cell, gpointer * data)
+{
+  GfsVariable ** nv = data[0];
+  GfsVariable * d = GFS_VARIABLE_CURVATURE (data[1])->f;
+  GtsVector n = { 0., 0., 0. };
+  FttComponent c;
+
+  for (c = 0; c < FTT_DIMENSION; c++)
+    n[c] = gfs_center_gradient (cell, c, d->i);
+  gts_vector_normalize (n);
+  for (c = 0; c < FTT_DIMENSION; c++)
+    GFS_VARIABLE (cell, nv[c]->i) = n[c];
+}
+
+static void distance_curvature (FttCell * cell, gpointer * data)
+{
+  GfsVariable ** nv = data[0];
+  gdouble kappa = 0.;
+  FttComponent c;
+
+  for (c = 0; c < FTT_DIMENSION; c++)
+    kappa += gfs_center_gradient (cell, c, nv[c]->i);
+  GFS_VARIABLE (cell, nv[FTT_DIMENSION]->i) = kappa/ftt_cell_size (cell);
+}
+
+static void interface_curvature (FttCell * cell, gpointer * data)
+{
+  GfsVariable * v = data[1];
+  GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
+  gdouble f = GFS_VARIABLE (cell, GFS_VARIABLE_DISTANCE (k->f)->v->i);
+
+  if (GFS_IS_FULL (f))
+    GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
+  else {
+    GfsVariable ** nv = data[0];
+    gdouble h = ftt_cell_size (cell)/2.;
+    FttCell * target = cell;
+    FttComponent c;
+    FttVector p;
+
+    ftt_cell_pos (cell, &p);
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      gdouble delta = GFS_VARIABLE (cell, k->f->i)*GFS_VARIABLE (cell, nv[c]->i);
+      (&p.x)[c] -= delta;
+      if (fabs (delta) > h)
+	target = NULL;
+    }
+    if (!target)
+      target = gfs_domain_locate (v->domain, p, -1);
+    GFS_VARIABLE (cell, v->i) = gfs_interpolate (target, p, nv[FTT_DIMENSION]);
+  }
+}
+
+static void variable_curvature_from_distance (GfsEvent * event, GfsSimulation * sim)
+{
+  GfsVariable * n[FTT_DIMENSION + 1];
+  GfsDomain * domain = GFS_DOMAIN (sim);
+  gpointer data[2];
+  FttComponent c;
+
+  gfs_domain_timer_start (domain, "variable_curvature");
+
+  for (c = 0; c < FTT_DIMENSION + 1; c++) {
+    n[c] = gfs_temporary_variable (domain);
+    gfs_variable_set_vector (n[c], c);
+  }
+  data[0] = n;
+  data[1] = event;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) normal, data);
+  for (c = 0; c < FTT_DIMENSION; c++)
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, n[c]);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) distance_curvature, data);
+  gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, 
+		      GFS_VARIABLE1 (event), n[FTT_DIMENSION]);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) interface_curvature, data);
+  gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			    (FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
+  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+  for (c = 0; c < FTT_DIMENSION + 1; c++)
+    gts_object_destroy (GTS_OBJECT (n[c]));
+
+  variable_curvature_diffuse (event, sim);
+
+  gfs_domain_timer_stop (domain, "variable_curvature");
+}
+
+static void variable_curvature_event_half (GfsEvent * event, GfsSimulation * sim)
+{
+  if (GFS_IS_VARIABLE_TRACER (GFS_VARIABLE_CURVATURE (event)->f))
+    variable_curvature_from_fraction (event, sim);
+  else /* distance */
+    variable_curvature_from_distance (event, sim);
 }
 
 static gboolean variable_curvature_event (GfsEvent * event, GfsSimulation * sim)
@@ -565,6 +679,8 @@ static void variable_position_event_half (GfsEvent * event, GfsSimulation * sim)
   gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+
+  variable_curvature_diffuse (event, sim);
 
   gfs_domain_timer_stop (domain, "variable_position");
 }

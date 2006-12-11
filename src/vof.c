@@ -870,7 +870,7 @@ guint gfs_vof_facet (FttCell * cell, GfsVariable * v, FttVector * p, FttVector *
 	p[n].x = q.x + h*(0.5 - x); p[n].y = q.y - h/2.; p[n++].z = 0.;
       }
     }
-    g_assert (n == 2);
+    g_assert (n <= 2);
 #else /* 3D */
     gdouble max = fabs (m->x);
     FttComponent c = FTT_X;

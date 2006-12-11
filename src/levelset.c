@@ -72,7 +72,8 @@ static gdouble vof_distance2 (FttCell * cell, GtsPoint * t, gpointer v)
     g_assert_not_implemented ();
 #endif
 
-    g_assert (n == 2);
+    if (n != 2)
+      return G_MAXDOUBLE;
 
     GtsPoint p1, p2;
     p1.x = p[0].x; p1.y = p[0].y; p1.z = 0.;
