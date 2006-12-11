@@ -1005,8 +1005,7 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
       GfsAdapt * a = i->data;
       if (a->active) {
 	if (level < gfs_function_value (a->maxlevel, cell) &&
-	    (level < gfs_function_value (a->minlevel, cell) ||
-	     (* a->cost) (cell, a) > a->cmax)) {
+	    (* a->cost) (cell, a) > a->cmax) {
 	  REFINABLE (cell, p) = TRUE;
 	  COARSENABLE (cell, p) = FALSE;
 	  return;
