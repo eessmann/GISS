@@ -33,7 +33,7 @@
 #
 # Author: St\'ephane Popinet
 # Command: shapes rayleigh-taylor | transform -M 2. | transform -u 0.5 > rt.gts && gerris2D rt.gfs | gfsview2D rt.gfv
-# Version: 0.8.0
+# Version: 1.0.0
 # Required files: rt.gfv
 # Running time: 16 minutes
 # Generated files: t.mpg vort.mpg t.eps vort.eps t-0.eps t-0.7.eps t-0.8.eps t-0.9.eps t-1.eps
@@ -48,20 +48,20 @@
   # We need a filtered version of T (T1) to define a sufficiently
   # smooth density field. The third argument defines how many times the
   # recursive smoothing must be applied.
-  VariableFiltered {} T1 T 1
+  VariableFiltered {} T1 T 0
 
   # The initial sinusoidal interface.
   InitFraction {} T rt.gts
 
-  AdaptVorticity { istep = 1 } { maxlevel = 7 cmax = 1e-2 }
-  AdaptGradient { istep = 1 } { maxlevel = 7 cmax = 1e-2 } T1
+  AdaptVorticity { istep = 1 } { maxlevel = 7 cmax = 2e-2 }
+  AdaptGradient { istep = 1 } { maxlevel = 7 cmax = 1e-2 } T
 
   # The dynamic viscosity for both phases
   SourceViscosity {} 0.00313
 
   # This defines the inverse of the density of the fluids as a
-  # function of T1
-  PhysicalParams { alpha = (T1/1.225 + (1. - T1)/0.1694) }
+  # function of T
+  PhysicalParams { alpha = 1./(T*1.225 + (1. - T)*0.1694) }
 
   # We also need gravity
   Source {} V -9.81
@@ -71,7 +71,7 @@
   OutputProjectionStats { istep = 10 } stderr
   OutputDiffusionStats { istep = 10 } stderr
   OutputPPM { istep = 2 } { ppm2mpeg > vort.mpg} {
-    min = -30 max = 30 v = Vorticity 
+    min = -30 max = 30 v = Vorticity
   }
   OutputPPM { istep = 2 } { ppm2mpeg > t.mpg } {
     min = 0 max = 1 v = T
@@ -83,7 +83,7 @@
     min = 0 max = 1 v = T
   }
   OutputTiming { start = end } stderr
-  OutputSimulation { istep = 1 } stdout {}
+  OutputSimulation { step = 0.1 } stdout {}
   EventScript { start = 0 } { echo "Save t-0.eps { format = EPS }" }
   EventScript { start = 0.7 step = 0.1 } { echo "Save t-$GfsTime.eps { format = EPS }" }
 }
