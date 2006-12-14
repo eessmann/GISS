@@ -556,23 +556,34 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	i = i->next;
       }
       if (lv) {
-	fputs ("  g_return_val_if_fail (cell != NULL, 0.);\n", fin);
+	fputs ("  if (cell) {\n", fin);
 	i = lv;
 	while (i) {
 	  GfsVariable * v = i->data;
-	  fprintf (fin, "  %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
+	  fprintf (fin, "    %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
 	  i = i->next;
 	}
+	fputs ("  } else {\n", fin);
+	i = lv;
+	while (i) {
+	  GfsVariable * v = i->data;
+	  fprintf (fin, "    %s = gfs_face_interpolated_value (face, %d);\n", v->name, v->i);
+	  i = i->next;
+	}
+	fputs ("  }\n", fin);
 	g_slist_free (lv);
       }
-      i = ldv;
-      while (i) {
-	GfsDerivedVariable * v = i->data;
-	fprintf (fin, "  %s = (* (Func) %p) (cell, face, sim, ((GfsDerivedVariable *) %p)->data);\n", 
-		 v->name, v->func, v);
-	i = i->next;
+      if (ldv) {
+	fputs ("  g_return_val_if_fail (cell != NULL, 0.);\n", fin);
+	i = ldv;
+	while (i) {
+	  GfsDerivedVariable * v = i->data;
+	  fprintf (fin, "  %s = (* (Func) %p) (cell, face, sim, ((GfsDerivedVariable *) %p)->data);\n", 
+		   v->name, v->func, v);
+	  i = i->next;
+	}
+	g_slist_free (ldv);
       }
-      g_slist_free (ldv);
     }
     fprintf (fin, "#line %d \"GfsFunction\"\n", fp->line);
 
@@ -788,11 +799,11 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa)
   else if (f->v)
     return gfs_face_interpolated_value (fa, f->v->i);
   else if (f->dv)
-    return (* (GfsFunctionDerivedFunc) f->dv->func) (fa->cell, fa,
+    return (* (GfsFunctionDerivedFunc) f->dv->func) (NULL, fa,
 						     gfs_object_simulation (f), 
 						     f->dv->data);
   else if (f->f)
-    return (* f->f) (fa->cell, fa, gfs_object_simulation (f));
+    return (* f->f) (NULL, fa, gfs_object_simulation (f));
   else
     return f->val;
 }
