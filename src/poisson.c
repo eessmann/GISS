@@ -331,29 +331,17 @@ static void poisson_coeff (FttCellFace * face, gdouble * lambda2)
   }
 }
 
-static void reset_alpha_coeff (FttCell * cell, gpointer * data)
-{
-  FttDirection d;
-  GfsFaceStateVector * f = GFS_STATE (cell)->f;
-  GfsFunction * alpha = data[0];
-  GfsVariable * a = data[1];
-  
-  for (d = 0; d < FTT_NEIGHBORS; d++)
-    f[d].v = 0.;
-  GFS_VARIABLE (cell, a->i) = gfs_function_value (alpha, cell);
-}
-
 static void poisson_alpha_coeff (FttCellFace * face,
 				 gpointer * data)
 {
   gdouble * lambda2 = data[0];
-  GfsVariable * alpha = data[1];
+  GfsFunction * alpha = data[1];
   gdouble v = lambda2[face->d/2];
   GfsStateVector * s = GFS_STATE (face->cell);
 
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
-  v *= gfs_face_interpolated_value (face, alpha->i);
+  v *= gfs_function_face_value (alpha, face);
   s->f[face->d].v = v;
 
   switch (ftt_face_type (face)) {
@@ -418,29 +406,21 @@ void gfs_poisson_coefficients (GfsDomain * domain,
 
     lambda2[i] = lambda*lambda;
   }
-  if (alpha == NULL) {
-    gfs_domain_cell_traverse (domain,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) reset_coeff, NULL);
+  gfs_domain_cell_traverse (domain,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) reset_coeff, NULL);
+  if (alpha == NULL)
     gfs_domain_face_traverse (domain, FTT_XYZ, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) poisson_coeff, lambda2);
-  }
   else {
     gpointer data[2];
 
-    data[0] = alpha;
-    data[1] = gfs_temporary_variable (domain);
-    gfs_domain_cell_traverse (domain,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) reset_alpha_coeff, data);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, data[1]);
     data[0] = lambda2;
+    data[1] = alpha;
     gfs_domain_face_traverse (domain, FTT_XYZ, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) poisson_alpha_coeff, 
-			      data);
-    gts_object_destroy (data[1]);
+			      (FttFaceTraverseFunc) poisson_alpha_coeff, data);
   }
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
@@ -453,7 +433,8 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   GfsStateVector * s = GFS_STATE (face->cell);
   GfsSourceTensionGeneric * t = data[1];
   gdouble v = lambda2[face->d/2]*t->sigma;
-  GfsVariable * alpha = data[2], * kappa = GFS_SOURCE_TENSION (data[1])->k;
+  GfsFunction * alpha = data[2];
+  GfsVariable * kappa = GFS_SOURCE_TENSION (data[1])->k;
   gdouble c1 = GFS_VARIABLE (face->cell, t->c->i);
   gdouble c2 = GFS_VARIABLE (face->neighbor, t->c->i);
   gdouble w1 = c1*(1. - c1);
@@ -477,7 +458,7 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   }
 
   if (alpha)
-    v *= gfs_face_interpolated_value (face, alpha->i);
+    v *= gfs_function_face_value (alpha, face);
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
   s->f[face->d].v = v;
@@ -521,28 +502,15 @@ void gfs_source_tension_coefficients (GfsSourceTension * s,
 
     lambda2[i] = lambda*lambda;
   }
-  if (alpha) {
-    data[0] = alpha;
-    data[1] = gfs_temporary_variable (domain);
-    gfs_domain_cell_traverse (domain,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) reset_alpha_coeff, data);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, data[1]);
-    data[2] = data[1];
-  }
-  else {
-    gfs_domain_cell_traverse (domain,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) reset_coeff, NULL);
-    data[2] = NULL;
-  }
+  gfs_domain_cell_traverse (domain,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) reset_coeff, NULL);
   data[0] = lambda2;
   data[1] = s;
+  data[2] = alpha;
   gfs_domain_face_traverse (domain, FTT_XYZ, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) tension_coeff, data);
-  if (alpha)
-    gts_object_destroy (data[2]);
 }
 
 static void correct (FttCell * cell, gpointer * data)
