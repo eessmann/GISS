@@ -875,7 +875,7 @@ static void write_mac (FttCellFace * face, gpointer * data)
 #endif /* not FTT_2D */
     default: g_assert_not_reached ();
     }
-    fprintf (fp, "VECT 1 3 0 3 0 %g %g %g %g %g %g %g %g %g\n",
+    fprintf (fp, "%g %g %g\n%g %g %g\n%g %g %g\n\n",
 	     p.x + f.x - (f.x - f.y/2.)/5.,
 	     p.y + f.y - (f.x/2. + f.y)/5.,
 	     p.z + f.z,
@@ -885,7 +885,7 @@ static void write_mac (FttCellFace * face, gpointer * data)
 	     p.x + f.x - (f.x + f.y/2.)/5.,
 	     p.y + f.y + (f.x/2. - f.y)/5.,
 	     p.z + f.z);
-    fprintf (fp, "VECT 1 2 0 2 0 %g %g %g %g %g %g\n",
+    fprintf (fp, "%g %g %g\n%g %g %g\n\n",
 	     p.x, p.y, p.z,
 	     p.x + f.x,
 	     p.y + f.y,
@@ -906,7 +906,6 @@ void gfs_write_mac_velocity (GfsDomain * domain,
   g_return_if_fail (domain != NULL);
   g_return_if_fail (fp != NULL);
 
-  fputs ("LIST{", fp);
   norm = gfs_domain_norm_velocity (domain, flags, level);
   scale = norm.infty > 0. ? 
     ftt_level_size (level < 0 ? gfs_domain_depth (domain) : level)*
@@ -916,7 +915,6 @@ void gfs_write_mac_velocity (GfsDomain * domain,
   data[2] = bbox;
   gfs_domain_face_traverse (domain, FTT_XYZ, FTT_PRE_ORDER, flags, level,
 			   (FttFaceTraverseFunc) write_mac, data);
-  fputc ('}', fp);
 }
 
 void gfs_draw_cells (FttCell * cell, 
