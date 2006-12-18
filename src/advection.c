@@ -963,7 +963,7 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
 	if (fp->type != GTS_ERROR && var[0].set)
 	  gts_file_variable_error (fp, var, "cfl", "cfl `%g' is out of range `]0,0.5]'", par->cfl);
 	else
-	  par->cfl = 0.5;
+	  par->cfl = 0.45;
       }
     }
     else if (fp->type != GTS_ERROR)

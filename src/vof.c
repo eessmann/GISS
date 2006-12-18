@@ -638,6 +638,11 @@ static void vof_flux (FttCellFace * face, VofParms * p)
   gdouble un = GFS_FACE_NORMAL_VELOCITY (face)*p->par->dt/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
     un = - un;
+  if (fabs (un) > 0.5) {
+    FttVector p;
+    ftt_face_pos (face, &p);
+    g_warning ("CFL (%g) at (%g,%g,%g) is larger than 0.5!", un, p.x, p.y, p.z);
+  }
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE: {
