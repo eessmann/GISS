@@ -851,25 +851,25 @@ guint gfs_vof_facet (FttCell * cell, GfsVariable * v, FttVector * p, FttVector *
 #if FTT_2D
     gdouble x, y;
 
-    if (m->y != 0.) {
+    if (fabs (m->y) > 1e-4) {
       y = alpha/m->y;
       if (y >= 0. && y <= 1.) {
 	p[n].x = q.x + h/2.; p[n].y = q.y + h*(0.5 - y); p[n++].z = 0.;
       }
     }
-    if (m->x != 0.) {
+    if (fabs (m->x) > 1e-4) {
       x = alpha/m->x;
       if (x >= 0. && x <= 1.) {
 	p[n].x = q.x + h*(0.5 - x); p[n].y = q.y + h/2.; p[n++].z = 0.;
       }
     }
-    if (m->y != 0.) {
+    if (fabs (m->y) > 1e-4) {
       y = (alpha - m->x)/m->y;
       if (y >= 0. && y <= 1.) {
 	p[n].x = q.x - h/2.; p[n].y = q.y + h*(0.5 - y); p[n++].z = 0.;
       }
     }
-    if (m->x != 0.) {
+    if (fabs (m->x) > 1e-4) {
       x = (alpha - m->y)/m->x;
       if (x >= 0. && x <= 1.) {
 	p[n].x = q.x + h*(0.5 - x); p[n].y = q.y - h/2.; p[n++].z = 0.;
