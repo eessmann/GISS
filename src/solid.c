@@ -335,6 +335,21 @@ static gboolean thin_cell_is_solid (FttCell * cell)
   return (sum < FTT_NEIGHBORS/2);
 }
 
+static void deal_with_thin_cell (FttCell * cell, InitSolidParams * p)
+{
+  if (thin_cell_is_solid (cell))
+    GFS_VARIABLE (cell, p->status->i) = 1.;
+  else {
+    GfsSolidVector * solid = GFS_STATE (cell)->solid;
+    FttDirection d;
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      solid->s[d] = (solid->s[d] > 0.5);
+    solid->a = 1.;
+    ftt_cell_pos (cell, &solid->cm);
+    solid->ca = solid->cm;
+  }
+}
+
 #if FTT_2D /* 2D */
 
 static void set_solid_fractions_from_surface (FttCell * cell,
@@ -343,12 +358,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 {
   if (gfs_set_2D_solid_fractions_from_surface (cell, s)) {
     p->thin++;
-    if (thin_cell_is_solid (cell))
-      GFS_VARIABLE (cell, p->status->i) = 1.;
-    else {
-      g_free (GFS_STATE (cell)->solid);
-      GFS_STATE (cell)->solid = NULL;
-    }
+    deal_with_thin_cell (cell, p);
   }
   else if (GFS_STATE (cell)->solid && GFS_STATE (cell)->solid->a == 0.)
     GFS_VARIABLE (cell, p->status->i) = 1.;
@@ -628,15 +638,7 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s, In
   }
   else { /* this is a "thin" cell */
     p->thin++;
-    if (thin_cell_is_solid (cell)) {
-      solid->cm = solid->ca;
-      solid->a = 0.;
-    }
-    else {
-      g_free (solid);
-      GFS_STATE (cell)->solid = NULL;
-      return;
-    }
+    deal_with_thin_cell (cell, p);
   }
   if (solid->a == 0.)
     GFS_VARIABLE (cell, p->status->i) = 1.;
