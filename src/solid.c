@@ -844,8 +844,11 @@ static void paint_mixed_leaf (FttCell * cell, GfsVariable * status)
 	    if (child.c[j])
 	      w += GFS_IS_FLUID (child.c[j]) ? 1. : 
 		GFS_STATE (child.c[j])->solid->s[FTT_OPPOSITE_DIRECTION (i)];
+	  if (w/k <= 0. || w/k >= 1.)
+	    g_warning ("file %s: line %d (%s): w/k=%g solid->s[%d]=%g",
+		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		       w/k, i, solid->s[i]);
 	  solid->s[i] = w/k;
-	  g_assert (solid->s[i] > 0. && solid->s[i] < 1.);
 	}
       }
     gts_fifo_destroy (fifo);
