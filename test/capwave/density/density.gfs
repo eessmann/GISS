@@ -1,11 +1,9 @@
-# Title: Planar capillary waves
+# Title: Fluids of different densities
 #
 # Description:
 #
-# A small amplitude sinusoidal wave oscillates under surface
-# tension. Prosperetti \cite{prosperetti81} found a solution to this
-# initial value problem in the limit of a vanishingly small initial
-# amplitude.
+# Same test as before but with a density ratio of 10. The dynamic
+# viscosities are identical.
 #
 # Table \ref{convergence} shows the convergence of various
 # solvers as a function of resolution: Gerris, the marker technique of
@@ -15,34 +13,36 @@
 # and Gerris ($64^2$) is given on Figure \ref{amplitude}.
 #
 # \begin{table}[htbp]
-# \caption{\label{convergence}Convergence of the relative error between the analytical
-# solution and simulation results from various solvers.}
 # \begin{center}
 # \begin{tabular}{|l|ccccc|} \hline
 # Method & $8^2$ & $16^2$ & $32^2$ & $64^2$ & $128^2$ \\ \hline
-# \input{convergence.tex} & 0.00596749 \\
-# Markers & 0.3018 & 0.0778 & 0.0131 & 0.0082 & 0.00645 \\
-# Surfer & - & - & 0.1168 & 0.0132 & 0.007 \\ \hline
+# \input{convergence.tex} & 0.00498124 \\
+# Markers & 0.3593 & 0.1397 & 0.0566 & 0.0264 & 0.0148 \\
+# Surfer & - & - & 0.1233 & 0.0300 & 0.0254 \\ \hline
 # \end{tabular}
 # \end{center}
+# \caption{Convergence of the relative error between the analytical
+# solution and simulation results from various solvers.}
+# \label{convergence}
 # \end{table}
 #
 # \begin{figure}[htbp]
-# \caption{\label{amplitude}Evolution of the amplitude of the capillary wave as a
-# function of non-dimensional time $\tau=\omega_0 t$.}
 # \begin{center}
 # \includegraphics[width=\hsize]{amplitude.eps}
 # \end{center}
+# \caption{Evolution of the amplitude of the capillary wave as a
+# function of non-dimensional time $\tau=\omega_0 t$.}
+# \label{amplitude}
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: sh capwave.sh capwave.gfs
+# Command: sh ../capwave.sh density.gfs
 # Version: 1.0.0
-# Required files: capwave.sh convergence.ref prosperetti
+# Required files: convergence.ref prosperetti
 # Generated files: convergence.tex amplitude.eps
 #
 1 1 GfsSimulation GfsBox GfsGEdge {} {
-  Time { end = 2.2426211256 }
+  Time { end = 1.66481717925811447992 }
   ApproxProjectionParams { tolerance = 1e-6 }
   ProjectionParams { tolerance = 1e-6 }
   Refine LEVEL
@@ -52,10 +52,11 @@
   AdvectionParams { scheme = none }
   SourceDiffusion {} U 0.0182571749236
   SourceDiffusion {} V 0.0182571749236
+  PhysicalParams { alpha = 1./(T + 0.1*(1. - T)) }
   InitFraction {} T wave.gts
-  OutputSimulation { step = 3.04290519077e-3 } sim-%ld.gfs { binary = 1 }
-  EventScript { step = 3.04290519077e-3 } {
-    echo $GfsTime | awk -v level=LEVEL '{printf ("%g ", $1*11.1366559937) >> ("wave-" level) }'
+  OutputSimulation { step = .00225584983639310905 } sim-%ld.gfs { binary = 1 }
+  EventScript { step = .00225584983639310905 } {
+    echo $GfsTime | awk -v level=LEVEL '{printf ("%.5g ", $1*15.016663878457) >> ("wave-" level) }'
     gfs2oogl2D -g -c T < sim-$GfsIter.gfs | sort -n +1 -2 | awk -v level=LEVEL 'BEGIN {
       n = exp (level*log (2.));
       x = 1./(n + 1.);

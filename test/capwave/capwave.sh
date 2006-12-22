@@ -46,7 +46,6 @@ for level in $levels; do
 	exit 1;
     fi
 done
-echo "7 0.00596749" >> convergence # just for reference
 
 awk 'BEGIN{first=1}{ 
   if (first) printf("Gerris & %.5f",$2);
