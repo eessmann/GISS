@@ -574,7 +574,6 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	g_slist_free (lv);
       }
       if (ldv) {
-	fputs ("  g_return_val_if_fail (cell != NULL, 0.);\n", fin);
 	i = ldv;
 	while (i) {
 	  GfsDerivedVariable * v = i->data;

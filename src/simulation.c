@@ -567,8 +567,8 @@ static gdouble cell_x (FttCell * cell, FttCellFace * face)
 
   g_return_val_if_fail (cell != NULL || face != NULL, 0.);
 
-  if (face && face->d/2 == 0)
-    ftt_face_pos (face, &p);
+  if (face)
+    gfs_face_ca (face, &p);
   else
     gfs_cell_cm (cell, &p);
   return p.x;
@@ -580,8 +580,8 @@ static gdouble cell_y (FttCell * cell, FttCellFace * face)
 
   g_return_val_if_fail (cell != NULL || face != NULL, 0.);
 
-  if (face && face->d/2 == 1)
-    ftt_face_pos (face, &p);
+  if (face)
+    gfs_face_ca (face, &p);
   else
     gfs_cell_cm (cell, &p);
   return p.y;
@@ -593,8 +593,8 @@ static gdouble cell_z (FttCell * cell, FttCellFace * face)
 
   g_return_val_if_fail (cell != NULL || face != NULL, 0.);
 
-  if (face && face->d/2 == 2)
-    ftt_face_pos (face, &p);
+  if (face)
+    gfs_face_ca (face, &p);
   else
     gfs_cell_cm (cell, &p);
   return p.z;
@@ -627,7 +627,7 @@ static gdouble cell_cx (FttCell * cell, FttCellFace * face)
 
   g_return_val_if_fail (cell != NULL || face != NULL, 0.);
 
-  if (face && face->d/2 == 0)
+  if (face)
     ftt_face_pos (face, &p);
   else
     ftt_cell_pos (cell, &p);
@@ -640,7 +640,7 @@ static gdouble cell_cy (FttCell * cell, FttCellFace * face)
 
   g_return_val_if_fail (cell != NULL || face != NULL, 0.);
 
-  if (face && face->d/2 == 1)
+  if (face)
     ftt_face_pos (face, &p);
   else
     ftt_cell_pos (cell, &p);
@@ -653,7 +653,7 @@ static gdouble cell_cz (FttCell * cell, FttCellFace * face)
 
   g_return_val_if_fail (cell != NULL || face != NULL, 0.);
 
-  if (face && face->d/2 == 2)
+  if (face)
     ftt_face_pos (face, &p);
   else
     ftt_cell_pos (cell, &p);
