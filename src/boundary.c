@@ -1222,7 +1222,7 @@ GfsBox * gfs_box_new (GfsBoxClass * klass)
   return object;
 }
 
-/* GfsBoxNotAdapt: Object */
+/* GfsBoxNotAdapt: Object: fixme: deprecated */
 
 static void gfs_box_not_adapt_read (GtsObject ** o, GtsFile * fp)
 {
@@ -1238,6 +1238,8 @@ static void gfs_box_not_adapt_read (GtsObject ** o, GtsFile * fp)
   a = gfs_adapt_not_box_new (gfs_adapt_not_box_class (), GFS_BOX (b));
   gts_container_add (GTS_CONTAINER (b->c), GTS_CONTAINEE (a));
   gts_container_add (GTS_CONTAINER (sim->adapts), GTS_CONTAINEE (a));
+
+  g_warning ("GfsBoxNotAdapt is deprecated you should use functions in GfsAdapt instead");
 }
 
 static void gfs_box_not_adapt_destroy (GtsObject * object)
