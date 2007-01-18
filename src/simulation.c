@@ -442,6 +442,28 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   sim->modules = g_slist_reverse (sim->modules);
 }
 
+static void advance_tracers (GfsDomain * domain, gdouble dt)
+{
+  GSList * i = domain->variables;
+  while (i) {
+    if (GFS_IS_VARIABLE_TRACER (i->data)) {
+      GfsVariableTracer * t = i->data;
+      
+      t->advection.dt = dt;
+      switch (t->advection.scheme) {
+      case GFS_GODUNOV: case GFS_NONE:
+	gfs_tracer_advection_diffusion (domain, &t->advection);
+	break;
+      case GFS_VOF:
+	gfs_tracer_vof_advection (domain, &t->advection);
+	gfs_domain_variable_centered_sources (domain, i->data, i->data, t->advection.dt);
+	break;
+      }
+    }
+    i = i->next;
+  }  
+}
+
 static void simulation_run (GfsSimulation * sim)
 {
   GfsVariable * p, * pmac, * res = NULL;
@@ -474,6 +496,7 @@ static void simulation_run (GfsSimulation * sim)
       			      &sim->approx_projection_params,
       			      &sim->advection_params,
 			      p, sim->physical_params.alpha, res);
+  advance_tracers (domain, sim->advection_params.dt/2.);
 
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
@@ -496,26 +519,7 @@ static void simulation_run (GfsSimulation * sim)
 			p, sim->physical_params.alpha, g);
     gfs_variables_swap (p, pmac);
 
-    i = domain->variables;
-    while (i) {
-      if (GFS_IS_VARIABLE_TRACER (i->data)) {
-	GfsVariableTracer * t = i->data;
-
-	t->advection.dt = sim->advection_params.dt;
-	switch (t->advection.scheme) {
-	case GFS_GODUNOV: case GFS_NONE:
-	  gfs_tracer_advection_diffusion (domain, &t->advection);
-	  break;
-	case GFS_VOF:
-	  gfs_tracer_vof_advection (domain, &t->advection);
-	  gfs_domain_variable_centered_sources (domain, i->data, i->data, t->advection.dt);
-	  break;
-	}
-      }
-      i = i->next;
-    }
-
-    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);    
 
     gfs_centered_velocity_advection_diffusion (domain,
 					       FTT_DIMENSION,
@@ -536,6 +540,8 @@ static void simulation_run (GfsSimulation * sim)
     gfs_approximate_projection (domain,
    				&sim->approx_projection_params, 
     				&sim->advection_params, p, sim->physical_params.alpha, res);
+
+    advance_tracers (domain, sim->advection_params.dt);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
