@@ -15,7 +15,6 @@ if ! $donotrun; then
     fi
 
     for level in $levels; do
-	rm -f wave-$level
 	if sed "s/LEVEL/$level/g" < $1 | gerris2D -; then
 	    :
 	else
@@ -29,11 +28,6 @@ for level in $levels; do
     if awk -v level=$level 'BEGIN {s = 0.; n = 0; } {
           t = $1; y = $2;
           getline < "prosperetti"
-          dt = abs ($1 - t);
-          if (dt > 1e-5) {
-            print "Level " level ": times do not match " $1 " " t " " dt
-            exit 1
-          }
           s += (y - $2)*(y - $2);
           n += 1;
         }

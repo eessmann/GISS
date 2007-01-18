@@ -20,7 +20,7 @@
 # \begin{center}
 # \begin{tabular}{|l|ccccc|} \hline
 # Method & $8^2$ & $16^2$ & $32^2$ & $64^2$ & $128^2$ \\ \hline
-# \input{convergence.tex} & 0.00596749 \\
+# \input{convergence.tex} & 0.00598128 \\
 # Markers & 0.3018 & 0.0778 & 0.0131 & 0.0082 & 0.00645 \\
 # Surfer & - & - & 0.1168 & 0.0132 & 0.007 \\ \hline
 # \end{tabular}
@@ -49,31 +49,14 @@
   VariableTracer {} T { scheme = vof }
   VariableCurvature {} K T
   SourceTension {} T 1 K
+  VariablePosition {} Y T y
   AdvectionParams { scheme = none }
   SourceDiffusion {} U 0.0182571749236
   SourceDiffusion {} V 0.0182571749236
   InitFraction {} T wave.gts
-  OutputSimulation { step = 3.04290519077e-3 } sim-%ld.gfs { binary = 1 }
-  EventScript { step = 3.04290519077e-3 } {
-    echo $GfsTime | awk -v level=LEVEL '{printf ("%g ", $1*11.1366559937) >> ("wave-" level) }'
-    gfs2oogl2D -g -c T < sim-$GfsIter.gfs | sort -n +1 -2 | awk -v level=LEVEL 'BEGIN {
-      n = exp (level*log (2.));
-      x = 1./(n + 1.);
-      c1 = c2 = 0.;
-    }
-    {
-      if ($1 > 0. && $1 < x) {
-        if (c1 + c2 < 1. && c2 + $4 > 1.) {
-          print y2+(0.5-c2)/n >> ("wave-" level);
-          exit 0;
-        }
-        c1 = c2;
-        c2 = $4;
-        y2 = $2;
-      }
-    }'
-    rm -f sim-$GfsIter.gfs
-  }
+  OutputScalarNorm { step = 3.04290519077e-3 } {
+      awk '{printf ("%g %g\n", $3*11.1366559937, $9); fflush(stdout); }' > wave-LEVEL
+  } { v = (T > 0. && T < 1. ? Y : 0.) }
 }
 GfsBox {}
 1 1 right
