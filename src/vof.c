@@ -538,9 +538,6 @@ static void vof_plane (FttCell * cell, VofParms * p)
   FttVector m;
   gdouble alpha;
 
-  if (GFS_IS_MIXED (cell))
-    g_assert_not_implemented ();
-
   gfs_vof_plane (cell, p->par->v, &m, &alpha);
   for (c = 0; c < FTT_DIMENSION; c++) {
     GFS_VARIABLE (cell, p->m[c]->i) = - (&m.x)[c];
@@ -643,36 +640,33 @@ static void vof_flux (FttCellFace * face, VofParms * p)
     ftt_face_pos (face, &p);
     g_warning ("CFL (%g) at (%g,%g,%g) is larger than 0.5!", un, p.x, p.y, p.z);
   }
+  un *= GFS_FACE_FRACTION (face);
 
+  GFS_VARIABLE (face->cell, p->par->fv->i) += GFS_VARIABLE (face->cell, p->par->v->i)*un;
+  gdouble flux = GFS_STATE (face->cell)->f[face->d].v*un;
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE: {
-    gdouble f = un > 0. ? 
-      GFS_STATE (face->cell)->f[face->d].v :
-      GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v;
-    GFS_VARIABLE (face->cell, p->par->fv->i) += 
-      (GFS_VARIABLE (face->cell, p->par->v->i) - f)*un;
-    GFS_VARIABLE (face->neighbor, p->par->fv->i) -= 
-      (GFS_VARIABLE (face->neighbor, p->par->v->i) - f)*un;
+    if (un < 0.)
+      flux = GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v*un;
+    GFS_VARIABLE (face->neighbor, p->par->fv->i) +=
+      flux - GFS_VARIABLE (face->neighbor, p->par->v->i)*un;
     break;
   }
   case FTT_FINE_COARSE: {
-    GFS_VARIABLE (face->cell, p->par->fv->i) += GFS_VARIABLE (face->cell, p->par->v->i)*un;
-    GFS_VARIABLE (face->neighbor, p->par->fv->i) -= coarse_fraction (face, p, 1.)*un/FTT_CELLS;
-
-    gdouble flux = GFS_STATE (face->cell)->f[face->d].v*un;
-    GFS_VARIABLE (face->cell, p->par->fv->i) -= flux;
-    GFS_VARIABLE (face->neighbor, p->par->fv->i) += flux/FTT_CELLS;
+    GFS_VARIABLE (face->neighbor, p->par->fv->i) += 
+      (flux - coarse_fraction (face, p, 1.)*un)/FTT_CELLS;
     break;
   }
   default:
     g_assert_not_reached ();
   }
+  GFS_VARIABLE (face->cell, p->par->fv->i) -= flux;
 }
 
-static void vof_update (FttCell * cell, GfsAdvectionParams * par)
+static void clamp (FttCell * cell, GfsVariable * v)
 {
-  gdouble f = GFS_VARIABLE (cell, par->v->i) + GFS_VARIABLE (cell, par->fv->i);
-  GFS_VARIABLE (cell, par->v->i) = f < 0. ? 0. : f > 1. ? 1. : f;
+  gdouble f = GFS_VARIABLE (cell, v->i);
+  GFS_VARIABLE (cell, v->i) = f < 0. ? 0. : f > 1. ? 1. : f;
 }
 
 /**
@@ -715,8 +709,9 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
     gfs_domain_face_traverse (domain, p.c,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) vof_flux, &p);
+    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, par);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) vof_update, par);
+    			      (FttCellTraverseFunc) clamp, par->v);
     gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) par->v->fine_coarse, par->v);
     gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, par->v);
