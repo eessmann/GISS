@@ -2597,7 +2597,14 @@ void gfs_domain_solid_force (GfsDomain * domain,
   }
 }
 
-static void tag_cell_fraction (FttCell * cell,
+typedef struct {
+  GfsVariable * v, * c;
+  GArray * sizes;
+  guint min;
+} RemoveDropletsPar;
+
+static void tag_cell_fraction (GtsFifo * fifo,
+			       FttCell * cell,
 			       GfsVariable * c, GfsVariable * v,
 			       guint tag, guint * size)
 {
@@ -2605,13 +2612,14 @@ static void tag_cell_fraction (FttCell * cell,
   FttCellNeighbors n;
 
   g_assert (FTT_CELL_IS_LEAF (cell));
-  GFS_VARIABLE (cell, v->i) = tag;
-  (*size)++;
   ftt_cell_neighbors (cell, &n);
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (n.c[d] && GFS_VARIABLE (n.c[d], v->i) == 0. && GFS_VARIABLE (n.c[d], c->i) > 1e-4) {
-      if (FTT_CELL_IS_LEAF (n.c[d]))
-	tag_cell_fraction (n.c[d], c, v, tag, size);
+      if (FTT_CELL_IS_LEAF (n.c[d])) {
+	GFS_VARIABLE (n.c[d], v->i) = tag;
+	(*size)++;
+	gts_fifo_push (fifo, n.c[d]);
+      }
       else {
 	FttCellChildren child;
 	FttDirection od = FTT_OPPOSITE_DIRECTION (d);
@@ -2623,37 +2631,38 @@ static void tag_cell_fraction (FttCell * cell,
 	ftt_cell_children_direction (n.c[d], od, &child);
 	for (i = 0; i < FTT_CELLS/2; i++)
 	  if (child.c[i] && GFS_VARIABLE (child.c[i], v->i) == 0. &&
-	      GFS_VARIABLE (child.c[i], c->i) > 1e-4)
-	    tag_cell_fraction (child.c[i], c, v, tag, size);
+	      GFS_VARIABLE (child.c[i], c->i) > 1e-4) {
+	    GFS_VARIABLE (child.c[i], v->i) = tag;
+	    (*size)++;
+	    gts_fifo_push (fifo, child.c[i]);
+	  }
       }
     }
 }
 
-static void tag_new_fraction_region (FttCell * cell, gpointer * data)
+static void tag_new_fraction_region (FttCell * cell, RemoveDropletsPar * p)
 {
-  GfsVariable * v = data[3];
+  if (GFS_VARIABLE (cell, p->v->i) == 0. && GFS_VARIABLE (cell, p->c->i) > 1e-4) {
+    guint size = 1;
+    GtsFifo * fifo = gts_fifo_new ();
 
-  if (GFS_VARIABLE (cell, v->i) == 0.) {
-    GfsVariable * c = data[0];
-    GArray * sizes = data[1];
-    guint size = 0;
-    
-    tag_cell_fraction (cell, c, v, sizes->len + 1, &size);
-    g_array_append_val (sizes, size);
+    GFS_VARIABLE (cell, p->v->i) = p->sizes->len + 1;
+    gts_fifo_push (fifo, cell);
+    while ((cell = gts_fifo_pop (fifo)))
+      tag_cell_fraction (fifo, cell, p->c, p->v, p->sizes->len + 1, &size);
+    gts_fifo_destroy (fifo);
+    g_array_append_val (p->sizes, size);
   }
 }
 
-static void reset_small_fraction (FttCell * cell, gpointer * data)
+static void reset_small_fraction (FttCell * cell, RemoveDropletsPar * p)
 {
-  GfsVariable * c = data[0];
-  GArray * sizes = data[1];
-  guint * min = data[2];
-  GfsVariable * v = data[3];
-  guint i = GFS_VARIABLE (cell, v->i) - 1.;
-  
-  g_assert (GFS_VARIABLE (cell, v->i) > 0.);
-  if (g_array_index (sizes, guint, i) < *min)
-    GFS_VARIABLE (cell, c->i) = 0.;
+  if (GFS_VARIABLE (cell, p->v->i) > 0.) {
+    guint i = GFS_VARIABLE (cell, p->v->i) - 1.;
+
+    if (g_array_index (p->sizes, guint, i) < p->min)
+      GFS_VARIABLE (cell, p->c->i) = 0.;
+  }
 }
 
 static int greater (const void * a, const void * b)
@@ -2675,40 +2684,34 @@ void gfs_domain_remove_droplets (GfsDomain * domain,
 				 GfsVariable * c,
 				 gint min)
 {
-  GfsVariable * v;
-  GArray * sizes;
-  gpointer data[4];
-  guint minsize;
+  RemoveDropletsPar p;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (c != NULL);
 
-  v = gfs_temporary_variable (domain);
-  sizes = g_array_new (FALSE, FALSE, sizeof (guint));
+  p.c = c;
+  p.v = gfs_temporary_variable (domain);
+  p.sizes = g_array_new (FALSE, FALSE, sizeof (guint));
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, v);
-  data[0] = c;
-  data[1] = sizes;
-  data[3] = v;
+			    (FttCellTraverseFunc) gfs_cell_reset, p.v);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) tag_new_fraction_region, data);
-  g_assert (sizes->len > 0);
+			    (FttCellTraverseFunc) tag_new_fraction_region, &p);
+  g_assert (p.sizes->len > 0);
   if (min >= 0)
-    minsize = min;
-  else if (-min >= sizes->len)
-    minsize = 0;
+    p.min = min;
+  else if (-min >= p.sizes->len)
+    p.min = 0;
   else {
-    guint * tmp = g_malloc (sizes->len*sizeof (guint));
-    memcpy (tmp, sizes->data, sizes->len*sizeof (guint));
-    qsort (tmp, sizes->len, sizeof (guint), greater);
-    minsize = tmp[-1 - min];
+    guint * tmp = g_malloc (p.sizes->len*sizeof (guint));
+    memcpy (tmp, p.sizes->data, p.sizes->len*sizeof (guint));
+    qsort (tmp, p.sizes->len, sizeof (guint), greater);
+    p.min = tmp[-1 - min];
     g_free (tmp);
   }
-  data[2] = &minsize;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_small_fraction, data);
-  g_array_free (sizes, TRUE);
-  gts_object_destroy (GTS_OBJECT (v));
+    			    (FttCellTraverseFunc) reset_small_fraction, &p);
+  g_array_free (p.sizes, TRUE);
+  gts_object_destroy (GTS_OBJECT (p.v));
 }
 
 static void tag_cell (FttCell * cell, GfsVariable * v, guint tag, guint * size)
