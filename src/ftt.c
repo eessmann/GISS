@@ -1549,8 +1549,6 @@ FttCell * ftt_cell_locate (FttCell * root,
 {
   FttVector pos;
   gdouble size;
-  FttOct * children;
-  guint n;
 
   g_return_val_if_fail (root != NULL, NULL);
 
@@ -1562,18 +1560,25 @@ FttCell * ftt_cell_locate (FttCell * root,
       target.z > pos.z + size || target.z < pos.z - size)
     return NULL;
 
-  if (FTT_CELL_IS_LEAF (root) || ftt_cell_level (root) == max_depth)
-    return root;
-
-  children = root->children;
-  for (n = 0; n < FTT_CELLS; n++) {
-    FttCell * c = &(children->cell[n]), * located;
-
-    if (!FTT_CELL_IS_DESTROYED (c) && 
-	(located = ftt_cell_locate (c, target, max_depth)) != NULL)
-      return located;
-  }
-
+  do {
+    if (FTT_CELL_IS_LEAF (root) || ftt_cell_level (root) == max_depth)
+      return root;
+#if FTT_2D3
+    guint n = 0;
+    g_assert_not_implemented ();
+#elif FTT_2D
+    static guint index[2][2] = {{2,3},{0,1}};
+    guint n = index[target.y > pos.y][target.x > pos.x];
+#else  /* 3D */
+    static guint index[2][2][2] = {{{6,7},{4,5}},{{2,3},{0,1}}};
+    guint n = index[target.z > pos.z][target.y > pos.y][target.x > pos.x];
+#endif /* 3D */
+    root = &(root->children->cell[n]);
+    size /= 2.;
+    pos.x += coords[n][0]*size;
+    pos.y += coords[n][1]*size;
+    pos.z += coords[n][2]*size;
+  } while (!FTT_CELL_IS_DESTROYED (root));
   return NULL;
 }
 
