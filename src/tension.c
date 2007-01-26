@@ -68,13 +68,18 @@ typedef struct {
   GfsVariable * c;
 } StabilityParams;
 
-static void min_max_alpha (FttCell * cell, StabilityParams * p)
+static void interface_level (FttCell * cell, StabilityParams * p)
 {
   guint level = ftt_cell_level (cell);
-  if (level > p->depth && 
+  if (level > p->depth &&
       GFS_VARIABLE (cell, p->c->i) > 1e-3 && 
       GFS_VARIABLE (cell, p->c->i) < 1. - 1.e-3)
     p->depth = level;
+}
+
+static void min_max_alpha (FttCell * cell, StabilityParams * p)
+{
+  interface_level (cell, p);
   if (p->alpha) {
     gdouble a = gfs_function_value (p->alpha, cell);
     if (a < p->amin) p->amin = a;
@@ -278,10 +283,14 @@ static void gfs_source_tension_write (GtsObject * o, FILE * fp)
 static gdouble gfs_source_tension_stability (GfsSourceGeneric * s,
 					     GfsSimulation * sim)
 {
-  if (GFS_IS_VARIABLE_POSITION (GFS_SOURCE_TENSION (s)->k))
+  if (GFS_IS_VARIABLE_POSITION (GFS_SOURCE_TENSION (s)->k)) {
     /* reduced gravity */
-    return sqrt (ftt_level_size (gfs_domain_depth (GFS_DOMAIN (sim)))/
-		 fabs (GFS_SOURCE_TENSION_GENERIC (s)->sigma));
+    StabilityParams p = { G_MAXDOUBLE, -G_MAXDOUBLE, 0 };
+    p.c = GFS_SOURCE_TENSION_GENERIC (s)->c;
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) interface_level, &p);
+    return sqrt (ftt_level_size (p.depth)/fabs (GFS_SOURCE_TENSION_GENERIC (s)->sigma));
+  }
   else 
     /* surface tension */
     return gfs_source_tension_generic_stability (s, sim);
