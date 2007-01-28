@@ -181,28 +181,33 @@ static void foreach_cell_tension_css (FttCell * cell, GfsSourceTensionCSS * s)
   GFS_VARIABLE (cell, s->t[1]->i) = alpha*(nx.y - nxy.x)/h;
 }
 
-static void gfs_source_tension_css_event (GfsEvent * event, 
-					  GfsSimulation * sim)
+static gboolean gfs_source_tension_css_event (GfsEvent * event, 
+					      GfsSimulation * sim)
 {
-  GfsSourceTensionCSS * s = GFS_SOURCE_TENSION_CSS (event);
-  guint i;
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_source_tension_css_class ())->parent_class)->event)
+      (event, sim)) {
+    GfsSourceTensionCSS * s = GFS_SOURCE_TENSION_CSS (event);
+    guint i;
 
 #if (!FTT_2D)
-  g_assert_not_implemented ();
+    g_assert_not_implemented ();
 #endif
 
-  for (i = 0; i < 3; i++)
-    s->g[i] = gfs_temporary_variable (GFS_DOMAIN (sim));
+    for (i = 0; i < 3; i++)
+      s->g[i] = gfs_temporary_variable (GFS_DOMAIN (sim));
 
-  gfs_domain_cell_traverse (GFS_DOMAIN (sim),
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) foreach_cell_normal, event);
-  /* fixme: boundary conditions for normal */
-  gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) foreach_cell_tension_css, event);
-  for (i = 0; i < 3; i++)
-    gts_object_destroy (GTS_OBJECT (s->g[i]));
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) foreach_cell_normal, event);
+    /* fixme: boundary conditions for normal */
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) foreach_cell_tension_css, event);
+    for (i = 0; i < 3; i++)
+      gts_object_destroy (GTS_OBJECT (s->g[i]));
+    return TRUE;
+  }
+  return FALSE;
 }
 
 static gdouble gfs_source_tension_css_value (GfsSourceGeneric * s, 
@@ -214,9 +219,9 @@ static gdouble gfs_source_tension_css_value (GfsSourceGeneric * s,
 
 static void gfs_source_tension_css_class_init (GfsSourceGenericClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->read =       gfs_source_tension_css_read;
-  GFS_EVENT_CLASS (klass)->event_half =  gfs_source_tension_css_event;
-  klass->centered_value =                gfs_source_tension_css_value;
+  GTS_OBJECT_CLASS (klass)->read = gfs_source_tension_css_read;
+  GFS_EVENT_CLASS (klass)->event = gfs_source_tension_css_event;
+  klass->centered_value =          gfs_source_tension_css_value;
 }
 
 GfsSourceGenericClass * gfs_source_tension_css_class (void)
