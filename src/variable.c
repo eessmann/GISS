@@ -235,13 +235,9 @@ static void variable_tracer_read (GtsObject ** o, GtsFile * fp)
 
   if (fp->type == '{')
     gfs_advection_params_read (&GFS_VARIABLE_TRACER (*o)->advection, fp);
-  if (fp->type != GTS_ERROR) {
-    if (GFS_VARIABLE_TRACER (*o)->advection.scheme == GFS_VOF)
-      GFS_VARIABLE1 (*o)->coarse_fine = gfs_vof_coarse_fine;
-    if (fp->type == '{')
-      g_warning ("%d:%d: specifying diffusion parameters is not done here anymore!",
-		 fp->line, fp->pos);
-  }
+  if (fp->type != GTS_ERROR && fp->type == '{')
+    g_warning ("%d:%d: specifying diffusion parameters is not done here anymore!",
+	       fp->line, fp->pos);
 }
 
 static void variable_tracer_write (GtsObject * o, FILE * fp)

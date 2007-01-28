@@ -24,6 +24,7 @@
 #include "boundary.h"
 #include "simulation.h"
 #include "adaptive.h"
+#include "vof.h"
 
 static FttVector rpos[FTT_NEIGHBORS] = {
 #if FTT_2D
@@ -87,7 +88,7 @@ static void bc_read (GtsObject ** o, GtsFile * fp)
   else
     gts_file_next_token (fp);
 
-  if (GFS_IS_VARIABLE_TRACER (bc->v) && GFS_VARIABLE_TRACER (bc->v)->advection.scheme == GFS_VOF)
+  if (GFS_IS_VARIABLE_TRACER_VOF (bc->v))
     bc->face_bc = (FttFaceTraverseFunc) face_symmetry_vof;
 }
 
@@ -248,7 +249,7 @@ static void bc_dirichlet_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
   
-  if (GFS_IS_VARIABLE_TRACER (bc->v) && GFS_VARIABLE_TRACER (bc->v)->advection.scheme == GFS_VOF)
+  if (GFS_IS_VARIABLE_TRACER_VOF (bc->v))
     bc->bc = (FttFaceTraverseFunc) dirichlet_vof;
 }
 

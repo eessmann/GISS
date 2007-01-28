@@ -25,6 +25,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "advection.h"
+#include "variable.h"
 
 #define GFS_IS_FULL(f)             ((f) == 0. || (f) == 1.)
 
@@ -52,33 +53,44 @@ void    gfs_plane_center           (FttVector * m,
 void    gfs_youngs_gradient        (FttCell * cell, 
 				    GfsVariable * v,
 				    FttVector * g);
-void    gfs_youngs_normal          (FttCell * cell, 
-				    GfsVariable * v,
-				    FttVector * n);
-void    gfs_cell_vof_advection     (FttCell * cell,
-				    FttComponent c,
+
+/* GfsVariableTracerVOF: header */
+
+typedef struct _GfsVariableTracerVOF                GfsVariableTracerVOF;
+
+struct _GfsVariableTracerVOF {
+  /*< private >*/
+  GfsVariableTracer parent;
+
+  /*< public >*/
+  GfsVariable * m[FTT_DIMENSION], * alpha;
+};
+
+#define GFS_VARIABLE_TRACER_VOF(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsVariableTracerVOF,\
+					           gfs_variable_tracer_vof_class ())
+#define GFS_IS_VARIABLE_TRACER_VOF(obj)         (gts_object_is_from_class (obj,\
+						   gfs_variable_tracer_vof_class ()))
+
+GfsVariableClass * gfs_variable_tracer_vof_class  (void);
+
+void     gfs_tracer_vof_advection  (GfsDomain * domain,
 				    GfsAdvectionParams * par);
-void    gfs_tracer_vof_advection   (GfsDomain * domain,
-				    GfsAdvectionParams * par);
-void    gfs_vof_coarse_fine        (FttCell * parent, 
-				    GfsVariable * v);
-gboolean gfs_vof_plane             (FttCell * cell, 
-				    GfsVariable * v,
-				    FttVector * m, 
-				    gdouble * alpha);
-guint    gfs_vof_facet             (FttCell * cell, 
-				    GfsVariable * v,
+gdouble  gfs_vof_face_value        (const FttCellFace * face, 
+				    GfsVariableTracerVOF * t);
+guint    gfs_vof_facet             (FttCell * cell,
+				    GfsVariableTracerVOF * t,
 				    FttVector * p,
 				    FttVector * m);
-gboolean gfs_vof_center            (FttCell * cell, 
-				    GfsVariable * v, 
+gboolean gfs_vof_center            (FttCell * cell,
+				    GfsVariableTracerVOF * t,
 				    FttVector * p);
 gdouble  gfs_vof_interpolate       (FttCell * cell,
 				    FttVector * p,
 				    guint level,
-				    GfsVariable * v);
+				    GfsVariableTracerVOF * t);
 gdouble  gfs_height_curvature      (FttCell * cell, 
-				    GfsVariable * v);
+				    GfsVariableTracerVOF * t);
 
 #ifdef __cplusplus
 }

@@ -878,7 +878,6 @@ void gfs_advection_params_write (GfsAdvectionParams * par, FILE * fp)
 	   par->average);
   switch (par->scheme) {
   case GFS_GODUNOV: fputs ("  scheme   = godunov\n", fp); break;
-  case GFS_VOF:     fputs ("  scheme   = vof\n", fp); break;
   case GFS_NONE:    fputs ("  scheme   = none\n", fp); break;
   }
   fputc ('}', fp);
@@ -956,15 +955,6 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
       par->scheme = GFS_GODUNOV;
     else if (!strcmp (scheme, "none"))
       par->scheme = GFS_NONE;
-    else if (!strcmp (scheme, "vof")) {
-      par->scheme = GFS_VOF;
-      if (par->cfl > 0.5) {
-	if (fp->type != GTS_ERROR && var[0].set)
-	  gts_file_variable_error (fp, var, "cfl", "cfl `%g' is out of range `]0,0.5]'", par->cfl);
-	else
-	  par->cfl = 0.45;
-      }
-    }
     else if (fp->type != GTS_ERROR)
       gts_file_variable_error (fp, var, "scheme",
 			       "unknown scheme parameter `%s'", scheme);

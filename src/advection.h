@@ -28,7 +28,6 @@ extern "C" {
 
 typedef enum {
   GFS_GODUNOV,
-  GFS_VOF,
   GFS_NONE
 } GfsAdvectionScheme;
 

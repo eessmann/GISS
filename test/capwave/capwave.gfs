@@ -46,7 +46,7 @@
   ApproxProjectionParams { tolerance = 1e-6 }
   ProjectionParams { tolerance = 1e-6 }
   Refine LEVEL
-  VariableTracer {} T { scheme = vof }
+  VariableTracerVOF {} T
   VariableCurvature {} K T
   SourceTension {} T 1 K
   VariablePosition {} Y T y

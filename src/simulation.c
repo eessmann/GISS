@@ -446,19 +446,21 @@ static void advance_tracers (GfsDomain * domain, gdouble dt)
 {
   GSList * i = domain->variables;
   while (i) {
-    if (GFS_IS_VARIABLE_TRACER (i->data)) {
+    if (GFS_IS_VARIABLE_TRACER_VOF (i->data)) {
       GfsVariableTracer * t = i->data;
       
       t->advection.dt = dt;
-      switch (t->advection.scheme) {
-      case GFS_GODUNOV: case GFS_NONE:
-	gfs_tracer_advection_diffusion (domain, &t->advection);
-	break;
-      case GFS_VOF:
-	gfs_tracer_vof_advection (domain, &t->advection);
-	gfs_domain_variable_centered_sources (domain, i->data, i->data, t->advection.dt);
-	break;
-      }
+      gfs_tracer_vof_advection (domain, &t->advection);
+      gfs_domain_variable_centered_sources (domain, i->data, i->data, t->advection.dt);
+    }
+    else if (GFS_IS_VARIABLE_TRACER (i->data)) {
+      GfsVariableTracer * t = i->data;
+      
+      t->advection.dt = dt;
+      gfs_tracer_advection_diffusion (domain, &t->advection);
+      gfs_domain_cell_traverse (domain,
+				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				(FttCellTraverseFunc) GFS_VARIABLE1 (t)->fine_coarse, t);
     }
     i = i->next;
   }  
@@ -492,7 +494,8 @@ static void simulation_run (GfsSimulation * sim)
       			      &sim->approx_projection_params,
       			      &sim->advection_params,
 			      p, sim->physical_params.alpha, res);
-  advance_tracers (domain, sim->advection_params.dt/2.);
+  if (sim->time.i == 0)
+    advance_tracers (domain, sim->advection_params.dt/2.);
 
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {

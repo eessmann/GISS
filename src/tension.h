@@ -98,7 +98,6 @@ typedef struct _GfsVariableCurvature                GfsVariableCurvature;
 struct _GfsVariableCurvature {
   /*< private >*/
   GfsVariable parent;
-  gboolean first_done;
 
   /*< public >*/
   GfsVariable * f;

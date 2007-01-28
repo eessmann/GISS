@@ -663,19 +663,18 @@ static void ocean_run (GfsSimulation * sim)
     
     i = domain->variables;
     while (i) {
-      if (GFS_IS_VARIABLE_TRACER (i->data)) {
+      if (GFS_IS_VARIABLE_TRACER_VOF (i->data)) {
 	GfsVariableTracer * t = i->data;
 
 	t->advection.dt = sim->advection_params.dt;
-	switch (t->advection.scheme) {
-	case GFS_GODUNOV: case GFS_NONE:
-	  gfs_tracer_advection_diffusion (domain, &t->advection);
-	  break;
-	case GFS_VOF:
-	  gfs_tracer_vof_advection (domain, &t->advection);
-	  gfs_domain_variable_centered_sources (domain, i->data, i->data, t->advection.dt);
-	  break;
-	}
+	gfs_tracer_vof_advection (domain, &t->advection);
+	gfs_domain_variable_centered_sources (domain, i->data, i->data, t->advection.dt);
+      }
+      else if (GFS_IS_VARIABLE_TRACER (i->data)) {
+	GfsVariableTracer * t = i->data;
+	
+	t->advection.dt = sim->advection_params.dt;
+	gfs_tracer_advection_diffusion (domain, &t->advection);
       }
       i = i->next;
     }
