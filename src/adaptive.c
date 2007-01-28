@@ -712,12 +712,6 @@ static FttCell * remove_top_fine (GtsEHeap * h, gdouble * cost, GfsVariable * hf
   return cell;
 }
 
-static void cell_coarse_init (FttCell * cell, AdaptParams * p)
-{
-  CELL_COST (cell) = 0.;
-  gfs_cell_coarse_init (cell, GFS_DOMAIN (p->sim));
-}
-
 static gdouble refine_cost (FttCell * cell, GfsSimulation * sim)
 {
   GSList * i = sim->adapts->items;
@@ -887,7 +881,7 @@ static void adapt_global (GfsSimulation * simulation,
   
   gfs_domain_cell_traverse (domain, 
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			    (FttCellTraverseFunc) cell_coarse_init, &apar);
+			    (FttCellTraverseFunc) gfs_cell_reset, apar.costv);
   for (l = *depth; l >= 0; l--)
     gfs_domain_cell_traverse (domain, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
@@ -1036,10 +1030,6 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
 static void adapt_local (GfsSimulation * sim, guint * depth, GfsAdaptStats * s)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
-
-  gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			   (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
-
   AdaptLocalParams p;
   p.sim = sim;
   p.depth = *depth;
@@ -1114,8 +1104,7 @@ void gfs_simulation_adapt (GfsSimulation * simulation)
     for (l = depth - 2; l >= 0; l--)
       gfs_domain_cell_traverse (domain, 
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-				(FttCellTraverseFunc) refine_cell_corner, 
-				domain);
+				(FttCellTraverseFunc) refine_cell_corner, domain);
     gfs_domain_match (domain);
     gfs_set_merged (domain);
     i = domain->variables;

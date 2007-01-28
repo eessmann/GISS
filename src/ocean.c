@@ -264,14 +264,10 @@ static void ocean_run (GfsSimulation * sim)
   domain = GFS_DOMAIN (sim);
 
   gfs_simulation_refine (sim);
+  gfs_simulation_init (sim);
 
-  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_init, sim);
-
-  gfs_set_merged (domain);
   i = domain->variables;
   while (i) {
-    gfs_event_init (i->data, sim);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
     if (GFS_IS_VARIABLE_RESIDUAL (i->data))
       res = i->data;
     i = i->next;
@@ -290,9 +286,6 @@ static void ocean_run (GfsSimulation * sim)
     GfsVariable * g[2];
     gdouble tstart = gfs_clock_elapsed (domain->timer);
 
-    gfs_domain_cell_traverse (domain,
-			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
     gfs_simulation_set_timestep (sim);
@@ -338,7 +331,7 @@ static void ocean_run (GfsSimulation * sim)
     gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt/2.);
     gfs_domain_timer_stop (domain, "free_surface_pressure");
 
-    gfs_simulation_adapt (sim);
+    gfs_simulation_adapt (sim, NULL);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);

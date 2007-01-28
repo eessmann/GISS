@@ -430,7 +430,6 @@ static void variable_curvature_class_init (GtsObjectClass * klass)
   klass->read = variable_curvature_read;
   klass->write = variable_curvature_write;
   GFS_EVENT_CLASS (klass)->event = variable_curvature_event;
-  GFS_EVENT_CLASS (klass)->event_half = variable_curvature_event_half;
 }
 
 static void curvature_coarse_fine (FttCell * parent, GfsVariable * v)

@@ -523,6 +523,7 @@ int main (int argc, char * argv[])
   }
   gts_file_destroy (fp);
   fclose (f);
+  gfs_simulation_init (s1);
 
   f = fopen (fname2, "rt");
   if (f == NULL) {
@@ -539,6 +540,7 @@ int main (int argc, char * argv[])
   }
   gts_file_destroy (fp);
   fclose (f);
+  gfs_simulation_init (s2);
 
   var1 = gfs_variable_from_name (GFS_DOMAIN (s1)->variables, name);
   if (var1 == NULL) {

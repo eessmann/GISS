@@ -95,6 +95,7 @@ struct _GfsSimulationClass {
 
 GfsSimulationClass * gfs_simulation_class        (void);
 GfsSimulation *      gfs_simulation_new          (GfsSimulationClass * klass);
+void                 gfs_simulation_init         (GfsSimulation * sim);
 void                 gfs_simulation_write        (GfsSimulation * sim,
 						  gint max_depth,  
 						  FILE * fp);

@@ -691,7 +691,6 @@ static void velocity_norm (FttCell * cell, gpointer * data)
 int main (int argc, char * argv[])
 {
   int c = 0;
-  GSList * i;
   GfsVariable * var = NULL;
   GtsFile * fp;
   GtsSurface * surface = NULL;
@@ -978,6 +977,7 @@ int main (int argc, char * argv[])
 	       fp->line, fp->pos, fp->error);
       return 1;
     }
+    gfs_simulation_init (simulation);
 
     domain = GFS_DOMAIN (simulation);
 
@@ -1011,21 +1011,12 @@ int main (int argc, char * argv[])
     if (verbose)
       fprintf (stderr, "gfs2oogl: processing t = %10e\n", simulation->time.t);
 
-    if (!reinit)
-      gfs_domain_match (domain);
-    else
+    if (reinit) {
       gfs_simulation_refine (simulation);
-
-    i = domain->variables;
-    while (i) {
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
-      i = i->next;
+      gfs_simulation_init (simulation);
     }
 
     if (var != NULL) {
-      gfs_domain_cell_traverse (domain,
-				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-				(FttCellTraverseFunc) var->fine_coarse, var);
       if (min == max) {
 	stats = gfs_domain_stats_variable (domain, var, FTT_TRAVERSE_ALL, -1);
 	if (verbose)
