@@ -64,6 +64,104 @@ static GfsDerivedVariable * lookup_derived_variable (const gchar * name,
   return NULL;
 }
 
+/* GfsGlobal: Object */
+
+struct _GfsGlobal {
+  /*< private >*/
+  GtsObject parent;
+
+  /*< public >*/
+  GString * s;
+  guint line;
+};
+
+static void global_destroy (GtsObject * object)
+{
+  g_string_free (GFS_GLOBAL (object)->s, TRUE);
+  (* gfs_global_class ()->parent_class->destroy) (object);
+}
+
+static void global_write (GtsObject * object, FILE * fp)
+{
+  fprintf (fp, "%s {", object->klass->info.name);
+  fputs (GFS_GLOBAL (object)->s->str, fp);
+  fputs ("}\n", fp);
+}
+
+static void global_read (GtsObject ** object, GtsFile * fp)
+{
+  GfsGlobal * global = GFS_GLOBAL (*object);
+  GtsObjectClass * klass;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (GfsGlobalClass)");
+    return;
+  }
+  klass = gfs_object_class_from_name (fp->token->str);
+  if (klass == NULL) {
+    gts_file_error (fp, "unknown class `%s'", fp->token->str);
+    return;
+  }
+  if (!gts_object_class_is_from_class (klass, gfs_global_class ())) {
+    gts_file_error (fp, "`%s' is not a GfsGlobal", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+  if (fp->type != '{') {
+    gts_file_error (fp, "expecting an opening brace");
+    return;
+  }
+  global->line = fp->line;
+  gchar * comments = fp->comments;
+  fp->comments = g_strdup ("");
+  guint scope = fp->scope_max;
+  gint c = gts_file_getc (fp);
+  while (c != EOF && fp->scope > scope) {
+    g_string_append_c (global->s, c);
+    c = gts_file_getc (fp);
+  }
+  g_free (fp->comments);
+  fp->comments = comments;
+  if (fp->scope != scope) {
+    gts_file_error (fp, "parse error");
+    return;
+  }
+  gts_file_next_token (fp);
+}
+
+static void gfs_global_class_init (GtsObjectClass * klass)
+{
+  klass->destroy = global_destroy;
+  klass->read =    global_read;
+  klass->write =   global_write;
+}
+
+static void gfs_global_init (GfsGlobal * object)
+{
+  object->s = g_string_new ("");
+}
+
+GtsObjectClass * gfs_global_class (void)
+{
+  static GtsObjectClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_global_info = {
+      "GfsGlobal",
+      sizeof (GfsGlobal),
+      sizeof (GtsObjectClass),
+      (GtsObjectClassInitFunc) gfs_global_class_init,
+      (GtsObjectInitFunc) gfs_global_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_object_class ()),
+				  &gfs_global_info);
+  }
+
+  return klass;
+}
+
 /* GfsFunction: Object */
 
 struct _GfsFunction {
@@ -397,8 +495,16 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     fputs ("#include <stdlib.h>\n"
 	   "#include <stdio.h>\n"
 	   "#include <math.h>\n"
-	   "#include <gfs.h>\n"
-	   "typedef double (* Func) (const FttCell * cell,\n"
+	   "#include <gfs.h>\n",
+	   fin);
+    i = sim->globals;
+    while (i) {
+      fprintf (fin, "#line %d \"GfsGlobal\"\n", GFS_GLOBAL (i->data)->line);
+      fputs (GFS_GLOBAL (i->data)->s->str, fin);
+      fputc ('\n', fin);
+      i = i->next;
+    }
+    fputs ("typedef double (* Func) (const FttCell * cell,\n"
 	   "                         const FttCellFace * face,\n"
 	   "                         GfsSimulation * sim,\n"
 	   "                         gpointer data);\n"

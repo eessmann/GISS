@@ -31,6 +31,18 @@ extern "C" {
 
 gboolean gfs_char_in_string (char c, const char * s);
 
+/* GfsGlobal: Header */
+
+typedef struct _GfsGlobal         GfsGlobal;
+
+#define GFS_GLOBAL(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsGlobal,\
+					         gfs_global_class ())
+#define GFS_IS_GLOBAL(obj)         (gts_object_is_from_class (obj,\
+						 gfs_global_class ()))
+
+GtsObjectClass * gfs_global_class  (void);
+
 /* GfsFunction: Header */
 
 typedef struct _GfsFunction         GfsFunction;

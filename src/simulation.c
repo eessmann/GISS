@@ -36,7 +36,6 @@
 static void simulation_destroy (GtsObject * object)
 {
   GfsSimulation * sim = GFS_SIMULATION (object);
-  GSList * i;
 
   if (sim->surface)
     gts_object_destroy (GTS_OBJECT (sim->surface));
@@ -50,16 +49,13 @@ static void simulation_destroy (GtsObject * object)
   gts_object_destroy (GTS_OBJECT (sim->events));
   gts_object_destroy (GTS_OBJECT (sim->adapts));
 
-  i = sim->modules;
-  while (i) {
-    g_module_close (i->data);
-    i = i->next;
-  }
+  g_slist_foreach (sim->modules, (GFunc) g_module_close, NULL);
   g_slist_free (sim->modules);
   g_slist_free (sim->variables);
+  g_slist_foreach (sim->globals, (GFunc) gts_object_destroy, NULL);
+  g_slist_free (sim->globals);
 
-  (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->destroy) 
-    (object);
+  (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->destroy) (object);
 }
 
 static void simulation_write (GtsObject * object, FILE * fp)
@@ -71,8 +67,14 @@ static void simulation_write (GtsObject * object, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->write)
     (object, fp);
 
-  fputs (" {\n"
-	 "  GfsTime ", fp);
+  fputs (" {\n", fp);
+  i = sim->globals;
+  while (i) {
+    fputs ("  ", fp);
+    (* GTS_OBJECT (i->data)->klass->write) (i->data, fp);
+    i = i->next;
+  }
+  fputs ("  GfsTime ", fp);
   gfs_time_write (&sim->time, fp);
   fputs ("\n  GfsPhysicalParams ", fp);
   gfs_physical_params_write (&sim->physical_params, fp);
@@ -392,7 +394,8 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       GtsObject * object;
 
       if (klass == NULL ||
-	  (!gts_object_class_is_from_class (klass, gfs_refine_class ()) &&
+	  (!gts_object_class_is_from_class (klass, gfs_global_class ()) &&
+	   !gts_object_class_is_from_class (klass, gfs_refine_class ()) &&
 	   !gts_object_class_is_from_class (klass, gfs_event_class ()) &&
 	   !gts_object_class_is_from_class (klass, gfs_surface_generic_bc_class ()))) {
 	gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
@@ -409,7 +412,9 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 	return;
       }
 
-      if (GFS_IS_REFINE (object))
+      if (GFS_IS_GLOBAL (object))
+	sim->globals = g_slist_append (sim->globals, object);
+      else if (GFS_IS_REFINE (object))
 	gts_container_add (GTS_CONTAINER (sim->refines), GTS_CONTAINEE (object));
       else if (GFS_IS_ADAPT (object)) {
 	gts_container_add (GTS_CONTAINER (sim->adapts), GTS_CONTAINEE (object));

@@ -74,8 +74,7 @@ struct _GfsSimulation {
   GfsAdaptStats adapts_stats;
 
   GtsSListContainer * events;
-  GSList * modules;
-  GSList * variables;
+  GSList * modules, * variables, * globals;
 
   gdouble tnext;
 };

@@ -135,6 +135,7 @@ void gfs_init (int * argc, char *** argv)
 		     (GLogFunc) gfs_log, NULL);
 
   /* Instantiates classes before reading any domain or simulation file */
+  gfs_global_class ();
   gfs_simulation_class ();
     gfs_ocean_class ();
     gfs_advection_class ();
