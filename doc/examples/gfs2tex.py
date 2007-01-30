@@ -230,8 +230,8 @@ class Example:
             return None,None
 
     def run(self,env=""):
-        out = os.popen("cd " + self.path + " && ( time -p " + env +\
-                       " sh -c \"" + self.command + "\" ) 2>&1")
+        out = os.popen("cd " + self.path + " && ( time -p " +\
+                       " sh -c \"" + env + " " + self.command + "\" ) 2>&1")
         lines = []
         for l in out:
             record = l.split()
