@@ -419,6 +419,50 @@ void gfs_youngs_gradient (FttCell * cell, GfsVariable * v, FttVector * g)
 #endif /* 3D */
 }
 
+/**
+ * gfs_vof_interpolate:
+ * @cell: a #FttCell containing location @p.
+ * @p: the center of the virtual cell.
+ * @level: the level of the virtual cell.
+ * @t: a #GfsVariableTracerVOF.
+ *
+ * Computes the volume fraction of a virtual cell at @level centered
+ * on @p.
+ *
+ * Returns: the volume fraction of the virtual cell.
+ */
+gdouble gfs_vof_interpolate (FttCell * cell,
+			     FttVector * p,
+			     guint level,
+			     GfsVariableTracerVOF * t)
+{
+  guint l = ftt_cell_level (cell);
+
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (l <= level, 0.);
+  g_return_val_if_fail (t != NULL, 0.);
+
+  GfsVariable * v = GFS_VARIABLE1 (t);
+  gdouble f = GFS_VARIABLE (cell, v->i);
+  if (l == level || GFS_IS_FULL (f))
+    return f;
+  else {
+    gdouble alpha = GFS_VARIABLE (cell, t->alpha->i);
+    gdouble h = ftt_level_size (level);
+    gdouble H = ftt_cell_size (cell);
+    FttComponent c;
+    FttVector m, q;
+    
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&m.x)[c] = GFS_VARIABLE (cell, t->m[c]->i);
+    ftt_cell_pos (cell, &q);
+    alpha *= H;
+    for (c = 0; c < FTT_DIMENSION; c++)
+      alpha -= (&m.x)[c]*((&p->x)[c] - h/2. - (&q.x)[c] + H/2);
+    return gfs_plane_volume (&m, alpha/h);
+  }
+}
+
 /* GfsVariableTracerVOF: object */
 
 static FttCell * domain_and_boundary_locate (GfsDomain * domain, FttVector p, guint level)
@@ -449,27 +493,9 @@ static void stencil (FttCell * cell, GfsVariable * v, gdouble f[3][3][3])
 	  FttCell * neighbor = domain_and_boundary_locate (v->domain, o, level);
 	  if (!neighbor) /* fixme: boundary conditions */
 	    f[x + 1][y + 1][z + 1] = f[1][1][1];
-	  else {
-	    guint l = ftt_cell_level (neighbor);
-	    if (l == level || GFS_IS_FULL (GFS_VARIABLE (neighbor, v->i)))
-	      f[x + 1][y + 1][z + 1] = GFS_VARIABLE (neighbor, v->i);
-	    else {
-	      GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
-	      gdouble alpha = GFS_VARIABLE (neighbor, t->alpha->i);
-	      FttComponent c;
-	      FttVector m, q;
-
-	      g_assert (l == level - 1);
-	      ftt_cell_pos (neighbor, &q);
-	      for (c = 0; c < FTT_DIMENSION; c++) {
-		gdouble a = ((&o.x)[c] - (&q.x)[c])/h;
-		g_assert (fabs (a) == 0.5);
-		(&m.x)[c] = GFS_VARIABLE (neighbor, t->m[c]->i);
-		alpha -= (&m.x)[c]*(0.25 + a/2.);
-	      }
-	      f[x + 1][y + 1][z + 1] = gfs_plane_volume (&m, 2.*alpha);
-	    }
-	  }
+	  else
+	    f[x + 1][y + 1][z + 1] = 
+	      gfs_vof_interpolate (neighbor, &o, level, GFS_VARIABLE_TRACER_VOF (v));
 	}
 }
 
@@ -1107,57 +1133,13 @@ gboolean gfs_vof_center (FttCell * cell, GfsVariableTracerVOF * t, FttVector * p
   return FALSE;
 }
 
-/**
- * gfs_vof_interpolate:
- * @cell: a #FttCell containing location @p.
- * @p: the center of the virtual cell.
- * @level: the level of the virtual cell.
- * @t: a #GfsVariableTracerVOF.
- *
- * Computes the volume fraction of a virtual cell at @level centered
- * on @p.
- *
- * Returns: the volume fraction of the virtual cell.
- */
-gdouble gfs_vof_interpolate (FttCell * cell,
-			     FttVector * p,
-			     guint level,
-			     GfsVariableTracerVOF * t)
-{
-  guint l = ftt_cell_level (cell);
-
-  g_return_val_if_fail (cell != NULL, 0.);
-  g_return_val_if_fail (l <= level, 0.);
-  g_return_val_if_fail (t != NULL, 0.);
-
-  GfsVariable * v = GFS_VARIABLE1 (t);
-  gdouble f = GFS_VARIABLE (cell, v->i);
-  if (l == level || GFS_IS_FULL (f))
-    return f;
-  else {
-    gdouble alpha = GFS_VARIABLE (cell, t->alpha->i);
-    gdouble h = ftt_level_size (level);
-    gdouble H = ftt_cell_size (cell);
-    FttComponent c;
-    FttVector m, q;
-    
-    for (c = 0; c < FTT_DIMENSION; c++)
-      (&m.x)[c] = GFS_VARIABLE (cell, t->m[c]->i);
-    ftt_cell_pos (cell, &q);
-    alpha *= H;
-    for (c = 0; c < FTT_DIMENSION; c++)
-      alpha -= (&m.x)[c]*((&q.x)[c] + H/2 - (&p->x)[c] - h/2.);
-    return gfs_plane_volume (&m, alpha/h);
-  }
-}
-
 static gdouble fraction (FttVector * p,
 			 guint level,
 			 GfsVariable * v)
 {
   FttCell * cell = domain_and_boundary_locate (v->domain, *p, level);
   g_assert (cell); /* fixme: boundary conditions? */
-  return gfs_vof_interpolate (cell, p, level, v);
+  return gfs_vof_interpolate (cell, p, level, GFS_VARIABLE_TRACER_VOF (v));
 }
 
 #define NMAX 10
