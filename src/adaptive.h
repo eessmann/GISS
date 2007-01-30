@@ -135,29 +135,6 @@ GfsEventClass * gfs_adapt_gradient_class  (void);
 
 GfsEventClass * gfs_adapt_curvature_class  (void);
 
-/* GfsAdaptNotBox: Header */
-
-typedef struct _GfsAdaptNotBox         GfsAdaptNotBox;
-
-struct _GfsAdaptNotBox {
-  /*< private >*/
-  GfsAdapt parent;
-  FttVector p1, p2;
-
-  /*< public >*/
-  GfsBox * box;
-};
-
-#define GFS_ADAPT_NOT_BOX(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsAdaptNotBox,\
-					         gfs_adapt_not_box_class ())
-#define GFS_IS_ADAPT_NOT_BOX(obj)         (gts_object_is_from_class (obj,\
-						 gfs_adapt_not_box_class ()))
-
-GfsEventClass *  gfs_adapt_not_box_class  (void);
-GfsAdaptNotBox * gfs_adapt_not_box_new    (GfsEventClass * klass,
-					   GfsBox * box);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

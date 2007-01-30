@@ -318,24 +318,6 @@ GfsDomain * gfs_box_domain (GfsBox * box)
   return d;
 }
 
-/* GfsBoxNotAdapt: Header */
-
-typedef struct _GfsBoxNotAdapt         GfsBoxNotAdapt;
-
-struct _GfsBoxNotAdapt {
-  /*< private >*/
-  GfsBox parent;
-  GtsSListContainer * c;
-};
-
-#define GFS_BOX_NOT_ADAPT(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsBoxNotAdapt,\
-					         gfs_box_not_adapt_class ())
-#define GFS_IS_BOX_NOT_ADAPT(obj)         (gts_object_is_from_class (obj,\
-						 gfs_box_not_adapt_class ()))
-
-GfsBoxClass * gfs_box_not_adapt_class  (void);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
