@@ -837,10 +837,11 @@ fprintf (stderr, "%g %g %g\n",
 
     while (i) {
       FttCell * cell = i->data;
+      gdouble vol = ftt_cell_volume (cell);
       gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
       
-      total_vol += a;
-      w += GFS_VARIABLE (cell, par->fv->i);
+      total_vol += vol*a;
+      w += vol*GFS_VARIABLE (cell, par->fv->i);
       i = i->next;
     }
     w /= total_vol;
