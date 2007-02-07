@@ -711,11 +711,13 @@ static void vof_fine_coarse (FttCell * parent, GfsVariable * v)
     gdouble n = 0.;
     for (c = 0; c < FTT_DIMENSION; c++)
       n += fabs ((&m.x)[c]);
-    g_assert (n > 0.);
-    for (c = 0; c < FTT_DIMENSION; c++) {
-      (&m.x)[c] /= n;
+    if (n > 0.)
+      for (c = 0; c < FTT_DIMENSION; c++)
+	(&m.x)[c] /= n;
+    else /* fixme: this is a small fragment */
+      m.x = 1.;
+    for (c = 0; c < FTT_DIMENSION; c++)
       GFS_VARIABLE (parent, t->m[c]->i) = (&m.x)[c];
-    }
     GFS_VARIABLE (parent, t->alpha->i) = gfs_plane_alpha (&m, f);
   }
 }
