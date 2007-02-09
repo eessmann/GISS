@@ -521,6 +521,7 @@ static void box_homogeneous_bc (GfsBox * box, gpointer * datum)
       if (bc) {
 	b->v = ov;
 	bc->v = ov;
+	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
 	ftt_face_traverse_boundary (b->root, b->d,
 				    FTT_PRE_ORDER, *flags, *max_depth,
 				    bc->homogeneous_bc, bc);

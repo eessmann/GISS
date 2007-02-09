@@ -55,7 +55,6 @@
   # is 50*(1. - 0.1) = 45
   SourceTension {} T 45 Y
 
-  AdvectionParams { scheme = none }
   SourceDiffusion {} U 0.0182571749236
   SourceDiffusion {} V 0.0182571749236
   PhysicalParams { alpha = 1./(T + 0.1*(1. - T)) }

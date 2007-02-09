@@ -50,7 +50,6 @@
   VariableCurvature {} K T
   SourceTension {} T 1 K
   VariablePosition {} Y T y
-  AdvectionParams { scheme = none }
   SourceDiffusion {} U 0.0182571749236
   SourceDiffusion {} V 0.0182571749236
   InitFraction {} T wave.gts
