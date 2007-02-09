@@ -491,12 +491,39 @@ static void stencil (FttCell * cell, GfsVariable * v, gdouble f[3][3][3])
 	  FttVector o;
 	  o.x = p.x + h*x; o.y = p.y + h*y; o.z = p.z + h*z;
 	  FttCell * neighbor = domain_and_boundary_locate (v->domain, o, level);
-	  if (!neighbor) /* fixme: boundary conditions */
-	    f[x + 1][y + 1][z + 1] = f[1][1][1];
-	  else
+	  if (neighbor)
 	    f[x + 1][y + 1][z + 1] = 
 	      gfs_vof_interpolate (neighbor, &o, level, GFS_VARIABLE_TRACER_VOF (v));
+	  else
+	    f[x + 1][y + 1][z + 1] = -1.;
 	}
+  /* boundary conditions (symmetry) */
+#if FTT_2D
+  for (x = 0; x <= 2; x++) {
+    if (f[x][0][1] < 0.) f[x][0][1] = f[x][1][1];
+    if (f[x][2][1] < 0.) f[x][2][1] = f[x][1][1];
+  }
+  for (y = 0; y <= 2; y++) {
+    if (f[0][y][1] < 0.) f[0][y][1] = f[1][y][1];
+    if (f[2][y][1] < 0.) f[2][y][1] = f[1][y][1];
+  }
+#else /* 3D */
+  for (x = 0; x <= 2; x++)
+    for (y = 0; y <= 2; y++) {
+      if (f[x][y][0] < 0.) f[x][y][0] = f[x][y][1];
+      if (f[x][y][2] < 0.) f[x][y][2] = f[x][y][1];
+    }
+  for (x = 0; x <= 2; x++)
+    for (z = 0; z <= 2; z++) {
+      if (f[x][0][z] < 0.) f[x][0][z] = f[x][1][z];
+      if (f[x][2][z] < 0.) f[x][2][z] = f[x][1][z];
+    }
+  for (z = 0; z <= 2; z++)
+    for (y = 0; y <= 2; y++) {
+      if (f[0][y][z] < 0.) f[0][y][z] = f[1][y][z];
+      if (f[2][y][z] < 0.) f[2][y][z] = f[1][y][z];
+    }
+#endif /* 3D */
 }
 
 static void youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
@@ -570,10 +597,16 @@ static void vof_plane (FttCell * cell, GfsVariable * v)
 
 static void variable_tracer_vof_update (GfsVariable * v, GfsDomain * domain)
 {
+  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
   guint l, depth = gfs_domain_depth (domain);
-  for (l = 0; l <= depth; l++)
+  FttComponent c;
+  for (l = 0; l <= depth; l++) {
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
 			      (FttCellTraverseFunc) vof_plane, v);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->m[c]);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->alpha);
+  }
 }
 
 static gboolean variable_tracer_vof_event (GfsEvent * event, 
