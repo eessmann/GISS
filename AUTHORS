@@ -5,4 +5,5 @@ Stéphane Popinet   <s.popinet@niwa.cri.nz>
 Contributors
 ------------
 Marcelo E. Magallon: Debian packages.
-Ruben Scardovelli: author of the Fortran version of gfs_plane_alpha()
+Ruben Scardovelli: - author of the Fortran version of gfs_plane_alpha()
+      		   - Mixed Youngs-Centered VOF normal calculation

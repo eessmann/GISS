@@ -86,6 +86,7 @@ SRC = \
 	utils.c \
 	ocean.c \
 	levelset.c \
+	myc.h \
 	$(GFS_HDS)
 
 libgfs3D_la_LDFLAGS = $(NO_UNDEFINED)\

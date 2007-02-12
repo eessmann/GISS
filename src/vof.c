@@ -562,6 +562,23 @@ static void youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 #endif /* 3D */
 }
 
+#include "myc.h"
+
+static void myc_normal (FttCell * cell, GfsVariable * v, FttVector * n)
+{
+  gdouble f[3][3][3];
+
+  stencil (cell, v, f);
+#if FTT_2D
+  /* fixme: this is still Youngs */
+  n->x = (f[0][2][1] + 2.*f[0][1][1] + f[0][0][1] - 2.*f[2][1][1] - f[2][2][1] - f[2][0][1])/8.;
+  n->y = (f[2][0][1] + 2.*f[1][0][1] + f[0][0][1] - 2.*f[1][2][1] - f[2][2][1] - f[0][2][1])/8.;
+  n->z = 0.;
+#else  /* 3D */
+  mycs (f, &n->x);
+#endif /* 3D */
+}
+
 static void vof_plane (FttCell * cell, GfsVariable * v)
 {
   if (FTT_CELL_IS_LEAF (cell)) {
@@ -580,7 +597,7 @@ static void vof_plane (FttCell * cell, GfsVariable * v)
       FttVector m;
       gdouble n = 0.;
 
-      youngs_normal (cell, v, &m);
+      myc_normal (cell, v, &m);
       for (c = 0; c < FTT_DIMENSION; c++)
 	n += fabs ((&m.x)[c]);
       if (n > 0.)
