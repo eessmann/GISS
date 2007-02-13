@@ -1187,7 +1187,7 @@ int main (int argc, char * argv[])
 				  stdout);
       puts ("}\n");
     }
-    else if (mixed && !strcmp (var->name, "Vorticity")) {
+    else if (mixed && var->name && !strcmp (var->name, "Vorticity")) {
       FttComponent c;
       GfsVariable ** u, * vort = gfs_temporary_variable (domain);
       gpointer data[2];
@@ -1206,7 +1206,7 @@ int main (int argc, char * argv[])
 				 (FttCellTraverseFunc) output_mixed_vorticity, vort);
       gts_object_destroy (GTS_OBJECT (vort));
     }
-    else if (mixed && !strcmp (var->name, "P"))
+    else if (mixed && var->name && !strcmp (var->name, "P"))
       gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 				 (FttCellTraverseFunc) output_mixed_pressure, var);
     else if (even_stream > 0.) {
