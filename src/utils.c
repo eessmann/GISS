@@ -702,10 +702,8 @@ static gdouble interpolated_value (GfsFunction * f, FttVector * p)
 
   q.x = p->x; q.y = p->y;
   t = gts_point_locate (&q, f->s, NULL);
-  if (t == NULL) {
-    g_warning ("%s: cannot locate point (%g,%g)", f->sname, p->x, p->y);
+  if (t == NULL)
     return 0.;
-  }
   gts_triangle_interpolate_height (GTS_TRIANGLE (t), &q);
   return q.z;
 }
