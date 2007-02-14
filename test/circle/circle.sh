@@ -1,7 +1,6 @@
 if ! $donotrun; then
     for level in 3 4 5 6 7 8 9; do
-	if sed "s/LEVEL/$level/g" < $1 | \
-	    gerris2D - > res-$level; then :
+	if ( sed "s/LEVEL/$level/g" < $1 | gerris2D - ) && join time proj > res-$level; then :
 	else
 	    exit 1
 	fi
@@ -43,12 +42,12 @@ if cat <<EOF | gnuplot ; then :
     set xlabel 'CPU time'
     set ylabel 'Maximum residual'
     set logscale y
-    plot 'res-7.ref' u 1:3 t 'ref' w lp, 'res-7' u 1:3 t '' w lp
+    plot 'res-7.ref' u 2:3 t 'ref' w lp, 'res-7' u 2:3 t '' w lp
     set output 'rate.eps'
     set xlabel 'V-cycle'
     set ylabel 'Cumulative residual reduction factor'
     unset logscale
-    plot 'res-7.ref' u 2:4 t 'ref' w lp, 'res-7' u 2:4 t '' w lp
+    plot 'res-7.ref' u 1:4 t 'ref' w lp, 'res-7' u 1:4 t '' w lp
     set output 'error.eps'
     set xlabel 'Level'
     set ylabel 'Error norms'
@@ -83,9 +82,9 @@ if cat <<EOF | python ; then :
 from check import *
 from sys import *
 c = Curve()
-for p in Curve('res-7.ref',1,3).l:
+for p in Curve('res-7.ref',2,3).l:
     c.l.append((p[0]+0.1, p[1]))
-if (Curve('res-7',1,3) - c).max() > 1e-8 or\
+if (Curve('res-7',2,3) - c).max() > 1e-8 or\
    (Curve('error',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
     exit(1)
 EOF

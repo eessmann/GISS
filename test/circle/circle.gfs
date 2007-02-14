@@ -68,14 +68,13 @@
     }
   }
   OutputTime { istep = 1 } {
-    awk '{printf ("%g ", $8); fflush (stdout)}'
+    awk '{print n++, $8}' > time
   }
   OutputProjectionStats { istep = 1 } {
     awk '{
       if ($1 == "niter:") printf ("%d ", $2);
       if ($1 == "residual.infty:") print $3 " " $4;
-      fflush (stdout);
-    }'
+    }' > proj
   }
   OutputSimulation { start = end } sim-LEVEL { variables = P }
 }
