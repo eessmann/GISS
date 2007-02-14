@@ -60,7 +60,8 @@ int main (int argc, char * argv[])
       {"partition", required_argument, NULL, 'p'},
       {"profile", no_argument, NULL, 'P'},
       {"help", no_argument, NULL, 'h'},
-      {"version", no_argument, NULL, 'V'}
+      {"version", no_argument, NULL, 'V'},
+      { NULL }
     };
     int option_index = 0;
     switch ((c = getopt_long (argc, argv, "hVs:p:P",

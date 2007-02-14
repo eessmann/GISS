@@ -755,6 +755,7 @@ int main (int argc, char * argv[])
       {"vector", required_argument, NULL, 'V'},
       {"help", no_argument, NULL, 'h'},
       {"verbose", no_argument, NULL, 'v'},
+      { NULL }
     };
     int option_index = 0;
     switch ((c = getopt_long (argc, argv, 

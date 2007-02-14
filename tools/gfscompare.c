@@ -364,7 +364,8 @@ int main (int argc, char * argv[])
       {"centered", no_argument, NULL, 'c'},
       {"not-weighted", no_argument, NULL, 'w'},
       {"constant", no_argument, NULL, 'C'},
-      {"extensive", no_argument, NULL, 'e'}
+      {"extensive", no_argument, NULL, 'e'},
+      { NULL }
     };
     int option_index = 0;
     switch ((c = getopt_long (argc, argv, "hvnog:f:lSrHp:cwCeaGm:M:xt",

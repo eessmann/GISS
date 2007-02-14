@@ -440,7 +440,8 @@ int main (int argc, char * argv[])
       {"dr", required_argument, NULL, 'd'},
       {"ratio", required_argument, NULL, 'r'},
       {"help", no_argument, NULL, 'h'},
-      {"verbose", no_argument, NULL, 'v'}
+      {"verbose", no_argument, NULL, 'v'},
+      { NULL }
     };
     int option_index = 0;
     switch ((c = getopt_long (argc, argv, "hvn:d:r:oz",
