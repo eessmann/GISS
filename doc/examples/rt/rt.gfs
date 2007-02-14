@@ -72,10 +72,10 @@
   OutputBalance { istep = 10 } stderr
   OutputProjectionStats { istep = 10 } stderr
   OutputDiffusionStats { istep = 10 } stderr
-  OutputPPM { istep = 2 } { ppmtoy4m -F 24:1 -v 0 | mpeg2enc -v 0 -o vort.mpg } {
+  OutputPPM { istep = 2 } { ppm2mpeg > vort.mpg} {
     min = -30 max = 30 v = Vorticity 
   }
-  OutputPPM { istep = 2 } { ppmtoy4m -F 24:1 -v 0 | mpeg2enc -v 0 -o t.mpg } {
+  OutputPPM { istep = 2 } { ppm2mpeg > t.mpg } {
     min = 0 max = 1 v = T
   }
   OutputPPM { start = end } { convert -colors 256 ppm:- vort.eps } {

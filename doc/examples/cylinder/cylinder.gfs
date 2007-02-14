@@ -84,14 +84,14 @@
   # Pipes a bitmap PPM image representation of the vorticity field at every other timestep
   # into a MJPegTools conversion pipeline to create a MPEG movie called vort.mpg
   # Sets the minimum used for colormapping to -10 and the maximum to 10
-  OutputPPM { istep = 2 } { ppmtoy4m -F 24:1 -v 0 | mpeg2enc -v 0 -o vort.mpg } {
+  OutputPPM { istep = 2 } { ppm2mpeg > vort.mpg } {
     min = -10 max = 10 v = Vorticity 
   }
 
   # Pipes a bitmap PPM image representation of the T field at every other timestep
   # into a MJPEGTools conversion pipeline to create a MPEG movie called t.mpg
   # Sets the minimum used for colormapping to 0 and the maximum to 1
-  OutputPPM { istep = 2 } { ppmtoy4m -F 24:1 -v 0 | mpeg2enc -v 0 -o t.mpg } {
+  OutputPPM { istep = 2 } { ppm2mpeg > t.mpg } {
     min = 0 max = 1 v = T
   }
 

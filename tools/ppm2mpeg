@@ -1,0 +1,8 @@
+#!/bin/bash
+
+command="ffmpeg -f image2pipe -vcodec ppm -i - -vcodec mpeg1video -b 1800 -f mpeg1video"
+while test $# -gt 0; do
+    command="$command $1"
+    shift
+done
+$command - 2> /dev/null
