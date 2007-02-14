@@ -61,8 +61,10 @@ struct _GfsOutputFile {
   guint refcount;
   gchar * name;
   FILE * fp;
+  gboolean is_pipe;
 };
 
+GfsOutputFile * gfs_output_file_new     (FILE * fp);
 GfsOutputFile * gfs_output_file_open    (const gchar * name,
 					 const gchar * mode);
 void            gfs_output_file_close   (GfsOutputFile * file);

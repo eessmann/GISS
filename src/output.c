@@ -139,45 +139,12 @@ static gboolean gfs_output_event (GfsEvent * event, GfsSimulation * sim)
       }
       else {
 	if (output->format[0] == '{') { /* script */
-	  GString * script;
-	  gint status;
-	  gchar pname[L_tmpnam], * c;
-	  guint i = 1, len;
-
-	  if (!tmpnam (pname)) {
-	    g_warning ("cannot create temporary name");
-	    return FALSE;
-	  }
-	  if (mkfifo (pname, S_IWUSR|S_IRUSR)) {
-	    g_warning ("cannot create named pipe: %s", strerror (errno));
-	    return FALSE;
-	  }
-	  script = g_string_new ("sh -c \"");
-	  c = output->format; c++;
-	  len = strlen (output->format);
-	  while (*c != '\0' && ++i < len) {
-	    switch (*c) {
-	    case '$': case '"':
-	      g_string_append_c (script, '\\');
-	    default:
-	      g_string_append_c (script, *c);
-	    }
-	    c++;
-	  }
-	  g_string_append (script, "\" < ");
-	  g_string_append (script, pname);
-	  g_string_append (script, " &");
-	  status = system (script->str);
-	  g_string_free (script, TRUE);
-	  if (status != -1)
-	    status = WEXITSTATUS (status);
-	  if (status == -1 || status != 0) {
-	    g_warning ("error while executing script");
-	    unlink (pname);
-	    return FALSE;
-	  }
-	  output->file = gfs_output_file_open (pname, "w");
-	  unlink (pname);
+	  guint len = strlen (output->format);
+	  g_assert (output->format[len - 1] == '}');
+	  output->format[len - 1] = '\0';
+	  output->file = gfs_output_file_new (popen (&output->format[1], "w"));
+	  output->file->is_pipe = TRUE;
+	  output->format[len - 1] = '}';
 	}
 	else { /* standard file */
 	  fname = format_string (output->formats,
@@ -413,6 +380,22 @@ void gfs_output_mute (GfsOutput * output)
 static GHashTable * gfs_output_files = NULL;
 
 /**
+ * gfs_output_file_new:
+ * @fp: a file pointer.
+ *
+ * Returns: a new #GfsOutputFile for @fp.
+ */
+GfsOutputFile * gfs_output_file_new (FILE * fp)
+{
+  GfsOutputFile * file = g_malloc (sizeof (GfsOutputFile));
+  file->refcount = 1;
+  file->name = NULL;
+  file->fp = fp;
+  file->is_pipe = FALSE;
+  return file;
+}
+
+/**
  * gfs_output_file_open:
  * @name: the name of the file to open.
  * @mode: the fopen mode.
@@ -453,10 +436,8 @@ GfsOutputFile * gfs_output_file_open (const gchar * name, const gchar * mode)
   if (fp == NULL)
     return NULL;
 
-  file = g_malloc (sizeof (GfsOutputFile));
-  file->refcount = 1;
+  file = gfs_output_file_new (fp);
   file->name = g_strdup (name);
-  file->fp = fp;
   g_hash_table_insert (gfs_output_files, file->name, file);
 
   return file;  
@@ -475,8 +456,12 @@ void gfs_output_file_close (GfsOutputFile * file)
 
   file->refcount--;
   if (file->refcount == 0) {
-    g_hash_table_remove (gfs_output_files, file->name);
-    fclose (file->fp);
+    if (file->name)
+      g_hash_table_remove (gfs_output_files, file->name);
+    if (file->is_pipe)
+      pclose (file->fp);
+    else
+      fclose (file->fp);
     g_free (file->name);
     g_free (file);
   }
