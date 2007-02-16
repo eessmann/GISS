@@ -20,16 +20,15 @@
 # significantly larger energy dissipation.
 #
 # \begin{figure}[htbp]
-# \begin{center}
-# \includegraphics[width=\hsize]{energy.eps}
-# \end{center}
-# \caption{Evolution
+# \caption{\label{energy}Evolution
 # of the total energy for the non-linear geostrophic adjustment problem. The
 # C-grid model is based on Sadourny {\cite{}} and implemented by Dupont
 # {\cite{dupont}}. The finite-element formulations are those studied by Dupont. LW:
 # Lynch and Werner {\cite{lynch87}}, LLS: Le Roux et al {\cite{leroux98}}, PZM: Peraire et al
 # {\cite{peraire86}}.}
-# \label{energy}
+# \begin{center}
+# \includegraphics[width=\hsize]{energy.eps}
+# \end{center}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

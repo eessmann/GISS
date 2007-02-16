@@ -15,16 +15,18 @@ clean-generic:
 
 tutorial.tar.gz: tutorial.ps.gz
 	rm -r -f tutorial
-	sed 's/input{pdf.tex}/usepackage{graphicx}\\newcommand{\\gfx}{eps}/g' < tutorial.tex | sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" > tutorial1.tex
-	latex2html -no_math -html_version 3.2,math -address "" -info "" -split +2 -show_section_numbers -toc_depth 5 -t "The Gerris Tutorial" -local_icons -white tutorial1.tex
-	mv -f tutorial1 tutorial
-	sh pre_fix.sh
-	cp -f ../share/darcs.css tutorial/tutorial1.css
+	sed 's/input{pdf.tex}/usepackage{graphicx}\\newcommand{\\gfx}{eps}/g' < tutorial.tex | sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" | sed 's/\\today/'"`date +\"%B %e, %Y\"`/g" > tutorial1.tex
+	hevea -fix -charset ISO8859-1 tutorial1.tex
+	imagen -res 600 -extra "pnmscale 0.24" tutorial1
+	mkdir tutorial
+	mv -f tutorial1[0-9][0-9][0-9].png tutorial1.html tutorial
+	cp ../share/darcs.css tutorial/tutorial.css
+	rm -f tutorial1.h{tml,aux,ind,toc} tutorial1.image.tex
 	tar cf tutorial.tar tutorial
 	gzip -f --best tutorial.tar
 
 tutorial1.dvi: tutorial.tex Makefile.deps
-	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < tutorial.tex > tutorial1.tex
+	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < tutorial.tex | sed 's/\\today/'"`date +\"%B %e, %Y\"`/g" > tutorial1.tex
 	latex -interaction=nonstopmode tutorial1.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode tutorial1.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode tutorial1.tex

@@ -23,12 +23,11 @@
 # behaves likes a rigid body attached to the outer boundary.
 #
 # \begin{figure}[htbp]
+# \caption{\label{prof}Tangential velocity as a function of radial position for
+# various Generalised Newtonian fluids.}
 # \begin{center}
 # \includegraphics[width=\hsize]{prof.eps}
 # \end{center}
-# \caption{Tangential velocity as a function of radial position for
-# various Generalised Newtonian fluids.}
-# \label{prof}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

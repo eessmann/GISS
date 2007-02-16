@@ -23,11 +23,11 @@ for start in sys.argv[1:]:
                 print "FAIL:",root
                 if len(msg) > 0:
                     print " ".join(msg)
-                print >>open(test.path + "/status",'w'), "{\color{red}FAIL}:"
+                print >>open(test.path + "/status",'w'), "{\color{Red}FAIL}:"
                 failed += 1
             else:
                 print "PASS:",root
-                print >>open(test.path + "/status",'w'), "{\color{green}PASS}:"
+                print >>open(test.path + "/status",'w'), "{\color{OliveGreen}PASS}:"
             n += 1
 
 endtime = datetime.now()
@@ -48,9 +48,9 @@ print >>summary, r'{\bf Finish} &', endtime.strftime('%a %d %b %H:%M:%S'), r'\\'
 print >>summary, r'{\bf Elapsed} &', repr(e.days) + ":" + repr(h) + ":" + repr(m) + ":" + repr(s), r'\\'
 print >>summary, r'{\bf Status} &',
 if failed:
-    print >>summary, r'{\color{red}FAIL (' + repr(failed) + '/' + repr(n) +')}'
+    print >>summary, r'{\color{Red}FAIL (' + repr(failed) + '/' + repr(n) +')}'
 else:
-    print >>summary, r'{\color{green}PASS (' + repr(n) + ')}'
+    print >>summary, r'{\color{OliveGreen}PASS (' + repr(n) + ')}'
 print >>summary, r'\end{tabular}'
 
 if failed:

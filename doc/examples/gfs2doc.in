@@ -28,16 +28,18 @@ for d in sys.argv[1:]:
     tex = open(wdname + "/" + example.name + ".tex", "w")
     tex.write(r"""
     \documentclass[a4paper]{article}
-    \usepackage{html}
+    \usepackage{hevea}
     \usepackage{color}
     \usepackage{graphicx}
-    \pagecolor{white}
     
     \oddsidemargin=4mm
     \evensidemargin=-1mm
     \topmargin=-7mm
     \textwidth=15.42cm
     \textheight=23.2cm
+
+    \newcommand{\htmladdnormallinkfoot}[2]{\footahref{#2}{#1}}
+    \newcommand{\htmladdnormallink}[2]{\ahref{#2}{#1}}
     
     \begin{document}
     \section{Examples}
@@ -62,9 +64,11 @@ for d in sys.argv[1:]:
     os.mkdir(hname)
     os.symlink("../" + example.name, hname + "/" + example.name)
     if os.system("cd " + wdname + \
-                  "&& latex2html -dir " + hname + " -no_math -html_version 3.2,math -address \"\" -info \"\" -split 0 -no_navigation -t \"Example " + example.name + "\" -white " + \
-                         example.name + ".tex" + \
-                  "&& mv " + hname + " " + os.getcwd()):
+		 "&& hevea -fix -charset ISO8859-1 " + example.name + ".tex" + \
+		 "&& imagen -res 600 -extra \"pnmscale 0.24\" " + example.name + " " + \
+		 "&& mv " + example.name + "[0-9][0-9][0-9].png " + example.name + ".html " + \
+		 hname + \
+                  " && mv " + hname + " " + os.getcwd()):
         print "\n\n**** Errors occured while generating directory ****: " + example.name + "_html"
         myexit(1)
         

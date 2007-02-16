@@ -36,9 +36,18 @@ test.sh: $(TESTDIRS)
 clean-generic:
 	$(RM) *.dvi *.aux *.log *.toc *.out tests.tex *.pyc test.sh *.bbl *.blg Makefile.deps
 
-tests: tests.ps.gz l2hconf.pm
-	latex2html -no_math -html_version 3.2,math -address "" -info "" -split +3 -show_section_numbers -toc_depth 5 -t "Gerris Tests" -local_icons -white tests.tex
-	cp -f ../doc/share/darcs.css tests/tests.css
+DOC = tests
+
+tests: tests.ps.gz
+	hevea -fix -charset ISO8859-1 $(DOC).tex
+	imagen -res 600 -extra "pnmscale 0.24" $(DOC)
+	hacha $(DOC).html
+	rm -f $(DOC).html
+	mv -f $(DOC)[0-9][0-9][0-9].png *.html $(DOC)
+	cat $(DOC).css ../doc/share/darcs.css > $(DOC)/$(DOC).css
+	sh ../doc/share/fixnav.sh $(DOC)
+	cp -f ../doc/share/contents.png ../doc/share/next.png ../doc/share/prev.png $(DOC)
+	rm -f *_motif.gif $(DOC).h{tml,aux,ind,toc} $(DOC).image.tex $(DOC).css
 
 tests.dvi: tests.tex tests.bib
 	latex -interaction=nonstopmode tests.tex > /dev/null 2>&1

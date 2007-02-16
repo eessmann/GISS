@@ -28,30 +28,27 @@
 # \ref{convergence}.
 #
 # \begin{figure}[htbp]
+# \caption{\label{vectors}Spurious currents at equilibrium for $La=12000$.}
 # \begin{center}
 # \includegraphics[width=0.6\hsize]{vectors.eps}
 # \end{center}
-# \caption{Spurious currents at equilibrium for $La=12000$.}
-# \label{vectors}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{laplace}Evolution of the capillary number $Ca$ as a function of
+# non-dimensional time $\tau=t\sigma/(\mu D)$ for the range of Laplace
+# numbers indicated in the legend.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{laplace.eps}
 # \end{center}
-# \caption{Evolution of the capillary number $Ca$ as a function of
-# non-dimensional time $\tau=t\sigma/(\mu D)$ for the range of Laplace
-# numbers indicated in the legend.}
-# \label{laplace}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{convergence}Poor convergence of the capillary number with increased
+# resolution. The diameter is given in number of grid points.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{convergence.eps}
 # \end{center}
-# \caption{Poor convergence of the capillary number with increased
-# resolution. The diameter is given in number of grid points.}
-# \label{convergence}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

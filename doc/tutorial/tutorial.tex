@@ -1,7 +1,6 @@
 \documentclass[a4paper]{article}
-\usepackage{html}
+\usepackage{hevea}
 \usepackage{color}
-\pagecolor{white}
 \usepackage{graphicx}
 
 \oddsidemargin=4mm
@@ -11,6 +10,9 @@
 \textheight=23.2cm
 
 \newcommand{\gfsweb}{http://gfs.sf.net}
+\newcommand{\htmladdnormallinkfoot}[2]{\footahref{#2}{#1}}
+\newcommand{\htmladdnormallink}[2]{\ahref{#2}{#1}}
+\loadcssfile{tutorial.css}
 
 \begin{document}
 
@@ -1079,7 +1081,7 @@ mouse button, zoom by dragging the middle button and rotate by
 dragging the left button.
 \begin{figure}[htbp]
 \begin{center}
-\htmlimage{scale=2.0,external,thumbnail=1}
+%% \htmlimage{scale=2.0,external,thumbnail=1}
 \includegraphics[width=\hsize]{gfsview.eps}
 \end{center}
 \caption{Screenshot of a GfsView session.}

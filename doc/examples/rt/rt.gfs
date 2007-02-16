@@ -8,6 +8,7 @@
 # time as illustrated on Figure \ref{evolution}.
 # 
 # \begin{figure}[htbp]
+# \caption{\label{evolution}Evolution of the interface.}
 # \begin{center}
 # \begin{tabular}{ccccc}
 # \includegraphics[width=0.15\hsize]{t-0.eps} &
@@ -18,19 +19,16 @@
 # $t=0$ & $t=0.7$ & $t=0.8$ & $t=0.9$ & $t=1.0$
 # \end{tabular}
 # \end{center}
-# \caption{Evolution of the interface.}
-# \label{evolution}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{movie}MPEG movies of the tracer and vorticity fields.}
 # \begin{center}
 # \begin{tabular}{cc}
 # \htmladdnormallinkfoot{\includegraphics[width=0.2\hsize]{t.eps}}{t.mpg} &
 # \htmladdnormallinkfoot{\includegraphics[width=0.2\hsize]{vort.eps}}{vort.mpg}
 # \end{tabular}
 # \end{center}
-# \caption{MPEG movies of the tracer and vorticity fields.}
-# \label{movie}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

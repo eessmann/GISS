@@ -10,11 +10,10 @@
 # The stationary solution obtained is illustrated on Figure \ref{velocity}.
 #
 # \begin{figure}[htbp]
+# \caption{\label{velocity}Norm of the velocity for the stationary regime.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{velocity.eps}
 # \end{center}
-# \caption{Norm of the velocity for the stationary regime.}
-# \label{velocity}
 # \end{figure}
 #
 # Velocity profiles are generated automatically and compared to the
@@ -22,21 +21,19 @@
 # Figures \ref{xprof} and \ref{yprof}.
 #
 # \begin{figure}[htbp]
+# \caption{\label{xprof}Vertical profile of the $x$-component of the velocity on
+# the centerline of the box.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{xprof.eps}
 # \end{center}
-# \caption{Vertical profile of the $x$-component of the velocity on
-# the centerline of the box.}
-# \label{xprof}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{yprof}Horizontal profile of the $y$-component of the velocity on
+# the centerline of the box.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{yprof.eps}
 # \end{center}
-# \caption{Horizontal profile of the $y$-component of the velocity on
-# the centerline of the box.}
-# \label{yprof}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

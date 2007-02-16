@@ -12,19 +12,17 @@
 # convergence is obtained.
 #
 # \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{error.eps}
 # \end{center}
-# \caption{Evolution of the error as a function of resolution.}
-# \label{error}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{order.eps}
 # \end{center}
-# \caption{Corresponding convergence order.}
-# \label{order}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

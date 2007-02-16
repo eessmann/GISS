@@ -20,35 +20,31 @@
 # dissipative the scheme.
 #
 # \begin{figure}[htbp]
+# \caption{\label{divmax}Evolution of the maximum divergence.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{divmax.eps}
 # \end{center}
-# \caption{Evolution of the maximum divergence.}
-# \label{divmax}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{divL2}Evolution of the L2 norm of the divergence.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{divL2.eps}
 # \end{center}
-# \caption{Evolution of the L2 norm of the divergence.}
-# \label{divL2}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{kinetic}Evolution of the kinetic energy.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{kinetic.eps}
 # \end{center}
-# \caption{Evolution of the kinetic energy.}
-# \label{kinetic}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{reynolds}Equivalent Reynolds number as a function of resolution.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{reynolds.eps}
 # \end{center}
-# \caption{Equivalent Reynolds number as a function of resolution.}
-# \label{reynolds}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

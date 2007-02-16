@@ -6,12 +6,11 @@
 # (2004), Journal of Atmospheric and Oceanic Technology, 21.
 #
 # \begin{figure}[htbp]
+# \caption{\label{sections}MPEG movie of the adaptive mesh. The two cross-sections are
+# coloured according to the norm of the velocity vector.}
 # \begin{center}
 # \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{sections.eps}}{sections.mpg}
 # \end{center}
-# \caption{MPEG movie of the adaptive mesh. The two cross-sections are
-# coloured according to the norm of the velocity vector.}
-# \label{sections}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

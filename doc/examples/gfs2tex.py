@@ -71,7 +71,7 @@ class Example:
 
         # adds the full path to references to generated files and makes labels absolute
         lines1 = []
-        path = self.path[2:].replace("/", "-")
+        path = self.path.replace("/", "-")
         for line in lines:
             for gen in self.generated:
                 line = line.replace("{" + gen + "}", "{" + self.path + "/" + gen + "}")
@@ -129,10 +129,12 @@ class Example:
     def write(self,dico,file=None):
         if file == None:
             file = open(self.path + "/" + self.name + ".tex", 'w')
+	file.write(self.section + "{\\label{" + self.name + "}")
         if self.status:
-            file.write(self.section + "{" + self.status + "\n".join(self.title) + "}\n")
-        else:
-            file.write(self.section + "{" + "\n".join(self.title) + "}\n")
+            file.write(self.status)
+	file.write("\n".join(self.title) + "}\n")
+	if self.section == "\\subsection":
+	    file.write("\\cutname{" + self.name + ".html}\n")
         file.write("\\begin{description}\n")
         file.write("\\item[Author]" + self.author + "\n")
         file.write("\\item[Command]" + "{\\tt " + self.command.replace('&',r'\&') + "}\n")

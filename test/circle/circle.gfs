@@ -11,43 +11,38 @@
 # resolution.
 #
 # \begin{figure}[htbp]
+# \caption{\label{solution}Solution of the Poisson equation.}
 # \begin{center}
 # \includegraphics[width=0.6\hsize]{solution.eps}
 # \end{center}
-# \caption{Solution of the Poisson equation.}
-# \label{solution}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{residual}Evolution of the residual.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{residual.eps}
 # \end{center}
-# \caption{Evolution of the residual.}
-# \label{residual}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{rate}Average reduction factor.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{rate.eps}
 # \end{center}
-# \caption{Average reduction factor.}
-# \label{rate}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{error.eps}
 # \end{center}
-# \caption{Evolution of the error as a function of resolution.}
-# \label{error}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{order.eps}
 # \end{center}
-# \caption{Corresponding convergence order.}
-# \label{order}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

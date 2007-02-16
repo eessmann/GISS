@@ -22,20 +22,18 @@
 # Gerris.
 #
 # \begin{figure}[htbp]
+# \caption{\label{solution}Surface-height after a rotation of 3 wave periods for a
+# resolution of 9.375 km.}
 # \begin{center}
 # \includegraphics[width=0.6\hsize]{solution.eps}
 # \end{center}
-# \caption{Surface-height after a rotation of 3 wave periods for a
-# resolution of 9.375 km.}
-# \label{solution}
 # \end{figure}
 #
 # \begin{table}[htbp]
+# \caption{\label{correlation}Maximum correlation and phase error as functions of resolution.}
 # \begin{center}
 # \input{correlation.tex}
 # \end{center}
-# \caption{Maximum correlation and phase error as functions of resolution.}
-# \label{correlation}
 # \end{table}
 #
 # Author: St\'ephane Popinet

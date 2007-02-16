@@ -8,13 +8,22 @@ BODY {
 
 A:link {
   background: transparent;
-  color: #494a82;
+  color: #8081b3;
+  text-decoration: none;
+  border-style: none;
 }
 
 A:visited {
   background: transparent;
-  color: #8081b3
+  color: #494a82;
+  text-decoration: none;
 }
+
+A:hover {
+  text-decoration: underline;
+}
+
+A IMG {border: none; }
 
 PRE     {
   background: #eeeeee;

@@ -16,11 +16,10 @@
 # The movie is generated using the scripting mode of GfsView.
 #
 # \begin{figure}[htbp]
+# \caption{\label{tracer}MPEG movie of the tracer field.}
 # \begin{center}
 # \htmladdnormallinkfoot{\includegraphics[width=0.3\hsize]{t.eps}}{t.mpg}
 # \end{center}
-# \caption{MPEG movie of the tracer field.}
-# \label{tracer}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

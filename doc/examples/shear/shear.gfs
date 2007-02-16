@@ -16,6 +16,7 @@
 # Eight levels of refinement are used on the interfaces and six away from the interface.
 #
 # \begin{figure}[htbp]
+# \caption{\label{advection}Volume fraction field at times (a) 0, (b) 2.5 and (c) 5.}
 # \begin{center}
 # \begin{tabular}{ccc}
 # \includegraphics[width=0.3\hsize]{t-0.eps} &
@@ -24,27 +25,23 @@
 # (a) & (b) & (c)
 # \end{tabular}
 # \end{center}
-# \caption{Volume fraction field at times (a) 0, (b) 2.5 and (c) 5.}
-# \label{advection}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{error}Difference between the initial and final volume fraction fields.}
 # \begin{center}
 # \includegraphics[width=0.4\hsize]{dt-5.eps}
 # \end{center}
-# \caption{Difference between the initial and final volume fraction fields.}
-# \label{error}
 # \end{figure}
 #
 # \begin{table}[htbp]
+# \caption{\label{norms}Norms of the error between the initial and final fields.}
 # \begin{center}
 # \begin{tabular}{lll}
 # $||^1$ & $||^2$ & $||^\infty$ \\
 # \input{norms.tex}
 # \end{tabular}
 # \end{center}
-# \caption{Norms of the error between the initial and final fields.}
-# \label{norms}
 # \end{table}
 #
 # Author: St\'ephane Popinet

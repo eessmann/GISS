@@ -1,8 +1,7 @@
 \documentclass[a4paper]{article}
-\usepackage{html}
+\usepackage{hevea}
 \usepackage{color}
 \usepackage{graphicx}
-\pagecolor{white}
 
 \oddsidemargin=4mm
 \evensidemargin=-1mm
@@ -11,6 +10,9 @@
 \textheight=23.2cm
 
 \newcommand{\gfsweb}{http://gfs.sf.net}
+\newcommand{\htmladdnormallinkfoot}[2]{\footahref{#2}{#1}}
+\newcommand{\htmladdnormallink}[2]{\ahref{#2}{#1}}
+\renewcommand{\cuttingunit}{subsection}
 
 \begin{document}
 
@@ -81,7 +83,7 @@ Once you have an initial draft for your documented parameter file, you need to p
 \begin{verbatim}
 % gfs2doc myexample
 \end{verbatim}
-Note that this script requires Latex and latex2html.
+Note that this script requires \footahref{http://pauillac.inria.fr/\~maranget/hevea/index.html}{hevea}.
 \item Check that the {\tt myexample\_html/index.html} and {\tt myexample.pdf} files are to your liking. If they are not, edit your parameter file and return to \ref{gendoc}.
 \item Send me ({\tt s.popinet at niwa.cri.nz}) your example ({\tt myexample.tgz} as an attachment). Tell me which section, subsection you think it would most naturally fit in (or request a new section). I will then review it and integrate it in this document.
 \end{enumerate}

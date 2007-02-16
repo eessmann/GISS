@@ -18,19 +18,17 @@
 # \ref{tracer}) generated on-the-fly.
 #
 # \begin{figure}[htbp]
+# \caption{\label{vorticity}MPEG movie of the vorticity field.}
 # \begin{center}
 # \htmladdnormallinkfoot{\includegraphics[width=\hsize]{vort.eps}}{vort.mpg}
 # \end{center}
-# \caption{MPEG movie of the vorticity field.}
-# \label{vorticity}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{tracer}MPEG movie of the tracer field.}
 # \begin{center}
 # \htmladdnormallinkfoot{\includegraphics[width=\hsize]{t.eps}}{t.mpg}
 # \end{center}
-# \caption{MPEG movie of the tracer field.}
-# \label{tracer}
 # \end{figure}
 #
 # Author: St\'ephane Popinet
@@ -82,7 +80,7 @@
   OutputProjectionStats { istep = 10 } stderr
 
   # Pipes a bitmap PPM image representation of the vorticity field at every other timestep
-  # into a MJPegTools conversion pipeline to create a MPEG movie called vort.mpg
+  # into a conversion pipeline to create a MPEG movie called vort.mpg
   # Sets the minimum used for colormapping to -10 and the maximum to 10
   OutputPPM { istep = 2 } { ppm2mpeg > vort.mpg } {
     min = -10 max = 10 v = Vorticity 

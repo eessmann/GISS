@@ -35,7 +35,10 @@ from math import *
 
 for component,variable in [('x','U'),('y','V')]:
   print r"""\begin{table}[htbp]
-  \begin{center}
+  \caption{"""
+  print r"\label{boundaries-" + component + "}"
+  print r"Errors and convergence rates for the \$"+component+r"\$-component of the velocity.}"  
+  print r"""\begin{center}
   \begin{tabular}{||l|c|c|c||c|c|c||} \hline
            & \multicolumn{3}{c||}{All cells} & \multicolumn{3}{c||}{Full 128 cells} \\\ \hline
            & 128-256  & Rate & 256-512  & 128-256  & Rate & 256-512  \\\ \hline"""
@@ -59,10 +62,7 @@ for component,variable in [('x','U'),('y','V')]:
   print r"\hline"
   print r"""\end{tabular}
   \end{center}
-  \caption{"""
-  print r"Errors and convergence rates for the \$"+component+r"\$-component of the velocity.}"
-  print r"\label{boundaries-" + component + "}"
-  print r"\end{table}"
+  \end{table}"""
 EOF
 else
     exit 1

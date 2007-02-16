@@ -11,11 +11,10 @@
 # boundary.
 #
 # \begin{figure}[htbp]
+# \caption{\label{tracer}MPEG movie of the tracer field.}
 # \begin{center}
 # \htmladdnormallinkfoot{\includegraphics[width=\hsize]{t.eps}}{t.mpg}
 # \end{center}
-# \caption{MPEG movie of the tracer field.}
-# \label{tracer}
 # \end{figure}
 #
 # Author: St\'ephane Popinet
@@ -73,7 +72,7 @@
   OutputProjectionStats { istep = 10 } stderr
 
   # Pipes a bitmap PPM image representation of the T field at every other timestep
-  # into a MJPEGTools conversion pipeline to create a MPEG movie called t.mpg
+  # into a conversion pipeline to create a MPEG movie called t.mpg
   # Sets the minimum used for colormapping to 0 and the maximum to 0.4
   OutputPPM { istep = 2 } { ppm2mpeg > t.mpg } {
     min = 0 max = 0.4 v = T

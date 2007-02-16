@@ -16,6 +16,8 @@
 # \ref{amplitude}.
 #
 # \begin{table}[htbp]
+# \caption{\label{convergence}Convergence of the relative error between the analytical
+# solution and simulation results from various solvers.}
 # \begin{center}
 # \begin{tabular}{|l|ccccc|} \hline
 # Method & $8^2$ & $16^2$ & $32^2$ & $64^2$ & $128^2$ \\ \hline
@@ -24,18 +26,14 @@
 # Surfer & - & - & 0.1168 & 0.0132 & 0.007 \\ \hline
 # \end{tabular}
 # \end{center}
-# \caption{Convergence of the relative error between the analytical
-# solution and simulation results from various solvers.}
-# \label{convergence}
 # \end{table}
 #
 # \begin{figure}[htbp]
+# \caption{\label{amplitude}Evolution of the amplitude of the capillary wave as a
+# function of non-dimensional time $\tau=\omega_0 t$.}
 # \begin{center}
 # \includegraphics[width=\hsize]{amplitude.eps}
 # \end{center}
-# \caption{Evolution of the amplitude of the capillary wave as a
-# function of non-dimensional time $\tau=\omega_0 t$.}
-# \label{amplitude}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

@@ -1,5 +1,5 @@
 \documentclass[a4paper]{article}
-\usepackage{html}
+\usepackage{hevea}
 \usepackage{color}
 \pagecolor{white}
 
@@ -10,6 +10,9 @@
 \textheight=23.2cm
 
 \newcommand{\gfsweb}{http://gfs.sf.net}
+\newcommand{\htmladdnormallinkfoot}[2]{\footahref{#2}{#1}}
+\loadcssfile{faq.css}
+\renewcommand{\cuttingunit}{subsection}
 
 \begin{document}
 
@@ -502,7 +505,7 @@ This may change in the future.
 
 \subsubsection{We have a problem inserting some GTS files generated 
 from STL files and even inserting the standard GTS files found 
-on the \htmladdnormallinkfoot{GTS samples}{http://gts.sourceforge.net/samples.html} site?}
+on the GTS samples site?}
 
 The samples files on the GTS site are not
 necessarily describing consistent geometric surfaces (i.e. they can be

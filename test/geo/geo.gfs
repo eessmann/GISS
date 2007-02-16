@@ -31,15 +31,17 @@
 # finite-element basis functions will result in growing gravity-wave noise.
 #
 # \begin{figure}[htbp]
+# \caption{\label{geo-error}Evolution of the maximum error on the surface height for the 
+# geostrophic adjustment problem.}
 # \begin{center}
 # \includegraphics[width=\hsize]{geo_error.eps}
 # \end{center}
-# \caption{Evolution of the maximum error on the surface height for the 
-# geostrophic adjustment problem.}
-# \label{geo-error}
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{geo-error1}Evolution of the surface-height error field. (a) $t =$1.157
+# days, (b) $t = 2.315$ days, (c) $t =$3.472 days, (d) $t =$4.630 days, (e) $t
+# =$17.361 days.}
 # \begin{center}
 # \begin{tabular}{ccccc}
 # \includegraphics[width=0.18\hsize]{error-100.eps} &
@@ -50,10 +52,6 @@
 #   (a) & (b) & (c) & (d) & (e)
 # \end{tabular}
 # \end{center}
-# \caption{Evolution of the surface-height error field. (a) $t =$1.157
-# days, (b) $t = 2.315$ days, (c) $t =$3.472 days, (d) $t =$4.630 days, (e) $t
-# =$17.361 days.}
-# \label{geo-error1}
 # \end{figure}
 #
 # Figures \ref{geo-error} and \ref{geo-error1} summarise the results obtained
