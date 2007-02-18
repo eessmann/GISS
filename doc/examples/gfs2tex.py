@@ -12,37 +12,6 @@ def generated(lines):
             return record[3:]
     return []
 
-def dictionary(d,file):
-    p = re.compile(r">\w*_class</A\n")
-    instruct = 0
-    for line in file:
-        record = line.split()
-        if re.match(p,line) != None:
-            klass = ""
-            cap = 1
-            for c in line[1:-9]:
-                if c == "_":
-                    cap = 1
-                elif cap:
-                    klass += c.capitalize()
-                    cap = 0
-                else:
-                    klass += c
-            if klass == "GfsOutputPpm":
-                klass = "GfsOutputPPM"
-            d[klass] = href
-        elif len(record) == 2 and record[0] == "struct" and record[1] == "<A":
-            instruct = 1
-        elif len(record) == 1 and record[0] == ">;":
-            instruct = 0
-        elif instruct:
-            if line[0:5] == "HREF=":
-                val = line[6:-2]
-            elif line[0] == ">" and line[-4:] == "</A\n":
-                d[line[1:-4]] = val
-        elif line[0:5] == "HREF=":
-            href = line[6:line.find("#")]
-
 class Example:
     def __init__(self,path):
         if path[0:2] == "./":
@@ -199,7 +168,7 @@ class Example:
                     elif dico.has_key("Gfs" + r):
                         key = "Gfs" + r
                     if key != None:
-                        out.write("<a href=\"" + path + dico[key] + "\">" + r + "</a> ")
+                        out.write("<a href=\"" + dico[key] + "\">" + r + "</a> ")
                     else:
                         out.write(r + " ")
                 out.write("<br>\n")

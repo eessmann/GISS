@@ -26,11 +26,14 @@ bin_SCRIPTS = \
 	gfs2doc
 
 BUILT_SOURCES= \
-	gfs2doc
+	gfs2doc gfsclasses.py
 
 CLEANFILES = $(BUILT_SOURCES) Makefile.deps
 
-dist_pkglib_DATA = gfs2tex.py
+dist_pkglib_DATA = gfs2tex.py gfsclasses.py
+
+gfsclasses.py: classes
+	$(srcdir)/classes > gfsclasses.py
 
 gfs2doc: gfs2doc.in
 
@@ -76,3 +79,12 @@ Makefile.deps: Makefile depend.py
 
 examples.tar.gz: examples.ps.gz examples.pdf examples $(DOCS)
 	tar czf examples.tar.gz examples.ps.gz examples.pdf examples $(DOCS)
+
+INCLUDES = -I$(top_srcdir)/src -I$(includedir) -DG_LOG_DOMAIN=\"Gfs-tools\"\
+            $(GTS_CFLAGS)
+
+noinst_PROGRAMS = classes
+
+classes_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+classes_LDADD = $(GFS2D_LIBS)
+

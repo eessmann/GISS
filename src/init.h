@@ -20,10 +20,13 @@
 #ifndef __INIT_H__
 #define __INIT_H__
 
+#include <gts.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
+GtsObjectClass ** gfs_classes             (void);
 void              gfs_init                (int * argc, 
 					   char *** argv);
 

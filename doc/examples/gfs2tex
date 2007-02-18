@@ -5,13 +5,10 @@ import os
 import os.path
 import glob
 import gfs2tex
+import gfsclasses
 
 if not os.access("examples",os.F_OK):
     os.mkdir("examples")
-
-dico = {}
-for f in glob.glob("../html/*.html"):
-    gfs2tex.dictionary(dico,open(f))
 
 for start in sys.argv[1:]:
     for root, dirs, files in os.walk(start,topdown=True):
@@ -19,4 +16,4 @@ for start in sys.argv[1:]:
             example = gfs2tex.Example(root)
             if not os.access("examples/" + example.path,os.F_OK):
                 os.symlink("../" + example.path, "examples/" + example.path)
-            example.write(dico)
+            example.write(gfsclasses.klass)
