@@ -40,7 +40,7 @@ DOC = tests
 
 tests: tests.ps.gz
 	hevea -fix -charset ISO8859-1 $(DOC).tex
-	imagen -res 600 -extra "pnmscale 0.24" $(DOC)
+	imagen -res 400 -extra "pnmscale 0.24" $(DOC)
 	hacha $(DOC).html
 	rm -f $(DOC).html
 	mv -f $(DOC)[0-9][0-9][0-9].png *.html $(DOC)
