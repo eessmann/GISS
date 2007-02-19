@@ -532,7 +532,7 @@ static void simulation_run (GfsSimulation * sim)
       gfs_correct_centered_velocities (domain, 2, g, -sim->advection_params.dt);
     }
 
-    gfs_simulation_adapt (sim, NULL);
+    gfs_simulation_adapt (sim);
     gfs_approximate_projection (domain,
    				&sim->approx_projection_params, 
     				&sim->advection_params, p, sim->physical_params.alpha, res);
@@ -1338,7 +1338,7 @@ static void advection_run (GfsSimulation * sim)
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
-    gfs_simulation_adapt (sim, NULL);
+    gfs_simulation_adapt (sim);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
@@ -1492,7 +1492,7 @@ static void poisson_run (GfsSimulation * sim)
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
     gfs_domain_timer_stop (domain, "poisson_cycle");
 
-    gfs_simulation_adapt (sim, NULL);
+    gfs_simulation_adapt (sim);
 
     par->niter++;
     sim->time.t = sim->tnext;

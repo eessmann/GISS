@@ -47,8 +47,7 @@ struct _GfsPhysicalParams {
 };
 
 struct _GfsAdaptStats {
-  GtsRange removed;
-  GtsRange created;
+  guint removed, created;
   GtsRange cmax;
   GtsRange ncells;
 };

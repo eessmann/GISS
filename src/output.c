@@ -781,34 +781,26 @@ static gboolean gfs_output_adapt_stats_event (GfsEvent * event,
     gfs_adapt_stats_update (&sim->adapts_stats);
     fprintf (GFS_OUTPUT (event)->file->fp,
 	     "Adaptive mesh refinement statistics\n"
-	     "  Cells removed\n"
-	     "    min: %10.0f avg: %10.3f | %10.3f max: %10.0f n: %10d\n"
-	     "  Cells created\n"
-	     "    min: %10.0f avg: %10.3f | %10.3f max: %10.0f n: %10d\n"
-	     "  Maximum cost\n"
-	     "    min: %10.3e avg: %10.3e | %10.3e max: %10.3e n: %10d\n"
+	     "  Cells removed: %10d\n"
+	     "  Cells created: %10d\n"
 	     "  Number of cells\n"
 	     "    min: %10.0f avg: %10.3f | %10.3f max: %10.0f n: %10d\n",
-	     sim->adapts_stats.removed.min,
-	     sim->adapts_stats.removed.mean,
-	     sim->adapts_stats.removed.stddev,
-	     sim->adapts_stats.removed.max,
-	     sim->adapts_stats.removed.n,
-	     sim->adapts_stats.created.min,
-	     sim->adapts_stats.created.mean,
-	     sim->adapts_stats.created.stddev,
-	     sim->adapts_stats.created.max,
-	     sim->adapts_stats.created.n,
-	     sim->adapts_stats.cmax.min,
-	     sim->adapts_stats.cmax.mean,
-	     sim->adapts_stats.cmax.stddev,
-	     sim->adapts_stats.cmax.max,
-	     sim->adapts_stats.cmax.n,
+	     sim->adapts_stats.removed,
+	     sim->adapts_stats.created,
 	     sim->adapts_stats.ncells.min,
 	     sim->adapts_stats.ncells.mean,
 	     sim->adapts_stats.ncells.stddev,
 	     sim->adapts_stats.ncells.max,
 	     sim->adapts_stats.ncells.n);
+    if (sim->adapts_stats.cmax.n > 0)
+      fprintf (GFS_OUTPUT (event)->file->fp,
+	       "  Maximum cost\n"
+	       "    min: %10.3e avg: %10.3e | %10.3e max: %10.3e n: %10d\n",
+	       sim->adapts_stats.cmax.min,
+	       sim->adapts_stats.cmax.mean,
+	       sim->adapts_stats.cmax.stddev,
+	       sim->adapts_stats.cmax.max,
+	       sim->adapts_stats.cmax.n);
     gfs_adapt_stats_init (&sim->adapts_stats);
     return TRUE;
   }

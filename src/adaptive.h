@@ -33,8 +33,7 @@ void          gfs_cell_fine_init            (FttCell * cell,
 					     GfsDomain * domain);
 void          gfs_adapt_stats_init          (GfsAdaptStats * s);
 void          gfs_adapt_stats_update        (GfsAdaptStats * s);
-void          gfs_simulation_adapt          (GfsSimulation * simulation,
-					     GfsAdaptStats * s);
+void          gfs_simulation_adapt          (GfsSimulation * simulation);
 
 /* GfsAdapt: Header */
 

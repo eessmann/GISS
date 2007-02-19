@@ -924,8 +924,7 @@ static void adapt_global (GfsSimulation * simulation,
       fprintf (stderr, "coarsen: %d\n", apar.nc);
 #endif /* DEBUG */
       fine = remove_top_fine (apar.hfine, &cfine, apar.hfinev);
-      if (s)
-	gts_range_add_value (&s->removed, n - apar.nc);
+      s->removed += n - apar.nc;
       changed = TRUE;
     }
     if (coarse && ((-ccoarse > cfine && apar.nc < mincells) ||
@@ -940,15 +939,12 @@ static void adapt_global (GfsSimulation * simulation,
       fprintf (stderr, "refine: %d\n", apar.nc);
 #endif /* DEBUG */
       coarse = remove_top_coarse (apar.hcoarse, &ccoarse, apar.hcoarsev);
-      if (s) 
-	gts_range_add_value (&s->created, apar.nc - n);
+      s->created += apar.nc - n;
       changed = TRUE;
     }
   }
-  if (s) {
-    gts_range_add_value (&s->cmax, -ccoarse);
-    gts_range_add_value (&s->ncells, apar.nc);
-  }
+  gts_range_add_value (&s->cmax, -ccoarse);
+  gts_range_add_value (&s->ncells, apar.nc);
 
   gts_eheap_destroy (apar.hcoarse);
   gts_eheap_destroy (apar.hfine);
@@ -959,8 +955,9 @@ static void adapt_global (GfsSimulation * simulation,
 
 typedef struct {
   GfsSimulation * sim;
-  guint depth;
+  guint depth, nc;
   GfsVariable * r, * c;
+  GfsAdaptStats * s;
 } AdaptLocalParams;
 
 #define REFINABLE(cell, p) (GFS_VARIABLE (cell, (p)->r->i))
@@ -975,11 +972,27 @@ static gboolean coarsen_cell (FttCell * cell, AdaptLocalParams * p)
   return COARSENABLE (cell, p);
 }
 
+static void cell_cleanup (FttCell * cell, AdaptLocalParams * p)
+{
+  gfs_cell_cleanup (cell);
+  p->s->removed++;
+  p->nc--;
+}
+
 static void coarsen_box (GfsBox * box, AdaptLocalParams * p)
 {
   ftt_cell_coarsen (box->root,
 		    (FttCellCoarsenFunc) coarsen_cell, p,
-		    (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+		    (FttCellCleanupFunc) cell_cleanup, p);
+}
+
+static void local_cell_fine_init (FttCell * parent,  AdaptLocalParams * p)
+{
+  gfs_cell_fine_init (parent, GFS_DOMAIN (p->sim));
+  if (!GFS_CELL_IS_BOUNDARY (parent)) {
+    p->s->created += FTT_CELLS;
+    p->nc += FTT_CELLS;
+  }
 }
 
 static void refine_cell (FttCell * cell, AdaptLocalParams * p)
@@ -987,8 +1000,8 @@ static void refine_cell (FttCell * cell, AdaptLocalParams * p)
   if (REFINABLE (cell, p)) {
     guint level = ftt_cell_level (cell);
 
-    ftt_cell_refine_corners (cell, (FttCellInitFunc) gfs_cell_fine_init, p->sim);
-    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, p->sim);
+    ftt_cell_refine_corners (cell, (FttCellInitFunc) local_cell_fine_init, p);
+    ftt_cell_refine_single (cell, (FttCellInitFunc) local_cell_fine_init, p);
     if (level + 1 > p->depth)
       p->depth = level + 1;
   }
@@ -996,6 +1009,7 @@ static void refine_cell (FttCell * cell, AdaptLocalParams * p)
 
 static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
 {
+  p->nc++;
   REFINABLE (cell, p) = FALSE;
   COARSENABLE (cell, p) = TRUE;
   if (!GFS_IS_MIXED (cell)) {
@@ -1019,7 +1033,7 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
   }
 }
 
-static void adapt_local (GfsSimulation * sim, guint * depth)
+static void adapt_local (GfsSimulation * sim, guint * depth, GfsAdaptStats * s)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
 
@@ -1031,6 +1045,8 @@ static void adapt_local (GfsSimulation * sim, guint * depth)
   p.depth = *depth;
   p.r = gfs_temporary_variable (domain);
   p.c = gfs_temporary_variable (domain);
+  p.s = s;
+  p.nc = 0;
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) refine_cell_mark, &p);
@@ -1041,6 +1057,8 @@ static void adapt_local (GfsSimulation * sim, guint * depth)
   gts_object_destroy (GTS_OBJECT (p.r));
   gts_object_destroy (GTS_OBJECT (p.c));
   *depth = p.depth;
+
+  gts_range_add_value (&s->ncells, p.nc);
 }
 
 /**
@@ -1056,8 +1074,7 @@ static void adapt_local (GfsSimulation * sim, guint * depth)
  * the mesh will be refined only if all of this criteria AND any other
  * regular criterion is verified.  
  */
-void gfs_simulation_adapt (GfsSimulation * simulation,
-			   GfsAdaptStats * s)
+void gfs_simulation_adapt (GfsSimulation * simulation)
 {
   gboolean active = FALSE;
   guint mincells = 0, maxcells = G_MAXINT;
@@ -1089,9 +1106,9 @@ void gfs_simulation_adapt (GfsSimulation * simulation,
     guint depth = gfs_domain_depth (domain);
 
     if (maxcells < G_MAXINT)
-      adapt_global (simulation, &depth, s, mincells, maxcells, c, cmax);
+      adapt_global (simulation, &depth, &simulation->adapts_stats, mincells, maxcells, c, cmax);
     else
-      adapt_local (simulation, &depth);
+      adapt_local (simulation, &depth, &simulation->adapts_stats);
 
     gint l;
     for (l = depth - 2; l >= 0; l--)
@@ -1121,8 +1138,8 @@ void gfs_adapt_stats_init (GfsAdaptStats * s)
 {
   g_return_if_fail (s != NULL);
 
-  gts_range_init (&s->removed);
-  gts_range_init (&s->created);
+  s->removed = 0;
+  s->created = 0;
   gts_range_init (&s->cmax);
   gts_range_init (&s->ncells);
 }
@@ -1137,8 +1154,6 @@ void gfs_adapt_stats_update (GfsAdaptStats * s)
 {
   g_return_if_fail (s != NULL);
 
-  gts_range_update (&s->removed);
-  gts_range_update (&s->created);
   gts_range_update (&s->cmax);
   gts_range_update (&s->ncells);
 }
