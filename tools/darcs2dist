@@ -24,6 +24,7 @@ cd $wrkdir
 if ( darcs get $repo $package && \
      cd $package && \
      sh autogen.sh && \
+     make && \
      make dist && \
      scp -q $package-*.tar.gz $url/$package-snapshot.tar.gz ) > msg 2>&1; then
     rm -f msg
