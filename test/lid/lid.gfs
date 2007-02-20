@@ -84,7 +84,7 @@
   # files using gnuplot and files: xprof, yprof, xprof.ghia, yprof.ghia
   EventScript { start = end } {
     cat <<EOF | gnuplot
-    set term postscript eps
+    set term postscript eps lw 3 solid 20
     set output 'xprof.eps'
     set xlabel 'Y'
     set ylabel 'U'
