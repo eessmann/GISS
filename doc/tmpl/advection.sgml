@@ -33,6 +33,7 @@ Advection scheme
 @upwinding: 
 @flux: 
 @scheme: 
+@average: 
 
 <!-- ##### FUNCTION gfs_advection_params_init ##### -->
 <para>
@@ -78,8 +79,6 @@ Advection scheme
 @upwinding: 
 @u: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@centered_upwinding: 
 
 
 <!-- ##### FUNCTION gfs_face_advection_flux ##### -->
@@ -116,8 +115,6 @@ Advection scheme
 
 @face: 
 @par: 
-<!-- # Unused Parameters # -->
-@upwinding: 
 
 
 <!-- ##### FUNCTION gfs_face_interpolated_normal_velocity ##### -->

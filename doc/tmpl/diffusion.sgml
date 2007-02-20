@@ -27,8 +27,6 @@ Diffusion solver
 @rhs: 
 @dia: 
 @beta: 
-<!-- # Unused Parameters # -->
-@cell: 
 
 
 <!-- ##### FUNCTION gfs_diffusion_residual ##### -->
@@ -41,9 +39,6 @@ Diffusion solver
 @rhs: 
 @dia: 
 @res: 
-<!-- # Unused Parameters # -->
-@cell: 
-@v: 
 
 
 <!-- ##### FUNCTION gfs_diffusion_coefficients ##### -->

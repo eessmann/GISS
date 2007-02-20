@@ -77,11 +77,6 @@ Contains the surface and volume fractions of the cell not contained in the solid
 
 @root: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@solid: 
-@stree: 
-@is_open: 
-@s: 
 
 
 <!-- ##### FUNCTION gfs_cell_traverse_mixed ##### -->

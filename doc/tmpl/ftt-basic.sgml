@@ -180,8 +180,6 @@ This function is used to control the refinement process of a cell tree.
 @cleanup: 
 @cleanup_data: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@data: 
 
 
 <!-- ##### FUNCTION ftt_cell_flatten ##### -->
@@ -303,16 +301,6 @@ Evaluates to the level of @c.
 
 </para>
 
-@level: 
-@Returns: 
-
-
-<!-- ##### FUNCTION ftt_cell_size ##### -->
-<para>
-
-</para>
-
-@cell: 
 @Returns: 
 
 
@@ -321,7 +309,6 @@ Evaluates to the level of @c.
 
 </para>
 
-@cell: 
 @Returns: 
 
 

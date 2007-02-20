@@ -73,9 +73,6 @@ Poisson solver
 @u: 
 @rhs: 
 @dia: 
-<!-- # Unused Parameters # -->
-@root: 
-@level: 
 
 
 <!-- ##### FUNCTION gfs_residual ##### -->
@@ -91,9 +88,6 @@ Poisson solver
 @rhs: 
 @dia: 
 @res: 
-<!-- # Unused Parameters # -->
-@root: 
-@cell: 
 
 
 <!-- ##### FUNCTION gfs_poisson_coefficients ##### -->
@@ -103,10 +97,6 @@ Poisson solver
 
 @domain: 
 @alpha: 
-<!-- # Unused Parameters # -->
-@dia: 
-@c: 
-@rho: 
 
 
 <!-- ##### FUNCTION gfs_poisson_cycle ##### -->
@@ -120,11 +110,6 @@ Poisson solver
 @rhs: 
 @dia: 
 @res: 
-<!-- # Unused Parameters # -->
-@d: 
-@levelmin: 
-@depth: 
-@nrelax: 
 
 
 <!-- ##### FUNCTION gfs_correct_normal_velocities ##### -->
@@ -138,9 +123,6 @@ Poisson solver
 @g: 
 @dt: 
 @w: 
-<!-- # Unused Parameters # -->
-@face: 
-@par: 
 
 
 <!-- ##### FUNCTION gfs_mac_projection ##### -->

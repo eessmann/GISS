@@ -131,7 +131,6 @@ This functions is called by ftt_cell_traverse() for each of the visited cells.
 
 </para>
 
-@t: 
 @Returns: 
 
 
@@ -194,8 +193,6 @@ Writes in @fp any user data associated with @cell. It is important that this fun
 @read: 
 @data: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@line: 
 
 
 <!-- ##### FUNCTION ftt_cell_read_binary ##### -->

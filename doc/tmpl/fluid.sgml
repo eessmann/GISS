@@ -91,6 +91,7 @@ The fluid variables associated with a fluid cell.
 @i: 
 @component: 
 @name: 
+@description: 
 @centered: 
 @fine_coarse: 
 @coarse_fine: 
@@ -186,11 +187,8 @@ The fluid variables associated with a fluid cell.
 @klass: 
 @domain: 
 @name: 
+@description: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@parent: 
-@centered: 
-@i: 
 
 
 <!-- ##### FUNCTION gfs_variable_from_name ##### -->
@@ -201,8 +199,6 @@ The fluid variables associated with a fluid cell.
 @i: 
 @name: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@variables: 
 
 
 <!-- ##### FUNCTION gfs_variables_from_list ##### -->
@@ -214,8 +210,6 @@ The fluid variables associated with a fluid cell.
 @list: 
 @error: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@variables: 
 
 
 <!-- ##### FUNCTION gfs_stats_variable ##### -->
@@ -228,8 +222,6 @@ The fluid variables associated with a fluid cell.
 @flags: 
 @max_depth: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@level: 
 
 
 <!-- ##### FUNCTION gfs_norm_variable ##### -->
@@ -242,8 +234,6 @@ The fluid variables associated with a fluid cell.
 @flags: 
 @max_depth: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@level: 
 
 
 <!-- ##### FUNCTION gfs_get_from_below_intensive ##### -->
@@ -271,8 +261,6 @@ The fluid variables associated with a fluid cell.
 
 @cell: 
 @domain: 
-<!-- # Unused Parameters # -->
-@variables: 
 
 
 <!-- ##### FUNCTION gfs_cell_fine_init ##### -->
@@ -282,8 +270,6 @@ The fluid variables associated with a fluid cell.
 
 @cell: 
 @domain: 
-<!-- # Unused Parameters # -->
-@variables: 
 
 
 <!-- ##### FUNCTION gfs_vector_norm ##### -->
@@ -373,8 +359,6 @@ Defines the (second-order accurate) gradient of a variable @v in a given directi
 @g: 
 @v: 
 @max_level: 
-<!-- # Unused Parameters # -->
-@Returns: 
 
 
 <!-- ##### FUNCTION gfs_face_weighted_gradient ##### -->
@@ -538,8 +522,6 @@ Defines the (second-order accurate) gradient of a variable @v in a given directi
 @cell: 
 @fp: 
 @domain: 
-<!-- # Unused Parameters # -->
-@variables: 
 
 
 <!-- ##### FUNCTION gfs_cell_read_binary ##### -->

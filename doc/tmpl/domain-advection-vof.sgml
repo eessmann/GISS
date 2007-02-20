@@ -68,8 +68,6 @@ Volume of Fluid advection
 @alpha: 
 @a: 
 @p: 
-<!-- # Unused Parameters # -->
-@c: 
 
 
 <!-- ##### FUNCTION gfs_cell_vof_advection ##### -->

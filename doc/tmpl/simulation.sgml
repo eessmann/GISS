@@ -69,6 +69,7 @@ Simulations
 @events: 
 @modules: 
 @variables: 
+@globals: 
 @tnext: 
 
 <!-- ##### STRUCT GfsTime ##### -->
@@ -125,8 +126,6 @@ Simulations
 
 @fp: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@sim: 
 
 
 <!-- ##### FUNCTION gfs_simulation_refine ##### -->
@@ -151,7 +150,6 @@ Simulations
 </para>
 
 @simulation: 
-@s: 
 
 
 <!-- ##### FUNCTION gfs_simulation_write ##### -->

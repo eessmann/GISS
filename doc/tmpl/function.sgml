@@ -105,8 +105,6 @@ or a C expression
 @f: 
 @fa: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@t: 
 
 
 <!-- ##### FUNCTION gfs_function_value ##### -->
@@ -117,9 +115,6 @@ or a C expression
 @f: 
 @cell: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@p: 
-@t: 
 
 
 <!-- ##### FUNCTION gfs_function_read ##### -->

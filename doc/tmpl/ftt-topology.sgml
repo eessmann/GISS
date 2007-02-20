@@ -54,7 +54,6 @@ Evaluates to the child index of @c.
 </para>
 
 @cell: 
-@children: 
 
 
 <!-- ##### STRUCT FttCellChildren ##### -->
@@ -91,7 +90,6 @@ Evaluates to the child index of @c.
 
 @cell: 
 @d: 
-@children: 
 @Returns: 
 
 
@@ -101,7 +99,6 @@ Evaluates to the child index of @c.
 </para>
 
 @cell: 
-@Param2: 
 @Returns: 
 
 
@@ -111,7 +108,6 @@ Evaluates to the child index of @c.
 </para>
 
 @cell: 
-@neighbors: 
 
 
 <!-- ##### FUNCTION ftt_cell_neighbors_not_cached ##### -->
@@ -120,7 +116,6 @@ Evaluates to the child index of @c.
 </para>
 
 @cell: 
-@neighbors: 
 
 
 <!-- ##### STRUCT FttCellNeighbors ##### -->
@@ -136,7 +131,6 @@ Evaluates to the child index of @c.
 </para>
 
 @cell: 
-@d: 
 @Returns: 
 
 
@@ -146,7 +140,6 @@ Evaluates to the child index of @c.
 </para>
 
 @cell: 
-@d: 
 @Returns: 
 
 
@@ -180,7 +173,6 @@ Evaluates to the child index of @c.
 </para>
 
 @cell: 
-@d: 
 @Returns: 
 
 

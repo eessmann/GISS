@@ -484,6 +484,14 @@ Evaluates to the index of the neighboring direction opposite to @i.
 @cell: 
 @v: 
 
+<!-- ##### FUNCTION ftt_cell_size ##### -->
+<para>
+
+</para>
+
+@cell: 
+@Returns: 
+
 <!-- ##### FUNCTION gfs_boundary_inflow_class ##### -->
 <para>
 

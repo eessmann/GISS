@@ -73,9 +73,6 @@ Advection
 @apar: 
 @g: 
 @alpha: 
-<!-- # Unused Parameters # -->
-@dpar: 
-@par: 
 
 
 <!-- ##### FUNCTION gfs_tracer_advection_diffusion ##### -->
@@ -86,8 +83,6 @@ Advection
 @domain: 
 @par: 
 @half: 
-<!-- # Unused Parameters # -->
-@dpar: 
 
 
 <!-- ##### FUNCTION gfs_predicted_face_velocities ##### -->

@@ -107,6 +107,7 @@ Fluid domain
 
 @domain: 
 @name: 
+@description: 
 @Returns: 
 
 
@@ -116,7 +117,7 @@ Fluid domain
 </para>
 
 @domain: 
-@v: 
+@info: 
 @Returns: 
 
 
@@ -379,8 +380,6 @@ Fluid domain
 
 @fp: 
 @Returns: 
-<!-- # Unused Parameters # -->
-@domain: 
 
 
 <!-- ##### FUNCTION gfs_domain_split ##### -->
