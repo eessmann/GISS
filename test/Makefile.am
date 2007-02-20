@@ -38,11 +38,13 @@ clean-generic:
 DOC = tests
 
 tests: tests.ps.gz
-	hevea -fix -charset ISO8859-1 $(DOC).tex
-	imagen -res 400 -extra "pnmscale 0.24" $(DOC)
+	hevea -fix $(DOC).tex
+	imagen -res 500 -extra "pnmscale 0.24" $(DOC)
 	hacha $(DOC).html
 	rm -f $(DOC).html
-	mv -f $(DOC)[0-9][0-9][0-9].png *.html $(DOC)
+	mv -f $(DOC)[0-9][0-9][0-9].png $(DOC)
+##	fixme: the character conversion below is a workaround for a bug in hevea version < 1.09
+	for f in *.html; do konwert iso1-utf8 < $$f > $(DOC)/$$f; rm -f $$f; done
 	cat $(DOC).css ../doc/share/darcs.css > $(DOC)/$(DOC).css
 	sh ../doc/share/fixnav.sh $(DOC)
 	cp -f ../doc/share/contents.png ../doc/share/next.png ../doc/share/prev.png $(DOC)

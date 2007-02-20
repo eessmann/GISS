@@ -42,11 +42,13 @@ clean-generic:
 DOC = examples
 
 examples: examples.ps.gz
-	hevea -fix -charset ISO8859-1 $(DOC).tex
+	hevea -fix $(DOC).tex
 	imagen -res 600 -extra "pnmscale 0.24" $(DOC)
 	hacha $(DOC).html
 	rm -f $(DOC).html
-	mv -f $(DOC)[0-9][0-9][0-9].png *.html $(DOC)
+	mv -f $(DOC)[0-9][0-9][0-9].png $(DOC)
+##	fixme: the character conversion below is a workaround for a bug in hevea version < 1.09
+	for f in *.html; do konwert iso1-utf8 < $$f > $(DOC)/$$f; rm -f $$f; done
 	cat $(DOC).css ../share/darcs.css > $(DOC)/$(DOC).css
 	sh ../share/fixnav.sh $(DOC)
 	cp -f ../share/contents.png ../share/next.png ../share/prev.png $(DOC)

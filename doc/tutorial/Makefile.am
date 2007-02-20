@@ -16,10 +16,12 @@ clean-generic:
 tutorial.tar.gz: tutorial.ps.gz
 	rm -r -f tutorial
 	sed 's/input{pdf.tex}/usepackage{graphicx}\\newcommand{\\gfx}{eps}/g' < tutorial.tex | sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" | sed 's/\\today/'"`date +\"%B %e, %Y\"`/g" > tutorial1.tex
-	hevea -fix -charset ISO8859-1 tutorial1.tex
+	hevea -fix tutorial1.tex
 	imagen -res 600 -extra "pnmscale 0.24" tutorial1
 	mkdir tutorial
-	mv -f tutorial1[0-9][0-9][0-9].png tutorial1.html tutorial
+	mv -f tutorial1[0-9][0-9][0-9].png tutorial
+##	fixme: the character conversion below is a workaround for a bug in hevea version < 1.09
+	konwert iso1-utf8 < tutorial1.html > tutorial/tutorial1.html
 	cp ../share/darcs.css tutorial/tutorial.css
 	rm -f tutorial1.h{tml,aux,ind,toc} tutorial1.image.tex
 	tar cf tutorial.tar tutorial
