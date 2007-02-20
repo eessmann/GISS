@@ -13,7 +13,6 @@ EXTRA_DIST = \
 	gfs2tex \
 	depend.py \
 	test.py \
-	l2hconf.pm \
 	Makefile.deps
 
 TESTS = test.sh
