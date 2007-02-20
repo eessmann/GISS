@@ -510,19 +510,22 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	   "                         gpointer data);\n"
 	   "static double Dirichlet = 1.;\n"
 	   "static double Neumann = 0.;\n"
+	   "static GfsSimulation * gsim = NULL;\n"
+	   "static FttCell * gcell = NULL;\n"
+	   "static double dd (const gchar * name, FttComponent c) {\n"
+	   "  GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (gsim)->variables, name);\n"
+	   "  if (v == NULL)\n"
+	   "    return 0.;\n"
+	   "  g_return_val_if_fail (gcell != NULL, 0.);\n"
+ 	   "  return gfs_center_gradient (gcell, c, v->i)/ftt_cell_size (gcell);\n"
+	   "}\n"
+	   "static double dx (const gchar * name) { return dd (name, FTT_X); }\n"
+	   "static double dy (const gchar * name) { return dd (name, FTT_Y); }\n"
+  #if !FTT_2D
+	   "static double dz (const gchar * name) { return dd (name, FTT_Z); }\n"
+  #endif /* 3D */
 	   "double f (FttCell * cell, FttCellFace * face, GfsSimulation * sim) {\n"
-	   "  double dd (const gchar * name, FttComponent c) {\n"
-	   "    GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, name);\n"
-	   "    if (v == NULL)\n"
-	   "      return 0.;\n"
-	   "    g_return_val_if_fail (cell != NULL, 0.);\n"
- 	   "    return gfs_center_gradient (cell, c, v->i)/ftt_cell_size (cell);\n"
-	   "  }\n"
-	   "  double dx (const gchar * name) { return dd (name, FTT_X); }\n"
-	   "  double dy (const gchar * name) { return dd (name, FTT_Y); }\n"
-#if !FTT_2D
-	   "  double dz (const gchar * name) { return dd (name, FTT_Z); }\n"
-#endif /* 3D */
+	   "  gsim = sim; gcell = cell;\n"
 	   , fin);
     i = domain->variables;
     while (i) {
