@@ -51,7 +51,7 @@ shell (and that you are running some version of a Unix system). Some
 knowledge of C programming would also be very helpful if you intend to 
 extend Gerris with your own objects.
 
-\subsection{Installing and compiling Gerris}
+\subsection{\label{installing}Installing and compiling Gerris}
 
 Gerris is written in C and uses two other C libraries which you need
 to install on your system first: the \htmladdnormallinkfoot{Glib
@@ -1023,7 +1023,7 @@ restart the simulation from where you left it.
 
 \subsection{Visualisation}
 
-\subsubsection{GfsView}
+\subsubsection{\label{gfsview}GfsView}
 
 GfsView is a tool written specifically to visualise Gerris simulation
 files. It is still young but fully usable both for 2D and 3D
@@ -1397,7 +1397,7 @@ In practice adding diffusion to a given tracer is as simple as adding:
 to the parameter file, where 0.01 is the value of the diffusion
 coefficient.
 
-\subsubsection{Boundary conditions for diffusion terms}
+\subsubsection{\label{diffusionbc}Boundary conditions for diffusion terms}
 
 What if we want to modify the tracer example above so that now the
 half-cylinder itself is a (diffusive) source of tracer rather than the
