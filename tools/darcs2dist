@@ -26,7 +26,10 @@ if ( darcs get $repo $package && \
      sh autogen.sh && \
      make && \
      make dist && \
-     scp -q $package-*.tar.gz $url/$package-snapshot.tar.gz ) > msg 2>&1; then
+     tar xzf $package-*.tar.gz && \
+     mv $package-[0-9].[0-9].[0-9] $package-snapshot-`date +%y%m%d` && \
+     tar chof - $package-snapshot-`date +%y%m%d` | gzip --best -c > $package-snapshot.tar.gz && \
+     scp -q $package-snapshot.tar.gz $url/$package-snapshot.tar.gz ) > msg 2>&1; then
     rm -f msg
     status=0
 else
