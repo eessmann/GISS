@@ -331,7 +331,10 @@ static void ocean_run (GfsSimulation * sim)
     gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt/2.);
     gfs_domain_timer_stop (domain, "free_surface_pressure");
 
-    gfs_simulation_adapt (sim, NULL);
+    gfs_domain_cell_traverse (domain,
+			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
+    gfs_simulation_adapt (sim);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
@@ -712,6 +715,9 @@ static void ocean_run (GfsSimulation * sim)
     set_solid3D (sim, solid);
     gfs_domain_timer_stop (domain, "free_surface_pressure");
 
+    gfs_domain_cell_traverse (domain,
+			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gfs_simulation_adapt (sim);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
