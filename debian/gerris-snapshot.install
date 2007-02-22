@@ -11,3 +11,4 @@ usr/lib/gerris/*.la
 usr/lib/gerris/*.mdf
 usr/lib/gerris/*.py
 usr/lib/pkgconfig/*.pc
+usr/share/mime/packages/*.xml

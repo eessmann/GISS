@@ -1,0 +1,10 @@
+#!/bin/sh
+
+if [ -x /usr/bin/update-mime-database ] ; then
+    if /usr/bin/update-mime-database /usr/share/mime; then :
+    else
+	exit 1
+    fi
+fi
+
+exit 0
