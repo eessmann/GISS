@@ -1051,8 +1051,10 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
     sim->advection_params.dt = cfl*gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
   else
     sim->advection_params.dt = G_MAXINT;
+  if (sim->advection_params.dt > sim->time.dtmax)
+    sim->advection_params.dt = sim->time.dtmax;
 
-  i = GFS_DOMAIN (sim)->variables;
+  GSList *  i = GFS_DOMAIN (sim)->variables;
   while (i) {
     GfsVariable * v = i->data;
     if (v->sources) {
@@ -1069,16 +1071,13 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
     }
     i = i->next;
   }
-  
-  if (sim->advection_params.dt > sim->time.dtmax)
-    sim->advection_params.dt = sim->time.dtmax;
 
   gdouble tnext = G_MAXINT;
-  GSList * i = sim->events->items;
+  i = sim->events->items;
   while (i) {
     GfsEvent * event = i->data;
     if (t < event->t && event->t < tnext)
-      tnext = event->t;
+      tnext = event->t + 1e-9;
     i = i->next;
   }
   if (sim->time.end < tnext)
