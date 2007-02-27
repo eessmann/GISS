@@ -107,9 +107,11 @@ GtsObjectClass ** gfs_classes (void)
     gfs_variable_curvature_class (),
       gfs_variable_position_class (),
     gfs_variable_distance_class (),
+
   gfs_surface_bc_class (),
 
   gfs_box_class (),
+
   gfs_gedge_class (),
 
   gfs_bc_dirichlet_class (),
@@ -143,7 +145,9 @@ GtsObjectClass ** gfs_classes (void)
       gfs_adapt_function_class (),
       gfs_adapt_gradient_class (),
         gfs_adapt_curvature_class (),
+
     gfs_event_sum_class (),
+      gfs_event_sum_direction_class (),
     gfs_event_harmonic_class (),
     gfs_event_stop_class (),
     gfs_event_script_class (),

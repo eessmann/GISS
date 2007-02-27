@@ -19,36 +19,27 @@
 # The convergence is obtained for a wide range of Laplace numbers
 # $La=\sigma\rho D/\mu^2$, as illustrated on Figure \ref{laplace}.
 #
-# \begin{figure}[htbp]
-# \begin{center}
-# \includegraphics[width=0.6\hsize]{vectors.eps}
-# \end{center}
-# \caption{Spurious currents at equilibrium for $La=12000$.}
-# \label{vectors}
-# \end{figure}
+# Figure \ref{convergence} illustrates the convergence of the error on
+# the droplet shape as a function of resolution for a Laplace number
+# of 12000.
 #
 # \begin{figure}[htbp]
-# \caption{\label{laplace}Evolution of the capillary number $Ca$ as a function of
-# non-dimensional time $\tau=t\sigma/(\mu D)$ for the range of Laplace
+# \caption{\label{laplace}Evolution of the amplitude of the capillary currents
+# $\max(|{\bf u}|)(D/\sigma)^{1/2}$ as a function of
+# non-dimensional time $\tau=t\mu/D^2$ for the range of Laplace
 # numbers indicated in the legend.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{laplace.eps}
 # \end{center}
-# \caption{Evolution of the capillary number $Ca$ as a function of
-# non-dimensional time $\tau=t\sigma/(\mu D)$ for the range of Laplace
-# numbers indicated in the legend.}
-# \label{laplace}
 # \end{figure}
 #
 # \begin{figure}[htbp]
-# \caption{\label{convergence}Poor convergence of the capillary number with increased
-# resolution. The diameter is given in number of grid points.}
+# \caption{\label{convergence}Convergence of the error on the equilibrium shape of the
+# droplet with resolution. The diameter is given in number of grid
+# points.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{convergence.eps}
 # \end{center}
-# \caption{Poor convergence of the capillary number with increased
-# resolution. The diameter is given in number of grid points.}
-# \label{convergence}
 # \end{figure}
 #
 # Author: St\'ephane Popinet

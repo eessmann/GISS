@@ -45,11 +45,6 @@
   # The tracer T is used to track both phases
   VariableTracer {} T { scheme = vof }
  
-  # We need a filtered version of T (T1) to define a sufficiently
-  # smooth density field. The third argument defines how many times the
-  # recursive smoothing must be applied.
-  VariableFiltered {} T1 T 0
-
   # The initial sinusoidal interface.
   InitFraction {} T rt.gts
 
