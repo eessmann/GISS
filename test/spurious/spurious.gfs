@@ -57,7 +57,7 @@
   ProjectionParams { tolerance = 1e-6 }
   AdvectionParams { scheme = none }
 
-  VariableTracer {} T { scheme = vof }
+  VariableTracerVOF {} T
   VariableCurvature {} K T
   SourceTension {} T 1 K
   SourceDiffusion {} U MU
