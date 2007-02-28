@@ -1401,8 +1401,11 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
   }
   s->max = atof (fp->token->str);
   s->oldv = gfs_domain_add_variable (domain, NULL, NULL);
-  s->oldv->fine_coarse = s->v->fine_coarse;
-  s->oldv->coarse_fine = s->v->coarse_fine;
+  /* fixme: the lines below are necessary in the general case (e.g. when dealing with a VOF tracer)
+   * but will crash if s->oldv is not of the same class as s->v.
+   * s->oldv->fine_coarse = s->v->fine_coarse;
+   * s->oldv->coarse_fine = s->v->coarse_fine;
+   */
 
   if (fp->next_token != '\n') {
     gts_file_next_token (fp);
