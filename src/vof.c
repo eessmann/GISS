@@ -473,14 +473,20 @@ static FttCell * domain_and_boundary_locate (GfsDomain * domain, FttVector p, gu
   return gfs_domain_boundary_locate (domain, p, level);
 }
 
-static void stencil (FttCell * cell, GfsVariable * v, gdouble f[3][3][3])
+#if FTT_2D
+# define F(x,y,z) f[x][y]
+#else
+# define F(x,y,z) f[x][y][z]
+#endif
+
+static void stencil (FttCell * cell, GfsVariable * v, gdouble F(3,3,3))
 {
   gdouble h = ftt_cell_size (cell);
   guint level = ftt_cell_level (cell);
   FttVector p;
   gint x, y, z = 0;
   
-  f[1][1][1] = GFS_VARIABLE (cell, v->i);
+  F(1,1,1) = GFS_VARIABLE (cell, v->i);
   ftt_cell_pos (cell, &p);
 #if !FTT_2D
   for (z = -1; z <= 1; z++)
@@ -492,20 +498,20 @@ static void stencil (FttCell * cell, GfsVariable * v, gdouble f[3][3][3])
 	  o.x = p.x + h*x; o.y = p.y + h*y; o.z = p.z + h*z;
 	  FttCell * neighbor = domain_and_boundary_locate (v->domain, o, level);
 	  if (neighbor)
-	    f[x + 1][y + 1][z + 1] = 
+	    F(x + 1, y + 1, z + 1) =
 	      gfs_vof_interpolate (neighbor, &o, level, GFS_VARIABLE_TRACER_VOF (v));
 	  else
-	    f[x + 1][y + 1][z + 1] = -1.;
+	    F(x + 1, y + 1, z + 1) = -1.;
 	}
   /* boundary conditions (symmetry) */
 #if FTT_2D
   for (x = 0; x <= 2; x++) {
-    if (f[x][0][1] < 0.) f[x][0][1] = f[x][1][1];
-    if (f[x][2][1] < 0.) f[x][2][1] = f[x][1][1];
+    if (f[x][0] < 0.) f[x][0] = f[x][1];
+    if (f[x][2] < 0.) f[x][2] = f[x][1];
   }
   for (y = 0; y <= 2; y++) {
-    if (f[0][y][1] < 0.) f[0][y][1] = f[1][y][1];
-    if (f[2][y][1] < 0.) f[2][y][1] = f[1][y][1];
+    if (f[0][y] < 0.) f[0][y] = f[1][y];
+    if (f[2][y] < 0.) f[2][y] = f[1][y];
   }
 #else /* 3D */
   for (x = 0; x <= 2; x++)
@@ -528,12 +534,12 @@ static void stencil (FttCell * cell, GfsVariable * v, gdouble f[3][3][3])
 
 static void youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 {
-  gdouble f[3][3][3];
+  gdouble F(3,3,3);
 
   stencil (cell, v, f);
 #if FTT_2D
-  n->x = (f[0][2][1] + 2.*f[0][1][1] + f[0][0][1] - 2.*f[2][1][1] - f[2][2][1] - f[2][0][1])/8.;
-  n->y = (f[2][0][1] + 2.*f[1][0][1] + f[0][0][1] - 2.*f[1][2][1] - f[2][2][1] - f[0][2][1])/8.;
+  n->x = (f[0][2] + 2.*f[0][1] + f[0][0] - 2.*f[2][1] - f[2][2] - f[2][0])/8.;
+  n->y = (f[2][0] + 2.*f[1][0] + f[0][0] - 2.*f[1][2] - f[2][2] - f[0][2])/8.;
   n->z = 0.;
 #else  /* 3D */
   gdouble mm1 = f[0][0][0] + f[0][0][2] + f[0][2][0] + f[0][2][2] +
@@ -562,21 +568,21 @@ static void youngs_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 #endif /* 3D */
 }
 
-#include "myc.h"
+#if FTT_2D
+# include "myc2d.h"
+#else
+# include "myc.h"
+#endif
 
 static void myc_normal (FttCell * cell, GfsVariable * v, FttVector * n)
 {
-  gdouble f[3][3][3];
+  gdouble F(3,3,3);  
 
   stencil (cell, v, f);
-#if FTT_2D
-  /* fixme: this is still Youngs */
-  n->x = (f[0][2][1] + 2.*f[0][1][1] + f[0][0][1] - 2.*f[2][1][1] - f[2][2][1] - f[2][0][1])/8.;
-  n->y = (f[2][0][1] + 2.*f[1][0][1] + f[0][0][1] - 2.*f[1][2][1] - f[2][2][1] - f[0][2][1])/8.;
-  n->z = 0.;
-#else  /* 3D */
   mycs (f, &n->x);
-#endif /* 3D */
+#if FTT_2D
+  n->z = 0.;
+#endif
 }
 
 static void vof_plane (FttCell * cell, GfsVariable * v)
