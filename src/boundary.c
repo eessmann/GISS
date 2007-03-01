@@ -236,7 +236,7 @@ static void homogeneous_dirichlet (FttCellFace * f, GfsBc * b)
 
 static void face_dirichlet (FttCellFace * f, GfsBc * b)
 {
-  GFS_STATE (f->cell)->f[f->d].v = 
+  GFS_STATE (f->cell)->f[f->d].v = GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = 
     gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
 }
 
