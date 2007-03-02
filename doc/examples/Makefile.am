@@ -87,6 +87,6 @@ INCLUDES = -I$(top_srcdir)/src -I$(includedir) -DG_LOG_DOMAIN=\"Gfs-tools\"\
 
 noinst_PROGRAMS = classes
 
-classes_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
-classes_LDADD = $(GFS2D_LIBS)
-
+classes: classes.c $(top_srcdir)/src/init.c
+	$(LIBTOOL) --mode=link $(CC) $(AM_CFLAGS) $(INCLUDES) -DFTT_2D=1 \
+	classes.c -o classes $(GFS2D_LIBS)
