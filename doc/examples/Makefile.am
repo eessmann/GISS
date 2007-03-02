@@ -5,7 +5,8 @@ EXAMPLES = \
 	shear \
 	rt \
 	boussinesq \
-	tangaroa
+	tangaroa \
+	logo
 
 EXTRA_DIST = \
 	template.tex \
