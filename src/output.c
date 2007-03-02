@@ -206,25 +206,11 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
   output->first_call = TRUE;
 
   if (fp->type == '{') {
-    GString * format;
-    guint scope;
-    gint c;
-
-    format = g_string_new ("{");
-    scope = fp->scope_max;
-    c = gts_file_getc (fp);
-    while (c != EOF && fp->scope > scope) {
-      g_string_append_c (format, c);
-      c = gts_file_getc (fp);
-    }
-    if (fp->scope != scope) {
-      gts_file_error (fp, "parse error");
-      g_string_free (format, TRUE);
+    gchar * script = gfs_file_statement (fp);
+    if (script == NULL)
       return;
-    }
-    g_string_append_c (format, '}');
-    output->format = format->str;
-    g_string_free (format, FALSE);
+    output->format = g_strconcat ("{", script, "}", NULL);
+    g_free (script);
     gts_file_next_token (fp);
   }
   else if (fp->type != GTS_STRING) {

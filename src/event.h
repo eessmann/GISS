@@ -231,7 +231,7 @@ typedef struct _GfsEventScript         GfsEventScript;
 struct _GfsEventScript {
   GfsEvent parent;
 
-  GString * script;
+  gchar * script;
 };
 
 #define GFS_EVENT_SCRIPT(obj)            GTS_OBJECT_CAST (obj,\

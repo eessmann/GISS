@@ -1512,7 +1512,7 @@ static void gfs_event_script_destroy (GtsObject * o)
 {
   GfsEventScript * s = GFS_EVENT_SCRIPT (o);
 
-  if (s->script) g_string_free (s->script, TRUE);
+  g_free (s->script);
 
   (* GTS_OBJECT_CLASS (gfs_event_script_class ())->parent_class->destroy) (o);
 } 
@@ -1527,15 +1527,13 @@ static void gfs_event_script_write (GtsObject * o, FILE * fp)
 
   fputs (" {", fp);
   if (s->script)
-    fputs (s->script->str, fp);
+    fputs (s->script, fp);
   fputc ('}', fp);
 }
 
 static void gfs_event_script_read (GtsObject ** o, GtsFile * fp)
 {
   GfsEventScript * s = GFS_EVENT_SCRIPT (*o);
-  guint scope;
-  gint c;
 
   if (GTS_OBJECT_CLASS (gfs_event_script_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_event_script_class ())->parent_class->read) 
@@ -1543,24 +1541,9 @@ static void gfs_event_script_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  if (fp->type != '{') {
-    gts_file_error (fp, "expecting an opening brace");
-    return;
-  }
-  if (s->script)
-    g_string_free (s->script, TRUE);
-  s->script = g_string_new ("");
-  scope = fp->scope_max;
-  c = gts_file_getc (fp);
-  while (c != EOF && fp->scope > scope) {
-    g_string_append_c (s->script, c);
-    c = gts_file_getc (fp);
-  }
-  if (fp->scope != scope) {
-    gts_file_error (fp, "parse error");
-    return;
-  }
-  gts_file_next_token (fp);
+  g_free (s->script);
+  if ((s->script = gfs_file_statement (fp)))
+    gts_file_next_token (fp);
 }
 
 static gboolean gfs_event_script_event (GfsEvent * event, GfsSimulation * sim)
@@ -1580,7 +1563,7 @@ static gboolean gfs_event_script_event (GfsEvent * event, GfsSimulation * sim)
 	return TRUE;
       }
       f = fdopen (sf, "w");
-      fputs (s->script->str, f);
+      fputs (s->script, f);
       fclose (f);
       close (sf);
       scommand = g_strdup_printf ("GfsTime=%g GfsIter=%d GfsPid=%d "

@@ -30,6 +30,7 @@ extern "C" {
 #define GFS_DOUBLE_TO_POINTER(d)     (*((gpointer *) &(d)))
 
 gboolean gfs_char_in_string (char c, const char * s);
+gchar *  gfs_file_statement (GtsFile * fp);
 
 /* GfsGlobal: Header */
 

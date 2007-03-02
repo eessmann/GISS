@@ -44,6 +44,45 @@ gboolean gfs_char_in_string (char c, const char * s)
   return FALSE;
 }
 
+/**
+ * gfs_file_statement:
+ * @fp: a #GtsFile.
+ *
+ * Reads the next brackets-delimited ({...}) statemement in @fp,
+ * including all comments.
+ *
+ * Returns: a newly allocated string containing the text of the next
+ * statement in @fp, or %NULL if an error occured in which case
+ * @fp->error is set.
+ */
+gchar * gfs_file_statement (GtsFile * fp)
+{
+  g_return_val_if_fail (fp != NULL, NULL);
+
+  if (fp->type != '{') {
+    gts_file_error (fp, "expecting an opening brace");
+    return NULL;
+  }
+  GString * s = g_string_new ("");
+  gchar empty[] = "", * comments = fp->comments;
+  fp->comments = empty;
+  guint scope = fp->scope_max;
+  gint c = gts_file_getc (fp);
+  while (c != EOF && fp->scope > scope) {
+    g_string_append_c (s, c);
+    c = gts_file_getc (fp);
+  }
+  fp->comments = comments;
+  if (fp->scope != scope) {
+    gts_file_error (fp, "parse error");
+    g_string_free (s, TRUE);
+    return NULL;
+  }
+  gchar * ret = s->str;
+  g_string_free (s, FALSE);
+  return ret;
+}
+
 typedef gdouble (* GfsFunctionFunc) (const FttCell * cell,
 				     const FttCellFace * face,
 				     GfsSimulation * sim);
@@ -71,20 +110,20 @@ struct _GfsGlobal {
   GtsObject parent;
 
   /*< public >*/
-  GString * s;
+  gchar * s;
   guint line;
 };
 
 static void global_destroy (GtsObject * object)
 {
-  g_string_free (GFS_GLOBAL (object)->s, TRUE);
+  g_free (GFS_GLOBAL (object)->s);
   (* gfs_global_class ()->parent_class->destroy) (object);
 }
 
 static void global_write (GtsObject * object, FILE * fp)
 {
   fprintf (fp, "%s {", object->klass->info.name);
-  fputs (GFS_GLOBAL (object)->s->str, fp);
+  fputs (GFS_GLOBAL (object)->s, fp);
   fputs ("}\n", fp);
 }
 
@@ -107,26 +146,10 @@ static void global_read (GtsObject ** object, GtsFile * fp)
     return;
   }
   gts_file_next_token (fp);
-  if (fp->type != '{') {
-    gts_file_error (fp, "expecting an opening brace");
-    return;
-  }
   global->line = fp->line;
-  gchar * comments = fp->comments;
-  fp->comments = g_strdup ("");
-  guint scope = fp->scope_max;
-  gint c = gts_file_getc (fp);
-  while (c != EOF && fp->scope > scope) {
-    g_string_append_c (global->s, c);
-    c = gts_file_getc (fp);
-  }
-  g_free (fp->comments);
-  fp->comments = comments;
-  if (fp->scope != scope) {
-    gts_file_error (fp, "parse error");
-    return;
-  }
-  gts_file_next_token (fp);
+  g_free (global->s);
+  if ((global->s = gfs_file_statement (fp)))
+    gts_file_next_token (fp);
 }
 
 static void gfs_global_class_init (GtsObjectClass * klass)
@@ -134,11 +157,6 @@ static void gfs_global_class_init (GtsObjectClass * klass)
   klass->destroy = global_destroy;
   klass->read =    global_read;
   klass->write =   global_write;
-}
-
-static void gfs_global_init (GfsGlobal * object)
-{
-  object->s = g_string_new ("");
 }
 
 GtsObjectClass * gfs_global_class (void)
@@ -151,7 +169,7 @@ GtsObjectClass * gfs_global_class (void)
       sizeof (GfsGlobal),
       sizeof (GtsObjectClass),
       (GtsObjectClassInitFunc) gfs_global_class_init,
-      (GtsObjectInitFunc) gfs_global_init,
+      (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -500,7 +518,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     i = sim->globals;
     while (i) {
       fprintf (fin, "#line %d \"GfsGlobal\"\n", GFS_GLOBAL (i->data)->line);
-      fputs (GFS_GLOBAL (i->data)->s->str, fin);
+      fputs (GFS_GLOBAL (i->data)->s, fin);
       fputc ('\n', fin);
       i = i->next;
     }
