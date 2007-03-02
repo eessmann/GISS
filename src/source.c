@@ -462,7 +462,8 @@ static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
 
 static gdouble diffusion_face (GfsDiffusion * d, FttCellFace * f)
 {
-  return gfs_function_face_value (d->val, f);
+  return d->mu ? gfs_face_interpolated_value (f, d->mu->i) :
+    gfs_function_get_constant_value (d->val);
 }
 
 static gdouble diffusion_cell (GfsDiffusion * d, FttCell * cell)
