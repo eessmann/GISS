@@ -32,7 +32,7 @@
 #
 # Author: St\'ephane Popinet
 # Command: sh couette.sh couette.gfs
-# Version: 0.8.0
+# Version: 1.0.0
 # Required files: couette.sh profile prof-0.ref prof-1.ref prof-2.ref prof-3.ref
 # Running time: 32 minutes
 # Generated files: prof.eps
@@ -75,6 +75,6 @@
   EventStop { istep = 1 } U 1e-4 DU
 
   OutputScalarNorm { istep = 1 } du-MODEL { v = DU }
-  OutputLocation { start = end } prof-MODEL profile
+  OutputLocation { start = end } { awk '{if ($1 != "#") print $2,$8;}' > prof-MODEL } profile
 }
 GfsBox {}
