@@ -35,7 +35,7 @@
 # Command: shapes rayleigh-taylor | transform -M 2. | transform -u 0.5 > rt.gts && gerris2D rt.gfs | gfsview2D rt.gfv
 # Version: 1.0.0
 # Required files: rt.gfv
-# Running time: 16 minutes
+# Running time: 12 minutes
 # Generated files: t.mpg vort.mpg t.eps vort.eps t-0.eps t-0.7.eps t-0.8.eps t-0.9.eps t-1.eps
 #
 4 3 GfsSimulation GfsBox GfsGEdge {} {
@@ -43,7 +43,7 @@
   Refine 7
 
   # The tracer T is used to track both phases
-  VariableTracer {} T { scheme = vof }
+  VariableTracerVOF {} T
  
   # The initial sinusoidal interface.
   InitFraction {} T rt.gts
