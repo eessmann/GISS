@@ -964,7 +964,7 @@ guint gfs_domain_init_solid_fractions (GfsDomain * domain,
   p.data = data;
   p.status = status ? status : gfs_temporary_variable (domain);
   p.thin = 0;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, p.status);
   gfs_domain_traverse_cut (domain, s, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			   (FttCellTraverseCutFunc) set_solid_fractions_from_surface, &p);
