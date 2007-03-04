@@ -59,7 +59,7 @@
 
   # Add tracer T, using a VOF advection scheme.
   # The default scheme is a Van-Leer limited, second-order upwind scheme.
-  VariableTracer {} T { scheme = vof }
+  VariableTracerVOF {} T
 
   # Initialize T as the volume fraction of each cell contained inside the
   # volume defined by circle.gts
@@ -81,9 +81,9 @@
   # Output progress report on standard error
   OutputProgress { istep = 1 } stderr
 
-  OutputPPM { start = 0 } { convert -colors 256 ppm:- t-0.eps } { v = T }
-  OutputPPM { start = 2.5 } { convert -colors 256 ppm:- t-2.5.eps } { v = T }
-  OutputPPM { start = 5 } { convert -colors 256 ppm:- t-5.eps } { v = T }
+  OutputPPM { start = 0 } { convert ppm:- t-0.eps } { v = T }
+  OutputPPM { start = 2.5 } { convert ppm:- t-2.5.eps } { v = T }
+  OutputPPM { start = 5 } { convert ppm:- t-5.eps } { v = T }
 
   # Add a new variable 
   Variable {} Tref
@@ -97,7 +97,7 @@
     s = Tref v = DT
   }
 
-  OutputPPM { start = end } { convert -colors 256 ppm:- dt-5.eps } { v = DT }
+  OutputPPM { start = end } { convert ppm:- dt-5.eps } { v = DT }
   OutputTiming { start = end } stderr
 }
 GfsBox {}
