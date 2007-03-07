@@ -121,6 +121,7 @@ struct _GfsVariablePosition {
 
   /*< public >*/
   FttComponent c;
+  gdouble ref;
 };
 
 #define GFS_VARIABLE_POSITION(obj)            GTS_OBJECT_CAST (obj,\

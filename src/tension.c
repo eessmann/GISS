@@ -652,7 +652,11 @@ static void variable_position_read (GtsObject ** o, GtsFile * fp)
   GFS_VARIABLE1 (v)->description = g_strjoin (" ", fp->token->str,
 					      "coordinate of the interface defined by tracer",
 					      GFS_VARIABLE_CURVATURE (v)->f->name, NULL);
-  gts_file_next_token (fp);  
+  gts_file_next_token (fp);
+  if (fp->type == GTS_INT || fp->type == GTS_FLOAT) {
+    v->ref = atof (fp->token->str);
+    gts_file_next_token (fp);
+  }
 }
 
 static void variable_position_write (GtsObject * o, FILE * fp)
@@ -662,6 +666,8 @@ static void variable_position_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_variable_position_class ())->parent_class->write) (o, fp);
 
   fprintf (fp, " %s", v->c == FTT_X ? "x" : v->c == FTT_Y ? "y" : "z");
+  if (v->ref != 0.)
+    fprintf (fp, " %g", v->ref);
 }
 
 static void position (FttCell * cell, GfsVariable * v)
@@ -669,7 +675,8 @@ static void position (FttCell * cell, GfsVariable * v)
   FttVector p;
 
   if (gfs_vof_center (cell, GFS_VARIABLE_TRACER_VOF (GFS_VARIABLE_CURVATURE (v)->f), &p))
-    GFS_VARIABLE (cell, v->i) = (&p.x)[GFS_VARIABLE_POSITION (v)->c];
+    GFS_VARIABLE (cell, v->i) = (&p.x)[GFS_VARIABLE_POSITION (v)->c] - 
+      GFS_VARIABLE_POSITION (v)->ref;
   else
     GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
 }
