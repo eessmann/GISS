@@ -49,14 +49,11 @@ static void face_symmetry (FttCellFace * f, GfsBc * b)
   if (b->v->component == f->d/2)
     GFS_STATE (f->cell)->f[f->d].v = 
       GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = 0.;
+  else if (GFS_IS_VARIABLE_TRACER_VOF (b->v))
+    GFS_STATE (f->cell)->f[f->d].v = GFS_VARIABLE (f->neighbor, b->v->i);
   else
     GFS_STATE (f->cell)->f[f->d].v = 
       GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v;
-}
-
-static void face_symmetry_vof (FttCellFace * f, GfsBc * b)
-{
-  GFS_STATE (f->cell)->f[f->d].v = GFS_VARIABLE (f->neighbor, b->v->i);
 }
 
 static void bc_write (GtsObject * o, FILE * fp)
@@ -87,9 +84,6 @@ static void bc_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
   else
     gts_file_next_token (fp);
-
-  if (GFS_IS_VARIABLE_TRACER_VOF (bc->v))
-    bc->face_bc = (FttFaceTraverseFunc) face_symmetry_vof;
 }
 
 static void gfs_bc_class_init (GtsObjectClass * klass)
