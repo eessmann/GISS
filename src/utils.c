@@ -258,31 +258,25 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
   if (is_expression)
     *is_expression = TRUE;
   if (fp->type == '{') {
-    gint c, scope;
-
-    expr = g_string_new ("{");
-    scope = fp->scope_max;
-    c = gts_file_getc (fp);
-    while (c != EOF && fp->scope > scope) {
-      g_string_append_c (expr, c);
-      c = gts_file_getc (fp);
-    }
-    g_string_append_c (expr, '}');
-    if (fp->scope != scope) {
-      gts_file_error (fp, "parse error");
-      g_string_free (expr, TRUE);
+    gchar * s = gfs_file_statement (fp);
+    if (fp->type == GTS_ERROR)
       return NULL;
-    }
+    expr = g_string_new ("{");
+    g_string_append (expr, s);
+    g_free (s);
+    g_string_append_c (expr, '}');
     if (is_expression)
       *is_expression = FALSE;
     return expr;
   }
   else {
     static gchar spaces[] = " \t\f\r";
-    static gchar operators[] = "+-*/%<>=&^|?:";
+    static gchar operators[] = "+-*/%<>=&^|?:!";
     gint c, scope = 0;
     gchar * s;
+    gchar empty[] = "", * comments = fp->comments;
 
+    fp->comments = empty;
     expr = g_string_new (fp->token->str);
     s = expr->str;
     while (*s != '\0') {
@@ -301,8 +295,7 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
     while (c != EOF) {
       if (gfs_char_in_string (c, "{}\n")) {
 	fp->next_token = c;
-	g_strchomp (expr->str);
-	return expr;
+	break;
       }
       else if (scope > 0) {
 	while (c != EOF && scope > 0) {
@@ -319,8 +312,7 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
 	}
 	if (!gfs_char_in_string (c, operators)) {
 	  fp->next_token = c;
-	  g_strchomp (expr->str);
-	  return expr;
+	  break;
 	}
 	g_string_append_c (expr, c);
 	c = gts_file_getc (fp);
@@ -345,6 +337,7 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
       }
     }
     g_strchomp (expr->str);
+    fp->comments = comments;
     return expr;
   }
 }
