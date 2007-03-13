@@ -51,8 +51,6 @@ GFS_HDS = \
 	vof.h \
 	utils.h \
 	ocean.h \
-	levelset.h \
-	isocube.h \
 	$(MPI_HDS)
 
 pkginclude_HEADERS = \
@@ -85,9 +83,6 @@ SRC = \
 	vof.c \
 	utils.c \
 	ocean.c \
-	levelset.c \
-	myc.h \
-	myc2d.h \
 	$(GFS_HDS)
 
 libgfs3D_la_LDFLAGS = $(NO_UNDEFINED)\

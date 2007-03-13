@@ -37,5 +37,6 @@
 #include <gerris/adaptive.h>
 #include <gerris/source.h>
 #include <gerris/vof.h>
+#include <gerris/cartesian.h>
 
 #endif /* GFS_H */
