@@ -49,13 +49,13 @@
     double m;
 
     switch (MODEL) {
-    case 0: # Newtonian
+    case 0: /* Newtonian */
       mu = 1.; ty = 0.; N = 1.; break;
-    case 1: # Power-law (shear-thinning)
+    case 1: /* Power-law (shear-thinning) */
       mu = 0.08; ty = 0.; N = 0.5; break;
-    case 2: # Herschel-Bulkley
+    case 2: /* Herschel-Bulkley */
       mu = 0.0672; ty = 0.12; N = 0.5; break;
-    case 3: # Bingham
+    case 3: /* Bingham */
       mu = 1.; ty = 10.; N = 1.; break;
     }
     if (D2 > 0.)
