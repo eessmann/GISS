@@ -1,3 +1,22 @@
+/* Gerris - The GNU Flow Solver
+ * Copyright (C) 2007 National Institute of Water and Atmospheric Research
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.  
+ */
+
 #include <stdlib.h>
 #include "cartesian.h"
 
@@ -6,7 +25,7 @@
 static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
 {
   GfsCartesianGrid * cgd = GFS_CARTESIAN_GRID (*o);
-  guint i, j, taille = 1, taille2 = 0;
+  guint i, j, taille = 1;
 
   /* call read method of parent */
   if (GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->read)
@@ -16,18 +35,18 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
     return;
 
   /* do object-specific read here */
-  if (fp->type == '\n') 
+  if (fp->type == '\n')
     gts_file_next_token (fp);
   if (fp->type != GTS_INT) {
      gts_file_error (fp, "expecting an integer (N)");
      return;
   }
-  cgd->N = atoi(fp->token->str);
+  cgd->N = atoi (fp->token->str);
   gts_file_next_token (fp);
 
-  cgd->n = g_malloc(cgd->N*sizeof(guint));
+  cgd->n = g_malloc (cgd->N*sizeof (guint));
   
-  for (i=0;i<cgd->N;i++) {
+  for (i = 0; i < cgd->N; i++) {
     if (fp->type == '\n') 
       gts_file_next_token (fp);
     if (fp->type != GTS_INT) {
@@ -35,38 +54,37 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     
-    cgd->n[i]=atoi(fp->token->str);
+    cgd->n[i] = atoi (fp->token->str);
     gts_file_next_token (fp);
     taille *= cgd->n[i];
-    taille2 += cgd->n[i];
   }
 
-  cgd->x = g_malloc(cgd->N*sizeof(gint));
+  cgd->x = g_malloc (cgd->N*sizeof (gint));
   
-  for (i=0;i<cgd->N;i++) {
-    cgd->x[i] = g_malloc(cgd->n[i]*sizeof(gdouble));
-    for (j=0;j<cgd->n[i];j++) {
-      if (fp->type == '\n') 
+  for (i = 0; i < cgd->N; i++) {
+    cgd->x[i] = g_malloc (cgd->n[i]*sizeof (gdouble));
+    for (j = 0; j < cgd->n[i]; j++) {
+      if (fp->type == '\n')
 	gts_file_next_token (fp);
       if (fp->type != GTS_FLOAT && fp->type != GTS_INT) {
-        gts_file_error (fp, "expecting a double or integer (x[%d][%d])",i,j);
+        gts_file_error (fp, "expecting a number (x[%d][%d])", i, j);
         return;
       }
-      cgd->x[i][j]=atof(fp->token->str);
+      cgd->x[i][j] = atof (fp->token->str);
       gts_file_next_token (fp);
-    }  
+    }
   }
 
-  cgd->v = g_malloc(taille*sizeof(gdouble));
+  cgd->v = g_malloc (taille*sizeof (gdouble));
   
-  for (i=0;i<taille;i++) {
-    if (fp->type == '\n') 
+  for (i = 0; i < taille; i++) {
+    if (fp->type == '\n')
       gts_file_next_token (fp);
     if (fp->type != GTS_FLOAT && fp->type != GTS_INT) {
       gts_file_error (fp, "expecting a double");
       return;
     }
-    cgd->v[i] = atof(fp->token->str);
+    cgd->v[i] = atof (fp->token->str);
     gts_file_next_token (fp);
   }
 }
@@ -74,30 +92,26 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
 static void gfs_cartesian_grid_write (GtsObject * o, FILE * fp)
 {
   GfsCartesianGrid * cgd = GFS_CARTESIAN_GRID (o);
-  guint i,j, taille = 1, taille2=0;
+  guint i, j, taille = 1;
+
   /* call write method of parent */
   if (GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->write)
     (* GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->write) 
       (o, fp);
 
   /* do object specific write here */
-
-  for (i=0;i<cgd->N;i++) {
+  for (i = 0; i < cgd->N; i++)
     taille *= cgd->n[i];
-    taille2 += cgd->n[i];
-  }
 
-  fprintf (fp,"%d\n",cgd->N);
-  for (i=0;i<cgd->N;i++)
-    fprintf (fp,"%d\n",cgd->n[i]);
+  fprintf (fp, "%d\n", cgd->N);
+  for (i = 0; i < cgd->N; i++)
+    fprintf (fp, "%d\n", cgd->n[i]);
 
-  for (i=0;i<cgd->N;i++) {
-    for (j=0;j<cgd->n[i];j++) {
+  for (i = 0; i < cgd->N; i++)
+    for (j = 0; j < cgd->n[i]; j++)
       fprintf (fp,"%f\n",cgd->x[i][j]);
-    }
-  }
 
-  for (i=0;i<taille;i++)
+  for (i = 0; i < taille; i++)
     fprintf (fp,"%f\n", cgd->v[i]);  
 }
 
@@ -105,20 +119,21 @@ static void gfs_cartesian_grid_destroy (GtsObject * object)
 {
   /* do object-specific cleanup here */
   GfsCartesianGrid * cgd = GFS_CARTESIAN_GRID (object);  
+  guint i;
 
   g_free (cgd->n);
+  for (i = 0; i < cgd->N; i++)
+    g_free (cgd->x[i]);
   g_free (cgd->x);
   g_free (cgd->v);
  
   /* do not forget to call destroy method of the parent */
-  (* GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->destroy) 
-    (object);
+  (* GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->destroy) (object);
 }
 
 static void gfs_cartesian_grid_class_init (GtsObjectClass * klass)
 {
   /* define new methods and overload inherited methods here */
-
   GTS_OBJECT_CLASS (klass)->read = gfs_cartesian_grid_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_cartesian_grid_write;
   GTS_OBJECT_CLASS (klass)->destroy = gfs_cartesian_grid_destroy;
@@ -153,8 +168,6 @@ GfsCartesianGrid * gfs_cartesian_grid_new (GtsObjectClass * klass)
 
   return object;
 }
-
-
 
 static void slice (GfsCartesianGrid * g, guint p, GfsCartesianGrid * s)
 {
@@ -198,11 +211,7 @@ gboolean gfs_cartesian_grid_interpolate (GfsCartesianGrid * g, gdouble * p, gdou
   g_return_val_if_fail (g->N > 0, 0.);
   g_return_val_if_fail (p != NULL, 0.);
 
-
-
   gint i = lookup (g, p[0]);
-
-
   if (i < 0)
     return FALSE;
   gdouble v1, v2;
