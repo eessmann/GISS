@@ -671,6 +671,11 @@ static gdouble cell_t (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
   return sim->time.t;
 }
 
+static gdouble cell_dt (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
+{
+  return sim->advection_params.dt;
+}
+
 static gdouble cell_vorticity (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 {
   return gfs_vorticity (cell, gfs_domain_velocity (domain));
@@ -738,6 +743,7 @@ static void simulation_init (GfsSimulation * object)
     { "cy", "y-coordinate of the center of the cell", cell_cy },
     { "cz", "z-coordinate of the center of the cell", cell_cz },
     { "t",  "Physical time", cell_t },
+    { "dt", "Timestep", cell_dt },
     { "Vorticity", "Norm of the vorticity vector of the velocity field", cell_vorticity },
     { "Divergence", "Divergence of the velocity field", cell_divergence },
     { "Velocity", "Norm of the velocity vector", cell_velocity_norm },
