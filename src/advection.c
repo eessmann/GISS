@@ -684,12 +684,10 @@ static void add_merged (GSList ** merged, FttCell * cell)
       if (neighbor.c[i]) {
 	if (!FTT_CELL_IS_LEAF (neighbor.c[i])) {
 	  FttCellChildren child;
-	  guint j;
-#if FTT_2D3
-	  g_assert_not_implemented ();
-#endif
-	  ftt_cell_children_direction (neighbor.c[i], FTT_OPPOSITE_DIRECTION (i), &child);
-	  for (j = 0; j < FTT_CELLS/2; j++)
+	  guint j, n;
+
+	  n = ftt_cell_children_direction (neighbor.c[i], FTT_OPPOSITE_DIRECTION (i), &child);;
+	  for (j = 0; j < n; j++)
 	    if (GFS_IS_MIXED (child.c[j]) &&
 		GFS_STATE (child.c[j])->solid->merged == cell)
 	      add_merged (merged, child.c[j]);
