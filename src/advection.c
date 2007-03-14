@@ -588,7 +588,8 @@ static gboolean is_small (FttCell * cell)
 
     ftt_cell_neighbors (cell, &n);
     for (d = 0; d < FTT_NEIGHBORS; d++)
-      if (n.c[d] && solid->s[d] > 0. && solid->a/solid->s[d] < 0.5)
+      if (n.c[d] && !GFS_CELL_IS_BOUNDARY (n.c[d]) && solid->s[d] > 0. && 
+	  solid->a/solid->s[d] < 0.5)
 	return TRUE;
   }
   return FALSE;
