@@ -265,7 +265,11 @@ static void refine_surface_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_refine_surface_class ())->parent_class->write) (o, fp);
   fprintf (fp, " { ");
   gts_surface_write (d->surface, fp);
-  fputs ("}\n", fp);
+  fputc ('}', fp);
+  if (d->twod)
+    fputs (" { twod = 1 }\n", fp);
+  else
+    fputc ('\n', fp);
 }
 
 static void refine_surface_read (GtsObject ** o, GtsFile * fp)
@@ -315,8 +319,16 @@ static void refine_surface_read (GtsObject ** o, GtsFile * fp)
     }
     fp->scope_max--;
   }
-
   gts_file_next_token (fp);
+
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_INT, "twod", TRUE},
+      {GTS_NONE}
+    };
+    var[0].data = &refine->twod;
+    gts_file_assign_variables (fp, var);
+  }
 }
 
 static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
@@ -325,9 +337,14 @@ static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
 
   data[0] = refine;
   data[1] = sim;
-  gfs_domain_traverse_cut (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
-			   FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			   (FttCellTraverseCutFunc) refine_cut_cell, data);
+  if (GFS_REFINE_SURFACE (refine)->twod)
+    gfs_domain_traverse_cut_2D (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+				(FttCellTraverseCutFunc) refine_cut_cell, data);
+  else
+    gfs_domain_traverse_cut (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
+			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			     (FttCellTraverseCutFunc) refine_cut_cell, data);
 }
 
 static void gfs_refine_surface_class_init (GfsRefineClass * klass)
