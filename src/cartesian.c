@@ -207,9 +207,10 @@ static gint lookup (GfsCartesianGrid * g, gdouble x)
  */
 gboolean gfs_cartesian_grid_interpolate (GfsCartesianGrid * g, gdouble * p, gdouble * val)
 {
-  g_return_val_if_fail (g != NULL, 0.);
-  g_return_val_if_fail (g->N > 0, 0.);
-  g_return_val_if_fail (p != NULL, 0.);
+  g_return_val_if_fail (g != NULL, FALSE);
+  g_return_val_if_fail (g->N > 0, FALSE);
+  g_return_val_if_fail (p != NULL, FALSE);
+  g_return_val_if_fail (val != NULL, FALSE);
 
   gint i = lookup (g, p[0]);
   if (i < 0)
