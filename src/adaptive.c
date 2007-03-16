@@ -67,10 +67,10 @@ void gfs_cell_fine_init (FttCell * parent, GfsDomain * domain)
   g_return_if_fail (!FTT_CELL_IS_LEAF (parent));
   g_return_if_fail (domain != NULL);
 
-  /* refinement of mixed cell is not implemented (yet) */
-  g_assert (GFS_CELL_IS_BOUNDARY (parent) || GFS_IS_FLUID (parent));
-
   gfs_cell_init (parent, domain);
+
+  /* fixme: refinement of mixed cell is not implemented (yet) */
+  g_assert (GFS_CELL_IS_BOUNDARY (parent) || GFS_IS_FLUID (parent));
 
   i = domain->variables;
   while (i) {
@@ -647,41 +647,38 @@ static gdouble refine_cost (FttCell * cell, GfsSimulation * sim)
 
 static void compute_cost (FttCell * cell, AdaptParams * p)
 {
-  p->nc++;
-  if (!GFS_IS_MIXED (cell)) {
-    gdouble cost = refine_cost (cell, p->sim);
+  gdouble cost = refine_cost (cell, p->sim);
 
-    GFS_VARIABLE (cell, p->hcoarsev->i) = GFS_VARIABLE (cell, p->hfinev->i) = 0.;
-    if (FTT_CELL_IS_LEAF (cell)) {
-      CELL_COST (cell) = cost;
-    }
-    else {
-      FttCellChildren child;
-      FttCellNeighbors n;
-      guint i, level = ftt_cell_level (cell);
-      FttCell * parent;
-      gdouble cmax = 0.;
+  GFS_VARIABLE (cell, p->hcoarsev->i) = GFS_VARIABLE (cell, p->hfinev->i) = 0.;
+  if (FTT_CELL_IS_LEAF (cell))
+    CELL_COST (cell) = cost;
+  else {
+    FttCellChildren child;
+    FttCellNeighbors n;
+    guint i, level = ftt_cell_level (cell);
+    FttCell * parent;
+    gdouble cmax = 0.;
 
-      ftt_cell_children (cell, &child);
-      for (i = 0; i < FTT_CELLS; i++)
-	if (child.c[i] && CELL_COST (child.c[i]) > cmax)
-	  cmax = CELL_COST (child.c[i]);
-      if (cmax > cost) cost = cmax;
-      if (cost > CELL_COST (cell)) CELL_COST (cell) = cost;
+    ftt_cell_children (cell, &child);
+    for (i = 0; i < FTT_CELLS; i++)
+      if (child.c[i] && CELL_COST (child.c[i]) > cmax)
+	cmax = CELL_COST (child.c[i]);
+    if (cmax > cost) cost = cmax;
+    if (cost > CELL_COST (cell)) CELL_COST (cell) = cost;
 
-      ftt_cell_neighbors (cell, &n);
-      for (i = 0; i < FTT_NEIGHBORS; i++)
-	if (n.c[i] && ftt_cell_level (n.c[i]) == level && 
-	    (parent = ftt_cell_parent (n.c[i])) &&
-	    cmax > CELL_COST (parent))
-	  CELL_COST (parent) = cmax;
-    }
+    ftt_cell_neighbors (cell, &n);
+    for (i = 0; i < FTT_NEIGHBORS; i++)
+      if (n.c[i] && ftt_cell_level (n.c[i]) == level && 
+	  (parent = ftt_cell_parent (n.c[i])) &&
+	  cmax > CELL_COST (parent))
+	CELL_COST (parent) = cmax;
   }
+  p->nc++;
 }
 
 static void store_cost (FttCell * cell, AdaptParams * p)
 {
-  GFS_VARIABLE (cell, p->c->i) = GFS_IS_MIXED (cell) ? 0. : CELL_COST (cell);
+  GFS_VARIABLE (cell, p->c->i) = CELL_COST (cell);
 }
 
 static guint minlevel (FttCell * cell, GfsSimulation * sim)
@@ -718,26 +715,23 @@ static guint maxlevel (FttCell * cell, GfsSimulation * sim)
 
 static void fill_heaps (FttCell * cell, AdaptParams * p)
 {
-  /* refinement of solid cells not implemented (yet) */
-  if (!GFS_IS_MIXED (cell)) {
-    guint level = ftt_cell_level (cell);
-    FttCell * parent = ftt_cell_parent (cell);
-
-    if (level < maxlevel (cell, p->sim))
-      GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, p->hcoarsev->i)) = 
-	gts_eheap_insert_with_key (p->hcoarse, cell, - CELL_COST (cell));
-    if (parent && !GFS_IS_MIXED (parent) && GFS_VARIABLE (parent, p->hfinev->i) == 0. &&
-	level > minlevel (parent, p->sim))
-      GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (parent, p->hfinev->i)) = 
-	gts_eheap_insert_with_key (p->hfine, parent, CELL_COST (parent));
-  }
+  guint level = ftt_cell_level (cell);
+  FttCell * parent = ftt_cell_parent (cell);
+  
+  if (level < maxlevel (cell, p->sim))
+    GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, p->hcoarsev->i)) = 
+      gts_eheap_insert_with_key (p->hcoarse, cell, - CELL_COST (cell));
+  if (parent && !GFS_CELL_IS_PERMANENT (parent) && GFS_VARIABLE (parent, p->hfinev->i) == 0. &&
+      level > minlevel (parent, p->sim))
+    GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (parent, p->hfinev->i)) = 
+      gts_eheap_insert_with_key (p->hfine, parent, CELL_COST (parent));
 }
 
 static gboolean fine_cell_coarsenable (FttCell * cell, AdaptParams * p)
 {
   if (GFS_CELL_IS_BOUNDARY (cell))
     return TRUE;
-  if (GFS_IS_MIXED (cell))
+  if (GFS_CELL_IS_PERMANENT (cell))
     return FALSE;
   if (CELL_COST (cell) >= -p->clim)
     return FALSE;
@@ -878,8 +872,6 @@ static gboolean coarsen_cell (FttCell * cell, AdaptLocalParams * p)
 {
   if (GFS_CELL_IS_BOUNDARY (cell))
     return TRUE;
-  if (GFS_IS_MIXED (cell))
-    return FALSE;
   return COARSENABLE (cell, p);
 }
 
@@ -922,25 +914,24 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
 {
   p->nc++;
   REFINABLE (cell, p) = FALSE;
-  COARSENABLE (cell, p) = TRUE;
-  if (!GFS_IS_MIXED (cell)) {
-    guint level = ftt_cell_level (cell);
-    GSList * i = p->sim->adapts->items;
-    while (i) {
-      GfsAdapt * a = i->data;
-      if (a->active) {
-	if (level < gfs_function_value (a->maxlevel, cell) &&
-	    (* a->cost) (cell, a) > a->cmax) {
-	  REFINABLE (cell, p) = TRUE;
-	  COARSENABLE (cell, p) = FALSE;
-	  return;
-	}
-	if (level < gfs_function_value (a->minlevel, cell) ||
-	    (* a->cost) (cell, a) > a->cmax/4.)
-	  COARSENABLE (cell, p) = FALSE;
+  COARSENABLE (cell, p) = !GFS_CELL_IS_PERMANENT (cell);
+
+  guint level = ftt_cell_level (cell);
+  GSList * i = p->sim->adapts->items;
+  while (i) {
+    GfsAdapt * a = i->data;
+    if (a->active) {
+      if (level < gfs_function_value (a->maxlevel, cell) &&
+	  (* a->cost) (cell, a) > a->cmax) {
+	REFINABLE (cell, p) = TRUE;
+	COARSENABLE (cell, p) = FALSE;
+	return;
       }
-      i = i->next;
+      if (level < gfs_function_value (a->minlevel, cell) ||
+	  (* a->cost) (cell, a) > a->cmax/4.)
+	COARSENABLE (cell, p) = FALSE;
     }
+    i = i->next;
   }
 }
 

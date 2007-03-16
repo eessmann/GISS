@@ -62,7 +62,8 @@ typedef enum {
   GFS_FLAG_BOUNDARY          = 1 << (FTT_FLAG_USER + 1),
   GFS_FLAG_DIRICHLET         = 1 << (FTT_FLAG_USER + 2),
   GFS_FLAG_GRADIENT_BOUNDARY = 1 << (FTT_FLAG_USER + 3),
-  GFS_FLAG_USER =                    FTT_FLAG_USER + 4 /* user flags start here */
+  GFS_FLAG_PERMANENT         = 1 << (FTT_FLAG_USER + 4),
+  GFS_FLAG_USER =                    FTT_FLAG_USER + 5 /* user flags start here */
 } GfsFlags;
 
 #define GFS_STATE(cell)               ((GfsStateVector *) (cell)->data)
@@ -86,6 +87,7 @@ typedef enum {
 #define GFS_IS_MIXED(cell)      ((cell) != NULL &&\
                                  GFS_STATE (cell)->solid != NULL)
 #define GFS_CELL_IS_BOUNDARY(cell) (((cell)->flags & GFS_FLAG_BOUNDARY) != 0)
+#define GFS_CELL_IS_PERMANENT(cell) (((cell)->flags & GFS_FLAG_PERMANENT) != 0)
 #define GFS_CELL_IS_GRADIENT_BOUNDARY(cell) (((cell)->flags & GFS_FLAG_GRADIENT_BOUNDARY) != 0)
 
 FttCellFace           gfs_cell_face                 (FttCell * cell,

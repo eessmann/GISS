@@ -896,6 +896,11 @@ static void is_diffusion (GfsSource * s, gboolean * diffusion)
   *diffusion = (GFS_IS_SOURCE_DIFFUSION (s) != NULL);
 }
 
+static void set_permanent (FttCell * cell)
+{
+  cell->flags |= GFS_FLAG_PERMANENT;
+}
+
 /**
  * gfs_simulation_refine:
  * @sim: a #GfsSimulation.
@@ -940,6 +945,8 @@ void gfs_simulation_refine (GfsSimulation * sim)
 						 (FttCellCleanupFunc) gfs_cell_cleanup, NULL, 
 						 NULL);
     gfs_domain_match (domain);
+    gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			       (FttCellTraverseFunc) set_permanent, NULL);
     gfs_domain_timer_stop (domain, "solid_fractions");
   }
   gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) check_solid_fractions, &nf);
