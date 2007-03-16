@@ -120,7 +120,7 @@ void gfs_cell_non_advected_face_values (FttCell * cell,
   }
 }
 
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
 
 static gdouble interpolate_1D1 (const FttCell * cell,
 				FttDirection dright,
@@ -162,6 +162,44 @@ static gdouble interpolate_1D1 (const FttCell * cell,
 	s2 = v2 = 0.;
     }
     return s2 > 0. ? (v2*(s1 - 1. + 2.*x) + v1*(s2 + 1. - 2.*x))/(s1 + s2) : v1;
+  }
+  return s->f[dleft].v;
+}
+
+#elif FTT_2D3
+
+static gdouble interpolate_1D1 (const FttCell * cell,
+				FttDirection dright,
+				FttDirection dup,
+				gdouble x)
+{
+  FttCell * n;
+  FttDirection dleft;
+  GfsStateVector * s;
+
+  g_return_val_if_fail (cell != NULL, 0.);
+
+  dleft = FTT_OPPOSITE_DIRECTION (dright);
+  n = ftt_cell_neighbor (cell, dup);
+  s = GFS_STATE (cell);
+  if (n && !GFS_CELL_IS_BOUNDARY (n)) {
+    /* check for corner refinement violation (topology.fig) */
+    g_assert (ftt_cell_level (n) == ftt_cell_level (cell));
+
+    if (FTT_CELL_IS_LEAF (n))
+      return GFS_STATE (n)->f[dleft].v*x + s->f[dleft].v*(1. - x);
+    else {
+      FttDirection d[FTT_DIMENSION];
+
+      d[0] = dleft;
+      d[1] = FTT_OPPOSITE_DIRECTION (dup);
+      g_assert (d[0] < FTT_NEIGHBORS_2D);
+      g_assert (d[1] < FTT_NEIGHBORS_2D);
+      d[2] = 0;
+      n = ftt_cell_child_corner (n, d);
+      if (n)
+	return (GFS_STATE (n)->f[dleft].v*4.*x + s->f[dleft].v*(3. - 4.*x))/3.;
+    }
   }
   return s->f[dleft].v;
 }
