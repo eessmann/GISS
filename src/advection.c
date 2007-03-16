@@ -890,7 +890,7 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->u = NULL;
   par->g = NULL;
   par->cfl = 0.8;
-  par->dt = 1.;
+  par->dt = 0.;
   par->gradient = gfs_center_gradient;
   par->upwinding = GFS_FACE_UPWINDING;
   par->use_centered_velocity = TRUE;
