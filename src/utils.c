@@ -27,6 +27,7 @@
 #include "config.h"
 #include "solid.h"
 #include "simulation.h"
+#include "cartesian.h"
 
 /**
  * @c: a character.
@@ -189,6 +190,8 @@ struct _GfsFunction {
   GfsFunctionFunc f;
   gchar * sname;
   GtsSurface * s;
+  GfsCartesianGrid * g;
+  guint index[4];
   GfsVariable * v;
   GfsDerivedVariable * dv;
   gdouble val;
@@ -216,6 +219,77 @@ static GtsSurface * read_surface (gchar * name, GtsFile * fp)
   fclose (fptr);
   return s;
 }
+
+static GfsCartesianGrid * read_cartesian_grid (gchar * name, GtsFile * fp)
+{
+  FILE * fptr = fopen (name, "r");
+  GtsFile * fp1;
+  GfsCartesianGrid * grid;
+  GtsObjectClass * klass;
+
+  if (fptr == NULL) {
+    gts_file_error (fp, "cannot open file `%s'", name);
+    return NULL;
+  }
+
+  fp1 = gts_file_new (fptr);
+
+  klass = gfs_cartesian_grid_class ();
+
+  grid = gfs_cartesian_grid_new (klass);
+
+  (* klass->read)((GtsObject **)&grid, fp1);
+
+  if (fp1->type == GTS_ERROR) {
+    gts_file_error (fp, "%s:%d:%d: %s", name, fp1->line, fp1->pos, fp1->error);
+    gts_object_destroy (GTS_OBJECT(grid));
+    grid = NULL;
+  }
+  gts_file_destroy (fp1);
+  fclose (fptr);
+  return grid;
+}
+
+static gboolean fit_index_dimension (GfsCartesianGrid * grid, guint * val, GtsFile * fp)
+{
+  guint i,j;
+  gchar liste[]={'x','y','z','t'};
+
+  if (grid->N > 4) 
+    return FALSE;
+
+  for(i = 0; i < grid->N; i++) {
+    for (j = 0; j < 4 && *grid->name[i] != liste[j]; j++);
+    if (j == 4)
+      return FALSE;
+    val[i]=j;
+  }
+  //  fprintf(stderr,"%d %d %d %d\n",val[0],val[1],val[2],val[3]);
+  return TRUE;
+}
+
+static gdouble interpolated_cgd (GfsFunction * f, FttVector * p)
+{
+  gdouble vecteur[4];
+  gdouble val;
+  guint i;
+
+  for (i = 0; i < f->g->N; i++)
+    switch (f->index[i]) {
+    case 0: vecteur[i] = p->x; break;
+    case 1: vecteur[i] = p->y; break;
+    case 2: vecteur[i] = p->z; break;
+    case 3: vecteur[i] = gfs_object_simulation (f)->time.t; break;
+    default: g_assert_not_reached ();
+    }
+    
+  if(!gfs_cartesian_grid_interpolate (f->g, vecteur, &val))
+    return 0.;
+  return val;
+}
+
+
+
 
 static gboolean load_module (GfsFunction * f, GtsFile * fp, gchar * mname)
 {
@@ -475,6 +549,16 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	gts_file_next_token (fp);
 	return;
       }
+      else if (strlen (f->expr->str) > 3 &&
+	       !strcmp (&(f->expr->str[strlen (f->expr->str) - 4]), ".cgd")) {
+	if ((f->g = read_cartesian_grid (f->expr->str, fp)) == NULL)
+	  return;
+	if (!fit_index_dimension (f->g, f->index, fp))
+	  return;
+	f->sname = g_strdup (f->expr->str);
+	gts_file_next_token (fp);
+	  return;
+      }
       else if ((f->v = gfs_variable_from_name (domain->variables, f->expr->str))) {
 	gts_file_next_token (fp);
 	return;
@@ -635,6 +719,8 @@ static void function_write (GtsObject * o, FILE * fp)
     fprintf (fp, " %s", f->v->name);
   else if (f->s)
     fprintf (fp, " %s", f->sname);
+  else if (f->g)
+    fprintf (fp, " %s", f->sname);
   else
     fprintf (fp, " %g", f->val);
 }
@@ -647,6 +733,10 @@ static void function_destroy (GtsObject * object)
   if (f->expr) g_string_free (f->expr, TRUE);
   if (f->s) {
     gts_object_destroy (GTS_OBJECT (f->s));
+    g_free (f->sname);
+  }
+  if (f->g) {
+    gts_object_destroy (GTS_OBJECT (f->g));
     g_free (f->sname);
   }
 
@@ -770,9 +860,13 @@ gdouble gfs_function_value (GfsFunction * f, FttCell * cell)
 
   if (f->s) {
     FttVector p;
-
     gfs_cell_cm (cell, &p);
     return interpolated_value (f, &p);
+  }
+  else if (f->g) {
+    FttVector p;
+    gfs_cell_cm (cell, &p);
+    return interpolated_cgd (f, &p);
   }
   else if (f->v)
     return GFS_VARIABLE (cell, f->v->i);

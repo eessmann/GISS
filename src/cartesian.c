@@ -35,7 +35,8 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
     return;
 
   /* do object-specific read here */
-  if (fp->type == '\n')
+
+  while (fp->type == '\n') 
     gts_file_next_token (fp);
   if (fp->type != GTS_INT) {
      gts_file_error (fp, "expecting an integer (N)");
@@ -44,10 +45,21 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
   cgd->N = atoi (fp->token->str);
   gts_file_next_token (fp);
 
-  cgd->n = g_malloc (cgd->N*sizeof (guint));
+  cgd->name = g_malloc0 ((cgd->N + 1)*sizeof(char*));
+
+  for (i = 0; i < cgd->N + 1; i++) {
+    if (fp->type != GTS_STRING) {
+      gts_file_error (fp, "expecting a string (name[%d])", i);
+      return;
+    } 
+    cgd->name[i] = g_strdup (fp->token->str);
+    gts_file_next_token (fp);
+  }
+
+  cgd->n = g_malloc(cgd->N*sizeof(guint));
   
   for (i = 0; i < cgd->N; i++) {
-    if (fp->type == '\n') 
+    while (fp->type == '\n') 
       gts_file_next_token (fp);
     if (fp->type != GTS_INT) {
       gts_file_error (fp, "expecting an integer (n[%d])", i);
@@ -59,7 +71,7 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
     taille *= cgd->n[i];
   }
 
-  cgd->x = g_malloc (cgd->N*sizeof (gint));
+  cgd->x = g_malloc0 (cgd->N*sizeof (gint));
   
   for (i = 0; i < cgd->N; i++) {
     cgd->x[i] = g_malloc (cgd->n[i]*sizeof (gdouble));
@@ -103,9 +115,12 @@ static void gfs_cartesian_grid_write (GtsObject * o, FILE * fp)
   for (i = 0; i < cgd->N; i++)
     taille *= cgd->n[i];
 
-  fprintf (fp, "%d\n", cgd->N);
-  for (i = 0; i < cgd->N; i++)
-    fprintf (fp, "%d\n", cgd->n[i]);
+  fprintf (fp, "%d ", cgd->N);
+  for (i = 0; i < cgd->N+1; i++)
+    fprintf (fp, "%s ", cgd->name[i]);
+  fputc ('\n', fp);
+  for (i=0;i<cgd->N;i++)
+    fprintf (fp,"%d\n",cgd->n[i]);
 
   for (i = 0; i < cgd->N; i++)
     for (j = 0; j < cgd->n[i]; j++)
@@ -119,12 +134,19 @@ static void gfs_cartesian_grid_destroy (GtsObject * object)
 {
   /* do object-specific cleanup here */
   GfsCartesianGrid * cgd = GFS_CARTESIAN_GRID (object);  
-  guint i;
 
+  guint i;
+  if (cgd->name) {
+    for (i = 0; i < cgd->N+1; i++)
+      g_free (cgd->name[i]);
+    g_free (cgd->name);
+  }
   g_free (cgd->n);
-  for (i = 0; i < cgd->N; i++)
-    g_free (cgd->x[i]);
-  g_free (cgd->x);
+  if (cgd->x) {
+    for (i = 0; i < cgd->N; i++)
+      g_free (cgd->x[i]);
+    g_free (cgd->x);
+  }
   g_free (cgd->v);
  
   /* do not forget to call destroy method of the parent */
