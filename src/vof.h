@@ -78,10 +78,18 @@ void     gfs_tracer_vof_advection  (GfsDomain * domain,
 				    GfsAdvectionParams * par);
 gdouble  gfs_vof_face_value        (const FttCellFace * face, 
 				    GfsVariableTracerVOF * t);
+guint    gfs_vof_plane_facet       (FttCell * cell,
+				    FttVector * m,
+				    gdouble alpha,
+				    FttVector * p);
 guint    gfs_vof_facet             (FttCell * cell,
 				    GfsVariableTracerVOF * t,
 				    FttVector * p,
 				    FttVector * m);
+gboolean gfs_vof_plane_center      (FttCell * cell, 
+				    FttVector * m, 
+				    gdouble alpha, 
+				    FttVector * p);
 gboolean gfs_vof_center            (FttCell * cell,
 				    GfsVariableTracerVOF * t,
 				    FttVector * p);

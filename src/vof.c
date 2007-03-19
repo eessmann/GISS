@@ -1076,6 +1076,81 @@ gdouble gfs_vof_face_value (const FttCellFace * face, GfsVariableTracerVOF * t)
 }
 
 /**
+ * gfs_vof_plane_facet:
+ * @cell: a #FttCell.
+ * @m: the plane normal.
+ * @alpha: the plane position.
+ * @p: a #FttVector array (of size 2 in 2D and 6 in 3D)
+ *
+ * Fills @p with the coordinates of points defining the
+ * VOF-reconstructed interface facet defined by @m and @alpha.
+ *
+ * Returns: the number of points defining the facet.
+ */
+guint gfs_vof_plane_facet (FttCell * cell,
+			   FttVector * m,
+			   gdouble alpha,
+			   FttVector * p)
+{
+  g_return_val_if_fail (cell != NULL, 0);
+  g_return_val_if_fail (m != NULL, 0);
+  g_return_val_if_fail (p != NULL, 0);
+
+  guint n = 0;
+  FttVector q;
+  ftt_cell_pos (cell, &q);
+  gdouble h = ftt_cell_size (cell);
+
+#if FTT_2D
+  gdouble x, y;
+
+  if (fabs (m->y) > 1e-4) {
+    y = (alpha - m->x)/m->y;
+    if (y >= 0. && y <= 1.) {
+      p[n].x = q.x + h/2.; p[n].y = q.y + h*(y - 0.5); p[n++].z = 0.;
+    }
+  }
+  if (fabs (m->x) > 1e-4) {
+    x = (alpha - m->y)/m->x;
+    if (x >= 0. && x <= 1.) {
+      p[n].x = q.x + h*(x - 0.5); p[n].y = q.y + h/2.; p[n++].z = 0.;
+    }
+  }
+  if (fabs (m->y) > 1e-4) {
+    y = alpha/m->y;
+    if (y >= 0. && y <= 1.) {
+      p[n].x = q.x - h/2.; p[n].y = q.y + h*(y - 0.5); p[n++].z = 0.;
+    }
+  }
+  if (fabs (m->x) > 1e-4) {
+    x = alpha/m->x;
+    if (x >= 0. && x <= 1.) {
+      p[n].x = q.x + h*(x - 0.5); p[n].y = q.y - h/2.; p[n++].z = 0.;
+    }
+  }
+  g_assert (n <= 2);
+#else /* 3D */
+  gdouble max = fabs (m->x);
+  FttComponent c = FTT_X;
+  if (fabs (m->y) > max) {
+    max = fabs (m->y);
+    c = FTT_Y;
+  }
+  if (fabs (m->z) > max)
+    c = FTT_Z;
+  q.x -= h/2.; q.y -= h/2.; q.z -= h/2.;
+  (&q.x)[c] += h*alpha/(&m->x)[c];
+  FttVector m1 = *m;
+  gts_vector_normalize (&m1.x);
+
+  FttDirection d[12];
+  n = gfs_cut_cube_vertices (cell, -1, &q, &m1, p, d, NULL, NULL);
+  g_assert (n <= 6);
+#endif /* 3D */
+  return n;
+}
+
+/**
  * gfs_vof_facet:
  * @cell: a #FttCell.
  * @t: a #GfsVariableTracerVOF.
@@ -1102,62 +1177,42 @@ guint gfs_vof_facet (FttCell * cell,
   if (GFS_IS_FULL (GFS_VARIABLE (cell, GFS_VARIABLE1 (t)->i)))
     return 0;
   else {
-    gdouble alpha = GFS_VARIABLE (cell, t->alpha->i);
-    guint n = 0;
-    FttVector q;
-    ftt_cell_pos (cell, &q);
-    gdouble h = ftt_cell_size (cell);
-
     FttComponent c;
     for (c = 0; c < FTT_DIMENSION; c++)
       (&m->x)[c] = GFS_VARIABLE (cell, t->m[c]->i);
-#if FTT_2D
-    gdouble x, y;
-
-    if (fabs (m->y) > 1e-4) {
-      y = (alpha - m->x)/m->y;
-      if (y >= 0. && y <= 1.) {
-	p[n].x = q.x + h/2.; p[n].y = q.y + h*(y - 0.5); p[n++].z = 0.;
-      }
-    }
-    if (fabs (m->x) > 1e-4) {
-      x = (alpha - m->y)/m->x;
-      if (x >= 0. && x <= 1.) {
-	p[n].x = q.x + h*(x - 0.5); p[n].y = q.y + h/2.; p[n++].z = 0.;
-      }
-    }
-    if (fabs (m->y) > 1e-4) {
-      y = alpha/m->y;
-      if (y >= 0. && y <= 1.) {
-	p[n].x = q.x - h/2.; p[n].y = q.y + h*(y - 0.5); p[n++].z = 0.;
-      }
-    }
-    if (fabs (m->x) > 1e-4) {
-      x = alpha/m->x;
-      if (x >= 0. && x <= 1.) {
-	p[n].x = q.x + h*(x - 0.5); p[n].y = q.y - h/2.; p[n++].z = 0.;
-      }
-    }
-    g_assert (n <= 2);
-#else /* 3D */
-    gdouble max = fabs (m->x);
-    c = FTT_X;
-    if (fabs (m->y) > max) {
-      max = fabs (m->y);
-      c = FTT_Y;
-    }
-    if (fabs (m->z) > max)
-      c = FTT_Z;
-    q.x -= h/2.; q.y -= h/2.; q.z -= h/2.;
-    (&q.x)[c] += h*alpha/(&m->x)[c];
-    gts_vector_normalize (&m->x);
-
-    FttDirection d[12];
-    n = gfs_cut_cube_vertices (cell, -1, &q, m, p, d, NULL, NULL);
-    g_assert (n <= 6);
-#endif /* 3D */
-    return n;
+    return gfs_vof_plane_facet (cell, m, GFS_VARIABLE (cell, t->alpha->i), p);
   }
+}
+
+/**
+ * gfs_vof_plane_center:
+ * @cell: a #FttCell.
+ * @m: the plane normal.
+ * @alpha: the plane position.
+ * @p: a #FttVector.
+ *
+ * Fills @p with the (approximate) coordinates of the center
+ * of mass of the VOF-reconstructed interface facet defined by @m and @alpha.
+ *
+ * Returns: %TRUE if the cell contains the interface, %FALSE otherwise.
+ */
+gboolean gfs_vof_plane_center (FttCell * cell, FttVector * m, gdouble alpha, FttVector * p)
+{
+  g_return_val_if_fail (cell != NULL, FALSE);
+  g_return_val_if_fail (m != NULL, FALSE);
+  g_return_val_if_fail (p != NULL, FALSE);
+
+  FttVector q[6];
+  guint i, nv = gfs_vof_plane_facet (cell, m, alpha, q);
+  if (nv > 0) {
+    p->x = p->y = p->z = 0.;
+    for (i = 0; i < nv; i++) {
+      p->x += q[i].x; p->y += q[i].y; p->z += q[i].z;
+    }
+    p->x /= nv; p->y /= nv; p->z /= nv;
+    return TRUE;
+  }
+  return FALSE;
 }
 
 /**
@@ -1165,7 +1220,6 @@ guint gfs_vof_facet (FttCell * cell,
  * @cell: a #FttCell.
  * @t: a #GfsVariableTracerVOF.
  * @p: a #FttVector.
- * @m: a #FttVector.
  *
  * Fills @p with the (approximate) coordinates of the center
  * of mass of the VOF-reconstructed interface facet defined by @t.
