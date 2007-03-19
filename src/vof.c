@@ -128,21 +128,31 @@ void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 
   g_return_if_fail (m != NULL);
   g_return_if_fail (p != NULL);
-  g_return_if_fail (m->x >= 0. && m->y >= 0.);
 
+  n = *m;
+  if (n.x < 0.) {
+    alpha -= n.x;
+    n.x = - n.x;
+  }
+  if (n.y < 0.) {
+    alpha -= n.y;
+    n.y = - n.y;
+  }
+
+  p->z = 0.;
   if (alpha <= 0.) {
     p->x = p->y = 0.;
     return;
   }
 
-  if (alpha >= m->x + m->y) {
+  if (alpha >= n.x + n.y) {
     p->x = p->y = 0.5;
     return;
   }
 
   g_return_if_fail (a > 0. && a < 1.);
 
-  n = *m; n.x += 1e-4; n.y += 1e-4;
+  n.x += 1e-4; n.y += 1e-4;
 
   p->x = p->y = alpha*alpha*alpha;
 
@@ -160,6 +170,11 @@ void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
   
   p->x /= 6.*n.x*n.x*n.y*a;
   p->y /= 6.*n.x*n.y*n.y*a;
+
+  if (m->x < 0.)
+    p->x = 1. - p->x;
+  if (m->y < 0.)
+    p->y = 1. - p->y;
 }
 
 #if (!FTT_2D)
@@ -315,21 +330,34 @@ void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 
   g_return_if_fail (m != NULL);
   g_return_if_fail (p != NULL);
-  g_return_if_fail (m->x >= 0. && m->y >= 0. && m->z >= 0.);
+
+  n = *m;
+  if (n.x < 0.) {
+    alpha -= n.x;
+    n.x = - n.x;
+  }
+  if (n.y < 0.) {
+    alpha -= n.y;
+    n.y = - n.y;
+  }  
+  if (n.z < 0.) {
+    alpha -= n.z;
+    n.z = - n.z;
+  }  
 
   if (alpha <= 0.) {
     p->x = p->y = p->z = 0.;
     return;
   }
 
-  if (alpha >= m->x + m->y + m->z) {
+  if (alpha >= n.x + n.y + n.z) {
     p->x = p->y = p->z = 0.5;
     return;
   }
 
   g_return_if_fail (a > 0. && a < 1.);
 
-  n = *m; n.x += 1e-4; n.y += 1e-4; n.z += 1e-4;
+  n.x += 1e-4; n.y += 1e-4; n.z += 1e-4;
 
   amax = n.x + n.y + n.z;
   p->x = p->y = p->z = alpha*alpha*alpha*alpha;
@@ -375,6 +403,10 @@ void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 
   b = 24.*n.x*n.y*n.z*a;
   p->x /= b*n.x; p->y /= b*n.y; p->z /= b*n.z;
+
+  if (m->x < 0.) p->x = 1. - p->x;
+  if (m->y < 0.) p->y = 1. - p->y;
+  if (m->z < 0.) p->z = 1. - p->z;
 }
 #endif /* 3D */
 

@@ -40,6 +40,7 @@ gdouble gfs_line_alpha             (FttVector * m,
 #if FTT_2D
 #  define gfs_plane_volume         gfs_line_area
 #  define gfs_plane_alpha          gfs_line_alpha
+#  define gfs_plane_center         gfs_line_center
 #else /* 3D */
 gdouble gfs_plane_volume           (FttVector * m, 
 				    gdouble alpha);
