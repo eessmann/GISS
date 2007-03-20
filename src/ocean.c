@@ -296,6 +296,13 @@ static void ocean_run (GfsSimulation * sim)
 
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p);
 
+    i = domain->variables;
+    while (i) {
+      if (!GFS_IS_VARIABLE_TRACER (i->data))
+	gfs_domain_variable_centered_sources (domain, i->data, i->data, sim->advection_params.dt);
+      i = i->next;
+    }
+
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
     gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., FALSE); 
@@ -669,6 +676,13 @@ static void ocean_run (GfsSimulation * sim)
 	t->advection.dt = sim->advection_params.dt;
 	gfs_tracer_advection_diffusion (domain, &t->advection);
       }
+      i = i->next;
+    }
+
+    i = domain->variables;
+    while (i) {
+      if (!GFS_IS_VARIABLE_TRACER (i->data))
+	gfs_domain_variable_centered_sources (domain, i->data, i->data, sim->advection_params.dt);
       i = i->next;
     }
 
