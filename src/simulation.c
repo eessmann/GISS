@@ -515,15 +515,8 @@ static void simulation_run (GfsSimulation * sim)
 			p, sim->physical_params.alpha, g);
     gfs_variables_swap (p, pmac);
 
-    i = domain->variables;
-    while (i) {
-      if (!GFS_IS_VARIABLE_TRACER (i->data))
-	gfs_domain_variable_centered_sources (domain, i->data, i->data, sim->advection_params.dt);
-      i = i->next;
-    }
-
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
-    
+
     gfs_centered_velocity_advection_diffusion (domain,
 					       FTT_DIMENSION,
 					       &sim->advection_params,
@@ -1378,13 +1371,6 @@ static void advection_run (GfsSimulation * sim)
 			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity,
 			      gfs_domain_velocity (domain));
 
-    GSList * i = domain->variables;
-    while (i) {
-      if (!GFS_IS_VARIABLE_TRACER (i->data))
-	gfs_domain_variable_centered_sources (domain, i->data, i->data, sim->advection_params.dt);
-      i = i->next;
-    }
-
     advance_tracers (domain, sim->advection_params.dt);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
@@ -1528,13 +1514,6 @@ static void poisson_run (GfsSimulation * sim)
       data[1] = res1;
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) copy_res, data);
-    }
-
-    i = domain->variables;
-    while (i) {
-      if (!GFS_IS_VARIABLE_TRACER (i->data))
-	gfs_domain_variable_centered_sources (domain, i->data, i->data, sim->advection_params.dt);
-      i = i->next;
     }
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
