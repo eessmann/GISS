@@ -238,7 +238,7 @@ static GfsCartesianGrid * read_cartesian_grid (gchar * name, GtsFile * fp)
 
   grid = gfs_cartesian_grid_new (klass);
 
-  (* klass->read)((GtsObject **)&grid, fp1);
+  (* klass->read) ((GtsObject **) &grid, fp1);
 
   if (fp1->type == GTS_ERROR) {
     gts_file_error (fp, "%s:%d:%d: %s", name, fp1->line, fp1->pos, fp1->error);
@@ -252,19 +252,22 @@ static GfsCartesianGrid * read_cartesian_grid (gchar * name, GtsFile * fp)
 
 static gboolean fit_index_dimension (GfsCartesianGrid * grid, guint * val, GtsFile * fp)
 {
-  guint i,j;
-  gchar liste[]={'x','y','z','t'};
+  guint i, j;
+  gchar liste[] = {'x','y','z','t'};
 
-  if (grid->N > 4) 
+  if (grid->N > 4) {
+    gts_file_error (fp, "Cartesian grids can only use four dimensions or less");
     return FALSE;
+  }
 
   for(i = 0; i < grid->N; i++) {
     for (j = 0; j < 4 && *grid->name[i] != liste[j]; j++);
-    if (j == 4)
+    if (j == 4) {
+      gts_file_error (fp, "unknown Cartesian grid index `%s'", grid->name[i]);
       return FALSE;
-    val[i]=j;
+    }
+    val[i] = j;
   }
-  //  fprintf(stderr,"%d %d %d %d\n",val[0],val[1],val[2],val[3]);
   return TRUE;
 }
 
@@ -282,14 +285,11 @@ static gdouble interpolated_cgd (GfsFunction * f, FttVector * p)
     case 3: vecteur[i] = gfs_object_simulation (f)->time.t; break;
     default: g_assert_not_reached ();
     }
-    
-  if(!gfs_cartesian_grid_interpolate (f->g, vecteur, &val))
+
+  if (!gfs_cartesian_grid_interpolate (f->g, vecteur, &val))
     return 0.;
   return val;
 }
-
-
-
 
 static gboolean load_module (GfsFunction * f, GtsFile * fp, gchar * mname)
 {
@@ -557,7 +557,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	  return;
 	f->sname = g_strdup (f->expr->str);
 	gts_file_next_token (fp);
-	  return;
+	return;
       }
       else if ((f->v = gfs_variable_from_name (domain->variables, f->expr->str))) {
 	gts_file_next_token (fp);
@@ -717,9 +717,7 @@ static void function_write (GtsObject * o, FILE * fp)
     fprintf (fp, " %s", g_module_name (f->module));
   else if (f->v)
     fprintf (fp, " %s", f->v->name);
-  else if (f->s)
-    fprintf (fp, " %s", f->sname);
-  else if (f->g)
+  else if (f->s || f->g)
     fprintf (fp, " %s", f->sname);
   else
     fprintf (fp, " %g", f->val);
