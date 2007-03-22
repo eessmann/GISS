@@ -1556,17 +1556,19 @@ FttCell * ftt_cell_locate (FttCell * root,
   size = ftt_cell_size (root)/2.;
 
   if (target.x > pos.x + size || target.x < pos.x - size ||
-      target.y > pos.y + size || target.y < pos.y - size ||
-      target.z > pos.z + size || target.z < pos.z - size)
+      target.y > pos.y + size || target.y < pos.y - size
+#if FTT_2D3
+      || target.z > pos.z + 0.5 || target.z < pos.z - 0.5
+#elif !FTT_2D
+      || target.z > pos.z + size || target.z < pos.z - size
+#endif
+      )
     return NULL;
 
   do {
     if (FTT_CELL_IS_LEAF (root) || ftt_cell_level (root) == max_depth)
       return root;
-#if FTT_2D3
-    guint n = 0;
-    g_assert_not_implemented ();
-#elif FTT_2D
+#if (FTT_2D || FTT_2D3)
     static guint index[2][2] = {{2,3},{0,1}};
     guint n = index[target.y > pos.y][target.x > pos.x];
 #else  /* 3D */
@@ -1577,7 +1579,9 @@ FttCell * ftt_cell_locate (FttCell * root,
     size /= 2.;
     pos.x += coords[n][0]*size;
     pos.y += coords[n][1]*size;
+#if !(FTT_2D || FTT_2D3)
     pos.z += coords[n][2]*size;
+#endif /* 3D */
   } while (!FTT_CELL_IS_DESTROYED (root));
   return NULL;
 }
