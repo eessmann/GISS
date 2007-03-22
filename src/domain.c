@@ -2271,6 +2271,10 @@ void gfs_cell_read (FttCell * cell, GtsFile * fp, GfsDomain * domain)
     return;
   }
   s0 = atof (fp->token->str);
+  if (s0 < 0. && s0 != -1.) {
+    gts_file_error (fp, "solid->s[0] must be positive");
+    return;
+  }
   gts_file_next_token (fp);
 
   gfs_cell_init (cell, domain);
@@ -2376,6 +2380,10 @@ void gfs_cell_read_binary (FttCell * cell, GtsFile * fp, GfsDomain * domain)
 
   if (gts_file_read (fp, &s0, sizeof (gdouble), 1) != 1) {
     gts_file_error (fp, "expecting a number (solid->s[0])");
+    return;
+  }
+  if (s0 < 0. && s0 != -1.) {
+    gts_file_error (fp, "solid->s[0] must be positive");
     return;
   }
 
