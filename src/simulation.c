@@ -714,6 +714,38 @@ static gdouble cell_solid_area (FttCell * cell)
   return ftt_vector_norm (&n);
 }
 
+static gdouble cell_solid_sr (FttCell * cell)
+{
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->s[FTT_RIGHT] : 1.;
+}
+
+static gdouble cell_solid_sl (FttCell * cell)
+{
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->s[FTT_LEFT] : 1.;
+}
+
+static gdouble cell_solid_st (FttCell * cell)
+{
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->s[FTT_TOP] : 1.;
+}
+
+static gdouble cell_solid_sb (FttCell * cell)
+{
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->s[FTT_BOTTOM] : 1.;
+}
+
+#if !FTT_2D
+static gdouble cell_solid_sf (FttCell * cell)
+{
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->s[FTT_FRONT] : 1.;
+}
+
+static gdouble cell_solid_sk (FttCell * cell)
+{
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->s[FTT_BACK] : 1.;
+}
+#endif /* 3D */
+
 static gdouble cell_velocity_lambda2 (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 {
   return gfs_vector_lambda2 (cell, gfs_domain_velocity (domain));
@@ -751,6 +783,14 @@ static void simulation_init (GfsSimulation * object)
     { "Level", "Quad/octree level of the cell", cell_level },
     { "A", "Fluid fraction of the cell", cell_fraction },
     { "S", "Area of the solid contained in the cell", cell_solid_area },
+    { "Sr", "Fluid fraction of the right cell face", cell_solid_sr },
+    { "Sl", "Fluid fraction of the left cell face", cell_solid_sl },
+    { "St", "Fluid fraction of the top cell face", cell_solid_st },
+    { "Sb", "Fluid fraction of the bottom cell face", cell_solid_sb },
+#if !FTT_2D
+    { "Sf", "Fluid fraction of the front cell face", cell_solid_sf },
+    { "Sk", "Fluid fraction of the back cell face", cell_solid_sk },    
+#endif /* 3D */
     { "Lambda2", "Vortex-detection criterion of Jeong & Hussein", cell_velocity_lambda2 },
     { "Curvature",  "Curvature of the local streamline", cell_streamline_curvature },
     { "D2", "Second principal invariant of the deformation tensor", cell_2nd_principal_invariant },
