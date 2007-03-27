@@ -302,7 +302,7 @@ gboolean gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
     /* fall through */
   case 2: {
     if (!solid)
-      GFS_STATE (cell)->solid = solid = g_malloc (sizeof (GfsSolidVector));
+      GFS_STATE (cell)->solid = solid = g_malloc0 (sizeof (GfsSolidVector));
     face_fractions (&f, solid, &h);
     break;
   }
