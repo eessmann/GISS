@@ -1554,7 +1554,8 @@ void gfs_cell_coarse_fine (FttCell * parent, GfsVariable * v)
 
   ftt_cell_children (parent, &child);
   for (n = 0; n < FTT_CELLS; n++)
-    GFS_VARIABLE (child.c[n], v->i) = GFS_VARIABLE (parent, v->i);
+    if (child.c[n])
+      GFS_VARIABLE (child.c[n], v->i) = GFS_VARIABLE (parent, v->i);
 
   if (!GFS_CELL_IS_BOUNDARY (parent)) {
     FttVector g;
@@ -1563,13 +1564,14 @@ void gfs_cell_coarse_fine (FttCell * parent, GfsVariable * v)
     for (c = 0; c < FTT_DIMENSION; c++)
       (&g.x)[c] = gfs_center_van_leer_gradient (parent, c, v->i);
 
-    for (n = 0; n < FTT_CELLS; n++) {
-      FttVector p;
-
-      ftt_cell_relative_pos (child.c[n], &p);
-      for (c = 0; c < FTT_DIMENSION; c++)
-	GFS_VARIABLE (child.c[n], v->i) += (&p.x)[c]*(&g.x)[c];
-    }
+    for (n = 0; n < FTT_CELLS; n++) 
+      if (child.c[n]) {
+	FttVector p;
+	
+	ftt_cell_relative_pos (child.c[n], &p);
+	for (c = 0; c < FTT_DIMENSION; c++)
+	  GFS_VARIABLE (child.c[n], v->i) += (&p.x)[c]*(&g.x)[c];
+      }
   }
 }
 

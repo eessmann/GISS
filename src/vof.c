@@ -740,6 +740,8 @@ static void vof_coarse_fine (FttCell * parent, GfsVariable * v)
   if (GFS_IS_FULL (f))
     for (i = 0; i < FTT_CELLS; i++) {
       FttComponent c;
+      if (!child.c[i])
+	g_assert_not_implemented ();
       GFS_VARIABLE (child.c[i], v->i) = f;
       for (c = 1; c < FTT_DIMENSION; c++)
 	GFS_VARIABLE (child.c[i], t->m[c]->i) = 0.;
@@ -757,6 +759,8 @@ static void vof_coarse_fine (FttCell * parent, GfsVariable * v)
       FttComponent c;
       FttVector p;
       
+      if (!child.c[i])
+	g_assert_not_implemented ();
       ftt_cell_relative_pos (child.c[i], &p);
       for (c = 0; c < FTT_DIMENSION; c++) {
 	alpha1 -= (&m.x)[c]*(0.25 + (&p.x)[c]);

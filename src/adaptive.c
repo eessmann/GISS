@@ -69,8 +69,8 @@ void gfs_cell_fine_init (FttCell * parent, GfsDomain * domain)
 
   gfs_cell_init (parent, domain);
 
-  /* fixme: refinement of mixed cell is not implemented (yet) */
-  g_assert (GFS_CELL_IS_BOUNDARY (parent) || GFS_IS_FLUID (parent));
+  if (!GFS_CELL_IS_BOUNDARY (parent) && GFS_IS_MIXED (parent))
+    gfs_solid_coarse_fine (parent);
 
   i = domain->variables;
   while (i) {

@@ -1305,3 +1305,161 @@ void gfs_face_ca (const FttCellFace * face, FttVector * ca)
 #endif /* 3D */
   }
 }
+
+#if !FTT_2D
+static void outer_fractions_coarse_fine (FttCell * parent, FttDirection d)
+{
+  GfsSolidVector * solid = GFS_STATE (parent)->solid;
+  FttComponent c1 = d < 4 ? 2 : 0, c2 = d < 2 || d > 3 ? 1 : 0;
+  gdouble nm;
+  FttVector m;
+    
+  m.x = solid->s[2*c1 + 1] - solid->s[2*c1]; nm = fabs (m.x);
+  m.y = solid->s[2*c2 + 1] - solid->s[2*c2]; nm += fabs (m.y);
+  if (nm > 0.) {
+    m.x /= nm;
+    m.y /= nm;
+  }
+  else
+    m.x = 1.;
+  gdouble alpha = gfs_line_alpha (&m, solid->s[d]);
+  gdouble ss = 0.;
+    
+  FttCellChildren child;
+  guint i, n = ftt_cell_children_direction (parent, d, &child);
+  for (i = 0; i < n; i++)
+    if (child.c[i]) {
+      if (GFS_IS_MIXED (child.c[i])) {
+	GfsSolidVector * s = GFS_STATE (child.c[i])->solid;
+	gdouble alpha1 = alpha;
+	FttVector p;
+	
+	ftt_cell_relative_pos (child.c[i], &p);
+	alpha1 -= m.x*(0.25 + (&p.x)[c1]);
+	alpha1 -= m.y*(0.25 + (&p.x)[c2]);
+	
+	s->s[d] = gfs_line_area (&m, 2.*alpha1);
+	ss += s->s[d];
+      }
+      else
+	ss += 1.;
+    }
+  /* fixme: this should not happen 
+   * It happens in configurations where children cells are not cut by
+   * the VOF approximation but should have non-zero surface
+   * fractions */
+  if (fabs (solid->s[d] - ss/n) > 1e-5)
+    g_warning ("inconsistent surface fractions %d %f %f %f\n", d, solid->s[d], ss/n,
+	       fabs (solid->s[d] - ss/n));
+}
+#endif /* 3D */
+
+/**
+ * gfs_solid_coarse_fine:
+ * @parent: a mixed #FttCell with children.
+ *
+ * Fills the solid properties of the children of @parent.
+ * Destroys all children entirely contained in the solid.
+ */
+void gfs_solid_coarse_fine (FttCell * parent)
+{
+#if FTT_2D3
+  g_assert_not_implemented ();
+#endif
+  g_return_if_fail (parent);
+  g_return_if_fail (GFS_IS_MIXED (parent));
+  g_return_if_fail (!FTT_CELL_IS_LEAF (parent));
+
+  GfsSolidVector * solid = GFS_STATE (parent)->solid;
+  FttVector m;
+  FttComponent c;
+  gdouble n = 0;
+
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    (&m.x)[c] = solid->s[2*c + 1] - solid->s[2*c];
+    n += fabs ((&m.x)[c]);
+  }
+  if (n > 0.)
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&m.x)[c] /= n;
+  else
+    m.x = 1.;
+  gdouble alpha = gfs_plane_alpha (&m, solid->a);
+
+  gdouble h = ftt_cell_size (parent)/2.;
+  guint level = ftt_cell_level (parent) + 1;
+  FttCellChildren child;
+  guint i;
+  ftt_cell_children (parent, &child);
+  for (i = 0; i < FTT_CELLS; i++) {
+    gdouble alpha1 = alpha;
+    FttVector p;
+
+    ftt_cell_relative_pos (child.c[i], &p);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      alpha1 -= (&m.x)[c]*(0.25 + (&p.x)[c]);
+
+    if (GFS_STATE (child.c[i])->solid) {
+      g_free (GFS_STATE (child.c[i])->solid);
+      GFS_STATE (child.c[i])->solid = NULL;
+    }
+
+    gdouble a = gfs_plane_volume (&m, 2.*alpha1);
+    if (a > 0. && a < 1.) {
+      GfsSolidVector * s = GFS_STATE (child.c[i])->solid = g_malloc (sizeof (GfsSolidVector));
+      s->a = a;
+
+      ftt_cell_pos (child.c[i], &p);
+      gfs_plane_center (&m, 2.*alpha1, a, &s->cm);
+      for (c = 0; c < FTT_DIMENSION; c++)
+	(&s->cm.x)[c] = (&p.x)[c] + h*((&s->cm.x)[c] - 0.5);
+      g_assert (gfs_vof_plane_center (child.c[i], &m, 2.*alpha1, &s->ca));
+
+      FttDirection d;
+      FttCellNeighbors n;
+      ftt_cell_neighbors (child.c[i], &n);
+      for (d = 0; d < FTT_NEIGHBORS; d++)
+	if (!n.c[d])
+	  s->s[d] = 0.;
+	else if (GFS_IS_MIXED (n.c[d]) && ftt_cell_level (n.c[d]) == level)
+	  s->s[d] = GFS_STATE (n.c[d])->solid->s[FTT_OPPOSITE_DIRECTION (d)];
+	else if (!ftt_cell_neighbor_is_brother (child.c[i], d) && GFS_IS_FLUID (n.c[d]))
+	  s->s[d] = 1.;
+	else {
+#if FTT_2D
+	  gdouble f;
+	  FttComponent c1 = d > 1, c2 = !c1;
+
+	  if ((&m.x)[c2] == 0.) f = 0.;
+	  else {
+	    f = (2.*alpha1 - (&m.x)[c1]*!(d % 2))/(&m.x)[c2];
+	    if (f < 0.) f = 0.; else if (f > 1.) f = 1.;
+	    if ((&m.x)[c2] < 0.)
+	      f = 1. - f;
+	  }
+	  s->s[d] = f;
+#else /* 3D */
+	  /* only initialises "inner" fractions */
+	  if (ftt_cell_neighbor_is_brother (child.c[i], d)) {
+	    FttComponent c1 = (d/2 + 1) % 3, c2 = (d/2 + 2) % 3;
+	    FttVector mp;
+	    mp.x = (&m.x)[c1]; 
+	    mp.y = (&m.x)[c2];
+	    s->s[d] = gfs_line_area (&mp, d % 2 ? 2.*alpha1 : 2.*alpha1 - (&m.x)[d/2]);
+	  }
+#endif /* 3D */
+	}
+    }
+    else if (a == 0.)
+      ftt_cell_destroy (child.c[i], (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+  }
+
+#if !FTT_2D
+  FttCellNeighbors neighbor;
+  FttDirection d;
+  ftt_cell_neighbors (parent, &neighbor);
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (neighbor.c[d] && FTT_CELL_IS_LEAF (neighbor.c[d]) && !GFS_IS_FLUID (neighbor.c[d]))
+      outer_fractions_coarse_fine (parent, d);
+#endif /* 3D */
+}

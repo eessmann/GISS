@@ -50,6 +50,7 @@ void         gfs_solid_normal                            (const FttCell * cell,
 							  FttVector * n);
 void         gfs_face_ca                                 (const FttCellFace * face, 
 							  FttVector * ca);
+void         gfs_solid_coarse_fine                       (FttCell * parent);
 
 #ifdef __cplusplus
 }
