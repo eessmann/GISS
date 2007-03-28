@@ -616,6 +616,8 @@ void gfs_face_reset_normal_velocity (const FttCellFace * face)
     GFS_FACE_NORMAL_VELOCITY_LEFT (face) = 0.;
 }
 
+#define SMALL 0.5
+
 static gboolean is_small (FttCell * cell)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
@@ -627,7 +629,7 @@ static gboolean is_small (FttCell * cell)
     ftt_cell_neighbors (cell, &n);
     for (d = 0; d < FTT_NEIGHBORS; d++)
       if (n.c[d] && !GFS_CELL_IS_BOUNDARY (n.c[d]) && solid->s[d] > 0. && 
-	  solid->a/solid->s[d] < 0.5)
+	  solid->a/solid->s[d] < SMALL)
 	return TRUE;
   }
   return FALSE;
@@ -866,7 +868,6 @@ fprintf (stderr, "%g %g %g\n",
     }
   }
   else {
-    /* J.J. Quirk volume-weighted values */
     GSList * i = merged;
     gdouble w = 0., total_vol = 0.;
 
@@ -874,9 +875,15 @@ fprintf (stderr, "%g %g %g\n",
       FttCell * cell = i->data;
       gdouble vol = ftt_cell_volume (cell);
       gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
-      
+
       total_vol += vol*a;
-      w += vol*GFS_VARIABLE (cell, par->fv->i);
+      if (a < SMALL) {
+	GFS_VARIABLE (cell, par->v->i) += GFS_VARIABLE (cell, par->fv->i)/SMALL;
+	w += vol*GFS_VARIABLE (cell, par->fv->i)*(1. - a/SMALL);
+      }
+      else
+	GFS_VARIABLE (cell, par->v->i) += GFS_VARIABLE (cell, par->fv->i)/a;
+
       i = i->next;
     }
     w /= total_vol;
