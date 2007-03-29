@@ -2144,7 +2144,7 @@ static void cell_traverse_cut (FttCell * cell,
 			       gpointer data,
 			       gboolean flatten)
 {
-  GtsSurface * s1 = gfs_cell_is_cut (cell, s, flatten);
+  GtsSurface * s1 = gfs_cell_is_cut (cell, s, flatten && FTT_CELL_IS_LEAF (cell));
 
   if (s1 == NULL)
     return;

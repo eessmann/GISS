@@ -765,12 +765,9 @@ void gfs_cell_init_solid_fractions_from_children (FttCell * cell)
       guint n = ftt_cell_children_direction (cell, i, &child);
 
       w = 0.;
-      for (j = 0; j < n; j++) {
-	FttCell * c = child.c[j];
-
-	if (c)
-	  w += GFS_IS_FLUID (c) ? 1. : GFS_STATE (c)->solid->s[i];
-      }
+      for (j = 0; j < n; j++)
+	if (child.c[j])
+	  w += GFS_IS_FLUID (child.c[j]) ? 1. : GFS_STATE (child.c[j])->solid->s[i];
       solid->s[i] = w/n;
     }
   }
