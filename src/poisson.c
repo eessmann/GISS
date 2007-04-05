@@ -309,26 +309,16 @@ static void reset_coeff (FttCell * cell)
     f[d].v = 0.;
 }
 
-static void poisson_coeff (FttCellFace * face, gdouble * lambda2)
+static void poisson_coeff (FttCell * cell, gdouble * lambda2)
 {
-  GfsStateVector * s = GFS_STATE (face->cell);
-  gdouble v = lambda2[face->d/2];
+  GfsStateVector * s = GFS_STATE (cell);
+  FttDirection d;
 
-  if (GFS_IS_MIXED (face->cell))
-    v *= s->solid->s[face->d];
-  s->f[face->d].v = v;
-
-  switch (ftt_face_type (face)) {
-  case FTT_FINE_FINE:
-    GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v = v;
-    break;
-  case FTT_FINE_COARSE:
-    GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v += 
-      v/FTT_CELLS_DIRECTION (face->d);
-    break;
-  default:
-    g_assert_not_reached ();
-  }
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    s->f[d].v = lambda2[d/2];
+  if (s->solid)
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      s->f[d].v *= s->solid->s[d];
 }
 
 static void poisson_alpha_coeff (FttCellFace * face,
@@ -374,7 +364,8 @@ static void face_coeff_from_below (FttCell * cell)
 	f[d].v += GFS_STATE (child.c[i])->f[d].v;
     f[d].v /= n;
 
-    if (f[d].v > 0. && !GFS_CELL_IS_BOUNDARY (ftt_cell_neighbor (cell, d)))
+    FttCell * neighbor;
+    if (f[d].v > 0. && (neighbor = ftt_cell_neighbor (cell, d)) && !GFS_CELL_IS_BOUNDARY (neighbor))
       neighbors++;
   }
 
@@ -406,16 +397,15 @@ void gfs_poisson_coefficients (GfsDomain * domain,
 
     lambda2[i] = lambda*lambda;
   }
-  gfs_domain_cell_traverse (domain,
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_coeff, NULL);
   if (alpha == NULL)
-    gfs_domain_face_traverse (domain, FTT_XYZ, 
+    gfs_domain_cell_traverse (domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) poisson_coeff, lambda2);
+			      (FttCellTraverseFunc) poisson_coeff, lambda2);
   else {
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) reset_coeff, NULL);
     gpointer data[2];
-
     data[0] = lambda2;
     data[1] = alpha;
     gfs_domain_face_traverse (domain, FTT_XYZ, 
