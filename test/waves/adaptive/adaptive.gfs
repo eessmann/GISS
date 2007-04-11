@@ -1,29 +1,17 @@
-# Title: Coastally-trapped waves
+# Title: Coastally-trapped waves with adaptive refinement
 #
 # Description:
 #
-# A simulation is initialised with an exact solution found by Lamb
-# \cite{lamb} for inertia-gravity waves in a circular, flat-bottomed
-# basin on an $f$-plane.
-#
-# The waves should rotate unchanged around the basin. This is a good
-# test of the shallow-water solver with Coriolis terms and non-trivial
-# coastlines.
+# Same test case as before but with adaptive refinement (using the
+# vorticity criterion).
 #
 # Figure \ref{solution} illustrates the solution obtained after three
 # wave periods.
 #
-# Following \cite{rutgers-waves}, Table \ref{correlation} presents the
-# phase error and the maximum correlation between the computed
-# solution and the exact solution. Note that these results are not
-# directly comparable to \cite{rutgers-waves}, because the timestep
-# used is much larger. The time-explicit codes tested in
-# \cite{rutgers-waves} have stronger stability requirements than
-# Gerris.
-#
 # \begin{figure}[htbp]
-# \caption{\label{solution}Surface-height after a rotation of 3 wave periods for a
-# resolution of 9.375 km.}
+# \caption{\label{solution}Surface-height after a rotation of 3 wave
+# periods. The maximum resolution is 9.375 km (dark red), the minimum
+# resolution is 150 km (dark blue).}
 # \begin{center}
 # \includegraphics[width=0.6\hsize]{solution.eps}
 # \end{center}
@@ -37,9 +25,9 @@
 # \end{table}
 #
 # Author: St\'ephane Popinet
-# Command: sh waves.sh waves.gfs
+# Command: sh ../waves.sh adaptive.gfs
 # Version: 1.0.0
-# Required files: waves.sh solution.gfv correlation.ref
+# Required files: solution.gfv correlation.ref
 # Generated files: correlation correlation.tex solution.eps
 #
 1 0 GfsOcean GfsBox GfsGEdge {} {
@@ -92,6 +80,7 @@
     H = 1
   }
   Refine LEVEL
+  AdaptVorticity { istep = 1 } { cmax = 5e-2 maxlevel = LEVEL }
   GtsSurfaceFile basin.gts
   AdvectionParams { scheme = none }
   ApproxProjectionParams { tolerance = 1e-9 weighted = 0 }
