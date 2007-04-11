@@ -1,0 +1,59 @@
+# Title: Gravity waves in a realistic ocean basin
+#
+# Description:
+#
+# A tilted ocean surface is initialised in a realistic basin (the Cook
+# strait area in New Zealand). The surface oscillates
+# sending complex gravity waves reflecting off the coast and
+# bathymetry (Figure \ref{p}). No explicit dissipation is added.
+#
+# This is a good test of the robustness of the method when dealing
+# with adaptively refined complex bathymetry.
+#
+# The robustness is controlled essentially by the way face-centred
+# velocity values are computed from cell-centred values.
+#
+# \begin{figure}[htbp]
+# \caption{\label{p}MPEG movie of the surface height.}
+# \begin{center}
+# \htmladdnormallinkfoot{\includegraphics[width=0.6\hsize]{p.eps}}{p.mpg}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D3 nz.gfs
+# Version: 1.0.0
+# Required files: nz.gfs bath.gts
+# Generated files: p.mpg p.eps
+#
+# Use the "GfsOcean" model
+1 0 GfsOcean GfsBox GfsGEdge {} {
+    # Set the timestep to sthg small compared to the tidal period
+    Time { dtmax = 1e-2 end = 28.5 }
+    # Refine to six levels
+    Refine 6
+    # We want more accuracy in the projection than the default 1e-3
+    ApproxProjectionParams { tolerance = 1e-6 nitermax = 10 }
+    AdvectionParams { scheme = none }
+    Init {} { P = 1e-2*x }
+    # Bathymetry
+    GtsSurfaceFile bath.gts
+    # Refine the coastline to 7 levels
+    RefineSurface 7 bath.gts { twod = 1 }
+    # Non-dimensional gravity
+    PhysicalParams { g = 19.62 }
+
+    OutputPPM { istep = 4 } { ppm2mpeg > p.mpg } { v = P min = -5e-3 max = 5e-3 maxlevel = 8 }
+    OutputPPM { start = 27 } { convert ppm:- p.eps } { v = P min = -5e-3 max = 5e-3 maxlevel = 8 }
+    OutputScalarNorm { istep = 1 } v { v = Velocity }
+    EventScript { start = end } {
+	if awk '{if ($9 > 0.15) exit (1);}' < v ; then
+	    return 0;
+	else
+	    return $GFS_STOP;
+	fi
+    }
+}
+GfsBox {
+    front = Boundary
+}

@@ -1571,7 +1571,7 @@ static gboolean gfs_event_script_event (GfsEvent * event, GfsSimulation * sim)
       g_free (scommand);
       remove (sname);
       if (status == GFS_EVENT_SCRIPT_STOP)
-	sim->time.end = sim->time.t;
+	exit (1);
     }
     return TRUE;
   }
