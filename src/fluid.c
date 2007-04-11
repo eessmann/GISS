@@ -169,10 +169,7 @@ static GfsGradient interpolate_1D1 (FttCell * cell,
 
   f = gfs_cell_face (cell, d);
   if (f.neighbor) {
-    gdouble p2;
-    gdouble x2 = 1.;
-
-    p2 = average_neighbor_value (&f, v, &x2);
+    gdouble x2 = 1., p2 = average_neighbor_value (&f, v, &x2);
     p.a = 1. - x/x2;
     p.b = p2*x/x2;
   }
@@ -304,7 +301,7 @@ static Gradient gradient_fine_coarse (const FttCellFace * face,
   p = interpolate_2D1 (face->neighbor, dp[0], dp[1], 1./4., 1./4., v);
 #endif /* FTT_3D */
 
-  if (n == NULL) {
+  if (n == NULL || GFS_IS_MIXED (n)) {
     g.a = 2./3.;
     g.b = 2.*p.a/3.;
     g.c = 2.*p.b/3.;
