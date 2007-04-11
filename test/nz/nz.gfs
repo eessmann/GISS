@@ -5,7 +5,8 @@
 # A tilted ocean surface is initialised in a realistic basin (the Cook
 # strait area in New Zealand). The surface oscillates
 # sending complex gravity waves reflecting off the coast and
-# bathymetry (Figure \ref{p}). No explicit dissipation is added.
+# bathymetry (Figure \ref{p}). No explicit dissipation is added and Figure
+# \ref{k} illustrates the good conservation of the total energy.
 #
 # This is a good test of the robustness of the method when dealing
 # with adaptively refined complex bathymetry.
@@ -20,11 +21,18 @@
 # \end{center}
 # \end{figure}
 #
+# \begin{figure}[htbp]
+# \caption{\label{k}Evolution of the kinetic energy.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{k.eps}
+# \end{center}
+# \end{figure}
+#
 # Author: St\'ephane Popinet
 # Command: gerris2D3 nz.gfs
 # Version: 1.0.0
 # Required files: nz.gfs bath.gts
-# Generated files: p.mpg p.eps
+# Generated files: p.mpg p.eps k.eps
 #
 # Use the "GfsOcean" model
 1 0 GfsOcean GfsBox GfsGEdge {} {
@@ -43,11 +51,19 @@
     # Non-dimensional gravity
     PhysicalParams { g = 19.62 }
 
-    OutputPPM { istep = 4 } { ppm2mpeg > p.mpg } { v = P min = -5e-3 max = 5e-3 maxlevel = 8 }
-    OutputPPM { start = 27 } { convert ppm:- p.eps } { v = P min = -5e-3 max = 5e-3 maxlevel = 8 }
-    OutputScalarNorm { istep = 1 } v { v = Velocity }
+    OutputPPM { istep = 10 } { ppm2mpeg > p.mpg } { v = P min = -5e-3 max = 5e-3 }
+    OutputPPM { start = 2 } { convert ppm:- p.eps } { v = P min = -5e-3 max = 5e-3 }
+    OutputScalarSum { istep = 10 } k { v = Velocity2 }
     EventScript { start = end } {
-	if awk '{if ($9 > 0.15) exit (1);}' < v ; then
+	gnuplot <<EOF
+            set term postscript eps color lw 3 solid 20
+            set output 'k.eps'
+            set xlabel 'Time'
+            set ylabel 'Kinetic energy'
+            set grid
+            plot 'k' u 3:5 w l t ''
+EOF
+	if awk '{if ($5 > 4e-7) exit (1);}' < k ; then
 	    return 0;
 	else
 	    return $GFS_STOP;
