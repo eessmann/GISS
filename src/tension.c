@@ -566,15 +566,9 @@ static void curvature_coarse_fine (FttCell * parent, GfsVariable * v)
   guint n;
 
   ftt_cell_children (parent, &child);
-  for (n = 0; n < FTT_CELLS; n++) 
-    if (child.c[n]) {
-      GfsVariableCurvature * k = GFS_VARIABLE_CURVATURE (v);
-      gdouble f = GFS_VARIABLE (child.c[n], k->f->i);
-      
+  for (n = 0; n < FTT_CELLS; n++)
+    if (child.c[n])
       GFS_VARIABLE (child.c[n], v->i) = GFS_VARIABLE (parent, v->i);
-      if (!GFS_IS_FULL (f))
-	g_assert (fabs (GFS_VARIABLE (child.c[n], v->i)) < G_MAXDOUBLE);
-    }
 }
 
 static void curvature_fine_coarse (FttCell * parent, GfsVariable * v)
