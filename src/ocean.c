@@ -153,7 +153,6 @@ typedef struct {
 
 static void normal_divergence (FttCell * cell, FreeSurfaceParams * p)
 {
-  gfs_normal_divergence_2D (cell, p->div);
   GFS_VARIABLE (cell, p->div->i) += (1. - THETA)*GFS_VARIABLE (cell, p->divn->i)/THETA;
 }
 
@@ -163,7 +162,11 @@ static void scale_divergence_helmoltz (FttCell * cell, FreeSurfaceParams * p)
   gdouble c = 2.*h*h/(THETA*p->G*p->dt*p->dt);
 
   if (GFS_IS_MIXED (cell))
+#if FTT_2D
     c *= GFS_STATE (cell)->solid->a;
+#else /* 3D */
+    c *= GFS_STATE (cell)->solid->s[FTT_FRONT];
+#endif /* 3D */
 
   GFS_VARIABLE (cell, p->dia->i) = c;
   GFS_VARIABLE (cell, p->div->i) = 2.*GFS_VARIABLE (cell, p->div->i)/p->dt -
@@ -181,6 +184,7 @@ static void gfs_free_surface_pressure (GfsDomain * toplayer,
 				       GfsMultilevelParams * par,
 				       GfsAdvectionParams * apar,
 				       GfsVariable * p,
+				       GfsVariable * div,
 				       GfsVariable * divn,
 				       GfsVariable * res,
 				       gdouble G)
@@ -192,11 +196,12 @@ static void gfs_free_surface_pressure (GfsDomain * toplayer,
   g_return_if_fail (par != NULL);
   g_return_if_fail (apar != NULL);
   g_return_if_fail (p != NULL);
+  g_return_if_fail (div != NULL);
   g_return_if_fail (divn != NULL);
   g_return_if_fail (G > 0.);
 
   fp.pn = p;
-  fp.div = gfs_temporary_variable (toplayer);
+  fp.div = div;
   fp.dia = gfs_temporary_variable (toplayer);
   res1 = res ? res : gfs_temporary_variable (toplayer);
   fp.divn = divn;
@@ -234,7 +239,6 @@ static void gfs_free_surface_pressure (GfsDomain * toplayer,
   if (!res)
     gts_object_destroy (GTS_OBJECT (res1));
   gts_object_destroy (GTS_OBJECT (fp.dia));
-  gts_object_destroy (GTS_OBJECT (fp.div));
 }
 
 #if FTT_2D
@@ -323,9 +327,13 @@ static void ocean_run (GfsSimulation * sim)
     sim->time.i++;
 
     gfs_domain_timer_start (domain, "free_surface_pressure");
+    GfsVariable * divn = gfs_temporary_variable (domain);
     normal_velocities (domain, gfs_domain_velocity (domain));
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_normal_divergence_2D, divn);
     gfs_free_surface_pressure (domain, &sim->approx_projection_params, &sim->advection_params,
-			       p, div, res, sim->physical_params.g);
+			       p, divn, div, res, sim->physical_params.g);
+    gts_object_destroy (GTS_OBJECT (divn));
     gfs_correct_normal_velocities_weighted (domain, 2, p, g, sim->advection_params.dt/2., 
 					    sim->approx_projection_params.weighted);
     gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt/2.);
@@ -382,6 +390,8 @@ GfsSimulationClass * gfs_ocean_class (void)
 #else /* 2D3 or 3D */
 
 /* GfsOcean: Object */
+
+#define MAC 0
 
 static void ocean_destroy (GtsObject * object)
 {
@@ -470,104 +480,125 @@ static void compute_w (FttCell * c, GfsVariable * W)
   }
 }
 
+static void compute_div (FttCell * c, GfsVariable * W)
+{
+  guint level = ftt_cell_level (c);
+  gdouble wf = 0., size = ftt_cell_size (c);
+
+  while (c) {
+    GfsStateVector * s = GFS_STATE (c);
+    GfsSolidVector * solid = s->solid;
+
+    g_assert (FTT_CELL_IS_LEAF (c) && ftt_cell_level (c) == level);
+    if (solid)
+      wf += (solid->s[FTT_RIGHT]*s->f[FTT_RIGHT].un - solid->s[FTT_LEFT]*s->f[FTT_LEFT].un +
+	     solid->s[FTT_TOP]*s->f[FTT_TOP].un - solid->s[FTT_BOTTOM]*s->f[FTT_BOTTOM].un);
+    else
+      wf += (s->f[FTT_RIGHT].un - s->f[FTT_LEFT].un +
+	     s->f[FTT_TOP].un - s->f[FTT_BOTTOM].un);
+    GFS_VARIABLE (c, W->i) = wf*size;
+    c = ftt_cell_neighbor (c, FTT_FRONT);
+  }
+}
+
+/* fixme: this is ok for one layer but what about several? */
+#define HEIGHT(cell) (GFS_IS_MIXED (cell) ? \
+		      GFS_STATE (cell)->solid->a/GFS_STATE (cell)->solid->s[FTT_FRONT] : 1.)
+
 static void compute_H (FttCell * cell, GfsVariable * H)
 {
-  if (GFS_IS_MIXED (cell)) {
-    g_assert (GFS_STATE (cell)->solid->s[FTT_FRONT] > 0.);
-    GFS_VARIABLE (cell, H->i) = GFS_STATE (cell)->solid->a/GFS_STATE (cell)->solid->s[FTT_FRONT];
+  GFS_VARIABLE (cell, H->i) = HEIGHT (cell);
+}
+
+static void face_interpolated_normal_velocity (const FttCellFace * face, GfsVariable ** v)
+{
+  gdouble u;
+
+  g_return_if_fail (face != NULL);
+  g_return_if_fail (v != NULL);
+
+  if (GFS_FACE_FRACTION (face) == 0.)
+    return;
+
+  guint i = v[face->d/2]->i;
+  switch (ftt_face_type (face)) {
+  case FTT_FINE_FINE:
+    u = (GFS_VARIABLE (face->cell, i) + GFS_VARIABLE (face->neighbor, i))/2.; 
+    break;
+  case FTT_FINE_COARSE: {
+    gdouble w1 = HEIGHT (face->cell), w2 = HEIGHT (face->neighbor);
+    w1 = 2.*w1/(w1 + w2);
+    u = w1*gfs_face_interpolated_value (face, i) + (1. - w1)*GFS_VARIABLE (face->neighbor, i);
+    break;
   }
-  else
-    GFS_VARIABLE (cell, H->i) = 1.;
+  default:
+     g_assert_not_reached ();
+  }
+
+  GFS_FACE_NORMAL_VELOCITY_LEFT (face) = u;
+
+  switch (ftt_face_type (face)) {
+  case FTT_FINE_FINE:
+    GFS_FACE_NORMAL_VELOCITY_RIGHT (face) = u;
+    break;
+  case FTT_FINE_COARSE:
+    GFS_FACE_NORMAL_VELOCITY_RIGHT (face) += 
+      u*GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*
+				       FTT_CELLS_DIRECTION (face->d));
+    break;
+  default:
+    g_assert_not_reached ();
+  }
 }
 
-static void compute_HU (FttCell * cell, gpointer * data)
+static void depth_integrated_divergence (GfsDomain * domain, GfsVariable * div)
 {
-  GfsVariable ** u = data[0];
-  GfsVariable ** hu = data[1];
-  GfsVariable * H = data[2];
-  GFS_VARIABLE (cell, hu[0]->i) = GFS_VARIABLE (cell, u[0]->i)*GFS_VARIABLE (cell, H->i);
-  GFS_VARIABLE (cell, hu[1]->i) = GFS_VARIABLE (cell, u[1]->i)*GFS_VARIABLE (cell, H->i);
-}
-
-static void normal_velocities (GfsDomain * toplayer, 
-			       GfsVariable ** u, 
-			       GfsVariable ** hu,
-			       GfsVariable * H)
-{
-  gpointer data[3];
-
-  g_return_if_fail (toplayer != NULL);
-  g_return_if_fail (div != NULL);
-
-  gfs_domain_face_traverse (toplayer, FTT_XY,
+  /* compute MAC velocities from centered velocities */
+#if !MAC
+  gfs_domain_face_traverse (domain, FTT_XY,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
-  data[0] = u;
-  data[1] = hu;
-  data[2] = H;
-  gfs_domain_cell_traverse (toplayer, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) compute_HU, data);
-  gfs_domain_bc (toplayer, FTT_TRAVERSE_LEAFS, -1, hu[0]);
-  gfs_domain_bc (toplayer, FTT_TRAVERSE_LEAFS, -1, hu[1]);
-  gfs_domain_face_traverse (toplayer, FTT_XY,
+  gfs_domain_face_traverse (domain, FTT_XY,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, hu);
+			    (FttFaceTraverseFunc) face_interpolated_normal_velocity,
+			    gfs_domain_velocity (domain));
+#endif
+  /* barotropic divergence */
+  gfs_domain_cell_traverse_boundary (domain, FTT_BACK,
+				     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				     (FttCellTraverseFunc) compute_div, div);
 }
 
-static void scale_g (FttCell * cell, gpointer * data)
+static void compute_coeff (FttCell * c)
 {
-  GfsVariable ** g = data[0];
-  GfsVariable * H = data[1];
-  GFS_VARIABLE (cell, g[0]->i) /= GFS_VARIABLE (cell, H->i);
-  GFS_VARIABLE (cell, g[1]->i) /= GFS_VARIABLE (cell, H->i);
+  guint level = ftt_cell_level (c);
+  gdouble wf[FTT_NEIGHBORS_2D] = {0.,0.,0.,0.};
+
+  while (c) {
+    GfsStateVector * s = GFS_STATE (c);
+    FttDirection d;
+
+    g_assert (FTT_CELL_IS_LEAF (c) && ftt_cell_level (c) == level);
+    for (d = 0; d < FTT_NEIGHBORS_2D; d++) {
+      wf[d] += s->f[d].v;
+      s->f[d].v = wf[d];
+    }
+    c = ftt_cell_neighbor (c, FTT_FRONT);
+  }
 }
 
-static void gfs_correct_normal_velocities_weighted1 (GfsDomain * toplayer,
-						     guint dimension,
-						     GfsVariable * p,
-						     GfsVariable ** g,
-						     gdouble dt,
-						     gboolean weighted,
-						     GfsVariable * H)
+static void depth_integrated_coefficients (GfsDomain * domain)
 {
-  gpointer data[2];
-  gfs_correct_normal_velocities_weighted (toplayer, dimension, p, g, dt, weighted);
-  data[0] = g;
-  data[1] = H;
-  gfs_domain_cell_traverse (toplayer, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) scale_g, data);
-}
-
-static void swap_solids (FttCell * cell, GfsVariable * solid)
-{
-  gpointer s = GFS_STATE (cell)->solid;
-  GFS_STATE (cell)->solid = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, solid->i));
-  GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, solid->i)) = s;
-}
-
-static void set_solid2D (GfsSimulation * sim, GfsVariable * solid)
-{
-  if (sim->surface)
-    gfs_domain_traverse_mixed (GFS_OCEAN (sim)->toplayer, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
-			       (FttCellTraverseFunc) swap_solids, solid);
-}
-
-static void set_solid3D (GfsSimulation * sim, GfsVariable * solid)
-{
-  if (sim->surface)
-    gfs_domain_cell_traverse (GFS_OCEAN (sim)->toplayer, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			      (FttCellTraverseFunc) swap_solids, solid);
-}
-
-static void free_solid (FttCell * cell, GfsVariable * solid)
-{
-  g_free (GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, solid->i)));
+  gfs_poisson_coefficients (domain, NULL);
+  gfs_domain_cell_traverse_boundary (domain, FTT_BACK,
+				     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				     (FttCellTraverseFunc) compute_coeff, NULL);
+  /* fixme: need a call to face_coeff_from_below */
 }
 
 static void ocean_run (GfsSimulation * sim)
 {
-  GfsVariable * p, * div, * H, * res = NULL, * solid = NULL, * hu[2];
-  GfsFunction * fH;
+  GfsVariable * p, * div, * H, * res = NULL;
   GfsDomain * domain, * toplayer;
   GSList * i;
 
@@ -578,11 +609,6 @@ static void ocean_run (GfsSimulation * sim)
 
   H = gfs_variable_from_name (domain->variables, "H");
   g_assert (H);
-  fH = gfs_function_new_from_variable (gfs_function_class (), H);
-  hu[0] = gfs_variable_from_name (domain->variables, "HU");
-  g_assert (hu[0]);
-  hu[1] = gfs_variable_from_name (domain->variables, "HV");
-  g_assert (hu[1]);
 
   gfs_domain_cell_traverse (toplayer, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) compute_H, H);
@@ -602,21 +628,7 @@ static void ocean_run (GfsSimulation * sim)
   p = gfs_variable_from_name (domain->variables, "P");
   g_assert (p);
 
-  div = gfs_temporary_variable (toplayer);
-
-  if (sim->surface) {
-    solid = gfs_temporary_variable (toplayer);
-    gfs_domain_cell_traverse (toplayer, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			      (FttCellTraverseFunc) gfs_cell_reset, solid);
-    set_solid2D (sim, solid);
-    gfs_domain_traverse_cut_2D (toplayer, sim->surface, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-				(FttCellTraverseCutFunc) gfs_set_2D_solid_fractions_from_surface,
-				NULL);
-    gfs_domain_cell_traverse (toplayer, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_init_solid_fractions_from_children,
-			      NULL);
-    set_solid3D (sim, solid);
-  }
+  div = gfs_temporary_variable (domain);
 
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
@@ -630,30 +642,24 @@ static void ocean_run (GfsSimulation * sim)
 
     gfs_simulation_set_timestep (sim);
 
-    /* barotropic divergence */
-    set_solid2D (sim, solid);
-    /* fixme: this is not correct with more than one layer!!! */
-    normal_velocities (toplayer, gfs_domain_velocity (domain), hu, H);
-    gfs_domain_cell_traverse (toplayer, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_normal_divergence_2D, div);
-    set_solid3D (sim, solid);
+    depth_integrated_divergence (domain, div);
 
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p);
 
     /* baroclinic terms */
-    
+#if !MAC
     gfs_predicted_face_velocities (domain, 2, &sim->advection_params);
 
     gfs_domain_timer_start (domain, "correct_normal_velocities");
     gfs_poisson_coefficients (domain, NULL);
-    gfs_correct_normal_velocities_weighted (domain, 2, p, g, sim->advection_params.dt/2., FALSE);
+    gfs_correct_normal_velocities_weighted (domain, 2, p, g, sim->advection_params.dt/2., TRUE);
 
     gfs_domain_cell_traverse_boundary (domain, FTT_BACK,
 				       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				       (FttCellTraverseFunc) compute_w, 
 				       gfs_variable_from_name (domain->variables, "W"));
     gfs_domain_timer_stop (domain, "correct_normal_velocities");
-    
+
     i = domain->variables;
     while (i) {
       if (GFS_IS_VARIABLE_TRACER_VOF (i->data)) {
@@ -680,31 +686,39 @@ static void ocean_run (GfsSimulation * sim)
 					       sim->physical_params.alpha);
 
     /* barotropic pressure and Coriolis terms */
-    set_solid2D (sim, solid);
-    gfs_poisson_coefficients (toplayer, fH);
-    gfs_correct_normal_velocities_weighted1 (toplayer, 2, p, g, 0., 
-					     sim->approx_projection_params.weighted, H);
+    gfs_poisson_coefficients (domain, NULL);
+    gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., 
+					    sim->approx_projection_params.weighted);
     if (gfs_has_source_coriolis (domain)) {
       gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt);
       gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
-      gfs_correct_normal_velocities_weighted1 (toplayer, 2, p, g, 0., 
-					       sim->approx_projection_params.weighted, H);
+      gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., 
+					      sim->approx_projection_params.weighted);
       gfs_correct_centered_velocities (domain, 2, g, -sim->advection_params.dt/2.);
     }
     else
       gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt/2.);
-
+#else
+    gfs_poisson_coefficients (domain, NULL);
+    gfs_correct_normal_velocities_weighted (domain, 2, p, g, sim->advection_params.dt/2.,
+					    sim->approx_projection_params.weighted);
+    gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt/2.);
+#endif
     sim->time.t = sim->tnext;
     sim->time.i++;
 
     gfs_domain_timer_start (domain, "free_surface_pressure");
-    normal_velocities (toplayer, gfs_domain_velocity (domain), hu, H);
+    GfsVariable * divn = gfs_temporary_variable (domain);
+    depth_integrated_divergence (domain, divn);
+    depth_integrated_coefficients (domain);
     gfs_free_surface_pressure (toplayer, &sim->approx_projection_params, &sim->advection_params,
-			       p, div, res, sim->physical_params.g/GFS_OCEAN (domain)->layer->len);
-    gfs_correct_normal_velocities_weighted1 (toplayer, 2, p, g, 0., 
-					     sim->approx_projection_params.weighted, H);
+			       p, divn, div, res, sim->physical_params.g/GFS_OCEAN (domain)->layer->len);
+    gts_object_destroy (GTS_OBJECT (divn));
+
+    gfs_poisson_coefficients (domain, NULL);
+    gfs_correct_normal_velocities_weighted (domain, 2, p, g, sim->advection_params.dt/2.,
+					    sim->approx_projection_params.weighted);
     gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt/2.);
-    set_solid3D (sim, solid);
     gfs_domain_timer_stop (domain, "free_surface_pressure");
 
     gfs_domain_cell_traverse (domain,
@@ -722,12 +736,6 @@ static void ocean_run (GfsSimulation * sim)
 			 (GtsFunc) gts_object_destroy, NULL);
 
   gts_object_destroy (GTS_OBJECT (div));
-  gts_object_destroy (GTS_OBJECT (fH));
-  if (sim->surface) {
-    gfs_domain_traverse_mixed (GFS_OCEAN (sim)->toplayer, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
-			       (FttCellTraverseFunc) free_solid, solid);
-    gts_object_destroy (GTS_OBJECT (solid));
-  }
 }
 
 static void gfs_ocean_class_init (GfsSimulationClass * klass)
@@ -741,12 +749,6 @@ static void gfs_ocean_class_init (GfsSimulationClass * klass)
 static void gfs_ocean_init (GfsOcean * object)
 {
   gfs_domain_add_variable (GFS_DOMAIN (object), "H", "Depth");
-  gfs_variable_set_vector (gfs_domain_add_variable (GFS_DOMAIN (object), "HU", 
-						    "x-component of the depth-integrated momentum"),
-			   FTT_X);
-  gfs_variable_set_vector (gfs_domain_add_variable (GFS_DOMAIN (object), "HV", 
-						    "y-component of the depth-integrated momentum"),
-			   FTT_Y);
   GFS_SIMULATION (object)->approx_projection_params.weighted = 1;
   object->layer = g_ptr_array_new ();
   new_layer (object);
@@ -1144,6 +1146,7 @@ static void bc_flather_destroy (GtsObject * o)
 
 static gdouble flather_value (FttCellFace * f, GfsBc * b)
 {
+  /* fixme: this will not work for multilayer domains */
   guint d, nb = 0;
   FttCellNeighbors n;
   gdouble H;
@@ -1163,7 +1166,11 @@ static gdouble flather_value (FttCellFace * f, GfsBc * b)
       (FTT_FACE_DIRECT (f) ? -1. : 1.)*
       (GFS_VARIABLE (f->neighbor, GFS_BC_FLATHER (b)->p->i) - 
        gfs_function_face_value (GFS_BC_FLATHER (b)->val, f))*
-      cg/sim->physical_params.g;
+      cg/sim->physical_params.g
+#if !FTT_2D
+      /H
+#endif
+      ;
   }
   else
     return 0.;
