@@ -13,7 +13,7 @@
 1 0 GfsPoisson GfsBox GfsGEdge {} {
   Refine 3
   ApproxProjectionParams { nitermax = 1000 minlevel = 1 tolerance = 1e-30 }
-  GtsSurfaceFile dumbell.gts
+  Surface dumbell.gts
   Init {} { Div = y }
   OutputProjectionStats { istep = 1 } stdout
 }

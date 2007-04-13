@@ -45,7 +45,7 @@
     AdvectionParams { scheme = none }
     Init {} { P = 1e-2*x }
     # Bathymetry
-    GtsSurfaceFile bath.gts
+    Surface bath.gts
     # Refine the coastline to 7 levels
     RefineSurface 7 bath.gts { twod = 1 }
     # Non-dimensional gravity

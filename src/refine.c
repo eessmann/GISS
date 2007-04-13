@@ -193,28 +193,33 @@ static void refine_solid_read (GtsObject ** o, GtsFile * fp)
   (* GTS_OBJECT_CLASS (gfs_refine_solid_class ())->parent_class->read) (o, fp);
 }
 
-static void refine_cut_cell (FttCell * cell, GtsSurface * s, gpointer * data)
-{
-  GfsRefine * refine = data[0];
-  GfsDomain * domain = data[1];
+typedef struct {
+  GfsRefine * refine;
+  GfsDomain * domain;
+  GtsSurface * surface;
+} RefineCut;
 
-  GTS_OBJECT (s)->reserved = GFS_SIMULATION (domain)->surface;
-  GFS_REFINE_SOLID (refine)->v->data = s;
-  if (ftt_cell_level (cell) < gfs_function_value (refine->maxlevel, cell))
-    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
-  GFS_REFINE_SOLID (refine)->v->data = NULL;
+static void refine_cut_cell (FttCell * cell, GtsSurface * s, RefineCut * p)
+{
+  GTS_OBJECT (s)->reserved = p->surface;
+  GFS_REFINE_SOLID (p->refine)->v->data = s;
+  if (ftt_cell_level (cell) < gfs_function_value (p->refine->maxlevel, cell))
+    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, p->domain);
+  GFS_REFINE_SOLID (p->refine)->v->data = NULL;
 }
 
 static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
 {
-  if (sim->surface) {
-    gpointer data[2];
-
-    data[0] = refine;
-    data[1] = sim;
-    gfs_domain_traverse_cut (GFS_DOMAIN (sim), sim->surface, 
+  GtsSurface * surface = gfs_simulation_get_surface (sim);
+  if (surface) {
+    RefineCut p;
+    p.refine = refine;
+    p.domain = GFS_DOMAIN (sim);
+    p.surface = surface;
+    gfs_domain_traverse_cut (GFS_DOMAIN (sim), surface, 
 			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			     (FttCellTraverseCutFunc) refine_cut_cell, data);
+			     (FttCellTraverseCutFunc) refine_cut_cell, &p);
+    gts_object_destroy (GTS_OBJECT (surface));
   }
 }
 
@@ -333,18 +338,19 @@ static void refine_surface_read (GtsObject ** o, GtsFile * fp)
 
 static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
 {
-  gpointer data[2];
+  RefineCut p;
 
-  data[0] = refine;
-  data[1] = sim;
+  p.refine = refine;
+  p.domain = GFS_DOMAIN (sim);
+  p.surface = GFS_REFINE_SURFACE (refine)->surface;
   if (GFS_REFINE_SURFACE (refine)->twod)
     gfs_domain_traverse_cut_2D (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-				(FttCellTraverseCutFunc) refine_cut_cell, data);
+				(FttCellTraverseCutFunc) refine_cut_cell, &p);
   else
     gfs_domain_traverse_cut (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
 			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			     (FttCellTraverseCutFunc) refine_cut_cell, data);
+			     (FttCellTraverseCutFunc) refine_cut_cell, &p);
 }
 
 static void gfs_refine_surface_class_init (GfsRefineClass * klass)

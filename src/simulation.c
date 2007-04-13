@@ -37,9 +37,6 @@ static void simulation_destroy (GtsObject * object)
 {
   GfsSimulation * sim = GFS_SIMULATION (object);
 
-  if (sim->surface)
-    gts_object_destroy (GTS_OBJECT (sim->surface));
-
   gts_container_foreach (GTS_CONTAINER (sim->refines),
 			 (GtsFunc) gts_object_destroy, NULL);
   gts_object_destroy (GTS_OBJECT (sim->refines));
@@ -48,6 +45,7 @@ static void simulation_destroy (GtsObject * object)
 			 (GtsFunc) gts_object_destroy, NULL);
   gts_object_destroy (GTS_OBJECT (sim->events));
   gts_object_destroy (GTS_OBJECT (sim->adapts));
+  gts_object_destroy (GTS_OBJECT (sim->surfaces));
 
   g_slist_foreach (sim->modules, (GFunc) g_module_close, NULL);
   g_slist_free (sim->modules);
@@ -138,127 +136,7 @@ static void simulation_write (GtsObject * object, FILE * fp)
     i = i->next;
   }
 
-  if (sim->surface && sim->output_surface) {
-    fputs ("  GtsSurface { ", fp);
-    if (GFS_DOMAIN (sim)->binary) {
-      gboolean binary = GTS_POINT_CLASS (sim->surface->vertex_class)->binary;
-      GTS_POINT_CLASS (sim->surface->vertex_class)->binary = TRUE;
-      gts_surface_write (sim->surface, fp);
-      GTS_POINT_CLASS (sim->surface->vertex_class)->binary = binary;
-    }
-    else
-      gts_surface_write (sim->surface, fp);
-    fputs ("}\n", fp);
-  }
   fputc ('}', fp);
-}
-
-static void check_solid_surface (GtsSurface * s, 
-				 const gchar * fname,
-				 GtsFile * fp)
-{
-  GString * name = g_string_new ("surface");
-
-  if (fname) {
-    g_string_append (name, " `");
-    g_string_append (name, fname);
-    g_string_append_c (name, '\'');
-  }
-
-  if (!gts_surface_is_orientable (s))
-    gts_file_error (fp, "%s is not orientable", name->str);
-  g_string_free (name, TRUE);
-}
-
-static GtsSurface * read_surface_file (GtsFile * fp, GtsSurface * surface)
-{
-  GtsSurface * s;
-  FILE * fptr;
-  GtsFile * fp1;
-  
-  gts_file_next_token (fp);
-  if (fp->type != GTS_STRING) {
-    gts_file_error (fp, "expecting a string (filename)");
-    return NULL;
-  }
-  s = gts_surface_new (gts_surface_class (),
-		       gts_face_class (),
-		       gts_edge_class (),
-		       surface ? surface->vertex_class : gts_vertex_class ());
-  fptr = fopen (fp->token->str, "rt");
-  if (fptr == NULL) {
-    gts_file_error (fp, "cannot open file `%s'", fp->token->str);
-    return NULL;
-  }
-  fp1 = gts_file_new (fptr);
-  if (gts_surface_read (s, fp1)) {
-    gts_file_error (fp, 
-		    "file `%s' is not a valid GTS file\n"
-		    "%s:%d:%d: %s",
-		    fp->token->str, fp->token->str,
-		    fp1->line, fp1->pos, fp1->error);
-    gts_file_destroy (fp1);
-    fclose (fptr);
-    gts_object_destroy (GTS_OBJECT (s));
-    return NULL;
-  }
-  gts_file_destroy (fp1);
-  fclose (fptr);
-  
-  check_solid_surface (s, fp->token->str, fp);
-  if (fp->type == GTS_ERROR) {
-    gts_object_destroy (GTS_OBJECT (s));
-    return NULL;
-  }
-  
-  if (surface) {
-    gts_surface_merge (surface, s);
-    gts_object_destroy (GTS_OBJECT (s));
-    return surface;
-  }
-  return s;
-}
-
-static GtsSurface * read_surface (GtsFile * fp, GtsSurface * surface)
-{
-  GtsSurface * s;
-
-  gts_file_next_token (fp);
-  if (fp->type != '{') {
-    gts_file_error (fp, "expecting an opening brace");
-    return NULL;
-  }
-  fp->scope_max++;
-  gts_file_next_token (fp);
-  
-  s = gts_surface_new (gts_surface_class (),
-		       gts_face_class (),
-		       gts_edge_class (),
-		       surface ? surface->vertex_class : gts_vertex_class ());
-  
-  if (gts_surface_read (s, fp)) {
-    gts_object_destroy (GTS_OBJECT (s));
-    return NULL;
-  }
-  if (fp->type != '}') {
-    gts_object_destroy (GTS_OBJECT (s));
-    gts_file_error (fp, "expecting a closing brace");
-    return NULL;
-  }
-  fp->scope_max--;
-  
-  check_solid_surface (s, NULL, fp);
-  if (fp->type == GTS_ERROR) {
-    gts_object_destroy (GTS_OBJECT (s));
-    return NULL;
-  }
-  
-  if (surface) {
-    gts_surface_merge (surface, s);
-    gts_object_destroy (GTS_OBJECT (s));
-    return surface;
-  }
-  return s;
 }
 
 static gboolean strmatch (const gchar * s, const gchar * s1)
@@ -298,28 +176,8 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       return;
     }
 
-    /* ------------ GtsSurface ------------ */
-    if (strmatch (fp->token->str, "GtsSurface")) {
-      GtsSurface * s;
-      
-      if ((s = read_surface (fp, sim->surface)) == NULL)
-	return;
-      sim->surface = s;
-      gts_file_next_token (fp);
-    }
-
-    /* ------------ GtsSurfaceFile ------------ */
-    else if (strmatch (fp->token->str, "GtsSurfaceFile")) {
-      GtsSurface * s;
-
-      if ((s = read_surface_file (fp, sim->surface)) == NULL)
-	return;
-      sim->surface = s;
-      gts_file_next_token (fp);
-    }
-
     /* ------------ GModule ------------ */
-    else if (strmatch (fp->token->str, "GModule")) {
+    if (!strcmp (fp->token->str, "GModule")) {
       gts_file_next_token (fp);
       if (fp->type != GTS_STRING) {
 	gts_file_error (fp, "expecting a string (filename)");
@@ -393,11 +251,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       GtsObjectClass * klass = gfs_object_class_from_name (fp->token->str);
       GtsObject * object;
 
-      if (klass == NULL ||
-	  (!gts_object_class_is_from_class (klass, gfs_global_class ()) &&
-	   !gts_object_class_is_from_class (klass, gfs_refine_class ()) &&
-	   !gts_object_class_is_from_class (klass, gfs_event_class ()) &&
-	   !gts_object_class_is_from_class (klass, gfs_surface_generic_bc_class ()))) {
+      if (klass == NULL) {
 	gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
 	return;
       }
@@ -420,6 +274,10 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 	gts_container_add (GTS_CONTAINER (sim->adapts), GTS_CONTAINEE (object));
 	gts_container_add (GTS_CONTAINER (sim->events), GTS_CONTAINEE (object));
       }
+      else if (GFS_IS_SURFACE (object)) {
+	gts_container_add (GTS_CONTAINER (sim->surfaces), GTS_CONTAINEE (object));
+	gts_container_add (GTS_CONTAINER (sim->events), GTS_CONTAINEE (object));
+      }
       else if (GFS_IS_EVENT (object))
 	gts_container_add (GTS_CONTAINER (sim->events), GTS_CONTAINEE (object));
       else if (GFS_IS_SURFACE_GENERIC_BC (object))
@@ -439,6 +297,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   sim->refines->items = g_slist_reverse (sim->refines->items);
   sim->adapts->items = g_slist_reverse (sim->adapts->items);
   sim->events->items = g_slist_reverse (sim->events->items);
+  sim->surfaces->items = g_slist_reverse (sim->surfaces->items);
   sim->modules = g_slist_reverse (sim->modules);
 }
 
@@ -824,7 +683,9 @@ static void simulation_init (GfsSimulation * object)
   gfs_multilevel_params_init (&object->projection_params);
   gfs_multilevel_params_init (&object->approx_projection_params);
 
-  object->surface = NULL;
+  object->surfaces = GTS_SLIST_CONTAINER (gts_container_new
+					  (GTS_CONTAINER_CLASS
+					   (gts_slist_container_class ())));
   object->output_surface = TRUE;
 
   object->refines = GTS_SLIST_CONTAINER (gts_container_new
@@ -878,6 +739,34 @@ static void init_non_variable (GfsEvent * event, GfsSimulation * sim)
 {
   if (!GFS_IS_VARIABLE (event))
     gfs_event_init (event, sim);
+}
+
+/**
+ * gfs_simulation_get_surface:
+ * @sim: a #GfsSimulation.
+ *
+ * Returns: a new #GtsSurface containing all the solid surfaces
+ * defined in @sim, or %NULL if @sim does not contain any solid
+ * surface.
+ */
+GtsSurface * gfs_simulation_get_surface (GfsSimulation * sim)
+{
+  g_return_val_if_fail (sim != NULL, NULL);
+
+  if (sim->surfaces->items == NULL)
+    return NULL;
+  else {
+    GtsSurface * s = gts_surface_new (gts_surface_class (), 
+				      gts_face_class (), 
+				      gts_edge_class (), 
+				      gts_vertex_class ());
+    GSList * i = sim->surfaces->items;
+    while (i) {
+      gts_surface_merge (s, GFS_SURFACE (i->data)->s);
+      i = i->next;
+    }
+    return s;
+  }
 }
 
 /**
@@ -979,11 +868,13 @@ void gfs_simulation_refine (GfsSimulation * sim)
   gfs_domain_match (domain);
   gfs_domain_timer_stop (domain, "simulation_refine");
 
-  if (sim->surface) {
+  GtsSurface * surface = gfs_simulation_get_surface (sim);
+  if (surface) {
     gfs_domain_timer_start (domain, "solid_fractions");
-    sim->thin = gfs_domain_init_solid_fractions (domain, sim->surface, TRUE,
-						 (FttCellCleanupFunc) gfs_cell_cleanup, NULL, 
+    sim->thin = gfs_domain_init_solid_fractions (domain, surface, TRUE,
+						 (FttCellCleanupFunc) gfs_cell_cleanup, NULL,  
 						 NULL);
+    gts_object_destroy (GTS_OBJECT (surface));
     gfs_domain_match (domain);
     gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			       (FttCellTraverseFunc) set_permanent, NULL);

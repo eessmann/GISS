@@ -38,6 +38,7 @@
 #include "ocean.h"
 #include "levelset.h"
 #include "vof.h"
+#include "solid.h"
 
 #include "modules.h"
 
@@ -99,15 +100,6 @@ GtsObjectClass ** gfs_classes (void)
     gfs_advection_class (),
     gfs_poisson_class (),
 
-  gfs_variable_class (),
-    gfs_variable_tracer_class (),
-      gfs_variable_tracer_vof_class (),
-    gfs_variable_residual_class (),
-    gfs_variable_filtered_class (),
-    gfs_variable_curvature_class (),
-      gfs_variable_position_class (),
-    gfs_variable_distance_class (),
-
   gfs_surface_bc_class (),
 
   gfs_box_class (),
@@ -133,12 +125,24 @@ GtsObjectClass ** gfs_classes (void)
       gfs_refine_height_class (),
 
   gfs_event_class (),
+    gfs_variable_class (),
+      gfs_variable_tracer_class (),
+        gfs_variable_tracer_vof_class (),
+      gfs_variable_residual_class (),
+      gfs_variable_filtered_class (),
+      gfs_variable_curvature_class (),
+        gfs_variable_position_class (),
+      gfs_variable_distance_class (),
+
+    gfs_surface_class (),
+
     gfs_init_class (),
     gfs_init_flow_constant_class (),
     gfs_init_fraction_class (),
 #if FTT_2D
     gfs_init_vorticity_class (),
 #endif /* FTT_2D */
+
     gfs_adapt_class (),
       gfs_adapt_vorticity_class (),
       gfs_adapt_streamline_curvature_class (),

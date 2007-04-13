@@ -1157,7 +1157,7 @@ int main (int argc, char * argv[])
       GtsSurface * s = surface;
 
       if (s == NULL)
-	s = simulation->surface;
+	s = gfs_simulation_get_surface (simulation);
 
       if (s) {
 	if (refine)

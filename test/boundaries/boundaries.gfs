@@ -34,7 +34,7 @@
   AdvectionParams { scheme = none }
   ApproxProjectionParams { tolerance = 1e-6 }
   Refine LEVEL
-  GtsSurfaceFile boundaries.gts
+  Surface boundaries.gts
   Init {} { U = 1 }
   OutputSimulation { start = end } sim-LEVEL {
     variables = U,V,P

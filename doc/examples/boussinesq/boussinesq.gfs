@@ -36,7 +36,7 @@
   RefineSolid 8
 
   # Insert the solid boundary defined by cylinder.gts
-  GtsSurfaceFile cylinder.gts
+  Surface cylinder.gts
 
   # Add a passive tracer called T
   VariableTracer {} T

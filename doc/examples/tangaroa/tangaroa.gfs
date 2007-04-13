@@ -22,7 +22,7 @@
 #
 2 1 GfsSimulation GfsBox GfsGEdge {} {
   Time { end = 2 }
-  GtsSurfaceFile tangaroa.gts
+  Surface tangaroa.gts
   Refine 5
   RefineSolid 9
   Init {} { U = 1. }

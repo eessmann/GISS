@@ -23,6 +23,7 @@
 #include <gts.h>
 
 #include "domain.h"
+#include "event.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,6 +52,26 @@ void         gfs_solid_normal                            (const FttCell * cell,
 void         gfs_face_ca                                 (const FttCellFace * face, 
 							  FttVector * ca);
 void         gfs_solid_coarse_fine                       (FttCell * parent);
+
+/* GfsSurface: Header */
+
+typedef struct _GfsSurface         GfsSurface;
+
+struct _GfsSurface {
+  /*< private >*/
+  GfsEvent parent;
+
+  /*< public >*/
+  GtsSurface * s;
+};
+
+#define GFS_SURFACE(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSurface,\
+					         gfs_surface_class ())
+#define GFS_IS_SURFACE(obj)         (gts_object_is_from_class (obj,\
+						 gfs_surface_class ()))
+
+GfsEventClass * gfs_surface_class  (void);
 
 #ifdef __cplusplus
 }

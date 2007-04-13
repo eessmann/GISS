@@ -50,7 +50,7 @@
   Time { iend = 10 }
   Refine LEVEL
   RefineSolid (LEVEL + 2)
-  GtsSurfaceFile shape.gts
+  Surface shape.gts
   ApproxProjectionParams { nrelax = 4 tolerance = 1e-30 }
   Init {} {
     Div = {

@@ -40,8 +40,8 @@
 1 0 GfsSimulation GfsBox GfsGEdge {} {
   Time { iend = 100 dtmax = 1e-2 }
   Refine 6
-  GtsSurfaceFile outer.gts
-  GtsSurfaceFile inner.gts
+  Surface outer.gts
+  Surface inner.gts
   ApproxProjectionParams { tolerance = 1e-6 }
   AdvectionParams { scheme = none }
   SourceViscosity {} {

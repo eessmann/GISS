@@ -81,7 +81,7 @@
   }
   Refine LEVEL
   AdaptVorticity { istep = 1 } { cmax = 5e-2 maxlevel = LEVEL }
-  GtsSurfaceFile basin.gts
+  Surface basin.gts
   AdvectionParams { scheme = none }
   ApproxProjectionParams { tolerance = 1e-9 weighted = 0 }
   SourceCoriolis {} 1.

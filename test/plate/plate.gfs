@@ -16,7 +16,7 @@
   Time { iend = 30 dtmax = 1e-2 }
   Refine 5
   RefineSolid 6
-  GtsSurfaceFile square.gts
+  Surface square.gts
   AdvectionParams { scheme = none }
   Init {} { U = 1 }
   OutputScalarNorm { start = end } stdout { v = Velocity } 

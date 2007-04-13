@@ -1460,3 +1460,138 @@ void gfs_solid_coarse_fine (FttCell * parent)
       outer_fractions_coarse_fine (parent, d);
 #endif /* 3D */
 }
+
+/* GfsSurface: Object */
+
+static void check_solid_surface (GtsSurface * s, 
+				 const gchar * fname,
+				 GtsFile * fp)
+{
+  GString * name = g_string_new ("surface");
+
+  if (fname) {
+    g_string_append (name, " `");
+    g_string_append (name, fname);
+    g_string_append_c (name, '\'');
+  }
+
+  if (!gts_surface_is_orientable (s))
+    gts_file_error (fp, "%s is not orientable", name->str);
+  g_string_free (name, TRUE);
+}
+
+static void gfs_surface_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_surface_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GtsSurface * s = GFS_SURFACE (*o)->s;
+  if (fp->type == '{') {
+    fp->scope_max++;
+    gts_file_next_token (fp);
+    if (gts_surface_read (s, fp))
+      return;
+    if (fp->type != '}') {
+      gts_file_error (fp, "expecting a closing brace");
+      return;
+    }
+    check_solid_surface (s, NULL, fp);
+    if (fp->type == GTS_ERROR)
+      return;
+    fp->scope_max--;
+  }
+  else {
+    if (fp->type != GTS_STRING) {
+      gts_file_error (fp, "expecting a string (filename)");
+      return;
+    }
+    FILE * fptr = fopen (fp->token->str, "rt");
+    if (fptr == NULL) {
+      gts_file_error (fp, "cannot open file `%s'", fp->token->str);
+      return;
+    }
+    GtsFile * fp1 = gts_file_new (fptr);
+    if (gts_surface_read (s, fp1)) {
+      gts_file_error (fp, 
+		      "file `%s' is not a valid GTS file\n"
+		      "%s:%d:%d: %s",
+		      fp->token->str, fp->token->str,
+		      fp1->line, fp1->pos, fp1->error);
+      gts_file_destroy (fp1);
+      fclose (fptr);
+      return;
+    }
+    gts_file_destroy (fp1);
+    fclose (fptr);
+  
+    check_solid_surface (s, fp->token->str, fp);
+    if (fp->type == GTS_ERROR)
+      return;
+  }
+  gts_file_next_token (fp);
+}
+
+static void gfs_surface_write (GtsObject * o, FILE * fp)
+{
+  GfsSimulation * sim = gfs_object_simulation (o);
+  if (sim->output_surface) {
+    (* GTS_OBJECT_CLASS (gfs_surface_class ())->parent_class->write) (o, fp);
+
+    fputs (" { ", fp);
+    GtsSurface * s = GFS_SURFACE (o)->s;
+    if (GFS_DOMAIN (sim)->binary) {
+      gboolean binary = GTS_POINT_CLASS (s->vertex_class)->binary;
+      GTS_POINT_CLASS (s->vertex_class)->binary = TRUE;
+      gts_surface_write (s, fp);
+      GTS_POINT_CLASS (s->vertex_class)->binary = binary;
+    }
+    else
+      gts_surface_write (s, fp);
+    fputc ('}', fp);
+  }
+}
+
+static void gfs_surface_destroy (GtsObject * object)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_SURFACE (object)->s));
+
+  (* GTS_OBJECT_CLASS (gfs_surface_class ())->parent_class->destroy) (object);
+}
+
+static void gfs_surface_class_init (GtsSurfaceClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = gfs_surface_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_surface_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_surface_destroy;
+}
+
+static void gfs_surface_init (GfsSurface * object)
+{
+  object->s = gts_surface_new (gts_surface_class (), 
+			       gts_face_class (), 
+			       gts_edge_class (), 
+			       gts_vertex_class ());
+  GFS_EVENT (object)->istep = G_MAXINT/2;
+}
+
+GfsEventClass * gfs_surface_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_surface_info = {
+      "GfsSurface",
+      sizeof (GfsSurface),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_surface_class_init,
+      (GtsObjectInitFunc) gfs_surface_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
+				  &gfs_surface_info);
+  }
+
+  return klass;
+}

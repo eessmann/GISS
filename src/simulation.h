@@ -63,10 +63,6 @@ struct _GfsSimulation {
 
   GfsAdvectionParams advection_params;
 
-  GtsSurface * surface;
-  guint thin;
-  gboolean output_surface;
-
   GtsSListContainer * refines;
 
   GtsSListContainer * adapts;
@@ -74,6 +70,10 @@ struct _GfsSimulation {
 
   GtsSListContainer * events;
   GSList * modules, * variables, * globals;
+
+  GtsSListContainer * surfaces;
+  guint thin;
+  gboolean output_surface;
 
   gdouble tnext;
 };
@@ -95,6 +95,7 @@ struct _GfsSimulationClass {
 
 GfsSimulationClass * gfs_simulation_class        (void);
 GfsSimulation *      gfs_simulation_new          (GfsSimulationClass * klass);
+GtsSurface *         gfs_simulation_get_surface  (GfsSimulation * sim);
 void                 gfs_simulation_init         (GfsSimulation * sim);
 void                 gfs_simulation_write        (GfsSimulation * sim,
 						  gint max_depth,  

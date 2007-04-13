@@ -92,7 +92,7 @@
     H = 1
   }
   Refine LEVEL
-  GtsSurfaceFile basin.gts
+  Surface basin.gts
   AdvectionParams { scheme = none }
   ApproxProjectionParams { tolerance = 1e-9 weighted = 0 }
   SourceCoriolis {} 1.
