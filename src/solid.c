@@ -1486,17 +1486,17 @@ static void gfs_surface_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  GtsSurface * s = GFS_SURFACE (*o)->s;
+  GtsSurface * surface = GFS_SURFACE (*o)->s;
   if (fp->type == '{') {
     fp->scope_max++;
     gts_file_next_token (fp);
-    if (gts_surface_read (s, fp))
+    if (gts_surface_read (surface, fp))
       return;
     if (fp->type != '}') {
       gts_file_error (fp, "expecting a closing brace");
       return;
     }
-    check_solid_surface (s, NULL, fp);
+    check_solid_surface (surface, NULL, fp);
     if (fp->type == GTS_ERROR)
       return;
     fp->scope_max--;
@@ -1512,7 +1512,7 @@ static void gfs_surface_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     GtsFile * fp1 = gts_file_new (fptr);
-    if (gts_surface_read (s, fp1)) {
+    if (gts_surface_read (surface, fp1)) {
       gts_file_error (fp, 
 		      "file `%s' is not a valid GTS file\n"
 		      "%s:%d:%d: %s",
@@ -1525,11 +1525,80 @@ static void gfs_surface_read (GtsObject ** o, GtsFile * fp)
     gts_file_destroy (fp1);
     fclose (fptr);
   
-    check_solid_surface (s, fp->token->str, fp);
+    check_solid_surface (surface, fp->token->str, fp);
     if (fp->type == GTS_ERROR)
       return;
   }
   gts_file_next_token (fp);
+
+  if (fp->type == '{') {
+    GtsVector r = {0.,0.,0.}, s = {1.,1.,1.}, t = {0.,0.,0.};
+    gdouble angle = 0., scale = 1.;
+    gboolean flip = FALSE;
+    GtsFileVariable var[] = {
+      {GTS_DOUBLE, "rx", TRUE},
+      {GTS_DOUBLE, "ry", TRUE},
+      {GTS_DOUBLE, "rz", TRUE},
+      {GTS_DOUBLE, "sx", TRUE},
+      {GTS_DOUBLE, "sy", TRUE},
+      {GTS_DOUBLE, "sz", TRUE},
+      {GTS_DOUBLE, "tx", TRUE},
+      {GTS_DOUBLE, "ty", TRUE},
+      {GTS_DOUBLE, "tz", TRUE},
+      {GTS_DOUBLE, "scale", TRUE},
+      {GTS_DOUBLE, "angle", TRUE},
+      {GTS_INT,  "flip", TRUE},
+      {GTS_NONE}
+    };
+    GtsFileVariable * v = var;
+
+    (v++)->data = &r[0];
+    (v++)->data = &r[1];
+    (v++)->data = &r[2];
+
+    (v++)->data = &s[0];
+    (v++)->data = &s[1];
+    (v++)->data = &s[2];
+
+    (v++)->data = &t[0];
+    (v++)->data = &t[1];
+    (v++)->data = &t[2];
+
+    (v++)->data = &scale;
+    (v++)->data = &angle;
+
+    (v++)->data = &flip;
+
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;
+
+    if (var[9].set)
+      s[0] = s[1] = s[2] = scale;
+    if (var[10].set && gts_vector_norm (r) == 0.) {
+      gts_file_variable_error (fp, var, "angle",
+			       "a non-zero rotation vector must be specified");
+      return;
+    }
+    
+    GtsMatrix * m = gts_matrix_translate (NULL, t);
+    if (angle != 0.) {
+      GtsMatrix * mr = gts_matrix_rotate (NULL, r, angle*M_PI/180.);
+      GtsMatrix * m1 = gts_matrix_product (m, mr);
+      gts_matrix_destroy (m);
+      gts_matrix_destroy (mr);
+      m = m1;
+    }
+    GtsMatrix * ms = gts_matrix_scale (NULL, s);
+    GtsMatrix * M = gts_matrix_product (m, ms);
+    gts_matrix_destroy (m);
+    gts_matrix_destroy (ms);
+    gts_surface_foreach_vertex (surface, (GtsFunc) gts_point_transform, M);
+    gts_matrix_destroy (M);
+
+    if (flip)
+      gts_surface_foreach_face (surface, (GtsFunc) gts_triangle_revert, NULL);
+  }
 }
 
 static void gfs_surface_write (GtsObject * o, FILE * fp)

@@ -1,5 +1,4 @@
 if ! $donotrun; then
-    shapes ellipse | transform -i --scale 1.9999 > outer.gts
     shapes ellipse | transform > inner.gts
     for model in 0 1 2 3; do
 	if sed "s/MODEL/$model/g" < $1 | gerris2D -; then :
