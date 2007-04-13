@@ -121,16 +121,6 @@ static void gfs_event_read (GtsObject ** o, GtsFile * fp)
   GfsEvent * event = GFS_EVENT (*o);
   GtsObjectClass * klass;
   gboolean class_changed = FALSE;
-  GtsFileVariable var[] = {
-    {GTS_STRING, "start",  TRUE},
-    {GTS_DOUBLE, "end",    TRUE},
-    {GTS_DOUBLE, "step",   TRUE},
-    {GTS_UINT,   "istart", TRUE},
-    {GTS_UINT,   "iend",   TRUE},
-    {GTS_UINT,   "istep",  TRUE},
-    {GTS_NONE}
-  };
-  gchar * start = NULL;
 
   if (fp->type != GTS_STRING) {
     gts_file_error (fp, "expecting a string (GfsEventClass)");
@@ -153,94 +143,107 @@ static void gfs_event_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
-  var[0].data = &start;
-  var[1].data = &event->end;
-  var[2].data = &event->step;
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_STRING, "start",  TRUE},
+      {GTS_DOUBLE, "end",    TRUE},
+      {GTS_DOUBLE, "step",   TRUE},
+      {GTS_UINT,   "istart", TRUE},
+      {GTS_UINT,   "iend",   TRUE},
+      {GTS_UINT,   "istep",  TRUE},
+      {GTS_NONE}
+    };
+    gchar * start = NULL;
 
-  var[3].data = &event->istart;
-  var[4].data = &event->iend;
-  var[5].data = &event->istep;
+    var[0].data = &start;
+    var[1].data = &event->end;
+    var[2].data = &event->step;
+
+    var[3].data = &event->istart;
+    var[4].data = &event->iend;
+    var[5].data = &event->istep;
  
-  gts_file_assign_variables (fp, var);
+    gts_file_assign_variables (fp, var);
 
-  if (fp->type == GTS_ERROR)
-    return;
+    if (fp->type == GTS_ERROR)
+      return;
 
-  if (start) {
-    if (!strcmp (start, "end")) {
-      event->end_event = TRUE;
-      if (var[1].set)
-	gts_file_variable_error (fp, var, "end", 
-				 "end cannot be set for an `end' event");
-      else if (var[2].set)
-	gts_file_variable_error (fp, var, "step", 
-				 "step cannot be set for an `end' event");
-      else if (var[3].set)
-	gts_file_variable_error (fp, var, "istart", 
-				 "istart cannot be set for an `end' event");
-      else if (var[4].set)
-	gts_file_variable_error (fp, var, "iend", 
-				 "iend cannot be set for an `end' event");
-      else if (var[5].set)
-	gts_file_variable_error (fp, var, "istep", 
-				 "istep cannot be set for an `end' event");
+    if (start) {
+      if (!strcmp (start, "end")) {
+	event->end_event = TRUE;
+	if (var[1].set)
+	  gts_file_variable_error (fp, var, "end", 
+				   "end cannot be set for an `end' event");
+	else if (var[2].set)
+	  gts_file_variable_error (fp, var, "step", 
+				   "step cannot be set for an `end' event");
+	else if (var[3].set)
+	  gts_file_variable_error (fp, var, "istart", 
+				   "istart cannot be set for an `end' event");
+	else if (var[4].set)
+	  gts_file_variable_error (fp, var, "iend", 
+				   "iend cannot be set for an `end' event");
+	else if (var[5].set)
+	  gts_file_variable_error (fp, var, "istep", 
+				   "istep cannot be set for an `end' event");
+      }
+      else
+	event->start = atof (start);
+      g_free (start);
     }
+
+    if (fp->type == GTS_ERROR)
+      return;
+
+    if (var[2].set && var[5].set) {
+      gts_file_variable_error (fp, var, "istep", 
+			       "step and istep cannot be set simultaneously");
+      return;
+    }
+
+    if (var[2].set && event->step <= 0.) {
+      gts_file_variable_error (fp, var, "step",
+			       "step `%g' must be strictly positive", 
+			       event->step);
+      return;
+    }
+    if (!var[2].set && !var[5].set && var[1].set) {
+      gts_file_error (fp, "expecting a number (step or istep)");
+      return;
+    }
+    if (var[1].set && event->end <= event->start) {
+      gts_file_variable_error (fp, var, "end",
+			       "end `%g' must be larger than start `%g'", 
+			       event->end, event->start);
+      return;
+    }
+    if (event->start < 0. && var[1].set) {
+      gts_file_variable_error (fp, var, "end",
+			       "end cannot be specified for an `init' event");
+      return;
+    }
+    if (event->start < 0. && var[2].set)
+      event->start = 0.;
+    if (var[0].set || !var[3].set)
+      event->t = event->start;
     else
-      event->start = atof (start);
-    g_free (start);
-  }
+      event->t = event->start = G_MAXDOUBLE/2.;
 
-  if (fp->type == GTS_ERROR)
-    return;
-
-  if (var[2].set && var[5].set) {
-    gts_file_variable_error (fp, var, "istep", 
-			     "step and istep cannot be set simultaneously");
-    return;
+    if (!var[5].set && !var[2].set && var[4].set) {
+      gts_file_error (fp, "expecting a number (istep or step)");
+      return;
+    }
+    if (var[3].set && event->iend <= event->istart) {
+      gts_file_variable_error (fp, var, "iend",
+			       "iend `%u' must be larger than istart `%u'", 
+			       event->iend, event->istart);
+      return;
+    }
+    if (var[3].set || !var[0].set)
+      event->i = event->istart;
+    else
+      event->i = event->istart = G_MAXINT/2;
   }
-
-  if (var[2].set && event->step <= 0.) {
-    gts_file_variable_error (fp, var, "step",
-			     "step `%g' must be strictly positive", 
-			     event->step);
-    return;
-  }
-  if (!var[2].set && !var[5].set && var[1].set) {
-    gts_file_error (fp, "expecting a number (step or istep)");
-    return;
-  }
-  if (var[1].set && event->end <= event->start) {
-    gts_file_variable_error (fp, var, "end",
-			     "end `%g' must be larger than start `%g'", 
-			     event->end, event->start);
-    return;
-  }
-  if (event->start < 0. && var[1].set) {
-    gts_file_variable_error (fp, var, "end",
-			     "end cannot be specified for an `init' event");
-    return;
-  }
-  if (event->start < 0. && var[2].set)
-    event->start = 0.;
-  if (var[0].set || !var[3].set)
-    event->t = event->start;
-  else
-    event->t = event->start = G_MAXDOUBLE/2.;
-
-  if (!var[5].set && !var[2].set && var[4].set) {
-    gts_file_error (fp, "expecting a number (istep or step)");
-    return;
-  }
-  if (var[3].set && event->iend <= event->istart) {
-    gts_file_variable_error (fp, var, "iend",
-			     "iend `%u' must be larger than istart `%u'", 
-			     event->iend, event->istart);
-    return;
-  }
-  if (var[3].set || !var[0].set)
-    event->i = event->istart;
-  else
-    event->i = event->istart = G_MAXINT/2;
 
   if (class_changed && fp->type != '\n' && klass->read)
     (* klass->read) (o, fp);
