@@ -33,6 +33,7 @@
 #include "refine.h"
 #include "output.h"
 #include "adaptive.h"
+#include "version.h"
 
 static void set_box_pid (GfsBox * box, gint * pid)
 {
@@ -97,11 +98,12 @@ int main (int argc, char * argv[])
       break;
     case 'V': /* version */
       fprintf (stderr,
-     "gerris: using %dD libgfs version %s\n"
+     "gerris: using %dD libgfs version %s (%s)\n"
      "compiled with flags: %s\n"
      "sizeof (GfsStateVector): %d sizeof (FttCell): %d sizeof (FttOct): %d\n",
 	       FTT_DIMENSION,
 	       GFS_VERSION,
+	       GFS_BUILD_VERSION,
 	       GFS_COMPILATION_FLAGS,
 	       sizeof (GfsStateVector),
 	       sizeof (FttCell),

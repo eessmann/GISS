@@ -54,6 +54,7 @@ GFS_HDS = \
 	levelset.h \
 	isocube.h \
 	cartesian.h \
+	version.h \
 	$(MPI_HDS)
 
 pkginclude_HEADERS = \
@@ -92,6 +93,8 @@ SRC = \
 	cartesian.c \
 	$(GFS_HDS)
 
+simulation.c: version.h
+
 libgfs3D_la_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
 	-release $(LT_RELEASE) -export-dynamic
@@ -128,3 +131,14 @@ gerris3D_LDADD = $(GFS3D_LIBS)
 gerris2D3_SOURCES = gerris.c
 gerris2D3_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 gerris2D3_LDADD = $(GFS2D3_LIBS)
+
+if DARCS_CONTROLLED
+DARCS_VERSION = darcsversion
+else
+DARCS_VERSION = 
+endif
+
+version.h: $(DARCS_VERSION)
+
+darcsversion:
+	sh darcsversion.sh

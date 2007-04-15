@@ -4,11 +4,18 @@ SUBDIRS = modules src tools test doc desktop
 
 EXTRA_DIST = ChangeLog
 
-ChangeLog:
+if DARCS_CONTROLLED
+DARCS_CHANGELOG = changelog
+else
+DARCS_CHANGELOG = 
+endif
+
+ChangeLog: $(DARCS_CHANGELOG)
+
+changelog:
 	darcs changes > ChangeLog
 
-debian-snapshot:
-	darcs changes > ChangeLog
+debian-snapshot: $(DARCS_CHANGELOG)
 	sh debian/control.sh
 	dpkg-buildpackage -rfakeroot -b -d
 	rm -f debian/repo/*

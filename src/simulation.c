@@ -30,6 +30,7 @@
 #include "source.h"
 #include "vof.h"
 #include "tension.h"
+#include "version.h"
 
 /* GfsSimulation: object */
 
@@ -942,8 +943,8 @@ void gfs_simulation_write (GfsSimulation * sim,
   g_return_if_fail (sim != NULL);
   g_return_if_fail (fp != NULL);
 
-  fprintf (fp, "# Gerris Flow Solver %dD version %s\n",
-	   FTT_DIMENSION, GFS_VERSION);
+  fprintf (fp, "# Gerris Flow Solver %dD version %s (%s)\n",
+	   FTT_DIMENSION, GFS_VERSION, GFS_BUILD_VERSION);
   domain = GFS_DOMAIN (sim);
   depth = domain->max_depth_write;
   domain->max_depth_write = max_depth;

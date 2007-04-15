@@ -385,6 +385,10 @@ AC_SUBST(GFS2D_LIBS)
 AC_SUBST(GFS3D_LIBS)
 AC_SUBST(GFS2D3_LIBS)
 
+# check whether the code is under darcs
+
+AM_CONDITIONAL(DARCS_CONTROLLED, test -d _darcs)
+
 AC_OUTPUT([
 Makefile
 src/Makefile
