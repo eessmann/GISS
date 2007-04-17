@@ -1008,7 +1008,7 @@ GtsObjectClass * gfs_object_class_from_name (const gchar * name)
     return klass;
   /* for backward parameter file compatibility */
   if (!strcmp (name, "GtsSurfaceFile"))
-    return GTS_OBJECT_CLASS (gfs_surface_class ());
+    return GTS_OBJECT_CLASS (gfs_solid_class ());
   gchar * ename = g_strconcat ("Gfs", name, NULL);
   klass = gts_object_class_from_name (ename);
   g_free (ename);

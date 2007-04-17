@@ -1154,21 +1154,24 @@ int main (int argc, char * argv[])
       printf ("})\n");
     }
     else if (draw_surface) {
-      GtsSurface * s = surface;
-
-      if (s == NULL)
-	s = gfs_simulation_get_surface (simulation);
-
-      if (s) {
-	if (refine)
-	  gts_surface_refine (s, 
-			      (GtsKeyFunc) local_size_ratio, domain,
-			      NULL, NULL,
-			      (GtsStopFunc) stop, NULL);
-	gfs_draw_surface (domain, s, 
-			  var, stats.min, stats.max,
-			  stdout);
+      GSList * l = gfs_simulation_get_solids (simulation), * i = l;
+	
+      while (i) {
+	GfsSurface * s = i->data;
+	  
+	if (s->s) {
+	  if (refine)
+	    gts_surface_refine (s->s, 
+				(GtsKeyFunc) local_size_ratio, domain,
+				NULL, NULL,
+				(GtsStopFunc) stop, NULL);
+	  gfs_draw_surface (domain, s->s, 
+			    var, stats.min, stats.max,
+			    stdout);
+	}
+	i = i->next;
       }
+      g_slist_free (l);
     }
     else if (merged) {
       gfs_set_merged (domain);

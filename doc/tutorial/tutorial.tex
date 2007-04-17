@@ -897,7 +897,7 @@ We can now insert this object in the simulation domain like this:
 \begin{verbatim}
 4 3 GfsSimulation GfsBox GfsGEdge {} {
   GfsTime { end = 0 }
-  GfsSurface half-cylinder.gts
+  GfsSolid half-cylinder.gts
 }
 GfsBox { left = GfsBoundaryInflowConstant 1 }
 GfsBox {}
@@ -912,7 +912,7 @@ add what mesh refinement we want and a few things to output:
 4 3 GfsSimulation GfsBox GfsGEdge {} {
   GfsTime { end = 9 }
   GfsRefine 6
-  GfsSurface half-cylinder.gts
+  GfsSolid half-cylinder.gts
   GfsInit {} { U = 1 }
   GfsOutputBoundaries {} boundaries
   GfsOutputTime { step = 0.02 } stdout
@@ -1009,10 +1009,9 @@ simulation from this point onward. If you edit it, you will see that
 the general structure is the same as usual but for five pretty big
 chunks of data. 
 
-The first chunk starts with {\tt GtsSurface} and is
+The first chunk starts with {\tt GfsSolid} and is
 just the data contained in {\tt half-cylinder.gts} but this time
-embedded directly (by using {\tt GtsSurface} rather than {\tt
-GfsSurface}) into the simulation file. The goal there is to have
+embedded directly into the simulation file. The goal there is to have
 fully self-contained simulations files which you can just move around
 without having to keep track of twenty different files.
 
@@ -1191,7 +1190,7 @@ Following this we can modify our simulation file:
 4 3 GfsSimulation GfsBox GfsGEdge {} {
   GfsTime { end = 9 }
   GfsRefine 7
-  GfsSurface half-cylinder.gts
+  GfsSolid half-cylinder.gts
   GfsInit {} { U = 1 }
 #  GfsOutputBoundaries {} boundaries
   GfsAdaptVorticity { istep = 1 } { maxlevel = 7 cmax = 1e-2 }
@@ -1343,7 +1342,7 @@ file like this:
 4 3 GfsSimulation GfsBox GfsGEdge {} {
   GfsTime { end = 9 }
   GfsRefine 7
-  GfsSurface half-cylinder.gts
+  GfsSolid half-cylinder.gts
   GfsVariableTracer {} T
   ...
   GfsOutputPPM { step = 0.02 } tracer.ppm {

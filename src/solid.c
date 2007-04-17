@@ -221,7 +221,7 @@ static void triangle_face_intersection (GtsTriangle * t, CellFace * f)
   }
 }
 
-static void face_new (CellFace * f, FttCell * cell, GtsSurface * s, FttVector * h)
+static void face_new (CellFace * f, FttCell * cell, GfsSurface * s, FttVector * h)
 {
   FttVector p;
 
@@ -234,7 +234,7 @@ static void face_new (CellFace * f, FttCell * cell, GtsSurface * s, FttVector * 
   f->n[0] = f->n[1] = f->n[2] = f->n[3] = 0;
   f->inside[0] = f->inside[1] = f->inside[2] = f->inside[3] = 0;
 
-  gts_surface_foreach_face (s, (GtsFunc) triangle_face_intersection, f);
+  gts_surface_foreach_face (s->s, (GtsFunc) triangle_face_intersection, f);
 }
 
 static gboolean solid_face_is_thin (CellFace * f)
@@ -260,14 +260,14 @@ static gboolean solid_face_is_thin (CellFace * f)
 /**
  * gfs_set_2D_solid_fractions_from_surface:
  * @cell: a #FttCell.
- * @s: a #GtsSurface.
+ * @s: a #GfsSurface.
  *
  * Sets the 2D volume fractions of @cell cut by @s.
  *
  * Returns: %TRUE if the cell is thin, %FALSE otherwise;
  */
 gboolean gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
-						  GtsSurface * s)
+						  GfsSurface * s)
 {
   GfsSolidVector * solid;
   FttVector h;
@@ -353,7 +353,7 @@ static void deal_with_thin_cell (FttCell * cell, InitSolidParams * p)
 #if FTT_2D /* 2D */
 
 static void set_solid_fractions_from_surface (FttCell * cell,
-					      GtsSurface * s,
+					      GfsSurface * s,
 					      InitSolidParams * p)
 {
   if (gfs_set_2D_solid_fractions_from_surface (cell, s)) {
@@ -367,7 +367,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 /**
  * gfs_solid_is_thin:
  * @cell: a #FttCell.
- * @s: a #GtsSurface.
+ * @s: a #GfsSurface.
  *
  * @s is "thin" relative to @cell if the miminum distance between
  * non-connected faces of @s cutting @cell is smaller than the size of
@@ -375,7 +375,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
  *
  * Returns: %TRUE if @s is a thin surface, %FALSE otherwise.
  */
-gboolean gfs_solid_is_thin (FttCell * cell, GtsSurface * s)
+gboolean gfs_solid_is_thin (FttCell * cell, GfsSurface * s)
 {
   CellFace f;
   FttVector h;
@@ -482,7 +482,7 @@ static guint topology (CellCube * cube)
   return nl;
 }
 
-static void cube_new (CellCube * cube, FttCell * cell, GtsSurface * s, FttVector * o, FttVector * h)
+static void cube_new (CellCube * cube, FttCell * cell, GfsSurface * s, FttVector * o, FttVector * h)
 {
   guint i;
 
@@ -497,10 +497,12 @@ static void cube_new (CellCube * cube, FttCell * cell, GtsSurface * s, FttVector
     cube->p[i].z = o->z + h->z*vertex[i].z;
   }
 
-  gts_surface_foreach_face (s, (GtsFunc) triangle_cube_intersection, cube);  
+  gts_surface_foreach_face (s->s, (GtsFunc) triangle_cube_intersection, cube);  
 }
 
-static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s, InitSolidParams * p)
+static void set_solid_fractions_from_surface (FttCell * cell, 
+					      GfsSurface * s, 
+					      InitSolidParams * p)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
   CellCube cube;
@@ -647,7 +649,7 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s, In
 /**
  * gfs_solid_is_thin:
  * @cell: a #FttCell.
- * @s: a #GtsSurface.
+ * @s: a #GfsSurface.
  *
  * @s is "thin" relative to @cell if the miminum distance between
  * non-connected faces of @s cutting @cell is smaller than the size of
@@ -655,7 +657,7 @@ static void set_solid_fractions_from_surface (FttCell * cell, GtsSurface * s, In
  *
  * Returns: %TRUE if @s is a thin surface, %FALSE otherwise.
  */
-gboolean gfs_solid_is_thin (FttCell * cell, GtsSurface * s)
+gboolean gfs_solid_is_thin (FttCell * cell, GfsSurface * s)
 {
   CellCube cube;
   FttVector o, h;
@@ -931,7 +933,7 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
 /**
  * gfs_domain_init_solid_fractions:
  * @domain: a #GfsDomain.
- * @s: an orientable surface defining the solid boundary.
+ * @i: a list of #GfsSurfaces.
  * @destroy_solid: controls what to do with solid cells.
  * @cleanup: a #FttCellCleanupFunc or %NULL.
  * @data: user data to pass to @cleanup.
@@ -945,7 +947,7 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
  * Returns: the number of thin cells.
  */
 guint gfs_domain_init_solid_fractions (GfsDomain * domain,
-				       GtsSurface * s,
+				       GSList * i,
 				       gboolean destroy_solid,
 				       FttCellCleanupFunc cleanup,
 				       gpointer data,
@@ -954,7 +956,6 @@ guint gfs_domain_init_solid_fractions (GfsDomain * domain,
   InitSolidParams p;
 
   g_return_val_if_fail (domain != NULL, 0);
-  g_return_val_if_fail (s != NULL, 0);
 
   p.destroy_solid = destroy_solid;
   p.cleanup = cleanup;
@@ -963,8 +964,11 @@ guint gfs_domain_init_solid_fractions (GfsDomain * domain,
   p.thin = 0;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, p.status);
-  gfs_domain_traverse_cut (domain, s, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			   (FttCellTraverseCutFunc) set_solid_fractions_from_surface, &p);
+  while (i) {
+    gfs_domain_traverse_cut (domain, i->data, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			     (FttCellTraverseCutFunc) set_solid_fractions_from_surface, &p);
+    i = i->next;
+  }
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) paint_mixed_leaf, p.status);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -1168,14 +1172,14 @@ static void restore_solid (FttCell * cell, gpointer * data)
 /**
  * gfs_domain_init_fraction:
  * @domain: a #GfsDomain.
- * @s: an orientable surface defining the interface boundary.
+ * @s: a surface defining the interface boundary.
  * @c: a #GfsVariable.
  *
  * Initializes the fraction @c of the interface @s contained in all
  * the cells of @domain.
  */
 void gfs_domain_init_fraction (GfsDomain * domain,
-			       GtsSurface * s,
+			       GfsSurface * s,
 			       GfsVariable * c)
 {
   gboolean not_cut = TRUE;
@@ -1190,7 +1194,9 @@ void gfs_domain_init_fraction (GfsDomain * domain,
 
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) save_solid, c);
-  gfs_domain_init_solid_fractions (domain, s, FALSE, NULL, NULL, status);
+  GSList * l = g_slist_prepend (NULL, s);
+  gfs_domain_init_solid_fractions (domain, l, FALSE, NULL, NULL, status);
+  g_slist_free (l);
   data[0] = c;
   data[1] = &not_cut;
   data[2] = status;
@@ -1461,205 +1467,62 @@ void gfs_solid_coarse_fine (FttCell * parent)
 #endif /* 3D */
 }
 
-/* GfsSurface: Object */
+/* GfsSolid: Object */
 
-static void check_solid_surface (GtsSurface * s, 
-				 const gchar * fname,
-				 GtsFile * fp)
+static void gfs_solid_read (GtsObject ** o, GtsFile * fp)
 {
-  GString * name = g_string_new ("surface");
-
-  if (fname) {
-    g_string_append (name, " `");
-    g_string_append (name, fname);
-    g_string_append_c (name, '\'');
-  }
-
-  if (!gts_surface_is_orientable (s))
-    gts_file_error (fp, "%s is not orientable", name->str);
-  g_string_free (name, TRUE);
-}
-
-static void gfs_surface_read (GtsObject ** o, GtsFile * fp)
-{
-  (* GTS_OBJECT_CLASS (gfs_surface_class ())->parent_class->read) (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_solid_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
-  GtsSurface * surface = GFS_SURFACE (*o)->s;
-  if (fp->type == '{') {
-    fp->scope_max++;
-    gts_file_next_token (fp);
-    if (gts_surface_read (surface, fp))
-      return;
-    if (fp->type != '}') {
-      gts_file_error (fp, "expecting a closing brace");
-      return;
-    }
-    check_solid_surface (surface, NULL, fp);
-    if (fp->type == GTS_ERROR)
-      return;
-    fp->scope_max--;
-  }
-  else {
-    if (fp->type != GTS_STRING) {
-      gts_file_error (fp, "expecting a string (filename)");
-      return;
-    }
-    FILE * fptr = fopen (fp->token->str, "rt");
-    if (fptr == NULL) {
-      gts_file_error (fp, "cannot open file `%s'", fp->token->str);
-      return;
-    }
-    GtsFile * fp1 = gts_file_new (fptr);
-    if (gts_surface_read (surface, fp1)) {
-      gts_file_error (fp, 
-		      "file `%s' is not a valid GTS file\n"
-		      "%s:%d:%d: %s",
-		      fp->token->str, fp->token->str,
-		      fp1->line, fp1->pos, fp1->error);
-      gts_file_destroy (fp1);
-      fclose (fptr);
-      return;
-    }
-    gts_file_destroy (fp1);
-    fclose (fptr);
-  
-    check_solid_surface (surface, fp->token->str, fp);
-    if (fp->type == GTS_ERROR)
-      return;
-  }
-  gts_file_next_token (fp);
-
-  if (fp->type == '{') {
-    GtsVector r = {0.,0.,0.}, s = {1.,1.,1.}, t = {0.,0.,0.};
-    gdouble angle = 0., scale = 1.;
-    gboolean flip = FALSE;
-    GtsFileVariable var[] = {
-      {GTS_DOUBLE, "rx", TRUE},
-      {GTS_DOUBLE, "ry", TRUE},
-      {GTS_DOUBLE, "rz", TRUE},
-      {GTS_DOUBLE, "sx", TRUE},
-      {GTS_DOUBLE, "sy", TRUE},
-      {GTS_DOUBLE, "sz", TRUE},
-      {GTS_DOUBLE, "tx", TRUE},
-      {GTS_DOUBLE, "ty", TRUE},
-      {GTS_DOUBLE, "tz", TRUE},
-      {GTS_DOUBLE, "scale", TRUE},
-      {GTS_DOUBLE, "angle", TRUE},
-      {GTS_INT,  "flip", TRUE},
-      {GTS_NONE}
-    };
-    GtsFileVariable * v = var;
-
-    (v++)->data = &r[0];
-    (v++)->data = &r[1];
-    (v++)->data = &r[2];
-
-    (v++)->data = &s[0];
-    (v++)->data = &s[1];
-    (v++)->data = &s[2];
-
-    (v++)->data = &t[0];
-    (v++)->data = &t[1];
-    (v++)->data = &t[2];
-
-    (v++)->data = &scale;
-    (v++)->data = &angle;
-
-    (v++)->data = &flip;
-
-    gts_file_assign_variables (fp, var);
-    if (fp->type == GTS_ERROR)
-      return;
-
-    if (var[9].set)
-      s[0] = s[1] = s[2] = scale;
-    if (var[10].set && gts_vector_norm (r) == 0.) {
-      gts_file_variable_error (fp, var, "angle",
-			       "a non-zero rotation vector must be specified");
-      return;
-    }
-    
-    GtsMatrix * m = gts_matrix_translate (NULL, t);
-    if (angle != 0.) {
-      GtsMatrix * mr = gts_matrix_rotate (NULL, r, angle*M_PI/180.);
-      GtsMatrix * m1 = gts_matrix_product (m, mr);
-      gts_matrix_destroy (m);
-      gts_matrix_destroy (mr);
-      m = m1;
-    }
-    GtsMatrix * ms = gts_matrix_scale (NULL, s);
-    GtsMatrix * M = gts_matrix_product (m, ms);
-    gts_matrix_destroy (m);
-    gts_matrix_destroy (ms);
-    gts_surface_foreach_vertex (surface, (GtsFunc) gts_point_transform, M);
-    gts_matrix_destroy (M);
-
-    if (flip)
-      gts_surface_foreach_face (surface, (GtsFunc) gts_triangle_revert, NULL);
-  }
+  gfs_surface_read (GFS_SOLID (*o)->s, fp);
 }
 
-static void gfs_surface_write (GtsObject * o, FILE * fp)
+static void gfs_solid_write (GtsObject * o, FILE * fp)
 {
   GfsSimulation * sim = gfs_object_simulation (o);
-  if (sim->output_surface) {
-    (* GTS_OBJECT_CLASS (gfs_surface_class ())->parent_class->write) (o, fp);
-
-    fputs (" { ", fp);
-    GtsSurface * s = GFS_SURFACE (o)->s;
-    if (GFS_DOMAIN (sim)->binary) {
-      gboolean binary = GTS_POINT_CLASS (s->vertex_class)->binary;
-      GTS_POINT_CLASS (s->vertex_class)->binary = TRUE;
-      gts_surface_write (s, fp);
-      GTS_POINT_CLASS (s->vertex_class)->binary = binary;
-    }
-    else
-      gts_surface_write (s, fp);
-    fputc ('}', fp);
+  if (sim->output_solid) {
+    (* GTS_OBJECT_CLASS (gfs_solid_class ())->parent_class->write) (o, fp);
+    gfs_surface_write (GFS_SOLID (o)->s, sim, fp);
   }
 }
 
-static void gfs_surface_destroy (GtsObject * object)
+static void gfs_solid_destroy (GtsObject * object)
 {
-  gts_object_destroy (GTS_OBJECT (GFS_SURFACE (object)->s));
+  gts_object_destroy (GTS_OBJECT (GFS_SOLID (object)->s));
 
-  (* GTS_OBJECT_CLASS (gfs_surface_class ())->parent_class->destroy) (object);
+  (* GTS_OBJECT_CLASS (gfs_solid_class ())->parent_class->destroy) (object);
 }
 
-static void gfs_surface_class_init (GtsSurfaceClass * klass)
+static void gfs_solid_class_init (GtsObjectClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->read = gfs_surface_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_surface_write;
-  GTS_OBJECT_CLASS (klass)->destroy = gfs_surface_destroy;
+  klass->read = gfs_solid_read;
+  klass->write = gfs_solid_write;
+  klass->destroy = gfs_solid_destroy;
 }
 
-static void gfs_surface_init (GfsSurface * object)
+static void gfs_solid_init (GfsSolid * object)
 {
-  object->s = gts_surface_new (gts_surface_class (), 
-			       gts_face_class (), 
-			       gts_edge_class (), 
-			       gts_vertex_class ());
+  object->s = GFS_SURFACE (gts_object_new (gfs_surface_class ()));
   GFS_EVENT (object)->istep = G_MAXINT/2;
 }
 
-GfsEventClass * gfs_surface_class (void)
+GfsEventClass * gfs_solid_class (void)
 {
   static GfsEventClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_surface_info = {
-      "GfsSurface",
-      sizeof (GfsSurface),
+    GtsObjectClassInfo gfs_solid_info = {
+      "GfsSolid",
+      sizeof (GfsSolid),
       sizeof (GfsEventClass),
-      (GtsObjectClassInitFunc) gfs_surface_class_init,
-      (GtsObjectInitFunc) gfs_surface_init,
+      (GtsObjectClassInitFunc) gfs_solid_class_init,
+      (GtsObjectInitFunc) gfs_solid_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
-				  &gfs_surface_info);
+				  &gfs_solid_info);
   }
 
   return klass;

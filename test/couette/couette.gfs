@@ -40,8 +40,8 @@
 1 0 GfsSimulation GfsBox GfsGEdge {} {
   Time { iend = 100 dtmax = 1e-2 }
   Refine 6
-  Surface inner.gts { flip = 1 scale = 1.9999 }
-  Surface inner.gts
+  Solid inner.gts { flip = 1 scale = 1.9999 }
+  Solid inner.gts
   ApproxProjectionParams { tolerance = 1e-6 }
   AdvectionParams { scheme = none }
   SourceViscosity {} {

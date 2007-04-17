@@ -30,5 +30,6 @@ while test $# -gt 0; do
   shift
 done
 
-sed 's/^ *GtsSurface/GfsSurface {}/g' | \
-sed 's/GtsSurfaceFile/GfsSurface/g'
+sed 's/^ *GtsSurface/GfsSolid {}/g' | \
+sed 's/GtsSurfaceFile/GfsSolid/g' | \
+sed 's/surface =/solid =/g'

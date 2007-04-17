@@ -71,9 +71,9 @@ struct _GfsSimulation {
   GtsSListContainer * events;
   GSList * modules, * variables, * globals;
 
-  GtsSListContainer * surfaces;
+  GtsSListContainer * solids;
   guint thin;
-  gboolean output_surface;
+  gboolean output_solid;
 
   gdouble tnext;
 };
@@ -95,12 +95,12 @@ struct _GfsSimulationClass {
 
 GfsSimulationClass * gfs_simulation_class        (void);
 GfsSimulation *      gfs_simulation_new          (GfsSimulationClass * klass);
-GtsSurface *         gfs_simulation_get_surface  (GfsSimulation * sim);
 void                 gfs_simulation_init         (GfsSimulation * sim);
 void                 gfs_simulation_write        (GfsSimulation * sim,
 						  gint max_depth,  
 						  FILE * fp);
 GfsSimulation *      gfs_simulation_read         (GtsFile * fp);
+GSList *             gfs_simulation_get_solids   (GfsSimulation * sim);
 void                 gfs_simulation_refine       (GfsSimulation * sim);
 void                 gfs_simulation_set_timestep (GfsSimulation * sim);
 void                 gfs_time_init               (GfsTime * t);

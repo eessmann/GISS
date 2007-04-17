@@ -98,9 +98,9 @@
     unbiased = 1
     v = E
   }
-  OutputSimulation { istart = 100 iend = 500 istep = 100 } stdout {}
+  OutputSimulation { istart = 100 iend = 500 istep = 100 } stdout
   EventScript { istart = 100 iend = 500 istep = 100 } { echo "Save error-$GfsIter.eps { format = EPS }"}
-  OutputSimulation { istart = 1500 } stdout {}
+  OutputSimulation { istart = 1500 } stdout
   EventScript { istart = 1500 } { echo "Save error-$GfsIter.eps { format = EPS }"}
   EventScript { start = end } {
     cat <<EOF | gnuplot

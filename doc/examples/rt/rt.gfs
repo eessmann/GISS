@@ -78,7 +78,7 @@
     min = 0 max = 1 v = T
   }
   OutputTiming { start = end } stderr
-  OutputSimulation { step = 0.1 } stdout {}
+  OutputSimulation { step = 0.1 } stdout
   EventScript { start = 0 } { echo "Save t-0.eps { format = EPS }" }
   EventScript { start = 0.7 step = 0.1 } { echo "Save t-$GfsTime.eps { format = EPS }" }
 }

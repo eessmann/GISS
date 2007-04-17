@@ -134,7 +134,7 @@ GtsObjectClass ** gfs_classes (void)
         gfs_variable_position_class (),
       gfs_variable_distance_class (),
 
-    gfs_surface_class (),
+    gfs_solid_class (),
 
     gfs_init_class (),
     gfs_init_flow_constant_class (),

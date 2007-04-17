@@ -54,7 +54,7 @@
 1 0 GfsPoisson GfsBox GfsGEdge {} {
   Time { iend = 10 }
   Refine LEVEL
-  Surface shape.gts
+  Solid shape.gts
   ApproxProjectionParams { nrelax = 4 tolerance = 1e-30 erelax = 2 }
   Init {} {
     Div = {

@@ -21,6 +21,7 @@
 #define __DOMAIN_H__
 
 #include "boundary.h"
+#include "surface.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -120,13 +121,13 @@ void         gfs_domain_traverse_mixed        (GfsDomain * domain,
 					       FttCellTraverseFunc func,
 					       gpointer data);
 void         gfs_domain_traverse_cut          (GfsDomain * domain,
-					       GtsSurface * s,
+					       GfsSurface * s,
 					       FttTraverseType order,
 					       FttTraverseFlags flags,
 					       FttCellTraverseCutFunc func,
 					       gpointer data);
 void         gfs_domain_traverse_cut_2D       (GfsDomain * domain,
-					       GtsSurface * s,
+					       GfsSurface * s,
 					       FttTraverseType order,
 					       FttTraverseFlags flags,
 					       FttCellTraverseCutFunc func,

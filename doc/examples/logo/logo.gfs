@@ -42,7 +42,7 @@
     AdaptVorticity { istep = 1 } { cmax = 1e-2 maxlevel = 12 }
     OutputTime { istep = 1 } stderr
     OutputProjectionStats { istep = 1 } stderr
-    OutputSimulation { istep = 10 } stdout {}
+    OutputSimulation { istep = 10 } stdout
     OutputPPM { istep = 2 } { ppm2mpeg > logo.mpg } {
         v = Vorticity
         min = -0.1348 max = 6.22219

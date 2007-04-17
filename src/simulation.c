@@ -46,7 +46,7 @@ static void simulation_destroy (GtsObject * object)
 			 (GtsFunc) gts_object_destroy, NULL);
   gts_object_destroy (GTS_OBJECT (sim->events));
   gts_object_destroy (GTS_OBJECT (sim->adapts));
-  gts_object_destroy (GTS_OBJECT (sim->surfaces));
+  gts_object_destroy (GTS_OBJECT (sim->solids));
 
   g_slist_foreach (sim->modules, (GFunc) g_module_close, NULL);
   g_slist_free (sim->modules);
@@ -275,8 +275,8 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 	gts_container_add (GTS_CONTAINER (sim->adapts), GTS_CONTAINEE (object));
 	gts_container_add (GTS_CONTAINER (sim->events), GTS_CONTAINEE (object));
       }
-      else if (GFS_IS_SURFACE (object)) {
-	gts_container_add (GTS_CONTAINER (sim->surfaces), GTS_CONTAINEE (object));
+      else if (GFS_IS_SOLID (object)) {
+	gts_container_add (GTS_CONTAINER (sim->solids), GTS_CONTAINEE (object));
 	gts_container_add (GTS_CONTAINER (sim->events), GTS_CONTAINEE (object));
       }
       else if (GFS_IS_EVENT (object))
@@ -298,7 +298,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   sim->refines->items = g_slist_reverse (sim->refines->items);
   sim->adapts->items = g_slist_reverse (sim->adapts->items);
   sim->events->items = g_slist_reverse (sim->events->items);
-  sim->surfaces->items = g_slist_reverse (sim->surfaces->items);
+  sim->solids->items = g_slist_reverse (sim->solids->items);
   sim->modules = g_slist_reverse (sim->modules);
 }
 
@@ -684,10 +684,10 @@ static void simulation_init (GfsSimulation * object)
   gfs_multilevel_params_init (&object->projection_params);
   gfs_multilevel_params_init (&object->approx_projection_params);
 
-  object->surfaces = GTS_SLIST_CONTAINER (gts_container_new
-					  (GTS_CONTAINER_CLASS
-					   (gts_slist_container_class ())));
-  object->output_surface = TRUE;
+  object->solids = GTS_SLIST_CONTAINER (gts_container_new
+					(GTS_CONTAINER_CLASS
+					 (gts_slist_container_class ())));
+  object->output_solid = TRUE;
 
   object->refines = GTS_SLIST_CONTAINER (gts_container_new
 					 (GTS_CONTAINER_CLASS
@@ -740,34 +740,6 @@ static void init_non_variable (GfsEvent * event, GfsSimulation * sim)
 {
   if (!GFS_IS_VARIABLE (event))
     gfs_event_init (event, sim);
-}
-
-/**
- * gfs_simulation_get_surface:
- * @sim: a #GfsSimulation.
- *
- * Returns: a new #GtsSurface containing all the solid surfaces
- * defined in @sim, or %NULL if @sim does not contain any solid
- * surface.
- */
-GtsSurface * gfs_simulation_get_surface (GfsSimulation * sim)
-{
-  g_return_val_if_fail (sim != NULL, NULL);
-
-  if (sim->surfaces->items == NULL)
-    return NULL;
-  else {
-    GtsSurface * s = gts_surface_new (gts_surface_class (), 
-				      gts_face_class (), 
-				      gts_edge_class (), 
-				      gts_vertex_class ());
-    GSList * i = sim->surfaces->items;
-    while (i) {
-      gts_surface_merge (s, GFS_SURFACE (i->data)->s);
-      i = i->next;
-    }
-    return s;
-  }
 }
 
 /**
@@ -832,6 +804,25 @@ static void set_permanent (FttCell * cell)
 }
 
 /**
+ * gfs_simulation_get_solids:
+ * @sim: a #GfsSimulation.
+ *
+ * Returns: a new list of #GfsSurface defining the solid boundaries
+ * contained in @sim.
+ */
+GSList * gfs_simulation_get_solids (GfsSimulation * sim)
+{
+  g_return_val_if_fail (sim != NULL, NULL);
+
+  GSList * solids = NULL, * i = sim->solids->items;
+  while (i) {
+    solids = g_slist_prepend (solids, GFS_SOLID (i->data)->s);
+    i = i->next;
+  }
+  return solids;
+}
+
+/**
  * gfs_simulation_refine:
  * @sim: a #GfsSimulation.
  *
@@ -869,13 +860,13 @@ void gfs_simulation_refine (GfsSimulation * sim)
   gfs_domain_match (domain);
   gfs_domain_timer_stop (domain, "simulation_refine");
 
-  GtsSurface * surface = gfs_simulation_get_surface (sim);
-  if (surface) {
+  GSList * solids = gfs_simulation_get_solids (sim);
+  if (solids) {
     gfs_domain_timer_start (domain, "solid_fractions");
-    sim->thin = gfs_domain_init_solid_fractions (domain, surface, TRUE,
+    sim->thin = gfs_domain_init_solid_fractions (domain, solids, TRUE,
 						 (FttCellCleanupFunc) gfs_cell_cleanup, NULL,  
 						 NULL);
-    gts_object_destroy (GTS_OBJECT (surface));
+    g_slist_free (solids);
     gfs_domain_match (domain);
     gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			       (FttCellTraverseFunc) set_permanent, NULL);

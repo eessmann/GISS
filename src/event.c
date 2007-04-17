@@ -1616,8 +1616,7 @@ static void gfs_init_fraction_destroy (GtsObject * object)
 {
   GfsInitFraction * init = GFS_INIT_FRACTION (object);
 
-  if (init->surface)
-    gts_object_destroy (GTS_OBJECT (init->surface));
+  gts_object_destroy (GTS_OBJECT (init->surface));
 
   (* GTS_OBJECT_CLASS (gfs_init_fraction_class ())->parent_class->destroy) 
     (object);
@@ -1647,63 +1646,17 @@ static void gfs_init_fraction_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
-  if (fp->type != '{') {
-    FILE * f;
-    GtsFile * gf;
-
-    if (fp->type != GTS_STRING) {
-      gts_file_error (fp, "expecting a string (filename)\n");
-      return;
-    }
-    f = fopen (fp->token->str, "rt");
-    if (f == NULL) {
-      gts_file_error (fp, "cannot open file `%s'\n", fp->token->str);
-      return;
-    }
-    gf = gts_file_new (f);
-    if (gts_surface_read (init->surface, gf)) {
-      gts_file_error (fp, 
-		      "file `%s' is not a valid GTS file\n"
-		      "%s:%d:%d: %s",
-		      fp->token->str, fp->token->str,
-		      gf->line, gf->pos, gf->error);
-      gts_file_destroy (gf);
-      fclose (f);
-      return;
-    }
-    gts_file_destroy (gf);
-    fclose (f);
-  }
-  else { /* embedded GTS file */
-    fp->scope_max++;
-    gts_file_next_token (fp);
-    if (gts_surface_read (init->surface, fp))
-      return;
-    if (fp->type != '}') {
-      gts_file_error (fp, "expecting a closing brace");
-      return;
-    }
-    fp->scope_max--;
-  }
-  
-  if (!gts_surface_is_orientable (init->surface)) {
-    gts_file_error (fp, "surface is not orientable");
-    return;
-  }
-  
-  gts_file_next_token (fp);
+  gfs_surface_read (init->surface, fp);
 }
 
 static void gfs_init_fraction_write (GtsObject * o, FILE * fp)
 {
   GfsInitFraction * init = GFS_INIT_FRACTION (o);
 
-  if (GTS_OBJECT_CLASS (gfs_init_fraction_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_init_fraction_class ())->parent_class->write) 
-      (o, fp);
-  fprintf (fp, " %s { ", init->c->name);
-  gts_surface_write (init->surface, fp);
-  fputs ("}\n", fp);
+
+  (* GTS_OBJECT_CLASS (gfs_init_fraction_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %s", init->c->name);
+  gfs_surface_write (init->surface, gfs_object_simulation (o), fp);
 }
 
 static gboolean gfs_init_fraction_event (GfsEvent * event, GfsSimulation * sim)
@@ -1728,10 +1681,7 @@ static void gfs_init_fraction_class_init (GfsInitFractionClass * klass)
 
 static void gfs_init_fraction_init (GfsInitFraction * object)
 {
-  object->surface = gts_surface_new (gts_surface_class (),
-				     gts_face_class (),
-				     gts_edge_class (),
-				     gts_vertex_class ());
+  object->surface = GFS_SURFACE (gts_object_new (gfs_surface_class ()));
 }
 
 GfsInitFractionClass * gfs_init_fraction_class (void)

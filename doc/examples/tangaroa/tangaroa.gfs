@@ -22,7 +22,7 @@
 #
 2 1 GfsSimulation GfsBox GfsGEdge {} {
   Time { end = 2 }
-  Surface tangaroa.gts
+  Solid tangaroa.gts
   Refine 5
   RefineSolid 9
   Init {} { U = 1. }
@@ -50,7 +50,7 @@
   EventSum { start = 1 istep = 1 } W*W SW2
 
   # Output simulation on standard output (to be read and displayed by GfsView)
-  OutputSimulation { istep = 4 } stdout {}
+  OutputSimulation { istep = 4 } stdout
   # Sends a command to GfsView to save a 1024x768 PPM image on standard output
   EventScript { istep = 4 } { echo "Save stdout { width = 1024 height = 768 }" }
 

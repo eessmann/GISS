@@ -75,7 +75,7 @@ typedef struct _GfsRefineSurface         GfsRefineSurface;
 struct _GfsRefineSurface {
   GfsRefine parent;
 
-  GtsSurface * surface;
+  GfsSurface * surface;
   gboolean twod;
 };
 

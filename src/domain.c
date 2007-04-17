@@ -917,21 +917,23 @@ void gfs_domain_traverse_mixed (GfsDomain * domain,
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) traverse_mixed, datum);
 }
 
-static void traverse_cut (GfsBox * box, gpointer * datum)
-{
-  FttCellTraverseCutFunc func = (FttCellTraverseCutFunc) datum[0];
-  gpointer data = datum[1];
-  FttTraverseType * order = datum[2];
-  FttTraverseFlags * flags = datum[3];
-  GtsSurface * s = datum[4];
+typedef struct {
+  FttCellTraverseCutFunc func;
+  gpointer data;
+  FttTraverseType order;
+  FttTraverseFlags flags;
+  GfsSurface * s;
+} TraverseCut;
 
-  gfs_cell_traverse_cut (box->root, s, *order, *flags, func, data);
+static void traverse_cut (GfsBox * box, TraverseCut * p)
+{
+  gfs_cell_traverse_cut (box->root, p->s, p->order, p->flags, p->func, p->data);
 }
 
 /**
  * gfs_domain_traverse_cut:
  * @domain: a #GfsDomain.
- * @s: a #GtsSurface.
+ * @s: a #GfsSurface.
  * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
  * %FTT_POST_ORDER. 
  * @flags: which types of children are to be visited.
@@ -941,42 +943,36 @@ static void traverse_cut (GfsBox * box, gpointer * datum)
  * Calls @func for each cell of @domain cut by @s.
  */
 void gfs_domain_traverse_cut (GfsDomain * domain,
-			      GtsSurface * s,
+			      GfsSurface * s,
 			      FttTraverseType order,
 			      FttTraverseFlags flags,
 			      FttCellTraverseCutFunc func,
 			      gpointer data)
 {
-  gpointer datum[5];
+  TraverseCut p;
 
-  datum[0] = func;
-  datum[1] = data;
-  datum[2] = &order;
-  datum[3] = &flags;
-  datum[4] = s;
+  p.func = func;
+  p.data= data;
+  p.order = order;
+  p.flags = flags;
+  p.s = s;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (s != NULL);
   g_return_if_fail (func != NULL);
 
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) traverse_cut, datum);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) traverse_cut, &p);
 }
 
-static void traverse_cut_2D (GfsBox * box, gpointer * datum)
+static void traverse_cut_2D (GfsBox * box, TraverseCut * p)
 {
-  FttCellTraverseCutFunc func = (FttCellTraverseCutFunc) datum[0];
-  gpointer data = datum[1];
-  FttTraverseType * order = datum[2];
-  FttTraverseFlags * flags = datum[3];
-  GtsSurface * s = datum[4];
-
-  gfs_cell_traverse_cut_2D (box->root, s, *order, *flags, func, data);
+  gfs_cell_traverse_cut_2D (box->root, p->s, p->order, p->flags, p->func, p->data);
 }
 
 /**
  * gfs_domain_traverse_cut_2D:
  * @domain: a #GfsDomain.
- * @s: a #GtsSurface.
+ * @s: a #GfsSurface.
  * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
  * %FTT_POST_ORDER. 
  * @flags: which types of children are to be visited.
@@ -988,25 +984,25 @@ static void traverse_cut_2D (GfsBox * box, gpointer * datum)
  * The cells are flattened in the z-direction.
  */
 void gfs_domain_traverse_cut_2D (GfsDomain * domain,
-				 GtsSurface * s,
+				 GfsSurface * s,
 				 FttTraverseType order,
 				 FttTraverseFlags flags,
 				 FttCellTraverseCutFunc func,
 				 gpointer data)
 {
-  gpointer datum[5];
+  TraverseCut p;
 
-  datum[0] = func;
-  datum[1] = data;
-  datum[2] = &order;
-  datum[3] = &flags;
-  datum[4] = s;
+  p.func = func;
+  p.data = data;
+  p.order = order;
+  p.flags = flags;
+  p.s = s;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (s != NULL);
   g_return_if_fail (func != NULL);
 
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) traverse_cut_2D, datum);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) traverse_cut_2D, &p);
 }
 
 static void box_depth (GfsBox * box, guint * depth)

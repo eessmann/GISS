@@ -34,7 +34,7 @@
   ProjectionParams { tolerance = 1e-6 }
   ApproxProjectionParams { tolerance = 1e-6 }
   Refine LEVEL
-  Surface channel.gts
+  Solid channel.gts
   Init {} { U = 1 }
   OutputSimulation { start = end } sim-LEVEL {
     variables = U,V,P

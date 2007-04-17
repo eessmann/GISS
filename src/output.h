@@ -151,7 +151,7 @@ struct _GfsOutputSimulation {
 
   gint max_depth;
   GSList * var;
-  gboolean binary, surface;
+  gboolean binary, solid;
   GfsOutputSimulationFormat format;
 };
 

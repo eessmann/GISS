@@ -156,26 +156,34 @@ static void refine_solid_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_refine_solid_class ())->parent_class->destroy) (object);
 }
 
-static void max_kappa (GtsVertex * v, gpointer * data)
+typedef struct {
+  GtsSurface * s;
+  gdouble kappa;
+} KappaData;
+
+static void max_kappa (GtsVertex * v, KappaData * d)
 {
-  GtsSurface * s = data[0];
-  gdouble * max = data[1];
   GtsVector Kh;
 
-  if (gts_vertex_mean_curvature_normal (v, s, Kh)) {
+  if (gts_vertex_mean_curvature_normal (v, d->s, Kh)) {
     gdouble kappa = gts_vector_norm (Kh)/(FTT_DIMENSION - 1);
-    if (kappa > *max)
-      *max = kappa;
+    if (kappa > d->kappa)
+      d->kappa = kappa;
   }
 }
 
 static gdouble solid_curvature (FttCell * cell, FttCellFace * face, 
-				GfsDomain * domain, GtsSurface * s)
+				GfsDomain * domain, GfsSurface * s)
 {
-  gdouble kappa = gfs_solid_is_thin (cell, s) ? 1./ftt_cell_size (cell) : 0.;
-  gpointer data[] = {GTS_OBJECT (s)->reserved, &kappa};
-  gts_surface_foreach_vertex (s, (GtsFunc) max_kappa, data);
-  return kappa;
+  if (s->s) {
+    KappaData d;
+    d.s = s->s;
+    d.kappa = gfs_solid_is_thin (cell, s) ? 1./ftt_cell_size (cell) : 0.;
+    gts_surface_foreach_vertex (d.s, (GtsFunc) max_kappa, &d);
+    return d.kappa;
+  }
+  else /* fixme: need to compute curvature for other types of surfaces */
+    return 0.;
 }
 
 static void refine_solid_read (GtsObject ** o, GtsFile * fp)
@@ -196,10 +204,10 @@ static void refine_solid_read (GtsObject ** o, GtsFile * fp)
 typedef struct {
   GfsRefine * refine;
   GfsDomain * domain;
-  GtsSurface * surface;
+  GfsSurface * surface;
 } RefineCut;
 
-static void refine_cut_cell (FttCell * cell, GtsSurface * s, RefineCut * p)
+static void refine_cut_cell (FttCell * cell, GfsSurface * s, RefineCut * p)
 {
   GTS_OBJECT (s)->reserved = p->surface;
   GFS_REFINE_SOLID (p->refine)->v->data = s;
@@ -210,16 +218,18 @@ static void refine_cut_cell (FttCell * cell, GtsSurface * s, RefineCut * p)
 
 static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
 {
-  GtsSurface * surface = gfs_simulation_get_surface (sim);
-  if (surface) {
+  if (sim->solids) {
     RefineCut p;
     p.refine = refine;
     p.domain = GFS_DOMAIN (sim);
-    p.surface = surface;
-    gfs_domain_traverse_cut (GFS_DOMAIN (sim), surface, 
-			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			     (FttCellTraverseCutFunc) refine_cut_cell, &p);
-    gts_object_destroy (GTS_OBJECT (surface));
+    GSList * i = sim->solids->items;
+    while (i) {
+      p.surface = GFS_SOLID (i->data)->s;
+      gfs_domain_traverse_cut (GFS_DOMAIN (sim), p.surface,
+			       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			       (FttCellTraverseCutFunc) refine_cut_cell, &p);
+      i = i->next;
+    }
   }
 }
 
@@ -268,9 +278,7 @@ static void refine_surface_write (GtsObject * o, FILE * fp)
   GfsRefineSurface * d = GFS_REFINE_SURFACE (o);
   
   (* GTS_OBJECT_CLASS (gfs_refine_surface_class ())->parent_class->write) (o, fp);
-  fprintf (fp, " { ");
-  gts_surface_write (d->surface, fp);
-  fputc ('}', fp);
+  gfs_surface_write (d->surface, gfs_object_simulation (o), fp);
   if (d->twod)
     fputs (" { twod = 1 }\n", fp);
   else
@@ -286,45 +294,9 @@ static void refine_surface_read (GtsObject ** o, GtsFile * fp)
     return;
 
   refine = GFS_REFINE_SURFACE (*o);
-  if (fp->type != '{') {
-    FILE * f;
-    GtsFile * gf;
-
-    if (fp->type != GTS_STRING) {
-      gts_file_error (fp, "expecting a string (filename)\n");
-      return;
-    }
-    f = fopen (fp->token->str, "rt");
-    if (f == NULL) {
-      gts_file_error (fp, "cannot open file `%s'\n", fp->token->str);
-      return;
-    }
-    gf = gts_file_new (f);
-    if (gts_surface_read (refine->surface, gf)) {
-      gts_file_error (fp, 
-		      "file `%s' is not a valid GTS file\n"
-		      "%s:%d:%d: %s",
-		      fp->token->str, fp->token->str,
-		      gf->line, gf->pos, gf->error);
-      gts_file_destroy (gf);
-      fclose (f);
-      return;
-    }
-    gts_file_destroy (gf);
-    fclose (f);
-  }
-  else { /* embedded GTS file */
-    fp->scope_max++;
-    gts_file_next_token (fp);
-    if (gts_surface_read (refine->surface, fp))
-      return;
-    if (fp->type != '}') {
-      gts_file_error (fp, "expecting a closing brace");
-      return;
-    }
-    fp->scope_max--;
-  }
-  gts_file_next_token (fp);
+  gfs_surface_read (refine->surface, fp);
+  if (fp->type == GTS_ERROR)
+    return;
 
   if (fp->type == '{') {
     GtsFileVariable var[] = {
@@ -364,10 +336,7 @@ static void gfs_refine_surface_class_init (GfsRefineClass * klass)
 
 static void refine_surface_init (GfsRefineSurface * r)
 {
-  r->surface = gts_surface_new (gts_surface_class (), 
-				gts_face_class (), 
-				gts_edge_class (), 
-				gts_vertex_class ());
+  r->surface = GFS_SURFACE (gts_object_new (gfs_surface_class ()));
 }
 
 GfsRefineClass * gfs_refine_surface_class (void)
@@ -434,8 +403,13 @@ static void refine_distance_read (GtsObject ** o, GtsFile * fp)
   (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
+  
+  if (!GFS_REFINE_SURFACE (*o)->surface->s) {
+    gts_file_error (fp, "RefineDistance only works with GTS surfaces");
+    return;
+  }
 
-  GFS_REFINE_DISTANCE (*o)->stree = gts_bb_tree_surface (GFS_REFINE_SURFACE (*o)->surface);
+  GFS_REFINE_DISTANCE (*o)->stree = gts_bb_tree_surface (GFS_REFINE_SURFACE (*o)->surface->s);
 }
 
 static void gfs_refine_distance_class_init (GfsRefineClass * klass)
@@ -498,7 +472,7 @@ static gdouble cell_height (FttCell * cell,
 {
   FttVector pos;
   ftt_cell_pos (cell, &pos);
-  return interpolated_value (refine->surface, &pos);
+  return interpolated_value (refine->surface->s, &pos);
 }
 
 static void refine_height_read (GtsObject ** o, GtsFile * fp)
@@ -513,6 +487,13 @@ static void refine_height_read (GtsObject ** o, GtsFile * fp)
   }
 
   (* GTS_OBJECT_CLASS (gfs_refine_height_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (!GFS_REFINE_SURFACE (*o)->surface->s) {
+    gts_file_error (fp, "RefineDistance only works with GTS surfaces");
+    return;
+  }
 }
 
 static void gfs_refine_height_class_init (GfsRefineClass * klass)

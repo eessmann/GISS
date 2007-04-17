@@ -1245,7 +1245,7 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
     g_slist_free (domain->variables_io);
     domain->variables_io = output->var;
     domain->binary =       output->binary;
-    sim->output_surface =  output->surface;
+    sim->output_solid   =  output->solid;
     switch (output->format) {
     case GFS:
       gfs_simulation_write (sim,
@@ -1273,7 +1273,7 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
     }
     domain->variables_io = NULL;
     domain->binary =       TRUE;
-    sim->output_surface =  TRUE;
+    sim->output_solid   =  TRUE;
     fflush (GFS_OUTPUT (event)->file->fp);
     return TRUE;
   }
@@ -1300,8 +1300,8 @@ static void output_simulation_write (GtsObject * o, FILE * fp)
   }
   if (!output->binary)
     fputs (" binary = 0", fp);
-  if (!output->surface)
-    fputs (" surface = 0", fp);
+  if (!output->solid)
+    fputs (" solid = 0", fp);
   if (output->format == GFS_TEXT)
     fputs (" format = text", fp);
   fputs (" }", fp);
@@ -1309,52 +1309,15 @@ static void output_simulation_write (GtsObject * o, FILE * fp)
 
 static void output_simulation_read (GtsObject ** o, GtsFile * fp)
 {
-  GtsFileVariable var[] = {
-    {GTS_INT,    "depth",    TRUE},
-    {GTS_STRING, "variables",TRUE},
-    {GTS_INT,    "binary",   TRUE},
-    {GTS_INT,    "surface",  TRUE},
-    {GTS_STRING, "format",   TRUE},
-    {GTS_NONE}
-  };
-  gchar * variables = NULL, * format = NULL;
-  GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (*o);
-  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (output));
-
-  (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->read) 
-    (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
-  var[0].data = &output->max_depth;
-  var[1].data = &variables;
-  var[2].data = &output->binary;
-  var[3].data = &output->surface;
-  var[4].data = &format;
-  gts_file_assign_variables (fp, var);
-  if (fp->type == GTS_ERROR) {
-    g_free (variables);
-    return;
-  }
-
-  if (variables != NULL) {
-    gchar * error = NULL;
-    GSList * vars = gfs_variables_from_list (domain->variables, variables, &error);
-
-    if (vars == NULL) {
-      gts_file_variable_error (fp, var, "variables",
-			       "unknown variable `%s'", error);
-      g_free (variables);
-      return;
-    }
-    if (output->var)
-      g_slist_free (output->var);
-    output->var = vars;
-    g_free (variables);
-  }
-  else if (output->var == NULL) {
+  GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (*o);
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (output));
+  if (output->var == NULL) {
     GSList * i = domain->variables;
-
+    
     while (i) {
       if (GFS_VARIABLE1 (i->data)->name)
 	output->var = g_slist_append (output->var, i->data);
@@ -1362,18 +1325,57 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
     }
   }
 
-  if (format != NULL) {
-    if (!strcmp (format, "gfs"))
-      output->format = GFS;
-    else if (!strcmp (format, "text"))
-      output->format = GFS_TEXT;
-    else {
-      gts_file_variable_error (fp, var, "format",
-			       "unknown format `%s'", format);
-      g_free (format);
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_INT,    "depth",    TRUE},
+      {GTS_STRING, "variables",TRUE},
+      {GTS_INT,    "binary",   TRUE},
+      {GTS_INT,    "solid",    TRUE},
+      {GTS_STRING, "format",   TRUE},
+      {GTS_NONE}
+    };
+    gchar * variables = NULL, * format = NULL;
+
+    var[0].data = &output->max_depth;
+    var[1].data = &variables;
+    var[2].data = &output->binary;
+    var[3].data = &output->solid;
+    var[4].data = &format;
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR) {
+      g_free (variables);
       return;
     }
-    g_free (format);
+
+    if (variables != NULL) {
+      gchar * error = NULL;
+      GSList * vars = gfs_variables_from_list (domain->variables, variables, &error);
+
+      if (vars == NULL) {
+	gts_file_variable_error (fp, var, "variables",
+				 "unknown variable `%s'", error);
+	g_free (variables);
+	return;
+      }
+      if (output->var)
+	g_slist_free (output->var);
+      output->var = vars;
+      g_free (variables);
+    }
+
+    if (format != NULL) {
+      if (!strcmp (format, "gfs"))
+	output->format = GFS;
+      else if (!strcmp (format, "text"))
+	output->format = GFS_TEXT;
+      else {
+	gts_file_variable_error (fp, var, "format",
+				 "unknown format `%s'", format);
+	g_free (format);
+	return;
+      }
+      g_free (format);
+    }
   }
 }
 
@@ -1390,7 +1392,7 @@ static void gfs_output_simulation_init (GfsOutputSimulation * object)
   object->max_depth = -1;
   object->var = NULL;
   object->binary = 1;
-  object->surface = 1;
+  object->solid = 1;
   object->format = GFS;
 }
 

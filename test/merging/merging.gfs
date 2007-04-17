@@ -121,7 +121,7 @@
            vortex (-0.045, -0.0779422863406, 50.);
   }
   AdaptVorticity { istep = 1 } { maxlevel = LEVEL cmax = 4e-3 }
-  OutputSimulation { start = 0.05 } stdout {}
+  OutputSimulation { start = 0.05 } stdout
   EventScript { start = 0.05 } {
     echo Clear
     cat levels.gfv
@@ -130,7 +130,7 @@
     cat vorticity.gfv
     echo Save tv_0_05.eps { format = EPS line_width = 0.1 }
   }
-  OutputSimulation { start = 0.15 } stdout {}
+  OutputSimulation { start = 0.15 } stdout
   EventScript { start = 0.15 } {
     echo Clear
     cat levels.gfv
@@ -139,7 +139,7 @@
     cat vorticity.gfv
     echo Save tv_0_15.eps { format = EPS line_width = 0.1 }
   }
-  OutputSimulation { start = 0.25 } stdout {}
+  OutputSimulation { start = 0.25 } stdout
   EventScript { start = 0.25 } {
     echo Clear
     cat levels.gfv
@@ -148,6 +148,6 @@
     cat vorticity.gfv
     echo Save tv_0_25.eps { format = EPS line_width = 0.1 }
   }
-  OutputSimulation { start = 0.25 } SIM {}
+  OutputSimulation { start = 0.25 } SIM
 }
 GfsBox {}

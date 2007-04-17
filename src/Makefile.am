@@ -54,6 +54,7 @@ GFS_HDS = \
 	levelset.h \
 	isocube.h \
 	cartesian.h \
+	surface.h \
 	version.h \
 	$(MPI_HDS)
 
@@ -91,6 +92,7 @@ SRC = \
 	myc.h \
 	myc2d.h \
 	cartesian.c \
+	surface.c \
 	$(GFS_HDS)
 
 simulation.c: version.h

@@ -38,6 +38,7 @@
 #include <gerris/source.h>
 #include <gerris/vof.h>
 #include <gerris/cartesian.h>
+#include <gerris/surface.h>
 #include <gerris/version.h>
 
 #endif /* GFS_H */

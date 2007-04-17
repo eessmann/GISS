@@ -92,7 +92,7 @@
     H = 1
   }
   Refine LEVEL
-  Surface basin.gts
+  Solid basin.gts
   AdvectionParams { scheme = none }
   ApproxProjectionParams { tolerance = 1e-9 weighted = 0 }
   SourceCoriolis {} 1.
@@ -628,7 +628,7 @@
     s = pwave(cx, cy, 30)
     unbiased = 1
   }
-  OutputSimulation { start = end } sim-LEVEL {}
+  OutputSimulation { start = end } sim-LEVEL
 }
 GfsBox {
   front = Boundary
