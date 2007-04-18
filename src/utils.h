@@ -85,6 +85,15 @@ void               gfs_function_write       (GfsFunction * f,
 					     FILE * fp);
 GString *          gfs_function_expression  (GtsFile * fp, 
 					     gboolean * is_expression);
+
+/* GfsFunctionSpatial: Header */
+
+#define GFS_IS_FUNCTION_SPATIAL(obj)         (gts_object_is_from_class (obj,\
+					      gfs_function_spatial_class ()))
+
+GfsFunctionClass * gfs_function_spatial_class (void);
+gdouble            gfs_function_spatial_value (GfsFunction * f, FttVector * p);
+
 GtsObjectClass *   gfs_object_class_from_name (const gchar * name);
 
 void               gfs_eigenvalues          (gdouble a[FTT_DIMENSION][FTT_DIMENSION],

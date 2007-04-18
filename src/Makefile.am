@@ -59,7 +59,9 @@ GFS_HDS = \
 	$(MPI_HDS)
 
 pkginclude_HEADERS = \
-	$(GFS_HDS)
+	$(GFS_HDS) \
+	spatial.h \
+	function.h
 
 include_HEADERS = \
 	gfs.h \

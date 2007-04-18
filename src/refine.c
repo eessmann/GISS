@@ -175,15 +175,11 @@ static void max_kappa (GtsVertex * v, KappaData * d)
 static gdouble solid_curvature (FttCell * cell, FttCellFace * face, 
 				GfsDomain * domain, GfsSurface * s)
 {
-  if (s->s) {
-    KappaData d;
-    d.s = s->s;
-    d.kappa = gfs_solid_is_thin (cell, s) ? 1./ftt_cell_size (cell) : 0.;
-    gts_surface_foreach_vertex (d.s, (GtsFunc) max_kappa, &d);
-    return d.kappa;
-  }
-  else /* fixme: need to compute curvature for other types of surfaces */
-    return 0.;
+  KappaData d;
+  d.s = s->s;
+  d.kappa = gfs_solid_is_thin (cell, s) ? 1./ftt_cell_size (cell) : 0.;
+  gts_surface_foreach_vertex (d.s, (GtsFunc) max_kappa, &d);
+  return d.kappa;
 }
 
 static void refine_solid_read (GtsObject ** o, GtsFile * fp)
@@ -225,6 +221,7 @@ static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
     GSList * i = sim->solids->items;
     while (i) {
       p.surface = GFS_SOLID (i->data)->s;
+      g_assert (p.surface->s); /* fixme: this works only for GTS surfaces */
       gfs_domain_traverse_cut (GFS_DOMAIN (sim), p.surface,
 			       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			       (FttCellTraverseCutFunc) refine_cut_cell, &p);
@@ -294,7 +291,7 @@ static void refine_surface_read (GtsObject ** o, GtsFile * fp)
     return;
 
   refine = GFS_REFINE_SURFACE (*o);
-  gfs_surface_read (refine->surface, fp);
+  gfs_surface_read (refine->surface, gfs_object_simulation (*o), fp);
   if (fp->type == GTS_ERROR)
     return;
 

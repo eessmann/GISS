@@ -1,5 +1,4 @@
 if ! $donotrun; then
-    shapes almgren > boundaries.gts
     for level in 7 8 9; do
 	if sed "s/LEVEL/$level/g" < $1 | \
            gerris2D -; then :

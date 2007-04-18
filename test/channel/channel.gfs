@@ -23,22 +23,33 @@
 #
 # Author: St\'ephane Popinet
 # Command: sh channel.sh channel.gfs
-# Version: 0.6.4
+# Version: 1.1.0
 # Required files: channel.sh orderU.ref orderfU.ref orderV.ref orderfV.ref
 # Running time: 3 minutes
 # Generated files: convergence.tex
 #
 4 3 GfsSimulation GfsBox GfsGEdge {} {
-  Time { end = 1 }
-  AdvectionParams { cfl = 0.9 }
-  ProjectionParams { tolerance = 1e-6 }
-  ApproxProjectionParams { tolerance = 1e-6 }
-  Refine LEVEL
-  Solid channel.gts
-  Init {} { U = 1 }
-  OutputSimulation { start = end } sim-LEVEL {
-    variables = U,V,P
-  }
+    Time { end = 1 }
+    AdvectionParams { cfl = 0.9 }
+    ProjectionParams { tolerance = 1e-6 }
+    ApproxProjectionParams { tolerance = 1e-6 }
+    Refine LEVEL
+    Global {
+	double channel (double x) {
+	    double y1 = 0.2/4.;
+	    double y2 = 1e-6/4.;
+	    
+	    return x <= -0.25 ? y1 : 
+	           x < 0.25 ? y2 + 0.5*(y1 - y2)*(1. + cos (2.*M_PI*(x + 0.25))) : 
+		   y2;
+	}
+    }
+    Solid (0.125 - channel(x) - y) { scale = 4 tx = 1.5 }
+    Solid (y + 0.125 - channel(x)) { scale = 4 tx = 1.5 }
+    Init {} { U = 1 }
+    OutputSimulation { start = end } sim-LEVEL {
+	variables = U,V,P
+    }
 }
 GfsBox { left = Boundary { BcDirichlet U 1 } }
 GfsBox {}

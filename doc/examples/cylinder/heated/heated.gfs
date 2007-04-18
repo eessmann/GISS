@@ -19,8 +19,8 @@
 #
 # Author: St\'ephane Popinet
 # Command: gerris2D heated.gfs
-# Version: 0.6.4
-# Required files: ../cylinder.gts
+# Version: 1.1.0
+# Required files:
 # Running time: 22 minutes
 # Generated files: t.mpg t.eps
 #
@@ -33,8 +33,9 @@
   # Use an initial refinement of 6 levels (i.e. 2^6=64x64 for each box)
   Refine 6
 
-  # Insert the solid boundary defined by cylinder.gts
-  Solid cylinder.gts
+  # Insert the solid boundary defined as x*x + y*y - 0.0625*0.0625 = 0
+  # (i.e. a cylinder of radius 0.0625 centered on the origin)
+  Solid (x*x + y*y - 0.0625*0.0625)
 
   # Add a passive tracer called T
   VariableTracer {} T

@@ -30,17 +30,19 @@
 # Generated files: convergence.tex
 #
 1 0 GfsSimulation GfsBox GfsGEdge {} {
-  Time { iend = 0 end = 1 }
-  AdvectionParams { scheme = none }
-  ApproxProjectionParams { tolerance = 1e-6 }
-  Refine LEVEL
-  Solid boundaries.gts
-  Init {} { U = 1 }
-  OutputSimulation { start = end } sim-LEVEL {
-    variables = U,V,P
-  }
+    Time { iend = 0 end = 1 }
+    AdvectionParams { scheme = none }
+    ApproxProjectionParams { tolerance = 1e-6 }
+    Refine LEVEL
+    Solid (ellipse(0.25, 0.25, 0.1, 0.1))
+    Solid (ellipse(-0.25, 0.125, 0.15, 0.1))
+    Solid (ellipse(0., -0.25, 0.2, 0.1))
+    Init {} { U = 1 }
+    OutputSimulation { start = end } sim-LEVEL {
+	variables = U,V,P
+    }
 }
 GfsBox {
-  left = Boundary { BcDirichlet U 1 }
-  right = Boundary { BcDirichlet U 1 }
+    left = Boundary { BcDirichlet U 1 }
+    right = Boundary { BcDirichlet U 1 }
 }

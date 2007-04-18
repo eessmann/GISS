@@ -17,8 +17,9 @@
  * 02111-1307, USA.  
  */
 
-#include "surface.h"
+
 #include "simulation.h"
+#include "surface.h"
 
 /* GfsSurface: Object */
 
@@ -43,10 +44,24 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
 {
   GfsSurface * surface = GFS_SURFACE (*o);
 
-  if (fp->type == '{') {
+  if (fp->type == '(') { /* implicit surface */
+    gts_file_next_token (fp);
+    if (surface->f)
+      gts_object_destroy (GTS_OBJECT (surface->f));
+    surface->f = gfs_function_new (gfs_function_spatial_class (), 0.);
+    gfs_function_read (surface->f, gfs_object_simulation (*o), fp);
+    if (fp->type == GTS_ERROR)
+      return;
+    if (fp->type != ')') {
+      gts_file_error (fp, "expecting a closing bracket");
+      return;
+    }
+  }
+  else if (fp->type == '{') { /* embedded surface */
     fp->scope_max++;
     gts_file_next_token (fp);
-    g_assert (!surface->s);
+    if (surface->s)
+      gts_object_destroy (GTS_OBJECT (surface->s));
     surface->s = gts_surface_new (gts_surface_class (), 
 				  gts_face_class (), 
 				  gts_edge_class (), 
@@ -62,7 +77,7 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
       return;
     fp->scope_max--;
   }
-  else {
+  else { /* surface file name */
     if (fp->type != GTS_STRING) {
       gts_file_error (fp, "expecting a string (filename)");
       return;
@@ -96,9 +111,7 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
   gts_file_next_token (fp);
 
   if (fp->type == '{') {
-    GtsVector r = {0.,0.,0.}, s = {1.,1.,1.}, t = {0.,0.,0.};
-    gdouble angle = 0., scale = 1.;
-    gboolean flip = FALSE;
+    gdouble scale = 1.;
     GtsFileVariable var[] = {
       {GTS_DOUBLE, "rx", TRUE},
       {GTS_DOUBLE, "ry", TRUE},
@@ -116,74 +129,115 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
     };
     GtsFileVariable * v = var;
 
-    (v++)->data = &r[0];
-    (v++)->data = &r[1];
-    (v++)->data = &r[2];
+    (v++)->data = &surface->rotate[0];
+    (v++)->data = &surface->rotate[1];
+    (v++)->data = &surface->rotate[2];
 
-    (v++)->data = &s[0];
-    (v++)->data = &s[1];
-    (v++)->data = &s[2];
+    (v++)->data = &surface->scale[0];
+    (v++)->data = &surface->scale[1];
+    (v++)->data = &surface->scale[2];
 
-    (v++)->data = &t[0];
-    (v++)->data = &t[1];
-    (v++)->data = &t[2];
+    (v++)->data = &surface->translate[0];
+    (v++)->data = &surface->translate[1];
+    (v++)->data = &surface->translate[2];
 
     (v++)->data = &scale;
-    (v++)->data = &angle;
+    (v++)->data = &surface->angle;
 
-    (v++)->data = &flip;
+    (v++)->data = &surface->flip;
 
     gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR)
       return;
 
     if (var[9].set)
-      s[0] = s[1] = s[2] = scale;
-    if (var[10].set && gts_vector_norm (r) == 0.) {
+      surface->scale[0] = surface->scale[1] = surface->scale[2] = scale;
+    if (var[10].set && gts_vector_norm (surface->rotate) == 0.) {
       gts_file_variable_error (fp, var, "angle",
 			       "a non-zero rotation vector must be specified");
       return;
     }
     
-    GtsMatrix * m = gts_matrix_translate (NULL, t);
-    if (angle != 0.) {
-      GtsMatrix * mr = gts_matrix_rotate (NULL, r, angle*M_PI/180.);
+    GtsMatrix * m = gts_matrix_translate (NULL, surface->translate);
+    if (surface->angle != 0.) {
+      GtsMatrix * mr = gts_matrix_rotate (NULL, surface->rotate, surface->angle*M_PI/180.);
       GtsMatrix * m1 = gts_matrix_product (m, mr);
       gts_matrix_destroy (m);
       gts_matrix_destroy (mr);
       m = m1;
     }
-    GtsMatrix * ms = gts_matrix_scale (NULL, s);
-    GtsMatrix * M = gts_matrix_product (m, ms);
+    GtsMatrix * ms = gts_matrix_scale (NULL, surface->scale);
+    if (surface->m)
+      gts_matrix_destroy (surface->m);
+    surface->m = gts_matrix_product (m, ms);
     gts_matrix_destroy (m);
     gts_matrix_destroy (ms);
-    gts_surface_foreach_vertex (surface->s, (GtsFunc) gts_point_transform, M);
-    gts_matrix_destroy (M);
 
-    if (flip)
-      gts_surface_foreach_face (surface->s, (GtsFunc) gts_triangle_revert, NULL);
+    if (surface->s) {
+      gts_surface_foreach_vertex (surface->s, (GtsFunc) gts_point_transform, surface->m);
+      gts_matrix_destroy (surface->m);
+      surface->m = NULL;
+      if (surface->flip)
+	gts_surface_foreach_face (surface->s, (GtsFunc) gts_triangle_revert, NULL);
+    }
+    else {
+      GtsMatrix * i = gts_matrix_inverse (surface->m);
+      gts_matrix_destroy (surface->m);
+      surface->m = i;
+    }
   }
 }
 
 static void surface_write (GtsObject * o, FILE * fp)
 {
-  fputs (" { ", fp);
-  GtsSurface * s = GFS_SURFACE (o)->s;
-  if (GFS_DOMAIN (gfs_object_simulation (o))->binary) {
-    gboolean binary = GTS_POINT_CLASS (s->vertex_class)->binary;
-    GTS_POINT_CLASS (s->vertex_class)->binary = TRUE;
-    gts_surface_write (s, fp);
-    GTS_POINT_CLASS (s->vertex_class)->binary = binary;
+  GfsSurface * surface = GFS_SURFACE (o);
+  if (surface->s) {
+    fputs (" { ", fp);
+    GtsSurface * s = surface->s;
+    if (GFS_DOMAIN (gfs_object_simulation (o))->binary) {
+      gboolean binary = GTS_POINT_CLASS (s->vertex_class)->binary;
+      GTS_POINT_CLASS (s->vertex_class)->binary = TRUE;
+      gts_surface_write (s, fp);
+      GTS_POINT_CLASS (s->vertex_class)->binary = binary;
+    }
+    else
+      gts_surface_write (s, fp);
+    fputc ('}', fp);
   }
-  else
-    gts_surface_write (s, fp);
-  fputc ('}', fp);
+  else if (surface->f) {
+    fputs (" (", fp);
+    gfs_function_write (surface->f, fp);
+    fputs (" )", fp);
+  }
+  if (surface->m) {
+    fputs (" {\n", fp);
+    if (gts_vector_norm (surface->translate) > 0.)
+      fprintf (fp, "  tx = %g ty = %g tz = %g\n",
+	       surface->translate[0], surface->translate[1], surface->translate[2]);
+    if (surface->scale[0] != 1. || surface->scale[1] != 1. || surface->scale[2] != 1.)
+      fprintf (fp, "  sx = %g sy = %g sz = %g\n",
+	       surface->scale[0], surface->scale[1], surface->scale[2]);
+    if (surface->angle != 0.)
+      fprintf (fp,
+	       "  rx = %g ry = %g rz = %g\n"
+	       "  angle = %g\n",
+	       surface->rotate[0], surface->rotate[1], surface->rotate[2],
+	       surface->angle);
+    if (surface->flip)
+      fputs ("  flip = 1\n", fp);
+    fputc ('}', fp);
+  }
 }
 
 static void surface_destroy (GtsObject * object)
 {
-  if (GFS_SURFACE (object)->s)
-    gts_object_destroy (GTS_OBJECT (GFS_SURFACE (object)->s));
+  GfsSurface * s = GFS_SURFACE (object);
+  if (s->s)
+    gts_object_destroy (GTS_OBJECT (s->s));
+  if (s->f)
+    gts_object_destroy (GTS_OBJECT (s->f));
+  if (s->m)
+    gts_matrix_destroy (s->m);
 
   (* GTS_OBJECT_CLASS (gfs_surface_class ())->parent_class->destroy) (object);
 }
@@ -193,6 +247,12 @@ static void gfs_surface_class_init (GtsObjectClass * klass)
   klass->read = surface_read;
   klass->write = surface_write;
   klass->destroy = surface_destroy;
+}
+
+static void gfs_surface_init (GfsSurface * s)
+{
+  s->scale[0] = 1.; s->scale[1] = 1.; s->scale[2] = 1.;
+  s->flip = FALSE;
 }
 
 GtsObjectClass * gfs_surface_class (void)
@@ -205,7 +265,7 @@ GtsObjectClass * gfs_surface_class (void)
       sizeof (GfsSurface),
       sizeof (GtsObjectClass),
       (GtsObjectClassInitFunc) gfs_surface_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_surface_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -218,17 +278,19 @@ GtsObjectClass * gfs_surface_class (void)
 /**
  * gfs_surface_read:
  * @s: a #GfsSurface.
+ * @sim: a #GfsSimulation.
  * @fp: a #GtsFile.
  * 
  * Calls the read() method of @s.
  */
-void gfs_surface_read (GfsSurface * s, GtsFile * fp)
+void gfs_surface_read (GfsSurface * s, gpointer sim, GtsFile * fp)
 {
   GtsObject * o = (GtsObject *) s;
 
   g_return_if_fail (s != NULL);
   g_return_if_fail (fp != NULL);
 
+  o->reserved = sim;
   (* GTS_OBJECT (s)->klass->read) (&o, fp);
 }
 
@@ -247,6 +309,23 @@ void gfs_surface_write (GfsSurface * s, gpointer sim, FILE * fp)
 
   GTS_OBJECT (s)->reserved = sim;
   (* GTS_OBJECT (s)->klass->write) (GTS_OBJECT (s), fp);
+}
+
+/**
+ * gfs_surface_implicit_value:
+ * @s: an (implicit) #GfsSurface.
+ * @p: a #GtsPoint.
+ *
+ * Returns: the value of the implicit surface a location @p.
+ */
+gdouble gfs_surface_implicit_value (GfsSurface * s, GtsPoint p)
+{
+  g_return_val_if_fail (s != NULL, 0.);
+  g_return_val_if_fail (s->f != NULL, 0.);
+
+  if (s->m)
+    gts_point_transform (&p, s->m);
+  return (s->flip ? -1. : 1.)*gfs_function_spatial_value (s->f, (FttVector *)&p.x);
 }
 
 static void face_overlaps_box (GtsTriangle * t, gpointer * data)
@@ -270,7 +349,7 @@ static void face_overlaps_box (GtsTriangle * t, gpointer * data)
  * @s: a #GfsSurface.
  * @flatten: if set to %TRUE, @cell is flattened in the z direction.
  *
- * Returns: a new #GfsSurface containing a subset of @s which may
+ * Returns: a (possibly new) #GfsSurface containing a subset of @s which may
  * intersect @cell or %NULL if @s does not intersect @cell.
  */
 GfsSurface * gfs_cell_is_cut (FttCell * cell, GfsSurface * s, gboolean flatten)
@@ -282,7 +361,6 @@ GfsSurface * gfs_cell_is_cut (FttCell * cell, GfsSurface * s, gboolean flatten)
     GtsSurface * s1 = NULL;
     gpointer data[2];
     GtsBBox bb;
-    
     ftt_cell_bbox (cell, &bb);
     if (flatten)
       bb.z1 = bb.z2 = 0.;
@@ -295,8 +373,10 @@ GfsSurface * gfs_cell_is_cut (FttCell * cell, GfsSurface * s, gboolean flatten)
     s2->s = s1;
     return s2;
   }
-
-  g_assert_not_implemented ();
+  else if (s->f)
+    return s;
+  g_assert_not_reached ();
+  return NULL;
 }
 
 static void cell_traverse_cut (FttCell * cell,
@@ -332,7 +412,8 @@ static void cell_traverse_cut (FttCell * cell,
        ((flags & FTT_TRAVERSE_LEAFS) != 0 && FTT_CELL_IS_LEAF (cell)) ||
        ((flags & FTT_TRAVERSE_NON_LEAFS) != 0 && !FTT_CELL_IS_LEAF (cell))))
     (* func) (cell, s1, data);
-  gts_object_destroy (GTS_OBJECT (s1));
+  if (s1 != s)
+    gts_object_destroy (GTS_OBJECT (s1));
 }
 
 /**

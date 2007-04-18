@@ -234,7 +234,22 @@ static void face_new (CellFace * f, FttCell * cell, GfsSurface * s, FttVector * 
   f->n[0] = f->n[1] = f->n[2] = f->n[3] = 0;
   f->inside[0] = f->inside[1] = f->inside[2] = f->inside[3] = 0;
 
-  gts_surface_foreach_face (s->s, (GtsFunc) triangle_face_intersection, f);
+  if (s->s)
+    gts_surface_foreach_face (s->s, (GtsFunc) triangle_face_intersection, f);
+  else {
+    guint i;
+    
+    for (i = 0; i < 4; i++) {
+      gdouble vE = gfs_surface_implicit_value (s, f->p[i]);
+      gdouble vD = gfs_surface_implicit_value (s, f->p[(i + 1) % 4]);
+
+      if ((vE > 0. && vD <= 0.) || (vE <= 0. && vD > 0.)) {
+	f->x[i] = vE/(vE - vD);
+	f->n[i] = 1;
+	f->inside[i] = vE > 0. ? -1 : 1;
+      }
+    }
+  }
 }
 
 static gboolean solid_face_is_thin (CellFace * f)
@@ -292,10 +307,6 @@ gboolean gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
   solid = GFS_STATE (cell)->solid;
   switch (n1) {
   case 0:
-    if (solid) {
-      g_free (solid);
-      GFS_STATE (cell)->solid = NULL;
-    }
     break;
   case 4:
     thin = TRUE;
@@ -304,6 +315,10 @@ gboolean gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
     if (!solid)
       GFS_STATE (cell)->solid = solid = g_malloc0 (sizeof (GfsSolidVector));
     face_fractions (&f, solid, &h);
+    if (solid->a == 1.) {
+      g_free (solid);
+      GFS_STATE (cell)->solid = NULL;
+    }
     break;
   }
   default: {
@@ -497,11 +512,26 @@ static void cube_new (CellCube * cube, FttCell * cell, GfsSurface * s, FttVector
     cube->p[i].z = o->z + h->z*vertex[i].z;
   }
 
-  gts_surface_foreach_face (s->s, (GtsFunc) triangle_cube_intersection, cube);  
+  if (s->s)
+    gts_surface_foreach_face (s->s, (GtsFunc) triangle_cube_intersection, cube);  
+  else {
+    guint i;
+    
+    for (i = 0; i < 12; i++) {
+      gdouble vE = gfs_surface_implicit_value (s, cube->p[edge1[i][0]]);
+      gdouble vD = gfs_surface_implicit_value (s, cube->p[edge1[i][1]]);
+
+      if ((vE > 0. && vD <= 0.) || (vE <= 0. && vD > 0.)) {
+	cube->x[i] = vE/(vE - vD);
+	cube->n[i] = 1;
+	cube->inside[i] = vE > 0. ? -1 : 1;
+      }
+    }
+  }
 }
 
 static void set_solid_fractions_from_surface (FttCell * cell, 
-					      GfsSurface * s, 
+					      GfsSurface * surface, 
 					      InitSolidParams * p)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
@@ -513,7 +543,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 
   ftt_cell_pos (cell, &o);
   cell_size (cell, &h);
-  cube_new (&cube, cell, s, &o, &h);
+  cube_new (&cube, cell, surface, &o, &h);
 
   for (i = 0; i < 12; i++) /* for each edge of the cube */
     if (cube.n[i] % 2 != 0) { /* only for odd number of intersections */
@@ -536,13 +566,8 @@ static void set_solid_fractions_from_surface (FttCell * cell,
     else
       cube.n[i] = 0;
 
-  if (n1 == 0) { /* no intersections */
-    if (solid) {
-      g_free (solid);
-      GFS_STATE (cell)->solid = NULL;
-    }
+  if (n1 == 0) /* no intersections */
     return;
-  }
 
   if (!solid)
     GFS_STATE (cell)->solid = solid = g_malloc0 (sizeof (GfsSolidVector));
@@ -629,7 +654,13 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 	sym[c] = FALSE;
       n += (&m.x)[c];
     }
-    g_assert (n > 0.);
+    if (n == 0.) { /* this is a fluid cell */
+      for (c = 0; c < FTT_NEIGHBORS; c++)
+	g_assert (solid->s[c] == 1.);
+      g_free (solid);
+      GFS_STATE (cell)->solid = NULL;
+      return;
+    }
     m.x /= n; m.y /= n; m.z /= n;
     alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
     solid->a = gfs_plane_volume (&m, alpha);
@@ -1475,7 +1506,7 @@ static void gfs_solid_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  gfs_surface_read (GFS_SOLID (*o)->s, fp);
+  gfs_surface_read (GFS_SOLID (*o)->s, gfs_object_simulation (*o), fp);
 }
 
 static void gfs_solid_write (GtsObject * o, FILE * fp)

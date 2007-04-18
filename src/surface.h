@@ -30,9 +30,14 @@ typedef struct _GfsSurface         GfsSurface;
 struct _GfsSurface {
   /*< private >*/
   GtsObject parent;
+  GtsVector rotate, scale, translate;
+  gdouble angle;
+  gboolean flip;
 
   /*< public >*/
   GtsSurface * s;
+  GfsFunction * f;
+  GtsMatrix * m;
 };
 
 #define GFS_SURFACE(obj)            GTS_OBJECT_CAST (obj,\
@@ -43,10 +48,13 @@ struct _GfsSurface {
 
 GtsObjectClass *   gfs_surface_class          (void);
 void               gfs_surface_read           (GfsSurface * s, 
+					       gpointer sim,
 					       GtsFile * fp);
 void               gfs_surface_write          (GfsSurface * s,
 					       gpointer sim,
 					       FILE * fp);
+gdouble            gfs_surface_implicit_value (GfsSurface * s, 
+					       GtsPoint p);
 GfsSurface *       gfs_cell_is_cut            (FttCell * cell,
 					       GfsSurface * s,
 					       gboolean flatten);

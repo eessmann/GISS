@@ -155,7 +155,7 @@ static gboolean strmatch (const gchar * s, const gchar * s1)
 static void simulation_read (GtsObject ** object, GtsFile * fp)
 {
   GfsSimulation * sim = GFS_SIMULATION (*object);
-  
+
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->read) (object, fp);
   if (fp->type == GTS_ERROR)
     return;

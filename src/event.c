@@ -1646,7 +1646,7 @@ static void gfs_init_fraction_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
-  gfs_surface_read (init->surface, fp);
+  gfs_surface_read (init->surface, gfs_object_simulation (*o), fp);
 }
 
 static void gfs_init_fraction_write (GtsObject * o, FILE * fp)

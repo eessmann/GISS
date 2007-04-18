@@ -46,15 +46,15 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: shapes -n 500 ellipse > shape.gts && sh circle.sh circle.gfs
-# Version: 0.8.0
+# Command: sh circle.sh circle.gfs
+# Version: 1.1.0
 # Required files: circle.sh res-7.ref error.ref order.ref solution.gfv
 # Generated files: residual.eps rate.eps error.eps order.eps solution.eps
 #
 1 0 GfsPoisson GfsBox GfsGEdge {} {
   Time { iend = 10 }
   Refine LEVEL
-  Solid shape.gts
+  Solid (ellipse(0,0,0.25,0.25))
   ApproxProjectionParams { nrelax = 4 tolerance = 1e-30 erelax = 2 }
   Init {} {
     Div = {
