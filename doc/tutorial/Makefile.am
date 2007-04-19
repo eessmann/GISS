@@ -1,8 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-EXTRA_DIST=tutorial.ps.gz tutorial.pdf tutorial.tar.gz half-cylinder.gts \
-	gfs2D.net
-
 Makefile.deps: Makefile.am tutorial.tex
 	awk -f depend.awk file="tutorial" < tutorial.tex > Makefile.deps
 

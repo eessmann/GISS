@@ -13,7 +13,7 @@ DOC_SOURCE_DIR=../src
 
 TARGET_DIR=html/$(DOC_MODULE)
 
-EXTRA_DIST=html figures
+EXTRA_DIST=figures
 
 scan:
 	gtkdoc-scan --module=$(DOC_MODULE) --source-dir=$(DOC_SOURCE_DIR) --ignore-headers=""

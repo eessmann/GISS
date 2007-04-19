@@ -30,7 +30,7 @@ BUILT_SOURCES= \
 
 CLEANFILES = $(BUILT_SOURCES) Makefile.deps
 
-dist_pkglib_DATA = gfs2tex.py gfsclasses.py
+pkglib_DATA = gfs2tex.py gfsclasses.py
 
 gfsclasses.py: classes
 	$(srcdir)/classes > gfsclasses.py
