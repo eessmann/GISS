@@ -1,6 +1,5 @@
 if ! $donotrun; then
     rm -f correlation res-* sim-*
-    shapes -n 500 ellipse | transform -s 1.999 -i > basin.gts
     for level in 5 6 7; do
 	if sed "s/LEVEL/$level/g" < $1 | gerris2D3 - | \
 	    awk '{ print $1 " " $5 }' > res-$level && \

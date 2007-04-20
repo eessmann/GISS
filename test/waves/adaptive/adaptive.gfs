@@ -81,7 +81,7 @@
   }
   Refine LEVEL
   AdaptVorticity { istep = 1 } { cmax = 5e-2 maxlevel = LEVEL }
-  Solid basin.gts
+  Solid (- ellipse (0, 0, 0.25, 0.25)) { scale = 1.999 }
   AdvectionParams { scheme = none }
   ApproxProjectionParams { tolerance = 1e-9 weighted = 0 }
   SourceCoriolis {} 1.

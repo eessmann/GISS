@@ -15,9 +15,9 @@
 # velocity values are computed from cell-centred values.
 #
 # \begin{figure}[htbp]
-# \caption{\label{p}MPEG movie of the surface height.}
+# \caption{Surface height at $t = 2$.}
 # \begin{center}
-# \htmladdnormallinkfoot{\includegraphics[width=0.6\hsize]{p.eps}}{p.mpg}
+# \includegraphics[width=0.6\hsize]{p.eps}
 # \end{center}
 # \end{figure}
 #
@@ -32,7 +32,7 @@
 # Command: gerris2D3 nz.gfs
 # Version: 1.0.0
 # Required files: nz.gfs bath.gts
-# Generated files: p.mpg p.eps k.eps
+# Generated files: p.eps k.eps
 #
 # Use the "GfsOcean" model
 1 0 GfsOcean GfsBox GfsGEdge {} {
@@ -51,7 +51,6 @@
     # Non-dimensional gravity
     PhysicalParams { g = 19.62 }
 
-    OutputPPM { istep = 10 } { ppm2mpeg > p.mpg } { v = P min = -5e-3 max = 5e-3 }
     OutputPPM { start = 2 } { convert ppm:- p.eps } { v = P min = -5e-3 max = 5e-3 }
     OutputScalarSum { istep = 10 } k { v = Velocity2 }
     EventScript { start = end } {
