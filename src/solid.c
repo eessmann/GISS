@@ -50,57 +50,9 @@ void gfs_cell_fluid (FttCell * cell)
   }
 }
 
-static gdouble segment_triangle_intersection (GtsPoint * E, GtsPoint * D,
-					      GtsTriangle * t,
-					      gboolean * inside)
-{
-  GtsVertex * vA, * vB, * vC;
-  GtsPoint * A, * B, * C;
-  gint ABCE, ABCD, ADCE, ABDE, BCDE;
-  GtsEdge * AB, * BC, * CA;
-  gdouble a, b;
-  gboolean reversed = FALSE;
-
-  gts_triangle_vertices_edges (t, NULL, &vA, &vB, &vC, &AB, &BC, &CA);
-  A = GTS_POINT (vA);
-  B = GTS_POINT (vB);
-  C = GTS_POINT (vC);
-  ABCE = gts_point_orientation_3d_sos (A, B, C, E);
-  ABCD = gts_point_orientation_3d_sos (A, B, C, D);
-  if (ABCE < 0 || ABCD > 0) {
-    GtsPoint * tmpp;
-    gint tmp;
-
-    tmpp = E; E = D; D = tmpp;
-    tmp = ABCE; ABCE = ABCD; ABCD = tmp;
-    reversed = TRUE;
-  }
-  if (ABCE < 0 || ABCD > 0)
-    return -1.;
-  ADCE = gts_point_orientation_3d_sos (A, D, C, E);
-  if (ADCE < 0)
-    return -1.;
-  ABDE = gts_point_orientation_3d_sos (A, B, D, E);
-  if (ABDE < 0)
-    return -1.;
-  BCDE = gts_point_orientation_3d_sos (B, C, D, E);
-  if (BCDE < 0)
-    return -1.;
-  *inside = reversed ? (ABCD < 0) : (ABCE < 0);
-  a = gts_point_orientation_3d (A, B, C, E);
-  b = gts_point_orientation_3d (A, B, C, D);
-  if (a != b)
-    return reversed ? 1. - a/(a - b) : a/(a - b);
-  /* D and E are contained within ABC */
-  g_assert (a == 0.);
-  return 0.5;
-}
-
 typedef struct {
   GtsPoint p[4];
-  gdouble x[4];
-  guint n[4];
-  gint inside[4];
+  GfsSegment s[4];
 } CellFace;
 
 static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
@@ -116,16 +68,16 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
   solid->cm.x = solid->cm.y = solid->cm.z = 0.;
   solid->ca.z = 0.;
       
-  for (m = 0; m < 4 && f->n[m] == 0; m++);
-  ins = f->inside[m] < 0;
+  for (m = 0; m < 4 && f->s[m].n == 0; m++);
+  ins = f->s[m].inside < 0;
   for (k = m; k < m + 4; k++) {
     guint i = k % 4, i1 = (i + 1) % 4;
     gdouble x1 = f->p[i].x, y1 = f->p[i].y, x2 = f->p[i1].x, y2 = f->p[i1].y;
-    if (f->n[i] > 0) {
-      g_assert (ins == (f->inside[i] < 0));
-      solid->s[etod[i]] = ins ? f->x[i] : 1. - f->x[i];
-      r[o].x = (1. - f->x[i])*x1 + f->x[i]*x2;
-      r[o].y = (1. - f->x[i])*y1 + f->x[i]*y2;
+    if (f->s[i].n > 0) {
+      g_assert (ins == (f->s[i].inside < 0));
+      solid->s[etod[i]] = ins ? f->s[i].x : 1. - f->s[i].x;
+      r[o].x = (1. - f->s[i].x)*x1 + f->s[i].x*x2;
+      r[o].y = (1. - f->s[i].x)*y1 + f->s[i].x*y2;
       if (ins) {
 	x2 = r[o].x; y2 = r[o].y;
       }
@@ -173,16 +125,16 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
     guint n = 0;
 
     solid->cm.x = solid->cm.y = 0.;
-    for (m = 0; m < 4 && f->n[m] == 0; m++);
-    ins = f->inside[m] < 0;
+    for (m = 0; m < 4 && f->s[m].n == 0; m++);
+    ins = f->s[m].inside < 0;
     for (k = m; k < m + 4; k++) {
       guint i = k % 4, i1 = (i + 1) % 4;
       gdouble x1 = f->p[i].x, y1 = f->p[i].y, x2 = f->p[i1].x, y2 = f->p[i1].y;
-      if (f->n[i] > 0) {
-	gdouble x = (1. - f->x[i])*x1 + f->x[i]*x2;
-	gdouble y = (1. - f->x[i])*y1 + f->x[i]*y2;
+      if (f->s[i].n > 0) {
+	gdouble x = (1. - f->s[i].x)*x1 + f->s[i].x*x2;
+	gdouble y = (1. - f->s[i].x)*y1 + f->s[i].x*y2;
 
-	g_assert (ins == (f->inside[i] < 0));
+	g_assert (ins == (f->s[i].inside < 0));
 	solid->cm.x += x;
 	solid->cm.y += y;
 	n++;
@@ -206,49 +158,21 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
   solid->a = a;
 }
 
-static void triangle_face_intersection (GtsTriangle * t, CellFace * f)
-{
-  guint i;
-
-  for (i = 0; i < 4; i++) {
-    gboolean ins;
-    gdouble x = segment_triangle_intersection (&(f->p[i]), &(f->p[(i + 1) % 4]), t, &ins);
-
-    if (x != -1.) {
-      f->x[i] += x; f->n[i]++;
-      f->inside[i] += ins ? 1 : -1;
-    }
-  }
-}
-
 static void face_new (CellFace * f, FttCell * cell, GfsSurface * s, FttVector * h)
 {
   FttVector p;
+  guint i;
 
   ftt_cell_pos (cell, &p);
   f->p[0].x = p.x - h->x/2.; f->p[0].y = p.y - h->y/2.; f->p[0].z = 0.;
   f->p[1].x = p.x + h->x/2.; f->p[1].y = p.y - h->y/2.; f->p[1].z = 0.;
   f->p[2].x = p.x + h->x/2.; f->p[2].y = p.y + h->y/2.; f->p[2].z = 0.;
   f->p[3].x = p.x - h->x/2.; f->p[3].y = p.y + h->y/2.; f->p[3].z = 0.;
-  f->x[0] = f->x[1] = f->x[2] = f->x[3] = 0.;
-  f->n[0] = f->n[1] = f->n[2] = f->n[3] = 0;
-  f->inside[0] = f->inside[1] = f->inside[2] = f->inside[3] = 0;
 
-  if (s->s)
-    gts_surface_foreach_face (s->s, (GtsFunc) triangle_face_intersection, f);
-  else {
-    guint i;
-    
-    for (i = 0; i < 4; i++) {
-      gdouble vE = gfs_surface_implicit_value (s, f->p[i]);
-      gdouble vD = gfs_surface_implicit_value (s, f->p[(i + 1) % 4]);
-
-      if ((vE > 0. && vD <= 0.) || (vE <= 0. && vD > 0.)) {
-	f->x[i] = vE/(vE - vD);
-	f->n[i] = 1;
-	f->inside[i] = vE > 0. ? -1 : 1;
-      }
-    }
+  for (i = 0; i < 4; i++) {
+    f->s[i].E = &f->p[i];
+    f->s[i].D = &f->p[(i + 1) % 4];
+    gfs_surface_segment_intersection (s, &f->s[i]);
   }
 }
 
@@ -257,15 +181,15 @@ static gboolean solid_face_is_thin (CellFace * f)
   guint odd = 0, even = 0, i;
 
   for (i = 0; i < 4; i++)
-    if (f->n[i]) {
-      if (f->n[i] % 2 != 0)
+    if (f->s[i].n) {
+      if (f->s[i].n % 2 != 0)
 	odd++;
       else
 	even++;
     }
   if (odd == 2 && even == 1) {
     for (i = 0; i < 4; i++)
-      if (f->n[i] % 2 != 0 && f->n[(i + 2) % 4] % 2 != 0)
+      if (f->s[i].n % 2 != 0 && f->s[(i + 2) % 4].n % 2 != 0)
 	return FALSE;
     return TRUE;
   }
@@ -297,12 +221,12 @@ gboolean gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
   face_new (&f, cell, s, &h);
   
   for (i = 0; i < 4; i++)
-    if (f.n[i] % 2 != 0) {
-      f.x[i] /= f.n[i];
+    if (f.s[i].n % 2 != 0) {
+      f.s[i].x /= f.s[i].n;
       n1++;
     }
     else
-      f.n[i] = 0;
+      f.s[i].n = 0;
 
   solid = GFS_STATE (cell)->solid;
   switch (n1) {
@@ -408,25 +332,8 @@ gboolean gfs_solid_is_thin (FttCell * cell, GfsSurface * s)
 
 typedef struct {
   GtsPoint p[8];
-  gdouble x[12];
-  guint n[12];
-  gint inside[12];
+  GfsSegment s[12];
 } CellCube;
-
-static void triangle_cube_intersection (GtsTriangle * t, CellCube * cube)
-{
-  guint i;
-
-  for (i = 0; i < 12; i++) {
-    gboolean ins;
-    gdouble x = segment_triangle_intersection (&cube->p[edge1[i][0]], &cube->p[edge1[i][1]], 
-					       t, &ins);
-    if (x != -1.) {
-      cube->x[i] += x; cube->n[i]++;
-      cube->inside[i] += ins ? 1 : -1;
-    }
-  }
-}
 
 static void rotate (CellFace * f, FttVector * h, FttComponent c)
 {
@@ -478,17 +385,17 @@ static guint topology (CellCube * cube)
   gboolean used[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
   
   for (l = 0; l < 12; l++) {
-    guint nv = 0, e = l, cut = cube->n[e] % 2;
+    guint nv = 0, e = l, cut = cube->s[e].n % 2;
     
     while (cut && !used[e]) {
-      guint m = 0, * ne = connect[e][cube->inside[e] > 0];
+      guint m = 0, * ne = connect[e][cube->s[e].inside > 0];
 
       nv++;
       used[e] = TRUE;
       cut = 0;
       while (m < 3 && !cut) {
 	e = ne[m++];
-	cut = cube->n[e] % 2;
+	cut = cube->s[e].n % 2;
       }
     }
     if (nv > 2)
@@ -503,30 +410,16 @@ static void cube_new (CellCube * cube, FttCell * cell, GfsSurface * s, FttVector
 
   for (i = 0; i < FTT_DIMENSION; i++)
     (&o->x)[i] -= (&h->x)[i]/2.;
-  for (i = 0; i < 12; i++) {
-    cube->x[i] = 0.; cube->n[i] = 0; cube->inside[i] = 0;
-  }
   for (i = 0; i < 8; i++) { /* for each vertex of the cube */
     cube->p[i].x = o->x + h->x*vertex[i].x;
     cube->p[i].y = o->y + h->y*vertex[i].y;
     cube->p[i].z = o->z + h->z*vertex[i].z;
   }
 
-  if (s->s)
-    gts_surface_foreach_face (s->s, (GtsFunc) triangle_cube_intersection, cube);  
-  else {
-    guint i;
-    
-    for (i = 0; i < 12; i++) {
-      gdouble vE = gfs_surface_implicit_value (s, cube->p[edge1[i][0]]);
-      gdouble vD = gfs_surface_implicit_value (s, cube->p[edge1[i][1]]);
-
-      if ((vE > 0. && vD <= 0.) || (vE <= 0. && vD > 0.)) {
-	cube->x[i] = vE/(vE - vD);
-	cube->n[i] = 1;
-	cube->inside[i] = vE > 0. ? -1 : 1;
-      }
-    }
+  for (i = 0; i < 12; i++) {
+    cube->s[i].E = &cube->p[edge1[i][0]];
+    cube->s[i].D = &cube->p[edge1[i][1]];
+    gfs_surface_segment_intersection (s, &cube->s[i]);
   }
 }
 
@@ -545,26 +438,28 @@ static void set_solid_fractions_from_surface (FttCell * cell,
   cell_size (cell, &h);
   cube_new (&cube, cell, surface, &o, &h);
 
-  for (i = 0; i < 12; i++) /* for each edge of the cube */
-    if (cube.n[i] % 2 != 0) { /* only for odd number of intersections */
+  for (i = 0; i < 12; i++) { /* for each edge of the cube */
+    GfsSegment * s = &cube.s[i];
+    if (cube.s[i].n % 2 != 0) { /* only for odd number of intersections */
       guint j = edge1[i][0], k = edge1[i][1];
 
       /* intersection vertex position is the average of all the n[i] intersections */
-      cube.x[i] /= cube.n[i];
+      s->x /= s->n;
 
       /* average of all intersections */
-      ca.x += (1. - cube.x[i])*cube.p[j].x + cube.x[i]*cube.p[k].x;
-      ca.y += (1. - cube.x[i])*cube.p[j].y + cube.x[i]*cube.p[k].y;
-      ca.z += (1. - cube.x[i])*cube.p[j].z + cube.x[i]*cube.p[k].z;
+      ca.x += (1. - s->x)*cube.p[j].x + s->x*cube.p[k].x;
+      ca.y += (1. - s->x)*cube.p[j].y + s->x*cube.p[k].y;
+      ca.z += (1. - s->x)*cube.p[j].z + s->x*cube.p[k].z;
 
-      g_assert (inside[j] == 0 || inside[j] == cube.inside[i]);
-      g_assert (inside[k] == 0 || inside[k] == - cube.inside[i]);
-      inside[j] = cube.inside[i];
-      inside[k] = - cube.inside[i];
+      g_assert (inside[j] == 0 || inside[j] == s->inside);
+      g_assert (inside[k] == 0 || inside[k] == - s->inside);
+      inside[j] = s->inside;
+      inside[k] = - s->inside;
       n1++;
     }
     else
-      cube.n[i] = 0;
+      s->n = 0;
+  }
 
   if (n1 == 0) /* no intersections */
     return;
@@ -579,18 +474,18 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 
     n2 = 0;
     for (j = 0; j < 4; j++) { /* initialise face i */
-      guint e = face[i][j][0];
+      GfsSegment * s = &cube.s[face[i][j][0]];
 
       f.p[j] = cube.p[face_v[i][j]];
-      f.n[j] = cube.n[e];
-      if (f.n[j]) n2++;
+      f.s[j].n = s->n;
+      if (f.s[j].n) n2++;
       if (face[i][j][1]) {
-	f.x[j] = 1. - cube.x[e];
-	f.inside[j] = - cube.inside[e];
+	f.s[j].x = 1. - s->x;
+	f.s[j].inside = - s->inside;
       }
       else {
-	f.x[j] = cube.x[e];
-	f.inside[j] = cube.inside[e];
+	f.s[j].x = s->x;
+	f.s[j].inside = s->inside;
       }
     }
 
@@ -705,7 +600,7 @@ gboolean gfs_solid_is_thin (FttCell * cell, GfsSurface * s)
     guint j;
 
     for (j = 0; j < 4; j++)
-      f.n[j] = cube.n[face[i][j][0]];
+      f.s[j].n = cube.s[face[i][j][0]].n;
     if (solid_face_is_thin (&f))
       return TRUE;
   }

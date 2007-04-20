@@ -40,6 +40,13 @@ struct _GfsSurface {
   GtsMatrix * m;
 };
 
+typedef struct {
+  GtsPoint * E, * D;
+  gdouble x;
+  guint n;
+  gint inside;
+} GfsSegment;
+
 #define GFS_SURFACE(obj)            GTS_OBJECT_CAST (obj,\
 					         GfsSurface,\
 					         gfs_surface_class ())
@@ -55,6 +62,8 @@ void               gfs_surface_write          (GfsSurface * s,
 					       FILE * fp);
 gdouble            gfs_surface_implicit_value (GfsSurface * s, 
 					       GtsPoint p);
+guint              gfs_surface_segment_intersection (GfsSurface * s,
+						     GfsSegment * I);
 GfsSurface *       gfs_cell_is_cut            (FttCell * cell,
 					       GfsSurface * s,
 					       gboolean flatten);

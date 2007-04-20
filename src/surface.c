@@ -328,6 +328,135 @@ gdouble gfs_surface_implicit_value (GfsSurface * s, GtsPoint p)
   return (s->flip ? -1. : 1.)*gfs_function_spatial_value (s->f, (FttVector *)&p.x);
 }
 
+static gdouble segment_triangle_intersection (GtsPoint * E, GtsPoint * D,
+					      GtsTriangle * t,
+					      gboolean * inside)
+{
+  GtsVertex * vA, * vB, * vC;
+  GtsPoint * A, * B, * C;
+  gint ABCE, ABCD, ADCE, ABDE, BCDE;
+  GtsEdge * AB, * BC, * CA;
+  gdouble a, b;
+  gboolean reversed = FALSE;
+
+  gts_triangle_vertices_edges (t, NULL, &vA, &vB, &vC, &AB, &BC, &CA);
+  A = GTS_POINT (vA);
+  B = GTS_POINT (vB);
+  C = GTS_POINT (vC);
+  ABCE = gts_point_orientation_3d_sos (A, B, C, E);
+  ABCD = gts_point_orientation_3d_sos (A, B, C, D);
+  if (ABCE < 0 || ABCD > 0) {
+    GtsPoint * tmpp;
+    gint tmp;
+
+    tmpp = E; E = D; D = tmpp;
+    tmp = ABCE; ABCE = ABCD; ABCD = tmp;
+    reversed = TRUE;
+  }
+  if (ABCE < 0 || ABCD > 0)
+    return -1.;
+  ADCE = gts_point_orientation_3d_sos (A, D, C, E);
+  if (ADCE < 0)
+    return -1.;
+  ABDE = gts_point_orientation_3d_sos (A, B, D, E);
+  if (ABDE < 0)
+    return -1.;
+  BCDE = gts_point_orientation_3d_sos (B, C, D, E);
+  if (BCDE < 0)
+    return -1.;
+  *inside = reversed ? (ABCD < 0) : (ABCE < 0);
+  a = gts_point_orientation_3d (A, B, C, E);
+  b = gts_point_orientation_3d (A, B, C, D);
+  if (a != b)
+    return reversed ? 1. - a/(a - b) : a/(a - b);
+  /* D and E are contained within ABC */
+  g_assert (a == 0.);
+  return 0.5;
+}
+
+static void triangle_face_intersection (GtsTriangle * t, GfsSegment * I)
+{
+  gboolean ins;
+  gdouble x = segment_triangle_intersection (I->E, I->D, t, &ins);
+  
+  if (x != -1.) {
+    I->x += x; I->n++;
+    I->inside += ins ? 1 : -1;
+  }
+}
+
+static gdouble segment_intersection_value (GfsSegment * I, GfsSurface * s)
+{
+  GtsPoint p;
+  p.x = I->E->x + I->x*(I->D->x - I->E->x);
+  p.y = I->E->y + I->x*(I->D->y - I->E->y);
+  p.z = I->E->z + I->x*(I->D->z - I->E->z);
+  return gfs_surface_implicit_value (s, p);
+}
+
+/**
+ * gfs_surface_segment_intersection:
+ * @s: a #GfsSurface.
+ * @I: a GfsSegment.
+ *
+ * Fills @I with the intersection of @s and @I.
+ *
+ * Returns: the number of times @s intersects @I.
+ */
+guint gfs_surface_segment_intersection (GfsSurface * s,
+					GfsSegment * I)
+{
+  g_return_val_if_fail (s != NULL, 0);
+  g_return_val_if_fail (I != NULL, 0);
+
+  I->n = 0;
+  I->x = 0.;
+  I->inside = 0;
+
+  if (s->s)
+    gts_surface_foreach_face (s->s, (GtsFunc) triangle_face_intersection, I);
+  else {
+    gdouble vE = gfs_surface_implicit_value (s, *I->E);
+    gdouble vD = gfs_surface_implicit_value (s, *I->D);
+    
+    if ((vE > 0. && vD <= 0.) || (vE <= 0. && vD > 0.)) {
+      I->n = 1;
+      I->inside = vE > 0. ? -1 : 1;
+
+      /* secant-bisection root-finding */
+      gdouble t, t1, t2, v1, v2;
+      if (vE > vD) {
+	v1 = vD; t1 = 1.;
+	v2 = vE; t2 = 0.;
+      }
+      else {
+	v1 = vE; t1 = 0.;
+	v2 = vD; t2 = 1.;
+      }
+      I->x = (v1*t2 - v2*t1)/(v1 - v2);
+      guint n = 0;
+      do {
+	t = I->x;
+	gdouble v = segment_intersection_value (I, s);
+	if (v < 0.) {
+	  v1 = v; t1 = I->x;
+	}
+	else {
+	  v2 = v; t2 = I->x;
+	}
+	if (v2 > v1)
+	  I->x = (v1*t2 - v2*t1)/(v1 - v2);
+	n++;
+      }
+      while (fabs (t - I->x) > 1e-3 && n < 10);
+      if (fabs (t - I->x) > 1e-3)
+	g_warning ("gfs_surface_segment_intersection(): convergence could not be reached\n"
+		   "after %d iterations", n);
+    }
+  }
+  return I->n;
+}
+
 static void face_overlaps_box (GtsTriangle * t, gpointer * data)
 {
   GtsBBox * bb = data[0];
