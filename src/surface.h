@@ -33,11 +33,12 @@ struct _GfsSurface {
   GtsVector rotate, scale, translate;
   gdouble angle;
   gboolean flip;
+  GfsFunction * f;
+  GtsMatrix * m;
 
   /*< public >*/
   GtsSurface * s;
-  GfsFunction * f;
-  GtsMatrix * m;
+  gboolean twod;
 };
 
 typedef struct {

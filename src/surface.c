@@ -124,7 +124,8 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
       {GTS_DOUBLE, "tz", TRUE},
       {GTS_DOUBLE, "scale", TRUE},
       {GTS_DOUBLE, "angle", TRUE},
-      {GTS_INT,  "flip", TRUE},
+      {GTS_INT,    "flip", TRUE},
+      {GTS_INT,    "twod", TRUE},
       {GTS_NONE}
     };
     GtsFileVariable * v = var;
@@ -145,6 +146,7 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
     (v++)->data = &surface->angle;
 
     (v++)->data = &surface->flip;
+    (v++)->data = &surface->twod;
 
     gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR)
@@ -225,6 +227,8 @@ static void surface_write (GtsObject * o, FILE * fp)
 	       surface->angle);
     if (surface->flip)
       fputs ("  flip = 1\n", fp);
+    if (surface->twod)
+      fputs ("  twod = 1\n", fp);
     fputc ('}', fp);
   }
 }

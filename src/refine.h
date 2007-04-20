@@ -76,7 +76,6 @@ struct _GfsRefineSurface {
   GfsRefine parent;
 
   GfsSurface * surface;
-  gboolean twod;
 };
 
 #define GFS_REFINE_SURFACE(obj)            GTS_OBJECT_CAST (obj,\

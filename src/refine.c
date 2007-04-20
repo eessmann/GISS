@@ -264,45 +264,24 @@ static void refine_surface_destroy (GtsObject * object)
 {
   GfsRefineSurface * d = GFS_REFINE_SURFACE (object);
 
-  if (d->surface)
-    gts_object_destroy (GTS_OBJECT (d->surface));
+  gts_object_destroy (GTS_OBJECT (d->surface));
 
   (* GTS_OBJECT_CLASS (gfs_refine_surface_class ())->parent_class->destroy) (object);
 }
 
 static void refine_surface_write (GtsObject * o, FILE * fp)
 {
-  GfsRefineSurface * d = GFS_REFINE_SURFACE (o);
-  
   (* GTS_OBJECT_CLASS (gfs_refine_surface_class ())->parent_class->write) (o, fp);
-  gfs_surface_write (d->surface, gfs_object_simulation (o), fp);
-  if (d->twod)
-    fputs (" { twod = 1 }\n", fp);
-  else
-    fputc ('\n', fp);
+  gfs_surface_write (GFS_REFINE_SURFACE (o)->surface, gfs_object_simulation (o), fp);
 }
 
 static void refine_surface_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsRefineSurface * refine;
-
   (* GTS_OBJECT_CLASS (gfs_refine_surface_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
-  refine = GFS_REFINE_SURFACE (*o);
-  gfs_surface_read (refine->surface, gfs_object_simulation (*o), fp);
-  if (fp->type == GTS_ERROR)
-    return;
-
-  if (fp->type == '{') {
-    GtsFileVariable var[] = {
-      {GTS_INT, "twod", TRUE},
-      {GTS_NONE}
-    };
-    var[0].data = &refine->twod;
-    gts_file_assign_variables (fp, var);
-  }
+  gfs_surface_read (GFS_REFINE_SURFACE (*o)->surface, gfs_object_simulation (*o), fp);
 }
 
 static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
@@ -312,7 +291,7 @@ static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
   p.refine = refine;
   p.domain = GFS_DOMAIN (sim);
   p.surface = GFS_REFINE_SURFACE (refine)->surface;
-  if (GFS_REFINE_SURFACE (refine)->twod)
+  if (p.surface->twod)
     gfs_domain_traverse_cut_2D (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 				(FttCellTraverseCutFunc) refine_cut_cell, &p);
