@@ -389,13 +389,13 @@ static void triangle_face_intersection (GtsTriangle * t, GfsSegment * I)
   }
 }
 
-static gdouble segment_intersection_value (GfsSegment * I, GfsSurface * s)
+static GtsPoint segment_intersection (GfsSegment * I)
 {
   GtsPoint p;
   p.x = I->E->x + I->x*(I->D->x - I->E->x);
   p.y = I->E->y + I->x*(I->D->y - I->E->y);
   p.z = I->E->z + I->x*(I->D->z - I->E->z);
-  return gfs_surface_implicit_value (s, p);
+  return p;
 }
 
 /**
@@ -441,7 +441,7 @@ guint gfs_surface_segment_intersection (GfsSurface * s,
       guint n = 0;
       do {
 	t = I->x;
-	gdouble v = segment_intersection_value (I, s);
+	gdouble v = gfs_surface_implicit_value (s, segment_intersection (I));
 	if (v < 0.) {
 	  v1 = v; t1 = I->x;
 	}
@@ -459,6 +459,50 @@ guint gfs_surface_segment_intersection (GfsSurface * s,
     }
   }
   return I->n;
+}
+
+static void surface_normal (GtsTriangle * t, GtsVector n)
+{
+  GtsVector m;
+  gts_triangle_normal (t, &m[0], &m[1], &m[2]);
+  n[0] -= m[0];
+  n[1] -= m[1];
+  n[2] -= m[2];
+}
+
+/**
+ * gfs_surface_segment_normal:
+ * @s: a #GfsSurface.
+ * @I: a GfsSegment.
+ * @n: a #GtsVector.
+ *
+ * Fills @n with the normal to @s at the intersection of @s and @I.
+ */
+void gfs_surface_segment_normal (GfsSurface * s,
+				 GfsSegment * I,
+				 GtsVector n)
+{
+  g_return_if_fail (s != NULL);
+  g_return_if_fail (I != NULL);
+  g_return_if_fail (I->n > 0);
+  g_return_if_fail (n != NULL);
+  
+  if (s->s) {
+    n[0] = n[1] = n[2] = 0.;
+    gts_surface_foreach_face (s->s, (GtsFunc) surface_normal, n);
+  }
+  else {
+    FttComponent c;
+    GtsPoint p = segment_intersection (I);
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      GtsPoint p1 = p;
+      (&p1.x)[c] -= 1e-4;
+      gdouble v1 = gfs_surface_implicit_value (s, p1);
+      (&p1.x)[c] += 2e-4;
+      gdouble v2 = gfs_surface_implicit_value (s, p1);
+      n[c] = v2 - v1;
+    }
+  }
 }
 
 static void face_overlaps_box (GtsTriangle * t, gpointer * data)

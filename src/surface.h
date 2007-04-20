@@ -65,6 +65,9 @@ gdouble            gfs_surface_implicit_value (GfsSurface * s,
 					       GtsPoint p);
 guint              gfs_surface_segment_intersection (GfsSurface * s,
 						     GfsSegment * I);
+void               gfs_surface_segment_normal (GfsSurface * s,
+					       GfsSegment * I,
+					       GtsVector n);
 GfsSurface *       gfs_cell_is_cut            (FttCell * cell,
 					       GfsSurface * s,
 					       gboolean flatten);
