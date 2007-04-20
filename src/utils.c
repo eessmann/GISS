@@ -238,8 +238,8 @@ static GfsCartesianGrid * read_cartesian_grid (gchar * name, GtsFile * fp)
   klass = gfs_cartesian_grid_class ();
 
   grid = gfs_cartesian_grid_new (klass);
-
-  (* klass->read) ((GtsObject **) &grid, fp1);
+  GtsObject * o = GTS_OBJECT (grid);
+  (* klass->read) (&o, fp1);
 
   if (fp1->type == GTS_ERROR) {
     gts_file_error (fp, "%s:%d:%d: %s", name, fp1->line, fp1->pos, fp1->error);
@@ -367,6 +367,11 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
       else
 	c = gts_file_getc (fp);
     }
+    if (strlen (expr->str) == 1 && gfs_char_in_string (expr->str[0], operators))
+      while (c != EOF && gfs_char_in_string (c, spaces)) {
+	g_string_append_c (expr, c);
+	c = gts_file_getc (fp);
+      }
     while (c != EOF) {
       if (gfs_char_in_string (c, "{}\n")) {
 	fp->next_token = c;
@@ -385,15 +390,22 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
 	  g_string_append_c (expr, c);
 	  c = gts_file_getc (fp);
 	}
-	if (!gfs_char_in_string (c, operators)) {
-	  fp->next_token = c;
-	  break;
-	}
-	g_string_append_c (expr, c);
-	c = gts_file_getc (fp);
-	while (c != EOF && gfs_char_in_string (c, spaces)) {
+	if (c == '(') {
+	  scope++;
 	  g_string_append_c (expr, c);
 	  c = gts_file_getc (fp);
+	}
+	else {
+	  if (!gfs_char_in_string (c, operators)) {
+	    fp->next_token = c;
+	    break;
+	  }
+	  g_string_append_c (expr, c);
+	  c = gts_file_getc (fp);
+	  while (c != EOF && gfs_char_in_string (c, spaces)) {
+	    g_string_append_c (expr, c);
+	    c = gts_file_getc (fp);
+	  }
 	}
       }
       else if (gfs_char_in_string (c, operators)) {
