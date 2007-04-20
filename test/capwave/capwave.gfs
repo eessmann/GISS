@@ -52,7 +52,7 @@
   VariablePosition {} Y T y
   SourceDiffusion {} U 0.0182571749236
   SourceDiffusion {} V 0.0182571749236
-  InitFraction {} T wave.gts
+  InitFraction {} T (y - 0.01*cos (2.*M_PI*x))
   OutputScalarNorm { step = 3.04290519077e-3 } {
       awk '{printf ("%g %g\n", $3*11.1366559937, $9); fflush(stdout); }' > wave-LEVEL
   } { v = (T > 0. && T < 1. ? Y : 0.) }

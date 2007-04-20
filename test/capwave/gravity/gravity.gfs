@@ -56,7 +56,7 @@
   SourceDiffusion {} U 0.0182571749236
   SourceDiffusion {} V 0.0182571749236
   PhysicalParams { alpha = 1./(T + 0.1*(1. - T)) }
-  InitFraction {} T wave.gts
+  InitFraction {} T (y - 0.01*cos (2.*M_PI*x))
   OutputScalarNorm { step = .00225584983639310905 } {
       awk '{printf ("%g %g\n", $3*16.032448313657, $9); fflush(stdout); }' > wave-LEVEL
   } { v = (T > 1e-6 && T < 1. - 1e-6 ? Y : 0.) }
