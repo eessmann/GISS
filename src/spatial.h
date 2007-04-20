@@ -28,4 +28,9 @@ static double ellipse (double xc, double yc, double a, double b)
   return (_x - xc)*(_x - xc)/(a*a) + (_y - yc)*(_y - yc)/(b*b) - 1.;
 }
 
+static double sphere (double xc, double yc, double zc, double r)
+{
+  return (_x - xc)*(_x - xc) + (_y - yc)*(_y - yc) + (_z - zc)*(_z - zc) - r*r;
+}
+
 #endif /* __SPATIAL_H__ */

@@ -610,7 +610,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     }
     if (f->spatial)
       fputs ("double f (double x, double y, double z) {\n"
-	     "  _x = x; _y = y;\n", 
+	     "  _x = x; _y = y; _z = z;\n", 
 	     fin);
     else {
       fputs ("typedef double (* Func) (const FttCell * cell,\n"
