@@ -1,5 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
+EXTRA_DIST = tutorial.tex depend.awk
+
 Makefile.deps: Makefile.am tutorial.tex
 	awk -f depend.awk file="tutorial" < tutorial.tex > Makefile.deps
 
