@@ -20,6 +20,10 @@
 #ifndef __SPATIAL_H__
 #define __SPATIAL_H__
 
+/* When modifying this file, please also update the documentation at:
+ * http://gfs.sourceforge.net/wiki/index.php/GfsSurface
+ */
+
 static double _x = 0., _y = 0., _z = 0.;
 
 static double ellipse (double xc, double yc, double a, double b)

@@ -15,7 +15,7 @@
 # velocity values are computed from cell-centred values.
 #
 # \begin{figure}[htbp]
-# \caption{Surface height at $t = 2$.}
+# \caption{\label{p}Surface height at $t = 2$.}
 # \begin{center}
 # \includegraphics[width=0.6\hsize]{p.eps}
 # \end{center}
