@@ -9,7 +9,7 @@ from datetime import *
 env = "export PYTHONPATH=$PYTHONPATH:" + os.getcwd() + " && export donotrun=false &&"
 system = commands.getoutput('uname -o -n -m')
 path = commands.getoutput('which gerris2D')
-version = commands.getoutput("""gerris2D -V 2>&1 | awk '{if ($5 == "version") print $6;}'""")
+version = commands.getoutput("""gerris2D -V 2>&1 | head -1 | cut -d' ' -f6-""")
 starttime = datetime.now()
 
 n = 0
