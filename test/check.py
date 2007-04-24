@@ -15,6 +15,8 @@ class Curve:
 			self.read(open(f,'r'),x,y)
 	def value(self,x):
 		l,u = 0,len(self.l)-1
+		if u == l:
+			return self.l[u][1]
 		while u - l > 1:
 			i = (u + l)/2
 			if self.l[i][0] > x:

@@ -2,7 +2,6 @@
 
 EXAMPLES = \
 	cylinder \
-	shear \
 	rt \
 	boussinesq \
 	tangaroa \
