@@ -226,6 +226,27 @@ AC_MSG_RESULT($have_gmodule)
 CFLAGS=$OLD_CFLAGS
 LIBS=$OLD_LIBS
 
+# checking how to build modules
+if test "$have_gmodule" = "yes"; then
+   module_flags=""
+   for flags in \
+       "-fPIC -shared -x c" \
+       "-fPIC -dynamiclib -x c -undefined dynamic_lookup" \
+       "-fPIC -bundle -x c"
+   do
+	if test x"$module_flags" = x; then
+	   if echo "test(){}" | gcc $flags - 2> /dev/null; then
+	      module_flags=\"$flags\"
+	   fi
+	fi
+   done
+   if test x"$module_flags" = x; then
+	have_gmodule=no
+	AC_MSG_WARN([Could not build module, functions in parameter files will not be supported.])
+   fi
+   AC_DEFINE_UNQUOTED(MODULES_FLAGS, $module_flags, [Linking flags to build modules.])
+fi
+
 # checks for pkg-config
 if test "$have_gmodule" = "yes"; then
   AC_CHECK_PROG(have_pkg_config, pkg-config, yes, no)

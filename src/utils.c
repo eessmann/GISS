@@ -449,11 +449,8 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
 #else /* 3D */
     "gerris3D"
 #endif
-#if defined(__APPLE__) && defined(__MACH__)
-    " --cflags --libs` -O -fPIC -bundle -x c";
-#else  /* not MACOSX */
-    " --cflags --libs` -O -fPIC -shared -x c";
-#endif /* not MACOSX*/
+    " --cflags --libs` -O "
+    MODULES_FLAGS;
   
   foutd = mkstemp (foutname);
   ferrd = mkstemp (ferrname);
