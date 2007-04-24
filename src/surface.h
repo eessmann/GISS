@@ -31,7 +31,6 @@ struct _GfsSurface {
   /*< private >*/
   GtsObject parent;
   GtsVector rotate, scale, translate;
-  gdouble angle;
   gboolean flip;
   GfsFunction * f;
   GtsMatrix * m;

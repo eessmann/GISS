@@ -123,7 +123,6 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
       {GTS_DOUBLE, "ty", TRUE},
       {GTS_DOUBLE, "tz", TRUE},
       {GTS_DOUBLE, "scale", TRUE},
-      {GTS_DOUBLE, "angle", TRUE},
       {GTS_INT,    "flip", TRUE},
       {GTS_INT,    "twod", TRUE},
       {GTS_NONE}
@@ -143,7 +142,6 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
     (v++)->data = &surface->translate[2];
 
     (v++)->data = &scale;
-    (v++)->data = &surface->angle;
 
     (v++)->data = &surface->flip;
     (v++)->data = &surface->twod;
@@ -154,20 +152,19 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
 
     if (var[9].set)
       surface->scale[0] = surface->scale[1] = surface->scale[2] = scale;
-    if (var[10].set && gts_vector_norm (surface->rotate) == 0.) {
-      gts_file_variable_error (fp, var, "angle",
-			       "a non-zero rotation vector must be specified");
-      return;
-    }
     
     GtsMatrix * m = gts_matrix_translate (NULL, surface->translate);
-    if (surface->angle != 0.) {
-      GtsMatrix * mr = gts_matrix_rotate (NULL, surface->rotate, surface->angle*M_PI/180.);
-      GtsMatrix * m1 = gts_matrix_product (m, mr);
-      gts_matrix_destroy (m);
-      gts_matrix_destroy (mr);
-      m = m1;
-    }
+    FttComponent c;
+    for (c = 3; c >= 0; c--)
+      if (surface->rotate[c] != 0.) {
+	GtsVector r = {0.,0.,0.};
+	r[c] = 1.;
+	GtsMatrix * mr = gts_matrix_rotate (NULL, r, surface->rotate[c]*M_PI/180.);
+	GtsMatrix * m1 = gts_matrix_product (m, mr);
+	gts_matrix_destroy (m);
+	gts_matrix_destroy (mr);
+	m = m1;
+      }
     GtsMatrix * ms = gts_matrix_scale (NULL, surface->scale);
     if (surface->m)
       gts_matrix_destroy (surface->m);
@@ -219,12 +216,12 @@ static void surface_write (GtsObject * o, FILE * fp)
     if (surface->scale[0] != 1. || surface->scale[1] != 1. || surface->scale[2] != 1.)
       fprintf (fp, "  sx = %g sy = %g sz = %g\n",
 	       surface->scale[0], surface->scale[1], surface->scale[2]);
-    if (surface->angle != 0.)
-      fprintf (fp,
-	       "  rx = %g ry = %g rz = %g\n"
-	       "  angle = %g\n",
-	       surface->rotate[0], surface->rotate[1], surface->rotate[2],
-	       surface->angle);
+    if (surface->rotate[0] != 0.)
+      fprintf (fp, "  rx = %g\n", surface->rotate[0]);
+    if (surface->rotate[1] != 0.)
+      fprintf (fp, "  ry = %g\n", surface->rotate[1]);
+    if (surface->rotate[2] != 0.)
+      fprintf (fp, "  rz = %g\n", surface->rotate[2]);
     if (surface->flip)
       fputs ("  flip = 1\n", fp);
     if (surface->twod)
