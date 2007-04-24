@@ -32,8 +32,8 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: shapes rayleigh-taylor | transform -M 2. | transform -u 0.5 > rt.gts && gerris2D rt.gfs | gfsview2D rt.gfv
-# Version: 1.0.0
+# Command: gerris2D rt.gfs | gfsview2D rt.gfv
+# Version: 1.1.0
 # Required files: rt.gfv
 # Running time: 12 minutes
 # Generated files: t.mpg vort.mpg t.eps vort.eps t-0.eps t-0.7.eps t-0.8.eps t-0.9.eps t-1.eps
@@ -45,8 +45,8 @@
   # The tracer T is used to track both phases
   VariableTracerVOF {} T
  
-  # The initial sinusoidal interface.
-  InitFraction {} T rt.gts
+  # The initial sinusoidal interface (translated by -0.5 along the y-axis)
+  InitFraction {} T (0.05*cos (2.*M_PI*x) + y) { ty = 0.5 }
 
   AdaptVorticity { istep = 1 } { maxlevel = 7 cmax = 2e-2 }
   AdaptGradient { istep = 1 } { maxlevel = 7 cmax = 1e-2 } T
