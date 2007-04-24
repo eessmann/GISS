@@ -150,12 +150,15 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
     if (fp->type == GTS_ERROR)
       return;
 
-    if (var[9].set)
-      surface->scale[0] = surface->scale[1] = surface->scale[2] = scale;
-    
+    if (var[9].set) {
+      surface->scale[0] *= scale;
+      surface->scale[1] *= scale;
+      surface->scale[2] *= scale;
+    }
+
     GtsMatrix * m = gts_matrix_translate (NULL, surface->translate);
-    FttComponent c;
-    for (c = 3; c >= 0; c--)
+    gint c;
+    for (c = 2; c >= 0; c--)
       if (surface->rotate[c] != 0.) {
 	GtsVector r = {0.,0.,0.};
 	r[c] = 1.;
