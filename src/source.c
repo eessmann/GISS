@@ -562,6 +562,14 @@ static void source_diffusion_read (GtsObject ** o, GtsFile * fp)
 
   gfs_object_simulation_set (d->D, gfs_object_simulation (d));
   (* GTS_OBJECT (d->D)->klass->read) ((GtsObject **) &d->D, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (GFS_SOURCE_SCALAR (d)->v->component < FTT_DIMENSION &&
+      gfs_function_get_constant_value (d->D->val) == G_MAXDOUBLE)
+      g_warning ("%d:%d: Terms may be missing when using variable diffusion\n"
+		 "on vector quantities",
+		 fp->line, fp->pos);
 }
 
 static void source_diffusion_write (GtsObject * o, FILE * fp)
@@ -591,13 +599,10 @@ static gdouble source_diffusion_value (GfsSourceGeneric * s,
   FttCellFace f;
   FttCellNeighbors n;
   GfsGradient g = { 0., 0. };
-  FttComponent c;
   gdouble v0, h;
 
   if (GFS_IS_MIXED (cell)) /* this improves results for channel test */
     return 0.;
-
-  c = v->component;
 
   v0 = GFS_VARIABLE (cell, v->i);
   f.cell = cell;
@@ -614,13 +619,16 @@ static gdouble source_diffusion_value (GfsSourceGeneric * s,
       g.a += D*e.a;
       g.b += D*e.b;
     }
-    else if (f.d/2 == c) {
+    else if (f.d/2 == v->component) {
       g.a += D;
       g.b -= D*v0;
     }
   }
   h = ftt_cell_size (cell);
-  return (g.b - g.a*v0)/(h*h);
+
+  GfsFunction * alpha = v->component < FTT_DIMENSION ? 
+    gfs_object_simulation (s)->physical_params.alpha : NULL;
+  return (alpha ? gfs_function_value (alpha, cell) : 1.)*(g.b - g.a*v0)/(h*h);
 }
 
 static void source_diffusion_class_init (GfsSourceGenericClass * klass)
@@ -816,9 +824,7 @@ static gdouble source_viscosity_value (GfsSourceGeneric * s,
 				       FttCell * cell,
 				       GfsVariable * v)
 {
-  GfsFunction * alpha = gfs_object_simulation (s)->physical_params.alpha;
-
-  return (source_diffusion_value (s, cell, v)*(alpha ? gfs_function_value (alpha, cell) : 1.) +
+  return (source_diffusion_value (s, cell, v) +
 	  source_viscosity_non_diffusion_value (s, cell, v));
 }
 
