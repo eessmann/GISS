@@ -49,7 +49,8 @@ void                  gfs_multilevel_params_write    (GfsMultilevelParams * par,
 						      FILE * fp);
 void                  gfs_multilevel_params_read     (GfsMultilevelParams * par, 
 						      GtsFile * fp);
-
+void                  gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
+							 FILE * fp);
 void                  gfs_relax                      (GfsDomain * domain,
 						      guint d,
 						      gint max_depth,

@@ -117,6 +117,52 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
     gts_file_variable_error (fp, var, "beta", "beta must be in [0.5,1]");
 }
 
+static gdouble rate (gdouble a, gdouble b, guint n)
+{
+  if (a > 0. && b > 0. && n > 0)
+    return exp (log (b/a)/n);
+  return 0.;
+}
+
+/**
+ * gfs_multilevel_params_stats_write:
+ * @par: the multilevel parameters.
+ * @fp: a file pointer.
+ *
+ * Writes in @fp the statistics contained in @p.
+ */
+void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
+					FILE * fp)
+{
+  g_return_if_fail (par != NULL);
+  g_return_if_fail (fp != NULL);
+
+  fprintf (fp,
+	   "    niter: %4d\n"
+	   "    residual.bias:   % 10.3e % 10.3e\n"
+	   "    residual.first:  % 10.3e % 10.3e %6.2g\n"
+	   "    residual.second: % 10.3e % 10.3e %6.2g\n"
+	   "    residual.infty:  % 10.3e % 10.3e %6.2g\n",
+	   par->niter,
+	   par->residual_before.bias,
+	   par->residual.bias,
+	   par->residual_before.first,
+	   par->residual.first,
+	   rate (par->residual.first,
+		 par->residual_before.first,
+		 par->niter),
+	   par->residual_before.second,
+	   par->residual.second,
+	   rate (par->residual.second,
+		 par->residual_before.second,
+		 par->niter),
+	   par->residual_before.infty,
+	   par->residual.infty,
+	   rate (par->residual.infty,
+		 par->residual_before.infty,
+		 par->niter));
+}
+
 typedef struct {
   guint u, rhs, dia, res;
   gint maxlevel;

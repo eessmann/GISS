@@ -565,42 +565,6 @@ GfsOutputClass * gfs_output_progress_class (void)
 
 /* GfsOutputProjectionStats: Object */
 
-static gdouble rate (gdouble a, gdouble b, guint n)
-{
-  if (a > 0. && b > 0. && n > 0)
-    return exp (log (b/a)/n);
-  return 0.;
-}
-
-static void multilevel_stats_write (GfsMultilevelParams * p,
-				    FILE * fp)
-{
-  fprintf (fp,
-	   "    niter: %4d\n"
-	   "    residual.bias:   % 10.3e % 10.3e\n"
-	   "    residual.first:  % 10.3e % 10.3e %6.2g\n"
-	   "    residual.second: % 10.3e % 10.3e %6.2g\n"
-	   "    residual.infty:  % 10.3e % 10.3e %6.2g\n",
-	   p->niter,
-	   p->residual_before.bias,
-	   p->residual.bias,
-	   p->residual_before.first,
-	   p->residual.first,
-	   rate (p->residual.first,
-		 p->residual_before.first,
-		 p->niter),
-	   p->residual_before.second,
-	   p->residual.second,
-	   rate (p->residual.second,
-		 p->residual_before.second,
-		 p->niter),
-	   p->residual_before.infty,
-	   p->residual.infty,
-	   rate (p->residual.infty,
-		 p->residual_before.infty,
-		 p->niter));
-}
-
 static gboolean projection_stats_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
@@ -608,10 +572,10 @@ static gboolean projection_stats_event (GfsEvent * event, GfsSimulation * sim)
 
     if (sim->projection_params.niter > 0) {
       fprintf (fp, "MAC projection        before     after       rate\n");
-      multilevel_stats_write (&sim->projection_params, fp);
+      gfs_multilevel_params_stats_write (&sim->projection_params, fp);
     }
     fprintf (fp, "Approximate projection\n");
-    multilevel_stats_write (&sim->approx_projection_params, fp);
+    gfs_multilevel_params_stats_write (&sim->approx_projection_params, fp);
     return TRUE;
   }
   return FALSE;
@@ -664,7 +628,7 @@ static gboolean diffusion_stats_event (GfsEvent * event, GfsSimulation * sim)
 	  if (GFS_IS_SOURCE_DIFFUSION (o) && !g_slist_find (l, o)) {
 	    l = g_slist_prepend (l, o);
 	    fprintf (fp, "%s diffusion\n", v->name);
-	    multilevel_stats_write (&GFS_SOURCE_DIFFUSION (o)->D->par, fp);
+	    gfs_multilevel_params_stats_write (&GFS_SOURCE_DIFFUSION (o)->D->par, fp);
 	  }
 	  j = j->next;
 	}
