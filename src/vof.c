@@ -1337,16 +1337,93 @@ static guint local_height (FttVector * p,
   return n;
 }
 
-static FttComponent orientation (FttVector * m)
+static void orientation (FttVector * m, FttComponent * c)
 {
-  gdouble max = fabs (m->x);
-  FttComponent c = FTT_X, i;
-  for (i = 1; i < FTT_DIMENSION; i++)
-    if (fabs ((&m->x)[i]) > max) {
-      max = fabs ((&m->x)[i]);
-      c = i;
-    }
-  return c;
+  FttComponent i, j;
+  for (i = 0; i < FTT_DIMENSION; i++)
+    c[i] = i;
+  for (i = 0; i < FTT_DIMENSION - 1; i++)
+    for (j = 0; j < FTT_DIMENSION - 1 - i; j++)
+      if (fabs ((&m->x)[c[j + 1]]) > fabs ((&m->x)[c[j]])) {
+	FttComponent tmp = c[j];
+	c[j] = c[j + 1];
+	c[j + 1] = tmp;
+      }
+}
+
+static gboolean curvature_along_direction (FttCell * cell, 
+					   GfsVariableTracerVOF * t,
+					   FttComponent c,
+					   gdouble * kappa)
+{
+  GfsVariable * v = GFS_VARIABLE1 (t);
+
+  FttVector m;
+  FttComponent i;
+  for (i = 0; i < FTT_DIMENSION; i++)
+    (&m.x)[i] = GFS_VARIABLE (cell, t->m[i]->i);
+
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  guint level = ftt_cell_level (cell);
+  gdouble size = ftt_level_size (level);
+
+  gdouble H;
+  if (!local_height (&p, &p, level, v, c, &H))
+    return FALSE;
+  if (H < -0.5 || H > 0.5) {
+    *kappa = G_MAXDOUBLE;
+    return TRUE;
+  }
+      
+#ifdef FTT_2D
+  FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
+  gdouble h[2];
+  FttVector q = p;
+  gdouble slope = rint ((&m.x)[cp]/(&m.x)[c]);
+
+  (&q.x)[cp] += size;
+  (&q.x)[c] -= slope*size;
+  if (!local_height (&q, &p, level, v, c, &h[0]))
+    return FALSE;
+
+  q = p;
+  (&q.x)[cp] -= size;
+  (&q.x)[c] += slope*size;
+  if (!local_height (&q, &p, level, v, c, &h[1]))
+    return FALSE;
+
+  gdouble hxx = h[0] - 2*H + h[1];
+  gdouble hx = (h[0] - h[1])/2.;
+  gdouble dnm = 1. + hx*hx;
+  *kappa = hxx/(size*sqrt (dnm*dnm*dnm));
+#else  /* 3D */  
+  static FttComponent or[3][2] = { { FTT_Y, FTT_Z }, { FTT_X, FTT_Z }, { FTT_X, FTT_Y } };
+  gdouble h[3][3];
+  gint x, y;
+
+  for (x = -1; x <= 1; x++)
+    for (y = -1; y <= 1; y++)
+      if (x != 0 || y != 0) {
+	FttVector q = p;
+	gdouble slope = rint ((&m.x)[or[c][0]]/(&m.x)[c]*x + (&m.x)[or[c][1]]/(&m.x)[c]*y);
+
+	(&q.x)[or[c][0]] += size*x;
+	(&q.x)[or[c][1]] += size*y;
+	(&q.x)[c] -= slope*size;
+	if (!local_height (&q, &p, level, v, c, &h[x + 1][y + 1]))
+	  return FALSE;
+      }
+  
+  gdouble hxx = h[2][1] - 2.*H + h[0][1];
+  gdouble hyy = h[1][2] - 2.*H + h[1][0];
+  gdouble hx = (h[2][1] - h[0][1])/2.;
+  gdouble hy = (h[1][2] - h[1][0])/2.;
+  gdouble hxy = (h[2][2] + h[0][0] - h[2][0] - h[0][2])/2.;
+  gdouble dnm = 1. + hx*hx + hy*hy; 
+  *kappa = (hxx + hyy + hxx*hy*hy + hyy*hx*hx - hxy*hx*hy)/(size*sqrt (dnm*dnm*dnm));  
+#endif /* 3D */
+  return TRUE;
 }
 
 /**
@@ -1373,73 +1450,16 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t)
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++)
     (&m.x)[c] = GFS_VARIABLE (cell, t->m[c]->i);
-  c = orientation (&m);
 
+  FttComponent try[FTT_DIMENSION];
+  orientation (&m, try); /* sort directions according to normal */
+  gdouble kappa = G_MAXDOUBLE;
+  for (c = 0; c < FTT_DIMENSION; c++) /* try each direction */
+    if (curvature_along_direction (cell, t, try[c], &kappa))
+      return kappa;
   FttVector p;
   ftt_cell_pos (cell, &p);
-  guint level = ftt_cell_level (cell);
-  gdouble H;
-  if (!local_height (&p, &p, level, v, c, &H))
-    return G_MAXDOUBLE;
-  if (H < -0.5 || H > 0.5)
-    return G_MAXDOUBLE;
-      
-  gdouble size = ftt_level_size (level);
-#ifdef FTT_2D
-  FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
-  gdouble h[2];
-  FttVector q = p;
-  gdouble slope = rint ((&m.x)[cp]/(&m.x)[c]);
-
-  (&q.x)[cp] += size;
-  (&q.x)[c] -= slope*size;
-  //  fprintf (stderr, "\n  (%g %g) ", q.x, q.y);
-  if (!local_height (&q, &p, level, v, c, &h[0])) {
-    g_warning ("Failed to compute local height at (%g,%g)", q.x, q.y);
-    return G_MAXDOUBLE;
-  }
-
-  q = p;
-  (&q.x)[cp] -= size;
-  (&q.x)[c] += slope*size;
-  //  fprintf (stderr, "\n  (%g %g) ", q.x, q.y);
-  if (!local_height (&q, &p, level, v, c, &h[1])) {
-    g_warning ("Failed to compute local height at (%g,%g)", q.x, q.y);
-    return G_MAXDOUBLE;
-  }
-
-  gdouble hxx = h[0] - 2*H + h[1];
-  gdouble hx = (h[0] - h[1])/2.;
-  gdouble dnm = 1. + hx*hx;
-  //  fprintf (stderr, " %g\n", hxx/(size*sqrt (dnm*dnm*dnm)));
-  return hxx/(size*sqrt (dnm*dnm*dnm));
-#else  /* 3D */  
-  static FttComponent or[3][2] = { { FTT_Y, FTT_Z }, { FTT_X, FTT_Z }, { FTT_X, FTT_Y } };
-  gdouble h[3][3];
-  gint x, y;
-
-  for (x = -1; x <= 1; x++)
-    for (y = -1; y <= 1; y++)
-      if (x != 0 || y != 0) {
-	FttVector q = p;
-	gdouble slope = rint ((&m.x)[or[c][0]]/(&m.x)[c]*x + (&m.x)[or[c][1]]/(&m.x)[c]*y);
-
-	(&q.x)[or[c][0]] += size*x;
-	(&q.x)[or[c][1]] += size*y;
-	(&q.x)[c] -= slope*size;
-	guint n = local_height (&q, &p, level, v, c, &h[x + 1][y + 1]);
-	if (!n) {
-	  g_warning ("Failed to compute local height at (%g,%g,%g)", q.x, q.y, q.z);
-	  return G_MAXDOUBLE;
-	}
-      }
-  
-  gdouble hxx = h[2][1] - 2.*H + h[0][1];
-  gdouble hyy = h[1][2] - 2.*H + h[1][0];
-  gdouble hx = (h[2][1] - h[0][1])/2.;
-  gdouble hy = (h[1][2] - h[1][0])/2.;
-  gdouble hxy = (h[2][2] + h[0][0] - h[2][0] - h[0][2])/2.;
-  gdouble dnm = 1. + hx*hx + hy*hy; 
-  return (hxx + hyy + hxx*hy*hy + hyy*hx*hx - hxy*hx*hy)/(size*sqrt (dnm*dnm*dnm));  
-#endif /* 3D */
+  g_warning ("Failed to compute curvature at (%g,%g,%g) level: %d", 
+	     p.x, p.y, p.z, ftt_cell_level (cell));
+  return G_MAXDOUBLE;
 }
