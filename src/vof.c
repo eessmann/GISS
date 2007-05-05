@@ -1301,8 +1301,7 @@ static gdouble local_height (FttVector * p,
 			     guint level,
 			     GfsVariable * v,
 			     FttComponent c,
-			     GtsVector interface,
-			     gboolean * flip)
+			     GtsVector interface)
 {
   gdouble h = ftt_level_size (level), H = 0.;
   gdouble right = fraction (p, level, v), left = right;
@@ -1339,38 +1338,23 @@ static gdouble local_height (FttVector * p,
   if (left > 0.5) {
     H += ((&pleft.x)[c] - (&origin->x)[c])/h - 0.5;
     interface[c] = H;
-    g_assert (!*flip);
   }
   else {
     g_assert (right > 0.5);
     H -= ((&pright.x)[c] - (&origin->x)[c])/h + 0.5;
     interface[c] = - H;
-    *flip = TRUE;
   }
   return H;
 }
 
-static void orientation (FttVector * m, FttComponent * c)
-{
-  FttComponent i, j;
-  for (i = 0; i < FTT_DIMENSION; i++)
-    c[i] = i;
-  for (i = 0; i < FTT_DIMENSION - 1; i++)
-    for (j = 0; j < FTT_DIMENSION - 1 - i; j++)
-      if (fabs ((&m->x)[c[j + 1]]) > fabs ((&m->x)[c[j]])) {
-	FttComponent tmp = c[j];
-	c[j] = c[j + 1];
-	c[j + 1] = tmp;
-      }
-}
-
+/* fixme: does not work for periodic boundary conditions along direction c
+ * for cells close to the boundary */
 static gboolean curvature_along_direction (FttCell * cell, 
 					   GfsVariableTracerVOF * t,
 					   FttComponent c,
 					   gdouble * kappa,
 					   GtsVector * interface,
-					   guint * n,
-					   gboolean * flip)
+					   guint * n)
 {
   GfsVariable * v = GFS_VARIABLE1 (t);
 
@@ -1385,7 +1369,7 @@ static gboolean curvature_along_direction (FttCell * cell,
   gdouble size = ftt_level_size (level), H;
 
   gboolean found_all_heights = TRUE;
-  H = local_height (&p, &p, level, v, c, interface[*n], flip);
+  H = local_height (&p, &p, level, v, c, interface[*n]);
   if (H == G_MAXDOUBLE)
     found_all_heights = FALSE;
   else
@@ -1400,11 +1384,11 @@ static gboolean curvature_along_direction (FttCell * cell,
 #ifdef FTT_2D
   FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
   FttVector q = p;
-  gdouble slope = rint ((&m.x)[cp]/(&m.x)[c]), h[2];
+  gdouble slope = (&m.x)[c] ? rint ((&m.x)[cp]/(&m.x)[c]) : 0, h[2];
 
   (&q.x)[cp] += size;
   (&q.x)[c] -= slope*size;
-  h[0] = local_height (&q, &p, level, v, c, interface[*n], flip);
+  h[0] = local_height (&q, &p, level, v, c, interface[*n]);
   if (h[0] == G_MAXDOUBLE)
     found_all_heights = FALSE;
   else
@@ -1413,7 +1397,7 @@ static gboolean curvature_along_direction (FttCell * cell,
   q = p;
   (&q.x)[cp] -= size;
   (&q.x)[c] += slope*size;
-  h[1] = local_height (&q, &p, level, v, c, interface[*n], flip);
+  h[1] = local_height (&q, &p, level, v, c, interface[*n]);
   if (h[1] == G_MAXDOUBLE)
     found_all_heights = FALSE;
   else
@@ -1434,12 +1418,13 @@ static gboolean curvature_along_direction (FttCell * cell,
     for (y = -1; y <= 1; y++)
       if (x != 0 || y != 0) {
 	FttVector q = p;
-	gdouble slope = rint ((&m.x)[or[c][0]]/(&m.x)[c]*x + (&m.x)[or[c][1]]/(&m.x)[c]*y);
+	gdouble slope = (&m.x)[c] ? 
+	  rint ((&m.x)[or[c][0]]/(&m.x)[c]*x + (&m.x)[or[c][1]]/(&m.x)[c]*y) : 0.;
 
 	(&q.x)[or[c][0]] += size*x;
 	(&q.x)[or[c][1]] += size*y;
 	(&q.x)[c] -= slope*size;
-	h[x + 1][y + 1] = local_height (&q, &p, level, v, c, interface[*n], flip);
+	h[x + 1][y + 1] = local_height (&q, &p, level, v, c, interface[*n]);
 	if (h[x + 1][y + 1] == G_MAXDOUBLE)
 	  found_all_heights = FALSE;
 	else
@@ -1460,54 +1445,108 @@ static gboolean curvature_along_direction (FttCell * cell,
 }
 
 typedef struct {
-  GtsMatrix * m;
-  GtsVector rhs;
-  gdouble a, b; /* y = a*x*x + b*x + c */
+  gdouble x2y, x4;
+  GtsVector o, m;
+  gdouble a, b;
 } ParabolaFit;
 
-static void parabola_fit_init (ParabolaFit * p)
+static void parabola_fit_init (ParabolaFit * p, FttVector * o, FttVector * m)
 {
-  p->m = gts_matrix_zero (NULL);
-  p->rhs[0] = p->rhs[1] = p->rhs[2] = 0.;
+  p->o[0] = o->x; p->o[1] = o->y; p->o[2] = o->z;
+  p->m[0] = m->x; p->m[1] = m->y; p->m[2] = m->z;
+  gts_vector_normalize (p->m);
+  p->x2y = p->x4 = p->b = 0.;
 }
 
 static void parabola_fit_destroy (ParabolaFit * p)
 {
-  gts_matrix_destroy (p->m);
 }
 
-static void parabola_fit_add (ParabolaFit * p, GtsVector m, FttComponent c)
+static void parabola_fit_add (ParabolaFit * p, GtsVector m, gdouble w)
 {
-  gdouble x = m[(c + 1) % 2], y = m[c];
-
-  p->m[0][0] += x*x*x*x; p->m[0][1] += x*x*x; p->m[0][2] += x*x;
-  p->rhs[0] += x*x*y;
-  
-  p->m[1][2] += x;
-  p->rhs[1] += x*y;
-  
-  p->m[2][2] += 1.;
-  p->rhs[2] += y;
+  gdouble x = m[0] - p->o[0];
+  gdouble y = m[1] - p->o[1];
+  gdouble x1 = p->m[1]*x - p->m[0]*y;
+  gdouble y1 = p->m[0]*x + p->m[1]*y;
+  p->x2y += w*x1*x1*y1;
+  p->x4 += w*x1*x1*x1*x1;
 }
 
-static gboolean parabola_fit_solve (ParabolaFit * p)
+static void parabola_fit_solve (ParabolaFit * p)
 {
-  if (p->m[2][2] >= 3.) {
-    p->m[1][0] = p->m[0][1]; p->m[1][1] = p->m[0][2];
-    p->m[2][0] = p->m[0][2]; p->m[2][1] = p->m[1][2];
-    GtsMatrix * im = gts_matrix3_inverse (p->m);
-    if (im) {
-      p->a = im[0][0]*p->rhs[0] + im[0][1]*p->rhs[1] + im[0][2]*p->rhs[2];
-      p->b = im[1][0]*p->rhs[0] + im[1][1]*p->rhs[1] + im[1][2]*p->rhs[2];
-      gts_matrix_destroy (im);
-      return TRUE;
-    }
-    g_warning ("Singular parabola fitting matrix");
-  }
-  else
-    g_warning ("Not enough interface points (%g) for parabola fitting",
-	       p->m[2][2]);
-  return FALSE;
+  if (p->x4 > 0.)
+    p->a = p->x2y/p->x4;
+  else /* this is a degenerate/isolated interface fragment */
+    p->a = 0.;
+}
+
+static gdouble parabola_fit_curvature (ParabolaFit * p, gdouble kappamax)
+{
+  gdouble kappa;
+#if FTT_2D
+  kappa = 2.*p->a;
+#else
+  g_assert_not_implemented ();
+#endif
+  if (fabs (kappa) > kappamax)
+    return kappa > 0. ? kappamax : - kappamax;
+  return kappa;
+}
+
+static void add_vof_center (ParabolaFit * fit, FttCell * cell, GfsVariable * v, gdouble w)
+{
+  FttVector c;
+  if (gfs_vof_center (cell, GFS_VARIABLE_TRACER_VOF (v), &c))
+    parabola_fit_add (fit, &c.x, w);
+}
+
+static void fit_from_fractions (FttCell * cell, GfsVariable * v, ParabolaFit * fit)
+{
+  gdouble h = ftt_cell_size (cell);
+  guint level = ftt_cell_level (cell);
+  gint x, y, z = 0;
+  FttVector p;
+  #define SMALL 0.1
+  static gdouble w[3][3] = {
+    { SMALL, 1., SMALL },
+    {  1.,   0.,  1.   },
+    { SMALL, 1., SMALL }
+  };
+  
+  ftt_cell_pos (cell, &p);
+  for (x = -1; x <= 1; x++)
+    for (y = -1; y <= 1; y++)
+      if (x != 0 || y != 0) {
+	FttVector o;
+	o.x = p.x + h*x; o.y = p.y + h*y; o.z = p.z + h*z;
+	FttCell * neighbor = domain_and_boundary_locate (v->domain, o, level);
+	if (neighbor)
+	  add_vof_center (fit, neighbor, v, w[x + 1][y + 1]);
+      }
+}
+
+static gdouble gfs_curvature_fit (FttCell * cell, GfsVariableTracerVOF * t)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (t != NULL, 0.);
+
+  GfsVariable * v = GFS_VARIABLE1 (t);
+  g_return_val_if_fail (!GFS_IS_FULL (GFS_VARIABLE (cell,  v->i)), 0.);
+
+  FttVector m;
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&m.x)[c] = GFS_VARIABLE (cell, t->m[c]->i);
+
+  ParabolaFit fit;
+  FttVector p;
+  g_assert (gfs_vof_center (cell, t, &p));
+  parabola_fit_init (&fit, &p, &m);
+  fit_from_fractions (cell, GFS_VARIABLE1 (t), &fit);
+  parabola_fit_solve (&fit);
+  gdouble kappa = parabola_fit_curvature (&fit, 2./ftt_cell_size (cell));
+  parabola_fit_destroy (&fit);
+  return kappa;
 }
 
 #if FTT_2D
@@ -1515,6 +1554,20 @@ static gboolean parabola_fit_solve (ParabolaFit * p)
 #else
 # define NI 9
 #endif
+
+static void orientation (FttVector * m, FttComponent * c)
+{
+  FttComponent i, j;
+  for (i = 0; i < FTT_DIMENSION; i++)
+    c[i] = i;
+  for (i = 0; i < FTT_DIMENSION - 1; i++)
+    for (j = 0; j < FTT_DIMENSION - 1 - i; j++)
+      if (fabs ((&m->x)[c[j + 1]]) > fabs ((&m->x)[c[j]])) {
+	FttComponent tmp = c[j];
+	c[j] = c[j + 1];
+	c[j + 1] = tmp;
+      }
+}
 
 /**
  * gfs_height_curvature:
@@ -1543,54 +1596,36 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t)
 
   FttComponent try[FTT_DIMENSION];
   orientation (&m, try); /* sort directions according to normal */
+
   gdouble kappa = G_MAXDOUBLE;
   GtsVector interface[FTT_DIMENSION*NI];
-  gboolean flip[FTT_DIMENSION];
   guint n = 0;
-  for (c = 0; c < FTT_DIMENSION; c++) { /* try each direction */
-    flip[try[c]] = FALSE;
-    if (curvature_along_direction (cell, t, try[c], &kappa, interface, &n, &flip[try[c]]))
+  for (c = 0; c < FTT_DIMENSION; c++) /* try each direction */
+    if (curvature_along_direction (cell, t, try[c], &kappa, interface, &n))
       return kappa;
-  }
 
   /* Could not compute curvature from the simple algorithm along any direction:
    * Try parabola fitting of the collected interface positions */
-  FttVector p;
-  ftt_cell_pos (cell, &p);
-    
+
   if (n < NI)
-    g_warning ("Not enough interface points (%d) for parabola fitting", n);
+    return gfs_curvature_fit (cell, t);
   else {
-    fprintf (stderr, "parabola fitting at (%g,%g,%g) level: %d\n",
-	     p.x, p.y, p.z, ftt_cell_level (cell));
-#if FTT_2D
     gdouble h = ftt_cell_size (cell);
-    FttComponent cz = try[0];
     ParabolaFit fit;
     guint j;
     
-    parabola_fit_init (&fit);
-    for (j = 0; j < n; j++)
-      parabola_fit_add (&fit, interface[j], cz);
-#if 1
-    FttVector fc;
+    FttVector p, fc;
+    ftt_cell_pos (cell, &p);
     gfs_vof_center (cell, t, &fc);
     fc.x = (fc.x - p.x)/h;
     fc.y = (fc.y - p.y)/h;
     fc.z = (fc.z - p.z)/h;
-    parabola_fit_add (&fit, &fc.x, cz);
-#endif
-    if (parabola_fit_solve (&fit)) {
-      gdouble dnm = 1. + fit.b*fit.b;
-      gdouble kappa = 2.*fit.a/(h*sqrt (dnm*dnm*dnm));
-      parabola_fit_destroy (&fit);
-      return flip[cz] ? - kappa : kappa;
-    }
+    parabola_fit_init (&fit, &fc, &m);
+    for (j = 0; j < n; j++)
+      parabola_fit_add (&fit, interface[j], 1.);
+    parabola_fit_solve (&fit);
+    kappa = parabola_fit_curvature (&fit, 2.)/h;
     parabola_fit_destroy (&fit);
-#endif
   }
-
-  g_warning ("Failed to compute curvature at (%g,%g,%g) level: %d", 
-	     p.x, p.y, p.z, ftt_cell_level (cell));
-  return G_MAXDOUBLE;
+  return kappa;
 }

@@ -383,7 +383,7 @@ static void curvature (FttCell * cell, GfsVariable * v)
   gdouble f = GFS_VARIABLE (cell, t->i);
 
   if (GFS_IS_FULL (f))
-    GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
+    GFS_VARIABLE (cell, v->i) = 0.;
   else
     GFS_VARIABLE (cell, v->i) = gfs_height_curvature (cell, GFS_VARIABLE_TRACER_VOF (t));
 }
@@ -445,7 +445,6 @@ static void variable_curvature_from_fraction (GfsEvent * event, GfsSimulation * 
   gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
-  variable_curvature_diffuse (event, sim);
 
   gfs_domain_timer_stop (domain, "variable_curvature");
 }
