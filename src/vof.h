@@ -35,12 +35,16 @@ void    gfs_line_center            (FttVector * m,
 				    gdouble alpha, 
 				    gdouble a, 
 				    FttVector * p);
+void    gfs_line_area_center       (FttVector * m, 
+				    gdouble alpha, 
+				    FttVector * p);
 gdouble gfs_line_alpha             (FttVector * m, 
 				    gdouble c);
 #if FTT_2D
 #  define gfs_plane_volume         gfs_line_area
 #  define gfs_plane_alpha          gfs_line_alpha
 #  define gfs_plane_center         gfs_line_center
+#  define gfs_plane_area_center     gfs_line_area_center
 #else /* 3D */
 gdouble gfs_plane_volume           (FttVector * m, 
 				    gdouble alpha);
@@ -49,6 +53,9 @@ gdouble gfs_plane_alpha            (FttVector * m,
 void    gfs_plane_center           (FttVector * m, 
 				    gdouble alpha, 
 				    gdouble a,
+				    FttVector * p);
+void    gfs_plane_area_center      (FttVector * m, 
+				    gdouble alpha, 
 				    FttVector * p);
 #endif /* 3D */
 void    gfs_youngs_gradient        (FttCell * cell, 
@@ -79,21 +86,18 @@ void     gfs_tracer_vof_advection  (GfsDomain * domain,
 				    GfsAdvectionParams * par);
 gdouble  gfs_vof_face_value        (const FttCellFace * face, 
 				    GfsVariableTracerVOF * t);
-guint    gfs_vof_plane_facet       (FttCell * cell,
-				    FttVector * m,
-				    gdouble alpha,
-				    FttVector * p);
 guint    gfs_vof_facet             (FttCell * cell,
 				    GfsVariableTracerVOF * t,
 				    FttVector * p,
 				    FttVector * m);
-gboolean gfs_vof_plane_center      (FttCell * cell, 
-				    FttVector * m, 
-				    gdouble alpha, 
-				    FttVector * p);
 gboolean gfs_vof_center            (FttCell * cell,
 				    GfsVariableTracerVOF * t,
 				    FttVector * p);
+gdouble  gfs_vof_plane_interpolate (FttCell * cell,
+				    FttVector * p,
+				    guint level,
+				    GfsVariableTracerVOF * t,
+				    FttVector * m);
 gdouble  gfs_vof_interpolate       (FttCell * cell,
 				    FttVector * p,
 				    guint level,

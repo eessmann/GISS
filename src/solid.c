@@ -1340,9 +1340,11 @@ void gfs_solid_coarse_fine (FttCell * parent)
 
       ftt_cell_pos (child.c[i], &p);
       gfs_plane_center (&m, 2.*alpha1, a, &s->cm);
-      for (c = 0; c < FTT_DIMENSION; c++)
+      gfs_plane_area_center (&m, 2.*alpha1, &s->ca);
+      for (c = 0; c < FTT_DIMENSION; c++) {
 	(&s->cm.x)[c] = (&p.x)[c] + h*((&s->cm.x)[c] - 0.5);
-      g_assert (gfs_vof_plane_center (child.c[i], &m, 2.*alpha1, &s->ca));
+	(&s->ca.x)[c] = (&p.x)[c] + h*((&s->ca.x)[c] - 0.5);
+      }
 
       FttDirection d;
       FttCellNeighbors n;
