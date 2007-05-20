@@ -1193,9 +1193,10 @@ void gfs_domain_cell_traverse_boundary (GfsDomain * domain,
 static void add_stats (const FttCell * cell, gpointer * data)
 {
   GtsRange * s = data[0];
-  GfsVariable * v = data[1];
+  gdouble v = GFS_VARIABLE (cell, GFS_VARIABLE1 (data[1])->i);
 
-  gts_range_add_value (s, GFS_VARIABLE (cell, v->i));
+  if (v < G_MAXDOUBLE)
+    gts_range_add_value (s, v);
 }
 
 #ifdef HAVE_MPI

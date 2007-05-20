@@ -1611,9 +1611,10 @@ void gfs_cell_reset (FttCell * cell, GfsVariable * v)
 static void add_stats (const FttCell * cell, gpointer * data)
 {
   GtsRange * s = data[0];
-  GfsVariable * v = data[1];
+  gdouble v = GFS_VARIABLE (cell, GFS_VARIABLE1 (data[1])->i);
 
-  gts_range_add_value (s, GFS_VARIABLE (cell, v->i));
+  if (v < G_MAXDOUBLE)
+    gts_range_add_value (s, v);
 }
 
 /**
@@ -1732,13 +1733,15 @@ void gfs_norm_add (GfsNorm * n, gdouble val, gdouble weight)
 {
   g_return_if_fail (n != NULL);
 
-  n->bias += weight*val;
-  val = fabs (val);
-  if (val > n->infty)
-    n->infty = val;
-  n->first += weight*val;
-  n->second += weight*val*val;
-  n->w += weight;
+  if (val < G_MAXDOUBLE) {
+    n->bias += weight*val;
+    val = fabs (val);
+    if (val > n->infty)
+      n->infty = val;
+    n->first += weight*val;
+    n->second += weight*val*val;
+    n->w += weight;
+  }
 }
 
 /**
