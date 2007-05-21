@@ -2748,20 +2748,21 @@ void gfs_domain_remove_droplets (GfsDomain * domain,
 			    (FttCellTraverseFunc) gfs_cell_reset, p.v);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) tag_new_fraction_region, &p);
-  g_assert (p.sizes->len > 0);
-  if (min >= 0)
-    p.min = min;
-  else if (-min >= p.sizes->len)
-    p.min = 0;
-  else {
-    guint * tmp = g_malloc (p.sizes->len*sizeof (guint));
-    memcpy (tmp, p.sizes->data, p.sizes->len*sizeof (guint));
-    qsort (tmp, p.sizes->len, sizeof (guint), greater);
-    p.min = tmp[-1 - min];
-    g_free (tmp);
+  if (p.sizes->len > 0) {
+    if (min >= 0)
+      p.min = min;
+    else if (-min >= p.sizes->len)
+      p.min = 0;
+    else {
+      guint * tmp = g_malloc (p.sizes->len*sizeof (guint));
+      memcpy (tmp, p.sizes->data, p.sizes->len*sizeof (guint));
+      qsort (tmp, p.sizes->len, sizeof (guint), greater);
+      p.min = tmp[-1 - min];
+      g_free (tmp);
+    }
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) reset_small_fraction, &p);
   }
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-    			    (FttCellTraverseFunc) reset_small_fraction, &p);
   g_array_free (p.sizes, TRUE);
   gts_object_destroy (GTS_OBJECT (p.v));
 }
