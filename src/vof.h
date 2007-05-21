@@ -35,7 +35,7 @@ void    gfs_line_center            (FttVector * m,
 				    gdouble alpha, 
 				    gdouble a, 
 				    FttVector * p);
-void    gfs_line_area_center       (FttVector * m, 
+gdouble gfs_line_area_center       (FttVector * m, 
 				    gdouble alpha, 
 				    FttVector * p);
 gdouble gfs_line_alpha             (FttVector * m, 
@@ -54,7 +54,7 @@ void    gfs_plane_center           (FttVector * m,
 				    gdouble alpha, 
 				    gdouble a,
 				    FttVector * p);
-void    gfs_plane_area_center      (FttVector * m, 
+gdouble gfs_plane_area_center      (FttVector * m, 
 				    gdouble alpha, 
 				    FttVector * p);
 #endif /* 3D */
@@ -90,7 +90,7 @@ guint    gfs_vof_facet             (FttCell * cell,
 				    GfsVariableTracerVOF * t,
 				    FttVector * p,
 				    FttVector * m);
-gboolean gfs_vof_center            (FttCell * cell,
+gdouble  gfs_vof_center            (FttCell * cell,
 				    GfsVariableTracerVOF * t,
 				    FttVector * p);
 gdouble  gfs_vof_plane_interpolate (FttCell * cell,
@@ -103,6 +103,8 @@ gdouble  gfs_vof_interpolate       (FttCell * cell,
 				    guint level,
 				    GfsVariableTracerVOF * t);
 gdouble  gfs_height_curvature      (FttCell * cell, 
+				    GfsVariableTracerVOF * t);
+gdouble  gfs_fit_curvature         (FttCell * cell,
 				    GfsVariableTracerVOF * t);
 
 #ifdef __cplusplus
