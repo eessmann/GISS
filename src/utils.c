@@ -662,14 +662,16 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	  i = lv;
 	  while (i) {
 	    GfsVariable * v = i->data;
-	    fprintf (fin, "    %s = GFS_VARIABLE (cell, %d);\n", v->name, v->i);
+	    fprintf (fin, "    %s = GFS_VARIABLE (cell, GFS_VARIABLE1 (%p)->i);\n", 
+		     v->name, v);
 	    i = i->next;
 	  }
 	  fputs ("  } else {\n", fin);
 	  i = lv;
 	  while (i) {
 	    GfsVariable * v = i->data;
-	    fprintf (fin, "    %s = gfs_face_interpolated_value (face, %d);\n", v->name, v->i);
+	    fprintf (fin, "    %s = gfs_face_interpolated_value (face, GFS_VARIABLE1 (%p)->i);\n", 
+		     v->name, v);
 	    i = i->next;
 	  }
 	  fputs ("  }\n", fin);
