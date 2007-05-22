@@ -1566,10 +1566,6 @@ static gboolean curvature_along_direction (FttCell * cell,
   FttComponent cp = FTT_ORTHOGONAL_COMPONENT (c);
   FttVector q = p;
   gdouble h[2];
-#if 0
-  gdouble slope = (&m.x)[c] ? rint ((&m.x)[cp]/(&m.x)[c]) : 0;
-  (&q.x)[c] -= slope*size;
-#endif
   (&q.x)[cp] += size;
   h[0] = local_height (&q, &p, level, v, d, interface[*n]);
   if (h[0] == G_MAXDOUBLE)
@@ -1578,9 +1574,6 @@ static gboolean curvature_along_direction (FttCell * cell,
     (*n)++;
 
   q = p;
-#if 0
-  (&q.x)[c] += slope*size;
-#endif
   (&q.x)[cp] -= size;
   h[1] = local_height (&q, &p, level, v, d, interface[*n]);
   if (h[1] == G_MAXDOUBLE)
@@ -1603,11 +1596,6 @@ static gboolean curvature_along_direction (FttCell * cell,
     for (y = -1; y <= 1; y++)
       if (x != 0 || y != 0) {
 	FttVector q = p;
-#if 0
-	gdouble slope = (&m.x)[c] ? 
-	  rint ((&m.x)[or[c][0]]/(&m.x)[c]*x + (&m.x)[or[c][1]]/(&m.x)[c]*y) : 0.;
-	(&q.x)[c] -= slope*size;
-#endif
 	(&q.x)[or[c][0]] += size*x;
 	(&q.x)[or[c][1]] += size*y;
 	h[x + 1][y + 1] = local_height (&q, &p, level, v, d, interface[*n]);
@@ -1630,70 +1618,12 @@ static gboolean curvature_along_direction (FttCell * cell,
   return found_all_heights;
 }
 
-#define PARABOLA_FIT 1
 #define PARABOLA_FIT_CENTER_WEIGHT .1
-#define PARABOLA_SIMPLER 1
-
-typedef struct {
-  GtsMatrix * M;
-  GtsVector m, rhs, a;
-} CircleFit;
-
-static void circle_fit_init (CircleFit * f, GtsVector m)
-{
-  f->M = gts_matrix_zero (NULL);
-  f->rhs[0] = f->rhs[1] = f->rhs[2] = 0.;
-  f->m[0] = m[0]; f->m[1] = m[1]; f->m[2] = m[2];
-}
-
-static void circle_fit_add (CircleFit * f, GtsVector p, gdouble w)
-{
-  gdouble x = p[0], y = p[1];
-  f->M[0][0] += w*x*x;                                       f->rhs[0] -= w*x*(x*x + y*y);
-  f->M[1][0] += w*x*y; f->M[1][1] += w*y*y;                  f->rhs[1] -= w*y*(x*x + y*y);
-  f->M[2][0] += w*x;   f->M[2][1] += w*y;   f->M[2][2] += w; f->rhs[2] -= w*(x*x + y*y);
-}
-
-static void circle_fit_solve (CircleFit * f)
-{
-  f->M[0][1] = f->M[1][0]; f->M[0][2] = f->M[2][0];
-  f->M[1][2] = f->M[2][1];  
-  GtsMatrix * M = gts_matrix3_inverse ((GtsMatrix *) f->M);
-  if (M) {
-    f->a[0] = M[0][0]*f->rhs[0] + M[0][1]*f->rhs[1] + M[0][2]*f->rhs[2];
-    f->a[1] = M[1][0]*f->rhs[0] + M[1][1]*f->rhs[1] + M[1][2]*f->rhs[2];
-    f->a[2] = M[2][0]*f->rhs[0] + M[2][1]*f->rhs[1] + M[2][2]*f->rhs[2];
-    gts_matrix_destroy (M);
-  }
-  else /* this is a degenerate/isolated interface fragment */
-    f->a[0] = f->a[1] = f->a[2] = 0.;
-}
-
-static gdouble circle_fit_curvature (CircleFit * f, gdouble kappamax)
-{
-  gdouble r2 = (f->a[0]*f->a[0] + f->a[1]*f->a[1])/4. - f->a[2];
-  if (r2 <= 0.) /* this is a degenerate/isolated interface fragment */
-    return 0.;
-#if 0
-  fprintf (stderr, "# circle: %g %g %g | %g %g %g\n", 
-	   f->a[0], f->a[1], f->a[2],
-	   - f->a[0]/2., - f->a[1]/2., sqrt (r2));
-#endif
-  gdouble orientation = f->m[0]*f->a[0] + f->m[1]*f->a[1];
-  gdouble kappa = 1./sqrt (r2);
-  if (kappa > kappamax)
-    kappa = kappamax;
-  return - SIGN (orientation)*kappa;
-}
-
-static void circle_fit_destroy (CircleFit * f)
-{
-  gts_matrix_destroy (f->M);
-}
+#define PARABOLA_SIMPLER 0
 
 typedef struct {
   GtsVector o;
-#if FTT_2D
+#if FTT_2D /* y = a[0]*x^2 + a[0]*x + a[1] */
   GtsVector m;
   GtsMatrix * M;
   GtsVector rhs, a;
@@ -1877,7 +1807,6 @@ static void parabola_fit_destroy (ParabolaFit * p)
 #endif
 }
 
-#if PARABOLA_FIT
 static void add_vof_center (FttCell * cell, FttVector * p, guint level,
 			    FttVector * origin,
 			    GfsVariableTracerVOF * t,
@@ -1892,9 +1821,6 @@ static void add_vof_center (FttCell * cell, FttVector * p, guint level,
     FttComponent i;
     for (i = 0; i < FTT_DIMENSION; i++)
       (&c.x)[i] = ((&p->x)[i] - (&origin->x)[i])/h + (&c.x)[i] - 0.5;
-    fprintf (stderr, "%g %g %g\n%g %g %g\n\n", 
-	     origin->x, origin->y, origin->z,
-	     origin->x + c.x*h, origin->y + c.y*h, origin->z + c.z*h);
     parabola_fit_add (fit, &c.x, w*area);
   }
 }
@@ -1960,89 +1886,8 @@ gdouble gfs_fit_curvature (FttCell * cell, GfsVariableTracerVOF * t)
   parabola_fit_solve (&fit);
   gdouble kappa = parabola_fit_curvature (&fit, 2.)/h;
   parabola_fit_destroy (&fit);
-  fprintf (stderr, "# kappa fit: %g\n", kappa);
   return kappa;
 }
-#else
-static void add_vof_center (FttCell * cell, FttVector * p, guint level,
-			    FttVector * origin,
-			    GfsVariableTracerVOF * t,
-			    CircleFit * fit, gdouble w)
-{
-  gdouble f = GFS_VARIABLE (cell, GFS_VARIABLE1 (t)->i);
-  if (!GFS_IS_FULL (f)) {
-    FttVector m, c;
-    gdouble alpha = gfs_vof_plane_interpolate (cell, p, level, t, &m);
-    gdouble area = gfs_plane_area_center (&m, alpha, &c);
-    gdouble h = ftt_level_size (level);
-    FttComponent i;
-    for (i = 0; i < FTT_DIMENSION; i++)
-      (&c.x)[i] = ((&p->x)[i] - (&origin->x)[i])/h + (&c.x)[i] - 0.5;
-    fprintf (stderr, "%g %g\n", origin->x + c.x*h, origin->y + c.y*h);
-    circle_fit_add (fit, &c.x, w*area);
-  }
-}
-
-static void fit_from_fractions (FttCell * cell, GfsVariable * v, CircleFit * fit)
-{
-  gdouble h = ftt_cell_size (cell);
-  guint level = ftt_cell_level (cell);
-  gint x, y, z = 0;
-  FttVector p;
-  
-  ftt_cell_pos (cell, &p);
-#if !FTT_2D
-  for (z = -1; z <= 1; z++)
-#endif
-    for (x = -1; x <= 1; x++)
-      for (y = -1; y <= 1; y++)
-	if (x != 0 || y != 0 || z != 0) {
-	  FttVector o;
-	  o.x = p.x + h*x; o.y = p.y + h*y; o.z = p.z + h*z;
-	  FttCell * neighbor = domain_and_boundary_locate (v->domain, o, level);
-	  if (neighbor)
-	    add_vof_center (neighbor, &o, level, &p, GFS_VARIABLE_TRACER_VOF (v),
-			    fit, 1.);
-	}
-}
-
-/**
- * gfs_fit_curvature:
- * @cell: a #FttCell containing an interface.
- * @v: a #GfsVariableTracerVOF.
- *
- * Computes an approximation of the curvature of the interface
- * contained in @cell using ellipsoid fitting of the centroids of the
- * reconstructed interface segments.
- *
- * Returns: the curvature of the interface contained in @cell.
- */
-gdouble gfs_fit_curvature (FttCell * cell, GfsVariableTracerVOF * t)
-{
-  g_return_val_if_fail (cell != NULL, 0.);
-  g_return_val_if_fail (t != NULL, 0.);
-
-  GfsVariable * v = GFS_VARIABLE1 (t);
-  g_return_val_if_fail (!GFS_IS_FULL (GFS_VARIABLE (cell,  v->i)), 0.);
-
-  FttVector m;
-  FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    (&m.x)[c] = GFS_VARIABLE (cell, t->m[c]->i);
-
-  CircleFit fit;
-  circle_fit_init (&fit, &m.x);
-  FttVector p;
-  ftt_cell_pos (cell, &p);
-  add_vof_center (cell, &p, ftt_cell_level (cell), &p, t, &fit, 1.);
-  fit_from_fractions (cell, GFS_VARIABLE1 (t), &fit);
-  circle_fit_solve (&fit);
-  gdouble kappa = circle_fit_curvature (&fit, 2.)/ftt_cell_size (cell);
-  circle_fit_destroy (&fit);
-  fprintf (stderr, "# kappa fit: %g\n", kappa);
-  return kappa;
-}
-#endif
 
 #if FTT_2D
 # define NI 3
@@ -2069,22 +1914,7 @@ static guint independent_positions (GtsVector * interface, guint n)
   if (n < 2)
     return n;
 
-  guint j;
-#if 0
-  gboolean no_interface_in_central_cell = TRUE;
-  for (j = 0; j < n && no_interface_in_central_cell; j++) {
-    FttComponent c;
-    gboolean central_cell = TRUE;
-    for (c = 0; c < FTT_DIMENSION && central_cell; c++)
-      if (interface[j][c] < -0.5 || interface[j][c] > 0.5)
-	central_cell = FALSE;
-    no_interface_in_central_cell = !central_cell;
-  }
-  if (no_interface_in_central_cell)
-    return 0;
-#endif
-
-  guint ni = 1;
+  guint j, ni = 1;
   for (j = 1; j < n; j++) {
     guint i;
     gboolean depends = FALSE;
@@ -2141,7 +1971,6 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t)
   if (independent_positions (interface, n) < 3*(FTT_DIMENSION - 1))
     return G_MAXDOUBLE;
 
-#if PARABOLA_FIT
   gdouble h = ftt_cell_size (cell);
   ParabolaFit fit;
   guint j;
@@ -2158,40 +1987,10 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t)
 #elif !PARABOLA_SIMPLER
   parabola_fit_add (&fit, &fc.x, area*100.);
 #endif
-  for (j = 0; j < n; j++) {
-    fprintf (stderr, "%g %g\n%g %g\n\n", 
-	     p.x + fc.x*h, p.y + fc.y*h,
-	     p.x + interface[j][0]*h, p.y + interface[j][1]*h);
+  for (j = 0; j < n; j++)
     parabola_fit_add (&fit, interface[j], 1.);
-  }
   parabola_fit_solve (&fit);
   kappa = parabola_fit_curvature (&fit, 2.)/h;
   parabola_fit_destroy (&fit);
-  fprintf (stderr, "# kappa: %g\n", kappa);
   return kappa;
-#else
-  CircleFit fit;
-  guint j;
-  
-  circle_fit_init (&fit, &m.x);
-#if 1
-  gdouble h = ftt_cell_size (cell);
-  FttVector p, fc;
-  ftt_cell_pos (cell, &p);
-  gfs_vof_center (cell, t, &fc);
-  fc.x = (fc.x - p.x)/h;
-  fc.y = (fc.y - p.y)/h;
-  fc.z = (fc.z - p.z)/h;
-  circle_fit_add (&fit, &fc.x, 0.01);
-#endif
-  for (j = 0; j < n; j++) {
-    fprintf (stderr, "%g %g\n", p.x + h*interface[j][0], p.y + h*interface[j][1]);
-    circle_fit_add (&fit, interface[j], 1.);
-  }
-  circle_fit_solve (&fit);
-  kappa = circle_fit_curvature (&fit, 2.)/ftt_cell_size (cell);
-  circle_fit_destroy (&fit);
-  fprintf (stderr, "# kappa: %g\n", kappa);
-  return kappa;
-#endif
 }
