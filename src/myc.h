@@ -25,8 +25,7 @@ static void mycs(double c[3][3][3],double mxyz[3])
        c[0][1][1];
   m2 = c[2][1][0] + c[2][1][2] + c[2][0][1] + c[2][2][1] + 
        c[2][1][1];
-  t0 = fabs(m1-m2) + NOT_ZERO; 
-  m[0][0] = (m1-m2)/t0;
+  m[0][0] = m1 > m2 ? 1. : -1.;
 
   m1 = c[0][0][1]+ c[2][0][1]+ c[1][0][1];
   m2 = c[0][2][1]+ c[2][2][1]+ c[1][2][1];
@@ -46,8 +45,7 @@ static void mycs(double c[3][3][3],double mxyz[3])
        c[1][0][1];
   m2 = c[1][2][0] + c[1][2][2] + c[2][2][1] + c[0][2][1] +
        c[1][2][1];
-  t0 = fabs(m1-m2) + NOT_ZERO; 
-  m[1][1] = (m1-m2)/t0;
+  m[1][1] = m1 > m2 ? 1. : -1.;
 
   m1 = c[1][0][0]+ c[1][1][0]+ c[1][2][0];
   m2 = c[1][0][2]+ c[1][1][2]+ c[1][2][2];
@@ -68,21 +66,20 @@ static void mycs(double c[3][3][3],double mxyz[3])
        c[1][1][0];
   m2 = c[0][1][2] + c[2][1][2] + c[1][0][2] + c[1][2][2] +
        c[1][1][2];
-  t0 = fabs(m1-m2) + NOT_ZERO; 
-  m[2][2] = (m1-m2)/t0;
+  m[2][2] = m1 > m2 ? 1. : -1.;
 
   /* normalize each set (mx,my,mz): |mx|+|my|+|mz| = 1 */
-  t0 = fabs(m[0][0]) + fabs(m[0][1]) + fabs(m[0][2]) + NOT_ZERO;
+  t0 = fabs(m[0][0]) + fabs(m[0][1]) + fabs(m[0][2]);
   m[0][0] /= t0;
   m[0][1] /= t0;
   m[0][2] /= t0;
 
-  t0 = fabs(m[1][0]) + fabs(m[1][1]) + fabs(m[1][2]) + NOT_ZERO;
+  t0 = fabs(m[1][0]) + fabs(m[1][1]) + fabs(m[1][2]);
   m[1][0] /= t0;
   m[1][1] /= t0;
   m[1][2] /= t0;
 
-  t0 = fabs(m[2][0]) + fabs(m[2][1]) + fabs(m[2][2]) + NOT_ZERO;
+  t0 = fabs(m[2][0]) + fabs(m[2][1]) + fabs(m[2][2]);
   m[2][0] /= t0;
   m[2][1] /= t0;
   m[2][2] /= t0;
@@ -93,9 +90,11 @@ static void mycs(double c[3][3][3],double mxyz[3])
   t2 = fabs(m[2][2]);
 
   cn = 0;
-  if (t1 > t0 && t1 > t2)
+  if (t1 > t0) {
+    t0 = t1;
     cn = 1;
-  if (t2 > t0 && t2 > t1)
+  }
+  if (t2 > t0)
     cn = 2;
 
   /* Youngs-CIAM scheme */  
@@ -130,10 +129,15 @@ static void mycs(double c[3][3][3],double mxyz[3])
   m[3][2] /= t0;
 
   /* choose between the previous choice and Youngs-CIAM */
-  t0 = MAX(fabs(m[3][0]),fabs(m[3][1]));
-  t0 = MAX(t0,fabs(m[3][2]));
+  t0 = fabs (m[3][0]);
+  t1 = fabs (m[3][1]);
+  t2 = fabs (m[3][2]);
+  if (t1 > t0)
+    t0 = t1;
+  if (t2 > t0)
+    t0 = t2;
 
-  if (fabs(m[cn][cn]) > t0) 
+  if (fabs(m[cn][cn]) > t0)
     cn = 3;
 
   /* components of the normal vector */

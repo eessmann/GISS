@@ -22,13 +22,11 @@ static void mycs(double c[3][3],double mxy[2])
 
   /* minimum coefficient between mx0 and my0 wins */
   if (fabs(mx0) <= fabs(my0)) {
-    mm1 = fabs(my0) + NOT_ZERO; 
-    my0 = my0/mm1;
+    my0 = my0 > 0. ? 1. : -1.;
     ix = 1;
   }
   else {
-    mm1 = fabs(mx0) + NOT_ZERO; 
-    mx0 = mx0/mm1;
+    mx0 = mx0 > 0. ? 1. : -1.;
     ix = 0;
   }
 
