@@ -103,9 +103,11 @@ gdouble  gfs_vof_interpolate       (FttCell * cell,
 				    guint level,
 				    GfsVariableTracerVOF * t);
 gdouble  gfs_height_curvature      (FttCell * cell, 
-				    GfsVariableTracerVOF * t);
+				    GfsVariableTracerVOF * t,
+				    gdouble * kmax);
 gdouble  gfs_fit_curvature         (FttCell * cell,
-				    GfsVariableTracerVOF * t);
+				    GfsVariableTracerVOF * t,
+				    gdouble * kmax);
 
 #ifdef __cplusplus
 }

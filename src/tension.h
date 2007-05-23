@@ -100,7 +100,7 @@ struct _GfsVariableCurvature {
   GfsVariable parent;
 
   /*< public >*/
-  GfsVariable * f;
+  GfsVariable * f, * kmax;
 };
 
 #define GFS_VARIABLE_CURVATURE(obj)            GTS_OBJECT_CAST (obj,\

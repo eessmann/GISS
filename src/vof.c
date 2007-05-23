@@ -1535,6 +1535,7 @@ static gboolean curvature_along_direction (FttCell * cell,
 					   GfsVariableTracerVOF * t,
 					   FttComponent c,
 					   gdouble * kappa,
+					   gdouble * kmax,
 					   GtsVector * interface,
 					   guint * n)
 {
@@ -1586,6 +1587,8 @@ static gboolean curvature_along_direction (FttCell * cell,
     gdouble hx = (h[0] - h[1])/2.;
     gdouble dnm = 1. + hx*hx;
     *kappa = hxx/(size*sqrt (dnm*dnm*dnm));
+    if (kmax)
+      *kmax = fabs (*kappa);
   }
 #else  /* 3D */  
   static FttComponent or[3][2] = { { FTT_Y, FTT_Z }, { FTT_X, FTT_Z }, { FTT_X, FTT_Y } };
@@ -1610,9 +1613,17 @@ static gboolean curvature_along_direction (FttCell * cell,
     gdouble hyy = h[1][2] - 2.*H + h[1][0];
     gdouble hx = (h[2][1] - h[0][1])/2.;
     gdouble hy = (h[1][2] - h[1][0])/2.;
-    gdouble hxy = (h[2][2] + h[0][0] - h[2][0] - h[0][2])/2.;
+    gdouble hxy = (h[2][2] + h[0][0] - h[2][0] - h[0][2])/4.;
     gdouble dnm = 1. + hx*hx + hy*hy; 
-    *kappa = (hxx + hyy + hxx*hy*hy + hyy*hx*hx - hxy*hx*hy)/(size*sqrt (dnm*dnm*dnm));  
+    *kappa = (hxx + hyy + hxx*hy*hy + hyy*hx*hx - 2.*hxy*hx*hy)/(size*sqrt (dnm*dnm*dnm));  
+    if (kmax) {
+      gdouble km = *kappa/2.;
+      /* Gaussian curvature */
+      gdouble kg = (hxx*hyy - hxy*hxy)/(size*size*dnm*dnm);
+      gdouble a = km*km - kg;
+      g_assert (a >= 0.);
+      *kmax = fabs (km) + sqrt (a);
+    }
   }
 #endif /* 3D */
   return found_all_heights;
@@ -1746,10 +1757,11 @@ static void parabola_fit_solve (ParabolaFit * p)
   if (M) {
     p->a[0] = M[0][0]*p->rhs[0] + M[0][1]*p->rhs[1] + M[0][2]*p->rhs[2];
     p->a[1] = M[1][0]*p->rhs[0] + M[1][1]*p->rhs[1] + M[1][2]*p->rhs[2];
+    p->a[2] = M[2][0]*p->rhs[0] + M[2][1]*p->rhs[1] + M[2][2]*p->rhs[2];
     gts_matrix_destroy (M);
   }
   else /* this may be a degenerate/isolated interface fragment */
-    p->a[0] = p->a[1] = 0.;
+    p->a[0] = p->a[1] = p->a[2] = 0.;
 # else
   p->M[0][1] = p->M[2][2]; p->M[0][5] = p->M[3][3];
   p->M[1][5] = p->M[4][4];
@@ -1768,33 +1780,46 @@ static void parabola_fit_solve (ParabolaFit * p)
   }
   else { /* this may be a degenerate/isolated interface fragment */
     g_warning ("singular matrix");
-    p->a[0] = p->a[1] = 0.;
+    p->a[0] = p->a[1] = p->a[2] = 0.;
   }
 # endif
 #endif /* 3D */
 }
 
-static gdouble parabola_fit_curvature (ParabolaFit * p, gdouble kappamax)
+static gdouble parabola_fit_curvature (ParabolaFit * p, gdouble kappamax,
+				       gdouble * kmax)
 {
   gdouble kappa;
 #if FTT_2D
   gdouble dnm = 1. + p->a[1]*p->a[1];
   kappa = 2.*p->a[0]/sqrt (dnm*dnm*dnm);
-#else
-# if PARABOLA_SIMPLER
-  kappa = 2.*(p->a[0] + p->a[1]);
-# else
+  if (kmax)
+    *kmax = fabs (kappa);
+#else /* 3D */
   gdouble hxx = 2.*p->a[0];
   gdouble hyy = 2.*p->a[1];
-  gdouble hx = p->a[3];
-  gdouble hy = p->a[4];
   gdouble hxy = p->a[2];
-  gdouble dnm = 1. + hx*hx + hy*hy;
-  kappa = (hxx + hyy + hxx*hy*hy + hyy*hx*hx - hxy*hx*hy)/sqrt (dnm*dnm*dnm);
+  gdouble hx, hy;
+# if PARABOLA_SIMPLER
+  hx = hy = 0.;
+# else
+  hx = p->a[3];
+  hy = p->a[4];
 # endif
-#endif
-  if (fabs (kappa) > kappamax)
+  gdouble dnm = 1. + hx*hx + hy*hy;
+  kappa = (hxx + hyy + hxx*hy*hy + hyy*hx*hx - 2.*hxy*hx*hy)/sqrt (dnm*dnm*dnm);
+  if (kmax) {
+    gdouble kg = (hxx*hyy - hxy*hxy)/(dnm*dnm);
+    gdouble a = kappa*kappa/4. - kg;
+    g_assert (a >= 0.);
+    *kmax = fabs (kappa/2.) + sqrt (a);
+  }
+#endif /* 3D */
+  if (fabs (kappa) > kappamax) {
+    if (kmax)
+      *kmax = kappamax;
     return kappa > 0. ? kappamax : - kappamax;
+  }
   return kappa;
 }
 
@@ -1852,14 +1877,19 @@ static void fit_from_fractions (FttCell * cell, GfsVariable * v, ParabolaFit * f
  * gfs_fit_curvature:
  * @cell: a #FttCell containing an interface.
  * @v: a #GfsVariableTracerVOF.
+ * @kmax: a pointer or %NULL. 
  *
  * Computes an approximation of the curvature of the interface
- * contained in @cell using ellipsoid fitting of the centroids of the
+ * contained in @cell using paraboloid fitting of the centroids of the
  * reconstructed interface segments.
  *
- * Returns: the curvature of the interface contained in @cell.
+ * If @kmax is not %NULL, it is filled with the absolute value of the
+ * maximum surface curvature (note that in 2D this is just the absolute value of
+ * the mean curvature).
+ *
+ * Returns: (double in 3D) the mean curvature of the interface contained in @cell.
  */
-gdouble gfs_fit_curvature (FttCell * cell, GfsVariableTracerVOF * t)
+gdouble gfs_fit_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble * kmax)
 {
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (t != NULL, 0.);
@@ -1884,7 +1914,9 @@ gdouble gfs_fit_curvature (FttCell * cell, GfsVariableTracerVOF * t)
   parabola_fit_add (&fit, &fc.x, area);
   fit_from_fractions (cell, GFS_VARIABLE1 (t), &fit);
   parabola_fit_solve (&fit);
-  gdouble kappa = parabola_fit_curvature (&fit, 2.)/h;
+  gdouble kappa = parabola_fit_curvature (&fit, 2., kmax)/h;
+  if (kmax)
+    *kmax /= h;
   parabola_fit_destroy (&fit);
   return kappa;
 }
@@ -1934,14 +1966,18 @@ static guint independent_positions (GtsVector * interface, guint n)
  * gfs_height_curvature:
  * @cell: a #FttCell containing an interface.
  * @v: a #GfsVariableTracerVOF.
- * @k: a curvature vector.
+ * @kmax: a pointer or %NULL.
  *
  * An implementation of the Height-Function (HF) method generalised to
  * adaptive meshes.
  *
- * Returns: the curvature of the interface contained in @cell.
+ * If @kmax is not %NULL, it is filled with the absolute value of the
+ * maximum surface curvature (note that in 2D this is just the absolute value of
+ * the mean curvature).
+ *
+ * Returns: (double in 3D) the mean curvature of the interface contained in @cell.
  */
-gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t)
+gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble * kmax)
 {
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (t != NULL, 0.);
@@ -1962,7 +1998,7 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t)
   GtsVector interface[FTT_DIMENSION*NI];
   guint n = 0;
   for (c = 0; c < FTT_DIMENSION; c++) /* try each direction */
-    if (curvature_along_direction (cell, t, try[c], &kappa, interface, &n))
+    if (curvature_along_direction (cell, t, try[c], &kappa, kmax, interface, &n))
       return kappa;
 
   /* Could not compute curvature from the simple algorithm along any direction:
@@ -1990,7 +2026,9 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t)
   for (j = 0; j < n; j++)
     parabola_fit_add (&fit, interface[j], 1.);
   parabola_fit_solve (&fit);
-  kappa = parabola_fit_curvature (&fit, 2.)/h;
+  kappa = parabola_fit_curvature (&fit, 2., kmax)/h;
+  if (kmax)
+    *kmax /= h;
   parabola_fit_destroy (&fit);
   return kappa;
 }
