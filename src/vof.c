@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include "vof.h"
 #include "variable.h"
+#include "adaptive.h"
 #include "graphic.h"
 
 #define THRESHOLD(c) {if ((c) < 0.) c = 0.; else if ((c) > 1.) c = 1.;}
@@ -1084,6 +1085,8 @@ GfsVariableClass * gfs_variable_tracer_vof_class (void)
 typedef struct {
   GfsAdvectionParams * par;
   FttComponent c;
+  GfsDomain * domain;
+  guint depth, too_coarse;
 } VofParms;
 
 static gdouble plane_volume_shifted (FttVector m, gdouble alpha, FttVector p[2])
@@ -1150,6 +1153,40 @@ static gdouble coarse_fraction (FttCellFace * face, VofParms * p, gdouble un)
       }
     (&q[1].x)[face->d/2] = un;
     return plane_volume_shifted (m, alpha, q);
+  }
+}
+
+#define TOO_COARSE(cell) (GFS_VARIABLE (cell, p->par->fv->i))
+
+/* Marks coarse cells which should be refined because an interface in
+   a neighboring finer cell will be advected into them */
+static void face_too_coarse (FttCellFace * face, VofParms * p)
+{
+  if (ftt_face_type (face) == FTT_FINE_COARSE) {
+    gdouble un = GFS_FACE_NORMAL_VELOCITY (face);
+    if (!FTT_FACE_DIRECT (face))
+      un = - un;
+    if (un > 0.) {
+      gdouble f = GFS_VARIABLE (face->neighbor, p->par->v->i);
+      if (GFS_IS_FULL (f) &&
+	  fine_fraction (face, p, un*p->par->dt/ftt_cell_size (face->cell)) != f) {
+	p->too_coarse++;
+	TOO_COARSE (face->neighbor) = TRUE;
+      }
+    }
+  }
+}
+
+static void refine_too_coarse (FttCell * cell, VofParms * p)
+{
+  if (TOO_COARSE (cell)) {
+    guint level = ftt_cell_level (cell);
+
+    TOO_COARSE (cell) = FALSE;
+    ftt_cell_refine_corners (cell, (FttCellInitFunc) gfs_cell_fine_init, p->domain);
+    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, p->domain);
+    if (level + 1 > p->depth)
+      p->depth = level + 1;
   }
 }
 
@@ -1246,12 +1283,24 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   par->fv = gfs_temporary_variable (domain);
   for (c = 0; c < FTT_DIMENSION; c++) {
     p.c = (cstart + c) % FTT_DIMENSION;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
+    p.too_coarse = 0;
+    gfs_domain_face_traverse (domain, p.c,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) face_too_coarse, &p);
+    if (p.too_coarse > 0) {
+      p.depth = 0;
+      p.domain = domain;
+      gfs_domain_cell_traverse (domain,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) refine_too_coarse, &p);
+      gfs_domain_reshape (domain, p.depth);
+    }
     gfs_domain_face_traverse (domain, p.c,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) vof_face_value, &p);
     gfs_domain_face_bc (domain, p.c, par->v);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
     gfs_domain_face_traverse (domain, p.c,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) vof_flux, &p);
