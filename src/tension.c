@@ -465,8 +465,37 @@ static void fit_curvature (FttCell * cell, GfsVariable * v)
 }
 
 typedef struct {
-  GfsVariable * v, * tmp;
+  GfsVariable * v, * f, * tmp;
 } DiffuseParms;
+
+#define FMIN 0.01
+
+static void diffuse_kmax (FttCell * cell, DiffuseParms * p)
+{
+  gdouble f = GFS_VARIABLE (cell, p->f->i);
+  if (GFS_VARIABLE (cell, p->v->i) < G_MAXDOUBLE && f*(1. - f) > FMIN*(1. - FMIN))
+    GFS_VARIABLE (cell, p->tmp->i) = GFS_VARIABLE (cell, p->v->i);
+  else {
+    FttCellNeighbors neighbor;
+    gdouble sa = 0., s = 0.;
+    FttDirection d;
+
+    ftt_cell_neighbors (cell, &neighbor);
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      if (neighbor.c[d] && GFS_VARIABLE (neighbor.c[d], p->v->i) < G_MAXDOUBLE) {
+	gdouble f = GFS_VARIABLE (neighbor.c[d], p->f->i);
+	if (f*(1. - f) > FMIN*(1. - FMIN)) {
+	  f *= 1. - f;
+	  s += f*GFS_VARIABLE (neighbor.c[d], p->v->i);
+	  sa += f;
+	}
+      }
+    if (sa > 0.)
+      GFS_VARIABLE (cell, p->tmp->i) = s/sa;
+    else
+      GFS_VARIABLE (cell, p->tmp->i) = GFS_VARIABLE (cell, p->v->i);
+  }
+}
 
 static void diffuse (FttCell * cell, DiffuseParms * p)
 {
@@ -490,16 +519,18 @@ static void diffuse (FttCell * cell, DiffuseParms * p)
   }
 }
 
-static void variable_curvature_diffuse (GfsVariable * v, GfsSimulation * sim, guint n)
+static void variable_curvature_diffuse (GfsVariable * v, GfsVariable * f, 
+					GfsSimulation * sim, guint n)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
+  FttCellTraverseFunc diff = f ? (FttCellTraverseFunc) diffuse_kmax : (FttCellTraverseFunc) diffuse;
   DiffuseParms p;
   p.v = v;
+  p.f = f;
   p.tmp = gfs_temporary_variable (domain);
 
   while (n--) {
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) diffuse, &p);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, diff, &p);
     gfs_variables_swap (p.v, p.tmp);
     gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) p.v->fine_coarse, p.v);
@@ -525,9 +556,9 @@ static void variable_curvature_from_fraction (GfsEvent * event, GfsSimulation * 
     gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) kmax->fine_coarse, kmax);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, kmax);
-    variable_curvature_diffuse (kmax, sim, 1);
+    variable_curvature_diffuse (kmax, GFS_VARIABLE_CURVATURE (event)->f, sim, 1);
   }
-  variable_curvature_diffuse (GFS_VARIABLE1 (event), sim, 1);
+  variable_curvature_diffuse (GFS_VARIABLE1 (event), NULL, sim, 1);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) fit_curvature, event);
   gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
@@ -537,9 +568,9 @@ static void variable_curvature_from_fraction (GfsEvent * event, GfsSimulation * 
     gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) kmax->fine_coarse, kmax);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, kmax);
-    variable_curvature_diffuse (kmax, sim, 1);
+    variable_curvature_diffuse (kmax, GFS_VARIABLE_CURVATURE (event)->f, sim, 1);
   }
-  variable_curvature_diffuse (GFS_VARIABLE1 (event), sim, 1);
+  variable_curvature_diffuse (GFS_VARIABLE1 (event), NULL, sim, 1);
 
   gfs_domain_timer_stop (domain, "variable_curvature");
 }
@@ -629,7 +660,7 @@ static void variable_curvature_from_distance (GfsEvent * event, GfsSimulation * 
   for (c = 0; c < FTT_DIMENSION + 1; c++)
     gts_object_destroy (GTS_OBJECT (n[c]));
 
-  variable_curvature_diffuse (GFS_VARIABLE1 (event), sim, 2);
+  variable_curvature_diffuse (GFS_VARIABLE1 (event), NULL, sim, 2);
 
   gfs_domain_timer_stop (domain, "variable_curvature");
 }
@@ -756,7 +787,7 @@ static gboolean variable_position_event (GfsEvent * event, GfsSimulation * sim)
 			      (FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
     gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, GFS_VARIABLE1 (event));
     
-    variable_curvature_diffuse (GFS_VARIABLE1 (event), sim, 2);
+    variable_curvature_diffuse (GFS_VARIABLE1 (event), NULL, sim, 2);
     
     gfs_domain_timer_stop (domain, "variable_position");
     return TRUE;
