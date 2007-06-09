@@ -249,6 +249,13 @@ struct _GfsSourceViscosity {
 
 GfsSourceGenericClass * gfs_source_viscosity_class  (void);
 
+/* GfsSourceViscosityExplicit: Header */
+
+#define GFS_IS_SOURCE_VISCOSITY_EXPLICIT(obj) (gts_object_is_from_class (obj,\
+					       gfs_source_viscosity_explicit_class ()))
+
+GfsSourceGenericClass * gfs_source_viscosity_explicit_class  (void);
+
 /* GfsSourceCoriolis: Header */
 
 typedef struct _GfsSourceCoriolis         GfsSourceCoriolis;

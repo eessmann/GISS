@@ -163,6 +163,7 @@ GtsObjectClass ** gfs_classes (void)
           gfs_source_diffusion_explicit_class (),
       gfs_source_velocity_class (),
         gfs_source_viscosity_class (),
+          gfs_source_viscosity_explicit_class (),
         gfs_source_friction_class (),
         gfs_source_coriolis_class (),
           gfs_source_tension_class (),

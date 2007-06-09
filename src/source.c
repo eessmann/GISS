@@ -858,6 +858,34 @@ GfsSourceGenericClass * gfs_source_viscosity_class (void)
   return klass;
 }
 
+/* GfsSourceViscosityExplicit: Object */
+
+static void source_viscosity_explicit_class_init (GfsSourceGenericClass * klass)
+{
+  klass->mac_value = klass->centered_value = source_viscosity_value;
+}
+
+GfsSourceGenericClass * gfs_source_viscosity_explicit_class (void)
+{
+  static GfsSourceGenericClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo source_viscosity_explicit_info = {
+      "GfsSourceViscosityExplicit",
+      sizeof (GfsSourceViscosity),
+      sizeof (GfsSourceGenericClass),
+      (GtsObjectClassInitFunc) source_viscosity_explicit_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_viscosity_class ()),
+				  &source_viscosity_explicit_info);
+  }
+
+  return klass;
+}
+
 /* GfsSourceCoriolis: Object */
 
 static void source_coriolis_destroy (GtsObject * o)

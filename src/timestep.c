@@ -572,7 +572,9 @@ static GfsSourceDiffusion * source_diffusion (GfsVariable * v)
     while (i) {
       GtsObject * o = i->data;
       
-      if (GFS_IS_SOURCE_DIFFUSION (o) && !GFS_IS_SOURCE_DIFFUSION_EXPLICIT (o))
+      if (GFS_IS_SOURCE_DIFFUSION (o) && 
+	  !GFS_IS_SOURCE_DIFFUSION_EXPLICIT (o) &&
+	  !GFS_IS_SOURCE_VISCOSITY_EXPLICIT (o))
         return GFS_SOURCE_DIFFUSION (o);
       i = i->next;
     }
