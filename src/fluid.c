@@ -733,6 +733,8 @@ static FttCell * cell_corner_neighbor1 (FttCell * cell,
 					FttDirection * d,
 					gint max_level)
 {
+  if (!cell)
+    return NULL;
   FttCell * neighbor = ftt_cell_neighbor (cell, d[0]);
   if (!neighbor)
     return NULL;
