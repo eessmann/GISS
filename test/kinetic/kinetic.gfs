@@ -1,0 +1,65 @@
+# Title: Momentum conservation for large density ratios
+#
+# Description:
+#
+# A dense droplet moves through a lighter background fluid. The
+# kinetic energy decreases due to viscous dissipation (Figure
+# \ref{k}). A previous non-conservative discretisation of the viscous
+# tensor was causing a non-physical increase in kinetic energy.
+#
+# \begin{figure}[htbp]
+# \caption{\label{k}Evolution of the kinetic energy.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{k.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: St\'ephane Popinet
+# Command: gerris2D kinetic.gfs
+# Version: 1.1.0
+# Required files: kinetic.gfs
+# Generated files: k.eps
+1 0 GfsSimulation GfsBox GfsGEdge {} {
+    Time { end = 0.5 }
+
+    Global {
+	#define rho(T) (T + 0.01*(1. - T))
+	#define level 7
+	#define radius 0.05
+    }
+
+    Refine level
+
+    ProjectionParams { tolerance = 1e-6 }
+    ApproxProjectionParams { tolerance = 1e-6 }
+
+    VariableTracerVOF T
+    InitFraction T (- ellipse(-0.3,0,radius,radius))
+    Init {} { U = T }
+
+    PhysicalParams { alpha = 1./rho(T) }
+    SourceViscosity (1e-3*T + 1e-5*(1. - T))
+
+    AdaptVorticity { istep = 1 } { cmax = 0.3 maxlevel = level }
+    AdaptGradient { istep = 1 } { cmax = 1e-3 maxlevel = level } T
+
+    OutputScalarSum { istep = 1 } k { v = Velocity2*rho(T) }
+    OutputScalarSum { istep = 1 } t { v = T }
+
+    EventScript { start = end } {
+	gnuplot <<EOF
+            set term postscript eps color lw 3 solid 20
+            set output 'k.eps'
+            set xlabel 'Time'
+            set ylabel 'Kinetic energy'
+            set grid
+            plot 'k' u 3:5 w l t ''
+EOF
+	if awk '{if ($5 > 8e-3) exit (1);}' < k ; then
+	    return 0;
+	else
+	    return $GFS_STOP;
+	fi
+    } 
+}
+GfsBox {}

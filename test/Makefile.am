@@ -18,7 +18,8 @@ TESTDIRS = \
 	plate \
 	dumbell \
 	nz \
-	shear
+	shear \
+	kinetic
 
 EXTRA_DIST = \
 	template.tex \
