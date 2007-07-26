@@ -221,10 +221,12 @@ static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
     GSList * i = sim->solids->items;
     while (i) {
       p.surface = GFS_SOLID (i->data)->s;
-      g_assert (p.surface->s); /* fixme: this works only for GTS surfaces */
-      gfs_domain_traverse_cut (GFS_DOMAIN (sim), p.surface,
-			       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			       (FttCellTraverseCutFunc) refine_cut_cell, &p);
+      if (p.surface->s)
+	gfs_domain_traverse_cut (GFS_DOMAIN (sim), p.surface,
+				 FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+				 (FttCellTraverseCutFunc) refine_cut_cell, &p);
+      else
+	g_warning ("GfsRefineSolid only works with explicit surfaces");
       i = i->next;
     }
   }
