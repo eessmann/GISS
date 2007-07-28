@@ -108,6 +108,7 @@ GtsObjectClass ** gfs_classes (void)
 
   gfs_bc_dirichlet_class (),
   gfs_bc_neumann_class (),
+  gfs_bc_navier_class (),
   gfs_bc_flather_class (),
 
   gfs_boundary_class (),

@@ -331,6 +331,81 @@ GfsBcClass * gfs_bc_neumann_class (void)
   return klass;
 }
 
+/* GfsBcNavier: Object */
+
+static void navier (FttCellFace * f, GfsBc * b)
+{
+  gdouble h = ftt_cell_size (f->cell);
+  gdouble lambda = GFS_BC_NAVIER (b)->lambda;
+  GFS_VARIABLE (f->cell, b->v->i) = 
+    (2.*gfs_function_face_value (GFS_BC_VALUE (b)->val, f)*h
+     - (h - 2.*lambda)*GFS_VARIABLE (f->neighbor, b->v->i))/(h + 2.*lambda);
+}
+
+static void face_navier (FttCellFace * f, GfsBc * b)
+{
+  gdouble h = ftt_cell_size (f->cell);
+  gdouble lambda = GFS_BC_NAVIER (b)->lambda;
+  GFS_STATE (f->cell)->f[f->d].v = GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = 
+    (gfs_function_face_value (GFS_BC_VALUE (b)->val, f)*h + 
+     2.*lambda*GFS_VARIABLE (f->neighbor, b->v->i))/(h + 2.*lambda);
+}
+
+static void bc_navier_read (GtsObject ** o, GtsFile * fp)
+{
+  if (GTS_OBJECT_CLASS (gfs_bc_navier_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_bc_navier_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (slip length)");
+    return;
+  }
+  GFS_BC_NAVIER (*o)->lambda = atof (fp->token->str);
+  gts_file_next_token (fp);
+}
+
+static void bc_navier_write (GtsObject * o, FILE * fp)
+{  
+  (* GTS_OBJECT_CLASS (gfs_bc_navier_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %g", GFS_BC_NAVIER (o)->lambda);
+}
+
+static void gfs_bc_navier_init (GfsBc * object)
+{
+  object->bc =             (FttFaceTraverseFunc) navier;
+  object->homogeneous_bc = (FttFaceTraverseFunc) homogeneous_dirichlet;
+  object->face_bc =        (FttFaceTraverseFunc) face_navier;
+}
+
+static void gfs_bc_navier_class_init (GtsObjectClass * klass)
+{
+  klass->read = bc_navier_read;
+  klass->write = bc_navier_write;
+}
+
+GfsBcClass * gfs_bc_navier_class (void)
+{
+  static GfsBcClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_bc_navier_info = {
+      "GfsBcNavier",
+      sizeof (GfsBcNavier),
+      sizeof (GfsBcClass),
+      (GtsObjectClassInitFunc) gfs_bc_navier_class_init,
+      (GtsObjectInitFunc) gfs_bc_navier_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_bc_value_class ()),
+				  &gfs_bc_navier_info);
+  }
+
+  return klass;
+}
+
 /* GfsBoundary: Object */
 
 static void destroy_bc (GfsVariable * v, GtsObject * o)

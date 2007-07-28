@@ -110,6 +110,26 @@ GfsBcClass * gfs_bc_dirichlet_class  (void);
 
 GfsBcClass * gfs_bc_neumann_class  (void);
 
+/* GfsBcNavier: Header */
+
+typedef struct _GfsBcNavier         GfsBcNavier;
+
+struct _GfsBcNavier {
+  /*< private >*/
+  GfsBcValue parent;
+
+  /*< public >*/
+  gdouble lambda;
+};
+
+#define GFS_BC_NAVIER(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsBcNavier,\
+					         gfs_bc_navier_class ())
+#define GFS_IS_BC_NAVIER(obj)         (gts_object_is_from_class (obj,\
+						 gfs_bc_navier_class ()))
+
+GfsBcClass * gfs_bc_navier_class  (void);
+
 /* GfsBoundary: Header */
 
 typedef enum {
