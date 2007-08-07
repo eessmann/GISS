@@ -191,7 +191,7 @@ class Example:
                        "else print $0;"
                        "}' < " + self.name + ".gfs > " + self.name + ".tmp && " +\
                        "mv -f " + self.name + ".tmp " + self.name + ".gfs && ( " +\
-                       command + " ) 2>&1")
+		       "bash -c \" set -o pipefail && " + command + "\" ) 2>&1")
         lines = out.readlines()
         status = out.close()
         os.system("rm -r -f " + wdname)
@@ -202,7 +202,7 @@ class Example:
 
     def run(self,env=""):
         out = os.popen("cd " + self.path + " && ( time -p " +\
-                       " sh -c \"" + env + " " + self.command + "\" ) 2>&1")
+                       " bash -c \" set -o pipefail && " + env + " " + self.command + "\" ) 2>&1")
         lines = []
         for l in out:
             record = l.split()
