@@ -30,7 +30,7 @@
     Refine (sqrt(x*x + y*y) < 0.0625 ? 12 : 6)
     # Initialise a vorticity field given by two gaussian distributions
     InitVorticity {} {
-        # We use nested functions for simplicity (this will not work on MACOSX)
+        /* We use nested functions for simplicity (this will not work on MACOSX) */
         double vortex (double xc, double yc, double r) {
             double r2 = (x - xc)*(x - xc) + (y - yc)*(y - yc);
             return 2.*M_PI*exp (- 2.*r2/(r*r));
