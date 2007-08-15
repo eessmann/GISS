@@ -2,11 +2,13 @@
 
 version=`darcs changes --last=1 --xml-output | \
     awk 'BEGIN{RS=" ";FS="="}{if ($1 == "date") print substr($2,4,6) "-" substr($2,10,6);}'`
-changes=`darcs whatsnew | head -n 1`
-
-if [ "$changes" != "No changes!" ] ; then
-    version="$version + local changes"
-fi
+changes=`darcs whatsnew -s | awk '{
+  if ($1 == "M" && substr($2,1,6) != "./doc/") {
+    print " + local changes";
+    exit 0;
+  }
+}'`
+version="$version$changes"
 
 if test -f version.h ; then
     oldversion=`awk '{if ($2 == "GFS_BUILD_VERSION") print $0;}' < version.h`
