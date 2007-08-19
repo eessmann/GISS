@@ -362,7 +362,11 @@ static void variable_filtered_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   v->niter = atoi (fp->token->str);
-  gts_file_next_token (fp);
+  if (v->niter == 0) {
+    gts_file_error (fp, "niter must be strictly positive");
+    return;
+  }
+  gts_file_next_token (fp);  
 
   if (GFS_VARIABLE1 (v)->description)
     g_free (GFS_VARIABLE1 (v)->description);
@@ -380,8 +384,9 @@ static void variable_filtered_event_half (GfsEvent * event, GfsSimulation * sim)
 {
   guint n = GFS_VARIABLE_FILTERED (event)->niter;
 
-  while (n--)
-    gfs_domain_filter (GFS_DOMAIN (sim), GFS_VARIABLE_FILTERED (event)->v, GFS_VARIABLE1 (event));
+  gfs_domain_filter (GFS_DOMAIN (sim), GFS_VARIABLE_FILTERED (event)->v, GFS_VARIABLE1 (event));
+  while (--n)
+    gfs_domain_filter (GFS_DOMAIN (sim), GFS_VARIABLE1 (event), NULL);
 }
 
 static gboolean variable_filtered_event (GfsEvent * event, GfsSimulation * sim)
