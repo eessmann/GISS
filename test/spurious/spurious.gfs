@@ -18,10 +18,15 @@
 #
 # The convergence is obtained for a wide range of Laplace numbers
 # $La=\sigma\rho D/\mu^2$, as illustrated on Figure \ref{laplace}.
+# Correspondingly, convergence of the curvature to a constant value is
+# also obtained at all Laplace numbers as illustrated on Figure
+# \ref{curvature}.
 #
 # Figure \ref{convergence} illustrates the convergence of the error on
 # the droplet shape as a function of resolution for a Laplace number
-# of 12000.
+# of 12000. Both the shape error and the relative error on the
+# equilibrium curvature value illustrated on Figure
+# \ref{kconvergence} show close to second-order convergence.
 #
 # \begin{figure}[htbp]
 # \caption{\label{laplace}Evolution of the amplitude of the capillary currents
@@ -34,6 +39,16 @@
 # \end{figure}
 #
 # \begin{figure}[htbp]
+# \caption{\label{curvature}Evolution of the standard deviation of the
+# value of the curvature along the interface as a function of
+# non-dimensional time $\tau=t\mu/D^2$ for the range of Laplace
+# numbers indicated in the legend.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{curvature.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
 # \caption{\label{convergence}Convergence of the error on the equilibrium shape of the
 # droplet with resolution. The diameter is given in number of grid
 # points.}
@@ -42,11 +57,20 @@
 # \end{center}
 # \end{figure}
 #
+# \begin{figure}[htbp]
+# \caption{\label{kconvergence}Convergence of the relative error on the
+# equilibrium curvature value with resolution. The diameter is given
+# in number of grid points.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{kconvergence.eps}
+# \end{center}
+# \end{figure}
+#
 # Author: St\'ephane Popinet
 # Command: sh spurious.sh spurious.gfs
 # Version: 1.0.0
-# Required files: spurious.sh convergence.ref
-# Generated files: laplace.eps convergence.eps
+# Required files: spurious.sh convergence.ref kconvergence.ref
+# Generated files: laplace.eps curvature.eps convergence.eps kconvergence.eps
 #
 1 0 GfsSimulation GfsBox GfsGEdge {} {
   Time { end = TMAX }
@@ -71,11 +95,17 @@
 
   OutputSimulation { start = end } stdout { depth = LEVEL }
   OutputScalarNorm { istep = 1 } {
-    awk '{ print MU*$3/(0.8*0.8) " " $9*sqrt(0.8) }' > La-LAPLACE-LEVEL
+    awk '{ print MU*$3/(0.8*0.8), $9*sqrt(0.8) }' > La-LAPLACE-LEVEL
   } { v = Velocity }
   OutputScalarNorm { istep = 1 } {
-    awk '{ print MU*$3/(0.8*0.8) " " $5 " " $7 " " $9 }' > E-LAPLACE-LEVEL
+    awk '{ print MU*$3/(0.8*0.8), $5, $7, $9 }' > E-LAPLACE-LEVEL
   } { v = (Tref - T) }
+  OutputScalarStats { istep = 1 } {
+    awk '{ print MU*$3/(0.8*0.8), $5, $7, $9, $11 }' > K-LAPLACE-LEVEL
+  } { v = (K - 2.50771) }
+  OutputScalarNorm { istep = 1 } {
+    awk '{ print MU*$3/(0.8*0.8), $5, $7, $9 }' > EK-LAPLACE-LEVEL
+  } { v = (T > 0 && T < 1 ? K - 2.5 : 0) }
 }
 GfsBox {
   top = Boundary
