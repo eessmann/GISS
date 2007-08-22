@@ -16,7 +16,8 @@ from check import *
 from sys import *
 if (Curve('norms',3,5) - Curve('norms.ref',3,5)).max() > 0. or\
    (Curve('norms',3,7) - Curve('norms.ref',3,7)).max() > 0. or\
-   (Curve('norms',3,9) - Curve('norms.ref',3,9)).max() > 0.:
+   (Curve('norms',3,9) - Curve('norms.ref',3,9)).max() > 0. or\
+   (Curve('norms',3,11) - Curve('norms.ref',3,11)).max() > 0.:
     exit(1)
 EOF
 else

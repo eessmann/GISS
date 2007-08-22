@@ -60,14 +60,14 @@
 
     # Add tracer T, using a VOF advection scheme.
     # The default scheme is a Van-Leer limited, second-order upwind scheme.
-    VariableTracerVOF {} T
+    VariableTracerVOF T
 
-    InitFraction {} T (ellipse (0, -.236338, 0.2, 0.2))
+    InitFraction T (ellipse (0, -.236338, 0.2, 0.2))
 
     # Initialize U and V with the vortical shear flow field
     Init {} {
-	U = sin((x + 0.5)*M_PI)*cos((y + 0.5)*M_PI)
-	V = -cos((x + 0.5)*M_PI)*sin((y + 0.5)*M_PI)
+        U = sin((x + 0.5)*M_PI)*cos((y + 0.5)*M_PI)
+        V = -cos((x + 0.5)*M_PI)*sin((y + 0.5)*M_PI)
     }
 
     # At t = 2.5 re-initialize U and V with the reversed flow field
@@ -82,7 +82,7 @@
     OutputPPM { start = 5 } { convert ppm:- t-5.eps } { v = T }
 
     # Add a new variable 
-    Variable {} Tref
+    Variable Tref
 
     # Initialize Tref with the initial shape
     InitFraction { start = end } Tref (ellipse (0, -.236338, 0.2, 0.2))
@@ -90,7 +90,7 @@
     # Output the norms of the difference between T and Tref, stores that into
     # new variable DT
     OutputErrorNorm { start = end } norms { v = T } {
-	s = Tref v = DT
+        s = Tref v = DT
     }
 
     OutputPPM { start = end } { convert ppm:- dt-5.eps } { v = DT }
