@@ -905,6 +905,9 @@ GfsSimulation * gfs_simulation_read (GtsFile * fp)
 
   g_return_val_if_fail (fp != NULL, NULL);
 
+  while (fp->type == '\n')
+     gts_file_next_token (fp);
+
   d = gfs_domain_read (fp);
   if (d != NULL && !GFS_IS_SIMULATION (d)) {
     gts_file_error (fp, "parent graph is not a GfsSimulation");
