@@ -1689,14 +1689,12 @@ static GList * grow_curve (GfsDomain * domain,
   guint nstep = 0, nmax = 10000;
   GtsPointClass * path_class = gfs_vertex_class ();
   Colormap * colormap = NULL;
-#if (!FTT_2D)
-  GfsVariable * vort[FTT_DIMENSION];
-#endif /* 3D */
 
   if (min < max)
     colormap = colormap_jet ();
 
 #if (!FTT_2D)
+  GfsVariable * vort[FTT_DIMENSION];
   if (twist) {
     FttComponent c;
     gpointer data[2];
@@ -1715,7 +1713,9 @@ static GList * grow_curve (GfsDomain * domain,
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 				(FttCellTraverseFunc) vort[c]->fine_coarse, vort[c]);
   }
-#endif /* 3D */  
+#else /* 2D */
+  twist = FALSE;
+#endif /* 2D */  
 
   p1 = p2 = p;
   while ((cell = gfs_domain_locate (domain, p, -1)) != NULL &&
@@ -1833,7 +1833,8 @@ GList * gfs_streamline_new (GfsDomain * domain,
 
   i = grow_curve (domain, U, p, var, min, max, twist, NULL, 1., stop, data);
   path = g_list_remove_link (i, i);
-  g_list_free (i);
+  gts_object_destroy (i->data);
+  g_list_free_1 (i);
   path = grow_curve (domain, U, p, var, min, max, twist, path, -1., stop, data);
   return path;
 }
