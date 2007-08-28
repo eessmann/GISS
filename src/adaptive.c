@@ -762,7 +762,8 @@ static void cell_fine_init (FttCell * cell, AdaptParams * p)
   gfs_cell_fine_init (cell, GFS_DOMAIN (p->sim));
   ftt_cell_children (cell, &child);
   for (n = 0; n < FTT_CELLS; n++)
-    CELL_COST (child.c[n]) = G_MAXDOUBLE;
+    if (child.c[n])
+      CELL_COST (child.c[n]) = G_MAXDOUBLE;
   if (!GFS_CELL_IS_BOUNDARY (cell))
     p->nc += FTT_CELLS;
 }
