@@ -268,15 +268,10 @@ static gint perpendicular[FTT_NEIGHBORS][FTT_CELLS][2] =
    {{-1,-1},{-1,-1},{-1,-1},{-1,-1},{1,2},{0,2},{1,3},{0,3}}};
 #endif /* FTT_3D */
 
-static Gradient gradient_fine_coarse (const FttCellFace * face,
-				      guint v,
-				      gint max_level)
+static Gradient gradient_fine_coarse (const FttCellFace * face, guint v)
 {
   Gradient g;
-  guint level;
-  FttCell * n;
   GfsGradient p;
-  GfsSolidVector * s;
 #if (FTT_2D || FTT_2D3)
   gint dp;
 #else  /* FTT_3D */
@@ -285,12 +280,6 @@ static Gradient gradient_fine_coarse (const FttCellFace * face,
 
   g_assert (face != NULL);
   g_assert (ftt_face_type (face) == FTT_FINE_COARSE);
-
-  level = ftt_cell_level (face->cell);
-  s = GFS_STATE (face->cell)->solid;
-  n = (s != NULL && s->s[FTT_OPPOSITE_DIRECTION (face->d)] == 0.) ? NULL :
-    ftt_cell_neighbor (face->cell, FTT_OPPOSITE_DIRECTION (face->d));
-  g_assert (n == NULL || ftt_cell_level (n) == level);
 
   dp = perpendicular[face->d][FTT_CELL_ID (face->cell)];
 #if (FTT_2D || FTT_2D3)
@@ -301,34 +290,9 @@ static Gradient gradient_fine_coarse (const FttCellFace * face,
   p = interpolate_2D1 (face->neighbor, dp[0], dp[1], 1./4., 1./4., v);
 #endif /* FTT_3D */
 
-  if (n == NULL || GFS_IS_MIXED (n)) {
-    g.a = 2./3.;
-    g.b = 2.*p.a/3.;
-    g.c = 2.*p.b/3.;
-  }
-  else if (level == max_level || FTT_CELL_IS_LEAF (n)) {
-    g.a = 1./3.;
-    g.b = 8.*p.a/15.;
-    g.c = 8.*p.b/15. - GFS_VARIABLE (n, v)/5.;
-  }
-  else {
-    FttCellChildren children;
-    guint i, j;
-    gdouble sa = 0.;
-
-    j = ftt_cell_children_direction (n, face->d, &children);
-    g.a = 2./9.;
-    g.b = 14.*p.a/27.;
-    g.c = 0.;
-    for (i = 0; i < j; i++)
-      if (children.c[i]) {
-	gdouble w = GFS_IS_MIXED (children.c[i]) ? GFS_STATE (children.c[i])->solid->s[face->d] : 1.;
-	g.c += w*GFS_VARIABLE (children.c[i], v);
-	sa += w;
-      }
-    g_assert (sa > 0.);
-    g.c = (14.*p.b - 8.*g.c/sa)/27.;
-  }
+  g.a = 2./3.;
+  g.b = 2.*p.a/3.;
+  g.c = 2.*p.b/3.;
 
   return g;
 }
@@ -605,7 +569,7 @@ void gfs_face_gradient (const FttCellFace * face,
     /* neighbor is at a shallower level */
     Gradient gcf;
 
-    gcf = gradient_fine_coarse (face, v, max_level);
+    gcf = gradient_fine_coarse (face, v);
     g->a = gcf.a;
     g->b = gcf.b*GFS_VARIABLE (face->neighbor, v) + gcf.c;
   }
@@ -628,7 +592,7 @@ void gfs_face_gradient (const FttCellFace * face,
       for (i = 0; i < n; i++)
 	if ((f.cell = children.c[i])) {
 	  Gradient gcf;
-	  gcf = gradient_fine_coarse (&f, v, max_level);
+	  gcf = gradient_fine_coarse (&f, v);
 	  s = GFS_FACE_FRACTION (&f);
 	  g->a += s*gcf.b;
 	  g->b += s*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
@@ -677,7 +641,7 @@ void gfs_face_weighted_gradient (const FttCellFace * face,
     Gradient gcf;
     gdouble w = GFS_STATE (face->cell)->f[face->d].v;
 
-    gcf = gradient_fine_coarse (face, v, max_level);
+    gcf = gradient_fine_coarse (face, v);
     g->a = w*gcf.a;
     g->b = w*(gcf.b*GFS_VARIABLE (face->neighbor, v) + gcf.c);
   }
@@ -703,7 +667,7 @@ void gfs_face_weighted_gradient (const FttCellFace * face,
 	  Gradient gcf;
 	  gdouble w = GFS_STATE (f.cell)->f[f.d].v;
 	
-	  gcf = gradient_fine_coarse (&f, v, max_level);
+	  gcf = gradient_fine_coarse (&f, v);
 	  g->a += w*gcf.b;
 	  g->b += w*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
 	}
@@ -1155,10 +1119,10 @@ void gfs_face_gradient_flux (const FttCellFace * face,
     /* neighbor is at a shallower level */
     if (GFS_IS_MIXED (face->cell) || GFS_IS_MIXED (face->neighbor)) {
       if (!mixed_face_gradient (face, &gcf, v, max_level))
-	gcf = gradient_fine_coarse (face, v, max_level);
+	gcf = gradient_fine_coarse (face, v);
     }
     else
-      gcf = gradient_fine_coarse (face, v, max_level);
+      gcf = gradient_fine_coarse (face, v);
     g->a = w*gcf.a;
     g->b = w*(gcf.b*GFS_VARIABLE (face->neighbor, v) + gcf.c);
   }
@@ -1192,10 +1156,10 @@ void gfs_face_gradient_flux (const FttCellFace * face,
 	  w = GFS_STATE (f.cell)->f[f.d].v;
 	  if (GFS_IS_MIXED (f.cell) || GFS_IS_MIXED (f.neighbor)) {
 	    if (!mixed_face_gradient (&f, &gcf, v, max_level))
-	      gcf = gradient_fine_coarse (&f, v, max_level);
+	      gcf = gradient_fine_coarse (&f, v);
 	  }
 	  else
-	    gcf = gradient_fine_coarse (&f, v, max_level);
+	    gcf = gradient_fine_coarse (&f, v);
 	  g->a += w*gcf.b;
 	  g->b += w*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
 	}
