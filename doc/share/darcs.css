@@ -1,26 +1,43 @@
 BODY {
+  font: x-small sans-serif;
   background: white;
   color: black;
-  font-family: arial,sans-serif;
   margin: 0;
   padding: 1em;
 }
 
-A:link {
-  background: transparent;
-  color: #8081b3;
+A {
   text-decoration: none;
+  color: #002bb8;
+  background: none;
   border-style: none;
 }
 
 A:visited {
-  background: transparent;
-  color: #494a82;
-  text-decoration: none;
+  color: #5a3696;
+}
+
+A:active {
+  color: #faa700;
 }
 
 A:hover {
   text-decoration: underline;
+}
+
+.section a {
+  color: black;
+  text-decoration: none;
+}
+
+.subsection a {
+  color: black;
+  text-decoration: none;
+}
+
+.subsubsection a {
+  color: black;
+  text-decoration: none;
 }
 
 A IMG {border: none; }
@@ -33,24 +50,30 @@ PRE     {
   white-space: pre;
 }
 
+H1, H2, H3, H4 {
+  color: black;
+}
+
 H1      {
-  color: #494a82;
   font-size: 24px ;
 }
 
 H2      {
-  color: #494a82;
   font-size: 18px;
 }
 
 H3      {
-  color: #494a82;
   font-size: 16px;
 }
 
 H4      {
-  color: #494a82;
   font-size: 14px;
+}
+
+/* GFS parameter files */
+
+.gfs .comment {
+    color: #17A729;
 }
 
 /* headers for darcs command options */

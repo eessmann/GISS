@@ -95,7 +95,7 @@ class Example:
         else:
             self.runtime = None
             
-    def write(self,dico,file=None):
+    def write(self,dico,file=None,style=None):
         if file == None:
             file = open(self.path + "/" + self.name + ".tex", 'w')
 	file.write(self.section + "{\\label{" + self.name + "}")
@@ -118,14 +118,19 @@ class Example:
         file.write("\\item[Running time]" + self.time + "\n")
         file.write("\\end{description}\n")
         file.write("\n".join(self.description))
-        self.colorize(dico)
+        self.colorize(dico,style)
 
-    def colorize(self,dico):
+    def colorize(self,dico,style=None):
         file = open(self.path + "/" + self.name + ".gfs")
         out = open(self.path + "/" + self.name + ".gfs.html", 'w')
         path = "../" * (self.path.count("/") + 3) + "reference/"
         out.write("<html><head><title>\n" + self.name + ".gfs")
-        out.write("</title></head><body><tt>\n")
+	if style == None:
+	    out.write('</title></head><body><tt class="gfs">\n')
+	else:
+	    out.write('</title><link rel="stylesheet" type="text/css" href="' + \
+		      ["../","../../"][self.path.count("/")] + \
+		      style + '"></head><body><tt class="gfs">\n')
         infile = insthg = 0
         for line in file:
             l = ""
@@ -150,9 +155,9 @@ class Example:
                 if infile:
                     record = line.split()
                     if insthg or len(record) > 1:
-                        out.write("<font color=\"#5285B4\">")
+                        out.write('<div class="comment">')
                         out.write(l)
-                        out.write("</font><br>")
+                        out.write('</div>')
                         insthg = 1
                 else:
                     record = line.split()

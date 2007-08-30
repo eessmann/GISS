@@ -16,4 +16,4 @@ for start in sys.argv[1:]:
             example = gfs2tex.Example(root)
             if not os.access("examples/" + example.path,os.F_OK):
                 os.symlink("../" + example.path, "examples/" + example.path)
-            example.write(gfsclasses.klass)
+            example.write(gfsclasses.klass,style="examples.css")
