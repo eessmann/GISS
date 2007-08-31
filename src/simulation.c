@@ -350,13 +350,13 @@ static void simulation_run (GfsSimulation * sim)
   }
 
   gfs_simulation_set_timestep (sim);
-  gfs_approximate_projection (domain,
-      			      &sim->approx_projection_params,
-      			      &sim->advection_params,
-			      p, sim->physical_params.alpha, res);
-  if (sim->time.i == 0)
+  if (sim->time.i == 0) {
+    gfs_approximate_projection (domain,
+				&sim->approx_projection_params,
+				&sim->advection_params,
+				p, sim->physical_params.alpha, res);
     advance_tracers (domain, sim->advection_params.dt/2.);
-
+  }
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
     GfsVariable * g[FTT_DIMENSION];
