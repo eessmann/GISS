@@ -1484,18 +1484,15 @@ static void gfs_output_scalar_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
       gts_file_next_token (fp);
-      if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-	gts_file_error (fp, "expecting a number (min)");
+      output->min = gfs_read_constant (fp, gfs_object_simulation (*o));
+      if (fp->type == GTS_ERROR)
 	return;
-      }
-      output->min = atof (fp->token->str);
       if (output->min > output->max) {
 	gts_file_error (fp, "min `%g' must be smaller than or equal to max `%g'", 
 			output->min, output->max);
 	return;
       }
       output->autoscale = FALSE;
-      gts_file_next_token (fp);
     }
     else if (!strcmp (fp->token->str, "max")) {
       gts_file_next_token (fp);
@@ -1504,18 +1501,15 @@ static void gfs_output_scalar_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
       gts_file_next_token (fp);
-      if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-	gts_file_error (fp, "expecting a number (max)");
+      output->max = gfs_read_constant (fp, gfs_object_simulation (*o));
+      if (fp->type == GTS_ERROR)
 	return;
-      }
-      output->max = atof (fp->token->str);
       if (output->max < output->min) {
 	gts_file_error (fp, "max `%g' must be larger than or equal to min `%g'", 
 			output->max, output->min);
 	return;
       }
       output->autoscale = FALSE;
-      gts_file_next_token (fp);
     }
     else if (!strcmp (fp->token->str, "maxlevel")) {
       gts_file_next_token (fp);

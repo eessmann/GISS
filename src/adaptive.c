@@ -179,12 +179,9 @@ static void gfs_adapt_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
       gts_file_next_token (fp);
-      if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-	gts_file_error (fp, "expecting a number (cmax)");
+      a->cmax = gfs_read_constant (fp, gfs_object_simulation (*o));
+      if (fp->type == GTS_ERROR)
 	return;
-      }
-      a->cmax = atof (fp->token->str);
-      gts_file_next_token (fp);
     }
     else if (!strcmp (fp->token->str, "weight")) {
       gts_file_next_token (fp);
@@ -193,12 +190,9 @@ static void gfs_adapt_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
       gts_file_next_token (fp);
-      if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-	gts_file_error (fp, "expecting a number (weight)");
+      a->weight = gfs_read_constant (fp, gfs_object_simulation (*o));
+      if (fp->type == GTS_ERROR)      
 	return;
-      }
-      a->weight = atof (fp->token->str);
-      gts_file_next_token (fp);
     }
     else if (!strcmp (fp->token->str, "c")) {
       GfsDomain * domain;

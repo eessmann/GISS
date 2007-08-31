@@ -1103,15 +1103,10 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
   }
 
   do {
-    gdouble omega;
-
-    if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-      gts_file_error (fp, "expecting a number (omega[%d])", s->omega->len);
+    gdouble omega = gfs_read_constant (fp, domain);
+    if (fp->type == GTS_ERROR)      
       return;
-    }
-    omega = atof (fp->token->str);
     g_array_append_val (s->omega, omega);
-    gts_file_next_token (fp);
   } while (fp->type != '\n' && fp->type != '{');
 
   s->Mn = gfs_matrix_new (2*s->omega->len + 1, sizeof (gdouble));
@@ -1389,11 +1384,9 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (max)");
+  s->max = gfs_read_constant (fp, domain);
+  if (fp->type == GTS_ERROR)      
     return;
-  }
-  s->max = atof (fp->token->str);
   s->oldv = gfs_domain_add_variable (domain, NULL, NULL);
   /* fixme: the lines below are necessary in the general case (e.g. when dealing with a VOF tracer)
    * but will crash if s->oldv is not of the same class as s->v.
@@ -1401,20 +1394,15 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
    * s->oldv->coarse_fine = s->v->coarse_fine;
    */
 
-  if (fp->next_token != '\n') {
-    gts_file_next_token (fp);
-    if (fp->type != GTS_STRING) {
-      gts_file_error (fp, "expecting a string (diff)");
-      return;
-    }
+  if (fp->type == GTS_STRING) {
     if (!(s->diff = gfs_variable_from_name (domain->variables, fp->token->str)) &&
 	!(s->diff = gfs_domain_add_variable (domain, fp->token->str, 
 					     "Stopping field difference"))) {
       gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
       return;
     }
+    gts_file_next_token (fp);
   }
-  gts_file_next_token (fp);
 }
 
 static void gfs_event_stop_destroy (GtsObject * o)
@@ -1917,16 +1905,14 @@ static void gfs_event_filter_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   gts_file_next_token (fp);
-  
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (time scale)");
+
+  GFS_EVENT_FILTER (*o)->scale = gfs_read_constant (fp, domain);
+  if (fp->type == GTS_ERROR)
     return;
-  }
-  if ((GFS_EVENT_FILTER (*o)->scale = atof (fp->token->str)) <= 0.) {
+  if (GFS_EVENT_FILTER (*o)->scale <= 0.) {
     gts_file_error (fp, "time scale must be strictly positive");
     return;
-  }  
-  gts_file_next_token (fp);
+  }
 }
 
 static void gfs_event_filter_write (GtsObject * o, FILE * fp)

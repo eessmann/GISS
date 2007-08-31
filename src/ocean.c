@@ -1004,12 +1004,9 @@ static void gfs_source_friction_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (f)");
+  GFS_SOURCE_FRICTION (*o)->f = gfs_read_constant (fp, domain);
+  if (fp->type == GTS_ERROR)
     return;
-  }
-  GFS_SOURCE_FRICTION (*o)->f = atof (fp->token->str);
-  gts_file_next_token (fp);
 
   for (c = 0; c <  FTT_DIMENSION; c++)
     GFS_SOURCE_FRICTION (*o)->u[c] = gfs_temporary_variable (domain);

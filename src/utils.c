@@ -195,7 +195,7 @@ struct _GfsFunction {
   GfsVariable * v;
   GfsDerivedVariable * dv;
   gdouble val;
-  gboolean spatial;
+  gboolean spatial, constant;
 };
 
 static GtsSurface * read_surface (gchar * name, GtsFile * fp)
@@ -554,7 +554,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	return;
       }
     }
-    else if (fp->type == GTS_STRING && !f->spatial) {
+    else if (fp->type == GTS_STRING && !f->spatial && !f->constant) {
       if (strlen (f->expr->str) > 3 &&
 	  !strcmp (&(f->expr->str[strlen (f->expr->str) - 4]), ".gts")) {
 	if ((f->s = read_surface (f->expr->str, fp)) == NULL)
@@ -608,7 +608,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
 	   fin);
     if (f->spatial)
       fputs ("#include <gerris/spatial.h>\n", fin);
-    else
+    else if (!f->constant)
       fputs ("#include <gerris/function.h>\n", fin);
     i = sim->globals;
     while (i) {
@@ -621,6 +621,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       fputs ("double f (double x, double y, double z) {\n"
 	     "  _x = x; _y = y; _z = z;\n", 
 	     fin);
+    else if (f->constant)
+      fputs ("double f (void) {\n", fin);
     else {
       fputs ("typedef double (* Func) (const FttCell * cell,\n"
 	     "                         const FttCellFace * face,\n"
@@ -711,6 +713,16 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     case SIGABRT: return;
     }
   }
+  if (fp->type == GTS_ERROR)
+    return;
+  if (f->constant && f->f) {
+    f->val = (* f->f) (NULL, NULL, NULL);
+    f->f = NULL;
+    if (f->module) g_module_close (f->module);
+    f->module = NULL;
+    if (f->expr) g_string_free (f->expr, TRUE);
+    f->expr = NULL;
+  }    
   gts_file_next_token (fp);
 }
 
@@ -1053,6 +1065,56 @@ gdouble gfs_function_spatial_value (GfsFunction * f, FttVector * p)
     return (* (GfsFunctionSpatialFunc) f->f) (p->x, p->y, p->z);
   else
     return f->val;
+}
+
+/* GfsFunctionConstant: object */
+
+static void gfs_function_constant_init (GfsFunction * f)
+{
+  f->constant = TRUE;
+}
+
+GfsFunctionClass * gfs_function_constant_class (void)
+{
+  static GfsFunctionClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_function_info = {
+      "GfsFunctionConstant",
+      sizeof (GfsFunction),
+      sizeof (GfsFunctionClass),
+      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_function_constant_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_function_class ()),
+				  &gfs_function_info);
+  }
+
+  return klass;
+}
+
+/**
+ * gfs_read_constant:
+ * @fp: a #GtsFile.
+ * @domain: a #GfsDomain.
+ *
+ * Reads a constant value from @fp.
+ *
+ * Returns: the value of the constant or G_MAXDOUBLE if an error
+ * occured.
+ */
+gdouble gfs_read_constant (GtsFile * fp, gpointer domain)
+{
+  g_return_val_if_fail (fp != NULL, G_MAXDOUBLE);
+  g_return_val_if_fail (domain != NULL, G_MAXDOUBLE);
+
+  GfsFunction * f = gfs_function_new (gfs_function_constant_class (), 0.);
+  gfs_function_read (f, domain, fp);
+  gdouble val = fp->type == GTS_ERROR ? G_MAXDOUBLE : gfs_function_get_constant_value (f);
+  gts_object_destroy (GTS_OBJECT (f));
+  return val;
 }
 
 /**

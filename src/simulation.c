@@ -1197,13 +1197,11 @@ void gfs_physical_params_read (GfsPhysicalParams * p, GfsDomain * domain, GtsFil
       gts_file_next_token (fp);
 
       if (!strcmp (id, "g")) {
-	if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+	p->g = gfs_read_constant (fp, domain);
+	if (fp->type == GTS_ERROR) {
 	  g_free (id);
-	  gts_file_error (fp, "expecting a number");
 	  return;
 	}
-	p->g = atof (fp->token->str);
-	gts_file_next_token (fp);
       }
       else if (!strcmp (id, "alpha")) {
 	p->alpha = gfs_function_new (gfs_function_class (), 0.);

@@ -358,12 +358,7 @@ static void bc_navier_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
   
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (slip length)");
-    return;
-  }
-  GFS_BC_NAVIER (*o)->lambda = atof (fp->token->str);
-  gts_file_next_token (fp);
+  GFS_BC_NAVIER (*o)->lambda = gfs_read_constant (fp, gfs_object_simulation (*o));
 }
 
 static void bc_navier_write (GtsObject * o, FILE * fp)

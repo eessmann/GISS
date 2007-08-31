@@ -94,6 +94,15 @@ GString *          gfs_function_expression  (GtsFile * fp,
 GfsFunctionClass * gfs_function_spatial_class (void);
 gdouble            gfs_function_spatial_value (GfsFunction * f, FttVector * p);
 
+/* GfsFunctionConstant: Header */
+
+#define GFS_IS_FUNCTION_CONSTANT(obj)         (gts_object_is_from_class (obj,\
+					       gfs_function_constant_class ()))
+
+GfsFunctionClass * gfs_function_constant_class (void);
+gdouble            gfs_read_constant           (GtsFile * fp,
+						gpointer domain);
+
 GtsObjectClass *   gfs_object_class_from_name (const gchar * name);
 
 void               gfs_eigenvalues          (gdouble a[FTT_DIMENSION][FTT_DIMENSION],
