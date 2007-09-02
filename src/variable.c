@@ -447,6 +447,89 @@ GfsVariableClass * gfs_variable_filtered_class (void)
   return klass;
 }
 
+/* GfsVariableDiagonal: object */
+
+static void unity (FttCell * cell, GfsVariable * v)
+{
+  GFS_VARIABLE (cell, v->i) = 1.;
+}
+
+static void variable_diagonal (FttCell * cell, gpointer * data)
+{
+  GfsVariable * v = data[0];
+  GfsVariable * tmp = data[1];
+  GfsGradient g;
+  FttCellNeighbors neighbor;
+  FttCellFace f;
+  GfsGradient ng;
+
+  GFS_VARIABLE (cell, tmp->i) = G_MAXDOUBLE;
+  g.a = g.b = 0.;
+  f.cell = cell;
+  ftt_cell_neighbors (cell, &neighbor);
+  for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
+    f.neighbor = neighbor.c[f.d];
+    if (f.neighbor) {
+      gfs_face_weighted_gradient (&f, &ng, tmp->i, -1);
+      g.a += ng.a;
+      g.b += ng.b;
+    }
+  }
+  if (g.a > 0.)
+    GFS_VARIABLE (cell, v->i) = g.b/g.a;
+  else
+    GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
+  GFS_VARIABLE (cell, tmp->i) = 1.;
+}
+
+static gboolean variable_diagonal_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_diagonal_class ())->parent_class)->event)
+      (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    GfsVariable * tmp = gfs_temporary_variable (domain);
+    gpointer data[2];
+    data[0] = event;
+    data[1] = tmp;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) unity, tmp);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, tmp);
+    gfs_poisson_coefficients (domain, sim->physical_params.alpha);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) variable_diagonal, data);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+    gts_object_destroy (GTS_OBJECT (tmp));
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void variable_diagonal_class_init (GtsObjectClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = variable_diagonal_event;
+}
+
+GfsVariableClass * gfs_variable_diagonal_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_diagonal_info = {
+      "GfsVariableDiagonal",
+      sizeof (GfsVariable),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_diagonal_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
+				  &gfs_variable_diagonal_info);
+  }
+
+  return klass;
+}
+
 /* GfsDerivedVariable: object */
 
 static void gfs_derived_variable_destroy (GtsObject * object)

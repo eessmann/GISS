@@ -132,6 +132,10 @@ struct _GfsVariableFiltered {
 
 GfsVariableClass * gfs_variable_filtered_class  (void);
 
+/* GfsVariableDiagonal: Header */
+
+GfsVariableClass * gfs_variable_diagonal_class  (void);
+
 /* GfsDerivedVariable: Header */
 
 struct _GfsDerivedVariable {
