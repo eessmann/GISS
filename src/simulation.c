@@ -67,22 +67,22 @@ static void simulation_write (GtsObject * object, FILE * fp)
     (object, fp);
 
   fputs (" {\n", fp);
+
+  i = sim->modules;
+  while (i) {
+    fprintf (fp, "  GModule %s\n", g_module_name (i->data));
+    i = i->next;
+  }
+
   i = sim->globals;
   while (i) {
     fputs ("  ", fp);
     (* GTS_OBJECT (i->data)->klass->write) (i->data, fp);
     i = i->next;
   }
+
   fputs ("  GfsTime ", fp);
   gfs_time_write (&sim->time, fp);
-  fputs ("\n  GfsPhysicalParams ", fp);
-  gfs_physical_params_write (&sim->physical_params, fp);
-  fputs ("\n  GfsAdvectionParams ", fp);
-  gfs_advection_params_write (&sim->advection_params, fp);
-  fputs ("\n  GfsApproxProjectionParams ", fp);
-  gfs_multilevel_params_write (&sim->approx_projection_params, fp);
-  fputs ("\n  GfsProjectionParams ", fp);
-  gfs_multilevel_params_write (&sim->projection_params, fp);
   fputc ('\n', fp);
 
   i = sim->variables;
@@ -90,12 +90,6 @@ static void simulation_write (GtsObject * object, FILE * fp)
     fputs ("  ", fp);
     (* GTS_OBJECT (i->data)->klass->write) (i->data, fp);
     fputc ('\n', fp);
-    i = i->next;
-  }
-
-  i = sim->modules;
-  while (i) {
-    fprintf (fp, "  GModule %s\n", g_module_name (i->data));
     i = i->next;
   }
 
@@ -136,6 +130,16 @@ static void simulation_write (GtsObject * object, FILE * fp)
     }
     i = i->next;
   }
+
+  fputs ("  GfsPhysicalParams ", fp);
+  gfs_physical_params_write (&sim->physical_params, fp);
+  fputs ("\n  GfsAdvectionParams ", fp);
+  gfs_advection_params_write (&sim->advection_params, fp);
+  fputs ("\n  GfsApproxProjectionParams ", fp);
+  gfs_multilevel_params_write (&sim->approx_projection_params, fp);
+  fputs ("\n  GfsProjectionParams ", fp);
+  gfs_multilevel_params_write (&sim->projection_params, fp);
+  fputc ('\n', fp);
 
   fputc ('}', fp);
 }
