@@ -4,8 +4,9 @@
 #
 # A dense droplet moves through a lighter background fluid. The
 # kinetic energy decreases due to viscous dissipation (Figure
-# \ref{k}). A previous non-conservative discretisation of the viscous
-# tensor was causing a non-physical increase in kinetic energy.
+# \ref{k}). For these density and viscosity ratios of 1000, the
+# calculation is stable only if a "mollified" volume fraction is used
+# to compute the average density and viscosity.
 #
 # \begin{figure}[htbp]
 # \caption{\label{k}Evolution of the kinetic energy.}
@@ -23,9 +24,11 @@
     Time { end = 0.5 }
 
     Global {
-	#define rho(T) (T + 0.01*(1. - T))
-	#define level 7
-	#define radius 0.05
+        #define var(T,min,max) (CLAMP(T,0,1)*(max - min) + min)
+        #define rho(T) var(T, 0.001, 1.)
+        #define mu(T)  var(T, 1e-6, 1e-3)
+        #define level 7
+        #define radius 0.05
     }
 
     Refine level
@@ -34,20 +37,21 @@
     ApproxProjectionParams { tolerance = 1e-6 }
 
     VariableTracerVOF T
+    VariableFiltered T1 T 1
     InitFraction T (- ellipse(-0.3,0,radius,radius))
     Init {} { U = T }
 
-    PhysicalParams { alpha = 1./rho(T) }
-    SourceViscosity (1e-3*T + 1e-5*(1. - T))
+    PhysicalParams { alpha = 1./rho(T1) }
+    SourceViscosity mu(T1)
 
     AdaptVorticity { istep = 1 } { cmax = 0.3 maxlevel = level }
     AdaptGradient { istep = 1 } { cmax = 1e-3 maxlevel = level } T
 
-    OutputScalarSum { istep = 1 } k { v = Velocity2*rho(T) }
+    OutputScalarSum { istep = 1 } k { v = Velocity2*rho(T1) }
     OutputScalarSum { istep = 1 } t { v = T }
 
     EventScript { start = end } {
-	gnuplot <<EOF
+        gnuplot <<EOF
             set term postscript eps color lw 3 solid 20
             set output 'k.eps'
             set xlabel 'Time'
@@ -55,11 +59,11 @@
             set grid
             plot 'k' u 3:5 w l t ''
 EOF
-	if awk '{if ($5 > 8e-3) exit (1);}' < k ; then
-	    return 0;
-	else
-	    return $GFS_STOP;
-	fi
+        if awk '{if ($5 > 7.2e-3) exit (1);}' < k ; then
+            return 0;
+        else
+            return $GFS_STOP;
+        fi
     } 
 }
 GfsBox {}
