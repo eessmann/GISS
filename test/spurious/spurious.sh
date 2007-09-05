@@ -74,7 +74,7 @@ else
 fi
 
 for f in La-120-5 La-1200-5 La-12000-5; do
-    if awk '{ last = $2; }END{if (last > 1e-10) exit (1);}' < $f; then :
+    if awk '{ last = $2; }END{if (last > 1e-11) exit (1);}' < $f; then :
     else
 	exit 1
     fi
