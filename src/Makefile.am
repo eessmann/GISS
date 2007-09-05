@@ -14,6 +14,7 @@ gerris3D.pc: gerris3D.pc.in
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = gerris2D.pc gerris3D.pc gerris2D3.pc
+pkglib_DATA = m4.awk
 
 lib_LTLIBRARIES = libgfs2D.la libgfs3D.la libgfs2D3.la
 
@@ -123,7 +124,8 @@ CLEANFILES = $(BUILT_SOURCES)
 EXTRA_DIST = \
 	mpi_boundary.c \
 	mpi_boundary.h \
-	ftt_internal.c
+	ftt_internal.c \
+	m4.awk
 
 bin_PROGRAMS = gerris2D gerris3D gerris2D3
 

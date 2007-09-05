@@ -50,6 +50,7 @@ int main (int argc, char * argv[])
   guint split = 0;
   guint npart = 0;
   gboolean profile = FALSE;
+  gchar * m4_options = g_strdup ("-P");
 
   gfs_init (&argc, &argv);
 
@@ -60,15 +61,16 @@ int main (int argc, char * argv[])
       {"split", required_argument, NULL, 's'},
       {"partition", required_argument, NULL, 'p'},
       {"profile", no_argument, NULL, 'P'},
+      {"define", required_argument, NULL, 'D'},
       {"help", no_argument, NULL, 'h'},
       {"version", no_argument, NULL, 'V'},
       { NULL }
     };
     int option_index = 0;
-    switch ((c = getopt_long (argc, argv, "hVs:p:P",
+    switch ((c = getopt_long (argc, argv, "hVs:p:PD:",
 			      long_options, &option_index))) {
 #else /* not HAVE_GETOPT_LONG */
-    switch ((c = getopt (argc, argv, "hVs:p:P"))) {
+    switch ((c = getopt (argc, argv, "hVs:p:PD:"))) {
 #endif /* not HAVE_GETOPT_LONG */
     case 'P': /* profile */
       profile = TRUE;
@@ -79,16 +81,28 @@ int main (int argc, char * argv[])
     case 's': /* split */
       split = atoi (optarg);
       break;
+    case 'D': { /* define */
+      gchar * tmp = g_strjoin (" ", m4_options, "-D", optarg, NULL);
+      g_free (m4_options);
+      m4_options = tmp;
+      break;
+    }
     case 'h': /* help */
       fprintf (stderr,
              "Usage: gerris [OPTION] FILE\n"
 	     "The Gerris flow solver simulation engine.\n"
 	     "\n"
-	     "  -s N  --split=N     splits the domain N times and returns\n"
-             "                      the corresponding simulation\n"
-             "  -p N  --partition=N partition the domain in 2^N subdomains and returns\n" 
-             "                      the corresponding simulation\n"
-	     "  -P    --profile     profiles calls to boundary conditions\n"
+	     "  -s N   --split=N     splits the domain N times and returns\n"
+             "                       the corresponding simulation\n"
+             "  -p N   --partition=N partition the domain in 2^N subdomains and returns\n" 
+             "                       the corresponding simulation\n"
+	     "  -P     --profile     profiles calls to boundary conditions\n"
+#ifdef HAVE_M4
+	     "  -DNAME               Defines NAME as a macro expanding to VALUE\n"
+	     "  -DNAME=VALUE\n"
+	     "         --define=NAME\n"
+             "         --define=NAME=VALUE\n"
+#endif /* have m4 */
 	     "  -h    --help        display this help and exit\n"
 	     "  -V    --version     output version information and exit\n"
 	     "\n"
@@ -123,14 +137,26 @@ int main (int argc, char * argv[])
     return 1; /* failure */
   }
 
+#ifdef HAVE_M4
+  const gchar awk[] = "awk -f " GFS_MODULES_DIR "/m4.awk ";
+  gchar * command;
+  
+  if (!strcmp (argv[optind], "-"))
+    command = g_strjoin (NULL, awk, "| m4 ", m4_options, NULL);
+  else
+    command = g_strjoin (NULL, awk, argv[optind], " | m4 ", m4_options, NULL);
+  fptr = popen (command, "r");
+  g_free (command);
+  g_free (m4_options);
+#else /* do not have m4 */
   if (!strcmp (argv[optind], "-"))
     fptr = stdin;
-  else {
+  else
     fptr = fopen (argv[optind], "r");
-    if (fptr == NULL) {
-      fprintf (stderr, "gerris: unable to open file `%s'\n", argv[optind]);
-      return 1;
-    }
+#endif /* do not have m4 */
+  if (fptr == NULL) {
+    fprintf (stderr, "gerris: unable to open file `%s'\n", argv[optind]);
+    return 1;
   }
 
   fp = gts_file_new (fptr);
@@ -143,8 +169,13 @@ int main (int argc, char * argv[])
     return 1;
   }
   gts_file_destroy (fp);
+
+#ifdef HAVE_M4
+  pclose (fptr);
+#else /* do not have m4 */
   if (fptr != stdin)
     fclose (fptr);
+#endif /* do not have m4 */
 
   if (npart > 0) {
     guint nmin = 1000;
