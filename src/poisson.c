@@ -371,13 +371,13 @@ static void poisson_alpha_coeff (FttCellFace * face,
 				 gpointer * data)
 {
   gdouble * lambda2 = data[0];
-  GfsFunction * alpha = data[1];
-  gdouble v = lambda2[face->d/2];
+  gdouble alpha = gfs_function_face_value (data[1], face);
+  gdouble v = lambda2[face->d/2]*alpha;
   GfsStateVector * s = GFS_STATE (face->cell);
 
+  g_assert (v > 0.);
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
-  v *= gfs_function_face_value (alpha, face);
   s->f[face->d].v = v;
 
   switch (ftt_face_type (face)) {
@@ -469,7 +469,7 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   GfsStateVector * s = GFS_STATE (face->cell);
   GfsSourceTensionGeneric * t = data[1];
   gdouble v = lambda2[face->d/2]*t->sigma;
-  GfsFunction * alpha = data[2];
+  gdouble alpha = data[2] ? gfs_function_face_value (data[2], face) : 1.;
   GfsVariable * kappa = GFS_SOURCE_TENSION (data[1])->k;
   gdouble k1 = GFS_VARIABLE (face->cell, kappa->i);
   gdouble k2 = GFS_VARIABLE (face->neighbor, kappa->i);
@@ -497,8 +497,8 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   }
   g_assert (v <= 1e6);
 
-  if (alpha)
-    v *= gfs_function_face_value (alpha, face);
+  g_assert (alpha > 0.);
+  v *= alpha;
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
   s->f[face->d].v = v;
