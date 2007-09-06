@@ -1669,7 +1669,7 @@ static void parabola_fit_init (ParabolaFit * p, FttVector * o, FttVector * m)
 {
   p->o[0] = o->x; p->o[1] = o->y; p->o[2] = o->z;
 #if FTT_2D
-  p->m[0] = m->x; p->m[1] = m->y; p->m[2] = m->z;
+  p->m[0] = m->x; p->m[1] = m->y; p->m[2] = 0.;
   gts_vector_normalize (p->m);
   p->M = gts_matrix_zero (NULL);
   p->rhs[0] = p->rhs[1] = p->rhs[2] = 0.;
