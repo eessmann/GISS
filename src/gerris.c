@@ -49,7 +49,7 @@ int main (int argc, char * argv[])
   int c = 0;
   guint split = 0;
   guint npart = 0;
-  gboolean profile = FALSE;
+  gboolean profile = FALSE, macros = FALSE;
   gchar * m4_options = g_strdup ("-P");
 
   gfs_init (&argc, &argv);
@@ -62,15 +62,16 @@ int main (int argc, char * argv[])
       {"partition", required_argument, NULL, 'p'},
       {"profile", no_argument, NULL, 'P'},
       {"define", required_argument, NULL, 'D'},
+      {"macros", no_argument, NULL, 'm'},
       {"help", no_argument, NULL, 'h'},
       {"version", no_argument, NULL, 'V'},
       { NULL }
     };
     int option_index = 0;
-    switch ((c = getopt_long (argc, argv, "hVs:p:PD:",
+    switch ((c = getopt_long (argc, argv, "hVs:p:PD:m",
 			      long_options, &option_index))) {
 #else /* not HAVE_GETOPT_LONG */
-    switch ((c = getopt (argc, argv, "hVs:p:PD:"))) {
+    switch ((c = getopt (argc, argv, "hVs:p:PD:m"))) {
 #endif /* not HAVE_GETOPT_LONG */
     case 'P': /* profile */
       profile = TRUE;
@@ -85,8 +86,11 @@ int main (int argc, char * argv[])
       gchar * tmp = g_strjoin (" ", m4_options, "-D", optarg, NULL);
       g_free (m4_options);
       m4_options = tmp;
-      break;
+      /* fall through */
     }
+    case 'm': /* macros */
+      macros = TRUE;
+      break;
     case 'h': /* help */
       fprintf (stderr,
              "Usage: gerris [OPTION] FILE\n"
@@ -98,8 +102,9 @@ int main (int argc, char * argv[])
              "                       the corresponding simulation\n"
 	     "  -P     --profile     profiles calls to boundary conditions\n"
 #ifdef HAVE_M4
+	     "  -m     --macros      Turn macros support on\n"
 	     "  -DNAME               Defines NAME as a macro expanding to VALUE\n"
-	     "  -DNAME=VALUE\n"
+	     "  -DNAME=VALUE\n       (macro support is implicitly turned on)"
 	     "         --define=NAME\n"
              "         --define=NAME=VALUE\n"
 #endif /* have m4 */
@@ -137,23 +142,25 @@ int main (int argc, char * argv[])
     return 1; /* failure */
   }
 
-#ifdef HAVE_M4
-  const gchar awk[] = "awk -f " GFS_MODULES_DIR "/m4.awk ";
-  gchar * command;
-  
-  if (!strcmp (argv[optind], "-"))
-    command = g_strjoin (NULL, awk, "| m4 ", m4_options, NULL);
-  else
-    command = g_strjoin (NULL, awk, argv[optind], " | m4 ", m4_options, NULL);
-  fptr = popen (command, "r");
-  g_free (command);
-  g_free (m4_options);
-#else /* do not have m4 */
-  if (!strcmp (argv[optind], "-"))
-    fptr = stdin;
-  else
-    fptr = fopen (argv[optind], "r");
-#endif /* do not have m4 */
+  if (macros) {
+    const gchar awk[] = "awk -f " GFS_MODULES_DIR "/m4.awk ";
+    gchar * command;
+    
+    if (!strcmp (argv[optind], "-"))
+      command = g_strjoin (NULL, awk, "| m4 ", m4_options, NULL);
+    else
+      command = g_strjoin (NULL, awk, argv[optind], " | m4 ", m4_options, NULL);
+    fptr = popen (command, "r");
+    g_free (command);
+    g_free (m4_options);
+  }
+  else { /* no macros */
+    if (!strcmp (argv[optind], "-"))
+      fptr = stdin;
+    else
+      fptr = fopen (argv[optind], "r");
+  }
+
   if (fptr == NULL) {
     fprintf (stderr, "gerris: unable to open file `%s'\n", argv[optind]);
     return 1;
@@ -170,12 +177,11 @@ int main (int argc, char * argv[])
   }
   gts_file_destroy (fp);
 
-#ifdef HAVE_M4
-  pclose (fptr);
-#else /* do not have m4 */
-  if (fptr != stdin)
-    fclose (fptr);
-#endif /* do not have m4 */
+  if (macros)
+    pclose (fptr);
+  else
+    if (fptr != stdin)
+      fclose (fptr);
 
   if (npart > 0) {
     guint nmin = 1000;
