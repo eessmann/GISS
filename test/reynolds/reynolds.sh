@@ -19,22 +19,22 @@ if ! $donotrun; then
 fi
 
 if cat <<EOF | gnuplot ; then :
-    set term postscript eps color solid 20
+    set term postscript eps color lw 3 solid 20
     set output 'divmax.eps'
     set xlabel 'Time'
     set ylabel 'Divergence Max'
-    plot [0:2]'div5' u 3:9 t "5" w l lw 2, 'div6' u 3:9 t "6" w l lw 2, 'div7' u 3:9 t "7" w l lw 2, 'div5.ref' u 3:9 t "5 (ref)" w l lw 2, 'div6.ref' u 3:9 t "6 (ref)" w l lw 2, 'div7.ref' u 3:9 t "7 (ref)" w l lw 2
+    plot [0:2]'div5' u 3:9 t "5" w l, 'div6' u 3:9 t "6" w l, 'div7' u 3:9 t "7" w l, 'div5.ref' u 3:9 t "5 (ref)" w l, 'div6.ref' u 3:9 t "6 (ref)" w l, 'div7.ref' u 3:9 t "7 (ref)" w l
     set output 'divL2.eps'
     set ylabel 'Divergence L2'
-    plot [0:2]'div5' u 3:7 t "5" w l lw 2, 'div6' u 3:7 t "6" w l lw 2, 'div7' u 3:7 t "7" w l lw 2, 'div5.ref' u 3:7 t "5 (ref)" w l lw 2, 'div6.ref' u 3:7 t "6 (ref)" w l lw 2, 'div7.ref' u 3:7 t "7 (ref)" w l lw 2
+    plot [0:2]'div5' u 3:7 t "5" w l, 'div6' u 3:7 t "6" w l, 'div7' u 3:7 t "7" w l, 'div5.ref' u 3:7 t "5 (ref)" w l, 'div6.ref' u 3:7 t "6 (ref)" w l, 'div7.ref' u 3:7 t "7 (ref)" w l
     set output 'kinetic.eps'
     set ylabel 'Kinetic energy'
-    plot [0:2]'kinetic5' u 3:5 t "5" w l lw 2, 'kinetic6' u 3:5 t "6" w l lw 2, 'kinetic7' u 3:5 t "7" w l lw 2
+    plot [0:2]'kinetic5' u 3:5 t "5" w l, 'kinetic6' u 3:5 t "6" w l, 'kinetic7' u 3:5 t "7" w l
     set output 'reynolds.eps'
     set xlabel 'Level'
     set ylabel 'Effective Reynolds number'
     set logscale y
-    plot 'reynolds' u 1:2 t "" w lp lw 2, 'reynolds.ref' u 1:2 t "ref" w lp lw 2
+    plot 'reynolds' u 1:2 t "" w lp, 'reynolds.ref' u 1:2 t "ref" w lp
 EOF
 else
     exit 1
