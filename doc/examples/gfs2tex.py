@@ -133,28 +133,30 @@ class Example:
 		      style + '"></head><body><tt class="gfs">\n')
         infile = insthg = 0
         for line in file:
+	    tab = ""
             l = ""
             first = 1
             comment = 0
             for c in line:
                 if c == " " and first:
-                    l += "&nbsp; "
+                    tab += "&nbsp;"
                 else:
                     if first and c == "#":
                         comment = 1
                     first = 0
                     if c == '<':
-                        l += "&lt"
+                        l += "&lt;"
                     elif c == '>':
-                        l += "&gt"
+                        l += "&gt;"
                     elif c == '&':
-                        l += "&amp"
+                        l += "&amp;"
                     else:
                         l += c
             if comment:
                 if infile:
                     record = line.split()
                     if insthg or len(record) > 1:
+			out.write(tab)
                         out.write('<div class="comment">')
                         out.write(l)
                         out.write('</div>')
@@ -165,6 +167,7 @@ class Example:
                         infile = 1
                         insthg = 0
             else:
+		out.write(tab)
                 record = l.split()
                 for r in record:
                     key = None
