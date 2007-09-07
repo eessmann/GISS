@@ -54,7 +54,7 @@
     OutputPPM { start = 2 } { convert ppm:- p.eps } { v = P min = -5e-3 max = 5e-3 }
     OutputScalarSum { istep = 10 } k { v = Velocity2 }
     EventScript { start = end } {
-	gnuplot <<EOF
+        gnuplot <<EOF
             set term postscript eps color lw 3 solid 20
             set output 'k.eps'
             set xlabel 'Time'
@@ -62,11 +62,11 @@
             set grid
             plot 'k' u 3:5 w l t ''
 EOF
-	if awk '{if ($5 > 4e-7) exit (1);}' < k ; then
-	    return 0;
-	else
-	    return $GFS_STOP;
-	fi
+        if awk '{if ($5 > 4e-7) exit (1);}' < k ; then
+            return 0;
+        else
+            return $GFS_STOP;
+        fi
     }
 }
 GfsBox {

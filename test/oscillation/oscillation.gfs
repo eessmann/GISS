@@ -12,16 +12,16 @@
 #
 # This simulation is also a stringent test case of the accuracy of the
 # surface tension representation as no explicit viscosity can damp
-# eventual spurious currents. Onset of spurious-current-driven
+# eventual parasitic currents. Onset of parasitic-current-driven
 # instability can be seen on the coarsest mesh (in Figure \ref{kinetic}
-# the kinetic energy behaves strangely for the 32x32 resolution).
+# for $t>0.5$ the kinetic energy behaves strangely for the 32x32 resolution).
 #
 # \begin{figure}[htbp]
 # \caption{\label{kinetic}Evolution of the kinetic energy as a function
 # of time for the spatial resolutions indicated in the legend. The
 # black lines are fitted decreasing exponential functions.}
 # \begin{center}
-# \includegraphics[width=0.8\hsize]{k.eps}
+# \includegraphics[width=0.9\hsize]{k.eps}
 # \end{center}
 # \end{figure}
 #
@@ -48,7 +48,7 @@
 # where $C$ is a constant, $\nu$ the viscosity and $D$ the droplet
 # diameter. Using curve fitting the damping coefficient $b=C\nu/D^2$
 # can be estimated (black curves on Figure \ref{kinetic}). An
-# equivalent Laplace number can the be computed as:
+# equivalent Laplace number can then be computed as:
 # $$La={\sigma D\over \rho\nu^2}={\sigma C^2 \over \rho b^2 D^3}$$
 # The equivalent Laplace number depends on spatial resolution as
 # illustrated in Figure \ref{laplace}.
@@ -66,13 +66,13 @@
 # Version: 1.1.1
 # Required files: oscillation.sh fit.ref
 # Running time: 3 minutes
-# Generated files: frequency.eps k.eps laplace.eps
+# Generated files: frequency.eps k.eps laplace.eds
 #
-Define Diameter 0.2
-Define Epsilon 0.05
-Define Var(T,min,max)   (min + CLAMP(T,0,1)*(max - min))
-Define Rho(T)            Var(T, 1., 1e-3)
-Define Radius(x,y)      (Diameter/2.*(1. + Epsilon*cos (2.*atan2 (y, x))))
+Define DIAMETER 0.2
+Define EPSILON 0.05
+Define VAR(T,min,max)   (min + CLAMP(T,0,1)*(max - min))
+Define RHO(T)            VAR(T, 1., 1e-3)
+Define RADIUS(x,y)      (DIAMETER/2.*(1. + EPSILON*cos (2.*atan2 (y, x))))
 
 1 0 GfsSimulation GfsBox GfsGEdge {} {
 
@@ -82,9 +82,9 @@ Define Radius(x,y)      (Diameter/2.*(1. + Epsilon*cos (2.*atan2 (y, x))))
  
     VariableTracerVOF T
     VariableFiltered T1 T 1
-    InitFraction T ({ x += 0.5; y += 0.5; return x*x + y*y - Radius(x,y)*Radius(x,y); })
+    InitFraction T ({ x += 0.5; y += 0.5; return x*x + y*y - RADIUS(x,y)*RADIUS(x,y); })
 
-    PhysicalParams { alpha = 1./Rho(T1) }
+    PhysicalParams { alpha = 1./RHO(T1) }
     VariableCurvature K T
     SourceTension T 1. K
 
@@ -94,17 +94,17 @@ Define Radius(x,y)      (Diameter/2.*(1. + Epsilon*cos (2.*atan2 (y, x))))
     } (T > 0 && T < 1 ? 1. : fabs (Vorticity)*ftt_cell_size (cell))
 
     OutputScalarSum { istep = 1 } k-LEVEL {
-        v = Rho(T1)*Velocity2
+        v = RHO(T1)*Velocity2
     }
 
     EventScript { start = end } {
         cat <<EOF | gnuplot 2>&1 | awk '{if ($1 == "result:") print LEVEL,$2,$3,$4;}'
-       k(t)=a*exp(-b*t)*(cos(c*t+3.14159265359)+1.)
-       a = 3e-4
-       b = 1.5
-       c = 153
-       fit k(x) 'k-LEVEL' u 3:5 via a,b,c
-       print "result: ", a, b, c       
+           k(t)=a*exp(-b*t)*(cos(c*t+3.14159265359)+1.)
+           a = 3e-4
+           b = 1.5
+           c = 153
+           fit k(x) 'k-LEVEL' u 3:5 via a,b,c
+           print "result: ", a, b, c       
 EOF
         rm -f fit.log
     }

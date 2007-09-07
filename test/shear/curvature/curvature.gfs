@@ -66,7 +66,7 @@
     # the cell size times the local curvature (only for cells cut by
     # the interface).
     # The maximum cost is set to 0.1 i.e. the radius of curvature must be
-    # resolved with a least 10 cells.
+    # resolved with at least 10 cells.
     AdaptFunction { istep = 1 } { cmax = 0.1 maxlevel = 8 minlevel = 6 } {
         return T > 0. && T < 1. ? ftt_cell_size (cell)*fabs (K) : 0.;
     }

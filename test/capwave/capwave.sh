@@ -49,7 +49,7 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-if (Curve('convergence',1,2) - Curve('convergence.ref',1,2)).max() > 1e-8:
+if (Curve('convergence',1,2) - Curve('convergence.ref',1,2)).max() > 1e-5:
     exit(1)
 EOF
 else
