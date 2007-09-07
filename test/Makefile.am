@@ -3,24 +3,24 @@
 TESTDIRS = \
 	poisson \
 	circle \
+	dumbell \
 	advection \
+	shear \
 	reynolds \
 	periodic \
 	merging \
-	boundaries \
-	channel \
-	spurious \
-	capwave \
-	waves \
-	geo \
 	lid \
 	couette \
-	plate \
-	dumbell \
-	nz \
-	shear \
 	kinetic \
-	oscillation
+	boundaries \
+	channel \
+	plate \
+	spurious \
+	capwave \
+	oscillation \
+	geo \
+	waves \
+	nz
 
 EXTRA_DIST = \
 	template.tex \
