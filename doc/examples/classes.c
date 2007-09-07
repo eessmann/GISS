@@ -1,11 +1,18 @@
 #include "init.h"
+#define WIKI "http://gfs.sf.net/wiki/index.php/"
+
+static void key_value_pair (const char * key)
+{
+  printf ("'%s' : '" WIKI "%s',\\\n", key, key);
+}
 
 int main (int argc, char * argv[])
 {
   GtsObjectClass ** klass = gfs_classes ();
   printf ("klass = {\\\n");
+  key_value_pair ("Define");
   while (*klass) {
-    printf ("'%s' : 'http://gfs.sf.net/wiki/index.php/%s',\\\n", (*klass)->info.name, (*klass)->info.name);
+    key_value_pair ((*klass)->info.name);
     klass++;
   }
   printf ("}\n");
