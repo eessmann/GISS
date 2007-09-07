@@ -628,6 +628,8 @@ static gdouble cell_2nd_principal_invariant (FttCell * cell, FttCellFace * face,
 static void simulation_init (GfsSimulation * object)
 {
   GfsDomain * domain = GFS_DOMAIN (object);
+  /* Please update http://gfs.sourceforge.net/wiki/index.php/Domain_variables 
+     when changing this list */
   static GfsDerivedVariableInfo derived_variable[] = {
     { "x", "x-coordinate of the center of mass of the cell", cell_x },
     { "y", "y-coordinate of the center of mass of the cell", cell_y },

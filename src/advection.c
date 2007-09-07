@@ -891,7 +891,8 @@ fprintf (stderr, "%g %g %g\n",
     i = merged;
     while (i) {
       FttCell * cell = i->data;
-
+      /* fixme: small cells should be excluded here?? 
+	 (with corresponding modification in total_vol) */
       GFS_VARIABLE (cell, par->v->i) += w;
       i = i->next;
     }
