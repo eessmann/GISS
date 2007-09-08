@@ -1,8 +1,9 @@
 # GfsView 2D
 View {
-  tx = 0. ty = -1.
+  tx = 0 ty = -0.5
+  sx = 1 sy = 1 sz = 1
   q0 = 0 q1 = 0 q2 = 0 q3 = 1
-  fov = 40
+  fov = 25.9274
   r = 0.3 g = 0.4 b = 0.6
   res = 1
   lc = 0.001

@@ -24,7 +24,7 @@
 #
 # Author: St\'ephane Popinet
 # Command: gerris2D boussinesq.gfs | gfsview2D boussinesq.gfv | ppm2mpeg > t.mpg
-# Version: 0.6.4
+# Version: 1.1.0
 # Required files: cylinder.gts boussinesq.gfv
 # Running time: 60 minutes
 # Generated files: t.mpg t.eps
@@ -36,16 +36,17 @@
   RefineSolid 8
 
   # Insert the solid boundary defined by cylinder.gts
-  Solid cylinder.gts
+  # shift the cylinder vertically
+  Solid cylinder.gts { ty = 0.25 }
 
   # Add a passive tracer called T
-  VariableTracer {} T
+  VariableTracer T
 
   # Add diffusion to tracer T
-  SourceDiffusion {} T 0.0001
+  SourceDiffusion T 0.0001
  
   # Add a source term to the vertical velocity component equal to T
-  Source {} V T
+  Source V T
 
   # Dirichlet boundary condition for T on the cylinder
   SurfaceBc T Dirichlet 1
@@ -85,7 +86,8 @@
   # At the end of the simulation this file is converted to EPS.
   EventScript { start = end } { convert -colors 256 t.ppm t.eps ; rm -f t.ppm }
 }
-GfsBox {}
+# The bottom boundary will also allow inflow (despite its name)
+GfsBox { bottom = BoundaryOutflow }
 GfsBox {}
 # The top boundary is a simple outflow condition. This could cause problems
 # (eddies getting stuck on the boundary) if the adaptive "sponge" layer was not
