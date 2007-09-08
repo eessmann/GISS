@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-AUTOMAKE_OPTIONS = 1.8
+AUTOMAKE_OPTIONS = 1.6
 
 INCLUDES = -I$(top_srcdir) -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs\" $(GTS_CFLAGS)
