@@ -66,7 +66,7 @@
 # Version: 1.1.1
 # Required files: oscillation.sh fit.ref
 # Running time: 3 minutes
-# Generated files: frequency.eps k.eps laplace.eds
+# Generated files: frequency.eps k.eps laplace.eps
 #
 Define DIAMETER 0.2
 Define EPSILON 0.05
