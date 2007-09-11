@@ -358,8 +358,9 @@ static gboolean source_control_event (GfsEvent * event, GfsSimulation * sim)
     GfsSourceControl * s = GFS_SOURCE_CONTROL (event);
     GtsRange r = gfs_domain_stats_variable (GFS_DOMAIN (sim), GFS_SOURCE_SCALAR (event)->v,
 					    FTT_TRAVERSE_LEAFS, -1);
-    s->s = (gfs_function_value (GFS_SOURCE (s)->intensity, NULL) - r.mean)/
-      sim->advection_params.dt;
+    s->s = sim->advection_params.dt > 0. ? 
+      (gfs_function_value (GFS_SOURCE (s)->intensity, NULL) - r.mean)/sim->advection_params.dt :
+      0.;
     return TRUE;
   }
   return FALSE;
