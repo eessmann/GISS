@@ -104,7 +104,7 @@ int main (int argc, char * argv[])
 #ifdef HAVE_M4
 	     "  -m     --macros      Turn macros support on\n"
 	     "  -DNAME               Defines NAME as a macro expanding to VALUE\n"
-	     "  -DNAME=VALUE\n       (macro support is implicitly turned on)"
+	     "  -DNAME=VALUE         (macro support is implicitly turned on)\n"
 	     "         --define=NAME\n"
              "         --define=NAME=VALUE\n"
 #endif /* have m4 */
@@ -192,6 +192,13 @@ int main (int argc, char * argv[])
     gint pid = 0;
 
     gts_graph_print_stats (GTS_GRAPH (simulation), stderr);
+    if (gts_container_size (GTS_CONTAINER (simulation)) < pow (2., npart)) {
+      fprintf (stderr,
+	       "gerris: the number of boxes in the domain to partition should be >= 2^N\n"
+	       "Use option '-s' to split the domain first\n"
+	       "Try `gerris --help' for more information.\n");
+      return 1;
+    }
     partition = gts_graph_recursive_bisection (GTS_WGRAPH (simulation),
 					       npart, 
 					       ntry, mmax, nmin, imbalance);
