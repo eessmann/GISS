@@ -620,10 +620,14 @@ int main (int argc, char * argv[])
     GtsSurface * ss1, * ss2;
     gpointer data[3];
 
+    gfs_clock_start (GFS_DOMAIN (s1)->timer);
+    gfs_clock_start (GFS_DOMAIN (s2)->timer);
     gfs_simulation_refine (s1);
     gfs_simulation_refine (s2);
     gfs_set_merged (GFS_DOMAIN (s1));
     gfs_set_merged (GFS_DOMAIN (s2));
+    gfs_clock_stop (GFS_DOMAIN (s1)->timer);
+    gfs_clock_stop (GFS_DOMAIN (s2)->timer);
     ss1 = surface_from_domain (GFS_DOMAIN (s1));
     ss2 = surface_from_domain (GFS_DOMAIN (s2));
     data[0] = ss2;

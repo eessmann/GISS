@@ -217,7 +217,9 @@ int main (int argc, char * argv[])
 
   domain = GFS_DOMAIN (simulation);
   if (split) {
+    gfs_clock_start (domain->timer);
     gfs_simulation_refine (simulation);
+    gfs_clock_stop (domain->timer);
     while (split) {
       gfs_domain_split (domain, TRUE);
       split--;

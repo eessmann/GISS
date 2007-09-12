@@ -1012,8 +1012,10 @@ int main (int argc, char * argv[])
       fprintf (stderr, "gfs2oogl: processing t = %10e\n", simulation->time.t);
 
     if (reinit) {
+      gfs_clock_start (domain->timer);
       gfs_simulation_refine (simulation);
       gfs_simulation_init (simulation);
+      gfs_clock_stop (domain->timer);
     }
 
     if (var != NULL) {
