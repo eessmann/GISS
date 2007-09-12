@@ -156,8 +156,8 @@ class Example:
                 if infile:
                     record = line.split()
                     if insthg or len(record) > 1:
-			out.write(tab)
                         out.write('<div class="comment">')
+			out.write(tab)
                         out.write(l)
                         out.write('</div>')
                         insthg = 1
