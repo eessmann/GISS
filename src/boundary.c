@@ -1043,6 +1043,7 @@ static void periodic_match (GfsBoundary * boundary)
 static void send (GfsBoundary * bb)
 {
   GfsBoundaryPeriodic * boundary = GFS_BOUNDARY_PERIODIC (bb);
+  g_assert (boundary->matching);
   GfsBoundaryPeriodic * matching = GFS_BOUNDARY_PERIODIC (boundary->matching->neighbor[bb->d]);
 
   g_assert (GFS_IS_BOUNDARY_PERIODIC (matching));

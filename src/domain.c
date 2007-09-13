@@ -1675,20 +1675,24 @@ GfsDomain * gfs_domain_read (GtsFile * fp)
   return domain;
 }
 
-static void box_split (GfsBox * box, gpointer * data)
+typedef struct {
+  GSList * boxlist;
+  guint bid;
+  gboolean one_box_per_pe;
+  gint pid;
+  GfsVariable * newboxp;
+  GfsDomain * domain;
+} SplitPar;
+
+static void box_split (GfsBox * box, SplitPar * p)
 {
-  GSList ** boxlist = data[0];
-  guint * bid = data[1];
-  gboolean * one_box_per_pe = data[2];
-  gint * pid = data[3];
-  GfsVariable * newboxp = data[4];
   guint refid = FTT_DIMENSION == 2 ? 2 : 6;
   FttCellChildren child;
   FttDirection d;
   guint i;
   GfsDomain * domain = gfs_box_domain (box);
 
-  *boxlist = g_slist_prepend (*boxlist, box);
+  p->boxlist = g_slist_prepend (p->boxlist, box);
 
   if (FTT_CELL_IS_LEAF (box->root))
     ftt_cell_refine_single (box->root, (FttCellInitFunc) gfs_cell_init, domain);
@@ -1699,16 +1703,16 @@ static void box_split (GfsBox * box, gpointer * data)
       GfsBox * newbox = GFS_BOX (gts_object_new (GTS_OBJECT (box)->klass));
 
       GTS_OBJECT (newbox)->reserved = domain;
-      if (*one_box_per_pe)
-	newbox->pid = (*pid)++;
+      if (p->one_box_per_pe)
+	newbox->pid = (p->pid)++;
       else
 	newbox->pid = box->pid;
       if (box->id == 1 && i == refid)
 	newbox->id = 1;
       else
-	newbox->id = (*bid)++;
+	newbox->id = (p->bid)++;
 
-      GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], newboxp->i)) = newbox;
+      GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], p->newboxp->i)) = newbox;
 
       if (FTT_CELL_IS_LEAF (child.c[i]))
 	ftt_cell_refine_single (child.c[i], (FttCellInitFunc) gfs_cell_init, domain);
@@ -1732,25 +1736,30 @@ static void box_split (GfsBox * box, gpointer * data)
       for (i = 0; i < FTT_CELLS/2; i++)
 	if (child.c[i]) {
 	  FttCell * neighbor = ftt_cell_neighbor (child.c[i], d);
-	  GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], newboxp->i));
+	  GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], p->newboxp->i));
 	  GfsBoundaryClass * klass = GFS_BOUNDARY_CLASS (GTS_OBJECT (boundary)->klass);
 	  GtsObject * newboundary = GTS_OBJECT (gfs_boundary_new (klass, newbox, d));
-	  gchar fname[] = "/tmp/XXXXXX";
-	  gint fd = mkstemp (fname);
-	  FILE * fp = fdopen (fd, "w");
-	  GtsFile * gfp;
 
-	  (* GTS_OBJECT_CLASS (klass)->write) (GTS_OBJECT (boundary), fp);
-	  fclose (fp);
-	  close (fd);
-	  fp = fopen (fname, "r");
-	  unlink (fname);
-	  gfp = gts_file_new (fp);
-	  (* GTS_OBJECT_CLASS (klass)->read) (&newboundary, gfp);
-	  g_assert (gfp->type != GTS_ERROR);
-	  gts_file_destroy (gfp);
-	  fclose (fp);
-
+	  if (GFS_IS_BOUNDARY_PERIODIC (newboundary))
+	    GFS_BOUNDARY_PERIODIC (newboundary)->matching = 
+	      GFS_BOUNDARY_PERIODIC (boundary)->matching;
+	  else {
+	    gchar fname[] = "/tmp/XXXXXX";
+	    gint fd = mkstemp (fname);
+	    FILE * fp = fdopen (fd, "w");
+	    GtsFile * gfp;
+	    
+	    (* GTS_OBJECT_CLASS (klass)->write) (GTS_OBJECT (boundary), fp);
+	    fclose (fp);
+	    close (fd);
+	    fp = fopen (fname, "r");
+	    unlink (fname);
+	    gfp = gts_file_new (fp);
+	    (* GTS_OBJECT_CLASS (klass)->read) (&newboundary, gfp);
+	    g_assert (gfp->type != GTS_ERROR);
+	    gts_file_destroy (gfp);
+	    fclose (fp);
+	  }
 	  g_assert (neighbor);
 	  GFS_BOUNDARY (newboundary)->root = neighbor;
 	}
@@ -1758,27 +1767,63 @@ static void box_split (GfsBox * box, gpointer * data)
     }
 }
 
-static void box_link (GfsBox * box, gpointer * data)
+static GtsGEdge * node_is_linked (GtsGNode * n1, GtsGNode * n2, FttDirection d)
 {
-  GfsVariable * newboxp = data[4];
-  GfsDomain * domain = data[5];
+  GSList * i = GTS_SLIST_CONTAINER (n1)->items;
+  while (i) {
+    if (GTS_GNODE_NEIGHBOR (n1, i->data) == n2 &&
+	GFS_GEDGE (i->data)->d == d)
+      return i->data;
+    i = i->next;
+  }
+  return NULL;
+}
+
+static void box_link (GfsBox * box, SplitPar * p)
+{
   FttCellChildren child;
   guint i;
 
   ftt_cell_children (box->root, &child);
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i]) {
-       GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], newboxp->i));
+       GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], p->newboxp->i));
        FttDirection d;
        
        g_assert (newbox);
-       gts_container_add (GTS_CONTAINER (domain), GTS_CONTAINEE (newbox));
+       gts_container_add (GTS_CONTAINER (p->domain), GTS_CONTAINEE (newbox));
+
        for (d = 0; d < FTT_NEIGHBORS; d++)
-	 if (newbox->neighbor[d] == NULL) {
+	 if (newbox->neighbor[d] != NULL && GFS_IS_BOUNDARY_PERIODIC (newbox->neighbor[d])) {
+	   GfsBox * matching =  GFS_BOUNDARY_PERIODIC (newbox->neighbor[d])->matching;
+	   static FttDirection match[FTT_CELLS][FTT_DIMENSION] = {
+#if FTT_2D
+	     {0,2}, {1,2}, {0,3}, {1,3}
+#elif FTT_2D3
+#else /* 3D */
+	     {0,2,4}, {1,2,4}, {0,3,4}, {1,3,4},
+	     {0,2,5}, {1,2,5}, {0,3,5}, {1,3,5}
+#endif /* 3D */
+	   };
+	   FttCell * neighbor = ftt_cell_child_corner (matching->root, 
+						       match[FTT_CELL_ID (child.c[i])]);
+	   g_assert (neighbor);
+	   GfsBox * newbox1 = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (neighbor, p->newboxp->i));
+	   g_assert (newbox1);
+	   GFS_BOUNDARY_PERIODIC (newbox->neighbor[d])->matching = newbox1;
+	   if (!node_is_linked (GTS_GNODE (newbox1), GTS_GNODE (newbox), 
+				FTT_OPPOSITE_DIRECTION (d))) {
+	     GfsGEdge * edge = GFS_GEDGE (gts_gedge_new (GTS_GRAPH (p->domain)->edge_class,
+							 GTS_GNODE (newbox), 
+							 GTS_GNODE (newbox1)));
+	     edge->d = d;
+	   }
+	 }
+	 else if (newbox->neighbor[d] == NULL) {
 	   FttCell * neighbor = ftt_cell_neighbor (child.c[i], d);
 
 	   if (neighbor) {
-	     GfsBox * newbox1 = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (neighbor, newboxp->i));
+	     GfsBox * newbox1 = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (neighbor, p->newboxp->i));
 	     FttDirection od = FTT_OPPOSITE_DIRECTION (d);
 	     GfsGEdge * edge;
 
@@ -1786,7 +1831,7 @@ static void box_link (GfsBox * box, gpointer * data)
 	     newbox->neighbor[d] = GTS_OBJECT (newbox1);
 	     g_assert (newbox1->neighbor[od] == NULL);
 	     newbox1->neighbor[od] = GTS_OBJECT (newbox);
-	     edge = GFS_GEDGE (gts_gedge_new (GTS_GRAPH (domain)->edge_class,
+	     edge = GFS_GEDGE (gts_gedge_new (GTS_GRAPH (p->domain)->edge_class,
 					      GTS_GNODE (newbox), 
 					      GTS_GNODE (newbox1)));
 	     edge->d = d;
@@ -1838,28 +1883,23 @@ static void get_ref_pos (GfsBox * box, FttVector * pos)
  */
 void gfs_domain_split (GfsDomain * domain, gboolean one_box_per_pe)
 {
-  GSList * list = NULL;
-  guint bid = 2;
-  gint pid = 0;
-  gpointer data[6];
-  GfsVariable * newboxp;
+  SplitPar p;
 
   g_return_if_fail (domain != NULL);
 
-  newboxp = gfs_temporary_variable (domain);
+  p.newboxp = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, 1,
-  			   (FttCellTraverseFunc) gfs_cell_reset, newboxp);
-  data[0] = &list;
-  data[1] = &bid;
-  data[2] = &one_box_per_pe;
-  data[3] = &pid;
-  data[4] = newboxp;
-  data[5] = domain;
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_split, data);
-  g_slist_foreach (list, (GFunc) box_link, data);
-  g_slist_foreach (list, (GFunc) box_destroy, newboxp);
-  g_slist_free (list);
-  gts_object_destroy (GTS_OBJECT (newboxp));
+  			   (FttCellTraverseFunc) gfs_cell_reset, p.newboxp);
+  p.boxlist = NULL;
+  p.bid = 2;
+  p.pid = 0;
+  p.one_box_per_pe = one_box_per_pe;
+  p.domain = domain;
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_split, &p);
+  g_slist_foreach (p.boxlist, (GFunc) box_link, &p);
+  g_slist_foreach (p.boxlist, (GFunc) box_destroy, p.newboxp);
+  g_slist_free (p.boxlist);
+  gts_object_destroy (GTS_OBJECT (p.newboxp));
 
   gfs_domain_match (domain);
   domain->rootlevel++;
