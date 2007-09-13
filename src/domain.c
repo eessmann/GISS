@@ -262,11 +262,35 @@ static void domain_destroy (GtsObject * o)
   (* GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class->destroy) (o);
 }
 
+static void add_item (gpointer item, GPtrArray * a)
+{
+  g_ptr_array_add (a, item);
+}
+
+static gint compare_boxes (const GfsBox ** b1, const GfsBox ** b2)
+{
+  return (*b1)->id < (*b2)->id ? -1 : 1;
+}
+
+static void domain_foreach (GtsContainer * c, 
+			    GtsFunc func, 
+			    gpointer data)
+{
+  GPtrArray * a = g_ptr_array_new ();
+  (* GTS_CONTAINER_CLASS (GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class)->foreach)
+    (c, (GtsFunc) add_item, a);
+  g_ptr_array_sort (a, (GCompareFunc) compare_boxes);
+  g_ptr_array_foreach (a, (GFunc) func, data);
+  g_ptr_array_free (a, TRUE);
+}
+
 static void domain_class_init (GfsDomainClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = domain_read;
   GTS_OBJECT_CLASS (klass)->write = domain_write;
   GTS_OBJECT_CLASS (klass)->destroy = domain_destroy;
+
+  GTS_CONTAINER_CLASS (klass)->foreach = domain_foreach;
 
   klass->post_read = domain_post_read;
 }

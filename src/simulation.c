@@ -752,8 +752,8 @@ GfsSimulation * gfs_simulation_new (GfsSimulationClass * klass)
   GfsSimulation * object;
 
   object = GFS_SIMULATION (gts_graph_new (GTS_GRAPH_CLASS (klass),
-					 GTS_GNODE_CLASS (gfs_box_class ()),
-					 GTS_GEDGE_CLASS (gfs_gedge_class ())));
+					  GTS_GNODE_CLASS (gfs_box_class ()),
+					  GTS_GEDGE_CLASS (gfs_gedge_class ())));
 
   return object;
 }
