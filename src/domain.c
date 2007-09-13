@@ -1787,8 +1787,10 @@ static void box_destroy (GfsBox * box, GfsVariable * newboxp)
   ftt_cell_destroy_root (box->root, &child, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
   box->root = NULL;
   for (i = 0; i < FTT_CELLS; i++)
-    if (child.c[i])
+    if (child.c[i]) {
       newbox[i]->root = child.c[i];
+      FTT_ROOT_CELL (newbox[i]->root)->parent = newbox[i];
+    }
 
   gts_object_destroy (GTS_OBJECT (box));
 }

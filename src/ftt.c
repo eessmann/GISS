@@ -39,8 +39,6 @@ gint ftt_opposite_direction[FTT_NEIGHBORS] =
 typedef struct _FttOct      FttOct;
 typedef struct _FttRootCell FttRootCell;
 
-#define FTT_ROOT_CELL(cell) ((FttRootCell *) cell)
-
 static void oct_new (FttCell * parent,
 		     gboolean check_neighbors,
 		     FttCellInitFunc init,

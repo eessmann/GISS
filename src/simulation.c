@@ -625,6 +625,20 @@ static gdouble cell_2nd_principal_invariant (FttCell * cell, FttCellFace * face,
   return gfs_2nd_principal_invariant (cell, gfs_domain_velocity (domain))/ftt_cell_size (cell);
 }
 
+static gdouble cell_pid (FttCell * cell)
+{
+  while (!FTT_CELL_IS_ROOT (cell))
+    cell = ftt_cell_parent (cell);
+  return GFS_BOX (FTT_ROOT_CELL (cell)->parent)->pid;
+}
+
+static gdouble cell_id (FttCell * cell)
+{
+  while (!FTT_CELL_IS_ROOT (cell))
+    cell = ftt_cell_parent (cell);
+  return GFS_BOX (FTT_ROOT_CELL (cell)->parent)->id;
+}
+
 static void simulation_init (GfsSimulation * object)
 {
   GfsDomain * domain = GFS_DOMAIN (object);
@@ -660,6 +674,8 @@ static void simulation_init (GfsSimulation * object)
     { "Lambda2", "Vortex-detection criterion of Jeong & Hussein", cell_velocity_lambda2 },
     { "Curvature",  "Curvature of the local streamline", cell_streamline_curvature },
     { "D2", "Second principal invariant of the deformation tensor", cell_2nd_principal_invariant },
+    { "Pid", "Parent box process ID", cell_pid },
+    { "Id", "Parent box ID", cell_id },
     { NULL, NULL, NULL}
   };
   GfsDerivedVariableInfo * v = derived_variable;

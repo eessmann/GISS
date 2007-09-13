@@ -684,6 +684,7 @@ GfsBoundary * gfs_boundary_new (GfsBoundaryClass * klass,
   if (box->root) {
     domain = gfs_box_domain (box);
     boundary->root = ftt_cell_new ((FttCellInitFunc) gfs_cell_init, domain);
+    FTT_ROOT_CELL (boundary->root)->parent = box;
     ftt_cell_set_level (boundary->root, ftt_cell_level (box->root));
     ftt_cell_set_neighbor_match (boundary->root, box->root, boundary->d, 
 				 (FttCellInitFunc) gfs_cell_init, domain);
@@ -1542,6 +1543,7 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
       }
   }
 
+  FTT_ROOT_CELL (b->root)->parent = b;
   if (ftt_cell_level (b->root) != domain->rootlevel) {
     FttDirection d;
 

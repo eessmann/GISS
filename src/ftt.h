@@ -150,6 +150,7 @@ struct _FttRootCell {
 #if FTT_2D3
   gdouble dz;
 #endif
+  gpointer parent;
 };
 
 struct _FttOct {
@@ -169,6 +170,7 @@ struct _FttCellFace {
   FttDirection d;
 };
 
+#define  FTT_ROOT_CELL(c)         ((struct _FttRootCell *) c)
 #define  FTT_CELL_ID(c)           ((c)->flags & FTT_FLAG_ID)
 #define  FTT_CELL_IS_LEAF(c)      ((c)->children == NULL)
 #define  FTT_CELL_IS_ROOT(c)      ((c)->parent == NULL)
