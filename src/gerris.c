@@ -51,6 +51,7 @@ int main (int argc, char * argv[])
   guint npart = 0;
   gboolean profile = FALSE, macros = FALSE;
   gchar * m4_options = g_strdup ("-P");
+  gint maxlevel = -2;
 
   gfs_init (&argc, &argv);
 
@@ -63,15 +64,16 @@ int main (int argc, char * argv[])
       {"profile", no_argument, NULL, 'P'},
       {"define", required_argument, NULL, 'D'},
       {"macros", no_argument, NULL, 'm'},
+      {"data", no_argument, NULL, 'd'},
       {"help", no_argument, NULL, 'h'},
       {"version", no_argument, NULL, 'V'},
       { NULL }
     };
     int option_index = 0;
-    switch ((c = getopt_long (argc, argv, "hVs:p:PD:m",
+    switch ((c = getopt_long (argc, argv, "hVs:p:PD:md",
 			      long_options, &option_index))) {
 #else /* not HAVE_GETOPT_LONG */
-    switch ((c = getopt (argc, argv, "hVs:p:PD:m"))) {
+    switch ((c = getopt (argc, argv, "hVs:p:PD:md"))) {
 #endif /* not HAVE_GETOPT_LONG */
     case 'P': /* profile */
       profile = TRUE;
@@ -91,6 +93,9 @@ int main (int argc, char * argv[])
     case 'm': /* macros */
       macros = TRUE;
       break;
+    case 'd': /* data */
+      maxlevel = -1;
+      break;
     case 'h': /* help */
       fprintf (stderr,
              "Usage: gerris [OPTION] FILE\n"
@@ -100,6 +105,7 @@ int main (int argc, char * argv[])
              "                       the corresponding simulation\n"
              "  -p N   --partition=N partition the domain in 2^N subdomains and returns\n" 
              "                       the corresponding simulation\n"
+	     "  -d     --data        when splitting or partitioning, output all data\n"
 	     "  -P     --profile     profiles calls to boundary conditions\n"
 #ifdef HAVE_M4
 	     "  -m     --macros      Turn macros support on\n"
@@ -152,7 +158,6 @@ int main (int argc, char * argv[])
       command = g_strjoin (NULL, awk, argv[optind], " | m4 ", m4_options, NULL);
     fptr = popen (command, "r");
     g_free (command);
-    g_free (m4_options);
   }
   else { /* no macros */
     if (!strcmp (argv[optind], "-"))
@@ -160,6 +165,7 @@ int main (int argc, char * argv[])
     else
       fptr = fopen (argv[optind], "r");
   }
+  g_free (m4_options);
 
   if (fptr == NULL) {
     fprintf (stderr, "gerris: unable to open file `%s'\n", argv[optind]);
@@ -202,6 +208,7 @@ int main (int argc, char * argv[])
     partition = gts_graph_recursive_bisection (GTS_WGRAPH (simulation),
 					       npart, 
 					       ntry, mmax, nmin, imbalance);
+
     i = partition;
     while (i) {
       gts_container_foreach (GTS_CONTAINER (i->data), 
@@ -211,7 +218,7 @@ int main (int argc, char * argv[])
     }
     gts_graph_partition_print_stats (partition, stderr);
     gts_graph_partition_destroy (partition);
-    gfs_simulation_write (simulation, -2, stdout);
+    gfs_simulation_write (simulation, maxlevel, stdout);
     return 0;
   }
 
@@ -224,7 +231,7 @@ int main (int argc, char * argv[])
       gfs_domain_split (domain, TRUE);
       split--;
     }
-    gfs_simulation_write (simulation, -2, stdout);
+    gfs_simulation_write (simulation, maxlevel, stdout);
     return 0;
   }
 
