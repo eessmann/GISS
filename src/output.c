@@ -886,14 +886,12 @@ static gboolean gfs_output_balance_event (GfsEvent * event,
     gfs_domain_stats_balance (domain, &size, &boundary, &mpiwait);
     fprintf (fp, 
 	     "Balance summary: %u PE\n"
-	     "  domain size:\n"
-	     "      min: %9.0f avg: %9.0f         | %7.0f max: %9.0f\n",
+	     "  domain   min: %9.0f avg: %9.0f         | %7.0f max: %9.0f\n",
 	     size.n,
 	     size.min, size.mean, size.stddev, size.max);
     if (boundary.max > 0.)
       fprintf (fp, 
-	       "  parallel boundary size:\n"
-	       "      min: %9.0f avg: %9.0f         | %7.0f max: %9.0f\n",
+	       "  boundary min: %9.0f avg: %9.0f         | %7.0f max: %9.0f\n",
 	       boundary.min, boundary.mean, boundary.stddev, boundary.max);
     if (mpiwait.max > 0.)
       fprintf (fp,

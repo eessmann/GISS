@@ -1388,18 +1388,32 @@ static void cell_count (FttCell * cell, guint * count)
   (*count)++;
 }
 
-#ifdef HAVE_MPI
-static void boundary_size (GfsBox * box, guint * count)
+static void box_count (GfsBox * b, GArray * a)
+{
+  guint count = 0;
+  ftt_cell_traverse (b->root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		     (FttCellTraverseFunc) cell_count, &count);
+  if (b->pid >= a->len)
+    g_array_set_size (a, b->pid + 1);
+  g_array_index (a, guint, b->pid) += count;
+}
+
+static void boundary_size (GfsBox * box, GArray * a)
 {
   FttDirection d;
+  guint count = 0;
 
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (GFS_IS_BOUNDARY_MPI (box->neighbor[d]))
-      ftt_cell_traverse (GFS_BOUNDARY (box->neighbor[d])->root,
-			 FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			 (FttCellTraverseFunc) cell_count, count);
+    if (
+#ifdef HAVE_MPI
+	GFS_IS_BOUNDARY_MPI (box->neighbor[d]) ||
+#endif
+	(GFS_IS_BOX (box->neighbor[d]) && GFS_BOX (box->neighbor[d])->pid != box->pid)
+       )
+      ftt_cell_traverse_boundary (box->root, d, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				  (FttCellTraverseFunc) cell_count, &count);
+  g_array_index (a, guint, box->pid) += count;
 }
-#endif /* HAVE_MPI */
 
 /**
  * gfs_domain_stats_balance:
@@ -1418,8 +1432,6 @@ void gfs_domain_stats_balance (GfsDomain * domain,
 			       GtsRange * boundary,
 			       GtsRange * mpiwait)
 {
-  guint count;
-
   g_return_if_fail (domain != NULL);
   g_return_if_fail (size != NULL);
   g_return_if_fail (boundary != NULL);
@@ -1428,21 +1440,26 @@ void gfs_domain_stats_balance (GfsDomain * domain,
   gts_range_init (size);
   gts_range_init (boundary);
   gts_range_init (mpiwait);
-  count = 0;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			   (FttCellTraverseFunc) cell_count, &count);
-  gts_range_add_value (size, count);
   if (domain->timestep.n > 0)
     gts_range_add_value (mpiwait, domain->mpi_wait.sum/domain->timestep.n);
+
+  GArray * a = g_array_new (FALSE, TRUE, sizeof (guint));
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_count, a);
+  guint i;
+  for (i = 0; i < a->len; i++) {
+    gts_range_add_value (size, g_array_index (a, guint, i));
+    g_array_index (a, guint, i) = 0;
+  }
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) boundary_size, a);
+  for (i = 0; i < a->len; i++)
+    gts_range_add_value (boundary, g_array_index (a, guint, i));
 #ifdef HAVE_MPI
-  count = 0;
-  gts_container_foreach (GTS_CONTAINER (domain),
-			 (GtsFunc) boundary_size, &count);
-  gts_range_add_value (boundary, count);
+  g_assert (a->len == 1);
   domain_range_reduce (domain, size);
   domain_range_reduce (domain, boundary);
   domain_range_reduce (domain, mpiwait);
 #endif /* HAVE_MPI */
+  g_array_free (a, TRUE);
   gts_range_update (size);
   gts_range_update (boundary);
   gts_range_update (mpiwait);
