@@ -1687,6 +1687,93 @@ GfsEventClass * gfs_event_script_class (void)
   return klass;
 }
 
+/* GfsEventBalance: Object */
+
+static void gfs_event_balance_write (GtsObject * o, FILE * fp)
+{
+  GfsEventBalance * s = GFS_EVENT_BALANCE (o);
+
+  if (GTS_OBJECT_CLASS (gfs_event_balance_class ())->parent_class->write)
+    (* GTS_OBJECT_CLASS (gfs_event_balance_class ())->parent_class->write)
+      (o, fp);
+
+  fprintf (fp, " %g", s->max);
+}
+
+static void gfs_event_balance_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsEventBalance * s = GFS_EVENT_BALANCE (*o);
+  GfsDomain * domain =  GFS_DOMAIN (gfs_object_simulation (s));
+
+  if (GTS_OBJECT_CLASS (gfs_event_balance_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_event_balance_class ())->parent_class->read) 
+      (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  
+  s->max = gfs_read_constant (fp, domain);
+}
+
+static gboolean gfs_event_balance_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_balance_class ())->parent_class)->event) 
+      (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    GfsEventBalance * s = GFS_EVENT_BALANCE (event);
+    GtsRange size, boundary, mpiwait;
+
+    gfs_domain_stats_balance (domain, &size, &boundary, &mpiwait);
+    if (size.max/size.min > s->max) {
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, 
+	     "EventBalance: unbalance limit reached (exiting)");
+       g_slist_free (domain->variables_io);
+       domain->variables_io = NULL;
+       GSList * i = domain->variables;
+       while (i) {
+	 if (GFS_VARIABLE1 (i->data)->name)
+	   domain->variables_io = g_slist_append (domain->variables_io, i->data);
+	 i = i->next;
+       }
+       FILE * fp = fopen ("unbalanced.gfs", "w");
+       if (fp) {
+	 gfs_simulation_write (GFS_SIMULATION (domain), -1, fp);
+	 fclose (fp);
+       }
+       exit (2);
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_event_balance_class_init (GfsEventClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = gfs_event_balance_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_event_balance_write;
+  GFS_EVENT_CLASS (klass)->event = gfs_event_balance_event;
+}
+
+GfsEventClass * gfs_event_balance_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_event_balance_info = {
+      "GfsEventBalance",
+      sizeof (GfsEventBalance),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_event_balance_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
+				  &gfs_event_balance_info);
+  }
+
+  return klass;
+}
+
 /* GfsInitFraction: Object */
 
 static void gfs_init_fraction_destroy (GtsObject * object)

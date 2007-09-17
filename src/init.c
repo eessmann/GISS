@@ -166,6 +166,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_event_harmonic_class (),
     gfs_event_stop_class (),
     gfs_event_script_class (),
+    gfs_event_balance_class (),
     gfs_source_generic_class (),
       gfs_source_scalar_class (),
         gfs_source_class (),
