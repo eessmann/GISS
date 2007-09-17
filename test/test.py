@@ -45,7 +45,13 @@ print >>summary, r'{\bf Path} &', path, r'\\'
 print >>summary, r'{\bf System} &', system, r'\\'
 print >>summary, r'{\bf Start} &', starttime.strftime('%a %d %b %H:%M:%S'), r'\\'
 print >>summary, r'{\bf Finish} &', endtime.strftime('%a %d %b %H:%M:%S'), r'\\'
-print >>summary, r'{\bf Elapsed} &', repr(e.days) + ":" + repr(h) + ":" + repr(m) + ":" + repr(s), r'\\'
+elapsed = ""
+if e.days > 0:
+    elapsed += '%02d:' % e.days
+if h > 0:
+    elapsed += '%02d:' % h
+elapsed += '%02d:%02d' % (m,s)
+print >>summary, r'{\bf Elapsed} &', elapsed, r'\\'
 print >>summary, r'{\bf Status} &',
 if failed:
     print >>summary, r'{\color{Red}FAIL (' + repr(failed) + '/' + repr(n) +')}'
