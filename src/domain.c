@@ -1388,14 +1388,16 @@ static void cell_count (FttCell * cell, guint * count)
   (*count)++;
 }
 
+#define BPID(b) ((b)->pid > 0 ? (b)->pid : 0)
+
 static void box_count (GfsBox * b, GArray * a)
 {
-  guint count = 0;
+  guint count = 0, pid = BPID(b);
   ftt_cell_traverse (b->root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 		     (FttCellTraverseFunc) cell_count, &count);
-  if (b->pid >= a->len)
-    g_array_set_size (a, b->pid + 1);
-  g_array_index (a, guint, b->pid) += count;
+  if (pid >= a->len)
+    g_array_set_size (a, pid + 1);
+  g_array_index (a, guint, pid) += count;
 }
 
 static void boundary_size (GfsBox * box, GArray * a)
@@ -1412,7 +1414,7 @@ static void boundary_size (GfsBox * box, GArray * a)
        )
       ftt_cell_traverse_boundary (box->root, d, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				  (FttCellTraverseFunc) cell_count, &count);
-  g_array_index (a, guint, box->pid) += count;
+  g_array_index (a, guint, BPID (box)) += count;
 }
 
 /**
