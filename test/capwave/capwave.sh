@@ -29,11 +29,10 @@ for level in $levels; do
 done
 
 awk 'BEGIN{first=1}{ 
-  if (first) printf("Gerris & %.5f",$2);
-  else printf(" & %.5f",$2);
+  if (first) printf("Gerris &\n%.5f",$2);
+  else printf(" &\n%.5f",$2);
   first=0;
-}
-END{printf("\n");}' < convergence > convergence.tex
+}' < convergence > convergence.tex
 
 if cat <<EOF | gnuplot ; then :
     set term postscript eps color lw 3 solid 20
@@ -44,6 +43,23 @@ if cat <<EOF | gnuplot ; then :
 EOF
 else
     exit 1
+fi
+
+if test -f clsvof.tex ; then
+    cp convergence.tex gerris.tex
+    echo " &\n0.00060" >> gerris.tex
+    if cat <<EOF | gnuplot ; then :
+      set term postscript eps color lw 3 solid 20
+      set output 'convergence.eps'
+      set xlabel 'Number of grid points'
+      set ylabel 'Relative RMS error'
+      set logscale
+      set grid
+      plot [5:200][1e-4:1]'gerris.tex' u (2**(\$0 + 2)):1 t "Gerris" w lp, 'prost.tex' u (2**(\$0 + 2)):1 t "PROST" w lp, 'markers.tex' u (2**(\$0 + 2)):1 t "Markers" w lp, 'clsvof.tex' u (2**(\$0 + 2)):1 t "CLSVOF" w lp, 'surfer.tex' u (2**(\$0 + 2)):1 t "Surfer" w lp, 2./x**2 t "Second order"
+EOF
+    else
+	exit 1
+    fi
 fi
 
 if cat <<EOF | python ; then :

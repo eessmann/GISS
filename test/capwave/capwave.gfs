@@ -13,7 +13,7 @@
 # Table \ref{convergence} shows the convergence of various solvers as
 # a function of resolution: Gerris, the marker technique of
 # \cite{popinet99}, Surfer \cite{gueyffier98}, PROST and CLSVOF
-# \cite{gerlach2006}.
+# \cite{gerlach2006}. The same data is represented on Figure \ref{convergence}.
 #
 # The time-evolution of the amplitude given by Prosperetti's theory
 # and Gerris ($64^2$) is given on Figure \ref{amplitude}.
@@ -25,13 +25,22 @@
 # \begin{tabular}{|l|ccccc|} \hline
 # Method & $8^2$ & $16^2$ & $32^2$ & $64^2$ & $128^2$ \\ \hline
 # \input{convergence.tex} & 0.000545 \\
-# Markers & 0.3018 & 0.0778 & 0.0131 & 0.0082 & 0.00645 \\
-# Surfer & - & - & 0.1168 & 0.0132 & 0.007 \\
-# PROST & 0.2960 & 0.0818 & 0.0069 & 0.0018 \\
-# CLSVOF & 0.3169 & 0.0991 & 0.0131 & 0.0033 \\ \hline
+# \input{markers.tex} \\
+# \input{surfer.tex} \\
+# \input{prost.tex} \\
+# \input{clsvof.tex} \\ \hline
 # \end{tabular}
 # \end{center}
 # \end{table}
+#
+# \begin{figure}[htbp]
+# \caption{\label{convergence}Convergence of the RMS error as a
+# function of resolution (number of grid points per wavelength) for
+# the methods indicated in the legend.}
+# \begin{center}
+# \includegraphics[width=\hsize]{convergence.eps}
+# \end{center}
+# \end{figure}
 #
 # \begin{figure}[htbp]
 # \caption{\label{amplitude}Evolution of the amplitude of the capillary wave as a
@@ -44,8 +53,8 @@
 # Author: St\'ephane Popinet
 # Command: sh capwave.sh capwave.gfs
 # Version: 1.1.0
-# Required files: capwave.sh convergence.ref prosperetti
-# Generated files: convergence.tex amplitude.eps
+# Required files: capwave.sh convergence.ref prosperetti markers.tex surfer.tex prost.tex clsvof.tex
+# Generated files: convergence.tex amplitude.eps convergence.eps markers.tex surfer.tex prost.tex clsvof.tex
 #
 3 5 GfsSimulation GfsBox GfsGEdge {} {
   Time { end = 2.2426211256 }
