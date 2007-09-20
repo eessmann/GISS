@@ -13,7 +13,7 @@
 # Table \ref{convergence} shows the convergence of various solvers as
 # a function of resolution: Gerris, the marker technique of
 # \cite{popinet99}, Surfer \cite{gueyffier98}, PROST and CLSVOF
-# \cite{gerlach2006}. The same data is represented on Figure \ref{convergence}.
+# \cite{gerlach2006}. The same data is represented on Figure \ref{fig-convergence}.
 #
 # The time-evolution of the amplitude given by Prosperetti's theory
 # and Gerris ($64^2$) is given on Figure \ref{amplitude}.
@@ -34,7 +34,7 @@
 # \end{table}
 #
 # \begin{figure}[htbp]
-# \caption{\label{convergence}Convergence of the RMS error as a
+# \caption{\label{fig-convergence}Convergence of the RMS error as a
 # function of resolution (number of grid points per wavelength) for
 # the methods indicated in the legend.}
 # \begin{center}
