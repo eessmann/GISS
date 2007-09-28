@@ -1475,6 +1475,15 @@ static void add_norm (const FttCell * cell, gpointer * data)
   gfs_norm_add (n, GFS_VARIABLE (cell, v->i), gfs_cell_volume (cell));
 }
 
+static void add_norm_weighted (FttCell * cell, gpointer * data)
+{
+  GfsNorm * n = data[0];
+  GfsVariable * v = data[1];
+  GfsFunction * w = data[2];
+
+  gfs_norm_add (n, GFS_VARIABLE (cell, v->i), gfs_cell_volume (cell)*gfs_function_value (w, cell));
+}
+
 #ifdef HAVE_MPI
 static void norm_reduce (void * i, void * o, 
 			 int * len,
@@ -1514,23 +1523,26 @@ static void domain_norm_reduce (GfsDomain * domain, GfsNorm * n)
  * gfs_domain_norm_variable:
  * @domain: the domain to obtain norm from.
  * @v: a #GfsVariable.
+ * @w: a #GfsFunction or %NULL.
  * @flags: which types of cells are to be visited.
  * @max_depth: maximum depth of the traversal.
  *
  * Traverses the domain defined by @domain using gfs_domain_cell_traverse()
  * and gathers norm statistics about variable @v.
  *
- * The norm is weighted by the volume of each cell.
+ * The norm is weighted by the volume of each cell times the value of
+ * function @w (if @w is not %NULL).
  *
  * Returns: a #GfsNorm containing the norm statistics about @v.
  */
 GfsNorm gfs_domain_norm_variable (GfsDomain * domain,
 				  GfsVariable * v,
+				  GfsFunction * w,
 				  FttTraverseFlags flags,
 				  gint max_depth)
 {
   GfsNorm n;
-  gpointer data[2];
+  gpointer data[3];
 
   g_return_val_if_fail (domain != NULL, n);
   g_return_val_if_fail (v != NULL, n);
@@ -1538,8 +1550,13 @@ GfsNorm gfs_domain_norm_variable (GfsDomain * domain,
   gfs_norm_init (&n);
   data[0] = &n;
   data[1] = v;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
-			   (FttCellTraverseFunc) add_norm, data);
+  data[2] = w;
+  if (w)
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
+			      (FttCellTraverseFunc) add_norm_weighted, data);
+  else
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
+			      (FttCellTraverseFunc) add_norm, data);
 #ifdef HAVE_MPI
   domain_norm_reduce (domain, &n);
 #endif /* HAVE_MPI */

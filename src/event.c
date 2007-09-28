@@ -1436,7 +1436,7 @@ static gboolean gfs_event_stop_event (GfsEvent * event, GfsSimulation * sim)
       gfs_domain_cell_traverse (domain,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) diff, s);
-      n = gfs_domain_norm_variable (domain, s->oldv, FTT_TRAVERSE_LEAFS, -1);
+      n = gfs_domain_norm_variable (domain, s->oldv, NULL, FTT_TRAVERSE_LEAFS, -1);
       if (n.infty <= s->max)
 	sim->time.end = sim->time.t;
       if (s->diff) {

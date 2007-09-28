@@ -174,6 +174,7 @@ void         gfs_domain_stats_balance         (GfsDomain * domain,
 					       GtsRange * mpiwait);
 GfsNorm      gfs_domain_norm_variable         (GfsDomain * domain,
 					       GfsVariable * v,
+					       GfsFunction * w,
 					       FttTraverseFlags flags,
 					       gint max_depth);
 GfsNorm      gfs_domain_norm_residual         (GfsDomain * domain,

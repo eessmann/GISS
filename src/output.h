@@ -264,6 +264,7 @@ struct _GfsOutputErrorNorm {
   /*< public >*/
   GfsFunction * s;
   gboolean unbiased;
+  GfsFunction * w;
 };
 
 #define GFS_OUTPUT_ERROR_NORM(obj)            GTS_OBJECT_CAST (obj,\

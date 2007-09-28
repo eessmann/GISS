@@ -564,7 +564,7 @@ int main (int argc, char * argv[])
     GtsRange s;
 
     norm = gfs_domain_norm_variable (GFS_DOMAIN (s1),
-				     var1, FTT_TRAVERSE_LEAFS, -1);
+				     var1, NULL, FTT_TRAVERSE_LEAFS, -1);
     s = gfs_domain_stats_variable (GFS_DOMAIN (s1),
 				   var1, FTT_TRAVERSE_LEAFS, -1);
     fprintf (stderr, 
@@ -575,7 +575,7 @@ int main (int argc, char * argv[])
 	     norm.first, norm.second, norm.infty, norm.w,
 	     s.min, s.mean, s.stddev, s.max);
     norm = gfs_domain_norm_variable (GFS_DOMAIN (s2),
-				    var2, FTT_TRAVERSE_LEAFS, -1);
+				     var2, NULL, FTT_TRAVERSE_LEAFS, -1);
     s = gfs_domain_stats_variable (GFS_DOMAIN (s2),
 				   var2, FTT_TRAVERSE_LEAFS, -1);
     fprintf (stderr, 
@@ -689,7 +689,7 @@ int main (int argc, char * argv[])
 	     norm.first, norm.second, norm.infty, norm.w);
     if (refined_error) {
       norm = gfs_domain_norm_variable (GFS_DOMAIN (s1),
-				       e, FTT_TRAVERSE_LEVEL,
+				       e, NULL, FTT_TRAVERSE_LEVEL,
 				       gfs_domain_depth (GFS_DOMAIN (s1)));
       fprintf (stderr, 
 	  "refined err first: %10.3e second: %10.3e infty: %10.3e w: %g\n",

@@ -267,7 +267,7 @@ void gfs_write_gts (GfsDomain * domain,
 		       vertex_cell_face_class ());
   gts_surface_add_face (s, gts_face_new (gts_face_class (), e1, e2, e3));
 
-  norm = gfs_domain_norm_variable (domain, v, flags, level);
+  norm = gfs_domain_norm_variable (domain, v, NULL, flags, level);
   if (norm.infty == 0.)
     norm.infty = 1.;
 #if FTT_2D
