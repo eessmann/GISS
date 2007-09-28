@@ -520,6 +520,8 @@ static void face_overlaps_box (GtsTriangle * t, gpointer * data)
   }
 }
 
+#define SIGN(v) ((v) > 0. ? 1 : (v) < 0. ? -1 : 0)
+
 /**
  * gfs_cell_is_cut:
  * @cell: a #FttCell.
@@ -550,8 +552,29 @@ GfsSurface * gfs_cell_is_cut (FttCell * cell, GfsSurface * s, gboolean flatten)
     s2->s = s1;
     return s2;
   }
-  else if (s->f)
-    return s;
+  else if (s->f) {
+    if (!FTT_CELL_IS_LEAF (cell))
+      return s;
+    FttVector p;
+    gdouble h = ftt_cell_size (cell)/2.;
+    ftt_cell_pos (cell, &p);
+    gint i, j, k, sign = 0;
+#if FTT_2D
+    k = 0;
+#else
+    for (k = -1; k <= 1; k += 2)
+#endif
+      for (i = -1; i <= 1; i += 2)
+	for (j = -1; j <= 1; j += 2) {
+	  GtsPoint o;
+	  o.x = p.x + h*i; o.y = p.y + h*j; o.z = p.z + h*k;
+	  gdouble v = gfs_surface_implicit_value (s, o);
+	  if (sign && sign*SIGN(v) <= 0)
+	    return s;
+	  sign = SIGN(v);
+	}
+    return NULL;
+  }
   g_assert_not_reached ();
   return NULL;
 }
