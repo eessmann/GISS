@@ -1702,7 +1702,7 @@ void gfs_norm_add (GfsNorm * n, gdouble val, gdouble weight)
   if (val < G_MAXDOUBLE) {
     n->bias += weight*val;
     val = fabs (val);
-    if (val > n->infty)
+    if (weight != 0. && val > n->infty)
       n->infty = val;
     n->first += weight*val;
     n->second += weight*val*val;
