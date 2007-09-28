@@ -5,6 +5,9 @@ function replace_params(s, b,    i)
     return s;
 }
 
+BEGIN {
+    print "m4_changecom()m4_dnl";
+}
 {
     if ($1 == "Define") {
 	macro = $2;
