@@ -149,10 +149,6 @@ gdouble               gfs_cell_dirichlet_gradient_flux (FttCell * cell,
 gdouble               gfs_cell_dirichlet_value         (FttCell * cell,
 							GfsVariable * v,
 							gint max_level);
-void                  gfs_face_gradient_flux_centered(const FttCellFace * face,
-						      GfsGradient * g,
-						      guint v,
-						      gint max_level);
 
 void                  gfs_normal_divergence          (FttCell * cell,
 						      GfsVariable * v);

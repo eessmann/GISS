@@ -38,7 +38,7 @@
   OutputProjectionStats { istep = 1 } stderr
 
   # Store in SU the integral over time of U
-  # At the end of the simulation U/(Total integration time) = U/1.
+  # At the end of the simulation SU/(Total integration time) = SU/1.
   # is the mean velocity
   EventSum { start = 1 istep = 1 } U SU
   EventSum { start = 1 istep = 1 } V SV

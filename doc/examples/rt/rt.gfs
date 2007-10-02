@@ -45,7 +45,7 @@
   # The tracer T is used to track both phases
   VariableTracerVOF {} T
  
-  # The initial sinusoidal interface (translated by -0.5 along the y-axis)
+  # The initial sinusoidal interface (translated by 0.5 along the y-axis)
   InitFraction {} T (0.05*cos (2.*M_PI*x) + y) { ty = 0.5 }
 
   AdaptVorticity { istep = 1 } { maxlevel = 7 cmax = 2e-2 }

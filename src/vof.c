@@ -1181,7 +1181,7 @@ static void vof_face_value (FttCellFace * face, VofParms * p)
     g_assert_not_reached ();
   }
 }
-  
+
 static void vof_flux (FttCellFace * face, VofParms * p)
 {
   gdouble un = GFS_FACE_NORMAL_VELOCITY (face)*p->par->dt/ftt_cell_size (face->cell);
@@ -2018,7 +2018,7 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
       return kappa;
 
   /* Could not compute curvature from the simple algorithm along any direction:
-   * Try circle fitting of the collected interface positions */
+   * Try parabola fitting of the collected interface positions */
 
   if (independent_positions (interface, n) < 3*(FTT_DIMENSION - 1))
     return G_MAXDOUBLE;
