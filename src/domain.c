@@ -267,9 +267,9 @@ static void add_item (gpointer item, GPtrArray * a)
   g_ptr_array_add (a, item);
 }
 
-static gint compare_boxes (const GfsBox ** b1, const GfsBox ** b2)
+static int compare_boxes (const void * b1, const void * b2)
 {
-  return (*b1)->id < (*b2)->id ? -1 : 1;
+  return (*(GfsBox **)b1)->id < (*(GfsBox **)b2)->id ? -1 : 1;
 }
 
 static void domain_foreach (GtsContainer * c, 
@@ -279,8 +279,10 @@ static void domain_foreach (GtsContainer * c,
   GPtrArray * a = g_ptr_array_new ();
   (* GTS_CONTAINER_CLASS (GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class)->foreach)
     (c, (GtsFunc) add_item, a);
-  g_ptr_array_sort (a, (GCompareFunc) compare_boxes);
-  g_ptr_array_foreach (a, (GFunc) func, data);
+  qsort (a->pdata, a->len, sizeof (gpointer), compare_boxes);
+  guint i;
+  for (i = 0; i < a->len; i++)
+    (* func) (a->pdata[i], data);
   g_ptr_array_free (a, TRUE);
 }
 
