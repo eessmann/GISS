@@ -194,6 +194,17 @@ static void gfs_adapt_read (GtsObject ** o, GtsFile * fp)
       if (fp->type == GTS_ERROR)      
 	return;
     }
+    else if (!strcmp (fp->token->str, "cfactor")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      a->cfactor = gfs_read_constant (fp, gfs_object_simulation (*o));
+      if (fp->type == GTS_ERROR)
+	return;
+    }
     else if (!strcmp (fp->token->str, "c")) {
       GfsDomain * domain;
 
@@ -253,6 +264,8 @@ static void gfs_adapt_write (GtsObject * o, FILE * fp)
     fprintf (fp, "cmax = %g ", a->cmax);
   if (a->weight != 1.)
     fprintf (fp, "weight = %g ", a->weight);
+  if (a->cfactor != 4.)
+    fprintf (fp, "cfactor = %g ", a->cfactor);
   if (a->c != NULL)
     fprintf (fp, "c = %s ", a->c->name);
   fputc ('}', fp);
@@ -290,6 +303,7 @@ static void gfs_adapt_init (GfsAdapt * object)
   object->maxcells = G_MAXINT;
   object->cmax = 0.;
   object->weight = 1.;
+  object->cfactor = 4.;
   object->c = NULL;
 }
 
@@ -956,7 +970,7 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
 	return;
       }
       if (level < gfs_function_value (a->minlevel, cell) ||
-	  (* a->cost) (cell, a) > a->cmax/4.)
+	  (* a->cost) (cell, a) > a->cmax/a->cfactor)
 	COARSENABLE (cell, p) = FALSE;
     }
     i = i->next;

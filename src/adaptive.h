@@ -51,7 +51,7 @@ struct _GfsAdapt {
   /*< public >*/
   GfsFunction * minlevel, * maxlevel;
   guint mincells, maxcells;
-  gdouble cmax, weight;
+  gdouble cmax, weight, cfactor;
   GfsVariable * c;
   GtsKeyFunc cost;
 };
