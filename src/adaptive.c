@@ -584,16 +584,49 @@ GfsEventClass * gfs_adapt_curvature_class (void)
   return klass;
 }
 
-#define CELL_COST(cell) (GFS_VARIABLE (cell, p->costv->i))
-#define CELL_HCOARSE(c) (GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (c, p->hcoarsev->i)))
-#define CELL_HFINE(c)   (GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (c, p->hfinev->i)))
-
-static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
+static void refine_cell_corner (FttCell * cell, gpointer * adata)
 {
   if (ftt_refine_corner (cell))
-    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, 
-			    domain);
+    ftt_cell_refine_single (cell, adata[0], adata[1]);
 }
+
+/**
+ * @domain: a #GfsDomain.
+ * @depth: the depth of @domain.
+ * @init: a #FttCellInitFunc.
+ * @data: user data to pass to @init.
+ *
+ * Force the grading of the tree hierarchy of domain, matches the
+ * boundaries, recomputes merged cells and applies the boundary
+ * conditions for all variables.
+ */
+void gfs_domain_reshape (GfsDomain * domain, guint depth, FttCellInitFunc init, gpointer data)
+{
+  gpointer adata[2];
+  gint l;
+
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (init != NULL);
+
+  adata[0] = init;
+  adata[1] = data;
+  for (l = depth - 2; l >= 0; l--)
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
+			      (FttCellTraverseFunc) refine_cell_corner,
+			      adata);
+  gfs_domain_match (domain);
+  gfs_set_merged (domain);
+  GSList * i = domain->variables;
+  while (i) {
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
+    i = i->next;
+  }
+}
+
+#define CELL_COST(cell) (GFS_VARIABLE (cell, p->costv->i))
+#define CELL_HCOARSE(c) (GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (c, p->hcoarsev->i)))
+#define CELL_HFINE(c) (GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (c, p->hfinev->i)))
 
 static FttCell * remove_top_coarse (GtsEHeap * h, gdouble * cost, GfsVariable * hcoarse)
 {
@@ -1003,18 +1036,7 @@ void gfs_simulation_adapt (GfsSimulation * simulation)
     else
       adapt_local (simulation, &depth, &simulation->adapts_stats);
 
-    gint l;
-    for (l = depth - 2; l >= 0; l--)
-      gfs_domain_cell_traverse (domain, 
-				FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-				(FttCellTraverseFunc) refine_cell_corner, domain);
-    gfs_domain_match (domain);
-    gfs_set_merged (domain);
-    i = domain->variables;
-    while (i) {
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
-      i = i->next;
-    }
+    gfs_domain_reshape (domain, depth, (FttCellInitFunc) gfs_cell_fine_init, domain);
   }
 
   gfs_domain_timer_stop (domain, "adapt");
