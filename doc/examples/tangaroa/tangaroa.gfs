@@ -22,6 +22,8 @@
 #
 2 1 GfsSimulation GfsBox GfsGEdge {} {
   Time { end = 2 }
+  # Insert the solid boundary defined explicitly by the
+  # triangulated surface contained in the GTS file tangaroa.gts
   Solid tangaroa.gts
   Refine 5
   RefineSolid 9

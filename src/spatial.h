@@ -37,4 +37,14 @@ static double sphere (double xc, double yc, double zc, double r)
   return (_x - xc)*(_x - xc) + (_y - yc)*(_y - yc) + (_z - zc)*(_z - zc) - r*r;
 }
 
+static double cube (double xc, double yc, double zc, double h)
+{
+  double vmax = (_x - xc)*(_x - xc) - h*h/4.;
+  double v = (_y - yc)*(_y - yc) - h*h/4.;
+  if (v > vmax) vmax = v;
+  v = (_z - zc)*(_z - zc) - h*h/4.;
+  if (v > vmax) vmax = v;
+  return vmax;
+}
+
 #endif /* __SPATIAL_H__ */
