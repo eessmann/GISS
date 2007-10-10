@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include "vof.h"
 #include "variable.h"
+#include "adaptive.h"
 #include "graphic.h"
 
 #define THRESHOLD(c) {if ((c) < 0.) c = 0.; else if ((c) > 1.) c = 1.;}
@@ -1085,6 +1086,8 @@ typedef struct {
   GfsAdvectionParams * par;
   GfsVariable * dV;
   FttComponent c;
+  GfsDomain * domain;
+  guint depth, too_coarse;
 } VofParms;
 
 static gdouble plane_volume_shifted (FttVector m, gdouble alpha, FttVector p[2])
@@ -1151,6 +1154,111 @@ static gdouble coarse_fraction (FttCellFace * face, VofParms * p, gdouble un)
       }
     (&q[1].x)[face->d/2] = un;
     return plane_volume_shifted (m, alpha, q);
+  }
+}
+
+#define TOO_COARSE(cell) (GFS_VARIABLE (cell, p->par->fv->i))
+
+/* Marks coarse cells which should be refined because an interface in
+   a neighboring finer cell will be advected into them */
+static void face_too_coarse (FttCellFace * face, VofParms * p)
+{
+  if (ftt_face_type (face) == FTT_FINE_COARSE) {
+    gdouble un = GFS_FACE_NORMAL_VELOCITY (face);
+    if (!FTT_FACE_DIRECT (face))
+      un = - un;
+    if (un > 0.) {
+      gdouble f = GFS_VARIABLE (face->neighbor, p->par->v->i);
+      if (GFS_IS_FULL (f) &&
+	  fine_fraction (face, p, un*p->par->dt/ftt_cell_size (face->cell)) != f) {
+	p->too_coarse++;
+	TOO_COARSE (face->neighbor) = TRUE;
+      }
+    }
+  }
+}
+
+static void vof_cell_fine_init (FttCell * parent, VofParms * p)
+{
+  gfs_cell_fine_init (parent, p->domain);
+
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++) {
+    FttDirection od = FTT_OPPOSITE_DIRECTION (d);
+    FttCellChildren dchild;
+    guint i, n = ftt_cell_children_direction (parent, d, &dchild);
+    for (i = 0; i < n; i++) {
+      g_assert (dchild.c[i]);
+      FttCell * neighbor = ftt_cell_neighbor (dchild.c[i], d);
+      if (neighbor)
+	GFS_STATE (dchild.c[i])->f[d].un = GFS_STATE (neighbor)->f[od].un;
+    }
+  }
+
+  FttCellChildren child;
+  gdouble div[FTT_CELLS], P[FTT_CELLS];
+  guint n;
+  ftt_cell_children (parent, &child);
+  for (n = 0; n < FTT_CELLS; n++) {
+    g_assert (child.c[n]);
+    GFS_VARIABLE (child.c[n], p->dV->i) = GFS_VARIABLE (parent, p->dV->i);
+    div[n] = 0.;
+    FttComponent c;
+    for (c = 0; c < FTT_DIMENSION; c++)
+      div[n] += GFS_STATE (child.c[n])->f[2*c].un - GFS_STATE (child.c[n])->f[2*c + 1].un;
+  }
+
+#if FTT_2D
+  P[0] = 0.;
+  P[1] = (3.*div[1] + div[2])/4. + div[3]/2.;
+  P[2] = (div[1] + 3.*div[2])/4. + div[3]/2.;
+  P[3] = (div[1] + div[2])/2. + div[3];
+  GFS_STATE (child.c[0])->f[0].un = GFS_STATE (child.c[1])->f[1].un = P[1] - P[0];
+  GFS_STATE (child.c[2])->f[0].un = GFS_STATE (child.c[3])->f[1].un = P[3] - P[2];
+  GFS_STATE (child.c[0])->f[3].un = GFS_STATE (child.c[2])->f[2].un = P[0] - P[2];
+  GFS_STATE (child.c[1])->f[3].un = GFS_STATE (child.c[3])->f[2].un = P[1] - P[3];
+#else /* 3D */
+  static gdouble m[7][7] = {{7./12.,5./24.,3./8.,5./24.,3./8.,1./4.,1./3.},
+			    {5./24.,7./12.,3./8.,5./24.,1./4.,3./8.,1./3.}, 
+			    {3./8.,3./8.,3./4.,1./4.,3./8.,3./8.,1./2.}, 
+			    {5./24.,5./24.,1./4.,7./12.,3./8.,3./8.,1./3.}, 
+			    {3./8.,1./4.,3./8.,3./8.,3./4.,3./8.,1./2.}, 
+			    {1./4.,3./8.,3./8.,3./8.,3./8.,3./4.,1./2.}, 
+			    {1./3.,1./3.,1./2.,1./3.,1./2.,1./2.,5./6.}};
+  P[0] = 0.;
+  guint i, j;
+  for (i = 0; i < 7; i++) {
+    P[i + 1] = 0.;
+    for (j = 0; j < 7; j++)
+      P[i + 1] += m[i][j]*div[j + 1];
+  }
+  GFS_STATE (child.c[0])->f[0].un = GFS_STATE (child.c[1])->f[1].un = P[1] - P[0];
+  GFS_STATE (child.c[2])->f[0].un = GFS_STATE (child.c[3])->f[1].un = P[3] - P[2];
+  GFS_STATE (child.c[0])->f[3].un = GFS_STATE (child.c[2])->f[2].un = P[0] - P[2];
+  GFS_STATE (child.c[1])->f[3].un = GFS_STATE (child.c[3])->f[2].un = P[1] - P[3];
+
+  GFS_STATE (child.c[4])->f[0].un = GFS_STATE (child.c[5])->f[1].un = P[5] - P[4];
+  GFS_STATE (child.c[6])->f[0].un = GFS_STATE (child.c[7])->f[1].un = P[7] - P[6];
+  GFS_STATE (child.c[4])->f[3].un = GFS_STATE (child.c[6])->f[2].un = P[4] - P[6];
+  GFS_STATE (child.c[5])->f[3].un = GFS_STATE (child.c[7])->f[2].un = P[5] - P[7];
+
+  GFS_STATE (child.c[0])->f[5].un = GFS_STATE (child.c[4])->f[4].un = P[0] - P[4];
+  GFS_STATE (child.c[1])->f[5].un = GFS_STATE (child.c[5])->f[4].un = P[1] - P[5];
+  GFS_STATE (child.c[2])->f[5].un = GFS_STATE (child.c[6])->f[4].un = P[2] - P[6];
+  GFS_STATE (child.c[3])->f[5].un = GFS_STATE (child.c[7])->f[4].un = P[3] - P[7];
+#endif /* 3D */
+}
+
+static void refine_too_coarse (FttCell * cell, VofParms * p)
+{
+  if (TOO_COARSE (cell)) {
+    guint level = ftt_cell_level (cell);
+
+    TOO_COARSE (cell) = FALSE;
+    ftt_cell_refine_corners (cell, (FttCellInitFunc) vof_cell_fine_init, p);
+    ftt_cell_refine_single (cell, (FttCellInitFunc) vof_cell_fine_init, p);
+    if (level + 1 > p->depth)
+      p->depth = level + 1;
   }
 }
 
@@ -1261,6 +1369,20 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   par->fv = gfs_temporary_variable (domain);
   for (c = 0; c < FTT_DIMENSION; c++) {
     p.c = (cstart + c) % FTT_DIMENSION;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
+    p.too_coarse = 0;
+    gfs_domain_face_traverse (domain, p.c,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) face_too_coarse, &p);
+    if (p.too_coarse > 0) {
+      p.depth = 0;
+      p.domain = domain;
+      gfs_domain_cell_traverse (domain,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) refine_too_coarse, &p);
+      gfs_domain_reshape (domain, p.depth, (FttCellInitFunc) vof_cell_fine_init, &p);
+    }
     gfs_domain_face_traverse (domain, p.c,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) vof_face_value, &p);
