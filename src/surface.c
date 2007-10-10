@@ -527,11 +527,12 @@ static void face_overlaps_box (GtsTriangle * t, gpointer * data)
  * @cell: a #FttCell.
  * @s: a #GfsSurface.
  * @flatten: if set to %TRUE, @cell is flattened in the z direction.
+ * @maxlevel: the maximum (virtual) cell level to consider.
  *
  * Returns: a (possibly new) #GfsSurface containing a subset of @s which may
  * intersect @cell or %NULL if @s does not intersect @cell.
  */
-GfsSurface * gfs_cell_is_cut (FttCell * cell, GfsSurface * s, gboolean flatten)
+GfsSurface * gfs_cell_is_cut (FttCell * cell, GfsSurface * s, gboolean flatten, gint maxlevel)
 {
   g_return_val_if_fail (cell != NULL, NULL);
   g_return_val_if_fail (s != NULL, NULL);
@@ -558,16 +559,17 @@ GfsSurface * gfs_cell_is_cut (FttCell * cell, GfsSurface * s, gboolean flatten)
     FttVector p;
     gdouble h = ftt_cell_size (cell)/2.;
     ftt_cell_pos (cell, &p);
-    gint i, j, k, sign = 0;
-#if FTT_2D
-    k = 0;
-#else
-    for (k = -1; k <= 1; k += 2)
+    gint i, j, k = 0, sign = 0, n = 1;
+    i = maxlevel - ftt_cell_level (cell);
+    while (i-- > 0)
+      n *= 2;
+#if !FTT_2D
+    for (k = - n; k <= n; k += 2)
 #endif
-      for (i = -1; i <= 1; i += 2)
-	for (j = -1; j <= 1; j += 2) {
+      for (i = - n; i <= n; i += 2)
+	for (j = - n; j <= n; j += 2) {
 	  GtsPoint o;
-	  o.x = p.x + h*i; o.y = p.y + h*j; o.z = p.z + h*k;
+	  o.x = p.x + i*h/n; o.y = p.y + j*h/n; o.z = p.z + k*h/n;
 	  gdouble v = gfs_surface_implicit_value (s, o);
 	  if (sign && sign*SIGN(v) <= 0)
 	    return s;
@@ -587,7 +589,7 @@ static void cell_traverse_cut (FttCell * cell,
 			       gpointer data,
 			       gboolean flatten)
 {
-  GfsSurface * s1 = gfs_cell_is_cut (cell, s, flatten && FTT_CELL_IS_LEAF (cell));
+  GfsSurface * s1 = gfs_cell_is_cut (cell, s, flatten && FTT_CELL_IS_LEAF (cell), -1);
 
   if (s1 == NULL)
     return;

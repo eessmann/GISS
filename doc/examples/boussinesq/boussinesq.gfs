@@ -24,8 +24,8 @@
 #
 # Author: St\'ephane Popinet
 # Command: gerris2D boussinesq.gfs | gfsview2D boussinesq.gfv | ppm2mpeg > t.mpg
-# Version: 1.1.0
-# Required files: cylinder.gts boussinesq.gfv
+# Version: 1.1.2
+# Required files: boussinesq.gfv
 # Running time: 60 minutes
 # Generated files: t.mpg t.eps
 #
@@ -35,9 +35,9 @@
   # Use an initial refinement of 8 levels around the solid boundary
   RefineSolid 8
 
-  # Insert the solid boundary defined by cylinder.gts
-  # shift the cylinder vertically
-  Solid cylinder.gts { ty = 0.25 }
+  # Insert the solid boundary defined implicitly by the 
+  # ellipse() function
+  Solid (ellipse(0.,-0.15,1./16.,1./16.))
 
   # Add a passive tracer called T
   VariableTracer T

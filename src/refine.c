@@ -176,18 +176,17 @@ static gdouble solid_curvature (FttCell * cell, FttCellFace * face,
 				GfsDomain * domain, GfsSurface * s)
 {
   KappaData d;
-  d.s = s->s;
   d.kappa = gfs_solid_is_thin (cell, s) ? 1./ftt_cell_size (cell) : 0.;
+  d.s = s->s;
   gts_surface_foreach_vertex (d.s, (GtsFunc) max_kappa, &d);
   return d.kappa;
 }
 
 static void refine_solid_read (GtsObject ** o, GtsFile * fp)
 {
+  GfsRefineSolid * refine = GFS_REFINE_SOLID (*o);
   GfsDerivedVariableInfo v = { "SolidCurvature", "curvature of the solid boundary",
 			       solid_curvature };
-  GfsRefineSolid * refine = GFS_REFINE_SOLID (*o);
-
   refine->v = gfs_domain_add_derived_variable (GFS_DOMAIN (gfs_object_simulation (*o)), v);
   if (!refine->v) {
     gts_file_error (fp, "derived variable `SolidCurvature' already defined");
@@ -212,6 +211,13 @@ static void refine_cut_cell (FttCell * cell, GfsSurface * s, RefineCut * p)
   GFS_REFINE_SOLID (p->refine)->v->data = NULL;
 }
 
+static void refine_implicit_cell (FttCell * cell, RefineCut * p)
+{
+  guint maxlevel = gfs_function_value (p->refine->maxlevel, cell);
+  if (ftt_cell_level (cell) < maxlevel && gfs_cell_is_cut (cell, p->surface, FALSE, maxlevel))
+    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, p->domain);
+}
+
 static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
 {
   if (sim->solids) {
@@ -226,7 +232,9 @@ static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
 				 FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 				 (FttCellTraverseCutFunc) refine_cut_cell, &p);
       else
-	g_warning ("GfsRefineSolid only works with explicit surfaces");
+	gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				  (FttCellTraverseFunc) refine_implicit_cell, &p);
       i = i->next;
     }
   }
@@ -293,14 +301,24 @@ static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
   p.refine = refine;
   p.domain = GFS_DOMAIN (sim);
   p.surface = GFS_REFINE_SURFACE (refine)->surface;
-  if (p.surface->twod)
-    gfs_domain_traverse_cut_2D (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
-				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-				(FttCellTraverseCutFunc) refine_cut_cell, &p);
-  else
-    gfs_domain_traverse_cut (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
-			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			     (FttCellTraverseCutFunc) refine_cut_cell, &p);
+  if (p.surface->twod) {
+    if (p.surface->s)
+      gfs_domain_traverse_cut_2D (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
+				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+				  (FttCellTraverseCutFunc) refine_cut_cell, &p);
+    else
+      g_assert_not_implemented ();
+  }
+  else {
+    if (p.surface->s)
+      gfs_domain_traverse_cut (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
+			       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			       (FttCellTraverseCutFunc) refine_cut_cell, &p);
+    else
+      gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) refine_implicit_cell, &p);
+  }
 }
 
 static void gfs_refine_surface_class_init (GfsRefineClass * klass)

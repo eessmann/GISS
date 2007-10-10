@@ -753,7 +753,7 @@ static void cell_traverse_leafs (FttCell * cell,
 
   if (FTT_CELL_IS_LEAF (cell))
     (* func) (cell, data);
-  else {
+  if (!FTT_CELL_IS_LEAF (cell)) {
     FttOct * children = cell->children;
     guint n;
 

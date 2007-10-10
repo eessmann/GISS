@@ -69,7 +69,8 @@ void               gfs_surface_segment_normal (GfsSurface * s,
 					       GtsVector n);
 GfsSurface *       gfs_cell_is_cut            (FttCell * cell,
 					       GfsSurface * s,
-					       gboolean flatten);
+					       gboolean flatten,
+					       gint maxlevel);
 typedef void       (* FttCellTraverseCutFunc) (FttCell * cell,
 					       GfsSurface * s,
 					       gpointer data);

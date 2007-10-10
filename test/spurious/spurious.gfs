@@ -68,26 +68,30 @@
 #
 # Author: St\'ephane Popinet
 # Command: sh spurious.sh spurious.gfs
-# Version: 1.0.0
+# Version: 1.1.2
 # Required files: spurious.sh convergence.ref kconvergence.ref
 # Generated files: laplace.eps curvature.eps convergence.eps kconvergence.eps
 #
+
+Define CIRCLE (ellipse (-0.5,0.5,0.4,0.4))
+Define MU sqrt(0.8/LAPLACE)
+
 1 0 GfsSimulation GfsBox GfsGEdge {} {
   Time { end = TMAX }
   Refine LEVEL
-  RefineSurface 10 circle.gts
+  RefineSurface {return 10;} CIRCLE
 
   ApproxProjectionParams { tolerance = 1e-6 }
   ProjectionParams { tolerance = 1e-6 }
   AdvectionParams { scheme = none }
 
-  VariableTracerVOF {} T
-  VariableCurvature {} K T
-  SourceTension {} T 1 K
-  SourceDiffusion {} U MU
-  SourceDiffusion {} V MU
+  VariableTracerVOF T
+  VariableCurvature K T
+  SourceTension T 1 K
+  SourceDiffusion U MU
+  SourceDiffusion V MU
 
-  InitFraction {} T circle.gts
+  InitFraction T CIRCLE
   Init {} { Tref = T }
 
   AdaptGradient { istep = 1 } { cmax = 1e-6 maxlevel = LEVEL } T
