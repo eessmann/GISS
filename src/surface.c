@@ -439,23 +439,28 @@ guint gfs_surface_segment_intersection (GfsSurface * s,
       }
       I->x = (v1*t2 - v2*t1)/(v1 - v2);
       guint n = 0;
+      gint side = 0;
       do {
 	t = I->x;
 	gdouble v = gfs_surface_implicit_value (s, segment_intersection (I));
 	if (v < 0.) {
 	  v1 = v; t1 = I->x;
+	  if (side == -1) v2 /= 2.;
+	  side = -1;
 	}
 	else {
 	  v2 = v; t2 = I->x;
+	  if (side == +1) v1 /= 2.;
+	  side = +1;
 	}
 	if (v2 > v1)
 	  I->x = (v1*t2 - v2*t1)/(v1 - v2);
 	n++;
       }
-      while (fabs (t - I->x) > 1e-3 && n < 10);
-      if (fabs (t - I->x) > 1e-3)
+      while (fabs (t - I->x) > 1e-5 && n < 100);
+      if (fabs (t - I->x) > 1e-5)
 	g_warning ("gfs_surface_segment_intersection(): convergence could not be reached\n"
-		   "after %d iterations", n);
+		   "after %d iterations, error is %g", n, fabs (t - I->x));
     }
   }
   return I->n;
