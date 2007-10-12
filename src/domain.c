@@ -1991,8 +1991,12 @@ static void box_boundary_locate (GfsBox * box, LocateArgs * a)
   FttDirection d;
 
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (a->cell == NULL && box->neighbor[d] && GFS_IS_BOUNDARY (box->neighbor[d]))
-      a->cell = ftt_cell_locate (GFS_BOUNDARY (box->neighbor[d])->root, a->target, a->max_depth);
+    if (a->cell == NULL && box->neighbor[d] && GFS_IS_BOUNDARY (box->neighbor[d])) {
+      FttCell * cell = ftt_cell_locate (GFS_BOUNDARY (box->neighbor[d])->root, a->target, 
+					a->max_depth);
+      if (cell && GFS_CELL_IS_BOUNDARY (cell))
+	a->cell = cell;
+    }
 }
 
 /**
