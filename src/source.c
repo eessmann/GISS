@@ -731,12 +731,60 @@ static gdouble source_diffusion_explicit_value (GfsSourceGeneric * s,
   return GFS_VARIABLE (cell, GFS_SOURCE_DIFFUSION_EXPLICIT (s)->s->i);
 }
 
+typedef struct {
+  GfsFunction * alpha;
+  GfsSourceGeneric * s;
+  gdouble dtmax;
+} StabilityParams;
+
+static void cell_diffusion_stability (FttCell * cell,
+				      StabilityParams * par)
+{
+  if (GFS_IS_MIXED (cell))
+    return;
+
+  FttCellFace f;
+  FttCellNeighbors n;
+  gdouble Dmax = 0.;
+  f.cell = cell;
+  ftt_cell_neighbors (cell, &n);
+  for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
+    gdouble D;
+
+    f.neighbor = n.c[f.d];
+    D = gfs_source_diffusion_face (GFS_SOURCE_DIFFUSION (par->s), &f);
+    if (D > Dmax)
+      Dmax = D;
+  }
+
+  gdouble h = ftt_cell_size (cell);
+  if (Dmax > 0.) {
+    gdouble dtmax = h*h/(Dmax*(par->alpha ? gfs_function_value (par->alpha, cell) : 1.));
+    if (dtmax < par->dtmax)
+      par->dtmax = dtmax;
+  }
+}
+
+static gdouble source_diffusion_stability (GfsSourceGeneric * s,
+					   GfsSimulation * sim)
+{
+  StabilityParams par;
+
+  par.s = s;
+  par.dtmax = G_MAXDOUBLE;
+  par.alpha = NULL;
+  gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) cell_diffusion_stability, &par);
+  return par.dtmax;
+}
+
 static void gfs_source_diffusion_explicit_class_init (GfsSourceGenericClass * klass)
 {
   GFS_EVENT_CLASS (klass)->event = gfs_source_diffusion_explicit_event;
   GTS_OBJECT_CLASS (klass)->read = gfs_source_diffusion_explicit_read;
   GTS_OBJECT_CLASS (klass)->destroy = gfs_source_diffusion_explicit_destroy;
   klass->mac_value = klass->centered_value = source_diffusion_explicit_value;
+  klass->stability = source_diffusion_stability;
 }
 
 GfsSourceGenericClass * gfs_source_diffusion_explicit_class (void)
@@ -861,9 +909,23 @@ GfsSourceGenericClass * gfs_source_viscosity_class (void)
 
 /* GfsSourceViscosityExplicit: Object */
 
+static gdouble source_viscosity_stability (GfsSourceGeneric * s,
+					   GfsSimulation * sim)
+{
+  StabilityParams par;
+
+  par.s = s;
+  par.dtmax = G_MAXDOUBLE;
+  par.alpha = sim->physical_params.alpha;
+  gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) cell_diffusion_stability, &par);
+  return par.dtmax;
+}
+
 static void source_viscosity_explicit_class_init (GfsSourceGenericClass * klass)
 {
   klass->mac_value = klass->centered_value = source_viscosity_value;
+  klass->stability = source_viscosity_stability;
 }
 
 GfsSourceGenericClass * gfs_source_viscosity_explicit_class (void)
