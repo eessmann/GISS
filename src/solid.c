@@ -62,8 +62,8 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
   gboolean ins;
   guint o = 0;
   GtsPoint r[2];
-  gdouble a;
-
+  gdouble a, x0 = f->p[0].x, y0 = f->p[0].y;
+  
   solid->a = 0.;
   solid->cm.x = solid->cm.y = solid->cm.z = 0.;
   solid->ca.z = 0.;
@@ -72,12 +72,12 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
   ins = f->s[m].inside < 0;
   for (k = m; k < m + 4; k++) {
     guint i = k % 4, i1 = (i + 1) % 4;
-    gdouble x1 = f->p[i].x, y1 = f->p[i].y, x2 = f->p[i1].x, y2 = f->p[i1].y;
+    gdouble x1 = f->p[i].x - x0, y1 = f->p[i].y - y0, x2 = f->p[i1].x - x0, y2 = f->p[i1].y - y0;
     if (f->s[i].n > 0) {
       g_assert (ins == (f->s[i].inside < 0));
       solid->s[etod[i]] = ins ? f->s[i].x : 1. - f->s[i].x;
-      r[o].x = (1. - f->s[i].x)*x1 + f->s[i].x*x2;
-      r[o].y = (1. - f->s[i].x)*y1 + f->s[i].x*y2;
+      r[o].x = x1 + f->s[i].x*(x2 - x1);
+      r[o].y = y1 + f->s[i].x*(y2 - y1);
       if (ins) {
 	x2 = r[o].x; y2 = r[o].y;
       }
@@ -115,11 +115,13 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
     else
       solid->s[etod[i]] = 0.;
   }
-
+  
   a = solid->a < 0. ? 0. : solid->a/(2.*h->x*h->y);
+  solid->ca.x += x0;
+  solid->ca.y += y0;
   if (a > 1e-4) {
-    solid->cm.x /= 3.*solid->a;
-    solid->cm.y /= 3.*solid->a;
+    solid->cm.x = x0 + solid->cm.x/(3.*solid->a);
+    solid->cm.y = y0 + solid->cm.y/(3.*solid->a);
   }
   else {
     guint n = 0;
@@ -129,10 +131,10 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
     ins = f->s[m].inside < 0;
     for (k = m; k < m + 4; k++) {
       guint i = k % 4, i1 = (i + 1) % 4;
-      gdouble x1 = f->p[i].x, y1 = f->p[i].y, x2 = f->p[i1].x, y2 = f->p[i1].y;
+      gdouble x1 = f->p[i].x - x0, y1 = f->p[i].y - y0, x2 = f->p[i1].x - x0, y2 = f->p[i1].y - y0;
       if (f->s[i].n > 0) {
-	gdouble x = (1. - f->s[i].x)*x1 + f->s[i].x*x2;
-	gdouble y = (1. - f->s[i].x)*y1 + f->s[i].x*y2;
+	gdouble x = x1 + f->s[i].x*(x2 - x1);
+	gdouble y = y1 + f->s[i].x*(y2 - y1);
 
 	g_assert (ins == (f->s[i].inside < 0));
 	solid->cm.x += x;
@@ -152,8 +154,8 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
       }
     }
     g_assert (n > 0);
-    solid->cm.x /= n;
-    solid->cm.y /= n;
+    solid->cm.x = x0 + solid->cm.x/n;
+    solid->cm.y = y0 + solid->cm.y/n;
   }
   solid->a = a;
 }
