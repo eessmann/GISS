@@ -557,8 +557,10 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
     GSList * i = GFS_INIT (event)->f;
 
     while (i) {
+      VarFunc * vf = i->data;
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) init_vf, i->data);
+				(FttCellTraverseFunc) init_vf, vf);
+      gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v);
       i = i->next;
     }
     return TRUE;
