@@ -1444,6 +1444,7 @@ void gfs_domain_stats_balance (GfsDomain * domain,
   gts_range_init (size);
   gts_range_init (boundary);
   gts_range_init (mpiwait);
+
   if (domain->timestep.n > 0)
     gts_range_add_value (mpiwait, domain->mpi_wait.sum/domain->timestep.n);
 
@@ -1451,14 +1452,19 @@ void gfs_domain_stats_balance (GfsDomain * domain,
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_count, a);
   guint i;
   for (i = 0; i < a->len; i++) {
-    gts_range_add_value (size, g_array_index (a, guint, i));
-    g_array_index (a, guint, i) = 0;
+    guint v = g_array_index (a, guint, i);
+    if (v > 0) {
+      gts_range_add_value (size, v);
+      g_array_index (a, guint, i) = 0;
+    }
   }
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) boundary_size, a);
-  for (i = 0; i < a->len; i++)
-    gts_range_add_value (boundary, g_array_index (a, guint, i));
+  for (i = 0; i < a->len; i++) {
+    guint v = g_array_index (a, guint, i);
+    if (v > 0)
+      gts_range_add_value (boundary, v);
+  }
 #ifdef HAVE_MPI
-  g_assert (a->len == 1);
   domain_range_reduce (domain, size);
   domain_range_reduce (domain, boundary);
   domain_range_reduce (domain, mpiwait);
