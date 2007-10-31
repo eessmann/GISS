@@ -8,7 +8,10 @@ static void key_value_pair (const char * key)
 
 int main (int argc, char * argv[])
 {
-  GtsObjectClass ** klass = gfs_classes ();
+  GtsObjectClass ** klass;
+
+  gfs_init (&argc, &argv);
+  klass = gfs_classes ();
   printf ("klass = {\\\n");
   key_value_pair ("Define");
   while (*klass) {
