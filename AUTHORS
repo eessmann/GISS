@@ -8,3 +8,4 @@ Marcelo E. Magallon: Debian packages.
 Ruben Scardovelli: - author of the Fortran version of gfs_plane_alpha()
       		   - Mixed Youngs-Centered VOF normal calculation
 Ivan Adam Vari: RPM packages.
+Daniel Fuster: gfsjoin script

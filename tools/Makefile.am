@@ -18,7 +18,8 @@ bin_SCRIPTS = \
 	darcs2dist \
 	bat2gts \
 	ppm2mpeg \
-	gfs2gfs
+	gfs2gfs \
+	gfsjoin
 
 EXTRA_DIST = $(bin_SCRIPTS)
 
