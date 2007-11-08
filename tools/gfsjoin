@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/bin/bash
 # script to join gerris output files in parallel simulations
 
 
@@ -11,24 +11,37 @@ help ()
     echo "Directory:      Directory where results are located"
     echo "Rootname:       File root name"
     echo "NP:             Number of processors"
-    echo "Tailname:       File tail name (without .gz)"
+    echo "Tailname:       File tail name"
     echo ""
     exit
 }
 
-# verbose=1
+#verbose=1
 
 message ()
 {
     if test $verbose; then
-	echo $1 > /dev/stderr
+	echo $1 > /dev/stdout
     fi
 }
 
+errmessage ()
+{
+        echo $1 > /dev/stderr
+}
+
+
 #------------------------------------------------------------------------------
 
-if [ $1 == '-h' ]; then
-    help
+#checking input
+if [ $# -ne 5 ]; then
+   if [ $1 == '-h' ]; then
+       help
+   else
+        errmessage "Input error, this command requires 5 arguments"
+        errmessage "Type gfsjoin -h for more info"
+   fi
+exit
 fi
 
 # removing all blanks and tabs immediately before the end of line.
@@ -42,14 +55,33 @@ c3="$tmp/sim.tmp"
 numproc=$4
 dir=$2
 
+# checking operations
+y=`expr ${#c2} - 2`
+tailst=`expr substr $c2 $y 3`
+
+if [ $tailst == 'gfs' ]; then
+   compress=0
+else
+        if [ $tailst == '.gz' ]; then
+          compress=1
+          c2=`expr substr $c2 1 $[$y-1]`
+        else
+          errmessage "Your simulation file has not a valid extension ("$tailst")"
+          errmessage "The correct file extensions are either .gfs or .gz"
+          exit
+        fi
+fi
+
 p1=$(awk '/GfsSimulation/ {print $1}' $c3)
 p2=$(awk '/GfsSimulation/ {print $2}' $c3)
 
 i=1
+if [ $compress -eq 1 ]; then
 while [ $i -le $numproc ]; do
     gunzip -q ${dir}'/'$c1$[$i-1]$c2
     i=$[$i+1]
 done
+fi
 
 message 'Creating output................'
 
@@ -73,7 +105,7 @@ sed -n '/SurfaceFile/ p' $c3
 # As I have already inserted the solid, this information is also removed from the files
 i=0
 while [ $i -lt $numproc ]; do
-    nend=$(awk '$1 ~ /GfsSourceDiffusion/ && $7 ~ /U/ {print NR}' ${mainfile[$i]})
+    nend=$(awk '$1 ~ /Gfs/ && $7 ~ /U/ {print NR}' ${mainfile[$i]})
     nend=$[$nend+0]
     if [ $nend -ne 0 ]; then
 	sed -e '1,2 d' -e '/GfsSolid/,'$[$nend-1]' d' ${mainfile[$i]} > $tmp/tmpfile$i
@@ -83,20 +115,13 @@ while [ $i -lt $numproc ]; do
     i=$[$i+1]
 done
 
-# Taking the initial common arguments (awk is used to remove the local 
-# connectivities in case they will be equal)
-(comm -1 -2 $tmp/tmpfile0 $tmp/tmpfile1 | awk '
-BEGIN{}
-{
-condition1 = ( $3 == "right" || $3 == "left" || $3 == "top" || $3 == "bottom" || $3 == "front" || $3 == "back" )
-if(!(NF == 3 && condition1)) {print $0}
-}
-END{}')
+#Taking the initial common arguments
+sed -n '1,/GfsBox/p' $tmp/tmpfile0 | sed '$ d' 
 
-# Creating temporal file with all the boxes (awk is used to remove the 
+# Creating temporal file with all the boxes (sed is used to remove the 
 # local connectivities in case they will be equal)
 # boxes in proc 0
-(comm -2 -3 $tmp/tmpfile0 $tmp/tmpfile1 | awk '
+(sed -n '/GfsBox/,$p' $tmp/tmpfile0 | awk '
 BEGIN{}
 {
 condition1 = ( $3 == "right" || $3 == "left" || $3 == "top" || $3 == "bottom" || $3 == "front" || $3 == "back" )
@@ -107,7 +132,7 @@ END{}') > $tmp/tmp.tmp
 # the rest of boxes
 i=1
 while [ $i -lt $numproc ]; do
-    (comm -3 -1 $tmp/tmpfile0 $tmp/tmpfile$i | awk '
+    (sed -n '/GfsBox/,$p' $tmp/tmpfile$i | awk '
 BEGIN{}
 {
 condition1= ( $3 == "right" || $3 == "left" || $3 == "top" || $3 == "bottom" || $3 == "front" || $3 == "back" )
@@ -161,7 +186,9 @@ tail -n $p2 $c3
 
 message
 message
-message 'compressing files again'
-gzip -f -q ${dir}'/'${c1}*'.gfs'
+if [ $compress -eq 1 ]; then
+	message 'compressing files again'
+	gzip -f -q ${dir}'/'${c1}*'.gfs'
+fi
 
 rm -rf $tmp
