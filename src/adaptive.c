@@ -52,35 +52,6 @@ void gfs_cell_coarse_init (FttCell * cell, GfsDomain * domain)
   }
 }
 
-/**
- * gfs_cell_fine_init:
- * @parent: a #FttCell.
- * @domain: a #GfsDomain containing @parent.
- *
- * Initialises the children of @parent.
- */
-void gfs_cell_fine_init (FttCell * parent, GfsDomain * domain)
-{
-  GSList * i;
-
-  g_return_if_fail (parent != NULL);
-  g_return_if_fail (!FTT_CELL_IS_LEAF (parent));
-  g_return_if_fail (domain != NULL);
-
-  gfs_cell_init (parent, domain);
-
-  if (!GFS_CELL_IS_BOUNDARY (parent) && GFS_IS_MIXED (parent))
-    gfs_solid_coarse_fine (parent);
-
-  i = domain->variables;
-  while (i) {
-    GfsVariable * v = i->data;
-  
-    (* v->coarse_fine) (parent, v);
-    i = i->next;
-  }
-}
-
 /* GfsAdapt: Object */
 
 typedef struct {
@@ -598,37 +569,31 @@ GfsEventClass * gfs_adapt_curvature_class (void)
   return klass;
 }
 
-static void refine_cell_corner (FttCell * cell, gpointer * adata)
+static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {
   if (ftt_refine_corner (cell))
-    ftt_cell_refine_single (cell, adata[0], adata[1]);
+    ftt_cell_refine_single (cell, domain->cell_init, domain->cell_init_data);
 }
 
 /**
  * @domain: a #GfsDomain.
  * @depth: the depth of @domain.
- * @init: a #FttCellInitFunc.
- * @data: user data to pass to @init.
  *
  * Force the grading of the tree hierarchy of domain, matches the
  * boundaries, recomputes merged cells and applies the boundary
  * conditions for all variables.
  */
-void gfs_domain_reshape (GfsDomain * domain, guint depth, FttCellInitFunc init, gpointer data)
+void gfs_domain_reshape (GfsDomain * domain, guint depth)
 {
-  gpointer adata[2];
   gint l;
 
   g_return_if_fail (domain != NULL);
-  g_return_if_fail (init != NULL);
 
-  adata[0] = init;
-  adata[1] = data;
   for (l = depth - 2; l >= 0; l--)
     gfs_domain_cell_traverse (domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
 			      (FttCellTraverseFunc) refine_cell_corner,
-			      adata);
+			      domain);
   gfs_domain_match (domain);
   gfs_set_merged (domain);
   GSList * i = domain->variables;
@@ -798,9 +763,10 @@ static void fine_cell_cleanup (FttCell * cell, AdaptParams * p)
 static void cell_fine_init (FttCell * cell, AdaptParams * p)
 {
   FttCellChildren child;
+  GfsDomain * domain = GFS_DOMAIN (p->sim);
   guint n;
 
-  gfs_cell_fine_init (cell, GFS_DOMAIN (p->sim));
+  (* domain->cell_init) (cell, domain->cell_init_data);
   ftt_cell_children (cell, &child);
   for (n = 0; n < FTT_CELLS; n++)
     if (child.c[n])
@@ -933,7 +899,8 @@ static void coarsen_box (GfsBox * box, AdaptLocalParams * p)
 
 static void local_cell_fine_init (FttCell * parent,  AdaptLocalParams * p)
 {
-  gfs_cell_fine_init (parent, GFS_DOMAIN (p->sim));
+  GfsDomain * domain = GFS_DOMAIN (p->sim);
+  (* domain->cell_init) (parent, domain->cell_init_data);
   if (!GFS_CELL_IS_BOUNDARY (parent)) {
     p->s->created += FTT_CELLS;
     p->nc += FTT_CELLS;
@@ -1050,7 +1017,7 @@ void gfs_simulation_adapt (GfsSimulation * simulation)
     else
       adapt_local (simulation, &depth, &simulation->adapts_stats);
 
-    gfs_domain_reshape (domain, depth, (FttCellInitFunc) gfs_cell_fine_init, domain);
+    gfs_domain_reshape (domain, depth);
   }
 
   gfs_domain_timer_stop (domain, "adapt");

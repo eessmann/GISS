@@ -330,6 +330,9 @@ static void domain_init (GfsDomain * domain)
 
   domain->variables_io = NULL;
   domain->max_depth_write = -1;
+
+  domain->cell_init = (FttCellInitFunc) gfs_cell_fine_init;
+  domain->cell_init_data = domain;
 }
 
 GfsDomainClass * gfs_domain_class (void)
@@ -2278,6 +2281,35 @@ void gfs_cell_reinit (FttCell * cell, GfsDomain * domain)
   g_return_if_fail (domain != NULL);
 
   cell->data = g_realloc (cell->data, gfs_domain_variables_size (domain));
+}
+
+/**
+ * gfs_cell_fine_init:
+ * @parent: a #FttCell.
+ * @domain: a #GfsDomain containing @parent.
+ *
+ * Initialises the children of @parent.
+ */
+void gfs_cell_fine_init (FttCell * parent, GfsDomain * domain)
+{
+  GSList * i;
+
+  g_return_if_fail (parent != NULL);
+  g_return_if_fail (!FTT_CELL_IS_LEAF (parent));
+  g_return_if_fail (domain != NULL);
+
+  gfs_cell_init (parent, domain);
+
+  if (!GFS_CELL_IS_BOUNDARY (parent) && GFS_IS_MIXED (parent))
+    gfs_solid_coarse_fine (parent);
+
+  i = domain->variables;
+  while (i) {
+    GfsVariable * v = i->data;
+  
+    (* v->coarse_fine) (parent, v);
+    i = i->next;
+  }
 }
 
 /**

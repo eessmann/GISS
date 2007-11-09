@@ -794,7 +794,7 @@ void gfs_simulation_init (GfsSimulation * sim)
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {
   if (ftt_refine_corner (cell))
-    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
+    ftt_cell_refine_single (cell, domain->cell_init, domain->cell_init_data);
 }
 
 static void check_face (FttCellFace * f, guint * nf)

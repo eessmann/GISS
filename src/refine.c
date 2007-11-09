@@ -207,7 +207,7 @@ static void refine_cut_cell (FttCell * cell, GfsSurface * s, RefineCut * p)
   GTS_OBJECT (s)->reserved = p->surface;
   GFS_REFINE_SOLID (p->refine)->v->data = s;
   if (ftt_cell_level (cell) < gfs_function_value (p->refine->maxlevel, cell))
-    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, p->domain);
+    ftt_cell_refine_single (cell, p->domain->cell_init, p->domain->cell_init_data);
   GFS_REFINE_SOLID (p->refine)->v->data = NULL;
 }
 
@@ -215,7 +215,7 @@ static void refine_implicit_cell (FttCell * cell, RefineCut * p)
 {
   guint maxlevel = gfs_function_value (p->refine->maxlevel, cell);
   if (ftt_cell_level (cell) < maxlevel && gfs_cell_is_cut (cell, p->surface, FALSE, maxlevel))
-    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, p->domain);
+    ftt_cell_refine_single (cell, p->domain->cell_init, p->domain->cell_init_data);
 }
 
 static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)

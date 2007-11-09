@@ -488,8 +488,8 @@ static void match (FttCell * cell, GfsBoundary * boundary)
       GFS_STATE (cell)->solid = NULL;
     }      
     if (FTT_CELL_IS_LEAF (cell) && !FTT_CELL_IS_LEAF (neighbor)) {
-      ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init,
-			      gfs_box_domain (boundary->box));
+      GfsDomain * domain = gfs_box_domain (boundary->box);
+      ftt_cell_refine_single (cell, domain->cell_init, domain->cell_init_data);
       boundary->changed = TRUE;
     }
   }
@@ -1111,9 +1111,9 @@ static void match_update (FttCell * cell,
       FttCell * neighbor = ftt_cell_neighbor (cell, GFS_BOUNDARY (boundary)->d);
 
       g_assert (neighbor);
-      ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
+      ftt_cell_refine_single (cell, domain->cell_init, domain->cell_init_data);
       if (FTT_CELL_IS_LEAF (neighbor))
-	ftt_cell_refine_single (neighbor, (FttCellInitFunc) gfs_cell_fine_init, domain);
+	ftt_cell_refine_single (neighbor, domain->cell_init, domain->cell_init_data);
       /* what about solid fractions? */
       GFS_BOUNDARY (boundary)->changed = TRUE;
     }

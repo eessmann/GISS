@@ -63,8 +63,10 @@ struct _GfsDomain {
 
   GSList * variables_io;
   gboolean binary;
-
   gint max_depth_write;
+
+  FttCellInitFunc cell_init;
+  gpointer cell_init_data;
 };
 
 struct _GfsDomainClass {
@@ -214,6 +216,8 @@ gdouble      gfs_domain_cfl                   (GfsDomain * domain,
 void         gfs_cell_init                    (FttCell * cell,
 					       GfsDomain * domain);
 void         gfs_cell_reinit                  (FttCell * cell, 
+					       GfsDomain * domain);
+void         gfs_cell_fine_init               (FttCell * cell,
 					       GfsDomain * domain);
 void         gfs_cell_copy                    (const FttCell * from, 
 					       FttCell * to,
