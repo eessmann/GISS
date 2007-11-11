@@ -40,7 +40,7 @@ static void send (GfsBoundary * bb)
 #ifdef DEBUG
 fprintf (stderr, "%d send %d tag: %d\n",
 	 domain->pid, 
-	 boundary->process,
+	 mpi->process,
 	 TAG (GFS_BOUNDARY (boundary)));
 #endif
     MPI_Isend (&boundary->sndcount, 1, MPI_UNSIGNED,
@@ -53,7 +53,7 @@ fprintf (stderr, "%d send %d tag: %d\n",
 #ifdef DEBUG
 fprintf (stderr, "%d send %d tag: %d size: %d\n",
 	 domain->pid, 
-	 boundary->process,
+	 mpi->process,
 	 TAG (GFS_BOUNDARY (boundary)),
 	 boundary->sndcount);
 #endif
@@ -85,7 +85,7 @@ static void receive (GfsBoundary * bb,
 #ifdef DEBUG
 fprintf (stderr, "%d wait %d %d match variable\n",
 	 gfs_box_domain (bb->box)->pid,
-	 boundary->process,
+	 mpi->process,
 	 MATCHING_TAG (GFS_BOUNDARY (boundary)));
 #endif
     MPI_Recv (&boundary->rcvcount, 1, MPI_UNSIGNED,
@@ -106,7 +106,7 @@ fprintf (stderr, "%d wait %d %d match variable\n",
 #ifdef DEBUG
 fprintf (stderr, "%d wait %d %d\n",
 	 gfs_box_domain (bb->box)->pid,
-	 boundary->process,
+	 mpi->process,
 	 MATCHING_TAG (GFS_BOUNDARY (boundary)));
 #endif
   g_assert (boundary->rcvcount <= boundary->rcvbuf->len);
@@ -118,7 +118,24 @@ fprintf (stderr, "%d wait %d %d\n",
 	    mpi->comm,
 	    &status);
   MPI_Get_count (&status, MPI_DOUBLE, &count);
+#ifdef DEBUG
+  fprintf (stderr, "%d %d %d\n", status.MPI_SOURCE, status.MPI_TAG, status.MPI_ERROR);
+  if (count == MPI_UNDEFINED) {
+    fprintf (stderr, "%d %d count is undefined!\n",
+	     gfs_box_domain (bb->box)->pid,
+	     MATCHING_TAG (GFS_BOUNDARY (boundary)));
+    g_assert_not_reached ();
+  }
+  else if (count != boundary->rcvcount) {
+    fprintf (stderr, "%d %d count = %d boundary->rcvcount = %d\n",
+	     gfs_box_domain (bb->box)->pid,
+	     MATCHING_TAG (GFS_BOUNDARY (boundary)),
+	     count, boundary->rcvcount);
+    g_assert_not_reached ();
+  }
+#else
   g_assert (count == boundary->rcvcount);
+#endif
 
 #ifdef PROFILE_MPI
   end = MPI_Wtime ();
@@ -148,7 +165,10 @@ static void synchronize (GfsBoundary * bb)
   gts_range_add_value (&domain->mpi_wait, end - start);
 #endif /* PROFILE_MPI */
   boundary->nrequest = 0;
-
+#ifdef DEBUG
+  fprintf (stderr, "==== %d synchronised ====\n",
+	   gfs_box_domain (bb->box)->pid);
+#endif
   (* gfs_boundary_periodic_class ()->synchronize) (bb);
 }
 

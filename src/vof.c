@@ -20,6 +20,11 @@
 #include <math.h>
 #include <stdlib.h>
 #include "vof.h"
+
+#include "config.h"
+#ifdef HAVE_MPI
+#  include <mpi.h>
+#endif
 #include "variable.h"
 #include "adaptive.h"
 #include "graphic.h"
@@ -1336,8 +1341,38 @@ static void f_times_dV (FttCell * cell, VofParms * p)
 
 static void f_over_dV (FttCell * cell, VofParms * p)
 {
+  g_assert (GFS_VARIABLE (cell, p->dV->i) > 0.);
   gdouble f = GFS_VARIABLE (cell, p->par->v->i)/GFS_VARIABLE (cell, p->dV->i);
   GFS_VARIABLE (cell, p->par->v->i) = f < 1e-10 ? 0. : f > 1. - 1e-10 ? 1. : f;
+}
+
+/* refine cells which would lead to a loss of resolution at the interface */
+static void fix_too_coarse (GfsDomain * domain, VofParms * p)
+{
+  p->depth = 0;
+  p->domain = domain;
+  p->too_coarse = 0;
+  gfs_domain_face_traverse (domain, p->c,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttFaceTraverseFunc) face_too_coarse, p);
+  domain->cell_init = (FttCellInitFunc) vof_cell_fine_init;
+  domain->cell_init_data = p;
+  if (p->too_coarse > 0)
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) refine_too_coarse, p);
+#ifdef HAVE_MPI
+  if (domain->pid >= 0) {
+    guint sum_too_coarse;
+      
+    MPI_Allreduce (&p->too_coarse, &sum_too_coarse, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
+    p->too_coarse = sum_too_coarse;
+  }
+#endif /* HAVE_MPI */
+  if (p->too_coarse > 0)
+    gfs_domain_reshape (domain, p->depth);
+  domain->cell_init = (FttCellInitFunc) gfs_cell_fine_init;
+  domain->cell_init_data = domain;
 }
 
 /**
@@ -1371,18 +1406,7 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
     p.c = (cstart + c) % FTT_DIMENSION;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
-    p.too_coarse = 0;
-    gfs_domain_face_traverse (domain, p.c,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) face_too_coarse, &p);
-    if (p.too_coarse > 0) {
-      p.depth = 0;
-      p.domain = domain;
-      gfs_domain_cell_traverse (domain,
-				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) refine_too_coarse, &p);
-      gfs_domain_reshape (domain, p.depth, (FttCellInitFunc) vof_cell_fine_init, &p);
-    }
+    fix_too_coarse (domain, &p);
     gfs_domain_face_traverse (domain, p.c,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) vof_face_value, &p);

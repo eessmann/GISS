@@ -248,7 +248,7 @@ void gfs_init (int * argc, char *** argv)
     }
     else
       MPI_Init (argc, argv);
-    atexit ((void (*)(void)) MPI_Finalize);
+    MPI_Errhandler_set (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
   }
 #endif /* HAVE_MPI */
   initialized = TRUE;
