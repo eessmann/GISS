@@ -8,7 +8,7 @@ Version: 1.1.2
 %else
 Version: %{current}
 %endif
-Release: 2.%{alphatag}cvs%{?dist}
+Release: 3.%{alphatag}cvs%{?dist}
 License: GPLv2
 Group: Applications/Engineering
 URL: http://gfs.sourceforge.net
@@ -16,12 +16,12 @@ Packager: Ivan Adam Vari <i.vari@niwa.co.nz>
 Source0: %{name}-stable.tar.gz
 Provides: %{name}
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: gts-snapshot-devel >= 0.7.6 pkgconfig gawk ImageMagick
+Requires: gts-snapshot-devel >= 0.7.6 pkgconfig gcc sed gawk m4
 BuildRequires: gts-snapshot-devel >= 0.7.6 glib2-devel geomview
 BuildRequires: glibc-devel automake libtool gtkglext-devel
-BuildRequires: startup-notification-devel 
+BuildRequires: startup-notification-devel
 %if 0%{?fedora_version}
-BuildRequires:  libXt-devel netpbm-devel 
+BuildRequires: libXt-devel netpbm-devel
 %elif 0%{?suse_version}
 BuildRequires: xorg-x11-devel libnetpbm
 %endif
@@ -103,6 +103,9 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 
 
 %changelog
+* Mon Nov 12 2007 Ivan Adam Vari <i.vari@niwa.co.nz>
+- Fixed package (install) dependencies
+
 * Mon Oct 1 2007 Ivan Adam Vari <i.vari@niwa.co.nz>
 - Removed unnecessary version specifications for some 
   build requirements
