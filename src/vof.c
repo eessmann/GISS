@@ -1088,8 +1088,7 @@ GfsVariableClass * gfs_variable_tracer_vof_class (void)
 }
 
 typedef struct {
-  GfsAdvectionParams * par;
-  GfsVariable * dV;
+  GfsAdvectionParams * par, vpar;
   FttComponent c;
   GfsDomain * domain;
   guint depth, too_coarse;
@@ -1206,7 +1205,7 @@ static void vof_cell_fine_init (FttCell * parent, VofParms * p)
   ftt_cell_children (parent, &child);
   for (n = 0; n < FTT_CELLS; n++) {
     g_assert (child.c[n]);
-    GFS_VARIABLE (child.c[n], p->dV->i) = GFS_VARIABLE (parent, p->dV->i);
+    GFS_VARIABLE (child.c[n], p->vpar.v->i) = GFS_VARIABLE (parent, p->vpar.v->i);
     div[n] = 0.;
     FttComponent c;
     for (c = 0; c < FTT_DIMENSION; c++)
@@ -1313,19 +1312,19 @@ static void vof_flux (FttCellFace * face, VofParms * p)
     if (un < 0.)
       flux = GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v*un;
     GFS_VARIABLE (face->neighbor, p->par->fv->i) += flux;
-    GFS_VARIABLE (face->neighbor, p->dV->i) += un;
+    GFS_VARIABLE (face->neighbor, p->vpar.fv->i) += un;
     break;
   }
   case FTT_FINE_COARSE: {
     GFS_VARIABLE (face->neighbor, p->par->fv->i) += flux/FTT_CELLS;
-    GFS_VARIABLE (face->neighbor, p->dV->i) += un/FTT_CELLS;
+    GFS_VARIABLE (face->neighbor, p->vpar.fv->i) += un/FTT_CELLS;
     break;
   }
   default:
     g_assert_not_reached ();
   }
-  GFS_VARIABLE (face->cell, p->dV->i) -= un;
   GFS_VARIABLE (face->cell, p->par->fv->i) -= flux;
+  GFS_VARIABLE (face->cell, p->vpar.fv->i) -= un;
 }
 
 static void initialize_dV (FttCell * cell, GfsVariable * dV)
@@ -1336,13 +1335,14 @@ static void initialize_dV (FttCell * cell, GfsVariable * dV)
 static void f_times_dV (FttCell * cell, VofParms * p)
 {
   GFS_VARIABLE (cell, p->par->fv->i) = 0.;
-  GFS_VARIABLE (cell, p->par->v->i) *= GFS_VARIABLE (cell, p->dV->i);
+  GFS_VARIABLE (cell, p->vpar.fv->i) = 0.;
+  GFS_VARIABLE (cell, p->par->v->i) *= GFS_VARIABLE (cell, p->vpar.v->i);
 }
 
 static void f_over_dV (FttCell * cell, VofParms * p)
 {
-  g_assert (GFS_VARIABLE (cell, p->dV->i) > 0.);
-  gdouble f = GFS_VARIABLE (cell, p->par->v->i)/GFS_VARIABLE (cell, p->dV->i);
+  g_assert (GFS_VARIABLE (cell, p->vpar.v->i) > 0.);
+  gdouble f = GFS_VARIABLE (cell, p->par->v->i)/GFS_VARIABLE (cell, p->vpar.v->i);
   GFS_VARIABLE (cell, p->par->v->i) = f < 1e-10 ? 0. : f > 1. - 1e-10 ? 1. : f;
 }
 
@@ -1398,9 +1398,11 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   gfs_domain_timer_start (domain, "tracer_vof_advection");
 
   p.par = par;
-  p.dV = gfs_temporary_variable (domain);
+  p.vpar.v = gfs_temporary_variable (domain);
+  p.vpar.fv = gfs_temporary_variable (domain);
+  p.vpar.average = par->average;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) initialize_dV, p.dV);
+			    (FttCellTraverseFunc) initialize_dV, p.vpar.v);
   par->fv = gfs_temporary_variable (domain);
   for (c = 0; c < FTT_DIMENSION; c++) {
     p.c = (cstart + c) % FTT_DIMENSION;
@@ -1417,6 +1419,7 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) vof_flux, &p);
     gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, par);
+    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, &p.vpar);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
     			      (FttCellTraverseFunc) f_over_dV, &p);
     gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
@@ -1428,7 +1431,8 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   cstart = (cstart + 1) % FTT_DIMENSION;
   gts_object_destroy (GTS_OBJECT (par->fv));
   par->fv = NULL;
-  gts_object_destroy (GTS_OBJECT (p.dV));
+  gts_object_destroy (GTS_OBJECT (p.vpar.v));
+  gts_object_destroy (GTS_OBJECT (p.vpar.fv));
 
   gfs_domain_timer_stop (domain, "tracer_vof_advection");
 }
