@@ -1398,6 +1398,7 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   gfs_domain_timer_start (domain, "tracer_vof_advection");
 
   p.par = par;
+  gfs_advection_params_init (&p.vpar);
   p.vpar.v = gfs_temporary_variable (domain);
   p.vpar.fv = gfs_temporary_variable (domain);
   p.vpar.average = par->average;
