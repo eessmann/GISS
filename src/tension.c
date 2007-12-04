@@ -739,7 +739,7 @@ static void variable_position_read (GtsObject ** o, GtsFile * fp)
 					      "coordinate of the interface defined by tracer",
 					      GFS_VARIABLE_CURVATURE (v)->f->name, NULL);
   gts_file_next_token (fp);
-  if (fp->type == GTS_INT || fp->type == GTS_FLOAT || fp->type == GTS_STRING)
+  if (fp->type != '\n')
     v->ref = gfs_read_constant (fp, gfs_object_simulation (*o));
 }
 
