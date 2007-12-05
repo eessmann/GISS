@@ -12,10 +12,11 @@ Package: gerris-snapshot
 Section: math
 Priority: extra
 Architecture: any
-Depends: libgts-snapshot-dev (>= $GTS_VERSION), pkg-config, gcc, sed, gawk, m4
+Depends: libc6-dev | libc-dev, libgts-snapshot-dev (>= $GTS_VERSION), pkg-config, gcc, sed, gawk, m4
 Conflicts: gerris
 Replaces: gerris
-Recommends: gfsview-snapshot, imagemagick, ffmpeg
+Recommends: gfsview-snapshot
+Suggests: imagemagick, ffmpeg
 Description: Gerris Flow Solver (development snapshot)
  Gerris is a system for the solution of the partial differential
  equations describing fluid flow.
