@@ -12,7 +12,7 @@ BEGIN {
     if ($1 == "Define") {
 	macro = $2;
 	delete b;
-	if (match(macro, "([a-zA-Z_]+)\\((([a-zA-Z_]+|,)+)\\)", a)) {
+	if (match(macro, /(.+)\((.+)\)/, a)) {
 	    macro = a[1];
 	    split(a[2],b,",");
 	}
