@@ -5,7 +5,8 @@ EXAMPLES = \
 	rt \
 	boussinesq \
 	tangaroa \
-	logo
+	logo \
+	tides
 
 EXTRA_DIST = \
 	template.tex \
