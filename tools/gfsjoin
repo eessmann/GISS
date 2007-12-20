@@ -105,10 +105,11 @@ sed -n '/SurfaceFile/ p' $c3
 # As I have already inserted the solid, this information is also removed from the files
 i=0
 while [ $i -lt $numproc ]; do
-    nend=$(awk '$1 ~ /Gfs/ && $7 ~ /U/ {print NR}' ${mainfile[$i]})
+    nend=$(echo -n $(sed -n '/GtsSurface/,/Gfs/ p' ${mainfile[$i]} | tail -1 | awk '{print $1}' ))
+    nend=$(echo -n $(awk '$1 ~ /'$nend'/ {print NR}' ${mainfile[$i]} | head -1 ))
     nend=$[$nend+0]
     if [ $nend -ne 0 ]; then
-	sed -e '1,2 d' -e '/GfsSolid/,'$[$nend-1]' d' ${mainfile[$i]} > $tmp/tmpfile$i
+	sed -e '1,2 d' -e '/GtsSurface/,'$[$nend-1]' d' ${mainfile[$i]} > $tmp/tmpfile$i
     else
 	more +3 ${mainfile[$i]} > $tmp/tmpfile$i
     fi
@@ -175,7 +176,7 @@ while [ $i -le $numboxes ]; do
         i=$[$i+1]
     else
 	message -n "$i ,"
-        nf=$(awk '$1 ~ /GfsBox/ && $5 ~ /'$i'/ && $3 ~ /id/ {print NR}' $tmp/tmp.tmp)
+        nf=$(awk '$1 ~ /GfsBox/ && $5 == '$i' && $3 ~ /id/ {print NR}' $tmp/tmp.tmp)
         more +$nf $tmp/tmp.tmp
         i=$[$i+1]
     fi
