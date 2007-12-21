@@ -2177,28 +2177,41 @@ guint gfs_domain_size (GfsDomain * domain,
   return n;
 }
 
-static void minimum_cfl (FttCell * cell, gpointer * data)
+typedef struct {
+  gdouble cfl;
+  GfsVariable ** v;
+} CflData;
+
+static void minimum_mac_cfl (FttCellFace * face, gdouble * cfl)
 {
-  gdouble * cfl = data[0];
-  GfsVariable ** v = data[1];
+  gdouble un = GFS_STATE (face->cell)->f[face->d].un;
+  if (un != 0.) {
+    gdouble cflu = ftt_cell_size (face->cell)/fabs (un);
+    if (cflu*cflu < *cfl)
+      *cfl = cflu*cflu;
+  }
+}
+
+static void minimum_cfl (FttCell * cell, CflData * p)
+{
   gdouble size = ftt_cell_size (cell);
   FttComponent c;
 
   for (c = 0; c < FTT_DIMENSION; c++) {
-    if (GFS_VARIABLE (cell, v[c]->i) != 0.) {
-      gdouble cflu = size/fabs (GFS_VARIABLE (cell, v[c]->i));
+    if (GFS_VARIABLE (cell, p->v[c]->i) != 0.) {
+      gdouble cflu = size/fabs (GFS_VARIABLE (cell, p->v[c]->i));
 
-      if (cflu*cflu < *cfl)
-	*cfl = cflu*cflu;
+      if (cflu*cflu < p->cfl)
+	p->cfl = cflu*cflu;
     }
-    if (v[c]->sources) {
-      gdouble g = gfs_variable_mac_source (v[c], cell);
+    if (p->v[c]->sources) {
+      gdouble g = gfs_variable_mac_source (p->v[c], cell);
 
       if (g != 0.) {
 	gdouble cflg = 2.*size/fabs (g);
 
-	if (cflg < *cfl)
-	  *cfl = cflg;
+	if (cflg < p->cfl)
+	  p->cfl = cflg;
       }
     }
   }
@@ -2219,24 +2232,25 @@ gdouble gfs_domain_cfl (GfsDomain * domain,
 			FttTraverseFlags flags,
 			gint max_depth)
 {
-  gdouble cfl = 1.;
-  gpointer data[2];
+  CflData p;
 
   g_return_val_if_fail (domain != NULL, 0.);
 
-  data[0] = &cfl;
-  data[1] = gfs_domain_velocity (domain);
+  p.cfl = 1.;
+  gfs_domain_face_traverse (domain, FTT_XYZ, FTT_PRE_ORDER, flags, max_depth, 
+			    (FttFaceTraverseFunc) minimum_mac_cfl, &p.cfl);
+  p.v = gfs_domain_velocity (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
-			    (FttCellTraverseFunc) minimum_cfl, data);
+			    (FttCellTraverseFunc) minimum_cfl, &p);
 #ifdef HAVE_MPI
   if (domain->pid >= 0) {
     gdouble gcfl;
 
-    MPI_Allreduce (&cfl, &gcfl, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    cfl = gcfl;
+    MPI_Allreduce (&p.cfl, &gcfl, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+    p.cfl = gcfl;
   }
 #endif /* HAVE_MPI */
-  return sqrt (cfl);
+  return sqrt (p.cfl);
 }
 
 /**
