@@ -8,7 +8,7 @@ Version: 1.1.2
 %else
 Version: %{current}
 %endif
-Release: 3.%{alphatag}cvs%{?dist}
+Release: 4.%{alphatag}cvs%{?dist}
 License: GPLv2
 Group: Applications/Engineering
 URL: http://gfs.sourceforge.net
@@ -50,7 +50,7 @@ else
 	    --libdir=%{_prefix}/%_lib
 fi
 
-%{__make} %{?_smp_mflags}
+%{__make}
 
 
 %install
@@ -103,15 +103,19 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 
 
 %changelog
-* Mon Nov 12 2007 Ivan Adam Vari <i.vari@niwa.co.nz>
+* Mon Jan 7 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 4
+- Removed %{?_smp_mflags} from make due to intermittent
+  build errors on some SMP systems
+
+* Mon Nov 12 2007 Ivan Adam Vari <i.vari@niwa.co.nz> - 3
 - Fixed package (install) dependencies
 
-* Mon Oct 1 2007 Ivan Adam Vari <i.vari@niwa.co.nz>
-- Removed unnecessary version specifications for some 
+* Mon Oct 1 2007 Ivan Adam Vari <i.vari@niwa.co.nz> - 2
+- Removed unnecessary version specifications for some
   build requirements
 - Added SLEx/SuSE compatibilty
 - Added 64bit compatibility
 - Updated %post, %postun scriptlets
 
-* Tue May 1 2007 Ivan Adam Vari <i.vari@niwa.co.nz>
+* Tue May 1 2007 Ivan Adam Vari <i.vari@niwa.co.nz> - 1
 - Initial rpm release based on Fedora/Redhat Linux
