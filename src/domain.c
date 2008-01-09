@@ -111,16 +111,27 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
+#if FTT_2D
+  if (var[3].set) {
+    gts_file_variable_error (fp, var, "z", "unknown identifier `z'");
+    return;
+  }
+  if (var[6].set) {
+    gts_file_variable_error (fp, var, "lz", "unknown identifier `lz'");
+    return;
+  }
+#endif
+
   if (var[4].set && domain->lambda.x <= 0.) {
-    gts_file_error (fp, "lx must be strictly positive");
+    gts_file_variable_error (fp, var, "lx", "lx must be strictly positive");
     return;
   }
   if (var[5].set && domain->lambda.y <= 0.) {
-    gts_file_error (fp, "ly must be strictly positive");
+    gts_file_variable_error (fp, var, "ly", "ly must be strictly positive");
     return;
   }
   if (var[6].set && domain->lambda.z <= 0.) {
-    gts_file_error (fp, "lz must be strictly positive");
+    gts_file_variable_error (fp, var, "lz", "lz must be strictly positive");
     return;
   }
 
