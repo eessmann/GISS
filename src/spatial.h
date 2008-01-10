@@ -24,6 +24,10 @@
  * http://gfs.sourceforge.net/wiki/index.php/GfsSurface
  */
 
+#define intersection(a,b) MAX(a, b)
+#define union(a,b)        MIN(a, b)
+#define difference(a,b)   MAX(a, -(b))
+
 static double _x = 0., _y = 0., _z = 0.;
 
 static double ellipse (double xc, double yc, double a, double b)
