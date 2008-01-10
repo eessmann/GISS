@@ -1264,7 +1264,10 @@ static void error_handler (const gchar *log_domain,
       domain->variables_io = g_slist_append (domain->variables_io, i->data);
     i = i->next;
   }
-  FILE * fp = fopen ("error.gfs", "w");
+  gchar fname[20] = "error.gfs";
+  if (domain->pid >= 0)
+    snprintf (fname, 20, "error-%d.gfs", domain->pid);
+  FILE * fp = fopen (fname, "w");
   if (fp) {
     gfs_simulation_write (GFS_SIMULATION (domain), -1, fp);
     fclose (fp);

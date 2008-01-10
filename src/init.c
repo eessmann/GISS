@@ -65,7 +65,7 @@ static void gfs_log (const gchar * log_domain,
     rank = -1;
 #endif /* HAVE_MPI */
   if (rank >= 0)
-    sprintf (pe, "PE %d: ", rank);
+    snprintf (pe, 10, "PE %d: ", rank);
   else
     pe[0] = '\0';
 
