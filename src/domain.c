@@ -2820,16 +2820,12 @@ void gfs_domain_solid_force (GfsDomain * domain,
   }
 }
 
-typedef struct {
-  GfsVariable * v, * c;
-  GArray * sizes;
-  guint min;
-} RemoveDropletsPar;
+#define THRESHOLD 1e-4
 
 static void tag_cell_fraction (GtsFifo * fifo,
 			       FttCell * cell,
 			       GfsVariable * c, GfsVariable * v,
-			       guint tag, guint * size)
+			       guint tag)
 {
   FttDirection d;
   FttCellNeighbors n;
@@ -2837,10 +2833,9 @@ static void tag_cell_fraction (GtsFifo * fifo,
   g_assert (FTT_CELL_IS_LEAF (cell));
   ftt_cell_neighbors (cell, &n);
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (n.c[d] && GFS_VARIABLE (n.c[d], v->i) == 0. && GFS_VARIABLE (n.c[d], c->i) > 1e-4) {
+    if (n.c[d] && GFS_VARIABLE (n.c[d], v->i) == 0. && GFS_VARIABLE (n.c[d], c->i) > THRESHOLD) {
       if (FTT_CELL_IS_LEAF (n.c[d])) {
 	GFS_VARIABLE (n.c[d], v->i) = tag;
-	(*size)++;
 	gts_fifo_push (fifo, n.c[d]);
       }
       else {
@@ -2854,38 +2849,81 @@ static void tag_cell_fraction (GtsFifo * fifo,
 	ftt_cell_children_direction (n.c[d], od, &child);
 	for (i = 0; i < FTT_CELLS/2; i++)
 	  if (child.c[i] && GFS_VARIABLE (child.c[i], v->i) == 0. &&
-	      GFS_VARIABLE (child.c[i], c->i) > 1e-4) {
+	      GFS_VARIABLE (child.c[i], c->i) > THRESHOLD) {
 	    GFS_VARIABLE (child.c[i], v->i) = tag;
-	    (*size)++;
 	    gts_fifo_push (fifo, child.c[i]);
 	  }
       }
     }
 }
 
-static void tag_new_fraction_region (FttCell * cell, RemoveDropletsPar * p)
+typedef struct {
+  GfsVariable * v, * c;
+  guint tag;
+} TagPar;
+
+static void tag_new_fraction_region (FttCell * cell, TagPar * p)
 {
-  if (GFS_VARIABLE (cell, p->v->i) == 0. && GFS_VARIABLE (cell, p->c->i) > 1e-4) {
-    guint size = 1;
+  if (GFS_VARIABLE (cell, p->v->i) == 0. && GFS_VARIABLE (cell, p->c->i) > THRESHOLD) {
     GtsFifo * fifo = gts_fifo_new ();
 
-    GFS_VARIABLE (cell, p->v->i) = p->sizes->len + 1;
+    GFS_VARIABLE (cell, p->v->i) = ++p->tag;
     gts_fifo_push (fifo, cell);
     while ((cell = gts_fifo_pop (fifo)))
-      tag_cell_fraction (fifo, cell, p->c, p->v, p->sizes->len + 1, &size);
+      tag_cell_fraction (fifo, cell, p->c, p->v, p->tag);
     gts_fifo_destroy (fifo);
-    g_array_append_val (p->sizes, size);
   }
+}
+
+/**
+ * gfs_domain_tag_droplets:
+ * @domain: a #GfsDomain.
+ * @c: the volume fraction.
+ * @tag: a #GfsVariable.
+ *
+ * Fills the @tag variable of the cells of @domain with the (strictly
+ * positive) index of the droplet they belong to. The cells belonging
+ * to the background phase have an index of zero.
+ *
+ * Returns: the number of droplets.
+ */
+guint gfs_domain_tag_droplets (GfsDomain * domain,
+			       GfsVariable * c,
+			       GfsVariable * tag)
+{
+  g_return_val_if_fail (domain != NULL, 0);
+  g_return_val_if_fail (c != NULL, 0);
+  g_return_val_if_fail (tag != NULL, 0);
+
+  TagPar p;
+  p.c = c;
+  p.v = tag;
+  p.tag = 0;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, tag);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) tag_new_fraction_region, &p);
+  return p.tag;
+}
+
+typedef struct {
+  GfsVariable * tag, * c;
+  guint * sizes;
+  guint n, min;
+} RemoveDropletsPar;
+
+static void compute_droplet_size (FttCell * cell, RemoveDropletsPar * p)
+{
+  guint i = GFS_VARIABLE (cell, p->tag->i);
+  if (i > 0)
+    p->sizes[i - 1]++;
 }
 
 static void reset_small_fraction (FttCell * cell, RemoveDropletsPar * p)
 {
-  if (GFS_VARIABLE (cell, p->v->i) > 0.) {
-    guint i = GFS_VARIABLE (cell, p->v->i) - 1.;
-
-    if (g_array_index (p->sizes, guint, i) < p->min)
-      GFS_VARIABLE (cell, p->c->i) = 0.;
-  }
+  guint i = GFS_VARIABLE (cell, p->tag->i);
+  if (i > 0 && p->sizes[i - 1] < p->min)
+    GFS_VARIABLE (cell, p->c->i) = 0.;
 }
 
 static int greater (const void * a, const void * b)
@@ -2913,29 +2951,26 @@ void gfs_domain_remove_droplets (GfsDomain * domain,
   g_return_if_fail (c != NULL);
 
   p.c = c;
-  p.v = gfs_temporary_variable (domain);
-  p.sizes = g_array_new (FALSE, FALSE, sizeof (guint));
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, p.v);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) tag_new_fraction_region, &p);
-  if (p.sizes->len > 0) {
+  p.tag = gfs_temporary_variable (domain);
+  p.n = gfs_domain_tag_droplets (domain, c, p.tag);
+  if (p.n > 0 && -min < p.n) {
+    p.sizes = g_malloc0 (p.n*sizeof (guint));
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) compute_droplet_size, &p);
     if (min >= 0)
       p.min = min;
-    else if (-min >= p.sizes->len)
-      p.min = 0;
     else {
-      guint * tmp = g_malloc (p.sizes->len*sizeof (guint));
-      memcpy (tmp, p.sizes->data, p.sizes->len*sizeof (guint));
-      qsort (tmp, p.sizes->len, sizeof (guint), greater);
+      guint * tmp = g_malloc (p.n*sizeof (guint));
+      memcpy (tmp, p.sizes, p.n*sizeof (guint));
+      qsort (tmp, p.n, sizeof (guint), greater);
       p.min = tmp[-1 - min];
       g_free (tmp);
     }
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) reset_small_fraction, &p);
+    g_free (p.sizes);
   }
-  g_array_free (p.sizes, TRUE);
-  gts_object_destroy (GTS_OBJECT (p.v));
+  gts_object_destroy (GTS_OBJECT (p.tag));
 }
 
 static void tag_cell (FttCell * cell, GfsVariable * v, guint tag, guint * size)

@@ -245,6 +245,9 @@ void         gfs_domain_solid_force           (GfsDomain * domain,
 					       FttVector * vf,
 					       FttVector * pm,
 					       FttVector * vm);
+guint        gfs_domain_tag_droplets          (GfsDomain * domain,
+					       GfsVariable * c,
+					       GfsVariable * tag);
 void         gfs_domain_remove_droplets       (GfsDomain * domain,
 					       GfsVariable * c,
 					       gint min);
