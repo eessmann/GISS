@@ -2221,6 +2221,119 @@ GfsOutputClass * gfs_output_scalar_histogram_class (void)
   return klass;
 }
 
+/* GfsOutputDropletStats: Object */
+
+static void gfs_output_droplet_stats_destroy (GtsObject * object)
+{
+  if (GFS_OUTPUT_DROPLET_STATS (object)->tag)
+    gts_object_destroy (GTS_OBJECT (GFS_OUTPUT_DROPLET_STATS (object)->tag));
+
+  (* GTS_OBJECT_CLASS (gfs_output_droplet_stats_class ())->parent_class->destroy) (object);
+}
+
+static void gfs_output_droplet_stats_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_output_droplet_stats_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (c)");
+    return;
+  }
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  GfsOutputDropletStats * d = GFS_OUTPUT_DROPLET_STATS (*o);
+  if ((d->c = gfs_variable_from_name (domain->variables, fp->token->str)) == NULL) {
+    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+
+  if (fp->type == GTS_STRING &&
+      ((d->tag = gfs_variable_from_name (domain->variables, fp->token->str)) ||
+       (d->tag = gfs_domain_add_variable (domain, fp->token->str, "Droplet index"))))
+    gts_file_next_token (fp);
+}
+
+static void gfs_output_droplet_stats_write (GtsObject * o, FILE * fp)
+{
+  GfsOutputDropletStats * d = GFS_OUTPUT_DROPLET_STATS (o);
+
+  (* GTS_OBJECT_CLASS (gfs_output_droplet_stats_class ())->parent_class->write) (o, fp);
+
+  fprintf (fp, " %s", d->c->name);
+  if (d->tag)
+    fprintf (fp, " %s", d->tag->name);
+}
+
+typedef struct {
+  GfsVariable * s, * c, * tag;
+  double * v;
+  guint n;
+} DropStatsPar;
+
+static void droplet_stats (FttCell * cell, DropStatsPar * p)
+{
+  guint i = GFS_VARIABLE (cell, p->tag->i);
+  if (i > 0)
+    p->v[i - 1] += ftt_cell_volume (cell)*GFS_VARIABLE (cell, p->c->i)*GFS_VARIABLE (cell, p->s->i);
+}
+
+static gboolean gfs_output_droplet_stats_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_droplet_stats_class ())->parent_class)->event) (event, sim)) {
+    GfsOutputDropletStats * d = GFS_OUTPUT_DROPLET_STATS (event);
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    DropStatsPar p;
+    p.s = GFS_OUTPUT_SCALAR (event)->v;
+    p.c = d->c;
+    p.tag = d->tag ? d->tag : gfs_temporary_variable (domain);
+    p.n = gfs_domain_tag_droplets (domain, d->c, p.tag);
+    if (p.n > 0) {
+      p.v = g_malloc0 (p.n*sizeof (double));
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) droplet_stats, &p);
+      guint i;
+      for (i = 0; i < p.n; i++)
+	fprintf (GFS_OUTPUT (event)->file->fp, "%g %d %.12g\n", sim->time.t, i + 1, p.v[i]);
+      g_free (p.v);
+    }
+    if (p.tag != d->tag)
+      gts_object_destroy (GTS_OBJECT (p.tag));
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_output_droplet_stats_class_init (GfsOutputClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = gfs_output_droplet_stats_event;
+  GTS_OBJECT_CLASS (klass)->read = gfs_output_droplet_stats_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_output_droplet_stats_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_output_droplet_stats_destroy;
+}
+
+GfsOutputClass * gfs_output_droplet_stats_class (void)
+{
+  static GfsOutputClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_output_droplet_stats_info = {
+      "GfsOutputDropletStats",
+      sizeof (GfsOutputDropletStats),
+      sizeof (GfsOutputClass),
+      (GtsObjectClassInitFunc) gfs_output_droplet_stats_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_output_scalar_class ()),
+				  &gfs_output_droplet_stats_info);
+  }
+
+  return klass;
+}
+
 /* GfsOutputErrorNorm: Object */
 
 static void output_error_norm_destroy (GtsObject * o)

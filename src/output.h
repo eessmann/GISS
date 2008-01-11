@@ -252,6 +252,26 @@ struct _GfsOutputScalarHistogram {
 
 GfsOutputClass * gfs_output_scalar_histogram_class  (void);
 
+/* GfsOutputDropletStats: Header */
+
+typedef struct _GfsOutputDropletStats         GfsOutputDropletStats;
+
+struct _GfsOutputDropletStats {
+  /*< private >*/
+  GfsOutputScalar parent;
+
+  /*< public >*/
+  GfsVariable * c, * tag;
+};
+
+#define GFS_OUTPUT_DROPLET_STATS(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsOutputDropletStats,\
+					         gfs_output_droplet_stats_class ())
+#define GFS_IS_OUTPUT_DROPLET_STATS(obj)         (gts_object_is_from_class (obj,\
+						 gfs_output_droplet_stats_class ()))
+
+GfsOutputClass * gfs_output_droplet_stats_class  (void);
+
 /* GfsOutputErrorNorm: Header */
 
 typedef struct _GfsOutputErrorNorm        GfsOutputErrorNorm;
