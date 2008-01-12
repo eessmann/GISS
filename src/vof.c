@@ -1063,7 +1063,7 @@ static void variable_tracer_vof_init (GfsVariable * v)
   v->coarse_fine = vof_coarse_fine;
   v->fine_coarse = vof_fine_coarse;
   //  v->face_value = gfs_vof_face_value;
-  GFS_VARIABLE_TRACER (v)->advection.cfl = 0.45;
+  GFS_VARIABLE_TRACER (v)->advection.cfl = 0.5;
 }
 
 GfsVariableClass * gfs_variable_tracer_vof_class (void)

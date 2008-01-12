@@ -359,6 +359,7 @@ static void simulation_run (GfsSimulation * sim)
 				&sim->approx_projection_params,
 				&sim->advection_params,
 				p, sim->physical_params.alpha, res);
+    gfs_simulation_set_timestep (sim);
     advance_tracers (domain, sim->advection_params.dt/2.);
   }
   while (sim->time.t < sim->time.end &&
@@ -367,8 +368,6 @@ static void simulation_run (GfsSimulation * sim)
     gdouble tstart = gfs_clock_elapsed (domain->timer);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
-
-    gfs_simulation_set_timestep (sim);
 
     gfs_predicted_face_velocities (domain, FTT_DIMENSION, &sim->advection_params);
     
@@ -405,10 +404,11 @@ static void simulation_run (GfsSimulation * sim)
    				&sim->approx_projection_params, 
     				&sim->advection_params, p, sim->physical_params.alpha, res);
 
-    advance_tracers (domain, sim->advection_params.dt);
-
     sim->time.t = sim->tnext;
     sim->time.i++;
+
+    gfs_simulation_set_timestep (sim);
+    advance_tracers (domain, sim->advection_params.dt);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
@@ -416,8 +416,7 @@ static void simulation_run (GfsSimulation * sim)
     gts_range_update (&domain->size);
   }
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
-  gts_container_foreach (GTS_CONTAINER (sim->events),
-			 (GtsFunc) gts_object_destroy, NULL);
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gts_object_destroy, NULL);
 }
 
 static void gfs_simulation_class_init (GfsSimulationClass * klass)
@@ -1036,9 +1035,9 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
   gdouble tnext = G_MAXINT;
   i = sim->events->items;
   while (i) {
-    GfsEvent * event = i->data;
-    if (t < event->t && event->t < tnext)
-      tnext = event->t + 1e-9;
+    gdouble next = gfs_event_next (i->data, sim);
+    if (t < next && next < tnext)
+      tnext = next + 1e-9;
     i = i->next;
   }
   if (sim->time.end < tnext)
@@ -1310,8 +1309,6 @@ static void advection_run (GfsSimulation * sim)
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
-    gfs_simulation_set_timestep (sim);
-
     gfs_domain_face_traverse (domain, FTT_XYZ,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
@@ -1319,6 +1316,8 @@ static void advection_run (GfsSimulation * sim)
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity,
 			      gfs_domain_velocity (domain));
+
+    gfs_simulation_set_timestep (sim);
 
     advance_tracers (domain, sim->advection_params.dt);
 

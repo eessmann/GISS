@@ -73,6 +73,8 @@ void            gfs_event_init        (GfsEvent * event,
 				       GfsSimulation * sim);
 void            gfs_event_do          (GfsEvent * event, 
 				       GfsSimulation * sim);
+gdouble         gfs_event_next        (GfsEvent * event, 
+				       GfsSimulation * sim);
 void            gfs_event_half_do     (GfsEvent * event, 
 				       GfsSimulation * sim);
 #define         gfs_event_is_repetitive(e) ((e)->step < G_MAXDOUBLE || (e)->istep < G_MAXINT)
