@@ -186,6 +186,7 @@ GtsObjectClass * gfs_global_class (void)
 struct _GfsFunction {
   GtsObject parent;
   GString * expr;
+  gboolean isexpr;
   GModule * module;
   GfsFunctionFunc f;
   gchar * sname;
@@ -196,6 +197,7 @@ struct _GfsFunction {
   GfsDerivedVariable * dv;
   gdouble val;
   gboolean spatial, constant;
+  GtsFile fpd;
 };
 
 static GtsSurface * read_surface (gchar * name, GtsFile * fp)
@@ -309,6 +311,14 @@ static gboolean load_module (GfsFunction * f, GtsFile * fp, gchar * mname)
     gts_file_error (fp, "module `%s' does not export function `f'", mname);
     g_module_close (f->module);
     return FALSE;
+  }
+  if (f->constant) {
+    f->val = (* f->f) (NULL, NULL, NULL);
+    f->f = NULL;
+    g_module_close (f->module);
+    f->module = NULL;
+    if (f->expr) g_string_free (f->expr, TRUE);
+    f->expr = NULL;
   }
   return TRUE;
 }
@@ -523,73 +533,16 @@ static gchar * find_identifier (const gchar * s, const gchar * i)
   return NULL;
 }
 
-static void function_read (GtsObject ** o, GtsFile * fp)
+static void function_compile (GfsFunction * f, GtsFile * fp)
 {
-  GfsFunction * f = GFS_FUNCTION (*o);
-  GfsSimulation * sim;
-  GfsDomain * domain;
-  gboolean isexpr;
-
-  if (GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read) (o, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-
-  sim = gfs_object_simulation (*o);
-  domain = GFS_DOMAIN (sim);
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT && fp->type != GTS_STRING &&
-      fp->type != '(' && fp->type != '{') {
-    gts_file_error (fp, "expecting an expression (val)");
-    return;
-  }
-
-  if ((f->expr = gfs_function_expression (fp, &isexpr)) == NULL)
-    return;
-
-  if (isexpr) {
-    if (fp->type == GTS_INT || fp->type == GTS_FLOAT) {
-      if (!strcmp (fp->token->str, f->expr->str)) {
-	f->val = atof (fp->token->str);
-	gts_file_next_token (fp);
-	return;
-      }
-    }
-    else if (fp->type == GTS_STRING && !f->spatial && !f->constant) {
-      if (strlen (f->expr->str) > 3 &&
-	  !strcmp (&(f->expr->str[strlen (f->expr->str) - 4]), ".gts")) {
-	if ((f->s = read_surface (f->expr->str, fp)) == NULL)
-	  return;
-	f->sname = g_strdup (f->expr->str);
-	gts_file_next_token (fp);
-	return;
-      }
-      else if (strlen (f->expr->str) > 3 &&
-	       !strcmp (&(f->expr->str[strlen (f->expr->str) - 4]), ".cgd")) {
-	if ((f->g = read_cartesian_grid (f->expr->str, fp)) == NULL)
-	  return;
-	if (!fit_index_dimension (f->g, f->index, fp))
-	  return;
-	f->sname = g_strdup (f->expr->str);
-	gts_file_next_token (fp);
-	return;
-      }
-      else if ((f->v = gfs_variable_from_name (domain->variables, f->expr->str))) {
-	gts_file_next_token (fp);
-	return;
-      }
-      else if ((f->dv = lookup_derived_variable (f->expr->str, domain->derived_variables))) {
-	gts_file_next_token (fp);
-	return;
-      }
-    }
-  }
-
   if (!HAVE_PKG_CONFIG) {
     gts_file_error (fp, "expecting a number, variable or GTS surface (val)\n"
 		    "(functions are not supported on this system)");
     return;
   }
   else {
+    GfsSimulation * sim = gfs_object_simulation (f);
+    GfsDomain * domain = GFS_DOMAIN (sim);
     gchar finname[] = "/tmp/gfsXXXXXX";
     gint find, status;
     FILE * fin;
@@ -693,7 +646,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     }
     fprintf (fin, "#line %d \"GfsFunction\"\n", fp->line);
 
-    if (isexpr)
+    if (f->isexpr)
       fprintf (fin, "return %s;\n}\n", f->expr->str);
     else {
       gchar * s = f->expr->str;
@@ -712,17 +665,93 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     case SIGQUIT: exit (0);
     case SIGABRT: return;
     }
+  }  
+}
+
+#define DEFERRED_COMPILATION ((GfsFunctionFunc) 0x1)
+
+static void check_for_deferred_compilation (GfsFunction * f)
+{
+  if (f->f == DEFERRED_COMPILATION) {
+    function_compile (f, &f->fpd);
+    if (f->fpd.type == GTS_ERROR) {
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_CRITICAL, 
+	     "error in deferred compilation\n%s", 
+	     f->fpd.error);
+      exit (1);
+    }
   }
+}
+
+static void function_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsFunction * f = GFS_FUNCTION (*o);
+  GfsSimulation * sim;
+  GfsDomain * domain;
+
+  if (GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_function_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
-  if (f->constant && f->f) {
-    f->val = (* f->f) (NULL, NULL, NULL);
-    f->f = NULL;
-    if (f->module) g_module_close (f->module);
-    f->module = NULL;
-    if (f->expr) g_string_free (f->expr, TRUE);
-    f->expr = NULL;
-  }    
+
+  sim = gfs_object_simulation (*o);
+  domain = GFS_DOMAIN (sim);
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT && fp->type != GTS_STRING &&
+      fp->type != '(' && fp->type != '{') {
+    gts_file_error (fp, "expecting an expression (val)");
+    return;
+  }
+
+  if ((f->expr = gfs_function_expression (fp, &f->isexpr)) == NULL)
+    return;
+
+  if (f->isexpr) {
+    if (fp->type == GTS_INT || fp->type == GTS_FLOAT) {
+      if (!strcmp (fp->token->str, f->expr->str)) {
+	f->val = atof (fp->token->str);
+	gts_file_next_token (fp);
+	return;
+      }
+    }
+    else if (fp->type == GTS_STRING && !f->spatial && !f->constant) {
+      if (strlen (f->expr->str) > 3 &&
+	  !strcmp (&(f->expr->str[strlen (f->expr->str) - 4]), ".gts")) {
+	if ((f->s = read_surface (f->expr->str, fp)) == NULL)
+	  return;
+	f->sname = g_strdup (f->expr->str);
+	gts_file_next_token (fp);
+	return;
+      }
+      else if (strlen (f->expr->str) > 3 &&
+	       !strcmp (&(f->expr->str[strlen (f->expr->str) - 4]), ".cgd")) {
+	if ((f->g = read_cartesian_grid (f->expr->str, fp)) == NULL)
+	  return;
+	if (!fit_index_dimension (f->g, f->index, fp))
+	  return;
+	f->sname = g_strdup (f->expr->str);
+	gts_file_next_token (fp);
+	return;
+      }
+      else if ((f->v = gfs_variable_from_name (domain->variables, f->expr->str))) {
+	gts_file_next_token (fp);
+	return;
+      }
+      else if ((f->dv = lookup_derived_variable (f->expr->str, domain->derived_variables))) {
+	gts_file_next_token (fp);
+	return;
+      }
+    }
+  }
+
+  if (sim->deferred_compilation) {
+    f->f = DEFERRED_COMPILATION;
+    f->fpd = *fp;
+  }
+  else
+    function_compile (f, fp);
+
+  if (fp->type == GTS_ERROR)
+    return;
   gts_file_next_token (fp);
 }
 
@@ -901,8 +930,10 @@ gdouble gfs_function_value (GfsFunction * f, FttCell * cell)
     return (* (GfsFunctionDerivedFunc) f->dv->func) (cell, NULL, 
 						     gfs_object_simulation (f), 
 						     f->dv->data);
-  else if (f->f)
+  else if (f->f) {
+    check_for_deferred_compilation (f);
     return (* f->f) (cell, NULL, gfs_object_simulation (f));
+  }
   else
     return f->val;
 }
@@ -931,8 +962,10 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa)
     return (* (GfsFunctionDerivedFunc) f->dv->func) (NULL, fa,
 						     gfs_object_simulation (f), 
 						     f->dv->data);
-  else if (f->f)
+  else if (f->f) {
+    check_for_deferred_compilation (f);
     return (* f->f) (NULL, fa, gfs_object_simulation (f));
+  }
   else
     return f->val;
 }
@@ -963,6 +996,7 @@ gdouble gfs_function_get_constant_value (GfsFunction * f)
 {
   g_return_val_if_fail (f != NULL, G_MAXDOUBLE);
 
+  check_for_deferred_compilation (f);
   if (f->f || f->s || f->v || f->dv)
     return G_MAXDOUBLE;
   else
@@ -1061,8 +1095,10 @@ gdouble gfs_function_spatial_value (GfsFunction * f, FttVector * p)
   g_return_val_if_fail (GFS_IS_FUNCTION_SPATIAL (f), 0.);
   g_return_val_if_fail (p != NULL, 0.);
 
-  if (f->f)
+  if (f->f) {
+    check_for_deferred_compilation (f);
     return (* (GfsFunctionSpatialFunc) f->f) (p->x, p->y, p->z);
+  }
   else
     return f->val;
 }

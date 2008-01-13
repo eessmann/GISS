@@ -75,6 +75,8 @@ struct _GfsSimulation {
   guint thin;
   gboolean output_solid;
 
+  gboolean deferred_compilation;
+
   gdouble tnext;
 };
 

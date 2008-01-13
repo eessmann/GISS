@@ -406,7 +406,7 @@ static void diffusion_destroy (GtsObject * o)
 {
   GfsDiffusion * d = GFS_DIFFUSION (o);
 
-  if (d->mu != gfs_function_get_variable (d->val))
+  if (d->mu && d->mu != gfs_function_get_variable (d->val))
     gts_object_destroy (GTS_OBJECT (d->mu));
   gts_object_destroy (GTS_OBJECT (d->val));
 
@@ -426,10 +426,6 @@ static void diffusion_read (GtsObject ** o, GtsFile * fp)
     if (fp->type == GTS_ERROR)
     return;
   }
-
-  if (gfs_function_get_constant_value (d->val) == G_MAXDOUBLE &&
-      (d->mu = gfs_function_get_variable (d->val)) == NULL)
-    d->mu = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
 }
 
 static void diffusion_write (GtsObject * o, FILE * fp)
@@ -448,7 +444,9 @@ static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
 {
   GfsDiffusion * d = GFS_DIFFUSION (event);
 
-  if (d->mu) {
+  if (gfs_function_get_constant_value (d->val) == G_MAXDOUBLE) {
+    if (d->mu == NULL && (d->mu = gfs_function_get_variable (d->val)) == NULL)
+      d->mu = gfs_temporary_variable (GFS_DOMAIN (sim));
     if (d->mu != gfs_function_get_variable (d->val))
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) update_mu, event);
@@ -463,14 +461,16 @@ static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
 
 static gdouble diffusion_face (GfsDiffusion * d, FttCellFace * f)
 {
-  return d->mu ? gfs_face_interpolated_value (f, d->mu->i) :
-    gfs_function_get_constant_value (d->val);
+  if (d->mu) return gfs_face_interpolated_value (f, d->mu->i);
+  gdouble val = gfs_function_get_constant_value (d->val);
+  return val < G_MAXDOUBLE ? val : 0.;
 }
 
 static gdouble diffusion_cell (GfsDiffusion * d, FttCell * cell)
 {
-  return d->mu ? GFS_VARIABLE (cell, d->mu->i) :
-    gfs_function_get_constant_value (d->val);
+  if (d->mu) return GFS_VARIABLE (cell, d->mu->i);
+  gdouble val = gfs_function_get_constant_value (d->val);
+  return val < G_MAXDOUBLE ? val : 0.;
 }
 
 static void diffusion_class_init (GfsDiffusionClass * klass)

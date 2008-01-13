@@ -66,7 +66,10 @@ static void simulation_write (GtsObject * object, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->write)
     (object, fp);
 
-  fputs (" {\n", fp);
+  fputs (" {\n"
+	 "  # when editing this file it is recommended to comment out the following line\n"
+	 "  GfsDeferredCompilation\n",
+	 fp);
 
   i = sim->modules;
   while (i) {
@@ -181,8 +184,14 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       return;
     }
 
+    /* ------ Deferred compilation ------*/
+    if (!strcmp (fp->token->str, "GfsDeferredCompilation")) {
+      sim->deferred_compilation = TRUE;
+      gts_file_next_token (fp);
+    }
+
     /* ------------ GModule ------------ */
-    if (!strcmp (fp->token->str, "GModule")) {
+    else if (!strcmp (fp->token->str, "GModule")) {
       gts_file_next_token (fp);
       if (fp->type != GTS_STRING) {
 	gts_file_error (fp, "expecting a string (filename)");
@@ -721,6 +730,8 @@ static void simulation_init (GfsSimulation * object)
 					(GTS_CONTAINER_CLASS
 					 (gts_slist_container_class ())));
   object->modules = NULL;
+
+  object->deferred_compilation = FALSE;
   
   object->tnext = 0.;
 }
