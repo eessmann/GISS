@@ -2666,6 +2666,39 @@ GfsVariable * gfs_domain_add_variable (GfsDomain * domain,
   return v;
 }
 
+/**
+ * gfs_domain_get_or_add_variable:
+ * @domain: a #GfsDomain.
+ * @name: the name of the variable to add or get.
+ * @description: the variable description or %NULL.
+ *
+ * Adds a new variable @name to @domain or returns the variable of
+ * @domain with the same name. In either case the description of the
+ * variable name is set to @description.
+ *
+ * Returns: the new or already existing variable or %NULL if @name is a
+ * reserved variable name.
+ */
+GfsVariable * gfs_domain_get_or_add_variable (GfsDomain * domain,
+					      const gchar * name,
+					      const gchar * description)
+{
+  GfsVariable * v;
+
+  g_return_val_if_fail (domain != NULL, NULL);
+  g_return_val_if_fail (name != NULL, NULL);
+
+  v = gfs_variable_from_name (domain->variables, name);
+  if (v != NULL) {
+    if (v->description)
+      g_free (v->description);
+    v->description = description ? g_strdup (description) : NULL;
+  }
+  else
+    v = gfs_domain_add_variable (domain, name, description);
+  return v;
+}
+
 static void add_pressure_force (FttCell * cell, gpointer * data)
 {
   gdouble * f = data[0];

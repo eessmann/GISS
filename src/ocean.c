@@ -865,8 +865,7 @@ static void gfs_source_hydrostatic_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (ph)");
     return;
   }
-  if (!(sh->ph = gfs_variable_from_name (domain->variables, fp->token->str)) &&
-      !(sh->ph = gfs_domain_add_variable (domain, fp->token->str, "Hydrostatic pressure"))) {
+  if (!(sh->ph = gfs_domain_get_or_add_variable (domain, fp->token->str, "Hydrostatic pressure"))) {
     gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
     return;
   }

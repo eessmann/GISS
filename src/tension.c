@@ -388,11 +388,15 @@ static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
 						v->f->name, NULL);
     gts_file_next_token (fp);
     if (fp->type == GTS_STRING) {
-      if ((v->kmax = gfs_variable_from_name (domain->variables, fp->token->str)) ||
-	  (v->kmax = gfs_domain_add_variable (domain, fp->token->str, "Maximum curvature"))) {
+      v->kmax = gfs_domain_get_or_add_variable (domain, fp->token->str, "Maximum curvature");
+      if (v->kmax) {
 	v->kmax->coarse_fine = curvature_coarse_fine;
 	v->kmax->fine_coarse = curvature_fine_coarse;
 	gts_file_next_token (fp);
+      }
+      else if (!GFS_IS_VARIABLE_POSITION (v)) {
+	gts_file_error (fp, "`%s' is a reserved variable name", fp->token->str);
+	return;
       }
     }
   }

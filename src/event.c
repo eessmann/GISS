@@ -516,10 +516,10 @@ static void gfs_init_read (GtsObject ** o, GtsFile * fp)
     else {
       GfsInit * init = GFS_INIT (*o);
       GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
-      GfsVariable * v = gfs_variable_from_name (domain->variables, fp->token->str);
+      GfsVariable * v = gfs_domain_get_or_add_variable (domain, fp->token->str, NULL);
       GfsFunction * f;
 
-      if (!v && !(v = gfs_domain_add_variable (domain, fp->token->str, NULL))) {
+      if (!v) {
 	gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
 	return;
       }
@@ -889,8 +889,7 @@ static void gfs_event_sum_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (sv)");
     return;
   }
-  if (!(s->sv = gfs_variable_from_name (domain->variables, fp->token->str)) &&
-      !(s->sv = gfs_domain_add_variable (domain, fp->token->str, "Sum"))) {
+  if (!(s->sv = gfs_domain_get_or_add_variable (domain, fp->token->str, "Sum"))) {
     gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
     return;
   }
@@ -1117,8 +1116,8 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (Z)");
     return;
   }
-  if (!(s->z = gfs_variable_from_name (domain->variables, fp->token->str)) &&
-      !(s->z = gfs_domain_add_variable (domain, fp->token->str, "Offset of harmonic decomposition"))) {
+  if (!(s->z = gfs_domain_get_or_add_variable (domain, fp->token->str, 
+					       "Offset of harmonic decomposition"))) {
     gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
     return;
   }
@@ -1129,9 +1128,8 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
       gts_file_error (fp, "expecting a string (E)");
       return;
     }
-    if (!(s->e = gfs_variable_from_name (domain->variables, fp->token->str)) &&
-	!(s->e = gfs_domain_add_variable (domain, fp->token->str, 
-					  "Remainder of harmonic decomposition"))) {
+    if (!(s->e = gfs_domain_get_or_add_variable (domain, fp->token->str, 
+						 "Remainder of harmonic decomposition"))) {
       gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
       return;
     }
@@ -1163,16 +1161,14 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
     gchar * u;
     
     u = g_strdup_printf ("%s%d", s->Aname, i);
-    if (!(s->A[i] = gfs_variable_from_name (domain->variables, u)) &&
-	!(s->A[i] = gfs_domain_add_variable (domain, u, 
-					 "In-phase component of the harmonic decomposition"))) {
+    if (!(s->A[i] = gfs_domain_get_or_add_variable (domain, u, 
+					"In-phase component of the harmonic decomposition"))) {
       gts_file_error (fp, "`%s' is a reserved keyword", u);
       return;
     }
     g_free (u);
     u = g_strdup_printf ("%s%d", s->Bname, i);
-    if (!(s->B[i] = gfs_variable_from_name (domain->variables, u)) &&
-	!(s->B[i] = gfs_domain_add_variable (domain, u,
+    if (!(s->B[i] = gfs_domain_get_or_add_variable (domain, u,
 				       "Out-of-phase component of the harmonic decomposition"))) {
       gts_file_error (fp, "`%s' is a reserved keyword", u);
       return;
@@ -1431,9 +1427,8 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
    */
 
   if (fp->type == GTS_STRING) {
-    if (!(s->diff = gfs_variable_from_name (domain->variables, fp->token->str)) &&
-	!(s->diff = gfs_domain_add_variable (domain, fp->token->str, 
-					     "Stopping field difference"))) {
+    if (!(s->diff = gfs_domain_get_or_add_variable (domain, fp->token->str, 
+						    "Stopping field difference"))) {
       gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
       return;
     }

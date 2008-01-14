@@ -2249,10 +2249,13 @@ static void gfs_output_droplet_stats_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
-  if (fp->type == GTS_STRING &&
-      ((d->tag = gfs_variable_from_name (domain->variables, fp->token->str)) ||
-       (d->tag = gfs_domain_add_variable (domain, fp->token->str, "Droplet index"))))
+  if (fp->type == GTS_STRING) {
+    if (!(d->tag = gfs_domain_get_or_add_variable (domain, fp->token->str, "Droplet index"))) {
+      gts_file_error (fp, "`%s' is a reserved variable name", fp->token->str);
+      return;
+    }
     gts_file_next_token (fp);
+  }
 }
 
 static void gfs_output_droplet_stats_write (GtsObject * o, FILE * fp)
@@ -2418,8 +2421,7 @@ static void output_error_norm_read (GtsObject ** o, GtsFile * fp)
 	gts_file_error (fp, "expecting a variable name");
 	return;
       }
-      if (!(n->v = gfs_variable_from_name (domain->variables, fp->token->str)) &&
-	  !(n->v = gfs_domain_add_variable (domain, fp->token->str, "Error field"))) {
+      if (!(n->v = gfs_domain_get_or_add_variable (domain, fp->token->str, "Error field"))) {
 	gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
 	return;
       }
