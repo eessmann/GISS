@@ -197,7 +197,7 @@ GtsObjectClass ** gfs_classes (void)
         gfs_output_scalar_sum_class (),
         gfs_output_scalar_maxima_class (),
         gfs_output_scalar_histogram_class (),
-        gfs_output_droplet_stats_class (),
+        gfs_output_droplet_sums_class (),
         gfs_output_error_norm_class (),
           gfs_output_correlation_class (),
 	gfs_output_squares_class (),

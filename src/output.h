@@ -252,25 +252,26 @@ struct _GfsOutputScalarHistogram {
 
 GfsOutputClass * gfs_output_scalar_histogram_class  (void);
 
-/* GfsOutputDropletStats: Header */
+/* GfsOutputDropletSums: Header */
 
-typedef struct _GfsOutputDropletStats         GfsOutputDropletStats;
+typedef struct _GfsOutputDropletSums         GfsOutputDropletSums;
 
-struct _GfsOutputDropletStats {
+struct _GfsOutputDropletSums {
   /*< private >*/
   GfsOutputScalar parent;
 
   /*< public >*/
-  GfsVariable * c, * tag;
+  GfsFunction * c;
+  GfsVariable * tag;
 };
 
-#define GFS_OUTPUT_DROPLET_STATS(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsOutputDropletStats,\
-					         gfs_output_droplet_stats_class ())
-#define GFS_IS_OUTPUT_DROPLET_STATS(obj)         (gts_object_is_from_class (obj,\
-						 gfs_output_droplet_stats_class ()))
+#define GFS_OUTPUT_DROPLET_SUMS(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsOutputDropletSums,\
+					         gfs_output_droplet_sums_class ())
+#define GFS_IS_OUTPUT_DROPLET_SUMS(obj)         (gts_object_is_from_class (obj,\
+						 gfs_output_droplet_sums_class ()))
 
-GfsOutputClass * gfs_output_droplet_stats_class  (void);
+GfsOutputClass * gfs_output_droplet_sums_class  (void);
 
 /* GfsOutputErrorNorm: Header */
 
