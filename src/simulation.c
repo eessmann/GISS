@@ -538,6 +538,12 @@ static gdouble cell_cz (FttCell * cell, FttCellFace * face)
   return p.z;
 }
 
+static gdouble cell_dV (FttCell * cell)
+{
+  gdouble dV = ftt_cell_volume (cell);
+  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a*dV : dV;
+}
+
 static gdouble cell_t (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   return sim->time.t;
@@ -662,6 +668,7 @@ static void simulation_init (GfsSimulation * object)
     { "cx", "x-coordinate of the center of the cell", cell_cx },
     { "cy", "y-coordinate of the center of the cell", cell_cy },
     { "cz", "z-coordinate of the center of the cell", cell_cz },
+    { "dV", "volume of the cell", cell_dV},
     { "t",  "Physical time", cell_t },
     { "dt", "Timestep", cell_dt },
     { "Vorticity", "Norm of the vorticity vector of the velocity field", cell_vorticity },
@@ -686,7 +693,6 @@ static void simulation_init (GfsSimulation * object)
     { "Id", "Parent box ID", cell_id },
     { NULL, NULL, NULL}
   };
-  GfsDerivedVariableInfo * v = derived_variable;
 
   gfs_domain_add_variable (domain, "P", "Approximate projection pressure")->centered = TRUE;
   gfs_domain_add_variable (domain, "Pmac", "MAC projection pressure")->centered = TRUE;
@@ -699,10 +705,12 @@ static void simulation_init (GfsSimulation * object)
 						    "z-component of the velocity"), FTT_Z);
 #endif /* FTT_3D */
 
+  GfsDerivedVariableInfo * v = derived_variable;
   while (v->name) {
     g_assert (gfs_domain_add_derived_variable (domain, *v));
     v++;
   }
+  domain->derived_variables = g_slist_reverse (domain->derived_variables);
 
   gfs_time_init (&object->time);
   gfs_physical_params_init (&object->physical_params);
