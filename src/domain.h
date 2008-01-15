@@ -253,6 +253,7 @@ guint        gfs_domain_tag_droplets          (GfsDomain * domain,
 					       GfsVariable * tag);
 void         gfs_domain_remove_droplets       (GfsDomain * domain,
 					       GfsVariable * c,
+					       GfsVariable * v,
 					       gint min);
 void         gfs_domain_remove_ponds          (GfsDomain * domain, 
 					       gint min,

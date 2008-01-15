@@ -284,8 +284,10 @@ typedef struct _GfsRemoveDroplets         GfsRemoveDroplets;
 struct _GfsRemoveDroplets {
   /*< private >*/
   GfsEvent parent;
+  GfsVariable * v;
 
   /*< public >*/
+  GfsFunction * fc;
   GfsVariable * c;
   gint min;
 };

@@ -65,6 +65,7 @@ struct _GfsVariableClass {
 						 gfs_variable_class())
 #define GFS_IS_VARIABLE(obj)         (gts_object_is_from_class (obj,\
 						 gfs_variable_class ()))
+#define GFS_VALUE(cell,v)            ((&GFS_STATE (cell)->place_holder)[(v)->i])
 
 GfsVariableClass *    gfs_variable_class            (void);
 GfsVariable *         gfs_variable_new              (GfsVariableClass * klass,

@@ -1726,13 +1726,35 @@ GfsInitFractionClass * gfs_init_fraction_class (void)
 
 /* GfsRemoveDroplets: Object */
 
+static void gfs_remove_droplets_destroy (GtsObject * object)
+{
+  GfsRemoveDroplets * d = GFS_REMOVE_DROPLETS (object);
+  if (d->fc)
+    gts_object_destroy (GTS_OBJECT (d->fc));
+  (* GTS_OBJECT_CLASS (gfs_remove_droplets_class ())->parent_class->destroy) (object);
+}
+
+static void compute_v (FttCell * cell, GfsRemoveDroplets * d)
+{
+  GFS_VALUE (cell, d->v) = gfs_function_value (d->fc, cell);
+}
+
 static gboolean gfs_remove_droplets_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_remove_droplets_class ())->parent_class)->event) 
       (event, sim)) {
-    gfs_domain_remove_droplets (GFS_DOMAIN (sim), 
-				GFS_REMOVE_DROPLETS (event)->c, 
-				GFS_REMOVE_DROPLETS (event)->min);
+    GfsRemoveDroplets * d = GFS_REMOVE_DROPLETS (event);
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    d->v = d->fc ? gfs_function_get_variable (d->fc) : d->c;
+    if (d->v)
+      gfs_domain_remove_droplets (domain, d->v, d->c, d->min);
+    else {
+      d->v = gfs_temporary_variable (domain);
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) compute_v, d);
+      gfs_domain_remove_droplets (domain, d->v, d->c, d->min);
+      gts_object_destroy (GTS_OBJECT (d->v));
+    }
     return TRUE;
   }
   return FALSE;
@@ -1740,8 +1762,6 @@ static gboolean gfs_remove_droplets_event (GfsEvent * event, GfsSimulation * sim
 
 static void gfs_remove_droplets_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsDomain * domain;
-
   if (GTS_OBJECT_CLASS (gfs_remove_droplets_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_remove_droplets_class ())->parent_class->read) 
       (o, fp);
@@ -1752,9 +1772,9 @@ static void gfs_remove_droplets_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (variable)");
     return;
   }
-  domain = GFS_DOMAIN (gfs_object_simulation (*o));
-  if ((GFS_REMOVE_DROPLETS (*o)->c = gfs_variable_from_name (domain->variables, fp->token->str))
-      == NULL) {
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  GfsRemoveDroplets * r = GFS_REMOVE_DROPLETS (*o);
+  if ((r->c = gfs_variable_from_name (domain->variables, fp->token->str)) == NULL) {
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
     return;
   }
@@ -1766,6 +1786,11 @@ static void gfs_remove_droplets_read (GtsObject ** o, GtsFile * fp)
   }
   GFS_REMOVE_DROPLETS (*o)->min = atoi (fp->token->str);
   gts_file_next_token (fp);
+
+  if (fp->type != '\n') {
+    r->fc = gfs_function_new (gfs_function_class (), 0.);
+    gfs_function_read (r->fc, gfs_object_simulation (r), fp);
+  }
 }
 
 static void gfs_remove_droplets_write (GtsObject * o, FILE * fp)
@@ -1773,12 +1798,16 @@ static void gfs_remove_droplets_write (GtsObject * o, FILE * fp)
   if (GTS_OBJECT_CLASS (gfs_remove_droplets_class ())->parent_class->write)
     (* GTS_OBJECT_CLASS (gfs_remove_droplets_class ())->parent_class->write) 
       (o, fp);
-  fprintf (fp, " %s %d", GFS_REMOVE_DROPLETS (o)->c->name, GFS_REMOVE_DROPLETS (o)->min);
+  GfsRemoveDroplets * r = GFS_REMOVE_DROPLETS (o);
+  fprintf (fp, " %s %d", r->c->name, r->min);
+  if (r->fc)
+    gfs_function_write (r->fc, fp);
 }
 
 static void gfs_remove_droplets_class_init (GfsEventClass * klass)
 {
   GFS_EVENT_CLASS (klass)->event = gfs_remove_droplets_event;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_remove_droplets_destroy;
   GTS_OBJECT_CLASS (klass)->read = gfs_remove_droplets_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_remove_droplets_write;
 }
