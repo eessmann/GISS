@@ -1088,6 +1088,7 @@ static void restore_solid (FttCell * cell, gpointer * data)
     *not_cut = FALSE;
   }
   else if (GFS_VARIABLE (cell, status->i) == 0.) {
+    /* fixme: this can fail for non-contiguous domains (e.g. non-connected GfsBoxes) */
     g_assert (*not_cut);
     GFS_VARIABLE (cell, c->i) = 0.;
   }

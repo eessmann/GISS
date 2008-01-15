@@ -2924,6 +2924,10 @@ guint gfs_domain_tag_droplets (GfsDomain * domain,
 			       GfsVariable * c,
 			       GfsVariable * tag)
 {
+  /* fixme: this function may not work as expected for parallel domain
+     and/or periodic boundaries: droplets sitting on PE boundaries
+     will be seen as two independent droplets... */
+
   g_return_val_if_fail (domain != NULL, 0);
   g_return_val_if_fail (c != NULL, 0);
   g_return_val_if_fail (tag != NULL, 0);
@@ -2999,6 +3003,7 @@ void gfs_domain_remove_droplets (GfsDomain * domain,
       guint * tmp = g_malloc (p.n*sizeof (guint));
       memcpy (tmp, p.sizes, p.n*sizeof (guint));
       qsort (tmp, p.n, sizeof (guint), greater);
+      /* fixme: this won't work for parallel jobs */
       p.min = tmp[-1 - min];
       g_free (tmp);
     }
