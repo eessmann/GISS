@@ -25,8 +25,9 @@
 
 static void variable_init_domain (GfsVariable * v, GfsDomain * domain)
 {
-   v->i = gfs_domain_alloc (domain);
-   v->domain = domain;
+  v->i = gfs_domain_alloc (domain);
+  v->domain = domain;
+  GTS_OBJECT (v)->reserved = domain;
 }
 
 static void gfs_variable_read (GtsObject ** o, GtsFile * fp)

@@ -3412,6 +3412,7 @@ GfsDerivedVariable * gfs_domain_add_derived_variable (GfsDomain * domain,
   v->func = info.func;
   v->data = info.data;
   domain->derived_variables = g_slist_prepend (domain->derived_variables, v);
+  GTS_OBJECT (v)->reserved = domain;
   return v;
 }
 
