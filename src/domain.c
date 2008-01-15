@@ -2866,9 +2866,9 @@ static void tag_cell_fraction (GtsFifo * fifo,
   g_assert (FTT_CELL_IS_LEAF (cell));
   ftt_cell_neighbors (cell, &n);
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (n.c[d] && GFS_VARIABLE (n.c[d], v->i) == 0. && GFS_VARIABLE (n.c[d], c->i) > THRESHOLD) {
+    if (n.c[d] && GFS_VALUE (n.c[d], v) == 0. && GFS_VALUE (n.c[d], c) > THRESHOLD) {
       if (FTT_CELL_IS_LEAF (n.c[d])) {
-	GFS_VARIABLE (n.c[d], v->i) = tag;
+	GFS_VALUE (n.c[d], v) = tag;
 	gts_fifo_push (fifo, n.c[d]);
       }
       else {
@@ -2881,9 +2881,9 @@ static void tag_cell_fraction (GtsFifo * fifo,
 #endif	
 	ftt_cell_children_direction (n.c[d], od, &child);
 	for (i = 0; i < FTT_CELLS/2; i++)
-	  if (child.c[i] && GFS_VARIABLE (child.c[i], v->i) == 0. &&
-	      GFS_VARIABLE (child.c[i], c->i) > THRESHOLD) {
-	    GFS_VARIABLE (child.c[i], v->i) = tag;
+	  if (child.c[i] && GFS_VALUE (child.c[i], v) == 0. &&
+	      GFS_VALUE (child.c[i], c) > THRESHOLD) {
+	    GFS_VALUE (child.c[i], v) = tag;
 	    gts_fifo_push (fifo, child.c[i]);
 	  }
       }
@@ -2897,10 +2897,10 @@ typedef struct {
 
 static void tag_new_fraction_region (FttCell * cell, TagPar * p)
 {
-  if (GFS_VARIABLE (cell, p->v->i) == 0. && GFS_VARIABLE (cell, p->c->i) > THRESHOLD) {
+  if (GFS_VALUE (cell, p->v) == 0. && GFS_VALUE (cell, p->c) > THRESHOLD) {
     GtsFifo * fifo = gts_fifo_new ();
 
-    GFS_VARIABLE (cell, p->v->i) = ++p->tag;
+    GFS_VALUE (cell, p->v) = ++p->tag;
     gts_fifo_push (fifo, cell);
     while ((cell = gts_fifo_pop (fifo)))
       tag_cell_fraction (fifo, cell, p->c, p->v, p->tag);
@@ -2947,16 +2947,16 @@ typedef struct {
 
 static void compute_droplet_size (FttCell * cell, RemoveDropletsPar * p)
 {
-  guint i = GFS_VARIABLE (cell, p->tag->i);
+  guint i = GFS_VALUE (cell, p->tag);
   if (i > 0)
     p->sizes[i - 1]++;
 }
 
 static void reset_small_fraction (FttCell * cell, RemoveDropletsPar * p)
 {
-  guint i = GFS_VARIABLE (cell, p->tag->i);
+  guint i = GFS_VALUE (cell, p->tag);
   if (i > 0 && p->sizes[i - 1] < p->min)
-    GFS_VARIABLE (cell, p->c->i) = 0.;
+    GFS_VALUE (cell, p->c) = 0.;
 }
 
 static int greater (const void * a, const void * b)
