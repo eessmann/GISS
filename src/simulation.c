@@ -1153,7 +1153,6 @@ void gfs_time_read (GfsTime * t, GtsFile * fp)
   var[5].data = &t->iend;
   var[6].data = &t->dtmax;
 
-  gfs_time_init (t);
   gts_file_assign_variables (fp, var);
 
   if (t->t < t->start)
