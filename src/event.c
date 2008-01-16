@@ -546,6 +546,10 @@ static void gfs_init_read (GtsObject ** o, GtsFile * fp)
   }
   fp->scope_max--;
   gts_file_next_token (fp);
+
+  GfsEvent * event = GFS_EVENT (*o);
+  if (event->start < 0. && (event->istep < G_MAXINT || event->step < G_MAXDOUBLE))
+    event->start = 0.;
 }
 
 static void gfs_init_write (GtsObject * o, FILE * fp)
