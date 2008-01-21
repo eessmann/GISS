@@ -12,6 +12,7 @@ TESTDIRS = \
 	lid \
 	couette \
 	kinetic \
+	hydrostatic \
 	boundaries \
 	channel \
 	plate \
