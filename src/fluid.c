@@ -1466,37 +1466,6 @@ void gfs_get_from_below_intensive (FttCell * cell, const GfsVariable * v)
 }
 
 /**
- * gfs_get_from_below_extensive:
- * @cell: a #FttCell.
- * @v: a #GfsVariable to "get from below".
- *
- * Sets the value of the "extensive" variable @v of @cell as (half in
- * 3D) the sum of the values of its children cells.
- *
- * This functions fails if @cell is a leaf of the cell tree.  
- */
-void gfs_get_from_below_extensive (FttCell * cell, const GfsVariable * v)
-{
-  gdouble val = 0.;
-  guint i;
-  FttCellChildren child;
-
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (!FTT_CELL_IS_LEAF (cell));
-  g_return_if_fail (v != NULL);
-
-  ftt_cell_children (cell, &child);
-  for (i = 0; i < FTT_CELLS; i++)
-    if (child.c[i])
-      val += GFS_VARIABLE (child.c[i], v->i);
-  GFS_VARIABLE (cell, v->i) = val
-#if (!FTT_2D && !FTT_2D3)
-    /2.
-#endif /* not FTT_2D */
-    ;
-}
-
-/**
  * gfs_cell_coarse_fine:
  * @parent: a #FttCell.
  * @v: a #GfsVariable.

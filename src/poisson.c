@@ -599,6 +599,32 @@ static void get_from_above (FttCell * parent, GfsVariable * v)
     }
 }
 
+static void get_from_below_3D (FttCell * cell, const GfsVariable * v)
+{
+  gdouble val = 0.;
+  guint i;
+  FttCellChildren child;
+
+  ftt_cell_children (cell, &child);
+  for (i = 0; i < FTT_CELLS; i++)
+    if (child.c[i])
+      val += GFS_VARIABLE (child.c[i], v->i);
+  GFS_VARIABLE (cell, v->i) = val/2.;
+}
+
+static void get_from_below_2D (FttCell * cell, const GfsVariable * v)
+{
+  gdouble val = 0.;
+  guint i;
+  FttCellChildren child;
+
+  ftt_cell_children (cell, &child);
+  for (i = 0; i < FTT_CELLS; i++)
+    if (child.c[i])
+      val += GFS_VARIABLE (child.c[i], v->i);
+  GFS_VARIABLE (cell, v->i) = val;
+}
+
 /**
  * gfs_poisson_cycle:
  * @domain: the domain on which to solve the Poisson equation.
@@ -644,7 +670,9 @@ void gfs_poisson_cycle (GfsDomain * domain,
   /* compute residual on non-leafs cells */
   gfs_domain_cell_traverse (domain, 
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_get_from_below_extensive, res);
+			    p->dimension == 2 ? (FttCellTraverseFunc) get_from_below_2D : 
+			    (FttCellTraverseFunc) get_from_below_3D,
+			    res);
 
   /* relax top level */
   gfs_domain_cell_traverse (domain,

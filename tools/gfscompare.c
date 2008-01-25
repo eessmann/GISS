@@ -327,7 +327,6 @@ int main (int argc, char * argv[])
   gboolean centered = FALSE;
   gboolean weighted = TRUE;
   gdouble constant = 0.;
-  gboolean extensive = FALSE;
   gboolean absolute = FALSE;
 #if FTT_2D
   gboolean gnuplot = FALSE;
@@ -364,7 +363,6 @@ int main (int argc, char * argv[])
       {"centered", no_argument, NULL, 'c'},
       {"not-weighted", no_argument, NULL, 'w'},
       {"constant", no_argument, NULL, 'C'},
-      {"extensive", no_argument, NULL, 'e'},
       { NULL }
     };
     int option_index = 0;
@@ -392,9 +390,6 @@ int main (int argc, char * argv[])
       break;
     case 'a': /* abs */
       absolute = TRUE;
-      break;
-    case 'e': /* extensive */
-      extensive = TRUE;
       break;
     case 'C': /* constant */
       constant = TRUE;
@@ -451,7 +446,6 @@ int main (int argc, char * argv[])
      "  -m V  --min=V       set minimum of color scale to V (used with -S)\n"
      "  -M V  --max=V       set maximum of color scale to V\n"
      "  -a    --abs         output the absolute value of the error field\n"
-     "  -e    --extensive   variable is extensive\n"
      "  -C    --constant    apply a constant shift to one of the field, minimizing\n"
      "                      the error between the two fields (useful for pressure)\n"
      "  -w    --not-weighted do not use area-weighted norm estimation\n"
@@ -638,22 +632,12 @@ int main (int argc, char * argv[])
   }
 #endif /* FTT_2D */
   else {
-    if (!extensive) {
-      gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
-				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-				(FttCellTraverseFunc) gfs_get_from_below_intensive, var1);
-      gfs_domain_cell_traverse (GFS_DOMAIN (s2), 
-				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-				(FttCellTraverseFunc) gfs_get_from_below_intensive, var2);
-    }
-    else {
-      gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
-				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-				(FttCellTraverseFunc) gfs_get_from_below_extensive, var1);
-      gfs_domain_cell_traverse (GFS_DOMAIN (s2), 
-				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-				(FttCellTraverseFunc) gfs_get_from_below_extensive, var2);
-    }
+    gfs_domain_cell_traverse (GFS_DOMAIN (s1), 
+			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_get_from_below_intensive, var1);
+    gfs_domain_cell_traverse (GFS_DOMAIN (s2), 
+			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_get_from_below_intensive, var2);
     data[4] = &period;
     gts_container_foreach (GTS_CONTAINER (s1), (GtsFunc) difference_box, data);
   }
