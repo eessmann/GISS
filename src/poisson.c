@@ -46,6 +46,7 @@ void gfs_multilevel_params_write (GfsMultilevelParams * par, FILE * fp)
 	   "  nitermin  = %u\n"
 	   "  weighted  = %d\n"
 	   "  beta      = %g\n"
+	   "  omega     = %g\n"
 	   "}",
 	   par->tolerance,
 	   par->nrelax,
@@ -54,7 +55,8 @@ void gfs_multilevel_params_write (GfsMultilevelParams * par, FILE * fp)
 	   par->nitermax,
 	   par->nitermin,
 	   par->weighted,
-	   par->beta);
+	   par->beta,
+	   par->omega);
 }
 
 void gfs_multilevel_params_init (GfsMultilevelParams * par)
@@ -71,6 +73,7 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
   par->dimension = FTT_DIMENSION;
   par->weighted = FALSE;
   par->beta = 0.5;
+  par->omega = 1.;
 }
 
 void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
@@ -84,6 +87,7 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
     {GTS_UINT,   "nitermin",  TRUE},
     {GTS_INT,    "weighted",  TRUE},
     {GTS_DOUBLE, "beta",      TRUE},
+    {GTS_DOUBLE, "omega",     TRUE},
     {GTS_NONE}
   };
 
@@ -98,6 +102,7 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
   var[5].data = &par->nitermin;
   var[6].data = &par->weighted;
   var[7].data = &par->beta;
+  var[8].data = &par->omega;
 
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR)
@@ -166,7 +171,7 @@ void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 typedef struct {
   guint u, rhs, dia, res;
   gint maxlevel;
-  gdouble beta;
+  gdouble beta, omega;
 } RelaxParams;
 
 static void relax (FttCell * cell, RelaxParams * p)
@@ -214,7 +219,9 @@ static void relax2D (FttCell * cell, RelaxParams * p)
     }
   }
   if (g.a > 0.)
-    GFS_VARIABLE (cell, p->u) = (g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
+    GFS_VARIABLE (cell, p->u) = 
+      (1. - p->omega)*GFS_VARIABLE (cell, p->u) 
+      + p->omega*(g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
   else
     GFS_VARIABLE (cell, p->u) = 0.;
 }
@@ -237,6 +244,7 @@ static void relax2D (FttCell * cell, RelaxParams * p)
 void gfs_relax (GfsDomain * domain,
 		guint d,
 		gint max_depth,
+		gdouble omega,
 		GfsVariable * u,
 		GfsVariable * rhs,
 		GfsVariable * dia)
@@ -253,6 +261,7 @@ void gfs_relax (GfsDomain * domain,
   p.rhs = rhs->i;
   p.dia = dia->i;
   p.maxlevel = max_depth;
+  p.omega = omega;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 			    max_depth,
@@ -685,7 +694,7 @@ void gfs_poisson_cycle (GfsDomain * domain,
     gfs_domain_homogeneous_bc (domain,
 			       FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 			       minlevel, dp, u);
-    gfs_relax (domain, p->dimension, minlevel, dp, res, dia);
+    gfs_relax (domain, p->dimension, minlevel, p->omega, dp, res, dia);
   }
   nrelax /= p->erelax;
 
@@ -699,7 +708,7 @@ void gfs_poisson_cycle (GfsDomain * domain,
       gfs_domain_homogeneous_bc (domain, 
 				 FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 				 l, dp, u);
-      gfs_relax (domain, p->dimension, l, dp, res, dia);
+      gfs_relax (domain, p->dimension, l, p->omega, dp, res, dia);
     }
   }
   /* correct on leaf cells */

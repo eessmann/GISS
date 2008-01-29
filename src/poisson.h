@@ -40,7 +40,7 @@ struct _GfsMultilevelParams {
   guint niter;
   guint depth;
   gboolean weighted;
-  gdouble beta;
+  gdouble beta, omega;
   GfsNorm residual_before, residual;
 };
 
@@ -54,6 +54,7 @@ void                  gfs_multilevel_params_stats_write (GfsMultilevelParams * p
 void                  gfs_relax                      (GfsDomain * domain,
 						      guint d,
 						      gint max_depth,
+						      gdouble omega,
 						      GfsVariable * u,
 						      GfsVariable * rhs,
 						      GfsVariable * dia);
