@@ -26,6 +26,9 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
+if Curve('energy',1,2).max() > 1. or \
+   Curve('energy-nonlinear',1,2).max() > 1.:
+    exit(1)
 if (Curve('energy.ref',1,2) - Curve('energy',1,2)).max() > 1e-2 or \
    (Curve('energy-nonlinear.ref',1,2) - Curve('energy-nonlinear',1,2)).max() > 1e-2:
     exit(1)

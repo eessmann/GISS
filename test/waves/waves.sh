@@ -32,6 +32,8 @@ awk 'BEGIN {
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
+if Curve('correlation',1,3).max() > 10.:
+    exit(1)
 if (Curve('correlation',1,2) - Curve('correlation.ref',1,2)).max() > 0. or\
    (Curve('correlation.ref',1,3) - Curve('correlation',1,3)).max() > 0.:
     exit(1)
