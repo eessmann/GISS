@@ -218,7 +218,7 @@ static void relax2D (FttCell * cell, RelaxParams * p)
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_face_weighted_gradient (&f, &ng, p->u, p->maxlevel);
+      gfs_face_weighted_gradient_2D (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
@@ -310,7 +310,7 @@ static void residual_set2D (FttCell * cell, RelaxParams * p)
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_face_weighted_gradient (&f, &ng, p->u, p->maxlevel);
+      gfs_face_weighted_gradient_2D (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }

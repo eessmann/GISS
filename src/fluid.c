@@ -597,35 +597,18 @@ void gfs_face_gradient (const FttCellFace * face,
 	  g->a += s*gcf.b;
 	  g->b += s*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
 	}
-      s = GFS_FACE_FRACTION (face);
-#if (FTT_2D || FTT_2D3)
+      s = GFS_FACE_FRACTION (face)*n/2.;
       g->a /= s;
       g->b /= s;
-#else  /* 3D */
-      g->a /= 2.*s;
-      g->b /= 2.*s;
-#endif /* 3D */
     }
   }
 }
 
-/**
- * gfs_face_weighted_gradient:
- * @face: a #FttCellFace.
- * @g: the #GfsGradient.
- * @v: a #GfsVariable index.
- * @max_level: the maximum cell level to consider (-1 means no restriction).
- *
- * Set the value of @g as the gradient of variable @v on the @face
- * weighted by the value of the @v field of the face state vector of the
- * corresponding cell. The value returned is second order accurate in
- * space and conservative, in the sense that values at a coarse/fine
- * cell boundary are consistent.  
- */
-void gfs_face_weighted_gradient (const FttCellFace * face,
-				 GfsGradient * g,
-				 guint v,
-				 gint max_level)
+static void face_weighted_gradient (const FttCellFace * face,
+				    GfsGradient * g,
+				    guint v,
+				    gint max_level,
+				    guint dimension)
 {
   guint level;
 
@@ -671,12 +654,41 @@ void gfs_face_weighted_gradient (const FttCellFace * face,
 	  g->a += w*gcf.b;
 	  g->b += w*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
 	}
-#if (!FTT_2D && !FTT_2D3)
-      g->a /= 2.;
-      g->b /= 2.;
-#endif /* not 2D and not 2D3 */
+      if (dimension > 2) {
+	g->a /= n/2.;
+	g->b /= n/2.;
+      }
     }
   }
+}
+
+/**
+ * gfs_face_weighted_gradient:
+ * @face: a #FttCellFace.
+ * @g: the #GfsGradient.
+ * @v: a #GfsVariable index.
+ * @max_level: the maximum cell level to consider (-1 means no restriction).
+ *
+ * Set the value of @g as the gradient of variable @v on the @face
+ * weighted by the value of the @v field of the face state vector of the
+ * corresponding cell. The value returned is second order accurate in
+ * space and conservative, in the sense that values at a coarse/fine
+ * cell boundary are consistent.  
+ */
+void gfs_face_weighted_gradient (const FttCellFace * face,
+				 GfsGradient * g,
+				 guint v,
+				 gint max_level)
+{
+  face_weighted_gradient (face, g, v, max_level, FTT_DIMENSION);
+}
+
+void gfs_face_weighted_gradient_2D (const FttCellFace * face,
+				    GfsGradient * g,
+				    guint v,
+				    gint max_level)
+{
+  face_weighted_gradient (face, g, v, max_level, 2);
 }
 
 static void fullest_directions (const FttCellFace * face,
