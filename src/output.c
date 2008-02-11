@@ -29,6 +29,7 @@
 #include "adaptive.h"
 #include "solid.h"
 #include "ocean.h"
+#include "unstructured.h"
 
 /* GfsOutput: object */
 
@@ -1230,6 +1231,16 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
 				(FttCellTraverseFunc) write_text, event);
       break;
     }
+    case GFS_VTK: {
+      gfs_domain_write_vtk (domain, output->max_depth, domain->variables_io,
+			    GFS_OUTPUT (event)->file->fp);
+      break;
+    }
+    case GFS_TECPLOT: {
+      gfs_domain_write_tecplot (domain, output->max_depth, domain->variables_io,
+				GFS_OUTPUT (event)->file->fp);
+      break;
+    }
     default:
       g_assert_not_reached ();
     }
@@ -1264,8 +1275,12 @@ static void output_simulation_write (GtsObject * o, FILE * fp)
     fputs (" binary = 0", fp);
   if (!output->solid)
     fputs (" solid = 0", fp);
-  if (output->format == GFS_TEXT)
-    fputs (" format = text", fp);
+  switch (output->format) {
+  case GFS_TEXT:    fputs (" format = text", fp);    break;
+  case GFS_VTK:     fputs (" format = VTK", fp);     break;
+  case GFS_TECPLOT: fputs (" format = Tecplot", fp); break;
+  default: break;
+  }
   fputs (" }", fp);
 }
 
@@ -1330,6 +1345,10 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
 	output->format = GFS;
       else if (!strcmp (format, "text"))
 	output->format = GFS_TEXT;
+      else if (!strcmp (format, "VTK"))
+	output->format = GFS_VTK;
+      else if (!strcmp (format, "Tecplot"))
+	output->format = GFS_TECPLOT;
       else {
 	gts_file_variable_error (fp, var, "format",
 				 "unknown format `%s'", format);

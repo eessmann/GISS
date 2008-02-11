@@ -144,7 +144,10 @@ GfsOutputClass * gfs_output_location_class  (void);
 /* GfsOutputSimulation: Header */
 
 typedef struct _GfsOutputSimulation         GfsOutputSimulation;
-typedef enum   { GFS, GFS_TEXT }            GfsOutputSimulationFormat;
+typedef enum   { GFS, 
+		 GFS_TEXT, 
+		 GFS_VTK, 
+		 GFS_TECPLOT }              GfsOutputSimulationFormat;
 
 struct _GfsOutputSimulation {
   GfsOutput parent;
