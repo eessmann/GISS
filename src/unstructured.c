@@ -54,7 +54,7 @@ static void vertex_pos (Vertex * v, FttVector * p)
   ftt_corner_pos (v->cell, d[v->i], p);
 }
 
-static gdouble vertex_value (Vertex * vertex, GfsVariable * v, gint max_depth)
+static float vertex_value (Vertex * vertex, GfsVariable * v, gint max_depth)
 {
   return gfs_cell_corner_value (vertex->cell, d[vertex->i], v, max_depth);
 }
@@ -321,7 +321,7 @@ void gfs_domain_write_tecplot (GfsDomain * domain, gint max_depth, GSList * vari
 
   /* header */
   fprintf (fp,
-	   " TITLE = 'Gerris simulation version %s (%s)'\n",
+	   " TITLE = \"Gerris simulation version %s (%s)\"\n",
 	   GFS_VERSION,
 	   GFS_BUILD_VERSION);
 
@@ -345,7 +345,11 @@ void gfs_domain_write_tecplot (GfsDomain * domain, gint max_depth, GSList * vari
     Vertex * vertex = j->data;
     FttVector p;
     vertex_pos (vertex, &p);
+#if FTT_2D
+    fprintf (fp, "%g %g", p.x, p.y);
+#else
     fprintf (fp, "%g %g %g", p.x, p.y, p.z);
+#endif
     GSList * k = variables;
     while (k) {
       fprintf (fp, " %g", vertex_value (vertex, k->data, max_depth));
