@@ -19,6 +19,9 @@
 
 #include <stdlib.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
 #include <unistd.h>
 #include <math.h>
 #include "event.h"
@@ -1560,39 +1563,52 @@ static void gfs_event_script_read (GtsObject ** o, GtsFile * fp)
     gts_file_next_token (fp);
 }
 
+static FILE * gfs_popen (GfsSimulation * sim, const char * command, const char * type)
+{
+  g_return_val_if_fail (command != NULL, NULL);
+  g_return_val_if_fail (type != NULL, NULL);
+  
+  gchar sname[] = "/tmp/gfsXXXXXX";
+  mktemp (sname);
+  if (mkfifo (sname, 0666)) {
+    g_warning ("gfs_popen() cannot create FIFO: %s", strerror (errno));
+    return NULL;
+  }
+  /* When adding pre-defined shell variables please update this page:
+     http://gfs.sourceforge.net/wiki/index.php/GfsEventScript */
+  gchar * scommand = g_strdup_printf ("GfsTime=%g GfsIter=%d GfsPid=%d "
+				      "GFS_STOP=%d sh %s",
+				      sim->time.t, sim->time.i, 
+				      GFS_DOMAIN (sim)->pid,
+				      GFS_EVENT_SCRIPT_STOP,
+				      sname);
+  fflush (stdout);
+  fflush (stderr);
+  FILE * fp = popen (scommand, type);
+  g_free (scommand);
+  if (fp != NULL) {
+    FILE * f = fopen (sname, "w");
+    fputs (command, f);
+    fclose (f);
+  }
+  remove (sname);
+  return fp;
+}
+
 static gboolean gfs_event_script_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_script_class ())->parent_class)->event) 
       (event, sim)) {
     GfsEventScript * s = GFS_EVENT_SCRIPT (event);
     if (s->script) {
-      gchar * scommand;
-      gchar sname[] = "/tmp/gfsXXXXXX";
-      gint sf = mkstemp (sname);
-      gint status;
-      FILE * f;
-
-      if (sf < 0) {
-	g_warning ("GfsEventScript cannot create temporary files");
+      FILE * fp = gfs_popen (sim, s->script, "w");
+      if (fp == NULL) {
+	g_warning ("GfsEventScript cannot start script");
 	return TRUE;
       }
-      f = fdopen (sf, "w");
-      fputs (s->script, f);
-      fclose (f);
-      close (sf);
-      scommand = g_strdup_printf ("GfsTime=%g GfsIter=%d GfsPid=%d "
-				  "GFS_STOP=%d sh %s",
-				  sim->time.t, sim->time.i, 
-				  GFS_DOMAIN (sim)->pid,
-				  GFS_EVENT_SCRIPT_STOP,
-				  sname);
-      fflush (stdout);
-      fflush (stderr);
-      status = system (scommand);
+      int status = pclose (fp);
       if (status != -1)
 	status = WEXITSTATUS (status);
-      g_free (scommand);
-      remove (sname);
       if (status == GFS_EVENT_SCRIPT_STOP)
 	exit (1);
     }
