@@ -30,7 +30,9 @@
 # Generated files: t.mpg t.eps
 #
 3 2 GfsSimulation GfsBox GfsGEdge {} {
-  Time { end = 20 }
+  # Limit the maximum timestep to 1e-2 so that the initial diffusion
+  # is properly resolved
+  Time { end = 20 dtmax = 1e-2 }
 
   # Use an initial refinement of 8 levels around the solid boundary
   RefineSolid 8
@@ -74,7 +76,7 @@
   OutputTiming { start = end } stderr
 
   # Outputs the simulation every 4 timesteps
-  OutputSimulation { istep = 4 } stdout { binary = 1 }
+  OutputSimulation { istep = 4 } stdout
  
   # Every 4 timesteps, GfsView will read the following command, after having read
   # the simulation file and will output a PPM screenshot on its standard output
