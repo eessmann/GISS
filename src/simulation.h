@@ -69,7 +69,7 @@ struct _GfsSimulation {
   GfsAdaptStats adapts_stats;
 
   GtsSListContainer * events;
-  GSList * modules, * variables, * globals;
+  GSList * modules, * globals;
 
   GtsSListContainer * solids;
   guint thin;
