@@ -25,7 +25,7 @@
 #include "solid.h"
 #include "tension.h"
 
-static void reset_gradients (FttCell * cell, gpointer * data)
+static void reset_cell_gradients (FttCell * cell, gpointer * data)
 {
   GfsVariable ** g = data[0];
   guint * dimension = data[1];    
@@ -33,6 +33,67 @@ static void reset_gradients (FttCell * cell, gpointer * data)
 
   for (c = 0; c < *dimension; c++)
     GFS_VARIABLE (cell, g[c]->i) = 0.;
+}
+
+static void reset_gradients (GfsDomain * domain, guint dimension, GfsVariable ** g)
+{
+  gpointer data[2];
+  data[0] = g;
+  data[1] = &dimension;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) reset_cell_gradients, data);
+}
+
+static void scale_cell_gradients (FttCell * cell, gpointer * data)
+{
+  GfsVariable ** g = data[0];
+  guint * dimension = data[1];
+  FttComponent c;
+
+  if (GFS_IS_MIXED (cell)) {
+    GfsSolidVector * s = GFS_STATE (cell)->solid;
+
+    for (c = 0; c < *dimension; c++)
+      if (s->s[2*c] + s->s[2*c + 1] > 0.)
+	GFS_VARIABLE (cell, g[c]->i) /= s->s[2*c] + s->s[2*c + 1];
+      else
+	g_assert (GFS_VARIABLE (cell, g[c]->i) == 0.);
+  }
+  else {
+    FttCellNeighbors n;
+    
+    ftt_cell_neighbors (cell, &n);
+    for (c = 0; c < *dimension; c++) {
+      FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
+      
+      if (c1 && c2 && !GFS_CELL_IS_GRADIENT_BOUNDARY (c1) && !GFS_CELL_IS_GRADIENT_BOUNDARY (c2))
+	GFS_VARIABLE (cell, g[c]->i) /= 2.;
+    }
+  }
+}
+
+/**
+ * gfs_scale_gradients:
+ * @domain: a #GfsDomain.
+ * @dimension: the number of dimensions.
+ * @g: the components of the gradient.
+ *
+ * Scales the gradient accumulated in @g (typically using
+ * gfs_correct_normal_velocities()).
+ */
+void gfs_scale_gradients (GfsDomain * domain, guint dimension, GfsVariable ** g)
+{
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (g != NULL);
+
+  gpointer data[2];
+  data[0] = g;
+  data[1] = &dimension;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) scale_cell_gradients, data);
+  FttComponent c;
+  for (c = 0; c < dimension; c++)
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, g[c]);
 }
 
 static void correct_normal_velocity (FttCellFace * face,
@@ -70,34 +131,6 @@ static void correct_normal_velocity (FttCellFace * face,
     GFS_VARIABLE (face->neighbor, gv[c]->i) += dp*GFS_FACE_FRACTION_RIGHT (face);
 }
 
-static void scale_gradients (FttCell * cell, gpointer * data)
-{
-  GfsVariable ** g = data[0];
-  guint * dimension = data[1];
-  FttComponent c;
-
-  if (GFS_IS_MIXED (cell)) {
-    GfsSolidVector * s = GFS_STATE (cell)->solid;
-
-    for (c = 0; c < *dimension; c++)
-      if (s->s[2*c] + s->s[2*c + 1] > 0.)
-	GFS_VARIABLE (cell, g[c]->i) /= s->s[2*c] + s->s[2*c + 1];
-      else
-	g_assert (GFS_VARIABLE (cell, g[c]->i) == 0.);
-  }
-  else {
-    FttCellNeighbors n;
-    
-    ftt_cell_neighbors (cell, &n);
-    for (c = 0; c < *dimension; c++) {
-      FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
-      
-      if (c1 && c2 && !GFS_CELL_IS_GRADIENT_BOUNDARY (c1) && !GFS_CELL_IS_GRADIENT_BOUNDARY (c2))
-	GFS_VARIABLE (cell, g[c]->i) /= 2.;
-    }
-  }
-}
-
 /**
  * gfs_correct_normal_velocities:
  * @domain: a #GfsDomain.
@@ -107,6 +140,9 @@ static void scale_gradients (FttCell * cell, gpointer * data)
  * @dt: the timestep.
  *
  * Corrects the normal velocity field of @domain using @p and and @dt.
+ *
+ * Assumes that the Poisson weighting coefficients have already been
+ * computed using gfs_poisson_coefficients().
  *
  * Also allocates the @g variables (if @g is not %NULL) and fills them
  * with the centered gradient of @p.
@@ -118,35 +154,16 @@ void gfs_correct_normal_velocities (GfsDomain * domain,
 				    gdouble dt)
 {
   gpointer data[3];
-  FttComponent c;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (p != NULL);
 
-  if (g) {
-    for (c = 0; c < dimension; c++) {
-      g[c] = gfs_temporary_variable (domain);
-      gfs_variable_set_vector (g[c], c);
-    }
-    data[0] = g;
-    data[1] = &dimension;
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) reset_gradients, data);
-  }
   data[0] = p;
   data[1] = g;
   data[2] = &dt;
   gfs_domain_face_traverse (domain, dimension == 2 ? FTT_XY : FTT_XYZ,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) correct_normal_velocity, data);
-  if (g) {
-    data[0] = g;
-    data[1] = &dimension;
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) scale_gradients, data);
-    for (c = 0; c < dimension; c++)
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, g[c]);
-  }
 }
 
 static void scale_divergence (FttCell * cell, gpointer * data)
@@ -173,12 +190,113 @@ static void surface_tension (GfsDomain * domain,
 	gfs_correct_normal_velocities (domain, FTT_DIMENSION,
 				       GFS_SOURCE_TENSION_GENERIC (s)->c,
 				       g, dt);
-	if (g)
-	  gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, dt);
       }
       i = i->next;
     }
   }
+}
+
+/**
+ * gfs_update_gradients:
+ * @domain: a #GfsDomain.
+ * @p: the pressure.
+ * @alpha: the Poisson equation gradient weight.
+ * @g: where to store the pressure gradient.
+ *
+ * Updates the gradients in @g using @p and @alpha.
+ */
+void gfs_update_gradients (GfsDomain * domain, 
+			   GfsVariable * p,  
+			   GfsFunction * alpha, 
+			   GfsVariable ** g)
+{
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (p != NULL);
+  g_return_if_fail (g != NULL);
+
+  /* Add surface tension */
+  reset_gradients (domain, FTT_DIMENSION, g);
+  surface_tension (domain, gfs_domain_velocity (domain)[0], 0., alpha, g);
+  /* Initialize face coefficients */
+  gfs_poisson_coefficients (domain, alpha);
+  /* Add pressure gradient */
+  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, 0.);
+  gfs_scale_gradients (domain, FTT_DIMENSION, g);
+}
+
+static void mac_projection (GfsDomain * domain,
+			    GfsMultilevelParams * par,
+			    GfsAdvectionParams * apar,
+			    GfsVariable * p,
+			    GfsFunction * alpha,
+			    GfsVariable * res,
+			    GfsVariable ** g)
+{
+  /* Add surface tension */
+  reset_gradients (domain, FTT_DIMENSION, g);
+  surface_tension (domain, gfs_domain_velocity (domain)[0], apar->dt, alpha, g);
+
+  GfsVariable * div = gfs_temporary_variable (domain);
+  GfsVariable * dia = gfs_temporary_variable (domain);
+  GfsVariable * res1 = res ? res : gfs_temporary_variable (domain);
+  /* Initialize face coefficients */
+  gfs_poisson_coefficients (domain, alpha);
+
+  /* Initialize diagonal coefficient */
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, dia);
+
+  /* compute MAC divergence */
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) gfs_normal_divergence, div);
+  gpointer data[2];
+  data[0] = div;
+  data[1] = &apar->dt;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+  			    (FttCellTraverseFunc) scale_divergence, data);
+
+#if 0
+  {
+    FILE * fp = fopen ("/tmp/mac", "wt");
+    GfsNorm norm;
+
+    gfs_write_mac_velocity (domain, 0.9, FTT_TRAVERSE_LEAFS, -1, NULL, fp);
+    fclose (fp);
+    norm = gfs_domain_norm_variable (domain, div, FTT_TRAVERSE_LEAFS, -1);
+    fprintf (stderr, "mac div before: %g %g %g\n",
+	     norm.first, norm.second, norm.infty);
+  }
+#endif
+  
+  /* compute residual */
+  par->depth = gfs_domain_depth (domain);
+  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res1);
+  /* solve for pressure */
+  par->residual_before = par->residual = 
+    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
+  par->niter = 0;
+  while (par->niter < par->nitermin ||
+	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
+#if 0
+    fprintf (stderr, "%d bias: %g first: %g second: %g infty: %g\n",
+	     par->niter, 
+	     par->residual.bias, 
+	     par->residual.first, 
+	     par->residual.second, 
+	     par->residual.infty);
+#endif
+    gfs_poisson_cycle (domain, par, p, div, dia, res1);
+    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
+    par->niter++;
+  }
+
+  gts_object_destroy (GTS_OBJECT (div));
+  gts_object_destroy (GTS_OBJECT (dia));
+  if (!res)
+    gts_object_destroy (GTS_OBJECT (res1));
+
+  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
+  gfs_scale_gradients (domain, FTT_DIMENSION, g);
 }
 
 /**
@@ -214,8 +332,6 @@ void gfs_mac_projection (GfsDomain * domain,
 			 GfsVariable ** g)
 {
   gdouble dt;
-  gpointer data[2];
-  GfsVariable * div, * dia, * res;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
@@ -225,59 +341,10 @@ void gfs_mac_projection (GfsDomain * domain,
 
   gfs_domain_timer_start (domain, "mac_projection");
 
-  div = gfs_temporary_variable (domain);
-  dia = gfs_temporary_variable (domain);
-  res = gfs_temporary_variable (domain);
-  
-  apar->v = gfs_variable_from_name (domain->variables, "U");
   dt = apar->dt;
   apar->dt /= 2.;
 
-  /* Add surface tension */
-  surface_tension (domain, apar->v, apar->dt, alpha, NULL);
-  /* Initialize face coefficients */
-  gfs_poisson_coefficients (domain, alpha);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, dia);
-  /* compute MAC divergence */
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_normal_divergence, div);
-  data[0] = div;
-  data[1] = &apar->dt;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-  			    (FttCellTraverseFunc) scale_divergence, data);
-
-#if 0
-  {
-    FILE * fp = fopen ("/tmp/mac", "wt");
-    GfsNorm norm;
-
-    gfs_write_mac_velocity (domain, 0.9, FTT_TRAVERSE_LEAFS, -1, NULL, fp);
-    fclose (fp);
-    norm = gfs_domain_norm_variable (domain, div, FTT_TRAVERSE_LEAFS, -1);
-    fprintf (stderr, "mac div before: %g %g %g\n",
-	     norm.first, norm.second, norm.infty);
-  }
-#endif
-
-  /* solve for pressure */
-  par->depth = gfs_domain_depth (domain);
-  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res);
-  par->residual_before = par->residual = 
-    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res);
-  par->niter = 0;
-  while (par->niter < par->nitermin ||
-	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
-    gfs_poisson_cycle (domain, par, p, div, dia, res);
-    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res);
-    par->niter++;
-  }
-
-  gts_object_destroy (GTS_OBJECT (div));
-  gts_object_destroy (GTS_OBJECT (dia));
-  gts_object_destroy (GTS_OBJECT (res));
-
-  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
+  mac_projection (domain, par, apar, p, alpha, NULL, g);
 
 #if 0
   {
@@ -337,11 +404,8 @@ void gfs_correct_centered_velocities (GfsDomain * domain,
   data[3] = &dimension;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) correct, data);
-  for (c = 0; c < dimension; c++) {
+  for (c = 0; c < dimension; c++)
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v[c]);
-    gts_object_destroy (GTS_OBJECT (g[c]));
-    g[c] = NULL;
-  }
 }
 
 /**
@@ -375,15 +439,14 @@ void gfs_approximate_projection (GfsDomain * domain,
 				 GfsAdvectionParams * apar,
 				 GfsVariable * p,
 				 GfsFunction * alpha,
-				 GfsVariable * res)
+				 GfsVariable * res,
+				 GfsVariable ** g)
 {
-  gpointer data[2];
-  GfsVariable * dia, * div, * g[FTT_DIMENSION], * res1;
-
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
   g_return_if_fail (apar != NULL);
   g_return_if_fail (p != NULL);
+  g_return_if_fail (g != NULL);
 
   gfs_domain_timer_start (domain, "approximate_projection");
   
@@ -395,67 +458,9 @@ void gfs_approximate_projection (GfsDomain * domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
 			    gfs_domain_velocity (domain));
-  /* Add surface tension */
-  surface_tension (domain, gfs_domain_velocity (domain)[0], apar->dt, alpha, g);
-
-  div = gfs_temporary_variable (domain);
-  dia = gfs_temporary_variable (domain);
-  res1 = res ? res : gfs_temporary_variable (domain);
-  /* Initialize face coefficients */
-  gfs_poisson_coefficients (domain, alpha);
-
-  /* Initialize diagonal coefficient */
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, dia);
-
-  /* compute MAC divergence */
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_normal_divergence, div);
-  data[0] = div;
-  data[1] = &apar->dt;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-  			    (FttCellTraverseFunc) scale_divergence, data);
-
-#if 0
-  {
-    FILE * fp = fopen ("/tmp/macapprox", "wt");
-    GfsNorm norm;
-
-    gfs_write_mac_velocity (domain, 0.9, FTT_TRAVERSE_LEAFS, -1, NULL, fp);
-    fclose (fp);
-    norm = gfs_domain_norm_variable (domain, div, FTT_TRAVERSE_LEAFS, -1);
-    fprintf (stderr, "mac div before: %g %g %g\n",
-	     norm.first, norm.second, norm.infty);
-  }
-#endif
   
-  /* solve for pressure */
-  par->depth = gfs_domain_depth (domain);
-  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res1);
-  par->residual_before = par->residual = 
-    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
-  par->niter = 0;
-  while (par->niter < par->nitermin ||
-	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
-#if 0
-    fprintf (stderr, "%d bias: %g first: %g second: %g infty: %g\n",
-	     par->niter, 
-	     par->residual.bias, 
-	     par->residual.first, 
-	     par->residual.second, 
-	     par->residual.infty);
-#endif
-    gfs_poisson_cycle (domain, par, p, div, dia, res1);
-    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
-    par->niter++;
-  }
+  mac_projection (domain, par, apar, p, alpha, res, g);
 
-  gts_object_destroy (GTS_OBJECT (div));
-  gts_object_destroy (GTS_OBJECT (dia));
-  if (!res)
-    gts_object_destroy (GTS_OBJECT (res1));
-
-  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
   gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
 
   gfs_domain_timer_stop (domain, "approximate_projection");
@@ -582,16 +587,22 @@ static GfsSourceDiffusion * source_diffusion (GfsVariable * v)
   return NULL;
 }
 
+static void add_pressure_gradient (FttCell * cell, GfsAdvectionParams * par)
+{
+  GFS_VALUE (cell, par->fv) -= GFS_VALUE (cell, par->g[par->v->component])*par->dt;
+}
+
 static void variable_sources (GfsDomain * domain,
 			      GfsAdvectionParams * par,
 			      GfsVariable * sv,
+			      GfsVariable ** gmac,
 			      GfsVariable ** g)
 {
   if (par->scheme == GFS_GODUNOV) {
     GfsVariable * v = par->v;
 
     par->u = gfs_domain_velocity (domain);
-    par->g = g;
+    par->g = gmac;
     par->fv = gfs_temporary_variable (domain);
     par->upwinding = GFS_FACE_UPWINDING;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -607,6 +618,14 @@ static void variable_sources (GfsDomain * domain,
     par->v = v;
     par->u = par->g = NULL;
     gts_object_destroy (GTS_OBJECT (par->fv));
+    par->fv = NULL;
+  }
+  if (g) {
+    par->fv = sv;
+    par->g = g;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) add_pressure_gradient, par);
+    par->g = NULL;
     par->fv = NULL;
   }
   /* fixme: time should be set to t + dt/2 here for evaluation of
@@ -640,6 +659,7 @@ static void variable_diffusion (GfsDomain * domain,
  * @domain: a #GfsDomain.
  * @dimension: the number of dimensions (2 or 3).
  * @apar: the advection parameters.
+ * @gmac: the MAC pressure gradient.
  * @g: the pressure gradient.
  * @alpha: the inverse of density or %NULL.
  *
@@ -659,6 +679,7 @@ static void variable_diffusion (GfsDomain * domain,
 void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 						guint dimension,
 						GfsAdvectionParams * apar,
+						GfsVariable ** gmac,
 						GfsVariable ** g,
 						GfsFunction * alpha)
 {
@@ -667,7 +688,7 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (apar != NULL);
-  g_return_if_fail (g != NULL);
+  g_return_if_fail (gmac != NULL);
 
   gfs_domain_timer_start (domain, "centered_velocity_advection_diffusion");
 
@@ -683,20 +704,15 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
       rhs = gfs_temporary_variable (domain);
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) gfs_cell_reset, rhs);
-      variable_sources (domain, apar, rhs, g);
-      gts_object_destroy (GTS_OBJECT (g[c]));
-      g[c] = NULL;
+      variable_sources (domain, apar, rhs, gmac, g);
       variable_diffusion (domain, d, apar, rhs, alpha);
       gts_object_destroy (GTS_OBJECT (rhs));
     }
     else {
-      variable_sources (domain, apar, apar->v, g);
-      gts_object_destroy (GTS_OBJECT (g[c]));
-      g[c] = NULL;
+      variable_sources (domain, apar, apar->v, gmac, g);
       gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, apar->v);
     }
   }
-
   gfs_domain_timer_stop (domain, "centered_velocity_advection_diffusion");
 }
 
@@ -724,12 +740,12 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
     rhs = gfs_temporary_variable (domain);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, rhs);
-    variable_sources (domain, par, rhs, NULL);
+    variable_sources (domain, par, rhs, NULL, NULL);
     variable_diffusion (domain, d, par, rhs, NULL);
     gts_object_destroy (GTS_OBJECT (rhs));
   }
   else {
-    variable_sources (domain, par, par->v, NULL);
+    variable_sources (domain, par, par->v, NULL, NULL);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, par->v);
   }
 

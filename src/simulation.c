@@ -332,7 +332,7 @@ static void advance_tracers (GfsDomain * domain, gdouble dt)
 
 static void simulation_run (GfsSimulation * sim)
 {
-  GfsVariable * p, * pmac, * res = NULL;
+  GfsVariable * p, * pmac, * res = NULL, * g[FTT_DIMENSION], * gmac[FTT_DIMENSION];
   GfsDomain * domain;
   GSList * i;
 
@@ -342,6 +342,13 @@ static void simulation_run (GfsSimulation * sim)
   g_assert (p);
   pmac = gfs_variable_from_name (domain->variables, "Pmac");
   g_assert (pmac);
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    g[c] = gfs_temporary_variable (domain);
+    gmac[c] = gfs_temporary_variable (domain);
+    gfs_variable_set_vector (g[c], c);
+    gfs_variable_set_vector (gmac[c], c);
+  }
 
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);
@@ -358,13 +365,15 @@ static void simulation_run (GfsSimulation * sim)
     gfs_approximate_projection (domain,
 				&sim->approx_projection_params,
 				&sim->advection_params,
-				p, sim->physical_params.alpha, res);
+				p, sim->physical_params.alpha, res, g);
     gfs_simulation_set_timestep (sim);
     advance_tracers (domain, sim->advection_params.dt/2.);
   }
+  else
+    gfs_update_gradients (domain, p, sim->physical_params.alpha, g);
+
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
-    GfsVariable * g[FTT_DIMENSION];
     gdouble tstart = gfs_clock_elapsed (domain->timer);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
@@ -375,7 +384,7 @@ static void simulation_run (GfsSimulation * sim)
     gfs_mac_projection (domain,
     			&sim->projection_params, 
     			&sim->advection_params,
-			p, sim->physical_params.alpha, g);
+			p, sim->physical_params.alpha, gmac);
     gfs_variables_swap (p, pmac);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
@@ -383,17 +392,11 @@ static void simulation_run (GfsSimulation * sim)
     gfs_centered_velocity_advection_diffusion (domain,
 					       FTT_DIMENSION,
 					       &sim->advection_params,
-					       g,
+					       gmac, sim->time.i > 0 ? g : gmac,
 					       sim->physical_params.alpha);
-
-    if (gfs_has_source_coriolis (domain)) {
-      gfs_poisson_coefficients (domain, sim->physical_params.alpha);
-      gfs_correct_normal_velocities (domain, 2, p, g, 0.);
-      gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt);
-      gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
-      gfs_correct_normal_velocities (domain, 2, p, g, 0.);
-      gfs_correct_centered_velocities (domain, 2, g, -sim->advection_params.dt);
-    }
+    gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
+    gfs_correct_centered_velocities (domain, FTT_DIMENSION, sim->time.i > 0 ? g : gmac, 
+				     -sim->advection_params.dt);
 
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
@@ -402,7 +405,7 @@ static void simulation_run (GfsSimulation * sim)
 
     gfs_approximate_projection (domain,
    				&sim->approx_projection_params, 
-    				&sim->advection_params, p, sim->physical_params.alpha, res);
+    				&sim->advection_params, p, sim->physical_params.alpha, res, g);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
@@ -417,6 +420,11 @@ static void simulation_run (GfsSimulation * sim)
   }
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gts_object_destroy, NULL);
+
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    gts_object_destroy (GTS_OBJECT (g[c]));
+    gts_object_destroy (GTS_OBJECT (gmac[c]));
+  }
 }
 
 static void gfs_simulation_class_init (GfsSimulationClass * klass)
@@ -1454,8 +1462,10 @@ static void poisson_run (GfsSimulation * sim)
   dia = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dia);
-  par->depth = gfs_domain_depth (domain);
+  /* compute residual */
+  par->depth = gfs_domain_depth (domain);  
   gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res1);
+  /* solve for pressure */
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
   par->niter = 0;
