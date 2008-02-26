@@ -12,9 +12,7 @@
 #
 # This simulation is also a stringent test case of the accuracy of the
 # surface tension representation as no explicit viscosity can damp
-# eventual parasitic currents. Onset of parasitic-current-driven
-# instability can be seen on the coarsest mesh (in Figure \ref{kinetic}
-# for $t>0.5$ the kinetic energy behaves strangely for the 32x32 resolution).
+# eventual parasitic currents.
 #
 # \begin{figure}[htbp]
 # \caption{\label{kinetic}Evolution of the kinetic energy as a function
@@ -63,7 +61,7 @@
 #
 # Author: St\'ephane Popinet
 # Command: sh oscillation.sh
-# Version: 1.1.1
+# Version: 1.2.0
 # Required files: oscillation.sh fit.ref
 # Running time: 3 minutes
 # Generated files: frequency.eps k.eps laplace.eps
@@ -75,7 +73,6 @@ Define RHO(T)            VAR(T, 1., 1e-3)
 Define RADIUS(x,y)      (DIAMETER/2.*(1. + EPSILON*cos (2.*atan2 (y, x))))
 
 1 0 GfsSimulation GfsBox GfsGEdge {} {
-
     Time { end = 1 }
 
     Refine LEVEL
@@ -87,6 +84,11 @@ Define RADIUS(x,y)      (DIAMETER/2.*(1. + EPSILON*cos (2.*atan2 (y, x))))
     PhysicalParams { alpha = 1./RHO(T1) }
     VariableCurvature K T
     SourceTension T 1. K
+
+    # fixme: A small amount of viscosity seems to be necessary to
+    # obtain a non-increasing kinetic energy at high-resolution (8
+    # levels).
+    SourceViscosityExplicit 7e-5*RHO(T1)
 
     AdaptFunction { istep = 1 } {
         cmax = 0.01

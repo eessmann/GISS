@@ -35,18 +35,22 @@ if cat <<EOF | gnuplot ; then :
     set xlabel 'Time'
     set ylabel 'Kinetic energy'
     set logscale y
-    plot [0:1][1e-5:]'k-8' u 3:5 t "256x256" w l, 'k-7' u 3:5 t "128x128" w l, 'k-6' u 3:5 t "64x64" w l, 'k-5' u 3:5 t "32x32" w l, 'fit-8' t "fit" w l lt 7, 'fit-7' t "" w l lt 7, 'fit-6' t "" w l lt 7, 'fit-5' t "" w l lt 7
+    plot [0:1][8e-5:]'k-8' u 3:5 t "256x256" w l, 'k-7' u 3:5 t "128x128" w l, 'k-6' u 3:5 t "64x64" w l, 'k-5' u 3:5 t "32x32" w l, 'fit-8' t "fit" w l lt 7, 'fit-7' t "" w l lt 7, 'fit-6' t "" w l lt 7, 'fit-5' t "" w l lt 7
 
     set output 'laplace.eps'
     set xlabel 'Diameter (grid points)'
     set ylabel 'Equivalent Laplace number'
-    unset logscale
+    set logscale y
+    set logscale x 2
+    set grid
     empirical_constant = 30.
     plot 'fit' u (D*2.**(\$1)):(1./(\$3**2.*D**3.))*empirical_constant**2. t "" w lp pt 5 ps 2
 
+    unset logscale
     set output 'frequency.eps'
     set xlabel 'Diameter (grid points)'
     set ylabel 'Frequency error (%)'
+    unset grid
     set xzeroaxis
     plot 'fit' u (D*2.**(\$1)):(\$4/2./omega0-1.)*100. t "" w lp pt 5 ps 2
 
