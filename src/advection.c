@@ -921,6 +921,8 @@ void gfs_advection_params_write (GfsAdvectionParams * par, FILE * fp)
 	   par->flux == gfs_face_velocity_convective_flux ?
 	   "gfs_face_velocity_convective_flux" : "NULL",
 	   par->average);
+  if (par->gc)
+    fputs ("  gc       = 1\n", fp);
   switch (par->scheme) {
   case GFS_GODUNOV: fputs ("  scheme   = godunov\n", fp); break;
   case GFS_NONE:    fputs ("  scheme   = none\n", fp); break;
@@ -942,6 +944,7 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->use_centered_velocity = TRUE;
   par->scheme = GFS_GODUNOV;
   par->average = FALSE;
+  par->gc = FALSE;
 }
 
 void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
@@ -952,6 +955,7 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
     {GTS_STRING, "flux",     TRUE},
     {GTS_STRING, "scheme",   TRUE},
     {GTS_INT,    "average",  TRUE},
+    {GTS_INT,    "gc",       TRUE},
     {GTS_NONE}
   };
   gchar * gradient = NULL, * flux = NULL, * scheme = NULL;
@@ -964,6 +968,7 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
   var[2].data = &flux;
   var[3].data = &scheme;
   var[4].data = &par->average;
+  var[5].data = &par->gc;
 
   gts_file_assign_variables (fp, var);
 

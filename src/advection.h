@@ -50,7 +50,7 @@ struct _GfsAdvectionParams {
   GfsUpwinding upwinding;
   GfsFaceAdvectionFluxFunc flux;
   GfsAdvectionScheme scheme;
-  gboolean average;
+  gboolean average, gc;
 };
 
 void         gfs_advection_params_init        (GfsAdvectionParams * par);

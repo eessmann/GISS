@@ -333,6 +333,7 @@ static void advance_tracers (GfsDomain * domain, gdouble dt)
 static void simulation_run (GfsSimulation * sim)
 {
   GfsVariable * p, * pmac, * res = NULL, * g[FTT_DIMENSION], * gmac[FTT_DIMENSION];
+  GfsVariable ** gc = sim->advection_params.gc ? g : NULL;
   GfsDomain * domain;
   GSList * i;
 
@@ -392,11 +393,21 @@ static void simulation_run (GfsSimulation * sim)
     gfs_centered_velocity_advection_diffusion (domain,
 					       FTT_DIMENSION,
 					       &sim->advection_params,
-					       gmac, sim->time.i > 0 ? g : gmac,
+					       gmac,
+					       sim->time.i > 0 || !gc ? gc : gmac,
 					       sim->physical_params.alpha);
-    gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
-    gfs_correct_centered_velocities (domain, FTT_DIMENSION, sim->time.i > 0 ? g : gmac, 
-				     -sim->advection_params.dt);
+    if (gc) {
+      gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
+      gfs_correct_centered_velocities (domain, FTT_DIMENSION, sim->time.i > 0 ? gc : gmac, 
+				       -sim->advection_params.dt);
+    }
+    else if (gfs_has_source_coriolis (domain)) {
+      gfs_correct_centered_velocities (domain, FTT_DIMENSION, sim->time.i > 0 ? g : gmac,
+				       sim->advection_params.dt);
+      gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
+      gfs_correct_centered_velocities (domain, FTT_DIMENSION, sim->time.i > 0 ? g : gmac, 
+				       -sim->advection_params.dt);
+    }
 
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
