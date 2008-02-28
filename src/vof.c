@@ -906,6 +906,28 @@ static void variable_tracer_vof_update (GfsVariable * v, GfsDomain * domain)
   }
 }
 
+static void allocate_normal_alpha (GfsVariableTracerVOF * t)
+{
+  GfsVariable * v = GFS_VARIABLE1 (t);
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    static gchar index[][2] = {"x", "y", "z"};
+    gchar * name = g_strdup_printf ("%s_%s", v->name, index[c]);
+    gchar * description = 
+      g_strdup_printf ("%s-component of the normal to the interface defined by %s",
+		       index[c], v->name);
+    t->m[c] = gfs_domain_get_or_add_variable (v->domain, name, description);
+    g_free (name);
+    g_free (description);
+  }
+  gchar * name = g_strdup_printf ("%s_alpha", v->name);
+  gchar * description = 
+    g_strdup_printf ("\"alpha\" for the interface defined by %s", v->name);
+  t->alpha = gfs_domain_get_or_add_variable (v->domain, name, description);
+  g_free (name);
+  g_free (description);
+}
+
 static gboolean variable_tracer_vof_event (GfsEvent * event, 
 					   GfsSimulation * sim)
 {
@@ -919,12 +941,8 @@ static gboolean variable_tracer_vof_event (GfsEvent * event,
     gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, v);
 
     GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
-    if (!t->alpha) {
-      FttComponent c;
-      for (c = 0; c < FTT_DIMENSION; c++)
-	t->m[c] = gfs_temporary_variable (domain);
-      t->alpha = gfs_temporary_variable (domain);
-    }
+    if (!t->alpha)
+      allocate_normal_alpha (t);
     variable_tracer_vof_update (v, domain);
     return TRUE;
   }
@@ -957,11 +975,7 @@ static void variable_tracer_vof_read (GtsObject ** o, GtsFile * fp)
     return;
   }  
 
-  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (*o);
-  FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    t->m[c] = gfs_temporary_variable (GFS_VARIABLE1 (*o)->domain);
-  t->alpha = gfs_temporary_variable (GFS_VARIABLE1 (*o)->domain);
+  allocate_normal_alpha (GFS_VARIABLE_TRACER_VOF (*o));
 }
 
 static void variable_tracer_vof_class_init (GtsObjectClass * klass)
