@@ -2314,7 +2314,7 @@ static gboolean gfs_output_droplet_sums_event (GfsEvent * event, GfsSimulation *
     if (!p.c) {
       p.c = gfs_temporary_variable (domain);
       p.fc = d->c;
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 				(FttCellTraverseFunc) compute_c, &p);
     }
     p.tag = d->tag ? d->tag : gfs_temporary_variable (domain);

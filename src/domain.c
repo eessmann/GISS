@@ -2918,6 +2918,8 @@ static void tag_new_fraction_region (FttCell * cell, TagPar * p)
  * positive) index of the droplet they belong to. The cells belonging
  * to the background phase have an index of zero.
  *
+ * Note that the volume fraction @c must be defined on all levels.
+ *
  * Returns: the number of droplets.
  */
 guint gfs_domain_tag_droplets (GfsDomain * domain,
