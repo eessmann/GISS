@@ -12,7 +12,7 @@ clean-generic:
 	refined2.pdf vorticity.eps vorticity.pdf gfsview.eps tutorial1.tex \
 	Makefile.deps
 
-tutorial.tar.gz: tutorial.ps.gz
+tutorial.tar.gz: tutorial1.dvi
 	rm -r -f tutorial
 	sed 's/input{pdf.tex}/usepackage{graphicx}\\newcommand{\\gfx}{eps}/g' < tutorial.tex | sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" | sed 's/\\today/'"`date +\"%B %e, %Y\"`/g" > tutorial1.tex
 	hevea -fix tutorial1.tex
@@ -31,10 +31,6 @@ tutorial1.dvi: tutorial.tex Makefile.deps
 	latex -interaction=nonstopmode tutorial1.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode tutorial1.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode tutorial1.tex
-
-tutorial.ps.gz: tutorial1.dvi
-	dvips tutorial1.dvi -o tutorial.ps
-	gzip -f --best tutorial.ps
 
 tutorial.pdf: tutorial1.dvi
 	dvips -Ppdf -G0 tutorial1.dvi -o tutorial1.ps

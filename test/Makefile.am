@@ -42,7 +42,7 @@ clean-generic:
 
 DOC = tests
 
-tests: tests.ps.gz
+tests: tests.dvi
 	hevea -fix $(DOC).tex
 	imagen -res 500 -extra "pnmscale 0.24" $(DOC)
 	hacha $(DOC).html
@@ -60,10 +60,6 @@ tests.dvi: tests.tex tests.bib
 	bibtex tests
 	latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode tests.tex
-
-tests.ps.gz: tests.dvi
-	dvips tests.dvi -o tests.ps
-	gzip -f --best tests.ps
 
 tests.pdf: tests.dvi
 	dvips -Ppdf -G0 tests.dvi -o tests.ps

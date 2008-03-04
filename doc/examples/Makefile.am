@@ -42,7 +42,7 @@ clean-generic:
 
 DOC = examples
 
-examples: examples.ps.gz
+examples: examples.dvi
 	hevea -fix $(DOC).tex
 	imagen -res 600 -extra "pnmscale 0.24" $(DOC)
 	hacha $(DOC).html
@@ -60,10 +60,6 @@ examples.dvi: examples.tex
 	latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode examples.tex
 
-examples.ps.gz: examples.dvi
-	dvips examples.dvi -o examples.ps
-	gzip -f --best examples.ps
-
 examples.pdf: examples.dvi
 	dvips -Ppdf -G0 examples.dvi -o examples.ps
 	ps2pdf -sPAPERSIZE=a4 -dMaxSubsetPct=100 -dCompatibilityLevel=1.2 -dSubsetFonts=true -dEmbedAllFonts=true examples.ps examples.pdf
@@ -79,8 +75,8 @@ Makefile.deps: Makefile depend.py
 
 -include Makefile.deps
 
-examples.tar.gz: examples.ps.gz examples.pdf examples $(DOCS)
-	tar czf examples.tar.gz examples.ps.gz examples.pdf examples $(DOCS)
+examples.tar.gz: examples.pdf examples $(DOCS)
+	tar czf examples.tar.gz examples $(DOCS)
 
 INCLUDES = -I$(top_srcdir)/src -I$(includedir) -DG_LOG_DOMAIN=\"Gfs-tools\"\
             $(GTS_CFLAGS)
