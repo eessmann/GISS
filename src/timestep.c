@@ -174,14 +174,62 @@ static void scale_divergence (FttCell * cell, gpointer * data)
   GFS_VARIABLE (cell, div->i) /= *dt;
 }
 
-static void surface_tension (GfsDomain * domain,
-			     GfsVariable * u,
-			     gdouble dt,
-			     GfsFunction * alpha,
-			     GfsVariable ** g)
-{     
-  if (u->sources) {
-    GSList * i = GTS_SLIST_CONTAINER (u->sources)->items;
+typedef struct {
+  GfsSourceGeneric * s;
+  GfsVariable * v, ** g;
+  gdouble dt;
+} FaceSource;
+
+static void add_face_source (FttCellFace * face,
+			     FaceSource * f)
+{
+  gdouble dp;
+  FttComponent c;
+
+  if (GFS_FACE_FRACTION (face) == 0.)
+    return;
+
+  c = face->d/2;
+  dp = (* f->s->face_value) (f->s, face, f->v);
+  GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= dp*f->dt;
+  if (f->g)
+    GFS_VARIABLE (face->cell, f->g[c]->i) += dp*GFS_FACE_FRACTION_LEFT (face);
+
+  if (ftt_face_type (face) == FTT_FINE_COARSE)
+    dp *= GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*FTT_CELLS/2);
+  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*f->dt;
+  if (f->g)
+    GFS_VARIABLE (face->neighbor, f->g[c]->i) += dp*GFS_FACE_FRACTION_RIGHT (face);
+}
+
+static void velocity_face_sources (GfsDomain * domain,
+				   GfsVariable ** u,
+				   gdouble dt,
+				   GfsFunction * alpha,
+				   GfsVariable ** g)
+{
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    if (u[c]->sources) {
+      GSList * i = GTS_SLIST_CONTAINER (u[c]->sources)->items;
+      
+      while (i) {
+	GfsSourceGeneric * s = i->data;
+	if (s->face_value) {
+	  FaceSource f;
+	  f.s = s;
+	  f.v = u[c];
+	  f.g = g;
+	  f.dt = dt;
+	  gfs_domain_face_traverse (domain, c,
+				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				    (FttFaceTraverseFunc) add_face_source, &f);
+	}	  
+	i = i->next;
+      }
+    }
+  if (u[0]->sources) {
+    GSList * i = GTS_SLIST_CONTAINER (u[0]->sources)->items;
     
     while (i) {
       if (GFS_IS_SOURCE_TENSION (i->data)) {
@@ -214,9 +262,9 @@ void gfs_update_gradients (GfsDomain * domain,
   g_return_if_fail (p != NULL);
   g_return_if_fail (g != NULL);
 
-  /* Add surface tension */
+  /* Add face sources */
   reset_gradients (domain, FTT_DIMENSION, g);
-  surface_tension (domain, gfs_domain_velocity (domain)[0], 0., alpha, g);
+  velocity_face_sources (domain, gfs_domain_velocity (domain), 0., alpha, g);
   /* Initialize face coefficients */
   gfs_poisson_coefficients (domain, alpha);
   /* Add pressure gradient */
@@ -232,9 +280,9 @@ static void mac_projection (GfsDomain * domain,
 			    GfsVariable * res,
 			    GfsVariable ** g)
 {
-  /* Add surface tension */
+  /* Add face sources */
   reset_gradients (domain, FTT_DIMENSION, g);
-  surface_tension (domain, gfs_domain_velocity (domain)[0], apar->dt, alpha, g);
+  velocity_face_sources (domain, gfs_domain_velocity (domain), apar->dt, alpha, g);
 
   GfsVariable * div = gfs_temporary_variable (domain);
   GfsVariable * dia = gfs_temporary_variable (domain);

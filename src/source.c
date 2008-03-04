@@ -44,11 +44,10 @@ gdouble gfs_variable_mac_source (GfsVariable * v, FttCell * cell)
   sum = 0.;
   i = GTS_SLIST_CONTAINER (v->sources)->items;
   while (i) {
-    GtsObject * o = i->data;
+    GfsSourceGeneric * s = i->data;
 
-    if (GFS_SOURCE_GENERIC_CLASS (o->klass)->mac_value)
-      sum += (* GFS_SOURCE_GENERIC_CLASS (o->klass)->mac_value) 
-	(GFS_SOURCE_GENERIC (o), cell, v);
+    if (s->mac_value)
+      sum += (* s->mac_value) (s, cell, v);
     i = i->next;
   }
   return sum;
@@ -64,11 +63,10 @@ static void add_sources (FttCell * cell, gpointer * data)
   
   i = GTS_SLIST_CONTAINER (v->sources)->items;
   while (i) {
-    GtsObject * o = i->data;
+    GfsSourceGeneric * s = i->data;
 
-    if (GFS_SOURCE_GENERIC_CLASS (o->klass)->centered_value)
-      sum += (* GFS_SOURCE_GENERIC_CLASS (o->klass)->centered_value)
-	(GFS_SOURCE_GENERIC (o), cell, v);
+    if (s->centered_value)
+      sum += (* s->centered_value) (s, cell, v);
     i = i->next;
   }
   GFS_VARIABLE (cell, sv->i) += (*dt)*sum;
@@ -293,6 +291,13 @@ static void source_destroy (GtsObject * o)
   (* GTS_OBJECT_CLASS (gfs_source_class ())->parent_class->destroy) (o);
 }
 
+static gdouble source_face_value (GfsSourceGeneric * s, 
+				  FttCellFace * face, 
+				  GfsVariable * v)
+{
+  return gfs_function_face_value (GFS_SOURCE (s)->intensity, face);
+}
+
 static void source_read (GtsObject ** o, GtsFile * fp)
 {
   if (GTS_OBJECT_CLASS (gfs_source_class ())->parent_class->read)
@@ -303,6 +308,14 @@ static void source_read (GtsObject ** o, GtsFile * fp)
 
   GFS_SOURCE (*o)->intensity = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (GFS_SOURCE (*o)->intensity, gfs_object_simulation (*o), fp);
+  if (fp->type != GTS_ERROR) {
+    GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
+    gchar * name = GFS_SOURCE_SCALAR (s)->v->name;
+    if (!strcmp (name, "U") || !strcmp (name, "V") || !strcmp (name, "W")) {
+      s->mac_value = s->centered_value = NULL;
+      s->face_value = source_face_value;
+    }
+  }
 }
 
 static void source_write (GtsObject * o, FILE * fp)
@@ -313,6 +326,13 @@ static void source_write (GtsObject * o, FILE * fp)
   gfs_function_write (GFS_SOURCE (o)->intensity, fp);
 }
 
+static void source_class_init (GfsSourceGenericClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->destroy = source_destroy;
+  GTS_OBJECT_CLASS (klass)->read = source_read;
+  GTS_OBJECT_CLASS (klass)->write = source_write;
+}
+
 static gdouble source_value (GfsSourceGeneric * s, 
 			     FttCell * cell, 
 			     GfsVariable * v)
@@ -320,13 +340,9 @@ static gdouble source_value (GfsSourceGeneric * s,
   return gfs_function_value (GFS_SOURCE (s)->intensity, cell);
 }
 
-static void source_class_init (GfsSourceGenericClass * klass)
+static void source_init (GfsSourceGeneric * s)
 {
-  GTS_OBJECT_CLASS (klass)->destroy = source_destroy;
-  GTS_OBJECT_CLASS (klass)->read = source_read;
-  GTS_OBJECT_CLASS (klass)->write = source_write;
-
-  klass->mac_value = klass->centered_value = source_value;
+  s->mac_value = s->centered_value = source_value;
 }
 
 GfsSourceGenericClass * gfs_source_class (void)
@@ -339,7 +355,7 @@ GfsSourceGenericClass * gfs_source_class (void)
       sizeof (GfsSource),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) source_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) source_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -366,6 +382,11 @@ static gboolean source_control_event (GfsEvent * event, GfsSimulation * sim)
   return FALSE;
 }
 
+static void source_control_class_init (GfsSourceGenericClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = source_control_event;
+}
+
 static gdouble source_control_value (GfsSourceGeneric * s, 
 				     FttCell * cell, 
 				     GfsVariable * v)
@@ -373,10 +394,9 @@ static gdouble source_control_value (GfsSourceGeneric * s,
   return GFS_SOURCE_CONTROL (s)->s;
 }
 
-static void source_control_class_init (GfsSourceGenericClass * klass)
+static void source_control_init (GfsSourceGeneric * s)
 {
-  GFS_EVENT_CLASS (klass)->event = source_control_event;
-  klass->mac_value = klass->centered_value = source_control_value;
+  s->mac_value = s->centered_value = source_control_value;
 }
 
 GfsSourceGenericClass * gfs_source_control_class (void)
@@ -389,7 +409,7 @@ GfsSourceGenericClass * gfs_source_control_class (void)
       sizeof (GfsSourceControl),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) source_control_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) source_control_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -639,13 +659,12 @@ static void source_diffusion_class_init (GfsSourceGenericClass * klass)
   GTS_OBJECT_CLASS (klass)->write = source_diffusion_write;
 
   GFS_EVENT_CLASS (klass)->event = source_diffusion_event;
-
-  klass->mac_value = source_diffusion_value;
 }
 
 static void source_diffusion_init (GfsSourceDiffusion * d)
 {
   d->D = GFS_DIFFUSION (gts_object_new (GTS_OBJECT_CLASS (gfs_diffusion_class ())));
+  GFS_SOURCE_GENERIC (d)->mac_value = source_diffusion_value;
 }
 
 GfsSourceGenericClass * gfs_source_diffusion_class (void)
@@ -783,8 +802,12 @@ static void gfs_source_diffusion_explicit_class_init (GfsSourceGenericClass * kl
   GFS_EVENT_CLASS (klass)->event = gfs_source_diffusion_explicit_event;
   GTS_OBJECT_CLASS (klass)->read = gfs_source_diffusion_explicit_read;
   GTS_OBJECT_CLASS (klass)->destroy = gfs_source_diffusion_explicit_destroy;
-  klass->mac_value = klass->centered_value = source_diffusion_explicit_value;
   klass->stability = source_diffusion_stability;
+}
+
+static void gfs_source_diffusion_explicit_init (GfsSourceGeneric * s)
+{
+  s->mac_value = s->centered_value = source_diffusion_explicit_value;
 }
 
 GfsSourceGenericClass * gfs_source_diffusion_explicit_class (void)
@@ -797,7 +820,7 @@ GfsSourceGenericClass * gfs_source_diffusion_explicit_class (void)
       sizeof (GfsSourceDiffusionExplicit),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) gfs_source_diffusion_explicit_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_source_diffusion_explicit_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -881,9 +904,12 @@ static void source_viscosity_class_init (GfsSourceGenericClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = source_viscosity_read;
   GTS_OBJECT_CLASS (klass)->write = source_viscosity_write;
+}
 
-  klass->mac_value = source_viscosity_value;
-  klass->centered_value = source_viscosity_non_diffusion_value;
+static void source_viscosity_init (GfsSourceGeneric * s)
+{
+  s->mac_value = source_viscosity_value;
+  s->centered_value = source_viscosity_non_diffusion_value;
 }
 
 GfsSourceGenericClass * gfs_source_viscosity_class (void)
@@ -896,7 +922,7 @@ GfsSourceGenericClass * gfs_source_viscosity_class (void)
       sizeof (GfsSourceViscosity),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) source_viscosity_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) source_viscosity_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -924,8 +950,12 @@ static gdouble source_viscosity_stability (GfsSourceGeneric * s,
 
 static void source_viscosity_explicit_class_init (GfsSourceGenericClass * klass)
 {
-  klass->mac_value = klass->centered_value = source_viscosity_value;
   klass->stability = source_viscosity_stability;
+}
+
+static void source_viscosity_explicit_init (GfsSourceGeneric * s)
+{
+  s->mac_value = s->centered_value = source_viscosity_value;
 }
 
 GfsSourceGenericClass * gfs_source_viscosity_explicit_class (void)
@@ -938,7 +968,7 @@ GfsSourceGenericClass * gfs_source_viscosity_explicit_class (void)
       sizeof (GfsSourceViscosity),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) source_viscosity_explicit_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) source_viscosity_explicit_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -1071,8 +1101,12 @@ static void gfs_source_coriolis_class_init (GfsSourceGenericClass * klass)
   GTS_OBJECT_CLASS (klass)->write = gfs_source_coriolis_write;
 
   GFS_EVENT_CLASS (klass)->event = gfs_source_coriolis_event;
-  klass->mac_value = gfs_source_coriolis_mac_value;
-  klass->centered_value = gfs_source_coriolis_centered_value;
+}
+
+static void gfs_source_coriolis_init (GfsSourceGeneric * s)
+{
+  s->mac_value = gfs_source_coriolis_mac_value;
+  s->centered_value = gfs_source_coriolis_centered_value;
 }
 
 GfsSourceGenericClass * gfs_source_coriolis_class (void)
@@ -1085,7 +1119,7 @@ GfsSourceGenericClass * gfs_source_coriolis_class (void)
       sizeof (GfsSourceCoriolis),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) gfs_source_coriolis_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_source_coriolis_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };

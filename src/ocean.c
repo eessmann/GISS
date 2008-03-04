@@ -931,9 +931,12 @@ static void gfs_source_hydrostatic_class_init (GfsSourceGenericClass * klass)
 
   GFS_EVENT_CLASS (klass)->event = gfs_source_hydrostatic_event;
   GFS_EVENT_CLASS (klass)->event_half = gfs_source_hydrostatic_event_half;
+}
 
-  klass->mac_value = gfs_source_hydrostatic_mac_value;
-  klass->centered_value = gfs_source_hydrostatic_centered_value;
+static void gfs_source_hydrostatic_init (GfsSourceGeneric * s)
+{
+  s->mac_value = gfs_source_hydrostatic_mac_value;
+  s->centered_value = gfs_source_hydrostatic_centered_value;
 }
 
 GfsSourceGenericClass * gfs_source_hydrostatic_class (void)
@@ -946,7 +949,7 @@ GfsSourceGenericClass * gfs_source_hydrostatic_class (void)
       sizeof (GfsSourceHydrostatic),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) gfs_source_hydrostatic_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_source_hydrostatic_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -1042,7 +1045,11 @@ static void gfs_source_friction_class_init (GfsSourceGenericClass * klass)
   GTS_OBJECT_CLASS (klass)->read = gfs_source_friction_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_source_friction_write;
   GFS_EVENT_CLASS (klass)->event = gfs_source_friction_event;
-  klass->mac_value = klass->centered_value = gfs_source_friction_saved_value;
+}
+
+static void gfs_source_friction_init (GfsSourceGeneric * s)
+{
+  s->mac_value = s->centered_value = gfs_source_friction_saved_value;
 }
 
 GfsSourceGenericClass * gfs_source_friction_class (void)
@@ -1055,7 +1062,7 @@ GfsSourceGenericClass * gfs_source_friction_class (void)
       sizeof (GfsSourceFriction),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) gfs_source_friction_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_source_friction_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };

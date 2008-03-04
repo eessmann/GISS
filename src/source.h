@@ -42,6 +42,9 @@ struct _GfsSourceGeneric {
 
   /*< public >*/
   GfsVariable * v;
+  gdouble (* mac_value)      (GfsSourceGeneric *, FttCell *, GfsVariable *);
+  gdouble (* centered_value) (GfsSourceGeneric *, FttCell *, GfsVariable *);
+  gdouble (* face_value)     (GfsSourceGeneric *, FttCellFace *, GfsVariable *);
 };
 
 typedef struct _GfsSourceGenericClass    GfsSourceGenericClass;
@@ -51,8 +54,6 @@ struct _GfsSourceGenericClass {
   GfsEventClass parent_class;
 
   /*< public >*/
-  gdouble (* mac_value)      (GfsSourceGeneric *, FttCell *, GfsVariable *);
-  gdouble (* centered_value) (GfsSourceGeneric *, FttCell *, GfsVariable *);
   gdouble (* stability)      (GfsSourceGeneric *, GfsSimulation *);
 };
 

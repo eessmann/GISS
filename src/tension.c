@@ -221,7 +221,11 @@ static void gfs_source_tension_css_class_init (GfsSourceGenericClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = gfs_source_tension_css_read;
   GFS_EVENT_CLASS (klass)->event = gfs_source_tension_css_event;
-  klass->centered_value =          gfs_source_tension_css_value;
+}
+
+static void gfs_source_tension_css_init (GfsSourceGeneric * s)
+{
+  s->centered_value = gfs_source_tension_css_value;
 }
 
 GfsSourceGenericClass * gfs_source_tension_css_class (void)
@@ -234,7 +238,7 @@ GfsSourceGenericClass * gfs_source_tension_css_class (void)
       sizeof (GfsSourceTensionCSS),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) gfs_source_tension_css_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_source_tension_css_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };

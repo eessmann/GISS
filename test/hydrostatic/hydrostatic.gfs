@@ -18,12 +18,8 @@
     ApproxProjectionParams { tolerance = 1e-12 }
     ProjectionParams { tolerance = 1e-12 }
 
-    # The pressure correction needs to be included in the
-    # Crank-Nicholson scheme in order to balance the body force
-    AdvectionParams { gc = 1 }
-
     OutputScalarNorm { istep = 1 } v { v = V }
-    EventScript { start = end } {
+    EventScript { start = end } { 
         if awk '{if ($9 > 1e-12) exit (1);}' < v ; then
             return 0;
         else
