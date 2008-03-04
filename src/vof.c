@@ -906,6 +906,8 @@ static void variable_tracer_vof_update (GfsVariable * v, GfsDomain * domain)
   }
 }
 
+static void no_coarse_fine (FttCell * cell,  GfsVariable * v) {}
+
 static void allocate_normal_alpha (GfsVariableTracerVOF * t)
 {
   GfsVariable * v = GFS_VARIABLE1 (t);
@@ -917,6 +919,7 @@ static void allocate_normal_alpha (GfsVariableTracerVOF * t)
       g_strdup_printf ("%s-component of the normal to the interface defined by %s",
 		       index[c], v->name);
     t->m[c] = gfs_domain_get_or_add_variable (v->domain, name, description);
+    t->m[c]->fine_coarse = t->m[c]->coarse_fine = no_coarse_fine;
     g_free (name);
     g_free (description);
   }
@@ -924,6 +927,7 @@ static void allocate_normal_alpha (GfsVariableTracerVOF * t)
   gchar * description = 
     g_strdup_printf ("\"alpha\" for the interface defined by %s", v->name);
   t->alpha = gfs_domain_get_or_add_variable (v->domain, name, description);
+  t->alpha->fine_coarse = t->alpha->coarse_fine = no_coarse_fine;
   g_free (name);
   g_free (description);
 }
