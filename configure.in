@@ -11,6 +11,7 @@ dnl are available for $ac_help expansion (don't we all *love* autoconf?)
 # if backwards compatibility has been broken,
 # set GFS_BINARY_AGE and GFS_INTERFACE_AGE to 0.
 #
+# Remember to update rpm/gerris.spec when changing the version number.
 GFS_MAJOR_VERSION=1
 GFS_MINOR_VERSION=2
 GFS_MICRO_VERSION=0

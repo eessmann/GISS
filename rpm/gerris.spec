@@ -4,7 +4,7 @@
 Summary: The Gerris Flow Solver
 Name: gerris
 %if "%{current}" == ""
-Version: 1.1.2
+Version: 1.2.0
 %else
 Version: %{current}
 %endif
