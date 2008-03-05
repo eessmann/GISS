@@ -14,6 +14,8 @@ int main (int argc, char * argv[])
   klass = gfs_classes ();
   printf ("klass = {\\\n");
   key_value_pair ("Define");
+  key_value_pair ("GfsProjectionParams");
+  key_value_pair ("GfsApproxProjectionParams");
   while (*klass) {
     key_value_pair ((*klass)->info.name);
     klass++;

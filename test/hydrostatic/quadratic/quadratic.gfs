@@ -29,15 +29,15 @@
     OutputScalarNorm { istep = 1 } v { v = V }
     # Checks that the pressure profile is close to the exact solution
     OutputErrorNorm { istep = 1 } p { v = P } {
-	s = (cy*cy/2. + 0.5*cy) 
-	unbiased = 1 
+        s = (cy*cy/2. + 0.5*cy) 
+        unbiased = 1 
     }
     EventScript { start = end } { 
         if awk '{if ($9 > 1e-12) exit (1);}' < v ; then :
         else
             return $GFS_STOP;
         fi        
-	if awk '{if ($9 > 1e-12) exit (1);}' < p ; then :
+        if awk '{if ($9 > 1e-12) exit (1);}' < p ; then :
         else
             return $GFS_STOP;
         fi

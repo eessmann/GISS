@@ -35,20 +35,20 @@
     ApproxProjectionParams { tolerance = 1e-6 }
     Refine LEVEL
     Global {
-	double channel (double x) {
-	    double y1 = 0.2/4.;
-	    double y2 = 1e-6/4.;
-	    
-	    return x <= -0.25 ? y1 : 
-	           x < 0.25 ? y2 + 0.5*(y1 - y2)*(1. + cos (2.*M_PI*(x + 0.25))) : 
-		   y2;
-	}
+        double channel (double x) {
+            double y1 = 0.2/4.;
+            double y2 = 1e-6/4.;
+            
+            return x <= -0.25 ? y1 : 
+                   x < 0.25 ? y2 + 0.5*(y1 - y2)*(1. + cos (2.*M_PI*(x + 0.25))) : 
+                   y2;
+        }
     }
     Solid (0.125 - channel (x) - y) { scale = 4 tx = 1.5 }
     Solid (y + 0.125 - channel (x)) { scale = 4 tx = 1.5 }
     Init {} { U = 1 }
     OutputSimulation { start = end } sim-LEVEL {
-	variables = U,V,P
+        variables = U,V,P
     }
 }
 GfsBox { left = Boundary { BcDirichlet U 1 } }
