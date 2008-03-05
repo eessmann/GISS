@@ -345,10 +345,14 @@ static void simulation_run (GfsSimulation * sim)
   g_assert (pmac);
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++) {
-    g[c] = gfs_temporary_variable (domain);
     gmac[c] = gfs_temporary_variable (domain);
-    gfs_variable_set_vector (g[c], c);
     gfs_variable_set_vector (gmac[c], c);
+    if (sim->advection_params.gc) {
+      g[c] = gfs_temporary_variable (domain);
+      gfs_variable_set_vector (g[c], c);
+    }
+    else
+      g[c] = gmac[c];
   }
 
   gfs_simulation_refine (sim);
@@ -370,7 +374,7 @@ static void simulation_run (GfsSimulation * sim)
     gfs_simulation_set_timestep (sim);
     advance_tracers (domain, sim->advection_params.dt/2.);
   }
-  else
+  else if (sim->advection_params.gc)
     gfs_update_gradients (domain, p, sim->physical_params.alpha, g);
 
   while (sim->time.t < sim->time.end &&
@@ -402,11 +406,9 @@ static void simulation_run (GfsSimulation * sim)
 				       -sim->advection_params.dt);
     }
     else if (gfs_has_source_coriolis (domain)) {
-      gfs_correct_centered_velocities (domain, FTT_DIMENSION, sim->time.i > 0 ? g : gmac,
-				       sim->advection_params.dt);
+      gfs_correct_centered_velocities (domain, FTT_DIMENSION, gmac, sim->advection_params.dt);
       gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
-      gfs_correct_centered_velocities (domain, FTT_DIMENSION, sim->time.i > 0 ? g : gmac, 
-				       -sim->advection_params.dt);
+      gfs_correct_centered_velocities (domain, FTT_DIMENSION, gmac, -sim->advection_params.dt);
     }
 
     gfs_domain_cell_traverse (domain,
@@ -433,8 +435,9 @@ static void simulation_run (GfsSimulation * sim)
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gts_object_destroy, NULL);
 
   for (c = 0; c < FTT_DIMENSION; c++) {
-    gts_object_destroy (GTS_OBJECT (g[c]));
     gts_object_destroy (GTS_OBJECT (gmac[c]));
+    if (sim->advection_params.gc)
+      gts_object_destroy (GTS_OBJECT (g[c]));
   }
 }
 
