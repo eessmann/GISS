@@ -191,15 +191,15 @@ static void add_face_source (FttCellFace * face,
 
   c = face->d/2;
   dp = (* f->s->face_value) (f->s, face, f->v);
-  GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= dp*f->dt;
+  GFS_FACE_NORMAL_VELOCITY_LEFT (face) += dp*f->dt;
   if (f->g)
-    GFS_VARIABLE (face->cell, f->g[c]->i) += dp*GFS_FACE_FRACTION_LEFT (face);
+    GFS_VARIABLE (face->cell, f->g[c]->i) -= dp*GFS_FACE_FRACTION_LEFT (face);
 
   if (ftt_face_type (face) == FTT_FINE_COARSE)
     dp *= GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*FTT_CELLS/2);
-  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*f->dt;
+  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) += dp*f->dt;
   if (f->g)
-    GFS_VARIABLE (face->neighbor, f->g[c]->i) += dp*GFS_FACE_FRACTION_RIGHT (face);
+    GFS_VARIABLE (face->neighbor, f->g[c]->i) -= dp*GFS_FACE_FRACTION_RIGHT (face);
 }
 
 static void velocity_face_sources (GfsDomain * domain,
