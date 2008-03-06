@@ -45,9 +45,7 @@ void gfs_multilevel_params_write (GfsMultilevelParams * par, FILE * fp)
 	   "  nitermax  = %u\n"
 	   "  nitermin  = %u\n"
 	   "  weighted  = %d\n"
-	   "  beta      = %g\n"
-	   "  omega     = %g\n"
-	   "}",
+	   "  beta      = %g\n",
 	   par->tolerance,
 	   par->nrelax,
 	   par->erelax,
@@ -55,8 +53,10 @@ void gfs_multilevel_params_write (GfsMultilevelParams * par, FILE * fp)
 	   par->nitermax,
 	   par->nitermin,
 	   par->weighted,
-	   par->beta,
-	   par->omega);
+	   par->beta);
+  if (par->omega != 1.)
+    fprintf (fp, "  omega     = %g\n", par->omega);
+  fputc ('}', fp);
 }
 
 void gfs_multilevel_params_init (GfsMultilevelParams * par)
