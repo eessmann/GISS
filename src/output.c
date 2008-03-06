@@ -143,7 +143,12 @@ static gboolean gfs_output_event (GfsEvent * event, GfsSimulation * sim)
 	  guint len = strlen (output->format);
 	  g_assert (output->format[len - 1] == '}');
 	  output->format[len - 1] = '\0';
-	  output->file = gfs_output_file_new (popen (&output->format[1], "w"));
+	  FILE * fp = gfs_popen (sim, &output->format[1], "w");
+	  if (fp == NULL) {
+	    g_warning ("GfsOutput cannot start script");
+	    return TRUE;
+	  }
+	  output->file = gfs_output_file_new (fp);
 	  output->file->is_pipe = TRUE;
 	  output->format[len - 1] = '}';
 	}

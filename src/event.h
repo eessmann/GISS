@@ -228,6 +228,10 @@ GfsEventClass * gfs_event_stop_class  (void);
 
 /* GfsEventScript: Header */
 
+FILE * gfs_popen (GfsSimulation * sim, 
+		  const char * command, 
+		  const char * type);
+
 typedef struct _GfsEventScript         GfsEventScript;
 
 struct _GfsEventScript {

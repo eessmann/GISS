@@ -1563,7 +1563,17 @@ static void gfs_event_script_read (GtsObject ** o, GtsFile * fp)
     gts_file_next_token (fp);
 }
 
-static FILE * gfs_popen (GfsSimulation * sim, const char * command, const char * type)
+/**
+ * gfs_popen:
+ * @sim: a #GfsSimulation.
+ * @command: a shell command.
+ * @type: "r" for reading or "w" for writing.
+ *
+ * Returns: a file descriptor pointing to a pipe opened using the
+ * standard popen() command but which also defines standard Gerris
+ * shell variables. In case of error returns %NULL.
+ */
+FILE * gfs_popen (GfsSimulation * sim, const char * command, const char * type)
 {
   g_return_val_if_fail (command != NULL, NULL);
   g_return_val_if_fail (type != NULL, NULL);
