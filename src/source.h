@@ -136,8 +136,11 @@ typedef struct _GfsSourceControl         GfsSourceControl;
 
 struct _GfsSourceControl {
   /*< private >*/
-  GfsSource parent;
+  GfsSourceScalar parent;
   gdouble s;
+
+  /*< public >*/
+  GfsFunction * intensity;
 };
 
 #define GFS_SOURCE_CONTROL(obj)            GTS_OBJECT_CAST (obj,\

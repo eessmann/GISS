@@ -368,6 +368,30 @@ GfsSourceGenericClass * gfs_source_class (void)
 
 /* GfsSourceControl: Object */
 
+static void source_control_destroy (GtsObject * o)
+{
+  if (GFS_SOURCE_CONTROL (o)->intensity)
+    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CONTROL (o)->intensity));
+
+  (* GTS_OBJECT_CLASS (gfs_source_control_class ())->parent_class->destroy) (o);
+}
+
+static void source_control_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_control_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GFS_SOURCE_CONTROL (*o)->intensity = gfs_function_new (gfs_function_class (), 0.);
+  gfs_function_read (GFS_SOURCE_CONTROL (*o)->intensity, gfs_object_simulation (*o), fp);
+}
+
+static void source_control_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_control_class ())->parent_class->write) (o, fp);
+  gfs_function_write (GFS_SOURCE_CONTROL (o)->intensity, fp);
+}
+
 static gboolean source_control_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* gfs_event_class ()->event) (event, sim)) {
@@ -375,8 +399,7 @@ static gboolean source_control_event (GfsEvent * event, GfsSimulation * sim)
     GtsRange r = gfs_domain_stats_variable (GFS_DOMAIN (sim), GFS_SOURCE_SCALAR (event)->v,
 					    FTT_TRAVERSE_LEAFS, -1);
     s->s = sim->advection_params.dt > 0. ? 
-      (gfs_function_value (GFS_SOURCE (s)->intensity, NULL) - r.mean)/sim->advection_params.dt :
-      0.;
+      (gfs_function_value (s->intensity, NULL) - r.mean)/sim->advection_params.dt: 0.;
     return TRUE;
   }
   return FALSE;
@@ -384,6 +407,9 @@ static gboolean source_control_event (GfsEvent * event, GfsSimulation * sim)
 
 static void source_control_class_init (GfsSourceGenericClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->read = source_control_read;
+  GTS_OBJECT_CLASS (klass)->write = source_control_write;
+  GTS_OBJECT_CLASS (klass)->destroy = source_control_destroy;
   GFS_EVENT_CLASS (klass)->event = source_control_event;
 }
 
@@ -413,7 +439,7 @@ GfsSourceGenericClass * gfs_source_control_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_class ()),
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_scalar_class ()),
 				  &source_control_info);
   }
 
