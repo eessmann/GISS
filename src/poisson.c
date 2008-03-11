@@ -634,6 +634,49 @@ static void get_from_below_2D (FttCell * cell, const GfsVariable * v)
   GFS_VARIABLE (cell, v->i) = val;
 }
 
+typedef struct {
+  GfsVariable * s, * r, * u, * v;
+  gdouble srs, rs2, beta;
+} MRSData;
+
+static void compute_beta (FttCell * cell, MRSData * data)
+{
+  gdouble rs = GFS_VALUE (cell, data->r) - GFS_VALUE (cell, data->s);
+  data->rs2 += rs*rs;
+  data->srs -= GFS_VALUE (cell, data->s)*rs;
+}
+
+static void update_sv (FttCell * cell, MRSData * data)
+{
+  GFS_VALUE (cell, data->s) += data->beta*(GFS_VALUE (cell, data->r) - GFS_VALUE (cell, data->s));
+  GFS_VALUE (cell, data->v) += data->beta*(GFS_VALUE (cell, data->u) - GFS_VALUE (cell, data->v));
+  GFS_VALUE (cell, data->r) = GFS_VALUE (cell, data->s);
+  GFS_VALUE (cell, data->u) = GFS_VALUE (cell, data->v);
+}
+
+/* See Jun Zhang, "Multigrid acceleration techniques and applications
+   to the numerical solutions of partial differential equations", PhD
+   Thesis, George Washington University, section 4.2 */
+static void minimal_residual_smoothing (GfsDomain * domain, 
+					GfsVariable * v, GfsVariable * s, 
+					GfsVariable * u, GfsVariable * res)
+{
+  MRSData data;
+  data.s = s;
+  data.r = res;
+  data.u = u;
+  data.v = v;
+  data.srs = data.rs2 = 0.;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) compute_beta, &data);
+  if (data.rs2 > 0.) {
+    data.beta = data.srs/data.rs2;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) update_sv, &data);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, u);
+  }
+}
+
 /**
  * gfs_poisson_cycle:
  * @domain: the domain on which to solve the Poisson equation.
@@ -659,7 +702,9 @@ void gfs_poisson_cycle (GfsDomain * domain,
 			GfsVariable * u,
 			GfsVariable * rhs,
 			GfsVariable * dia,
-			GfsVariable * res)
+			GfsVariable * res,
+			GfsVariable * v,
+			GfsVariable * s)
 {
   guint n, l, nrelax, minlevel;
   GfsVariable * dp;
@@ -719,6 +764,8 @@ void gfs_poisson_cycle (GfsDomain * domain,
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, u);
   /* compute new residual on leaf cells */
   gfs_residual (domain, p->dimension, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
+  if (v && s)
+    minimal_residual_smoothing (domain, v, s, u, res);
 
   gts_object_destroy (GTS_OBJECT (dp));
 }
