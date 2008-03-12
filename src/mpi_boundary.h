@@ -23,6 +23,17 @@
 #include <mpi.h>
 #include "boundary.h"
 
+#ifdef gfs_all_reduce
+# undef gfs_all_reduce
+#endif
+#define gfs_all_reduce(domain, p, type, op) {				\
+    if ((domain)->pid >= 0) {						\
+      union { int a; float b; double c;} global;			\
+      MPI_Allreduce (&(p), &global, 1, type, op, MPI_COMM_WORLD);	\
+      memcpy (&(p), &global, sizeof (p));				\
+    }									\
+  }
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

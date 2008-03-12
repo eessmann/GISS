@@ -677,14 +677,7 @@ static gboolean domain_match (GfsDomain * domain)
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, datum);
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_synchronize, &c);
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_changed, &changed);
-#ifdef HAVE_MPI
-  if (domain->pid >= 0) {
-    guint global_changed;
-
-    MPI_Allreduce (&changed, &global_changed, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-    changed = global_changed;
-  }
-#endif /* HAVE_MPI */
+  gfs_all_reduce (domain, changed, MPI_INT, MPI_MAX);
   return changed;
 }
 
@@ -1069,15 +1062,7 @@ guint gfs_domain_depth (GfsDomain * domain)
 
   gts_container_foreach (GTS_CONTAINER (domain),
 			 (GtsFunc) box_depth, &depth);
-#ifdef HAVE_MPI
-  if (domain->pid >= 0) {
-    guint global_depth;
-
-    MPI_Allreduce (&depth, &global_depth, 1, MPI_UNSIGNED, MPI_MAX, 
-		   MPI_COMM_WORLD);
-    depth = global_depth;
-  }
-#endif /* HAVE_MPI */
+  gfs_all_reduce (domain, depth, MPI_UNSIGNED, MPI_MAX);
   return depth;
 }
 
@@ -2177,14 +2162,7 @@ guint gfs_domain_size (GfsDomain * domain,
   
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
 			   (FttCellTraverseFunc) count, &n);
-#ifdef HAVE_MPI
-  if (domain->pid >= 0) {
-    guint sn;
-
-    MPI_Allreduce (&n, &sn, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
-    n = sn;
-  }
-#endif /* HAVE_MPI */
+  gfs_all_reduce (domain, n, MPI_UNSIGNED, MPI_SUM);
   return n;
 }
 
@@ -2253,14 +2231,7 @@ gdouble gfs_domain_cfl (GfsDomain * domain,
   p.v = gfs_domain_velocity (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
 			    (FttCellTraverseFunc) minimum_cfl, &p);
-#ifdef HAVE_MPI
-  if (domain->pid >= 0) {
-    gdouble gcfl;
-
-    MPI_Allreduce (&p.cfl, &gcfl, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-    p.cfl = gcfl;
-  }
-#endif /* HAVE_MPI */
+  gfs_all_reduce (domain, p.cfl, MPI_DOUBLE, MPI_MIN);
   return sqrt (p.cfl);
 }
 

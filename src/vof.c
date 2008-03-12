@@ -23,7 +23,7 @@
 
 #include "config.h"
 #ifdef HAVE_MPI
-#  include <mpi.h>
+#  include "mpi_boundary.h"
 #endif
 #include "variable.h"
 #include "adaptive.h"
@@ -1379,14 +1379,7 @@ static void fix_too_coarse (GfsDomain * domain, VofParms * p)
     gfs_domain_cell_traverse (domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) refine_too_coarse, p);
-#ifdef HAVE_MPI
-  if (domain->pid >= 0) {
-    guint sum_too_coarse;
-      
-    MPI_Allreduce (&p->too_coarse, &sum_too_coarse, 1, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
-    p->too_coarse = sum_too_coarse;
-  }
-#endif /* HAVE_MPI */
+  gfs_all_reduce (domain, p->too_coarse, MPI_UNSIGNED, MPI_SUM);
   if (p->too_coarse > 0)
     gfs_domain_reshape (domain, p->depth);
   domain->cell_init = (FttCellInitFunc) gfs_cell_fine_init;

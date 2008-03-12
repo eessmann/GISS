@@ -27,6 +27,9 @@ extern "C" {
 #include <gmodule.h>
 #include "ftt.h"
 
+/* gfs_all_reduce() defaults to nothing without MPI */
+#define gfs_all_reduce(domain, p, type, op)
+
 #define GFS_DOUBLE_TO_POINTER(d)     (*((gpointer *) &(d)))
 
 gboolean gfs_char_in_string (char c, const char * s);

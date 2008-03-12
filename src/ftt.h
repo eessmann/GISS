@@ -31,7 +31,7 @@ extern "C" {
 
 #include "gfsconfig.h"
 
-#define FTT_MAINTAINER "s.popinet@niwa.cri.nz"
+#define FTT_MAINTAINER "s.popinet@niwa.co.nz"
 
 #if (FTT_2D || FTT_2D3)
 # define FTT_CELLS     4

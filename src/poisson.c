@@ -23,6 +23,11 @@
 #include "source.h"
 #include "tension.h"
 
+#include "config.h"
+#ifdef HAVE_MPI
+#  include "mpi_boundary.h"
+#endif
+
 /**
  * gfs_multilevel_params_write:
  * @par: the multilevel parameters.
@@ -669,6 +674,8 @@ static void minimal_residual_smoothing (GfsDomain * domain,
   data.srs = data.rs2 = 0.;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) compute_beta, &data);
+  gfs_all_reduce (domain, data.srs, MPI_DOUBLE, MPI_SUM);
+  gfs_all_reduce (domain, data.rs2, MPI_DOUBLE, MPI_SUM);
   if (data.rs2 > 0.) {
     data.beta = data.srs/data.rs2;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
