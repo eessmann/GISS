@@ -6,7 +6,8 @@ EXAMPLES = \
 	boussinesq \
 	tangaroa \
 	logo \
-	tides
+	tides \
+	ship
 
 EXTRA_DIST = \
 	template.tex \
