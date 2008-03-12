@@ -659,31 +659,6 @@ static void update_sv (FttCell * cell, MRSData * data)
   GFS_VALUE (cell, data->u) = GFS_VALUE (cell, data->v);
 }
 
-/* See Jun Zhang, "Multigrid acceleration techniques and applications
-   to the numerical solutions of partial differential equations", PhD
-   Thesis, George Washington University, section 4.2 */
-static void minimal_residual_smoothing (GfsDomain * domain, 
-					GfsVariable * v, GfsVariable * s, 
-					GfsVariable * u, GfsVariable * res)
-{
-  MRSData data;
-  data.s = s;
-  data.r = res;
-  data.u = u;
-  data.v = v;
-  data.srs = data.rs2 = 0.;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) compute_beta, &data);
-  gfs_all_reduce (domain, data.srs, MPI_DOUBLE, MPI_SUM);
-  gfs_all_reduce (domain, data.rs2, MPI_DOUBLE, MPI_SUM);
-  if (data.rs2 > 0.) {
-    data.beta = data.srs/data.rs2;
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) update_sv, &data);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, u);
-  }
-}
-
 /**
  * gfs_poisson_cycle:
  * @domain: the domain on which to solve the Poisson equation.
@@ -709,9 +684,7 @@ void gfs_poisson_cycle (GfsDomain * domain,
 			GfsVariable * u,
 			GfsVariable * rhs,
 			GfsVariable * dia,
-			GfsVariable * res,
-			GfsVariable * v,
-			GfsVariable * s)
+			GfsVariable * res)
 {
   guint n, l, nrelax, minlevel;
   GfsVariable * dp;
@@ -771,8 +744,6 @@ void gfs_poisson_cycle (GfsDomain * domain,
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, u);
   /* compute new residual on leaf cells */
   gfs_residual (domain, p->dimension, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
-  if (v && s)
-    minimal_residual_smoothing (domain, v, s, u, res);
 
   gts_object_destroy (GTS_OBJECT (dp));
 }

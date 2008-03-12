@@ -272,16 +272,6 @@ void gfs_update_gradients (GfsDomain * domain,
   gfs_scale_gradients (domain, FTT_DIMENSION, g);
 }
 
-typedef struct {
-  GfsVariable * u, * r, * s, * v;
-} MRSData;
-
-static void init_mrs (FttCell * cell, MRSData * d)
-{
-  GFS_VALUE (cell, d->v) = GFS_VALUE (cell, d->u);
-  GFS_VALUE (cell, d->s) = GFS_VALUE (cell, d->r);
-}
-
 static void mac_projection (GfsDomain * domain,
 			    GfsMultilevelParams * par,
 			    GfsAdvectionParams * apar,
@@ -297,8 +287,6 @@ static void mac_projection (GfsDomain * domain,
   GfsVariable * div = gfs_temporary_variable (domain);
   GfsVariable * dia = gfs_temporary_variable (domain);
   GfsVariable * res1 = res ? res : gfs_temporary_variable (domain);
-  GfsVariable * s = gfs_temporary_variable (domain);
-  GfsVariable * v = gfs_temporary_variable (domain);
   /* Initialize face coefficients */
   gfs_poisson_coefficients (domain, alpha);
 
@@ -331,11 +319,6 @@ static void mac_projection (GfsDomain * domain,
   /* compute residual */
   par->depth = gfs_domain_depth (domain);
   gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res1);
-  /* initialize Minimal Residual Smoothing */
-  MRSData mrs;
-  mrs.u = p; mrs.r = res1; mrs.v = v; mrs.s = s;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-  			    (FttCellTraverseFunc) init_mrs, &mrs);
   /* solve for pressure */
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
@@ -352,11 +335,7 @@ static void mac_projection (GfsDomain * domain,
 	     par->residual.second, 
 	     par->residual.infty);
 #endif
-#if 1
-    gfs_poisson_cycle (domain, par, p, div, dia, res1, v, s);
-#else
-    gfs_poisson_cycle (domain, par, p, div, dia, res1, NULL, NULL);
-#endif
+    gfs_poisson_cycle (domain, par, p, div, dia, res1);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
     if (par->residual.infty == res_max_before) /* convergence has stopped!! */
       break;
@@ -372,8 +351,6 @@ static void mac_projection (GfsDomain * domain,
   gts_object_destroy (GTS_OBJECT (dia));
   if (!res)
     gts_object_destroy (GTS_OBJECT (res1));
-  gts_object_destroy (GTS_OBJECT (s));
-  gts_object_destroy (GTS_OBJECT (v));
 
   gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
   gfs_scale_gradients (domain, FTT_DIMENSION, g);

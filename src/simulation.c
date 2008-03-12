@@ -1451,20 +1451,10 @@ static void copy_res (FttCell * cell, gpointer * data)
   GFS_VARIABLE (cell, res->i) = GFS_VARIABLE (cell, res1->i);
 }
 
-typedef struct {
-  GfsVariable * u, * r, * s, * v;
-} MRSData;
-
-static void init_mrs (FttCell * cell, MRSData * d)
-{
-  GFS_VALUE (cell, d->v) = GFS_VALUE (cell, d->u);
-  GFS_VALUE (cell, d->s) = GFS_VALUE (cell, d->r);
-}
-
 static void poisson_run (GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
-  GfsVariable * dia, * div, * res = NULL, * res1, * p, * s, * v;
+  GfsVariable * dia, * div, * res = NULL, * res1, * p;
   GfsMultilevelParams * par = &sim->approx_projection_params;
   GSList * i;
 
@@ -1484,18 +1474,11 @@ static void poisson_run (GfsSimulation * sim)
   gfs_poisson_coefficients (domain, NULL);
   res1 = gfs_temporary_variable (domain);
   dia = gfs_temporary_variable (domain);
-  s = gfs_temporary_variable (domain);
-  v = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dia);
   /* compute residual */
   par->depth = gfs_domain_depth (domain);  
   gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res1);
-  /* initialize Minimal Residual Smoothing */
-  MRSData mrs;
-  mrs.u = p; mrs.r = res1; mrs.v = v; mrs.s = s;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-  			    (FttCellTraverseFunc) init_mrs, &mrs);
   /* solve for pressure */
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
@@ -1517,7 +1500,7 @@ static void poisson_run (GfsSimulation * sim)
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
     gfs_domain_timer_start (domain, "poisson_cycle");
-    gfs_poisson_cycle (domain, par, p, div, dia, res1, v, s);
+    gfs_poisson_cycle (domain, par, p, div, dia, res1);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
     gfs_domain_timer_stop (domain, "poisson_cycle");
 
@@ -1541,8 +1524,6 @@ static void poisson_run (GfsSimulation * sim)
   gts_object_destroy (GTS_OBJECT (dia));
   gts_object_destroy (GTS_OBJECT (div));
   gts_object_destroy (GTS_OBJECT (res1));
-  gts_object_destroy (GTS_OBJECT (s));
-  gts_object_destroy (GTS_OBJECT (v));
 }
 
 static void poisson_class_init (GfsSimulationClass * klass)

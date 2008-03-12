@@ -233,7 +233,7 @@ static void gfs_free_surface_pressure (GfsDomain * toplayer,
 	     par->residual.second, 
 	     par->residual.infty);
 #endif
-    gfs_poisson_cycle (toplayer, par, p, fp.div, fp.dia, res1, NULL, NULL);
+    gfs_poisson_cycle (toplayer, par, p, fp.div, fp.dia, res1);
     par->residual = gfs_domain_norm_residual (toplayer, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
     par->niter++;
   }
