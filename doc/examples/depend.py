@@ -8,6 +8,7 @@ import gfs2tex
 dists = ""
 depends = ""
 docs = ""
+
 for start in sys.argv[1:]:
     for root, dirs, files in os.walk(start,topdown=True):
         if not ".xvpics" in root:
@@ -17,7 +18,8 @@ for start in sys.argv[1:]:
             dists += "\\\n\t" + name
             depends += "\\\n\t" + name
             for f in example.required:
-                dists += "\\\n\t" + example.path + "/" + f
+                if os.path.exists("../../_darcs/pristine/doc/examples/" + example.path + "/" + f):
+                    dists += "\\\n\t" + example.path + "/" + f
             for f in example.generated:
                 depends += "\\\n\t" + example.path + "/" + f
                 if f[-4:] == ".mpg":
