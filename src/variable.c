@@ -44,11 +44,15 @@ static void gfs_variable_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (name)");
     return;
   }
+  domain = (*o)->reserved;
+  if (gfs_derived_variable_from_name (domain->derived_variables, fp->token->str)) {
+    gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
+    return;
+  }
   v = GFS_VARIABLE1 (*o);
   v->name = g_strdup (fp->token->str);
   gts_file_next_token (fp);
 
-  domain = (*o)->reserved;
   if ((old = gfs_variable_from_name (domain->variables, v->name))) {
     GSList * i;
     if ((i = g_slist_find (domain->variables_io, old)))
