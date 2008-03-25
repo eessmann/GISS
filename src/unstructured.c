@@ -49,9 +49,10 @@ static FttDirection d[NV][FTT_DIMENSION] = {
 #endif /* 3D */
 };
 
-static void vertex_pos (Vertex * v, FttVector * p)
+static void vertex_pos (Vertex * v, FttVector * p, GfsSimulation * sim)
 {
   ftt_corner_pos (v->cell, d[v->i], p);
+  gfs_simulation_map_inverse (sim, p);
 }
 
 static float vertex_value (Vertex * vertex, GfsVariable * v, gint max_depth)
@@ -153,13 +154,6 @@ static void print_pos (Vertex * v)
 }
 #endif /* DEBUG */
 
-static void write_pos (Vertex * v, FILE * fp)
-{
-  FttVector p;
-  vertex_pos (v, &p);
-  fprintf (fp, "%g %g %g\n", p.x, p.y, p.z);
-}
-
 #if DEBUG
 static void draw_vertices (FttCell * cell, GfsVariable ** v)
 {
@@ -226,7 +220,13 @@ void gfs_domain_write_vtk (GfsDomain * domain, gint max_depth, GSList * variable
   /* vertices */
   guint nv = g_slist_length (vertices);
   fprintf (fp, "POINTS %d float\n", nv);
-  g_slist_foreach (vertices, (GFunc) write_pos, fp);
+  GSList * j = vertices;
+  while (j) {
+    FttVector p;
+    vertex_pos (j->data, &p, GFS_SIMULATION (domain));
+    fprintf (fp, "%g %g %g\n", p.x, p.y, p.z);
+    j = j->next;
+  }
   fputc ('\n', fp);
 
   /* elements */
@@ -344,7 +344,7 @@ void gfs_domain_write_tecplot (GfsDomain * domain, gint max_depth, GSList * vari
   while (j) {
     Vertex * vertex = j->data;
     FttVector p;
-    vertex_pos (vertex, &p);
+    vertex_pos (vertex, &p, GFS_SIMULATION (domain));
 #if FTT_2D
     fprintf (fp, "%g %g", p.x, p.y);
 #else

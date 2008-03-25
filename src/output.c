@@ -1122,8 +1122,9 @@ static gboolean gfs_output_location_event (GfsEvent * event,
       fputc ('\n', fp);
     }
     for (i = 0; i < location->p->len; i++) {
-      FttVector p = g_array_index (location->p, FttVector, i);
-      FttCell * cell = gfs_domain_locate (domain, p, -1);
+      FttVector p = g_array_index (location->p, FttVector, i), pm = p;
+      gfs_simulation_map (sim, &pm);
+      FttCell * cell = gfs_domain_locate (domain, pm, -1);
       
       if (cell != NULL) {
 	GSList * i = domain->variables;
@@ -1131,7 +1132,7 @@ static gboolean gfs_output_location_event (GfsEvent * event,
 	fprintf (fp, "%g %g %g %g", sim->time.t, p.x, p.y, p.z);
 	while (i) {
 	  if (GFS_VARIABLE1 (i->data)->name)
-	    fprintf (fp, " %g", gfs_interpolate (cell, p, i->data));
+	    fprintf (fp, " %g", gfs_interpolate (cell, pm, i->data));
 	  i = i->next;
 	}
 	fputc ('\n', fp);
@@ -1195,6 +1196,7 @@ static void write_text (FttCell * cell, GfsOutputSimulation * output)
   FttVector p;
 
   gfs_cell_cm (cell, &p);
+  gfs_simulation_map_inverse (gfs_object_simulation (output), &p);
   fprintf (fp, "%g %g %g", p.x, p.y, p.z);
   while (i) {
     if (GFS_VARIABLE1 (i->data)->name)
@@ -1962,6 +1964,7 @@ static void maxima (FttCell * cell, GfsOutputScalarMaxima * m)
       FttVector p;
 
       gfs_cell_cm (cell, &p);
+      gfs_simulation_map_inverse (gfs_object_simulation (m), &p);
       m->m[0][i] = p.x; m->m[1][i] = p.y; m->m[2][i] = p.z;
       m->m[3][i] = v;
       return;
@@ -2772,9 +2775,11 @@ static gboolean gfs_output_streamline_event (GfsEvent * event,
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_streamline_class ())->parent_class)->event)
       (event,sim)) {
+    FttVector p = GFS_OUTPUT_STREAMLINE (event)->p;
+    gfs_simulation_map (sim, &p);
     GList * stream = gfs_streamline_new (GFS_DOMAIN (sim),
 					 gfs_domain_velocity (GFS_DOMAIN (sim)),
-					 GFS_OUTPUT_STREAMLINE (event)->p,
+					 p,
 					 GFS_OUTPUT_SCALAR (event)->v,
 					 0., 0.,
 					 TRUE,
@@ -2877,8 +2882,10 @@ static gboolean gfs_output_particle_event (GfsEvent * event,
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class)->event)
       (event,sim)) {
     FILE * fp = GFS_OUTPUT (event)->file->fp;
-
-    fprintf (fp, "%g %g %g %g\n", sim->time.t, l->p->x, l->p->y, l->p->z);
+    FttVector pm;
+    pm.x = l->p->x; pm.y = l->p->y; pm.z = l->p->z;
+    gfs_simulation_map_inverse (sim, &pm);
+    fprintf (fp, "%g %g %g %g\n", sim->time.t, pm.x, pm.y, pm.z);
     ret = TRUE;
   }
   gfs_domain_advect_point (GFS_DOMAIN (sim), l->p, sim->advection_params.dt);

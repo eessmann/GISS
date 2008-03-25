@@ -30,6 +30,7 @@
 #include "source.h"
 #include "vof.h"
 #include "tension.h"
+#include "map.h"
 #include "version.h"
 #ifdef HAVE_MPI
 #  include "mpi_boundary.h"
@@ -41,13 +42,15 @@ static void simulation_destroy (GtsObject * object)
 {
   GfsSimulation * sim = GFS_SIMULATION (object);
 
-  gts_container_foreach (GTS_CONTAINER (sim->refines),
-			 (GtsFunc) gts_object_destroy, NULL);
+  gts_container_foreach (GTS_CONTAINER (sim->refines), (GtsFunc) gts_object_destroy, NULL);
   gts_object_destroy (GTS_OBJECT (sim->refines));
 
-  gts_container_foreach (GTS_CONTAINER (sim->events),
-			 (GtsFunc) gts_object_destroy, NULL);
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gts_object_destroy, NULL);
   gts_object_destroy (GTS_OBJECT (sim->events));
+
+  gts_container_foreach (GTS_CONTAINER (sim->maps), (GtsFunc) gts_object_destroy, NULL);
+  gts_object_destroy (GTS_OBJECT (sim->maps));
+
   gts_object_destroy (GTS_OBJECT (sim->adapts));
   gts_object_destroy (GTS_OBJECT (sim->solids));
 
@@ -138,6 +141,15 @@ static void simulation_write (GtsObject * object, FILE * fp)
   gfs_multilevel_params_write (&sim->projection_params, fp);
   fputc ('\n', fp);
 
+  i = sim->maps->items;
+  while (i) {
+    GtsObject * object = i->data;
+    g_assert (object->klass->write);
+    (* object->klass->write) (object, fp);
+    fputc ('\n', fp);
+    i = i->next;
+  }
+
   fputc ('}', fp);
 }
 
@@ -194,16 +206,16 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       if (!g_module_supported ())
 	g_warning ("modules are not supported on this system");
       else {
-	gchar * name, * path;
 	GModule * module;
 
-	name = g_strconcat (fp->token->str, FTT_DIMENSION == 2 ? "2D" : "3D", NULL);
-	path = g_module_build_path (GFS_MODULES_DIR, name);
-	g_free (name);
-	module = g_module_open (path, 0);
-	g_free (path);
-	if (module == NULL)
-	  module = g_module_open (fp->token->str, 0);
+	module = g_module_open (fp->token->str, 0);
+	if (module == NULL) {
+	  gchar * name = g_strconcat (fp->token->str, FTT_DIMENSION == 2 ? "2D" : "3D", NULL);
+	  gchar * path = g_module_build_path (GFS_MODULES_DIR, name);
+	  g_free (name);
+	  module = g_module_open (path, 0);
+	  g_free (path);
+	}
 	if (module == NULL) {
 	  gts_file_error (fp, "cannot load module: %s", g_module_error ());
 	  return;
@@ -292,6 +304,8 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       }
       else if (GFS_IS_EVENT (object))
 	gts_container_add (GTS_CONTAINER (sim->events), GTS_CONTAINEE (object));
+      else if (GFS_IS_MAP (object))
+	gts_container_add (GTS_CONTAINER (sim->maps), GTS_CONTAINEE (object));
       else if (GFS_IS_SURFACE_GENERIC_BC (object))
 	;
       else
@@ -459,7 +473,7 @@ static void gfs_simulation_class_init (GfsSimulationClass * klass)
 
 /* Derived variables */
 
-static gdouble cell_x (FttCell * cell, FttCellFace * face)
+static gdouble cell_x (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   FttVector p;
 
@@ -469,10 +483,11 @@ static gdouble cell_x (FttCell * cell, FttCellFace * face)
     gfs_face_ca (face, &p);
   else
     gfs_cell_cm (cell, &p);
+  gfs_simulation_map_inverse (sim, &p);
   return p.x;
 }
 
-static gdouble cell_y (FttCell * cell, FttCellFace * face)
+static gdouble cell_y (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   FttVector p;
 
@@ -482,10 +497,11 @@ static gdouble cell_y (FttCell * cell, FttCellFace * face)
     gfs_face_ca (face, &p);
   else
     gfs_cell_cm (cell, &p);
+  gfs_simulation_map_inverse (sim, &p);
   return p.y;
 }
 
-static gdouble cell_z (FttCell * cell, FttCellFace * face)
+static gdouble cell_z (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   FttVector p;
 
@@ -495,31 +511,47 @@ static gdouble cell_z (FttCell * cell, FttCellFace * face)
     gfs_face_ca (face, &p);
   else
     gfs_cell_cm (cell, &p);
+  gfs_simulation_map_inverse (sim, &p);
   return p.z;
 }
 
-static gdouble cell_ax (FttCell * cell)
+static gdouble cell_ax (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   g_return_val_if_fail (cell != NULL, 0.);
-
-  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->ca.x : 0.;
+  if (!GFS_IS_MIXED (cell))
+    return 0.;
+  else {
+    FttVector p = GFS_STATE (cell)->solid->ca;
+    gfs_simulation_map_inverse (sim, &p);
+    return p.x;
+  }
 }
 
-static gdouble cell_ay (FttCell * cell)
+static gdouble cell_ay (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   g_return_val_if_fail (cell != NULL, 0.);
-
-  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->ca.y : 0.;
+  if (!GFS_IS_MIXED (cell))
+    return 0.;
+  else {
+    FttVector p = GFS_STATE (cell)->solid->ca;
+    gfs_simulation_map_inverse (sim, &p);
+    return p.y;
+  }
 }
 
-static gdouble cell_az (FttCell * cell)
+static gdouble cell_az (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   g_return_val_if_fail (cell != NULL, 0.);
-
-  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->ca.z : 0.;
+  if (!GFS_IS_MIXED (cell))
+    return 0.;
+  else {
+    FttVector p = GFS_STATE (cell)->solid->ca;
+    gfs_simulation_map_inverse (sim, &p);
+    return p.z;
+  }
 }
 
-static gdouble cell_cx (FttCell * cell, FttCellFace * face)
+static gdouble cell_cx (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   FttVector p;
 
@@ -529,10 +561,11 @@ static gdouble cell_cx (FttCell * cell, FttCellFace * face)
     ftt_face_pos (face, &p);
   else
     ftt_cell_pos (cell, &p);
+  gfs_simulation_map_inverse (sim, &p);
   return p.x;
 }
 
-static gdouble cell_cy (FttCell * cell, FttCellFace * face)
+static gdouble cell_cy (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   FttVector p;
 
@@ -542,10 +575,11 @@ static gdouble cell_cy (FttCell * cell, FttCellFace * face)
     ftt_face_pos (face, &p);
   else
     ftt_cell_pos (cell, &p);
+  gfs_simulation_map_inverse (sim, &p);
   return p.y;
 }
 
-static gdouble cell_cz (FttCell * cell, FttCellFace * face)
+static gdouble cell_cz (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   FttVector p;
 
@@ -555,6 +589,7 @@ static gdouble cell_cz (FttCell * cell, FttCellFace * face)
     ftt_face_pos (face, &p);
   else
     ftt_cell_pos (cell, &p);
+  gfs_simulation_map_inverse (sim, &p);
   return p.z;
 }
 
@@ -750,6 +785,9 @@ static void simulation_init (GfsSimulation * object)
   object->refines = GTS_SLIST_CONTAINER (gts_container_new
 					 (GTS_CONTAINER_CLASS
 					  (gts_slist_container_class ())));
+  object->maps = GTS_SLIST_CONTAINER (gts_container_new
+				      (GTS_CONTAINER_CLASS
+				       (gts_slist_container_class ())));
   object->adapts = GTS_SLIST_CONTAINER (gts_container_new
 					(GTS_CONTAINER_CLASS
 					 (gts_slist_container_class ())));
@@ -1332,6 +1370,48 @@ void gfs_simulation_run (GfsSimulation * sim)
   (* GFS_SIMULATION_CLASS (GTS_OBJECT (sim)->klass)->run) (sim);
   gfs_clock_stop (GFS_DOMAIN (sim)->timer);
   g_log_remove_handler ("Gfs", id);
+}
+
+/**
+ * gfs_simulation_map:
+ * @sim: a #GfsSimulation.
+ * @p: a #FttVector.
+ *
+ * Applies the mapping transformations associated with @sim to
+ * coordinates @p.
+ */
+void gfs_simulation_map (GfsSimulation * sim, FttVector * p)
+{
+  g_return_if_fail (sim != NULL);
+  g_return_if_fail (p != NULL);
+  
+  GSList * i = sim->maps->items;
+  while (i) {
+    GtsObject * o = i->data;
+    (* GFS_MAP_CLASS (o->klass)->transform) (i->data, p, p);
+    i = i->next;
+  }
+}
+
+/**
+ * gfs_simulation_map_inverse:
+ * @sim: a #GfsSimulation.
+ * @p: a #FttVector.
+ *
+ * Applies the inverse mapping transformations associated with @sim to
+ * coordinates @p.
+ */
+void gfs_simulation_map_inverse (GfsSimulation * sim, FttVector * p)
+{
+  g_return_if_fail (sim != NULL);
+  g_return_if_fail (p != NULL);
+  
+  GSList * i = sim->maps->items;
+  while (i) {
+    GtsObject * o = i->data;
+    (* GFS_MAP_CLASS (o->klass)->inverse) (i->data, p, p);
+    i = i->next;
+  }
 }
 
 /* GfsAdvection: Object */

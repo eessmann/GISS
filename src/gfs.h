@@ -39,6 +39,8 @@
 #include <gerris/vof.h>
 #include <gerris/cartesian.h>
 #include <gerris/surface.h>
+#include <gerris/unstructured.h>
+#include <gerris/map.h>
 #include <gerris/version.h>
 
 #endif /* GFS_H */

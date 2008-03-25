@@ -59,6 +59,7 @@ GFS_HDS = \
 	cartesian.h \
 	surface.h \
 	unstructured.h \
+	map.h \
 	version.h \
 	$(MPI_HDS)
 
@@ -100,6 +101,7 @@ SRC = \
 	cartesian.c \
 	surface.c \
 	unstructured.c \
+	map.c \
 	$(GFS_HDS)
 
 simulation.c: version.h

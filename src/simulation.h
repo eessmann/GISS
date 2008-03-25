@@ -68,7 +68,7 @@ struct _GfsSimulation {
   GtsSListContainer * adapts;
   GfsAdaptStats adapts_stats;
 
-  GtsSListContainer * events;
+  GtsSListContainer * events, * maps;
   GSList * modules, * globals;
 
   GtsSListContainer * solids;
@@ -105,6 +105,10 @@ GfsSimulation *      gfs_simulation_read         (GtsFile * fp);
 GSList *             gfs_simulation_get_solids   (GfsSimulation * sim);
 void                 gfs_simulation_refine       (GfsSimulation * sim);
 void                 gfs_simulation_set_timestep (GfsSimulation * sim);
+void                 gfs_simulation_map          (GfsSimulation * sim, 
+						  FttVector * p);
+void                 gfs_simulation_map_inverse  (GfsSimulation * sim, 
+						  FttVector * p);
 void                 gfs_time_init               (GfsTime * t);
 void                 gfs_time_write              (GfsTime * t, 
 						  FILE * fp);
