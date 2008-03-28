@@ -210,7 +210,15 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 
 	module = g_module_open (fp->token->str, 0);
 	if (module == NULL) {
-	  gchar * name = g_strconcat (fp->token->str, FTT_DIMENSION == 2 ? "2D" : "3D", NULL);
+	  gchar * name = g_strconcat (fp->token->str, 
+#if FTT_2D
+				      "2D"
+#elif FTT_2D3
+				      "2D3"
+#else
+				      "3D"
+#endif
+				      , NULL);
 	  gchar * path = g_module_build_path (GFS_MODULES_DIR, name);
 	  g_free (name);
 	  module = g_module_open (path, 0);

@@ -3,6 +3,32 @@
 INCLUDES = -I$(top_srcdir)/src -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs-modules\" $(GTS_CFLAGS)
 
+if HAS_LIBPROJ
+MAP = libmap2D.la libmap3D.la libmap2D3.la
+endif
+
+pkglib_LTLIBRARIES = \
+	$(MAP)
+
+EXTRA_DIST = \
+	map.mod
+
+BUILT_SOURCES = \
+	map.c
+
+AM_LDFLAGS = $(NO_UNDEFINED)\
+        -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
+	-release $(LT_RELEASE) -export-dynamic
+
+libmap3D_la_SOURCES = map.c
+libmap3D_la_LIBADD = -lproj
+libmap2D_la_SOURCES = map.c
+libmap2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+libmap2D_la_LIBADD = -lproj
+libmap2D3_la_SOURCES = map.c
+libmap2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
+libmap2D3_la_LIBADD = -lproj
+
 if HAVE_MODULES
 %.c : %.mod
 	@echo "/* $@" > $@
