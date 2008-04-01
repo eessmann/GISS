@@ -1125,6 +1125,8 @@ GfsSourceGenericClass * gfs_source_friction_class (void)
 
 /* GfsBcFlather: Object */
 
+/* Also check whether modules/tide.mod needs upgrading when modyifing this class */
+
 static void bc_flather_write (GtsObject * o, FILE * fp)
 {
   GfsBcFlather * bc = GFS_BC_FLATHER (o);

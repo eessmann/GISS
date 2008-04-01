@@ -8,13 +8,18 @@ MAP = libmap2D.la libmap3D.la libmap2D3.la
 endif
 
 pkglib_LTLIBRARIES = \
-	$(MAP)
+	$(MAP) \
+	libtide2D.la \
+	libtide3D.la \
+	libtide2D3.la
 
 EXTRA_DIST = \
-	map.mod
+	map.mod \
+	tide.mod
 
 BUILT_SOURCES = \
-	map.c
+	map.c \
+	tide.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -28,6 +33,15 @@ libmap2D_la_LIBADD = -lproj
 libmap2D3_la_SOURCES = map.c
 libmap2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 libmap2D3_la_LIBADD = -lproj
+
+libtide3D_la_SOURCES = tide.c
+libtide3D_la_LIBADD = -L/home/popinet/local/lib -lfes -lnetcdf -lgsl -lgslcblas -lm -lpthread
+libtide2D_la_SOURCES = tide.c
+libtide2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+libtide2D_la_LIBADD = -L/home/popinet/local/lib -lfes -lnetcdf -lgsl -lgslcblas -lm -lpthread
+libtide2D3_la_SOURCES = tide.c
+libtide2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
+libtide2D3_la_LIBADD = -L/home/popinet/local/lib -lfes -lnetcdf -lgsl -lgslcblas -lm -lpthread
 
 if HAVE_MODULES
 %.c : %.mod
