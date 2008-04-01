@@ -78,7 +78,11 @@ static void simulation_write (GtsObject * object, FILE * fp)
 
   i = sim->modules;
   while (i) {
-    fprintf (fp, "  GModule %s\n", g_module_name (i->data));
+    void (* module_write) (FILE *);
+    fprintf (fp, "  GModule %s", g_module_name (i->data));
+    if (g_module_symbol (i->data, "gfs_module_write", (gpointer) &module_write))
+      (* module_write) (fp);
+    fputc ('\n', fp);
     i = i->next;
   }
 
@@ -203,8 +207,10 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 	gts_file_error (fp, "expecting a string (filename)");
 	return;
       }
-      if (!g_module_supported ())
+      if (!g_module_supported ()) {
 	g_warning ("modules are not supported on this system");
+	gts_file_next_token (fp);      
+      }
       else {
 	GModule * module;
 
@@ -230,8 +236,15 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 	}
 	g_module_make_resident (module);
 	sim->modules = g_slist_prepend (sim->modules, module);
+	gts_file_next_token (fp);
+
+	void (* module_read) (GtsFile *);
+	if (g_module_symbol (module, "gfs_module_read", (gpointer) &module_read)) {
+	  (* module_read) (fp);
+	  if (fp->type == GTS_ERROR)
+	    return;
+	}
       }
-      gts_file_next_token (fp);
     }
 
     /* ------------ GfsTime ------------ */
