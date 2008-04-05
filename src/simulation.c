@@ -260,6 +260,10 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 	gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
 	return;
       }
+      if (gts_object_class_is_from_class (klass, gfs_box_class ())) {
+	gts_file_error (fp, "parse error (unclosed statement?)");
+	return;
+      }
 
       object = gts_object_new (klass);
       gfs_object_simulation_set (object, sim);
