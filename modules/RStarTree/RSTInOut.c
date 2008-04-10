@@ -93,7 +93,7 @@ void ReadPage(RSTREE R,
 {
   int pnb; /* position or nbytes */
   
-  pnb= lseek(fd.f,pagenr*fd.bl,L_SET);
+  pnb= lseek(fd.f,(off_t)pagenr*(off_t)fd.bl,L_SET);
   if (pnb != -1) {
     pnb= read(fd.f,block,fd.bl);
   }
@@ -112,7 +112,7 @@ void WritePage(RSTREE R,
 {
   int pnb; /* position or nbytes */
   
-  pnb= lseek(fd.f,pagenr*fd.bl,L_SET);
+  pnb= lseek(fd.f,(off_t)pagenr*(off_t)fd.bl,L_SET);
   if (pnb != -1) {
     pnb= write(fd.f,block,fd.bl);
   }

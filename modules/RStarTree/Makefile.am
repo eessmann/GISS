@@ -2,7 +2,7 @@
 
 noinst_LIBRARIES = libcSmRST.a
 
-libcSmRST_a_CFLAGS = $(AM_CFLAGS)
+libcSmRST_a_CFLAGS = $(AM_CFLAGS) -D_FILE_OFFSET_BITS=64
 libcSmRST_a_SOURCES = \
 		RStarTree.c \
 		RStarTree.h \
