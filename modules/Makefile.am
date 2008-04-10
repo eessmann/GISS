@@ -1,5 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
+SUBDIRS = RStarTree
+
 INCLUDES = -I$(top_srcdir)/src -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs-modules\" $(GTS_CFLAGS)
 

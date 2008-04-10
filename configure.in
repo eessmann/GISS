@@ -437,6 +437,7 @@ src/gerris2D3.pc
 src/gerris3D.pc
 tools/Makefile
 modules/Makefile
+modules/RStarTree/Makefile
 test/Makefile
 doc/Makefile
 doc/tutorial/Makefile
