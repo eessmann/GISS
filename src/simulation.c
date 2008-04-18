@@ -31,6 +31,9 @@
 #include "vof.h"
 #include "tension.h"
 #include "version.h"
+#ifdef HAVE_MPI
+#  include "mpi_boundary.h"
+#endif /* HAVE_MPI */
 
 /* GfsSimulation: object */
 
@@ -1067,6 +1070,8 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
     }
     i = i->next;
   }
+
+  gfs_all_reduce (GFS_DOMAIN (sim), sim->advection_params.dt, MPI_DOUBLE, MPI_MIN);
 
   gdouble tnext = G_MAXINT;
   i = sim->events->items;
