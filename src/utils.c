@@ -459,7 +459,7 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
 #else /* 3D */
     "gerris3D"
 #endif
-    " --cflags --libs` -O "
+    " --cflags --libs` -O -Wall -Wno-unused -Werror "
     MODULES_FLAGS;
   
   foutd = mkstemp (foutname);
