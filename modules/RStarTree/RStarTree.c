@@ -1,5 +1,6 @@
 /* ----- RStarTree.c ----- */
 
+#include <stdlib.h>
 
 #include "RStarTree.h"
 #include "RSTInterUtil.h"

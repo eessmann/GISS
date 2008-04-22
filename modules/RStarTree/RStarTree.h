@@ -34,13 +34,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 
-#ifdef SVR4
-#  include <fcntl.h>
-#  include <sys/fcntl.h>
-#else
-#  include <sys/fcntlcom.h>
-#  include <sys/fcntl.h>
-#endif
+#include <fcntl.h>
 
 
 /* ----------------------------- constants ----------------------------- */
@@ -83,7 +77,7 @@ typedef typinterval  typrect[NumbOfDim];
 
 
 typedef struct {
-               int  contents; /**V**/
+               float height;
                } typinfo, *refinfo;
 
         /* A typinfo is a struct which may contain arbitrary information
