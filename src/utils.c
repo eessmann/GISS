@@ -1302,18 +1302,18 @@ void gfs_eigenvalues (gdouble a[FTT_DIMENSION][FTT_DIMENSION],
  *
  * Replaces @m with its inverse.
  *
- * Returns: %FALSE if the inversion encounters a pivot coefficient
- * smaller than or equal to @pivmin (i.e. @m is non-invertible), %TRUE
- * otherwise.
+ * Returns: 0. if the inversion encounters a pivot coefficient smaller
+ * than or equal to @pivmin (i.e. @m is non-invertible), the minimum
+ * absolute value of the pivoting coefficient otherwise.
  */
-gboolean gfs_matrix_inverse (gdouble ** m, guint n, gdouble pivmin)
+gdouble gfs_matrix_inverse (gdouble ** m, guint n, gdouble pivmin)
 {
   gint * indxc, * indxr, * ipiv;
   gint i, icol = 0, irow = 0, j, k, l, ll;
-  gdouble big, dum, pivinv, temp;
+  gdouble big, dum, pivinv, temp, minpiv = G_MAXDOUBLE;
 
-  g_return_val_if_fail (m != NULL, FALSE);
-  g_return_val_if_fail (pivmin >= 0., FALSE);
+  g_return_val_if_fail (m != NULL, 0.);
+  g_return_val_if_fail (pivmin >= 0., 0.);
 
   indxc = g_malloc (sizeof (gint)*n);
   indxr = g_malloc (sizeof (gint)*n);
@@ -1347,8 +1347,10 @@ gboolean gfs_matrix_inverse (gdouble ** m, guint n, gdouble pivmin)
       g_free (indxc);
       g_free (indxr);
       g_free (ipiv);
-      return FALSE;
+      return 0.;
     }
+    if (fabs (m[icol][icol]) < minpiv)
+      minpiv = fabs (m[icol][icol]);
     pivinv = 1.0/m[icol][icol];
     m[icol][icol] = 1.0;
     for (l = 0; l < n; l++) m[icol][l] *= pivinv;
@@ -1368,7 +1370,7 @@ gboolean gfs_matrix_inverse (gdouble ** m, guint n, gdouble pivmin)
   g_free (indxc);
   g_free (indxr);
   g_free (ipiv);
-  return TRUE;
+  return minpiv;
 }
 
 /**

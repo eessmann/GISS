@@ -9,14 +9,18 @@ if HAS_LIBPROJ
 MAP = libmap2D.la libmap3D.la libmap2D3.la
 endif
 
-TERRAIN = libterrain2D.la libterrain3D.la libterrain2D3.la
-
 pkglib_LTLIBRARIES = \
 	$(MAP) \
-	$(TERRAIN) \
+	libterrain2D.la \
+	libterrain3D.la \
+	libterrain2D3.la \
 	libtide2D.la \
 	libtide3D.la \
 	libtide2D3.la
+
+bin_PROGRAMS = \
+	xyz2rsurface \
+	rsurfacequery
 
 EXTRA_DIST = \
 	map.mod \
@@ -41,14 +45,16 @@ libmap2D3_la_SOURCES = map.c
 libmap2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 libmap2D3_la_LIBADD = -lproj
 
-libterrain3D_la_SOURCES = terrain.c
-libterrain3D_la_LIBADD = -lpq
-libterrain2D_la_SOURCES = terrain.c
+libterrain3D_la_SOURCES = terrain.c rsurface.c
+libterrain3D_la_LIBADD = -LRStarTree -lcSmRST
+
 libterrain2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
-libterrain2D_la_LIBADD = -lpq
-libterrain2D3_la_SOURCES = terrain.c
+libterrain2D_la_SOURCES = terrain.c rsurface.c
+libterrain2D_la_LIBADD = -LRStarTree -lcSmRST
+
+libterrain2D3_la_SOURCES = terrain.c rsurface.c
 libterrain2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
-libterrain2D3_la_LIBADD = -lpq
+libterrain2D3_la_LIBADD = -LRStarTree -lcSmRST
 
 libtide3D_la_SOURCES = tide.c
 libtide3D_la_LIBADD = -L/home/popinet/local/lib -lfes -lnetcdf -lgsl -lgslcblas -lm -lpthread
@@ -58,6 +64,12 @@ libtide2D_la_LIBADD = -L/home/popinet/local/lib -lfes -lnetcdf -lgsl -lgslcblas 
 libtide2D3_la_SOURCES = tide.c
 libtide2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 libtide2D3_la_LIBADD = -L/home/popinet/local/lib -lfes -lnetcdf -lgsl -lgslcblas -lm -lpthread
+
+xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c
+xyz2rsurface_LDADD = -LRStarTree -lcSmRST
+
+rsurfacequery_SOURCES = rsurfacequery.c rsurface.c
+rsurfacequery_LDADD = -LRStarTree -lcSmRST
 
 if HAVE_MODULES
 %.c : %.mod
