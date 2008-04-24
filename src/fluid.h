@@ -63,7 +63,8 @@ typedef enum {
   GFS_FLAG_DIRICHLET         = 1 << (FTT_FLAG_USER + 2),
   GFS_FLAG_GRADIENT_BOUNDARY = 1 << (FTT_FLAG_USER + 3),
   GFS_FLAG_PERMANENT         = 1 << (FTT_FLAG_USER + 4),
-  GFS_FLAG_USER =                    FTT_FLAG_USER + 5 /* user flags start here */
+  GFS_FLAG_THIN              = 1 << (FTT_FLAG_USER + 5),
+  GFS_FLAG_USER =                    FTT_FLAG_USER + 6 /* user flags start here */
 } GfsFlags;
 
 #define GFS_STATE(cell)               ((GfsStateVector *) (cell)->data)

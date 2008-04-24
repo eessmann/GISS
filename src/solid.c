@@ -278,6 +278,7 @@ static gboolean thin_cell_is_solid (FttCell * cell)
 
 static void deal_with_thin_cell (FttCell * cell, InitSolidParams * p)
 {
+  cell->flags |= GFS_FLAG_THIN;
   if (thin_cell_is_solid (cell))
     GFS_VARIABLE (cell, p->status->i) = 1.;
   else {
@@ -851,9 +852,13 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
 	else if (GFS_VARIABLE (neighbor.c[d], status->i) != 1.) {
 	  if (!GFS_IS_MIXED (neighbor.c[d]) && solid->s[d] < 1.)
 	    solid->s[d] = 1.;
+	  else if (neighbor.c[d]->flags & GFS_FLAG_THIN)
+	    solid->s[d] = GFS_STATE (neighbor.c[d])->solid->s[FTT_OPPOSITE_DIRECTION (d)];
 	}
-	else if (GFS_IS_MIXED (neighbor.c[d])) /* this is a thin cell */
+	else if (GFS_IS_MIXED (neighbor.c[d])) { /* this is a thin cell */
+	  g_assert (neighbor.c[d]->flags & GFS_FLAG_THIN);
 	  solid->s[d] = 0.;
+	}
       }
   }
 }
@@ -943,35 +948,32 @@ static gboolean check_area_fractions (const FttCell * root)
   for (i = 0; i < FTT_NEIGHBORS; i++)
     if (neighbor.c[i]) {
       GfsSolidVector * nsolid = GFS_STATE (neighbor.c[i])->solid;
+      FttDirection oi = FTT_OPPOSITE_DIRECTION (i);
 
       if (ftt_cell_level (neighbor.c[i]) == level) {
 	if (GFS_IS_FLUID (root)) {
-	  if (!GFS_IS_FLUID (neighbor.c[i]) && 
-	      1. - nsolid->s[FTT_OPPOSITE_DIRECTION (i)] >= 1e-10) {
+	  if (!GFS_IS_FLUID (neighbor.c[i]) && 1. - nsolid->s[oi] >= 1e-10) {
 	    FttVector p;
 	    ftt_cell_pos (root, &p);
 	    g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
 		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
 		       p.x, p.y, p.z, ftt_cell_level (root),
-		       FTT_OPPOSITE_DIRECTION (i),
-		       nsolid->s[FTT_OPPOSITE_DIRECTION (i)]);
+		       oi, nsolid->s[oi]);
 	    ret = FALSE;
-	    nsolid->s[FTT_OPPOSITE_DIRECTION (i)] = 1.;
+	    nsolid->s[oi] = 1.;
 	  }
 	}
 	else if (GFS_IS_MIXED (neighbor.c[i])) {
-	  if (fabs (solid->s[i] - 
-		    nsolid->s[FTT_OPPOSITE_DIRECTION (i)]) >= 1e-10) {
+	  if (fabs (solid->s[i] - nsolid->s[oi]) >= 1e-10) {
 	    FttVector p;
 	    ftt_cell_pos (root, &p);
 	    g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g neighbor->s[%d]: %g",
 		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
 		       p.x, p.y, p.z, ftt_cell_level (root),
-		       i, solid->s[i],		       
-		       FTT_OPPOSITE_DIRECTION (i),
-		       nsolid->s[FTT_OPPOSITE_DIRECTION (i)]);
+		       i, solid->s[i],
+		       oi, nsolid->s[oi]);
 	    ret = FALSE;
-	    nsolid->s[FTT_OPPOSITE_DIRECTION (i)] = solid->s[i];
+	    nsolid->s[oi] = solid->s[i];
 	  }
 	}
 	else if (1. - solid->s[i] >= 1e-10) {
