@@ -739,6 +739,204 @@ GfsRefineClass * gfs_refine_terrain_class (void)
   return klass;
 }
 
+/* GfsSurfaceTerrain: Header */
+
+typedef struct _GfsSurfaceTerrain         GfsSurfaceTerrain;
+
+struct _GfsSurfaceTerrain {
+  /*< private >*/
+  GfsGenericSurface parent;
+  GfsVariable * h[NM];
+
+  /*< public >*/
+  gchar * name;
+};
+
+#define GFS_SURFACE_TERRAIN(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSurfaceTerrain,\
+					         gfs_surface_terrain_class ())
+#define GFS_IS_SURFACE_TERRAIN(obj)         (gts_object_is_from_class (obj,\
+						 gfs_surface_terrain_class ()))
+
+GfsGenericSurfaceClass * gfs_surface_terrain_class  (void);
+
+/* GfsSurfaceTerrain: Object */
+
+static void gfs_surface_terrain_read (GtsObject ** o, GtsFile * fp)
+{
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a variable name");
+    return;
+  }
+  GfsSurfaceTerrain * t = GFS_SURFACE_TERRAIN (*o);
+  t->name = g_strdup (fp->token->str);
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  guint i;
+  for (i = 0; i < NM; i++) {
+    gchar * name = g_strdup_printf ("%s%d", t->name, i);
+    t->h[i] = gfs_variable_from_name (domain->variables, name);
+    if (!t->h[i]) {
+      gts_file_error (fp, "%s is not a valid variable name", name);
+      g_free (name);
+      return;
+    }
+    t->h[i]->coarse_fine = terrain_coarse_fine;
+    g_free (name);
+  }
+  gts_file_next_token (fp);
+}
+
+static void gfs_surface_terrain_write (GtsObject * o, FILE * fp)
+{
+  fprintf (fp, " %s", GFS_SURFACE_TERRAIN (o)->name);
+}
+
+static void gfs_surface_terrain_destroy (GtsObject * object)
+{
+  g_free (GFS_SURFACE_TERRAIN (object)->name);
+  (* GTS_OBJECT_CLASS (gfs_surface_terrain_class ())->parent_class->destroy)
+    (object);
+}
+
+static GfsGenericSurface * cell_is_cut (FttCell * cell, GfsGenericSurface * s1,
+					gboolean flatten, gint maxlevel)
+{
+  g_assert (!flatten); /* not implemented */
+  if (!FTT_CELL_IS_LEAF (cell))
+    return s1;
+  return GFS_VALUE (cell, GFS_SURFACE_TERRAIN (s1)->h[0]) != G_MAXDOUBLE ? s1 : NULL;
+}
+
+static guint surface_segment_intersection (GfsGenericSurface * s1,
+					   FttCell * cell,
+					   GfsSegment * I)
+{
+  I->n = 0;
+  I->x = 0.;
+  I->inside = 0;
+
+  FttVector pE, pD;
+  pE.x = I->E->x; pE.y = I->E->y;
+  pD.x = I->D->x; pD.y = I->D->y;
+  gdouble vE = I->E->z - cell_value (cell, GFS_SURFACE_TERRAIN (s1)->h, pE)/4000.;
+  gdouble vD = I->D->z - cell_value (cell, GFS_SURFACE_TERRAIN (s1)->h, pD)/4000.;
+  
+  if ((vE > 0. && vD <= 0.) || (vE <= 0. && vD > 0.)) {
+    I->n = 1;
+    I->inside = vE > 0. ? -1 : 1;
+    I->x = vE/(vE - vD);
+#if DEBUG
+    gdouble size = ftt_cell_size (cell)/2.;
+    FttVector q;
+    ftt_cell_pos (cell, &q);
+    pE.x = (pE.x - q.x)/size;
+    pE.y = (pE.y - q.y)/size;
+    pD.x = (pD.x - q.x)/size;
+    pD.y = (pD.y - q.y)/size;
+    fprintf (stderr, "p %g %g %g %g %g %g %g %d %g %g %g %g\n", 
+	     I->D->x, I->D->y, I->D->z,
+	     I->E->x, I->E->y, I->E->z,
+	     I->x,
+	     ftt_cell_level (cell),
+	     pE.x, pE.y, pD.x, pD.y);
+    fprintf (stderr, "q %g %g %g\nq %g %g %g\nq\nq\n",
+	     I->D->x, I->D->y, I->D->z,
+	     I->E->x, I->E->y, I->E->z);
+    fprintf (stderr, "i %g %g %g\n",
+	     I->E->x + I->x*(I->D->x - I->E->x),
+	     I->E->y + I->x*(I->D->y - I->E->y),
+	     I->E->z + I->x*(I->D->z - I->E->z));
+#endif
+  }
+  return I->n;
+}
+
+static void surface_segment_normal (GfsGenericSurface * s1,
+				    FttCell * cell,
+				    GfsSegment * I,
+				    GtsVector n)
+{
+  GfsVariable ** h = GFS_SURFACE_TERRAIN (s1)->h;
+  gdouble size = ftt_cell_size (cell)/2.;
+  FttVector p, q;
+  ftt_cell_pos (cell, &q);
+  p.x = I->E->x + I->x*(I->D->x - I->E->x);
+  p.y = I->E->y + I->x*(I->D->y - I->E->y);
+  p.x = (p.x - q.x)/size;
+  p.y = (p.y - q.y)/size;
+  n[0] = - (GFS_VALUE (cell, h[1]) + GFS_VALUE (cell, h[3])*p.y)/4000./size;
+  n[1] = - (GFS_VALUE (cell, h[2]) + GFS_VALUE (cell, h[3])*p.x)/4000./size;
+  n[2] = 1.;
+}
+
+static void gfs_surface_terrain_class_init (GfsGenericSurfaceClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = gfs_surface_terrain_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_surface_terrain_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_surface_terrain_destroy;
+
+  klass->cell_is_cut = cell_is_cut;
+  klass->segment_intersection = surface_segment_intersection;
+  klass->segment_normal = surface_segment_normal;
+}
+
+GfsGenericSurfaceClass * gfs_surface_terrain_class (void)
+{
+  static GfsGenericSurfaceClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_surface_terrain_info = {
+      "GfsSurfaceTerrain",
+      sizeof (GfsSurfaceTerrain),
+      sizeof (GfsGenericSurfaceClass),
+      (GtsObjectClassInitFunc) gfs_surface_terrain_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_surface_class ()),
+				  &gfs_surface_terrain_info);
+  }
+
+  return klass;
+}
+
+/* GfsTerrain: Header */
+
+#define GFS_IS_TERRAIN(obj)         (gts_object_is_from_class (obj,\
+						 gfs_terrain_class ()))
+
+GfsEventClass * gfs_terrain_class  (void);
+
+/* GfsTerrain: Object */
+
+static void terrain_init (GfsSolid * s)
+{
+  gts_object_destroy (GTS_OBJECT (s->s));
+  s->s = GFS_GENERIC_SURFACE (gts_object_new (GTS_OBJECT_CLASS (gfs_surface_terrain_class ())));
+}
+
+GfsEventClass * gfs_terrain_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_terrain_info = {
+      "GfsTerrain",
+      sizeof (GfsSolid),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectInitFunc) terrain_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_solid_class ()),
+				  &gfs_terrain_info);
+  }
+
+  return klass;
+}
+
 /* Initialize module */
 
 const gchar * g_module_check_init (void);
@@ -751,6 +949,7 @@ const gchar * g_module_check_init (void)
   if (dir)
     default_dir = dir;
   gfs_refine_terrain_class ();
+  gfs_terrain_class ();
   return NULL;
 }
 
