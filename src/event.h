@@ -258,7 +258,7 @@ struct _GfsInitFraction {
   GfsGenericInit parent;
 
   GfsVariable * c;
-  GfsSurface * surface;
+  GfsGenericSurface * surface;
 };
 
 typedef struct _GfsInitFractionClass    GfsInitFractionClass;

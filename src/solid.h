@@ -31,9 +31,9 @@ extern "C" {
 
 void         gfs_cell_fluid                              (FttCell * cell);
 gboolean     gfs_solid_is_thin                           (FttCell * cell, 
-							  GfsSurface * s);
+							  GfsGenericSurface * s);
 gboolean     gfs_set_2D_solid_fractions_from_surface     (FttCell * cell,
-							  GfsSurface * s);
+							  GfsGenericSurface * s);
 guint        gfs_domain_init_solid_fractions             (GfsDomain * domain,
 							  GSList * i,
 							  gboolean destroy_solid,
@@ -43,7 +43,7 @@ guint        gfs_domain_init_solid_fractions             (GfsDomain * domain,
 void         gfs_cell_init_solid_fractions_from_children (FttCell * cell);
 gboolean     gfs_cell_check_solid_fractions              (FttCell * root);
 void         gfs_domain_init_fraction                    (GfsDomain * domain,
-							  GfsSurface * s,
+							  GfsGenericSurface * s,
 							  GfsVariable * c);
 void         gfs_cell_cm                                 (const FttCell * cell, 
 							  FttVector * cm);
@@ -62,7 +62,7 @@ struct _GfsSolid {
   GfsEvent parent;
 
   /*< public >*/
-  GfsSurface * s;
+  GfsGenericSurface * s;
 };
 
 #define GFS_SOLID(obj)            GTS_OBJECT_CAST (obj,\

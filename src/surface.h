@@ -23,6 +23,80 @@
 #include <gts.h>
 #include "ftt.h"
 
+/* GfsGenericSurface: Header */
+
+typedef GtsObject GfsGenericSurface;
+
+typedef struct {
+  GtsPoint * E, * D;
+  gdouble x;
+  guint n;
+  gint inside;
+} GfsSegment;
+
+typedef struct _GfsGenericSurfaceClass    GfsGenericSurfaceClass;
+
+struct _GfsGenericSurfaceClass {
+  /*< private >*/
+  GtsObjectClass parent_class;
+
+  /*< public >*/
+  GfsGenericSurface * (* cell_is_cut)          (FttCell * cell,
+						GfsGenericSurface * s,
+						gboolean flatten,
+						gint maxlevel);
+  guint               (* segment_intersection) (GfsGenericSurface * s,
+						FttCell * cell,
+						GfsSegment * I);
+  void                (* segment_normal)       (GfsGenericSurface * s,
+						FttCell * cell,
+						GfsSegment * I,
+						GtsVector n);
+};
+
+#define GFS_GENERIC_SURFACE(obj)            GTS_OBJECT_CAST (obj,\
+					         GtsObject,\
+					         gfs_generic_surface_class ())
+#define GFS_GENERIC_SURFACE_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
+						 GfsGenericSurfaceClass,\
+						 gfs_generic_surface_class())
+#define GFS_IS_GENERIC_SURFACE(obj)         (gts_object_is_from_class (obj,\
+						 gfs_generic_surface_class ()))
+
+GfsGenericSurfaceClass * gfs_generic_surface_class  (void);
+guint              gfs_surface_segment_intersection (GfsGenericSurface * s,
+						     FttCell * cell,
+						     GfsSegment * I);
+void               gfs_surface_segment_normal       (GfsGenericSurface * s,
+						     FttCell * cell,
+						     GfsSegment * I,
+						     GtsVector n);
+GfsGenericSurface *      gfs_cell_is_cut (FttCell * cell,
+					  GfsGenericSurface * s,
+					  gboolean flatten,
+					  gint maxlevel);
+typedef void       (* FttCellTraverseCutFunc) (FttCell * cell,
+					       GfsGenericSurface * s,
+					       gpointer data);
+void               gfs_cell_traverse_cut       (FttCell * root,
+						GfsGenericSurface * s,
+						FttTraverseType order,
+						FttTraverseFlags flags,
+						FttCellTraverseCutFunc func,
+						gpointer data);
+void               gfs_cell_traverse_cut_2D    (FttCell * root,
+						GfsGenericSurface * s,
+						FttTraverseType order,
+						FttTraverseFlags flags,
+						FttCellTraverseCutFunc func,
+						gpointer data);
+void               gfs_generic_surface_read    (GfsGenericSurface * s, 
+						gpointer sim,
+						GtsFile * fp);
+void               gfs_generic_surface_write   (GfsGenericSurface * s,
+						gpointer sim,
+						FILE * fp);
+
 /* GfsSurface: Header */
 
 typedef struct _GfsSurface         GfsSurface;
@@ -40,52 +114,15 @@ struct _GfsSurface {
   gboolean twod;
 };
 
-typedef struct {
-  GtsPoint * E, * D;
-  gdouble x;
-  guint n;
-  gint inside;
-} GfsSegment;
-
 #define GFS_SURFACE(obj)            GTS_OBJECT_CAST (obj,\
 					         GfsSurface,\
 					         gfs_surface_class ())
 #define GFS_IS_SURFACE(obj)         (gts_object_is_from_class (obj,\
 						 gfs_surface_class ()))
 
-GtsObjectClass *   gfs_surface_class          (void);
-void               gfs_surface_read           (GfsSurface * s, 
-					       gpointer sim,
-					       GtsFile * fp);
-void               gfs_surface_write          (GfsSurface * s,
-					       gpointer sim,
-					       FILE * fp);
+GfsGenericSurfaceClass *   gfs_surface_class          (void);
 gdouble            gfs_surface_implicit_value (GfsSurface * s, 
 					       GtsPoint p);
-guint              gfs_surface_segment_intersection (GfsSurface * s,
-						     GfsSegment * I);
-void               gfs_surface_segment_normal (GfsSurface * s,
-					       GfsSegment * I,
-					       GtsVector n);
-GfsSurface *       gfs_cell_is_cut            (FttCell * cell,
-					       GfsSurface * s,
-					       gboolean flatten,
-					       gint maxlevel);
-typedef void       (* FttCellTraverseCutFunc) (FttCell * cell,
-					       GfsSurface * s,
-					       gpointer data);
-void               gfs_cell_traverse_cut       (FttCell * root,
-						GfsSurface * s,
-						FttTraverseType order,
-						FttTraverseFlags flags,
-						FttCellTraverseCutFunc func,
-						gpointer data);
-void               gfs_cell_traverse_cut_2D    (FttCell * root,
-						GfsSurface * s,
-						FttTraverseType order,
-						FttTraverseFlags flags,
-						FttCellTraverseCutFunc func,
-						gpointer data);
 
 #ifdef __cplusplus
 }

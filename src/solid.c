@@ -160,7 +160,7 @@ static void face_fractions (CellFace * f, GfsSolidVector * solid, FttVector * h)
   solid->a = a;
 }
 
-static void face_new (CellFace * f, FttCell * cell, GfsSurface * s, FttVector * h)
+static void face_new (CellFace * f, FttCell * cell, GfsGenericSurface * s, FttVector * h)
 {
   FttVector p;
   guint i;
@@ -174,7 +174,7 @@ static void face_new (CellFace * f, FttCell * cell, GfsSurface * s, FttVector * 
   for (i = 0; i < 4; i++) {
     f->s[i].E = &f->p[i];
     f->s[i].D = &f->p[(i + 1) % 4];
-    gfs_surface_segment_intersection (s, &f->s[i]);
+    gfs_surface_segment_intersection (s, cell, &f->s[i]);
   }
 }
 
@@ -201,14 +201,14 @@ static gboolean solid_face_is_thin (CellFace * f)
 /**
  * gfs_set_2D_solid_fractions_from_surface:
  * @cell: a #FttCell.
- * @s: a #GfsSurface.
+ * @s: a #GfsGenericSurface.
  *
  * Sets the 2D volume fractions of @cell cut by @s.
  *
  * Returns: %TRUE if the cell is thin, %FALSE otherwise;
  */
 gboolean gfs_set_2D_solid_fractions_from_surface (FttCell * cell,
-						  GfsSurface * s)
+						  GfsGenericSurface * s)
 {
   GfsSolidVector * solid;
   FttVector h;
@@ -295,7 +295,7 @@ static void deal_with_thin_cell (FttCell * cell, InitSolidParams * p)
 #if FTT_2D /* 2D */
 
 static void set_solid_fractions_from_surface (FttCell * cell,
-					      GfsSurface * s,
+					      GfsGenericSurface * s,
 					      InitSolidParams * p)
 {
   if (gfs_set_2D_solid_fractions_from_surface (cell, s)) {
@@ -309,7 +309,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 /**
  * gfs_solid_is_thin:
  * @cell: a #FttCell.
- * @s: a #GfsSurface.
+ * @s: a #GfsGenericSurface.
  *
  * @s is "thin" relative to @cell if the miminum distance between
  * non-connected faces of @s cutting @cell is smaller than the size of
@@ -317,7 +317,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
  *
  * Returns: %TRUE if @s is a thin surface, %FALSE otherwise.
  */
-gboolean gfs_solid_is_thin (FttCell * cell, GfsSurface * s)
+gboolean gfs_solid_is_thin (FttCell * cell, GfsGenericSurface * s)
 {
   CellFace f;
   FttVector h;
@@ -407,7 +407,7 @@ static guint topology (CellCube * cube)
   return nl;
 }
 
-static void cube_new (CellCube * cube, FttCell * cell, GfsSurface * s, FttVector * o, FttVector * h)
+static void cube_new (CellCube * cube, FttCell * cell, GfsGenericSurface * s, FttVector * o, FttVector * h)
 {
   guint i;
 
@@ -422,12 +422,12 @@ static void cube_new (CellCube * cube, FttCell * cell, GfsSurface * s, FttVector
   for (i = 0; i < 12; i++) {
     cube->s[i].E = &cube->p[edge1[i][0]];
     cube->s[i].D = &cube->p[edge1[i][1]];
-    gfs_surface_segment_intersection (s, &cube->s[i]);
+    gfs_surface_segment_intersection (s, cell, &cube->s[i]);
   }
 }
 
 static void set_solid_fractions_from_surface (FttCell * cell, 
-					      GfsSurface * surface, 
+					      GfsGenericSurface * surface, 
 					      InitSolidParams * p)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
@@ -586,7 +586,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 /**
  * gfs_solid_is_thin:
  * @cell: a #FttCell.
- * @s: a #GfsSurface.
+ * @s: a #GfsGenericSurface.
  *
  * @s is "thin" relative to @cell if the miminum distance between
  * non-connected faces of @s cutting @cell is smaller than the size of
@@ -594,7 +594,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
  *
  * Returns: %TRUE if @s is a thin surface, %FALSE otherwise.
  */
-gboolean gfs_solid_is_thin (FttCell * cell, GfsSurface * s)
+gboolean gfs_solid_is_thin (FttCell * cell, GfsGenericSurface * s)
 {
   CellCube cube;
   FttVector o, h;
@@ -843,8 +843,7 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
 
     ftt_cell_neighbors (cell, &neighbor);
     for (d = 0; d < FTT_NEIGHBORS; d++)
-      if (neighbor.c[d] &&
-	  !GFS_CELL_IS_BOUNDARY (neighbor.c[d])) {
+      if (neighbor.c[d] && !GFS_CELL_IS_BOUNDARY (neighbor.c[d])) {
 	if (!FTT_CELL_IS_LEAF (neighbor.c[d])) {
 	  FttCellChildren child;
 	  FttDirection od = FTT_OPPOSITE_DIRECTION (d);
@@ -872,7 +871,7 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
 /**
  * gfs_domain_init_solid_fractions:
  * @domain: a #GfsDomain.
- * @i: a list of #GfsSurfaces.
+ * @i: a list of #GfsGenericSurfaces.
  * @destroy_solid: controls what to do with solid cells.
  * @cleanup: a #FttCellCleanupFunc or %NULL.
  * @data: user data to pass to @cleanup.
@@ -1116,7 +1115,7 @@ static void restore_solid (FttCell * cell, gpointer * data)
  * the cells of @domain.
  */
 void gfs_domain_init_fraction (GfsDomain * domain,
-			       GfsSurface * s,
+			       GfsGenericSurface * s,
 			       GfsVariable * c)
 {
   gboolean not_cut = TRUE;
@@ -1414,7 +1413,7 @@ static void gfs_solid_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  gfs_surface_read (GFS_SOLID (*o)->s, gfs_object_simulation (*o), fp);
+  gfs_generic_surface_read (GFS_SOLID (*o)->s, gfs_object_simulation (*o), fp);
 }
 
 static void gfs_solid_write (GtsObject * o, FILE * fp)
@@ -1422,7 +1421,7 @@ static void gfs_solid_write (GtsObject * o, FILE * fp)
   GfsSimulation * sim = gfs_object_simulation (o);
   if (sim->output_solid) {
     (* GTS_OBJECT_CLASS (gfs_solid_class ())->parent_class->write) (o, fp);
-    gfs_surface_write (GFS_SOLID (o)->s, sim, fp);
+    gfs_generic_surface_write (GFS_SOLID (o)->s, sim, fp);
   }
 }
 
@@ -1442,7 +1441,7 @@ static void gfs_solid_class_init (GtsObjectClass * klass)
 
 static void gfs_solid_init (GfsSolid * object)
 {
-  object->s = GFS_SURFACE (gts_object_new (gfs_surface_class ()));
+  object->s = GFS_GENERIC_SURFACE (gts_object_new (GTS_OBJECT_CLASS (gfs_surface_class ())));
   GFS_EVENT (object)->istep = G_MAXINT/2;
 }
 

@@ -955,7 +955,7 @@ typedef struct {
   gpointer data;
   FttTraverseType order;
   FttTraverseFlags flags;
-  GfsSurface * s;
+  GfsGenericSurface * s;
 } TraverseCut;
 
 static void traverse_cut (GfsBox * box, TraverseCut * p)
@@ -966,7 +966,7 @@ static void traverse_cut (GfsBox * box, TraverseCut * p)
 /**
  * gfs_domain_traverse_cut:
  * @domain: a #GfsDomain.
- * @s: a #GfsSurface.
+ * @s: a #GfsGenericSurface.
  * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
  * %FTT_POST_ORDER. 
  * @flags: which types of children are to be visited.
@@ -976,7 +976,7 @@ static void traverse_cut (GfsBox * box, TraverseCut * p)
  * Calls @func for each cell of @domain cut by @s.
  */
 void gfs_domain_traverse_cut (GfsDomain * domain,
-			      GfsSurface * s,
+			      GfsGenericSurface * s,
 			      FttTraverseType order,
 			      FttTraverseFlags flags,
 			      FttCellTraverseCutFunc func,
@@ -1005,7 +1005,7 @@ static void traverse_cut_2D (GfsBox * box, TraverseCut * p)
 /**
  * gfs_domain_traverse_cut_2D:
  * @domain: a #GfsDomain.
- * @s: a #GfsSurface.
+ * @s: a #GfsGenericSurface.
  * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
  * %FTT_POST_ORDER. 
  * @flags: which types of children are to be visited.
@@ -1017,7 +1017,7 @@ static void traverse_cut_2D (GfsBox * box, TraverseCut * p)
  * The cells are flattened in the z-direction.
  */
 void gfs_domain_traverse_cut_2D (GfsDomain * domain,
-				 GfsSurface * s,
+				 GfsGenericSurface * s,
 				 FttTraverseType order,
 				 FttTraverseFlags flags,
 				 FttCellTraverseCutFunc func,

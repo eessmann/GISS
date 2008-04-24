@@ -173,11 +173,11 @@ static void max_kappa (GtsVertex * v, KappaData * d)
 }
 
 static gdouble solid_curvature (FttCell * cell, FttCellFace * face, 
-				GfsDomain * domain, GfsSurface * s)
+				GfsDomain * domain, GfsGenericSurface * s)
 {
   KappaData d;
   d.kappa = gfs_solid_is_thin (cell, s) ? 1./ftt_cell_size (cell) : 0.;
-  d.s = s->s;
+  d.s = GFS_SURFACE (s)->s;
   gts_surface_foreach_vertex (d.s, (GtsFunc) max_kappa, &d);
   return d.kappa;
 }
@@ -199,10 +199,10 @@ static void refine_solid_read (GtsObject ** o, GtsFile * fp)
 typedef struct {
   GfsRefine * refine;
   GfsDomain * domain;
-  GfsSurface * surface;
+  GfsGenericSurface * surface;
 } RefineCut;
 
-static void refine_cut_cell (FttCell * cell, GfsSurface * s, RefineCut * p)
+static void refine_cut_cell (FttCell * cell, GfsGenericSurface * s, RefineCut * p)
 {
   GTS_OBJECT (s)->reserved = p->surface;
   GFS_REFINE_SOLID (p->refine)->v->data = s;
@@ -227,7 +227,7 @@ static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
     GSList * i = sim->solids->items;
     while (i) {
       p.surface = GFS_SOLID (i->data)->s;
-      if (p.surface->s)
+      if (GFS_SURFACE (p.surface)->s)
 	gfs_domain_traverse_cut (GFS_DOMAIN (sim), p.surface,
 				 FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 				 (FttCellTraverseCutFunc) refine_cut_cell, &p);
@@ -282,7 +282,7 @@ static void refine_surface_destroy (GtsObject * object)
 static void refine_surface_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_refine_surface_class ())->parent_class->write) (o, fp);
-  gfs_surface_write (GFS_REFINE_SURFACE (o)->surface, gfs_object_simulation (o), fp);
+  gfs_generic_surface_write (GFS_REFINE_SURFACE (o)->surface, gfs_object_simulation (o), fp);
 }
 
 static void refine_surface_read (GtsObject ** o, GtsFile * fp)
@@ -291,7 +291,7 @@ static void refine_surface_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  gfs_surface_read (GFS_REFINE_SURFACE (*o)->surface, gfs_object_simulation (*o), fp);
+  gfs_generic_surface_read (GFS_REFINE_SURFACE (*o)->surface, gfs_object_simulation (*o), fp);
 }
 
 static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
@@ -301,8 +301,8 @@ static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
   p.refine = refine;
   p.domain = GFS_DOMAIN (sim);
   p.surface = GFS_REFINE_SURFACE (refine)->surface;
-  if (p.surface->twod) {
-    if (p.surface->s)
+  if (GFS_SURFACE (p.surface)->twod) {
+    if (GFS_SURFACE (p.surface)->s)
       gfs_domain_traverse_cut_2D (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
 				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 				  (FttCellTraverseCutFunc) refine_cut_cell, &p);
@@ -310,7 +310,7 @@ static void gfs_refine_surface_refine (GfsRefine * refine, GfsSimulation * sim)
       g_assert_not_implemented ();
   }
   else {
-    if (p.surface->s)
+    if (GFS_SURFACE (p.surface)->s)
       gfs_domain_traverse_cut (GFS_DOMAIN (sim), GFS_REFINE_SURFACE (refine)->surface,
 			       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			       (FttCellTraverseCutFunc) refine_cut_cell, &p);
@@ -332,7 +332,7 @@ static void gfs_refine_surface_class_init (GfsRefineClass * klass)
 
 static void refine_surface_init (GfsRefineSurface * r)
 {
-  r->surface = GFS_SURFACE (gts_object_new (gfs_surface_class ()));
+  r->surface = GFS_GENERIC_SURFACE (gts_object_new (GTS_OBJECT_CLASS (gfs_surface_class ())));
 }
 
 GfsRefineClass * gfs_refine_surface_class (void)
@@ -399,13 +399,14 @@ static void refine_distance_read (GtsObject ** o, GtsFile * fp)
   (* GTS_OBJECT_CLASS (gfs_refine_distance_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
-  
-  if (!GFS_REFINE_SURFACE (*o)->surface->s) {
+
+  GtsSurface * s = GFS_SURFACE (GFS_REFINE_SURFACE (*o)->surface)->s;
+  if (!s) {
     gts_file_error (fp, "RefineDistance only works with GTS surfaces");
     return;
   }
 
-  GFS_REFINE_DISTANCE (*o)->stree = gts_bb_tree_surface (GFS_REFINE_SURFACE (*o)->surface->s);
+  GFS_REFINE_DISTANCE (*o)->stree = gts_bb_tree_surface (s);
 }
 
 static void gfs_refine_distance_class_init (GfsRefineClass * klass)
@@ -468,7 +469,7 @@ static gdouble cell_height (FttCell * cell,
 {
   FttVector pos;
   ftt_cell_pos (cell, &pos);
-  return interpolated_value (refine->surface->s, &pos);
+  return interpolated_value (GFS_SURFACE (refine->surface)->s, &pos);
 }
 
 static void refine_height_read (GtsObject ** o, GtsFile * fp)
@@ -486,7 +487,7 @@ static void refine_height_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  if (!GFS_REFINE_SURFACE (*o)->surface->s) {
+  if (!GFS_SURFACE (GFS_REFINE_SURFACE (*o)->surface)->s) {
     gts_file_error (fp, "RefineDistance only works with GTS surfaces");
     return;
   }

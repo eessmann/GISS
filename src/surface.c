@@ -21,6 +21,225 @@
 #include "simulation.h"
 #include "surface.h"
 
+/* GfsGenericSurface: Object */
+
+GfsGenericSurfaceClass * gfs_generic_surface_class (void)
+{
+  static GfsGenericSurfaceClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_generic_surface_info = {
+      "GfsGenericSurface",
+      sizeof (GtsObject),
+      sizeof (GfsGenericSurfaceClass),
+      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_object_class ()),
+				  &gfs_generic_surface_info);
+  }
+
+  return klass;
+}
+
+/**
+ * gfs_cell_is_cut:
+ * @cell: a #FttCell.
+ * @s: a #GfsGenericSurface.
+ * @flatten: if set to %TRUE, @cell is flattened in the z direction.
+ * @maxlevel: the maximum (virtual) cell level to consider.
+ *
+ * Returns: a (possibly new) #GfsGenericSurface containing a subset of @s which may
+ * intersect @cell or %NULL if @s does not intersect @cell.
+ */
+GfsGenericSurface * gfs_cell_is_cut (FttCell * cell, GfsGenericSurface * s, 
+				     gboolean flatten, gint maxlevel)
+{
+  g_return_val_if_fail (cell != NULL, NULL);
+  g_return_val_if_fail (s != NULL, NULL);
+  
+  g_assert (GFS_GENERIC_SURFACE_CLASS (GTS_OBJECT (s)->klass)->cell_is_cut);
+  return (* GFS_GENERIC_SURFACE_CLASS (GTS_OBJECT (s)->klass)->cell_is_cut) 
+    (cell, s, flatten, maxlevel);
+}
+
+static void cell_traverse_cut (FttCell * cell,
+			       GfsGenericSurface * s,
+			       FttTraverseType order,
+			       FttTraverseFlags flags,
+			       FttCellTraverseCutFunc func,
+			       gpointer data,
+			       gboolean flatten)
+{
+  GfsGenericSurface * s1 = gfs_cell_is_cut (cell, s, flatten && FTT_CELL_IS_LEAF (cell), -1);
+
+  if (s1 == NULL)
+    return;
+  if (order == FTT_PRE_ORDER &&
+      (flags == FTT_TRAVERSE_ALL ||
+       ((flags & FTT_TRAVERSE_LEAFS) != 0 && FTT_CELL_IS_LEAF (cell)) ||
+       ((flags & FTT_TRAVERSE_NON_LEAFS) != 0 && !FTT_CELL_IS_LEAF (cell))))
+    (* func) (cell, s1, data);
+  if (!FTT_CELL_IS_LEAF (cell)) {
+    struct _FttOct * children = cell->children;
+    guint n;
+
+    for (n = 0; n < FTT_CELLS; n++) {
+      FttCell * c = &(children->cell[n]);
+
+      if (!FTT_CELL_IS_DESTROYED (c))
+	cell_traverse_cut (c, s1, order, flags, func, data, flatten);
+    }
+  }
+  if (order == FTT_POST_ORDER &&
+      (flags == FTT_TRAVERSE_ALL ||
+       ((flags & FTT_TRAVERSE_LEAFS) != 0 && FTT_CELL_IS_LEAF (cell)) ||
+       ((flags & FTT_TRAVERSE_NON_LEAFS) != 0 && !FTT_CELL_IS_LEAF (cell))))
+    (* func) (cell, s1, data);
+  if (s1 != s)
+    gts_object_destroy (GTS_OBJECT (s1));
+}
+
+/**
+ * gfs_cell_traverse_cut:
+ * @root: the root #FttCell of the tree to traverse.
+ * @s: a #GfsGenericSurface.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ * 
+ * Traverses a cell tree starting at the given root #FttCell. Calls
+ * the given function for each cell cut by @s.
+ */
+void gfs_cell_traverse_cut (FttCell * root,
+			    GfsGenericSurface * s,
+			    FttTraverseType order,
+			    FttTraverseFlags flags,
+			    FttCellTraverseCutFunc func,
+			    gpointer data)
+{
+  g_return_if_fail (root != NULL);
+  g_return_if_fail (s != NULL);
+  g_return_if_fail (func != NULL);
+
+  cell_traverse_cut (root, s, order, flags, func, data, FALSE);
+}
+
+/**
+ * gfs_cell_traverse_cut_2D:
+ * @root: the root #FttCell of the tree to traverse.
+ * @s: a #GfsGenericSurface.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ * 
+ * Traverses a cell tree starting at the given root #FttCell. Calls
+ * the given function for each cell cut by @s.
+ *
+ * The cells are "flattened" in the z-direction.
+ */
+void gfs_cell_traverse_cut_2D (FttCell * root,
+			       GfsGenericSurface * s,
+			       FttTraverseType order,
+			       FttTraverseFlags flags,
+			       FttCellTraverseCutFunc func,
+			       gpointer data)
+{
+  g_return_if_fail (root != NULL);
+  g_return_if_fail (s != NULL);
+  g_return_if_fail (func != NULL);
+
+  cell_traverse_cut (root, s, order, flags, func, data, TRUE);
+}
+
+/**
+ * gfs_generic_surface_read:
+ * @s: a #GfsGenericSurface.
+ * @sim: a #GfsSimulation.
+ * @fp: a #GtsFile.
+ * 
+ * Calls the read() method of @s.
+ */
+void gfs_generic_surface_read (GfsGenericSurface * s, gpointer sim, GtsFile * fp)
+{
+  GtsObject * o = (GtsObject *) s;
+
+  g_return_if_fail (s != NULL);
+  g_return_if_fail (fp != NULL);
+
+  o->reserved = sim;
+  (* GTS_OBJECT (s)->klass->read) (&o, fp);
+}
+
+/**
+ * gfs_generic_surface_write:
+ * @s: a #GfsGenericSurface.
+ * @sim: a #GfsSimulation.
+ * @fp: a file pointer.
+ * 
+ * Calls the write() method of @s.
+ */
+void gfs_generic_surface_write (GfsGenericSurface * s, gpointer sim, FILE * fp)
+{
+  g_return_if_fail (s != NULL);
+  g_return_if_fail (fp != NULL);
+
+  GTS_OBJECT (s)->reserved = sim;
+  (* GTS_OBJECT (s)->klass->write) (GTS_OBJECT (s), fp);
+}
+
+/**
+ * gfs_surface_segment_intersection:
+ * @s: a #GfsGenericSurface.
+ * @cell: a #FttCell containing @I.
+ * @I: a GfsSegment.
+ *
+ * Fills @I with the intersection of @s and @I.
+ *
+ * Returns: the number of times @s intersects @I.
+ */
+guint gfs_surface_segment_intersection (GfsGenericSurface * s,
+					FttCell * cell,
+					GfsSegment * I)
+{
+  g_return_val_if_fail (s != NULL, 0);
+  g_return_val_if_fail (cell != NULL, 0);
+  g_return_val_if_fail (I != NULL, 0);
+
+  g_assert (GFS_GENERIC_SURFACE_CLASS (GTS_OBJECT (s)->klass)->segment_intersection);
+  return (* GFS_GENERIC_SURFACE_CLASS (GTS_OBJECT (s)->klass)->segment_intersection) (s, cell, I);
+}
+
+/**
+ * gfs_surface_segment_normal:
+ * @s: a #GfsGenericSurface.
+ * @cell: a #FttCell containing @I.
+ * @I: a GfsSegment.
+ * @n: a #GtsVector.
+ *
+ * Fills @n with the normal to @s at the intersection of @s and @I.
+ */
+void gfs_surface_segment_normal (GfsGenericSurface * s,
+				 FttCell * cell,
+				 GfsSegment * I,
+				 GtsVector n)
+{
+  g_return_if_fail (s != NULL);
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (I != NULL);
+  g_return_if_fail (I->n > 0);
+  g_return_if_fail (n != NULL);
+
+  g_assert (GFS_GENERIC_SURFACE_CLASS (GTS_OBJECT (s)->klass)->segment_normal);
+  (* GFS_GENERIC_SURFACE_CLASS (GTS_OBJECT (s)->klass)->segment_normal) (s, cell, I, n);
+}
+
 /* GfsSurface: Object */
 
 static void check_solid_surface (GtsSurface * s, 
@@ -246,90 +465,70 @@ static void surface_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_surface_class ())->parent_class->destroy) (object);
 }
 
-static void gfs_surface_class_init (GtsObjectClass * klass)
-{
-  klass->read = surface_read;
-  klass->write = surface_write;
-  klass->destroy = surface_destroy;
-}
 
-static void gfs_surface_init (GfsSurface * s)
+static void face_overlaps_box (GtsTriangle * t, gpointer * data)
 {
-  s->scale[0] = 1.; s->scale[1] = 1.; s->scale[2] = 1.;
-  s->flip = FALSE;
-}
+  GtsBBox * bb = data[0];
+  GtsSurface ** s1 = data[1];
 
-GtsObjectClass * gfs_surface_class (void)
-{
-  static GtsObjectClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_surface_info = {
-      "GfsSurface",
-      sizeof (GfsSurface),
-      sizeof (GtsObjectClass),
-      (GtsObjectClassInitFunc) gfs_surface_class_init,
-      (GtsObjectInitFunc) gfs_surface_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (gts_object_class (), &gfs_surface_info);
+  if (gts_bbox_overlaps_triangle (bb, t)) {
+    if (*s1 == NULL)
+      *s1 = gts_surface_new (gts_surface_class (),
+			     gts_face_class (),
+			     gts_edge_class (),
+			     gts_vertex_class ());
+    gts_surface_add_face (*s1, GTS_FACE (t));
   }
-
-  return klass;
 }
 
-/**
- * gfs_surface_read:
- * @s: a #GfsSurface.
- * @sim: a #GfsSimulation.
- * @fp: a #GtsFile.
- * 
- * Calls the read() method of @s.
- */
-void gfs_surface_read (GfsSurface * s, gpointer sim, GtsFile * fp)
+#define SIGN(v) ((v) > 0. ? 1 : (v) < 0. ? -1 : 0)
+
+static GfsGenericSurface * cell_is_cut (FttCell * cell, GfsGenericSurface * s1, 
+					gboolean flatten, gint maxlevel)
 {
-  GtsObject * o = (GtsObject *) s;
-
-  g_return_if_fail (s != NULL);
-  g_return_if_fail (fp != NULL);
-
-  o->reserved = sim;
-  (* GTS_OBJECT (s)->klass->read) (&o, fp);
-}
-
-/**
- * gfs_surface_write:
- * @s: a #GfsSurface.
- * @sim: a #GfsSimulation.
- * @fp: a file pointer.
- * 
- * Calls the write() method of @s.
- */
-void gfs_surface_write (GfsSurface * s, gpointer sim, FILE * fp)
-{
-  g_return_if_fail (s != NULL);
-  g_return_if_fail (fp != NULL);
-
-  GTS_OBJECT (s)->reserved = sim;
-  (* GTS_OBJECT (s)->klass->write) (GTS_OBJECT (s), fp);
-}
-
-/**
- * gfs_surface_implicit_value:
- * @s: an (implicit) #GfsSurface.
- * @p: a #GtsPoint.
- *
- * Returns: the value of the implicit surface a location @p.
- */
-gdouble gfs_surface_implicit_value (GfsSurface * s, GtsPoint p)
-{
-  g_return_val_if_fail (s != NULL, 0.);
-  g_return_val_if_fail (s->f != NULL, 0.);
-
-  if (s->m)
-    gts_point_transform (&p, s->m);
-  return (s->flip ? -1. : 1.)*gfs_function_spatial_value (s->f, (FttVector *)&p.x);
+  GfsSurface * s = GFS_SURFACE (s1);
+  if (s->s) {
+    GtsSurface * s1 = NULL;
+    gpointer data[2];
+    GtsBBox bb;
+    ftt_cell_bbox (cell, &bb);
+    if (flatten)
+      bb.z1 = bb.z2 = 0.;
+    data[0] = &bb;
+    data[1] = &s1;
+    gts_surface_foreach_face (s->s, (GtsFunc) face_overlaps_box, data);
+    if (s1 == NULL)
+      return NULL;
+    GfsSurface * s2 = GFS_SURFACE (gts_object_new (GTS_OBJECT_CLASS (gfs_surface_class ())));
+    s2->s = s1;
+    return GFS_GENERIC_SURFACE (s2);
+  }
+  else if (s->f) {
+    if (!FTT_CELL_IS_LEAF (cell))
+      return GFS_GENERIC_SURFACE (s);
+    FttVector p;
+    gdouble h = ftt_cell_size (cell)/2.;
+    ftt_cell_pos (cell, &p);
+    gint i, j, k = 0, sign = 0, n = 1;
+    i = maxlevel - ftt_cell_level (cell);
+    while (i-- > 0)
+      n *= 2;
+#if !FTT_2D
+    for (k = - n; k <= n; k += 2)
+#endif
+      for (i = - n; i <= n; i += 2)
+	for (j = - n; j <= n; j += 2) {
+	  GtsPoint o;
+	  o.x = p.x + i*h/n; o.y = p.y + j*h/n; o.z = p.z + k*h/n;
+	  gdouble v = gfs_surface_implicit_value (s, o);
+	  if (sign && sign*SIGN(v) <= 0)
+	    return GFS_GENERIC_SURFACE (s);
+	  sign = SIGN(v);
+	}
+    return NULL;
+  }
+  g_assert_not_reached ();
+  return NULL;
 }
 
 static gdouble segment_triangle_intersection (GtsPoint * E, GtsPoint * D,
@@ -395,23 +594,18 @@ static GtsPoint segment_intersection (GfsSegment * I)
   p.x = I->E->x + I->x*(I->D->x - I->E->x);
   p.y = I->E->y + I->x*(I->D->y - I->E->y);
   p.z = I->E->z + I->x*(I->D->z - I->E->z);
+  /* lines below just to prevent compiler warnings about uninitialised fields */
+  p.object.flags = 0;
+  p.object.reserved = NULL;
+  p.object.klass = NULL;
   return p;
 }
 
-/**
- * gfs_surface_segment_intersection:
- * @s: a #GfsSurface.
- * @I: a GfsSegment.
- *
- * Fills @I with the intersection of @s and @I.
- *
- * Returns: the number of times @s intersects @I.
- */
-guint gfs_surface_segment_intersection (GfsSurface * s,
-					GfsSegment * I)
+static guint surface_segment_intersection (GfsGenericSurface * s1,
+					   FttCell * cell,
+					   GfsSegment * I)
 {
-  g_return_val_if_fail (s != NULL, 0);
-  g_return_val_if_fail (I != NULL, 0);
+  GfsSurface * s = GFS_SURFACE (s1);
 
   I->n = 0;
   I->x = 0.;
@@ -475,23 +669,12 @@ static void surface_normal (GtsTriangle * t, GtsVector n)
   n[2] -= m[2];
 }
 
-/**
- * gfs_surface_segment_normal:
- * @s: a #GfsSurface.
- * @I: a GfsSegment.
- * @n: a #GtsVector.
- *
- * Fills @n with the normal to @s at the intersection of @s and @I.
- */
-void gfs_surface_segment_normal (GfsSurface * s,
-				 GfsSegment * I,
-				 GtsVector n)
+static void surface_segment_normal (GfsGenericSurface * s1,
+				    FttCell * cell,
+				    GfsSegment * I,
+				    GtsVector n)
 {
-  g_return_if_fail (s != NULL);
-  g_return_if_fail (I != NULL);
-  g_return_if_fail (I->n > 0);
-  g_return_if_fail (n != NULL);
-  
+  GfsSurface * s = GFS_SURFACE (s1);
   if (s->s) {
     n[0] = n[1] = n[2] = 0.;
     gts_surface_foreach_face (s->s, (GtsFunc) surface_normal, n);
@@ -510,171 +693,57 @@ void gfs_surface_segment_normal (GfsSurface * s,
   }
 }
 
-static void face_overlaps_box (GtsTriangle * t, gpointer * data)
+static void gfs_surface_class_init (GtsObjectClass * klass)
 {
-  GtsBBox * bb = data[0];
-  GtsSurface ** s1 = data[1];
+  klass->read = surface_read;
+  klass->write = surface_write;
+  klass->destroy = surface_destroy;
 
-  if (gts_bbox_overlaps_triangle (bb, t)) {
-    if (*s1 == NULL)
-      *s1 = gts_surface_new (gts_surface_class (),
-			     gts_face_class (),
-			     gts_edge_class (),
-			     gts_vertex_class ());
-    gts_surface_add_face (*s1, GTS_FACE (t));
-  }
+  GFS_GENERIC_SURFACE_CLASS (klass)->cell_is_cut = cell_is_cut;
+  GFS_GENERIC_SURFACE_CLASS (klass)->segment_intersection = surface_segment_intersection;
+  GFS_GENERIC_SURFACE_CLASS (klass)->segment_normal = surface_segment_normal;
 }
 
-#define SIGN(v) ((v) > 0. ? 1 : (v) < 0. ? -1 : 0)
+static void gfs_surface_init (GfsSurface * s)
+{
+  s->scale[0] = 1.; s->scale[1] = 1.; s->scale[2] = 1.;
+  s->flip = FALSE;
+}
+
+GfsGenericSurfaceClass * gfs_surface_class (void)
+{
+  static GfsGenericSurfaceClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_surface_info = {
+      "GfsSurface",
+      sizeof (GfsSurface),
+      sizeof (GfsGenericSurfaceClass),
+      (GtsObjectClassInitFunc) gfs_surface_class_init,
+      (GtsObjectInitFunc) gfs_surface_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_surface_class ()), 
+				  &gfs_surface_info);
+  }
+
+  return klass;
+}
 
 /**
- * gfs_cell_is_cut:
- * @cell: a #FttCell.
- * @s: a #GfsSurface.
- * @flatten: if set to %TRUE, @cell is flattened in the z direction.
- * @maxlevel: the maximum (virtual) cell level to consider.
+ * gfs_surface_implicit_value:
+ * @s: an (implicit) #GfsSurface.
+ * @p: a #GtsPoint.
  *
- * Returns: a (possibly new) #GfsSurface containing a subset of @s which may
- * intersect @cell or %NULL if @s does not intersect @cell.
+ * Returns: the value of the implicit surface a location @p.
  */
-GfsSurface * gfs_cell_is_cut (FttCell * cell, GfsSurface * s, gboolean flatten, gint maxlevel)
+gdouble gfs_surface_implicit_value (GfsSurface * s, GtsPoint p)
 {
-  g_return_val_if_fail (cell != NULL, NULL);
-  g_return_val_if_fail (s != NULL, NULL);
+  g_return_val_if_fail (s != NULL, 0.);
+  g_return_val_if_fail (s->f != NULL, 0.);
 
-  if (s->s) {
-    GtsSurface * s1 = NULL;
-    gpointer data[2];
-    GtsBBox bb;
-    ftt_cell_bbox (cell, &bb);
-    if (flatten)
-      bb.z1 = bb.z2 = 0.;
-    data[0] = &bb;
-    data[1] = &s1;
-    gts_surface_foreach_face (s->s, (GtsFunc) face_overlaps_box, data);
-    if (s1 == NULL)
-      return NULL;
-    GfsSurface * s2 = GFS_SURFACE (gts_object_new (gfs_surface_class ()));
-    s2->s = s1;
-    return s2;
-  }
-  else if (s->f) {
-    if (!FTT_CELL_IS_LEAF (cell))
-      return s;
-    FttVector p;
-    gdouble h = ftt_cell_size (cell)/2.;
-    ftt_cell_pos (cell, &p);
-    gint i, j, k = 0, sign = 0, n = 1;
-    i = maxlevel - ftt_cell_level (cell);
-    while (i-- > 0)
-      n *= 2;
-#if !FTT_2D
-    for (k = - n; k <= n; k += 2)
-#endif
-      for (i = - n; i <= n; i += 2)
-	for (j = - n; j <= n; j += 2) {
-	  GtsPoint o;
-	  o.x = p.x + i*h/n; o.y = p.y + j*h/n; o.z = p.z + k*h/n;
-	  gdouble v = gfs_surface_implicit_value (s, o);
-	  if (sign && sign*SIGN(v) <= 0)
-	    return s;
-	  sign = SIGN(v);
-	}
-    return NULL;
-  }
-  g_assert_not_reached ();
-  return NULL;
-}
-
-static void cell_traverse_cut (FttCell * cell,
-			       GfsSurface * s,
-			       FttTraverseType order,
-			       FttTraverseFlags flags,
-			       FttCellTraverseCutFunc func,
-			       gpointer data,
-			       gboolean flatten)
-{
-  GfsSurface * s1 = gfs_cell_is_cut (cell, s, flatten && FTT_CELL_IS_LEAF (cell), -1);
-
-  if (s1 == NULL)
-    return;
-  if (order == FTT_PRE_ORDER &&
-      (flags == FTT_TRAVERSE_ALL ||
-       ((flags & FTT_TRAVERSE_LEAFS) != 0 && FTT_CELL_IS_LEAF (cell)) ||
-       ((flags & FTT_TRAVERSE_NON_LEAFS) != 0 && !FTT_CELL_IS_LEAF (cell))))
-    (* func) (cell, s1, data);
-  if (!FTT_CELL_IS_LEAF (cell)) {
-    struct _FttOct * children = cell->children;
-    guint n;
-
-    for (n = 0; n < FTT_CELLS; n++) {
-      FttCell * c = &(children->cell[n]);
-
-      if (!FTT_CELL_IS_DESTROYED (c))
-	cell_traverse_cut (c, s1, order, flags, func, data, flatten);
-    }
-  }
-  if (order == FTT_POST_ORDER &&
-      (flags == FTT_TRAVERSE_ALL ||
-       ((flags & FTT_TRAVERSE_LEAFS) != 0 && FTT_CELL_IS_LEAF (cell)) ||
-       ((flags & FTT_TRAVERSE_NON_LEAFS) != 0 && !FTT_CELL_IS_LEAF (cell))))
-    (* func) (cell, s1, data);
-  if (s1 != s)
-    gts_object_destroy (GTS_OBJECT (s1));
-}
-
-/**
- * gfs_cell_traverse_cut:
- * @root: the root #FttCell of the tree to traverse.
- * @s: a #GfsSurface.
- * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
- * %FTT_POST_ORDER. 
- * @flags: which types of children are to be visited.
- * @func: the function to call for each visited #FttCell.
- * @data: user data to pass to @func.
- * 
- * Traverses a cell tree starting at the given root #FttCell. Calls
- * the given function for each cell cut by @s.
- */
-void gfs_cell_traverse_cut (FttCell * root,
-			    GfsSurface * s,
-			    FttTraverseType order,
-			    FttTraverseFlags flags,
-			    FttCellTraverseCutFunc func,
-			    gpointer data)
-{
-  g_return_if_fail (root != NULL);
-  g_return_if_fail (s != NULL);
-  g_return_if_fail (func != NULL);
-
-  cell_traverse_cut (root, s, order, flags, func, data, FALSE);
-}
-
-/**
- * gfs_cell_traverse_cut_2D:
- * @root: the root #FttCell of the tree to traverse.
- * @s: a #GfsSurface.
- * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
- * %FTT_POST_ORDER. 
- * @flags: which types of children are to be visited.
- * @func: the function to call for each visited #FttCell.
- * @data: user data to pass to @func.
- * 
- * Traverses a cell tree starting at the given root #FttCell. Calls
- * the given function for each cell cut by @s.
- *
- * The cells are "flattened" in the z-direction.
- */
-void gfs_cell_traverse_cut_2D (FttCell * root,
-			       GfsSurface * s,
-			       FttTraverseType order,
-			       FttTraverseFlags flags,
-			       FttCellTraverseCutFunc func,
-			       gpointer data)
-{
-  g_return_if_fail (root != NULL);
-  g_return_if_fail (s != NULL);
-  g_return_if_fail (func != NULL);
-
-  cell_traverse_cut (root, s, order, flags, func, data, TRUE);
+  if (s->m)
+    gts_point_transform (&p, s->m);
+  return (s->flip ? -1. : 1.)*gfs_function_spatial_value (s->f, (FttVector *)&p.x);
 }

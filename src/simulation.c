@@ -976,6 +976,7 @@ void gfs_simulation_refine (GfsSimulation * sim)
 			     FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
 			     (FttCellTraverseFunc) refine_cell_corner, 
 			      domain);
+
   gfs_domain_match (domain);
   gfs_domain_timer_stop (domain, "simulation_refine");
 

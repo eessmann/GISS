@@ -75,7 +75,7 @@ typedef struct _GfsRefineSurface         GfsRefineSurface;
 struct _GfsRefineSurface {
   GfsRefine parent;
 
-  GfsSurface * surface;
+  GfsGenericSurface * surface;
 };
 
 #define GFS_REFINE_SURFACE(obj)            GTS_OBJECT_CAST (obj,\

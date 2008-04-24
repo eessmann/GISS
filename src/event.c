@@ -1692,7 +1692,7 @@ static void gfs_init_fraction_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
-  gfs_surface_read (init->surface, gfs_object_simulation (*o), fp);
+  gfs_generic_surface_read (init->surface, gfs_object_simulation (*o), fp);
 }
 
 static void gfs_init_fraction_write (GtsObject * o, FILE * fp)
@@ -1702,7 +1702,7 @@ static void gfs_init_fraction_write (GtsObject * o, FILE * fp)
 
   (* GTS_OBJECT_CLASS (gfs_init_fraction_class ())->parent_class->write) (o, fp);
   fprintf (fp, " %s", init->c->name);
-  gfs_surface_write (init->surface, gfs_object_simulation (o), fp);
+  gfs_generic_surface_write (init->surface, gfs_object_simulation (o), fp);
 }
 
 static gboolean gfs_init_fraction_event (GfsEvent * event, GfsSimulation * sim)
@@ -1727,7 +1727,7 @@ static void gfs_init_fraction_class_init (GfsInitFractionClass * klass)
 
 static void gfs_init_fraction_init (GfsInitFraction * object)
 {
-  object->surface = GFS_SURFACE (gts_object_new (gfs_surface_class ()));
+  object->surface = GFS_GENERIC_SURFACE (gts_object_new (GTS_OBJECT_CLASS (gfs_surface_class ())));
 }
 
 GfsInitFractionClass * gfs_init_fraction_class (void)
