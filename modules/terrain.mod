@@ -548,7 +548,7 @@ static gboolean refine_terrain_from_boundary (FttCell * cell, GfsRefineTerrain *
 {
   FttVector p;
   ftt_cell_pos (cell, &p);
-  gdouble h = ftt_cell_size (cell)/2., zmin = (p.z - h)*4000., zmax = (p.z + h)*4000.;
+  gdouble h = ftt_cell_size (cell)/2., zmin = p.z - h, zmax = p.z + h;
   p.z = t->front;
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (t));
   FttCell * boundary = gfs_domain_locate (domain, p, ftt_cell_level (cell));
@@ -617,15 +617,15 @@ static void draw_terrain (FttCell * cell, gpointer * data)
   FttVector p;
   ftt_cell_pos (cell, &p);
   p.x += h/2.; p.y += h/2.;
-  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p)/4000.);
+  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p));
   p.x -= h;
-  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p)/4000.);
+  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p));
   p.y -= h;
-  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p)/4000.);
+  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p));
   p.x += h;
-  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p)/4000.);
+  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p));
   p.y += h;
-  fprintf (fp, "%g %g %g\n\n\n", p.x, p.y, cell_value (cell, t->h, p)/4000.);
+  fprintf (fp, "%g %g %g\n\n\n", p.x, p.y, cell_value (cell, t->h, p));
 }
 
 static void draw_level (GfsDomain * domain, GfsRefine * refine, guint level, const gchar * name)
@@ -692,7 +692,7 @@ static void terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 	hc[3] = h[3]/4.;
 #if !FTT_2D
 	ftt_cell_pos (child.c[n], &p);
-	gdouble zmin = (p.z - size)*4000., zmax = (p.z + size)*4000.;
+	gdouble zmin = p.z - size, zmax = p.z + size;
 	gdouble dx, dy;
 	gdouble minmax[2] = { G_MAXDOUBLE, - G_MAXDOUBLE };
 	for (dx = -1.; dx <= 1.; dx += 2.)
@@ -1023,8 +1023,8 @@ static guint surface_segment_intersection (GfsGenericSurface * s1,
   FttVector pE, pD;
   pE.x = I->E->x; pE.y = I->E->y;
   pD.x = I->D->x; pD.y = I->D->y;
-  gdouble vE = I->E->z - cell_value (cell, GFS_SURFACE_TERRAIN (s1)->h, pE)/4000.;
-  gdouble vD = I->D->z - cell_value (cell, GFS_SURFACE_TERRAIN (s1)->h, pD)/4000.;
+  gdouble vE = I->E->z - cell_value (cell, GFS_SURFACE_TERRAIN (s1)->h, pE);
+  gdouble vD = I->D->z - cell_value (cell, GFS_SURFACE_TERRAIN (s1)->h, pD);
   
   if ((vE > 0. && vD <= 0.) || (vE <= 0. && vD > 0.)) {
     I->n = 1;
@@ -1069,8 +1069,8 @@ static void surface_segment_normal (GfsGenericSurface * s1,
   p.y = I->E->y + I->x*(I->D->y - I->E->y);
   p.x = (p.x - q.x)/size;
   p.y = (p.y - q.y)/size;
-  n[0] = - (GFS_VALUE (cell, h[1]) + GFS_VALUE (cell, h[3])*p.y)/4000./size;
-  n[1] = - (GFS_VALUE (cell, h[2]) + GFS_VALUE (cell, h[3])*p.x)/4000./size;
+  n[0] = - (GFS_VALUE (cell, h[1]) + GFS_VALUE (cell, h[3])*p.y)/size;
+  n[1] = - (GFS_VALUE (cell, h[2]) + GFS_VALUE (cell, h[3])*p.x)/size;
   n[2] = 1.;
 }
 

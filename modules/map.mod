@@ -18,6 +18,7 @@
  */
 
 #include <proj_api.h>
+#include "simulation.h"
 #include "map.h"
 
 /* GfsMapProjection: Header */
@@ -31,7 +32,7 @@ struct _GfsMapProjection {
   gdouble cosa, sina;
 
   /*< public >*/
-  gdouble lon, lat, scale, angle;
+  gdouble lon, lat, scale, angle, zscale;
 };
 
 #define GFS_MAP_PROJECTION(obj)            GTS_OBJECT_CAST (obj,\
@@ -51,10 +52,11 @@ static void gfs_map_projection_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GtsFileVariable var[] = {
-    {GTS_DOUBLE, "lon",   TRUE},
-    {GTS_DOUBLE, "lat",   TRUE},
-    {GTS_DOUBLE, "scale", TRUE},
-    {GTS_DOUBLE, "angle", TRUE},
+    {GTS_DOUBLE, "lon",    TRUE},
+    {GTS_DOUBLE, "lat",    TRUE},
+    {GTS_DOUBLE, "scale",  TRUE},
+    {GTS_DOUBLE, "angle",  TRUE},
+    {GTS_DOUBLE, "zscale", TRUE},
     {GTS_NONE}
   };
   GfsMapProjection * map = GFS_MAP_PROJECTION (*o);
@@ -62,6 +64,7 @@ static void gfs_map_projection_read (GtsObject ** o, GtsFile * fp)
   var[1].data = &map->lat;
   var[2].data = &map->scale;
   var[3].data = &map->angle;
+  var[4].data = &map->zscale;
 
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR)
@@ -69,6 +72,8 @@ static void gfs_map_projection_read (GtsObject ** o, GtsFile * fp)
 
   map->cosa = cos (map->angle*DEG_TO_RAD);
   map->sina = sin (map->angle*DEG_TO_RAD);
+  if (!var[4].set)
+    map->zscale = map->scale;
 
   char * parms[] = {
     "proj=lcc", /* Lambert Conformal Conic */
@@ -91,8 +96,8 @@ static void gfs_map_projection_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_map_projection_class ())->parent_class->write) (o, fp);
   GfsMapProjection * map = GFS_MAP_PROJECTION (o);
-  fprintf (fp, " { lon = %.8g lat = %.8g scale = %.8g angle = %.8g }",
-	   map->lon, map->lat, map->scale, map->angle);
+  fprintf (fp, " { lon = %.8g lat = %.8g scale = %g angle = %g zscale = %g }",
+	   map->lon, map->lat, map->scale, map->angle, map->zscale);
 }
 
 static void gfs_map_projection_destroy (GtsObject * object)
@@ -114,6 +119,7 @@ static void projection_transform (GfsMap * map, const FttVector * src, FttVector
   odata.v /= m->scale;
   dest->x = odata.u*m->cosa - odata.v*m->sina;
   dest->y = odata.v*m->cosa + odata.u*m->sina;
+  dest->z = src->z/m->zscale*GFS_DOMAIN (gfs_object_simulation (map))->lambda.z;
 }
 
 static void projection_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
@@ -128,6 +134,7 @@ static void projection_inverse (GfsMap * map, const FttVector * src, FttVector *
   odata = pj_inv (idata, GFS_MAP_PROJECTION (map)->pj);
   dest->x = odata.u*RAD_TO_DEG;
   dest->y = odata.v*RAD_TO_DEG;
+  dest->z = src->z*m->zscale/GFS_DOMAIN (gfs_object_simulation (map))->lambda.z;
 }
 
 static void gfs_map_projection_class_init (GfsMapClass * klass)
@@ -144,7 +151,7 @@ static void gfs_map_projection_init (GfsMapProjection * object)
   /* Wellington */
   object->lon = 174.777222;
   object->lat = -41.288889;
-  object->scale = 5e5;
+  object->scale = object->zscale = 5e5;
   object->angle = 0.; object->cosa = 1.; object->sina = 0.;
   object->pj = NULL;
 }
