@@ -22,6 +22,7 @@
 # include <gsl/gsl_linalg.h>
 #endif
 #include "refine.h"
+#include "solid.h"
 #include "rsurface.h"
 
 static gchar * default_dir = "/home/popinet/Projects/GIS/rsurfaces";
@@ -33,15 +34,23 @@ typedef struct _GfsRefineTerrain         GfsRefineTerrain;
 #define NM 4
 
 struct _GfsRefineTerrain {
+  /*< private >*/
   GfsRefine parent;
   guint level;
   gboolean refined;
+  GfsVariable * type;
 
-  gchar * name, * basename;
+#if !FTT_2D
+  GfsVariable * min, * max;
+  gdouble front;
+#endif
+
   RSurface ** rs;
   guint nrs;
 
-  GfsVariable * h[NM], * he, * hn, * cond;
+  /*< public >*/
+  gchar * name, * basename;  
+  GfsVariable * h[NM], * he, * hn;
   GfsFunction * criterion;
 };
 
@@ -158,17 +167,17 @@ static void function_from_corners (gdouble h[4], gdouble H[4])
   h[3] = (H[0] - H[1] + H[2] - H[3])/4.;  
 }
 
-static gdouble cell_value (FttCell * cell, GfsRefineTerrain * t, FttVector p)
+static gdouble cell_value (FttCell * cell, GfsVariable * h[NM], FttVector p)
 {
-  gdouble h = ftt_cell_size (cell)/2.;
+  gdouble size = ftt_cell_size (cell)/2.;
   FttVector q;
   ftt_cell_pos (cell, &q);
-  p.x = (p.x - q.x)/h;
-  p.y = (p.y - q.y)/h;
-  return GFS_VALUE (cell, t->h[0]) + 
-    GFS_VALUE (cell, t->h[1])*p.x + 
-    GFS_VALUE (cell, t->h[2])*p.y + 
-    GFS_VALUE (cell, t->h[3])*p.x*p.y;
+  p.x = (p.x - q.x)/size;
+  p.y = (p.y - q.y)/size;
+  return GFS_VALUE (cell, h[0]) + 
+    GFS_VALUE (cell, h[1])*p.x + 
+    GFS_VALUE (cell, h[2])*p.y + 
+    GFS_VALUE (cell, h[3])*p.x*p.y;
 }
 
 static void corners_from_parent (FttCell * cell, GfsRefineTerrain * t, gdouble H[4])
@@ -178,13 +187,13 @@ static void corners_from_parent (FttCell * cell, GfsRefineTerrain * t, gdouble H
   FttVector p;
   ftt_cell_pos (cell, &p);
   p.x += size/2.; p.y += size/2.;
-  H[0] = cell_value (parent, t, p);
+  H[0] = cell_value (parent, t->h, p);
   p.x -= size;
-  H[1] = cell_value (parent, t, p);
+  H[1] = cell_value (parent, t->h, p);
   p.y -= size;
-  H[2] = cell_value (parent, t, p);
+  H[2] = cell_value (parent, t->h, p);
   p.x += size;
-  H[3] = cell_value (parent, t, p);
+  H[3] = cell_value (parent, t->h, p);
 }
 
 static gdouble clamp (gdouble x, gdouble min, gdouble max)
@@ -312,6 +321,8 @@ static int write_points (double p[3], RMS * rms)
 #define FAIR       1. /* fitted and C0 */
 #define REFINED    2. /* non-fitted refined cell */
 #define NEW_CHILD  3. /* non-fitted child extrapolated from its parent */
+#define CONTAINS_SURFACE 4. /* 3D-only */
+#define BOUNDARY 5.         /* 3D-only */
 
 static int rms_add (double p[3], RMS * rms)
 {
@@ -320,7 +331,7 @@ static int rms_add (double p[3], RMS * rms)
     if (p[2] > rms->max) rms->max = p[2];
     if (p[2] < rms->min) rms->min = p[2];
     if (rms->relative)
-      p[2] -= cell_value (ftt_cell_parent (rms->p->cell), rms->p->t, *((FttVector *) p));
+      p[2] -= cell_value (ftt_cell_parent (rms->p->cell), rms->p->t->h, *((FttVector *) p));
     p[0] = (p[0] - rms->p->c.x)/rms->p->h; p[1] = (p[1] - rms->p->c.y)/rms->p->h;
     rms->m[0][1] += p[0];      rms->m[0][2] += p[1];      rms->m[0][3] += p[0]*p[1];
     rms->m[1][1] += p[0]*p[0]; rms->m[1][2] += p[0]*p[1]; rms->m[1][3] += p[0]*p[0]*p[1];
@@ -338,11 +349,11 @@ static int rms_add (double p[3], RMS * rms)
 
 static void update_terrain (FttCell * cell, GfsRefineTerrain * t)
 {
-  g_assert (GFS_VALUE (cell, t->cond) == REFINED);
+  g_assert (GFS_VALUE (cell, t->type) == REFINED);
   Polygon p;
   polygon_init (&p, cell, t);
   RMS rms;
-  rms_init (&rms, &p, TRUE);
+  rms_init (&rms, &p, ftt_cell_parent (cell) != NULL);
   guint i;
   for (i = 0; i < t->nrs; i++)
     r_surface_query_region (t->rs[i], p.min, p.max, (RSurfaceQuery) rms_add, &rms);
@@ -351,7 +362,7 @@ static void update_terrain (FttCell * cell, GfsRefineTerrain * t)
     GFS_VALUE (cell, t->h[i]) = rms.h[i];
   GFS_VALUE (cell, t->he) = rms.he;
   GFS_VALUE (cell, t->hn) = rms.m[0][0];
-  GFS_VALUE (cell, t->cond) = RAW;
+  GFS_VALUE (cell, t->type) = RAW;
 }
 
 static void function_from_parent (FttCell * cell, GfsRefineTerrain * t, gdouble h[4])
@@ -376,7 +387,7 @@ static void cell_fine_init (FttCell * parent, GfsRefineTerrain * t)
 	GFS_VALUE (child.c[i], t->h[j]) = h[j];
       GFS_VALUE (child.c[i], t->he) = GFS_VALUE (parent, t->he);
       GFS_VALUE (child.c[i], t->hn) = GFS_VALUE (parent, t->hn)/FTT_CELLS;
-      GFS_VALUE (child.c[i], t->cond) = NEW_CHILD;
+      GFS_VALUE (child.c[i], t->type) = NEW_CHILD;
     }
 }
 
@@ -388,17 +399,17 @@ static gdouble corner_value (GfsRefineTerrain * t, FttVector * p, gdouble eps, g
   for (i = -1; i <= 1; i += 2)
     for (j = -1; j <= 1; j += 2) {
       FttVector q;
-      q.x = p->x + eps*i; q.y = p->y + eps*j;
+      q.x = p->x + eps*i; q.y = p->y + eps*j; q.z = p->z;
       FttCell * cell = gfs_domain_locate (domain, q, level);
       if (cell) {
 	if (ftt_cell_level (cell) < level)
 	    return 0.;
-	else if (GFS_VALUE (cell, t->cond) == FAIR)
-	  return cell_value (cell, t, q);
+	else if (GFS_VALUE (cell, t->type) == FAIR)
+	  return cell_value (cell, t->h, *p);
 	gdouble n = GFS_VALUE (cell, t->hn);
 	if (n > 0.) {
-	  g_assert (GFS_VALUE (cell, t->cond) == RAW);
-	  v += cell_value (cell, t, q);
+	  g_assert (GFS_VALUE (cell, t->type) == RAW);
+	  v += cell_value (cell, t->h, *p);
 	  w += 1.;
 	}
       }
@@ -443,19 +454,21 @@ static void remove_knots (FttCell * cell, GfsRefineTerrain * t)
   guint i;
   for (i = 0; i < NM; i++)
     GFS_VALUE (cell, t->h[i]) = h[i];
-  GFS_VALUE (cell, t->cond) = FAIR;
+  GFS_VALUE (cell, t->type) = FAIR;
 
-  update_error_estimate (cell, t, TRUE);
+  update_error_estimate (cell, t, ftt_cell_parent (cell) != NULL);
 }
 
 static void update_height_and_check_for_refinement (FttCell * cell, GfsRefineTerrain * t)
 {
-  if (GFS_VALUE (cell, t->cond) == FAIR) {
-    gdouble h[4];
-    function_from_parent (cell, t, h);
-    guint i;
-    for (i = 0; i < NM; i++)
-      GFS_VALUE (cell, t->h[i]) += h[i];
+  if (GFS_VALUE (cell, t->type) == FAIR) {
+    if (ftt_cell_parent (cell)) {
+      gdouble h[4];
+      function_from_parent (cell, t, h);
+      guint i;
+      for (i = 0; i < NM; i++)
+	GFS_VALUE (cell, t->h[i]) += h[i];
+    }
 
     if (ftt_cell_level (cell) < gfs_function_value (GFS_REFINE (t)->maxlevel, cell) &&
 	gfs_function_value (t->criterion, cell)) {
@@ -465,13 +478,135 @@ static void update_height_and_check_for_refinement (FttCell * cell, GfsRefineTer
       guint i;
       ftt_cell_children (cell, &child);
       for (i = 0; i < FTT_CELLS; i++)
-	GFS_VALUE (child.c[i], t->cond) = REFINED;
+	GFS_VALUE (child.c[i], t->type) = REFINED;
       t->refined = TRUE;
     }
   }
   else
-    g_assert (GFS_VALUE (cell, t->cond) == NEW_CHILD);
+    g_assert (GFS_VALUE (cell, t->type) == NEW_CHILD);
 }
+
+static void reset_terrain (FttCell * cell, GfsRefineTerrain * t)
+{
+  guint i;
+  for (i = 0; i < NM; i++)
+    GFS_VALUE (cell, t->h[i]) = 0.;
+  GFS_VALUE (cell, t->type) = REFINED;
+  if (FTT_CELL_IS_LEAF (cell) && ftt_cell_level (cell) < t->level)
+    t->level = ftt_cell_level (cell);
+}
+
+#if FTT_2D
+# define traverse_boundary(domain,order,flags,depth,func,data) \
+         gfs_domain_cell_traverse(domain,order,flags,depth,func,data)
+#else /* 3D */
+# define traverse_boundary(domain,order,flags,depth,func,data) \
+         gfs_domain_cell_traverse_boundary(domain,FTT_FRONT,order,flags,depth,func,data)
+
+static void terrain_min_max (FttCell * cell, GfsVariable * h[NM], gdouble minmax[2])
+{
+  gdouble dx, dy;
+  gdouble H0 = GFS_VALUE (cell, h[0]), H1 = GFS_VALUE (cell, h[1]);
+  gdouble H2 = GFS_VALUE (cell, h[2]), H3 = GFS_VALUE (cell, h[3]);
+  minmax[0] = G_MAXDOUBLE; minmax[1] = - G_MAXDOUBLE;
+  for (dx = -1.; dx <= 1.; dx += 2.)
+    for (dy = -1.; dy <= 1.; dy += 2.) {
+      gdouble v = H0 + dx*H1 + dy*H2 + dx*dy*H3;
+      if (v < minmax[0]) minmax[0] = v;
+      if (v > minmax[1]) minmax[1] = v;
+    }
+}
+
+static void min_max (FttCell * cell, GfsRefineTerrain * t)
+{
+  gdouble minmax[2] = { G_MAXDOUBLE, - G_MAXDOUBLE };
+  if (FTT_CELL_IS_LEAF (cell)) {
+    terrain_min_max (cell, t->h, minmax);
+    FttVector p;
+    ftt_cell_pos (cell, &p);
+    if (p.z > t->front)
+      t->front = p.z;
+  }
+  else {
+    FttCellChildren child;
+    guint i;
+    ftt_cell_children (cell, &child);
+    for (i = 0; i < FTT_CELLS; i++)
+      if (child.c[i]) {
+	if (GFS_VALUE (child.c[i], t->max) > minmax[1])
+	  minmax[1] = GFS_VALUE (child.c[i], t->max);
+	if (GFS_VALUE (child.c[i], t->min) < minmax[0])
+	  minmax[0] = GFS_VALUE (child.c[i], t->min);	
+      }
+  }
+  GFS_VALUE (cell, t->min) = minmax[0];
+  GFS_VALUE (cell, t->max) = minmax[1];
+  GFS_VALUE (cell, t->type) = BOUNDARY;
+}
+
+static gboolean refine_terrain_from_boundary (FttCell * cell, GfsRefineTerrain * t)
+{
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  gdouble h = ftt_cell_size (cell)/2., zmin = (p.z - h)*4000., zmax = (p.z + h)*4000.;
+  p.z = t->front;
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (t));
+  FttCell * boundary = gfs_domain_locate (domain, p, ftt_cell_level (cell));
+  g_assert (boundary);
+  if (GFS_VALUE (boundary, t->min) > zmax || GFS_VALUE (boundary, t->max) < zmin)
+    return FALSE;
+  GFS_VALUE (cell, t->type) = CONTAINS_SURFACE;
+  return !FTT_CELL_IS_LEAF (boundary);
+}
+
+static void refine_box (GfsBox * box, GfsRefineTerrain * t)
+{
+  ftt_cell_refine (box->root, 
+		   (FttCellRefineFunc) refine_terrain_from_boundary, t,
+		   (FttCellInitFunc) gfs_cell_fine_init, gfs_box_domain (box));
+}
+
+static void init_terrain_from_boundary (FttCell * cell, GfsRefineTerrain * t)
+{
+  if (GFS_VALUE (cell, t->type) == CONTAINS_SURFACE) {
+    FttVector p;
+    ftt_cell_pos (cell, &p);
+    p.z = t->front;
+    GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (t));
+    FttCell * boundary = gfs_domain_locate (domain, p, -1);
+    g_assert (boundary);
+    g_assert (ftt_cell_level (cell) == ftt_cell_level (boundary));
+    guint i;
+    for (i = 0; i < NM; i++)
+      GFS_VALUE (cell, t->h[i]) = GFS_VALUE (boundary, t->h[i]);
+    GFS_VALUE (cell, t->he) = GFS_VALUE (boundary, t->he);
+    GFS_VALUE (cell, t->hn) = GFS_VALUE (boundary, t->hn);
+  }
+}
+
+static gboolean coarsen_boundary (FttCell * cell, GfsRefineTerrain * t)
+{
+  return (GFS_VALUE (cell, t->type) != CONTAINS_SURFACE);
+}
+
+static void coarsen_box (GfsBox * box, GfsRefineTerrain * t)
+{
+  ftt_cell_coarsen (box->root,
+		    (FttCellCoarsenFunc) coarsen_boundary, t,
+		    (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+}
+
+static void reset_empty_cell (FttCell * cell, GfsRefineTerrain * t)
+{
+  if (GFS_VALUE (cell, t->type) != CONTAINS_SURFACE) {
+    guint i;
+    for (i = 0; i < NM; i++)
+      GFS_VALUE (cell, t->h[i]) = G_MAXDOUBLE;
+    GFS_VALUE (cell, t->he) = G_MAXDOUBLE;
+    GFS_VALUE (cell, t->hn) = G_MAXDOUBLE;
+  }
+}
+#endif /* 3D */
 
 #if DEBUG
 static void draw_terrain (FttCell * cell, gpointer * data)
@@ -482,13 +617,15 @@ static void draw_terrain (FttCell * cell, gpointer * data)
   FttVector p;
   ftt_cell_pos (cell, &p);
   p.x += h/2.; p.y += h/2.;
-  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t, p)/20000.);
+  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p)/4000.);
   p.x -= h;
-  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t, p)/20000.);
+  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p)/4000.);
   p.y -= h;
-  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t, p)/20000.);
+  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p)/4000.);
   p.x += h;
-  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t, p)/20000.);
+  fprintf (fp, "%g %g %g\n", p.x, p.y, cell_value (cell, t->h, p)/4000.);
+  p.y += h;
+  fprintf (fp, "%g %g %g\n\n\n", p.x, p.y, cell_value (cell, t->h, p)/4000.);
 }
 
 static void draw_level (GfsDomain * domain, GfsRefine * refine, guint level, const gchar * name)
@@ -497,8 +634,8 @@ static void draw_level (GfsDomain * domain, GfsRefine * refine, guint level, con
   data[0] = refine;
   data[1] = fopen (name, "w");
   fprintf (data[1], "QUAD\n");
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, level,
-			    (FttCellTraverseFunc) draw_terrain, data);
+  traverse_boundary (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, level,
+		     (FttCellTraverseFunc) draw_terrain, data);
   fclose (data[1]);
 }
 
@@ -507,46 +644,96 @@ static void draw_all (GfsDomain * domain, GfsRefine * refine, const gchar * name
   gpointer data[2];
   data[0] = refine;
   data[1] = fopen (name, "w");
-  fprintf (data[1], "QUAD\n");
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) draw_terrain, data);
+  //  fprintf (data[1], "QUAD\n");
+  traverse_boundary (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		     (FttCellTraverseFunc) draw_terrain, data);
   fclose (data[1]);
 }
 #endif
 
-static void reset_terrain (FttCell * cell, GfsRefineTerrain * t)
+#define ASCII_ZERO 48 /* ASCII value for character "0" */
+
+static void terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 {
-  guint i;
-  for (i = 0; i < NM; i++)
-    GFS_VALUE (cell, t->h[i]) = 0.;
-  GFS_VALUE (cell, t->cond) = REFINED;
-  if (FTT_CELL_IS_LEAF (cell) && ftt_cell_level (cell) < t->level)
-    t->level = ftt_cell_level (cell);
+  FttCellChildren child;
+  guint len = strlen (v->name) - 1;
+  gint c = v->name[len] - ASCII_ZERO;
+  guint n;
+  gdouble h[NM];
+
+  g_assert (c >= 0 && c < NM);
+  for (n = 0; n < NM; n++) {
+    GSList * i = v->domain->variables;
+    while (i && (!GFS_VARIABLE1 (i->data)->name || 
+		 strncmp (v->name, GFS_VARIABLE1 (i->data)->name, len) ||
+		 GFS_VARIABLE1 (i->data)->name[len] != ASCII_ZERO + n))
+      i = i->next;
+    g_assert (i);
+    h[n] = GFS_VALUE (parent, GFS_VARIABLE1 (i->data));
+  }
+
+  ftt_cell_children (parent, &child);
+  if (h[0] == G_MAXDOUBLE) {
+    for (n = 0; n < FTT_CELLS; n++)
+      if (child.c[n])
+	GFS_VALUE (child.c[n], v) = G_MAXDOUBLE;
+  }
+  else {
+    gdouble size = ftt_cell_size (parent)/4.;
+    for (n = 0; n < FTT_CELLS; n++)
+      if (child.c[n]) {
+	gdouble hc[NM];
+	FttVector p;
+	ftt_cell_relative_pos (child.c[n], &p);
+	p.x *= 2.; p.y *= 2.;
+	hc[0] = h[0] + h[1]*p.x + h[2]*p.y + h[3]*p.x*p.y;
+	hc[1] = (h[1] + h[3]*p.y)/2.;
+	hc[2] = (h[2] + h[3]*p.x)/2.;
+	hc[3] = h[3]/4.;
+#if !FTT_2D
+	ftt_cell_pos (child.c[n], &p);
+	gdouble zmin = (p.z - size)*4000., zmax = (p.z + size)*4000.;
+	gdouble dx, dy;
+	gdouble minmax[2] = { G_MAXDOUBLE, - G_MAXDOUBLE };
+	for (dx = -1.; dx <= 1.; dx += 2.)
+	  for (dy = -1.; dy <= 1.; dy += 2.) {
+	    gdouble v = hc[0] + dx*hc[1] + dy*hc[2] + dx*dy*hc[3];
+	    if (v < minmax[0]) minmax[0] = v;
+	    if (v > minmax[1]) minmax[1] = v;
+	  }
+	if (minmax[0] > zmax || minmax[1] < zmin)
+	  GFS_VALUE (child.c[n], v) = G_MAXDOUBLE;
+	else
+#endif
+	  GFS_VALUE (child.c[n], v) = hc[c];
+      }
+  }
 }
 
 static void terrain_refine (GfsRefine * refine, GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
   GfsRefineTerrain * t = GFS_REFINE_TERRAIN (refine);
+  t->type = gfs_temporary_variable (domain);
   t->level = G_MAXINT/2;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) reset_terrain, refine);
+  traverse_boundary (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+		     (FttCellTraverseFunc) reset_terrain, refine);
   do {
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, t->level,
-			      (FttCellTraverseFunc) update_terrain, refine);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, t->level,
-			      (FttCellTraverseFunc) remove_knots, refine);
+    traverse_boundary (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, t->level,
+		       (FttCellTraverseFunc) update_terrain, refine);
+    traverse_boundary (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, t->level,
+		       (FttCellTraverseFunc) remove_knots, refine);
     t->refined = FALSE;
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, t->level,
-			      (FttCellTraverseFunc) update_height_and_check_for_refinement,
-			      refine);
+    traverse_boundary (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, t->level,
+		       (FttCellTraverseFunc) update_height_and_check_for_refinement,
+		       refine);
 #if DEBUG
     GfsNorm norm = gfs_domain_norm_variable (domain, t->he, NULL, FTT_TRAVERSE_LEAFS, -1);
     fprintf (stderr, "level: %d bias: %g 1: %g 2: %g inf: %g\n", 
 	     t->level, norm.bias, norm.first, norm.second, norm.infty);
     fprintf (stderr, "level: %d depth: %d\n", t->level, gfs_domain_depth (domain));
     gchar name[] = "/tmp/level-x";
-    name[11] = 48 + t->level;
+    name[11] = ASCII_ZERO + t->level;
     draw_level (domain, refine, t->level, name);
 #endif
     t->level++;
@@ -554,6 +741,27 @@ static void terrain_refine (GfsRefine * refine, GfsSimulation * sim)
 #if DEBUG
   draw_all (domain, refine, "/tmp/all");
 #endif
+#if !FTT_2D
+  /* The height field is only defined on the front boundary, we need
+     to define it volumetrically */
+  t->min = gfs_temporary_variable (domain);
+  t->max = gfs_temporary_variable (domain);
+  t->front = - G_MAXDOUBLE;
+  gfs_domain_cell_traverse_boundary (domain, FTT_FRONT, FTT_POST_ORDER, FTT_TRAVERSE_ALL, -1,
+				     (FttCellTraverseFunc) min_max, t);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) refine_box, t);
+  gts_object_destroy (GTS_OBJECT (t->min));
+  gts_object_destroy (GTS_OBJECT (t->max));
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) init_terrain_from_boundary, t);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) coarsen_box, t);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) reset_empty_cell, t);
+#endif /* 3D */  
+  gts_object_destroy (GTS_OBJECT (t->type));
+  guint i;
+  for (i = 0; i < NM; i++)
+    t->h[i]->coarse_fine = terrain_coarse_fine;
 }
 
 static void refine_terrain_destroy (GtsObject * object)
@@ -686,9 +894,6 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
   g_free (name);
   name = g_strjoin (NULL, t->name, "n", NULL);
   t->hn = gfs_domain_get_or_add_variable (domain, name, "Terrain samples #");
-  g_free (name);
-  name = g_strjoin (NULL, t->name, "c", NULL);
-  t->cond = gfs_domain_get_or_add_variable (domain, name, "Terrain condition number");
   g_free (name);
 
   gfs_function_read (t->criterion, domain, fp);
