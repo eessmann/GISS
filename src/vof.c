@@ -408,6 +408,7 @@ void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 
   g_return_if_fail (m != NULL);
   g_return_if_fail (p != NULL);
+  g_return_if_fail (a >= 0. && a <= 1.);
 
   n = *m;
   if (n.x < 0.) {
@@ -423,17 +424,15 @@ void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
     n.z = - n.z;
   }  
 
-  if (alpha <= 0.) {
+  if (alpha <= 0. || a == 0.) {
     p->x = p->y = p->z = 0.;
     return;
   }
 
-  if (alpha >= n.x + n.y + n.z) {
+  if (alpha >= n.x + n.y + n.z || a == 1.) {
     p->x = p->y = p->z = 0.5;
     return;
   }
-
-  g_return_if_fail (a > 0. && a < 1.);
 
   n.x += 1e-4; n.y += 1e-4; n.z += 1e-4;
 

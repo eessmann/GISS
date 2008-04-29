@@ -552,17 +552,25 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 	sym[c] = FALSE;
       n += (&m.x)[c];
     }
-    if (n == 0.) { /* this is a fluid cell */
-      for (c = 0; c < FTT_NEIGHBORS; c++)
-	g_assert (solid->s[c] == 1.);
-      g_free (solid);
-      GFS_STATE (cell)->solid = NULL;
-      return;
+    if (n == 0.) { /* this is a fluid or solid cell */
+      for (c = 1; c < FTT_NEIGHBORS; c++)
+	g_assert (solid->s[c] == solid->s[0]);
+      if (solid->s[0] == 1.) { /* fluid */
+	g_free (solid);
+	GFS_STATE (cell)->solid = NULL;
+	return;
+      }
+      else { /* solid */
+	solid->a = 0.;
+	solid->cm.x = solid->cm.y = solid->cm.z = 0.;
+      }
     }
-    m.x /= n; m.y /= n; m.z /= n;
-    alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
-    solid->a = gfs_plane_volume (&m, alpha);
-    gfs_plane_center (&m, alpha, solid->a, &solid->cm);
+    else {
+      m.x /= n; m.y /= n; m.z /= n;
+      alpha = m.x*ca.x + m.y*ca.y + m.z*ca.z;
+      solid->a = gfs_plane_volume (&m, alpha);
+      gfs_plane_center (&m, alpha, solid->a, &solid->cm);
+    }
     for (c = 0; c < FTT_DIMENSION; c++)
       (&solid->cm.x)[c] = (&o.x)[c] + 
 	(sym[c] ? 1. - (&solid->cm.x)[c] : (&solid->cm.x)[c])*(&h.x)[c];
@@ -855,10 +863,8 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
 	  else if (neighbor.c[d]->flags & GFS_FLAG_THIN)
 	    solid->s[d] = GFS_STATE (neighbor.c[d])->solid->s[FTT_OPPOSITE_DIRECTION (d)];
 	}
-	else if (GFS_IS_MIXED (neighbor.c[d])) { /* this is a thin cell */
-	  g_assert (neighbor.c[d]->flags & GFS_FLAG_THIN);
+	else /* neighbor.c[d] is a solid cell */
 	  solid->s[d] = 0.;
-	}
       }
   }
 }
