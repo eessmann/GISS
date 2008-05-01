@@ -50,7 +50,7 @@ static void correct_normal_velocity (FttCellFace * face,
   gdouble * dt = data[2];
   FttComponent c;
 
-  if (GFS_FACE_FRACTION (face) == 0.)
+  if (GFS_FACE_FRACTION_RIGHT (face) == 0.)
     return;
 
   type = ftt_face_type (face);
@@ -528,7 +528,7 @@ static void face_interpolated_normal_velocity (const FttCellFace * face, GfsVari
   g_return_if_fail (face != NULL);
   g_return_if_fail (v != NULL);
 
-  if (GFS_FACE_FRACTION (face) == 0.)
+  if (GFS_FACE_FRACTION_RIGHT (face) == 0.)
     return;
 
   guint i = v[face->d/2]->i;

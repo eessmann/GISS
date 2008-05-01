@@ -464,8 +464,13 @@ static void set_solid_fractions_from_surface (FttCell * cell,
       s->n = 0;
   }
 
-  if (n1 == 0) /* no intersections */
+  if (n1 == 0) { /* no intersections */
+    if (solid) {
+      g_free (solid);
+      GFS_STATE (cell)->solid = NULL;      
+    }
     return;
+  }
 
   if (!solid)
     GFS_STATE (cell)->solid = solid = g_malloc0 (sizeof (GfsSolidVector));
@@ -943,8 +948,11 @@ static gboolean check_area_fractions (const FttCell * root)
       g_assert_not_reached ();
     }
     if (!gts_bbox_point_is_inside (&bb, &solid->ca)) {
-      g_warning ("file %s: line %d (%s): ca is not inside cell",
-		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION);
+      g_warning ("file %s: line %d (%s): ca (%g,%g,%g)/%d is not inside cell [(%g,%g,%g),(%g,%g,%g)]",
+		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		 solid->ca.x, solid->ca.y, solid->ca.z, ftt_cell_level (root),
+		 bb.x1, bb.y1, bb.z1, 
+		 bb.x2, bb.y2, bb.z2);
       ret = FALSE;
       g_assert_not_reached ();
     }
@@ -957,14 +965,16 @@ static gboolean check_area_fractions (const FttCell * root)
 
       if (ftt_cell_level (neighbor.c[i]) == level) {
 	if (GFS_IS_FLUID (root)) {
-	  if (!GFS_IS_FLUID (neighbor.c[i]) && 1. - nsolid->s[oi] >= 1e-10) {
-	    FttVector p;
-	    ftt_cell_pos (root, &p);
-	    g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
-		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
-		       p.x, p.y, p.z, ftt_cell_level (root),
-		       oi, nsolid->s[oi]);
-	    ret = FALSE;
+	  if (!GFS_IS_FLUID (neighbor.c[i])) {
+	    if (1. - nsolid->s[oi] >= 1e-10) {
+	      FttVector p;
+	      ftt_cell_pos (root, &p);
+	      g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
+			 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+			 p.x, p.y, p.z, ftt_cell_level (root),
+			 oi, nsolid->s[oi]);
+	      ret = FALSE;
+	    }
 	    nsolid->s[oi] = 1.;
 	  }
 	}
@@ -978,31 +988,50 @@ static gboolean check_area_fractions (const FttCell * root)
 		       i, solid->s[i],
 		       oi, nsolid->s[oi]);
 	    ret = FALSE;
-	    nsolid->s[oi] = solid->s[i];
 	  }
+	  nsolid->s[oi] = solid->s[i];
 	}
-	else if (1. - solid->s[i] >= 1e-10) {
-	  FttVector p;
-	  ftt_cell_pos (root, &p);
-	  g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
-		     __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
-		     p.x, p.y, p.z, ftt_cell_level (root),
-		     i, solid->s[i]);
-	  ret = FALSE;
+	else {
+	  if (1. - solid->s[i] >= 1e-10) {
+	    FttVector p;
+	    ftt_cell_pos (root, &p);
+	    g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
+		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		       p.x, p.y, p.z, ftt_cell_level (root),
+		       i, solid->s[i]);
+	    ret = FALSE;
+	  }
 	  solid->s[i] = 1.;
 	}
       }
       else { /* fine/coarse boundary */
 	g_assert (ftt_cell_level (neighbor.c[i]) == level - 1);
-	if (GFS_IS_FLUID (neighbor.c[i]) && GFS_IS_MIXED (root) && 1. - solid->s[i] >= 1e-10) {
-	  FttVector p;
-	  ftt_cell_pos (root, &p);
-	  g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
-		     __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
-		     p.x, p.y, p.z, ftt_cell_level (root),
-		     i, solid->s[i]);
-	  ret = FALSE;
-	  solid->s[i] = 1.;
+	if (GFS_IS_FLUID (neighbor.c[i])) {
+	  if (GFS_IS_MIXED (root)) {
+	    if (1. - solid->s[i] >= 1e-10) {
+	      FttVector p;
+	      ftt_cell_pos (root, &p);
+	      g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
+			 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+			 p.x, p.y, p.z, ftt_cell_level (root),
+			 i, solid->s[i]);
+	      ret = FALSE;
+	    }
+	    solid->s[i] = 1.;
+	  }
+	}
+	else if (nsolid->s[oi] == 0.) {
+	  g_assert (GFS_IS_MIXED (root));
+	  if (solid->s[i] >= 1e-10) {
+	    FttVector p;
+	    ftt_cell_pos (root, &p);
+	    g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
+		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		       p.x, p.y, p.z, ftt_cell_level (root),
+		       i, solid->s[i]);
+	    ret = FALSE;
+	  }
+	  solid->s[i] = 0.;
 	}
       }
     }

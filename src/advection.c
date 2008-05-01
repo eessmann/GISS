@@ -548,7 +548,7 @@ void gfs_face_advected_normal_velocity (const FttCellFace * face,
   g_return_if_fail (face != NULL);
   g_return_if_fail (par != NULL);
 
-  if (GFS_FACE_FRACTION (face) == 0.)
+  if (GFS_FACE_FRACTION_RIGHT (face) == 0.)
     return;
 
   GFS_FACE_NORMAL_VELOCITY_LEFT (face) = u = 
@@ -583,7 +583,7 @@ void gfs_face_interpolated_normal_velocity (const FttCellFace * face, GfsVariabl
   g_return_if_fail (face != NULL);
   g_return_if_fail (v != NULL);
 
-  if (GFS_FACE_FRACTION (face) == 0.)
+  if (GFS_FACE_FRACTION_RIGHT (face) == 0.)
     return;
 
   GFS_FACE_NORMAL_VELOCITY_LEFT (face) = u = gfs_face_interpolated_value (face, v[face->d/2]->i);

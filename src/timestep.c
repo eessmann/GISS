@@ -106,7 +106,7 @@ static void correct_normal_velocity (FttCellFace * face,
   gdouble * dt = data[2];
   FttComponent c;
 
-  if (GFS_FACE_FRACTION (face) == 0.)
+  if (GFS_FACE_FRACTION_RIGHT (face) == 0.)
     return;
 
   s = GFS_STATE (face->cell);
@@ -186,7 +186,7 @@ static void add_face_source (FttCellFace * face,
   gdouble dp;
   FttComponent c;
 
-  if (GFS_FACE_FRACTION (face) == 0.)
+  if (GFS_FACE_FRACTION_RIGHT (face) == 0.)
     return;
 
   c = face->d/2;
