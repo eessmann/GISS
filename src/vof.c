@@ -118,6 +118,8 @@ gdouble gfs_line_alpha (FttVector * m, gdouble c)
   return alpha;
 }
 
+#define EPS 1e-6
+
 /**
  * gfs_line_center:
  * @m: normal to the line.
@@ -159,7 +161,17 @@ void gfs_line_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
 
   g_return_if_fail (a > 0. && a < 1.);
 
-  n.x += 1e-4; n.y += 1e-4;
+  if (n.x < EPS) {
+    p->x = 0.5;
+    p->y = m->y < 0. ? 1. - a/2. : a/2.;
+    return;
+  }
+
+  if (n.y < EPS) {
+    p->y = 0.5;
+    p->x = m->x < 0. ? 1. - a/2. : a/2.;
+    return;
+  }
 
   p->x = p->y = alpha*alpha*alpha;
 
@@ -218,7 +230,17 @@ gdouble gfs_line_area_center (FttVector * m, gdouble alpha, FttVector * p)
     return 0.;
   }
 
-  n.x += 1e-4; n.y += 1e-4;
+  if (n.x < EPS) {
+    p->x = 0.5;
+    p->y = m->y < 0. ? 1. - alpha : alpha;
+    return 1.;
+  }
+
+  if (n.y < EPS) {
+    p->y = 0.5;
+    p->x = m->x < 0. ? 1. - alpha : alpha;
+    return 1.;
+  }
 
   p->x = p->y = 0.;
 
@@ -410,6 +432,32 @@ void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
   g_return_if_fail (p != NULL);
   g_return_if_fail (a >= 0. && a <= 1.);
 
+  if (fabs (m->x) < EPS) {
+    FttVector q;
+    n.x = m->y;
+    n.y = m->z;
+    gfs_line_center (&n, alpha, a, &q);
+    p->x = 0.5;
+    p->y = q.x;
+    p->z = q.y;
+    return;
+  }
+  if (fabs (m->y) < EPS) {
+    FttVector q;
+    n.x = m->z;
+    n.y = m->x;
+    gfs_line_center (&n, alpha, a, &q);
+    p->x = q.y;
+    p->y = 0.5;
+    p->z = q.x;
+    return;
+  }
+  if (fabs (m->z) < EPS) {
+    gfs_line_center (m, alpha, a, p);
+    p->z = 0.5;
+    return;
+  }
+
   n = *m;
   if (n.x < 0.) {
     alpha -= n.x;
@@ -433,8 +481,6 @@ void gfs_plane_center (FttVector * m, gdouble alpha, gdouble a, FttVector * p)
     p->x = p->y = p->z = 0.5;
     return;
   }
-
-  n.x += 1e-4; n.y += 1e-4; n.z += 1e-4;
 
   amax = n.x + n.y + n.z;
   p->x = p->y = p->z = alpha*alpha*alpha*alpha;
@@ -502,7 +548,7 @@ gdouble gfs_plane_area_center (FttVector * m, gdouble alpha, FttVector * p)
   g_return_val_if_fail (m != NULL, 0.);
   g_return_val_if_fail (p != NULL, 0.);
 
-  if (fabs (m->x) < 1e-4) {
+  if (fabs (m->x) < EPS) {
     FttVector n, q;
     n.x = m->y;
     n.y = m->z;
@@ -512,7 +558,7 @@ gdouble gfs_plane_area_center (FttVector * m, gdouble alpha, FttVector * p)
     p->z = q.y;
     return area;
   }
-  if (fabs (m->y) < 1e-4) {
+  if (fabs (m->y) < EPS) {
     FttVector n, q;
     n.x = m->z;
     n.y = m->x;
@@ -522,7 +568,7 @@ gdouble gfs_plane_area_center (FttVector * m, gdouble alpha, FttVector * p)
     p->z = q.x;
     return area;
   }
-  if (fabs (m->z) < 1e-4) {
+  if (fabs (m->z) < EPS) {
     gdouble area = gfs_line_area_center (m, alpha, p);
     p->z = 0.5;
     return area;
@@ -1563,25 +1609,25 @@ guint gfs_vof_facet (FttCell * cell,
 #if FTT_2D
   gdouble x, y;
 
-  if (fabs (m->y) > 1e-4) {
+  if (fabs (m->y) > EPS) {
     y = (alpha - m->x)/m->y;
     if (y >= 0. && y <= 1.) {
       p[n].x = q.x + h/2.; p[n].y = q.y + h*(y - 0.5); p[n++].z = 0.;
     }
   }
-  if (fabs (m->x) > 1e-4) {
+  if (fabs (m->x) > EPS) {
     x = (alpha - m->y)/m->x;
     if (x >= 0. && x <= 1.) {
       p[n].x = q.x + h*(x - 0.5); p[n].y = q.y + h/2.; p[n++].z = 0.;
     }
   }
-  if (fabs (m->y) > 1e-4) {
+  if (fabs (m->y) > EPS) {
     y = alpha/m->y;
     if (y >= 0. && y <= 1.) {
       p[n].x = q.x - h/2.; p[n].y = q.y + h*(y - 0.5); p[n++].z = 0.;
     }
   }
-  if (fabs (m->x) > 1e-4) {
+  if (fabs (m->x) > EPS) {
     x = alpha/m->x;
     if (x >= 0. && x <= 1.) {
       p[n].x = q.x + h*(x - 0.5); p[n].y = q.y - h/2.; p[n++].z = 0.;
