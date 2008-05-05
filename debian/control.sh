@@ -6,13 +6,13 @@ Source: gerris-snapshot
 Section: math
 Priority: extra
 Maintainer: Stephane Popinet <popinet@users.sf.net>
-Build-Depends: debhelper (>> 4), autotools-dev
+Build-Depends: debhelper (>> 4), autotools-dev, netcdfg-dev, libgsl0-dev
 
 Package: gerris-snapshot
 Section: math
 Priority: extra
 Architecture: any
-Depends: libc6-dev | libc-dev, libgts-snapshot-dev (>= $GTS_VERSION), pkg-config, gcc, sed, gawk, m4
+Depends: libc6-dev | libc-dev, libgts-snapshot-dev (>= $GTS_VERSION), pkg-config, gcc, sed, gawk, m4, proj, libnetcdf3, libgsl0
 Conflicts: gerris
 Replaces: gerris
 Recommends: gfsview-snapshot
