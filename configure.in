@@ -296,6 +296,20 @@ AC_CHECK_LIB(proj, pj_fwd, proj="true",
 AC_CHECK_HEADERS(proj_api.h, proj="true", proj="false")
 AM_CONDITIONAL(HAS_LIBPROJ, test x$proj = xtrue)
 
+# checks for GNU Scientific Library
+AM_PATH_GSL
+
+# checks for netCDF
+AC_CHECK_LIB(netcdf, nc_open, netcdf="true", netcdf="false", [-lm])
+AC_CHECK_HEADERS(netcdf.h, netcdf="true", netcdf="false")
+AM_CONDITIONAL(HAS_NETCDF, test x$netcdf = xtrue)
+
+# Tide module requires both netCDF and GSL
+if test x$netcdf = xfalse -o x$no_gsl = xyes; then
+   AC_MSG_WARN([GSL and/or netCDF not found. Tide module will not be available.])
+fi
+AM_CONDITIONAL(BUILD_TIDE, test x$netcdf = xtrue -a x$no_gsl = x)
+
 dnl header file checks
 AC_CHECK_HEADERS(fpu_control.h,
   AC_CHECK_DECL(_FPU_SETCW, 
@@ -441,6 +455,7 @@ src/gerris3D.pc
 tools/Makefile
 modules/Makefile
 modules/RStarTree/Makefile
+modules/fes2004/Makefile
 test/Makefile
 doc/Makefile
 doc/tutorial/Makefile

@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = RStarTree
+SUBDIRS = RStarTree fes2004
 
 INCLUDES = -I$(top_srcdir)/src -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs-modules\" $(GTS_CFLAGS)
@@ -8,15 +8,16 @@ INCLUDES = -I$(top_srcdir)/src -I$(includedir) \
 if HAS_LIBPROJ
 MAP = libmap2D.la libmap3D.la libmap2D3.la
 endif
+if BUILD_TIDE
+TIDE = libtide2D.la libtide3D.la libtide2D3.la
+endif
 
 pkglib_LTLIBRARIES = \
 	$(MAP) \
 	libterrain2D.la \
 	libterrain3D.la \
 	libterrain2D3.la \
-	libtide2D.la \
-	libtide3D.la \
-	libtide2D3.la
+	$(TIDE)
 
 bin_PROGRAMS = \
 	xyz2rsurface \
@@ -57,13 +58,14 @@ libterrain2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 libterrain2D3_la_LIBADD = -LRStarTree -lcSmRST
 
 libtide3D_la_SOURCES = tide.c
-libtide3D_la_LIBADD = -L/home/popinet/local/lib -lfes -lnetcdf -lgsl -lgslcblas -lm -lpthread
+libtide3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
+libtide3D_la_LIBADD = -Lfes2004 -lfes -lnetcdf $(GSL_LIBS)
 libtide2D_la_SOURCES = tide.c
-libtide2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
-libtide2D_la_LIBADD = -L/home/popinet/local/lib -lfes -lnetcdf -lgsl -lgslcblas -lm -lpthread
+libtide2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
+libtide2D_la_LIBADD = -Lfes2004 -lfes -lnetcdf $(GSL_LIBS)
 libtide2D3_la_SOURCES = tide.c
-libtide2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
-libtide2D3_la_LIBADD = -L/home/popinet/local/lib -lfes -lnetcdf -lgsl -lgslcblas -lm -lpthread
+libtide2D3_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D3=1
+libtide2D3_la_LIBADD = -Lfes2004 -lfes -lnetcdf $(GSL_LIBS)
 
 xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c
 xyz2rsurface_LDADD = -LRStarTree -lcSmRST

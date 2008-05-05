@@ -21,7 +21,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
-#include <fes2004_lib.h>
+#include "fes2004/fes2004_lib.h"
 #include "gfsconfig.h"
 #include "variable.h"
 

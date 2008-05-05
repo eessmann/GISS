@@ -11,3 +11,4 @@ Ivan Adam Vari: RPM packages.
 Daniel Fuster: gfsjoin script
 Rohallah Tavakoli: initial implementation of VTK and Tecplot output
 Norbert Beckmann: R*-tree implementation used in the terrain module
+Thierry Letellier, Laurent Roblou: FES2004 tidal atlas library
