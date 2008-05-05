@@ -21,6 +21,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <stdlib.h>
 #include "fes2004/fes2004_lib.h"
 #include "gfsconfig.h"
 #include "variable.h"
@@ -168,10 +169,14 @@ static void bc_tide_read (GtsObject ** o, GtsFile * fp)
   }
   else {
     /* extract FES2004 tidal coefficients */
-    gchar * fname = g_strjoin ("/", GFS_MODULES_DIR, "tide.fes2004.nc", NULL);
+    gchar * fname = getenv ("GFS_FES2004") ?
+      g_strdup (getenv ("GFS_FES2004"))
+      :
+      g_strjoin ("/", GFS_MODULES_DIR, "tide.fes2004.nc", NULL);
     FILE * f = fopen (fname, "r");
     if (f == NULL) {
       gts_file_error (fp, "cannot open file `%s': %s", fname, strerror (errno));
+      g_free (fname);
       return;
     }
     fclose (f);
@@ -187,6 +192,7 @@ static void bc_tide_read (GtsObject ** o, GtsFile * fp)
 
     fes2004_extraction (fname, N, lat, lon, bc->amplitude, bc->phase, 1);
 
+    g_free (fname);
     g_free (lon);
     g_free (lat);
   }
