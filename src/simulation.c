@@ -614,6 +614,45 @@ static gdouble cell_cz (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
   return p.z;
 }
 
+static gdouble cell_rx (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
+{
+  FttVector p;
+
+  g_return_val_if_fail (cell != NULL || face != NULL, 0.);
+
+  if (face)
+    ftt_face_pos (face, &p);
+  else
+    ftt_cell_pos (cell, &p);
+  return p.x;
+}
+
+static gdouble cell_ry (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
+{
+  FttVector p;
+
+  g_return_val_if_fail (cell != NULL || face != NULL, 0.);
+
+  if (face)
+    ftt_face_pos (face, &p);
+  else
+    ftt_cell_pos (cell, &p);
+  return p.y;
+}
+
+static gdouble cell_rz (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
+{
+  FttVector p;
+
+  g_return_val_if_fail (cell != NULL || face != NULL, 0.);
+
+  if (face)
+    ftt_face_pos (face, &p);
+  else
+    ftt_cell_pos (cell, &p);
+  return p.z;
+}
+
 static gdouble cell_dV (FttCell * cell)
 {
   gdouble dV = ftt_cell_volume (cell);
@@ -744,6 +783,9 @@ static void simulation_init (GfsSimulation * object)
     { "cx", "x-coordinate of the center of the cell", cell_cx },
     { "cy", "y-coordinate of the center of the cell", cell_cy },
     { "cz", "z-coordinate of the center of the cell", cell_cz },
+    { "rx", "x-coordinate of the center of the cell (internal)", cell_rx },
+    { "ry", "y-coordinate of the center of the cell (internal)", cell_ry },
+    { "rz", "z-coordinate of the center of the cell (internal)", cell_rz },
     { "dV", "volume of the cell", cell_dV},
     { "t",  "Physical time", cell_t },
     { "dt", "Timestep", cell_dt },
