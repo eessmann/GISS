@@ -10,6 +10,7 @@ TESTDIRS = \
 	periodic \
 	merging \
 	lid \
+	poiseuille \
 	couette \
 	kinetic \
 	hydrostatic \
