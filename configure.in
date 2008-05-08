@@ -336,7 +336,6 @@ AC_OUTPUT_COMMANDS([
 #define GFSCONFIG_H
 
 __EOF
-        echo "#define GFS_MODULES_DIR \"$libdir\"" >> src/gfsconfig.h
 	if test "$have_gmodule" = "yes"; then
 	  cat >> src/gfsconfig.h <<\__EOF
 #define GFS_HAS_MODULES 1
@@ -394,7 +393,6 @@ __EOF
 ],[
 	build="$build"
 	have_gmodule="$have_gmodule"
-        libdir="${prefix}${libdir}/$PACKAGE"
 ])
 
 dnl generate `src/modules.c'

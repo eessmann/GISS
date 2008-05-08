@@ -2,6 +2,8 @@
 
 SUBDIRS = RStarTree fes2004
 
+AM_CPPFLAGS = -DGFS_MODULES_DIR=\"$(libdir)/gerris\"
+
 INCLUDES = -I$(top_srcdir)/src -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs-modules\" $(GTS_CFLAGS)
 

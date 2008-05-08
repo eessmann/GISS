@@ -2,6 +2,8 @@
 
 AUTOMAKE_OPTIONS = 1.6
 
+AM_CPPFLAGS = -DGFS_MODULES_DIR=\"$(libdir)/gerris\"
+
 INCLUDES = -I$(top_srcdir) -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs\" $(GTS_CFLAGS)
 
