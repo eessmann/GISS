@@ -787,7 +787,7 @@ static void gfs_ocean_class_init (GfsSimulationClass * klass)
 
 static void gfs_ocean_init (GfsOcean * object)
 {
-  gfs_domain_add_variable (GFS_DOMAIN (object), "H", "Depth");
+  gfs_domain_add_variable (GFS_DOMAIN (object), gfs_variable_class (), "H", "Depth");
   GFS_SIMULATION (object)->approx_projection_params.weighted = 1;
   object->layer = g_ptr_array_new ();
   new_layer (object);

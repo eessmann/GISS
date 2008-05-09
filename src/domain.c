@@ -141,7 +141,7 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
     variables1 = g_strdup (variables);
     s = strtok (variables1, ",");
     while (s) {
-      gfs_domain_add_variable (domain, s, NULL);
+      gfs_domain_add_variable (domain, gfs_variable_class (), s, NULL);
       s = strtok (NULL, ",");
     }
     g_free (variables1);
@@ -2615,6 +2615,7 @@ void gfs_domain_free (GfsDomain * domain, guint i)
 /**
  * gfs_domain_add_variable:
  * @domain: a #GfsDomain.
+ * @klass: a #GfsVariableClass.
  * @name: the name of the variable to add or %NULL.
  * @description: the variable description or %NULL.
  *
@@ -2624,14 +2625,16 @@ void gfs_domain_free (GfsDomain * domain, guint i)
  * already exists.  
  */
 GfsVariable * gfs_domain_add_variable (GfsDomain * domain,
+				       gpointer klass,
 				       const gchar * name,
 				       const gchar * description)
 {
   GfsVariable * v;
 
   g_return_val_if_fail (domain != NULL, NULL);
+  g_return_val_if_fail (klass != NULL, NULL);
 
-  if ((v = gfs_variable_new (gfs_variable_class (), domain, name, description)) == NULL)
+  if ((v = gfs_variable_new (klass, domain, name, description)) == NULL)
     return NULL;
   domain->variables = g_slist_append (domain->variables, v);
   return v;
@@ -2666,7 +2669,7 @@ GfsVariable * gfs_domain_get_or_add_variable (GfsDomain * domain,
     v->description = description ? g_strdup (description) : NULL;
   }
   else
-    v = gfs_domain_add_variable (domain, name, description);
+    v = gfs_domain_add_variable (domain, gfs_variable_class (), name, description);
   return v;
 }
 

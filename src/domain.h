@@ -237,7 +237,8 @@ void         gfs_cell_write_binary            (const FttCell * cell,
 guint        gfs_domain_alloc                 (GfsDomain * domain);
 void         gfs_domain_free                  (GfsDomain * domain, 
 					       guint i);
-GfsVariable * gfs_domain_add_variable         (GfsDomain * domain, 
+GfsVariable * gfs_domain_add_variable         (GfsDomain * domain,
+					       gpointer klass,
 					       const gchar * name,
 					       const gchar * description);
 GfsVariable * gfs_domain_get_or_add_variable  (GfsDomain * domain,
