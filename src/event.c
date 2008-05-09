@@ -1448,7 +1448,7 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
   s->max = gfs_read_constant (fp, domain);
   if (fp->type == GTS_ERROR)      
     return;
-  s->oldv = gfs_domain_add_variable (domain, gfs_variable_class (), NULL, NULL);
+  s->oldv = gfs_domain_add_variable (domain, NULL, NULL);
   /* fixme: the lines below are necessary in the general case (e.g. when dealing with a VOF tracer)
    * but will crash if s->oldv is not of the same class as s->v.
    * s->oldv->fine_coarse = s->v->fine_coarse;

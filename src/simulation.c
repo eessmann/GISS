@@ -815,17 +815,15 @@ static void simulation_init (GfsSimulation * object)
     { NULL, NULL, NULL}
   };
 
-  gfs_domain_add_variable (domain, gfs_variable_class (),
-			   "P", "Approximate projection pressure")->centered = TRUE;
-  gfs_domain_add_variable (domain, gfs_variable_class (),
-			   "Pmac", "MAC projection pressure")->centered = TRUE;
-  gfs_variable_set_vector (gfs_domain_add_variable (domain, gfs_variable_class (),
-						    "U", "x-component of the velocity"), FTT_X);
-  gfs_variable_set_vector (gfs_domain_add_variable (domain, gfs_variable_class (),
-						    "V", "y-component of the velocity"), FTT_Y);
+  gfs_domain_add_variable (domain, "P", "Approximate projection pressure")->centered = TRUE;
+  gfs_domain_add_variable (domain, "Pmac", "MAC projection pressure")->centered = TRUE;
+  gfs_variable_set_vector (gfs_domain_add_variable (domain, "U", 
+						    "x-component of the velocity"), FTT_X);
+  gfs_variable_set_vector (gfs_domain_add_variable (domain, "V",
+						    "y-component of the velocity"), FTT_Y);
 #if (!FTT_2D)
-  gfs_variable_set_vector (gfs_domain_add_variable (domain, gfs_variable_class (),
-						    "W", "z-component of the velocity"), FTT_Z);
+  gfs_variable_set_vector (gfs_domain_add_variable (domain, "W",
+						    "z-component of the velocity"), FTT_Z);
 #endif /* FTT_3D */
 
   GfsDerivedVariableInfo * v = derived_variable;
@@ -1691,8 +1689,7 @@ static void poisson_class_init (GfsSimulationClass * klass)
 
 static void poisson_init (GfsDomain * domain)
 {
-  gfs_domain_add_variable (domain, gfs_variable_class (),
-			   "Div", "Right-hand-side of the Poisson equation");
+  gfs_domain_add_variable (domain, "Div", "Right-hand-side of the Poisson equation");
 }
 
 GfsSimulationClass * gfs_poisson_class (void)
