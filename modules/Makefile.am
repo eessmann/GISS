@@ -48,14 +48,14 @@ libmap2D3_la_SOURCES = map.c
 libmap2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 libmap2D3_la_LIBADD = -lproj
 
-libterrain3D_la_SOURCES = terrain.c rsurface.c
+libterrain3D_la_SOURCES = terrain.c rsurface.c rsurface.h
 libterrain3D_la_LIBADD = -LRStarTree -lcSmRST
 
 libterrain2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
-libterrain2D_la_SOURCES = terrain.c rsurface.c
+libterrain2D_la_SOURCES = terrain.c rsurface.c rsurface.h
 libterrain2D_la_LIBADD = -LRStarTree -lcSmRST
 
-libterrain2D3_la_SOURCES = terrain.c rsurface.c
+libterrain2D3_la_SOURCES = terrain.c rsurface.c rsurface.h
 libterrain2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 libterrain2D3_la_LIBADD = -LRStarTree -lcSmRST
 
@@ -69,10 +69,10 @@ libtide2D3_la_SOURCES = tide.c
 libtide2D3_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D3=1
 libtide2D3_la_LIBADD = -Lfes2004 -lfes -lnetcdf $(GSL_LIBS)
 
-xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c
+xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c rsurface.h
 xyz2rsurface_LDADD = -LRStarTree -lcSmRST
 
-rsurfacequery_SOURCES = rsurfacequery.c rsurface.c
+rsurfacequery_SOURCES = rsurfacequery.c rsurface.c rsurface.h
 rsurfacequery_LDADD = -LRStarTree -lcSmRST
 
 if HAVE_MODULES
