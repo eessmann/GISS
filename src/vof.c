@@ -1864,7 +1864,7 @@ static void parabola_fit_init (ParabolaFit * p, FttVector * o, FttVector * m)
   p->M = gts_matrix_zero (NULL);
   p->rhs[0] = p->rhs[1] = p->rhs[2] = 0.;
 # else
-  p->M = gfs_matrix_new (6, sizeof (gdouble));
+  p->M = gfs_matrix_new (6, 6, sizeof (gdouble));
   p->rhs[0] = p->rhs[1] = p->rhs[2] = p->rhs[3] = p->rhs[4] = p->rhs[5] = 0.;
 # endif
 #endif /* 3D */

@@ -263,7 +263,7 @@ static void rms_update (RMS * rms)
       return;
     }
 #else
-    gdouble ** m = gfs_matrix_new (NM, sizeof (gdouble));
+    gdouble ** m = gfs_matrix_new (NM, NM, sizeof (gdouble));
     for (i = 0; i < NM; i++)
       for (j = 0; j < NM; j++)
 	m[i][j] = rms->m[i][j];

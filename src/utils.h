@@ -115,6 +115,7 @@ gdouble            gfs_matrix_inverse       (gdouble ** m,
 					     guint n,
 					     gdouble pivmin);
 gpointer           gfs_matrix_new           (guint n, 
+					     guint p,
 					     guint size);
 void               gfs_matrix_free          (gpointer m);
 

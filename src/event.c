@@ -1147,12 +1147,12 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
     g_array_append_val (s->omega, omega);
   } while (fp->type != '\n' && fp->type != '{');
 
-  s->Mn = gfs_matrix_new (2*s->omega->len + 1, sizeof (gdouble));
+  s->Mn = gfs_matrix_new (2*s->omega->len + 1, 2*s->omega->len + 1, sizeof (gdouble));
   for (i = 0; i < 2*s->omega->len + 1; i++)
     s->Mn[i][i] = 1.;
 
-  s->M  = gfs_matrix_new (2*s->omega->len + 1, sizeof (gdouble));
-  s->iM = gfs_matrix_new (2*s->omega->len + 1, sizeof (gdouble));
+  s->M  = gfs_matrix_new (2*s->omega->len + 1, 2*s->omega->len + 1, sizeof (gdouble));
+  s->iM = gfs_matrix_new (2*s->omega->len + 1, 2*s->omega->len + 1, sizeof (gdouble));
 
   s->A =    g_malloc (sizeof (GfsVariable *)*s->omega->len);
   s->B =    g_malloc (sizeof (GfsVariable *)*s->omega->len);

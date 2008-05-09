@@ -1376,24 +1376,26 @@ gdouble gfs_matrix_inverse (gdouble ** m, guint n, gdouble pivmin)
 /**
  * gfs_matrix_new:
  * @n: the size of the matrix.
+ * @p: the size of the matrix.
  * @size: the size of the matrix elements.
  *
  * The matrix elements are initialised to zero.
  *
  * Returns: a newly allocated matrix.
  */
-gpointer gfs_matrix_new (guint n, guint size)
+gpointer gfs_matrix_new (guint n, guint p, guint size)
 {
   guint i;
   gpointer * m, a;
   
   g_return_val_if_fail (n > 0, NULL);
+  g_return_val_if_fail (p > 0, NULL);
   g_return_val_if_fail (size > 0, NULL);
 
   m = g_malloc (n*sizeof (gpointer));
-  a = g_malloc0 (n*n*size);
+  a = g_malloc0 (n*p*size);
   for (i = 0; i < n; i++)
-    m[i] = GUINT_TO_POINTER (GPOINTER_TO_UINT (a) + i*n*size);
+    m[i] = GUINT_TO_POINTER (GPOINTER_TO_UINT (a) + i*p*size);
   return m;
 }
 
