@@ -56,6 +56,7 @@ GFS_HDS = \
 	vof.h \
 	utils.h \
 	ocean.h \
+	wave.h \
 	levelset.h \
 	isocube.h \
 	cartesian.h \
@@ -97,6 +98,7 @@ SRC = \
 	vof.c \
 	utils.c \
 	ocean.c \
+	wave.c \
 	levelset.c \
 	myc.h \
 	myc2d.h \

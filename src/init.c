@@ -36,6 +36,7 @@
 #include "source.h"
 #include "tension.h"
 #include "ocean.h"
+#include "wave.h"
 #include "levelset.h"
 #include "vof.h"
 #include "solid.h"
@@ -99,6 +100,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_ocean_class (),
     gfs_advection_class (),
     gfs_poisson_class (),
+    gfs_wave_class (),
 
   gfs_surface_bc_class (),
 
