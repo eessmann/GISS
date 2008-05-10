@@ -1,0 +1,265 @@
+#!/bin/bash
+
+. $HOME/.bashrc
+
+# Gerris tests
+wdir=$HOME/local/src/gerris-tests
+
+gerris=gerris-stable
+gfsview=gfsview-mainline
+gts=gts-mainline
+
+darcs_gerris=$HOME/local/src/darcs/gerris
+darcs_gts=$HOME/local/src/darcs/gts
+darcs_gfsview=$HOME/local/src/darcs/gfsview
+
+gtsweb=popinet@gts.sf.net:/home/groups/g/gt/gts/htdocs
+gerrisweb=popinet@gfs.sf.net:/home/groups/g/gf/gfs/htdocs
+localgerrisweb=/var/www/gerris
+
+export PATH=$wdir/local/bin:$PATH:/usr/local/bin
+export LD_LIBRARY_PATH=$wdir/local/lib:$LD_LIBRARY_PATH:/usr/local/lib
+export PKG_CONFIG_PATH=$wdir/local/lib/pkgconfig:$PKG_CONFIG_PATH
+ulimit -c unlimited
+
+# argument #1: repository to upgrade
+# argument #2: package name
+darcs_upgrade()
+{
+    package=$localgerrisweb/version/$2
+    if ( darcs push --dry-run --no-set-default $1 | \
+	 grep "No recorded local changes to push" ) ; then :
+    else
+	if ( darcs push --dry-run --no-set-default $1 | \
+	       grep -v "^\(Making no changes\|Pushing to\|Would push\)" | \
+	       $HOME/local/bin/redate | \
+	       source-highlight -f html -s changelog -c mystyle --no-doc > $package"_changes" ) && \
+	   ( darcs changes | \
+	       $HOME/local/bin/redate | \
+	       source-highlight -f html -s changelog -c mystyle --no-doc > $package"_all_changes" ) && \
+	   ( grep -c date $package"_changes" | awk '{printf ("%d", $1)}' > $package"_changes_number" ) && \
+	   ( darcs changes --last=1 --xml-output | \
+	      awk 'BEGIN{RS=" ";FS="="} {
+                if ($1 == "date") 
+                  printf ("%s-%s-%s", substr($2,8,2), substr($2,6,2), substr($2,2,4));
+               }' > $package"_current" ) && \
+	    darcs push -a --no-set-default $1 ; then
+	    return 0;
+	else
+	    return 1;
+	fi	
+    fi
+}
+
+build_gts=false
+if ( cd $wdir/$gts && make -k clean && \
+    ( darcs pull -a | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then
+    gts_changed=false
+else
+    gts_changed=true
+    if ( cd $wdir/$gts && sh autogen.sh --prefix=$wdir/local && make -k && make -k install ) \
+       > $wdir/build 2>&1 ; then :
+	build_gts=true
+    else
+	echo
+        echo ============ $wdir/$gts: build failed ============
+	echo
+	cat $wdir/build
+	exit 1
+    fi
+fi
+
+build_gerris=false
+if ( cd $wdir/$gerris && make -k clean && \
+    ( darcs pull -a | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then
+    gerris_changed=false
+    if $build_gts ; then
+	build_gerris=true
+    fi
+else
+    gerris_changed=true
+    build_gerris=true
+fi
+if $build_gerris ; then
+    if ( cd $wdir/$gerris && sh autogen.sh --prefix=$wdir/local --disable-mpi && make -k && make -k install ) \
+       > $wdir/build 2>&1 ; then :
+    else
+	echo
+        echo ============ $wdir/$gerris: build failed ============
+	echo
+	cat $wdir/build
+	exit 1
+    fi
+fi
+
+build_gfsview=false
+if ( cd $wdir/$gfsview && make -k clean && \
+    ( darcs pull -a | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then :
+    gfsview_changed=false
+    if $build_gerris ; then
+	build_gfsview=true
+    fi
+else
+    gfsview_changed=true
+    build_gfsview=true
+fi
+if $build_gfsview ; then
+    if ( cd $wdir/$gfsview && sh autogen.sh --prefix=$wdir/local && make -k && make -k install ) \
+       > $wdir/build 2>&1 ; then :
+    else
+	echo
+        echo ============ $wdir/$gfsview: build failed ============
+	echo
+	cat $wdir/build
+	exit 1
+    fi
+fi
+
+if ( $build_gerris || $build_gfsview ) ; then
+   if ( cd $wdir/$gerris && make -k check ) > $wdir/check 2>&1 ; then :
+   else
+       check=1
+   fi
+   if ( cd $wdir/$gerris/test && make -k tests && \
+        cd $wdir/$gerris/doc/tutorial && make -k tutorial.pdf tutorial.tar.gz && \
+        cd $wdir/$gerris/doc/examples && make -k examples.tar.gz && \
+        cd $wdir/$gerris/doc && make -k templates sgml html ) > $wdir/tests 2>&1 ; then :
+   else
+       tests=1
+   fi
+   if test $check; then
+       echo
+       echo ============ $wdir: check failed =====================
+       if test ! $tests; then
+	   echo file://$wdir/$gerris/test/tests/index.html
+       fi
+       echo
+       cat $wdir/check
+   fi
+   if test $tests; then
+       echo
+       echo ============ $wdir: doc generation failed ============
+       echo
+       cat $wdir/tests
+   fi
+   if test -z "$check" && test -z "$tests"; then
+       if ( cd $wdir/$gts && darcs_upgrade $darcs_gts/$gts gts && \
+	    cd $wdir/$gerris && darcs_upgrade $darcs_gerris/$gerris gerris && \
+	    cd $wdir/$gfsview && darcs_upgrade $darcs_gfsview/$gfsview gfsview ) \
+	   > $wdir/darcs 2>&1 ; then
+	   gts_snapshot=true
+	   if $gts_changed ; then
+	       if ( darcs2dist gts $darcs_gts/$gts $gtsweb && \
+                    cd $wdir/$gts && make ChangeLog debian-snapshot && \
+		    rsync -rz --delete --rsh=ssh $wdir/$gts/debian/repo/ $gtsweb/debian/ ) \
+               > $wdir/snapshot 2>&1 ; then :
+	       else
+		   echo
+		   echo ============ $wdir: GTS snapshot failed ============
+		   echo
+		   cat $wdir/snapshot
+		   gts_snapshot=false
+	       fi
+	   fi
+	   gerris_snapshot=true
+	   if $gerris_changed && $gts_snapshot ; then
+	       if ( darcs2dist gerris $darcs_gerris/$gerris $gerrisweb ) \
+               > $wdir/snapshot 2>&1 ; then :
+	       else
+		   echo
+		   echo ============ $wdir: Gerris snapshot failed ============
+		   echo
+		   cat $wdir/snapshot
+		   gerris_snapshot=false
+	       fi
+	   fi
+	   gerris_debian=true
+           if $gts_snapshot && ( $gts_changed || $gerris_changed ) ; then
+	       if ( cd $wdir/$gerris && make ChangeLog debian-snapshot && \
+	 	    rm -f $HOME/local/debian/gerris-snapshot_*.deb && \
+		    mv -f $wdir/$gerris/debian/repo/*.deb $HOME/local/debian ) \
+		   > $wdir/debian 2>&1 ; then :
+	       else
+		   echo
+		   echo ============ $wdir: Gerris debian failed ============
+		   echo
+		   cat $wdir/debian
+		   gerris_debian=false
+	       fi
+	   fi
+	   if $gfsview_changed && $gerris_snapshot ; then
+	       if ( darcs2dist gfsview $darcs_gfsview/$gfsview $gerrisweb ) \
+               > $wdir/snapshot 2>&1 ; then :
+	       else
+		   echo
+		   echo ============ $wdir: GfsView snapshot failed ============
+		   echo
+		   cat $wdir/snapshot
+	       fi
+	   fi
+	   gfsview_debian=true
+	   if $gts_snapshot && $gerris_debian && \
+              ( $gts_changed || $gerris_changed || $gfsview_changed ) ; then
+	       if ( cd $wdir/$gfsview && make ChangeLog debian-snapshot && \
+		    rm -f $HOME/local/debian/gfsview-snapshot_*.deb && \
+		    mv -f $wdir/$gfsview/debian/repo/*.deb $HOME/local/debian ) \
+               > $wdir/debian 2>&1 ; then :
+	       else
+		   echo
+		   echo ============ $wdir: GfsView debian failed ============
+		   echo
+		   cat $wdir/debian
+		   gfsview_debian=false
+	       fi
+	   fi
+           if $gts_snapshot && $gerris_debian && $gfsview_debian && \
+	       ( $gts_changed || $gerris_changed || $gfsview_changed ) ; then
+	       if ( cd $HOME/local/debian && \
+                    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz && \
+		    ssh popinet@gfs.sf.net rm -f /home/groups/g/gf/gfs/htdocs/debian/* && \
+                    scp -q $HOME/local/debian/* $gerrisweb/debian ) \
+               > $wdir/debian 2>&1 ; then :
+	       else
+		   echo
+		   echo ============ $wdir: Gerris/GfsView debian failed ============
+		   echo
+		   cat $wdir/debian
+	       fi
+           fi
+       else
+	   echo
+	   echo ============ $wdir: darcs push failed ============
+	   echo
+	   cat $wdir/darcs
+       fi
+       if ( cd $wdir/$gerris/test && make tests.tar.gz && \
+           rm -r -f $localgerrisweb/tests/* && \
+           cp tests.tar.gz $localgerrisweb/tests/ && \
+	   cd $localgerrisweb/tests/ && \
+	   tar xzf tests.tar.gz && \
+	   cd $wdir/$gerris/doc/examples && \
+           rm -r -f $HOME/local/src/gerris-www/publish/examples/* && \
+           cp examples.tar.gz $HOME/local/src/gerris-www/publish/examples/ && \
+	   cd $HOME/local/src/gerris-www/publish/examples/ && \
+	   tar xzf examples.tar.gz && rm -f examples.tar.gz && \
+	   cd $wdir/$gts && rm -f ChangeLog && make ChangeLog && \
+	   $HOME/local/bin/redate < ChangeLog | source-highlight -f html -s changelog -d -T "GTS ChangeLog" > $HOME/local/src/gts-www/publish/ChangeLog.html && \
+	   cd $wdir/$gerris && rm -f ChangeLog && make ChangeLog && \
+	   $HOME/local/bin/redate < ChangeLog | source-highlight -f html -s changelog -d -T "Gerris ChangeLog" > $localgerrisweb/gerris-ChangeLog.html && \
+	   cd $wdir/$gfsview && rm -f ChangeLog && make ChangeLog && \
+	   $HOME/local/bin/redate < ChangeLog | source-highlight -f html -s changelog -d -T "GfsView ChangeLog" > $localgerrisweb/gfsview-ChangeLog.html && \
+	   cd $HOME/local/src/gerris-www && make publish_local sync && \
+	   cd $HOME/local/src/gts-www && make sync ) > $wdir/www 2>&1 ; then :
+       else
+	   echo
+	   echo ============ $wdir: www failed ============
+	   echo
+	   cat $wdir/www
+       fi
+   fi
+fi
+
+# Darcs mirroring
+rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gfsview/* popinet@gfs.sourceforge.net:/home/groups/g/gf/gfs/htdocs/darcs/gfsview/
+rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gerris/* popinet@gfs.sourceforge.net:/home/groups/g/gf/gfs/htdocs/darcs/gerris
+rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gts/* popinet@gts.sourceforge.net:/home/groups/g/gt/gts/htdocs/darcs
