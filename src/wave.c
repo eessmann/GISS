@@ -80,16 +80,6 @@ static void init_action (FttCell * cell, GfsVariable *** F)
       GFS_VALUE (cell, F[ik][ith]) = action (ik, ith, p.x, p.y, 1.);
 }
 
-static void advance_tracers (GfsDomain * domain, GfsVariableTracer * t, gdouble dt)
-{
-  t->advection.dt = dt;
-  t->advection.use_centered_velocity = FALSE;
-  gfs_tracer_advection_diffusion (domain, &t->advection);
-  gfs_domain_cell_traverse (domain,
-			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			    (FttCellTraverseFunc) GFS_VARIABLE1 (t)->fine_coarse, t);
-}
-
 static void set_group_velocity (const FttCellFace * face, FttVector * u)
 {
   GFS_FACE_NORMAL_VELOCITY_RIGHT (face) = 
@@ -111,30 +101,47 @@ static void wave_run (GfsSimulation * sim)
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
+    /* get global timestep */
+    gfs_domain_face_traverse (domain, FTT_XYZ,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
+    gfs_simulation_set_timestep (sim);
+    gdouble dt = sim->advection_params.dt;
+    gdouble tnext = sim->tnext;
+    
+    /* spatial advection */
     guint ik, ith;
-    for (ik = 0; ik < NK; ik++)
-      for (ith = 0; ith < NTHETA; ith++) {
-	FttVector u;
-	cg (ik, ith, &u);
-	gfs_domain_face_traverse (domain, FTT_XYZ,
-				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				  (FttFaceTraverseFunc) set_group_velocity, &u);
-
-	gfs_simulation_set_timestep (sim);
-
-	//	fprintf (stderr, "%d-%d: %g %g %g\n", ik, ith, u.x, u.y, sim->advection_params.dt);
-	advance_tracers (domain, GFS_VARIABLE_TRACER (GFS_WAVE (sim)->F[ik][ith]), 
-			 sim->advection_params.dt);
+    for (ik = 0; ik < NK; ik++) {
+      FttVector u;
+      cg (ik, 0, &u);
+      gfs_domain_face_traverse (domain, FTT_XYZ,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttFaceTraverseFunc) set_group_velocity, &u);
+      gfs_simulation_set_timestep (sim);
+      /* subcycling */
+      guint n = ceil (dt/sim->advection_params.dt);
+      g_assert (fabs (sim->time.t + sim->advection_params.dt*n - tnext) < 1e-12);
+      while (n--) {
+	for (ith = 0; ith < NTHETA; ith++) {
+	  FttVector u;
+	  cg (ik, ith, &u);
+	  gfs_domain_face_traverse (domain, FTT_XYZ,
+				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				    (FttFaceTraverseFunc) set_group_velocity, &u);
+	  GfsVariable * t = GFS_WAVE (sim)->F[ik][ith];
+	  GFS_VARIABLE_TRACER (t)->advection.dt = sim->advection_params.dt;
+	  gfs_tracer_advection_diffusion (domain, &GFS_VARIABLE_TRACER (t)->advection);
+	  gfs_domain_cell_traverse (domain,
+				    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				    (FttCellTraverseFunc) t->fine_coarse, t);
+	}
+	gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_redo, sim);
+	gfs_simulation_adapt (sim);
       }
+    }
 
-    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
-
-    gfs_domain_cell_traverse (domain,
-			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
-    gfs_simulation_adapt (sim);
-
-    sim->time.t = sim->tnext;
+    sim->advection_params.dt = dt;
+    sim->time.t = sim->tnext = tnext;
     sim->time.i++;
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
@@ -171,6 +178,7 @@ static void wave_init (GfsWave * wave)
 						  gfs_variable_tracer_class (), 
 						  name, description);
       g_assert (wave->F[ik][ith]);
+      GFS_VARIABLE_TRACER (wave->F[ik][ith])->advection.use_centered_velocity = FALSE;
       g_free (name);
       g_free (description);
     }
