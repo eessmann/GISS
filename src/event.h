@@ -36,7 +36,7 @@ struct _GfsEvent {
   guint i, istart, iend, istep;
   
   guint n;
-  gboolean end_event, realised;
+  gboolean end_event, realised, redo;
 };
 
 typedef struct _GfsSimulation           GfsSimulation;
@@ -72,6 +72,8 @@ void            gfs_event_set         (GfsEvent * e,
 void            gfs_event_init        (GfsEvent * event,
 				       GfsSimulation * sim);
 void            gfs_event_do          (GfsEvent * event, 
+				       GfsSimulation * sim);
+void            gfs_event_redo        (GfsEvent * event, 
 				       GfsSimulation * sim);
 gdouble         gfs_event_next        (GfsEvent * event, 
 				       GfsSimulation * sim);

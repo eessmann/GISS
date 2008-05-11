@@ -64,6 +64,10 @@ gdouble gfs_event_next (GfsEvent * event, GfsSimulation * sim)
 
 static gboolean gfs_event_event (GfsEvent * event, GfsSimulation * sim)
 {
+  if (event->redo) {
+    event->redo = FALSE;
+    return event->realised;
+  }
   if (event->t >= event->end ||
       event->i >= event->iend ||
       sim->time.t > event->end || 
@@ -442,6 +446,27 @@ void gfs_event_half_do (GfsEvent * event, GfsSimulation * sim)
 
   if (event->realised && GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event_half)
     (* GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event_half) (event, sim);
+}
+
+/**
+ * gfs_event_redo:
+ * @event: a #GfsEvent:
+ * @sim: a #GfsSimulation.
+ * 
+ * Realises the event if it has just been realised.
+ */
+void gfs_event_redo (GfsEvent * event, GfsSimulation * sim)
+{
+  GfsEventClass * klass;
+
+  g_return_if_fail (event != NULL);
+  g_return_if_fail (sim != NULL);
+
+  klass = GFS_EVENT_CLASS (GTS_OBJECT (event)->klass);
+  g_assert (klass->event);
+  event->redo = TRUE;
+  if ((* klass->event) (event, sim) && klass->post_event)
+    (* klass->post_event) (event, sim);
 }
 
 /* GfsGenericInit: Object */
