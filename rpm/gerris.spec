@@ -8,23 +8,29 @@ Version: 1.2.0
 %else
 Version: %{current}
 %endif
-Release: 4.%{alphatag}cvs%{?dist}
+Release: 5.%{alphatag}cvs%{?dist}
 License: GPLv2
-Group: Applications/Engineering
+Group: Productivity/Scientific/Other
 URL: http://gfs.sourceforge.net
 Packager: Ivan Adam Vari <i.vari@niwa.co.nz>
 Source0: %{name}-stable.tar.gz
 Provides: %{name}
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires: gts-snapshot-devel >= 0.7.6 pkgconfig gcc sed gawk m4
-BuildRequires: gts-snapshot-devel >= 0.7.6 glib2-devel geomview
-BuildRequires: glibc-devel automake libtool gtkglext-devel
-BuildRequires: startup-notification-devel
 %if 0%{?fedora_version}
-BuildRequires: libXt-devel netpbm-devel
+Requires: proj gsl netcdf
 %elif 0%{?suse_version}
-BuildRequires: xorg-x11-devel libnetpbm
+Requires: proj4 gsl libnetcdf-4
 %endif
+BuildRequires: gts-snapshot-devel >= 0.7.6 glib2-devel geomview-devel
+BuildRequires: glibc-devel automake libtool gtkglext-devel
+BuildRequires: startup-notification-devel gsl-devel
+%if 0%{?fedora_version}
+BuildRequires: libXt-devel netpbm-devel netcdf-devel
+%elif 0%{?suse_version}
+BuildRequires: xorg-x11-devel libnetpbm libnetcdf-devel
+%endif
+
 
 %description
 Gerris is an Open Source Free Software library for the solution of the 
@@ -103,6 +109,9 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 
 
 %changelog
+* Mon May 12 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 5
+- Added new package dependencies, minor fixes
+
 * Mon Jan 7 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 4
 - Removed %{?_smp_mflags} from make due to intermittent
   build errors on some SMP systems
