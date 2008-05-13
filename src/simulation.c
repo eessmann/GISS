@@ -79,7 +79,10 @@ static void simulation_write (GtsObject * object, FILE * fp)
   i = sim->modules;
   while (i) {
     void (* module_write) (FILE *);
-    fprintf (fp, "  GModule %s", g_module_name (i->data));
+    const gchar * name = NULL;
+    fprintf (fp, "  GModule %s", 
+	     g_module_symbol (i->data, "gfs_module_name", (gpointer) &name) ? name : 
+	     g_module_name (i->data));
     if (g_module_symbol (i->data, "gfs_module_write", (gpointer) &module_write))
       (* module_write) (fp);
     fputc ('\n', fp);
@@ -204,7 +207,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
     else if (!strcmp (fp->token->str, "GModule")) {
       gts_file_next_token (fp);
       if (fp->type != GTS_STRING) {
-	gts_file_error (fp, "expecting a string (filename)");
+	gts_file_error (fp, "expecting a string (module name)");
 	return;
       }
       if (!g_module_supported ()) {

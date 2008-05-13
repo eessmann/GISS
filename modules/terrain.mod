@@ -1144,9 +1144,10 @@ GfsEventClass * gfs_terrain_class (void)
 
 /* Initialize module */
 
+/* only define gfs_module_name for "official" modules (i.e. those installed in
+   GFS_MODULES_DIR) */
+const gchar gfs_module_name[] = "terrain";
 const gchar * g_module_check_init (void);
-void          gfs_module_read     (GtsFile * fp);
-void          gfs_module_write    (FILE * fp);
 
 const gchar * g_module_check_init (void)
 {
@@ -1156,14 +1157,4 @@ const gchar * g_module_check_init (void)
   gfs_refine_terrain_class ();
   gfs_terrain_class ();
   return NULL;
-}
-
-void gfs_module_read (GtsFile * fp)
-{
-  g_return_if_fail (fp != NULL);
-}
-
-void gfs_module_write (FILE * fp)
-{
-  g_return_if_fail (fp != NULL);
 }

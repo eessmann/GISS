@@ -332,6 +332,9 @@ GfsBcClass * gfs_bc_tide_class (void)
 
 /* Initialize module */
 
+/* only define gfs_module_name for "official" modules (i.e. those installed in
+   GFS_MODULES_DIR) */
+const gchar gfs_module_name[] = "tide";
 const gchar * g_module_check_init (void);
 void          gfs_module_read     (GtsFile * fp);
 void          gfs_module_write    (FILE * fp);
