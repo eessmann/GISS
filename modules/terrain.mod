@@ -25,7 +25,7 @@
 #include "solid.h"
 #include "rsurface.h"
 
-static gchar * default_dir = "/home/popinet/Projects/GIS/rsurfaces";
+static gchar * default_path = ".";
 
 /* GfsRefineTerrain: Header */
 
@@ -793,32 +793,32 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
   t->name = g_strdup (fp->token->str);
   gts_file_next_token (fp);
 
-  gchar * dir = NULL;
+  gchar * path = NULL;
   if (fp->type == '{') {
     GtsFileVariable var[] = {
       {GTS_STRING, "basename", TRUE},
-      {GTS_STRING, "dir",      TRUE},
+      {GTS_STRING, "path",      TRUE},
       {GTS_NONE}
     };
     gchar * basename = NULL;
     var[0].data = &basename;
-    var[1].data = &dir;
+    var[1].data = &path;
     gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR)
       return;
     if (var[0].set) { g_free (t->basename); t->basename = basename; }
-    if (!var[1].set) dir = g_strdup (default_dir);
+    if (!var[1].set) path = g_strdup (default_path);
   }
   else
-    dir = g_strdup (default_dir);
+    path = g_strdup (default_path);
 
   if (!strcmp (t->basename, "*")) { /* file globbing */
-    gchar * pattern = g_strconcat (dir, "/*.Data", NULL);
+    gchar * pattern = g_strconcat (path, "/*.Data", NULL);
     glob_t pglob;
     if (glob (pattern, GLOB_ERR, NULL, &pglob)) {
-      gts_file_error (fp, "cannot find/open RSurface files in path:\n%s", pattern);
+      gts_file_error (fp, "cannot find/open terrain databases in path:\n%s", pattern);
       g_free (pattern);
-      g_free (dir);
+      g_free (path);
       return;
     }
     g_free (pattern);
@@ -830,15 +830,15 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
       t->rs = g_realloc (t->rs, (t->nrs + 1)*sizeof (RSurface *));
       t->rs[t->nrs] = r_surface_open (pglob.gl_pathv[i], "r", -1);
       if (!t->rs[t->nrs]) {
-	gts_file_error (fp, "cannot open RSurface `%s'", pglob.gl_pathv[i]);
+	gts_file_error (fp, "cannot open terrain database `%s'", pglob.gl_pathv[i]);
 	globfree (&pglob);
-	g_free (dir);
+	g_free (path);
 	return;
       }
       if (t->basename) {
-	gchar * dirbasename = g_strconcat (t->basename, ",", pglob.gl_pathv[i], NULL);
+	gchar * pathbasename = g_strconcat (t->basename, ",", pglob.gl_pathv[i], NULL);
 	g_free (t->basename);
-	t->basename = dirbasename;
+	t->basename = pathbasename;
       }
       else
 	t->basename = g_strdup (pglob.gl_pathv[i]);
@@ -847,40 +847,51 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
     globfree (&pglob);
   }
   else { /* basename is of the form: set1,set2,set3... */
-    gchar * basename = g_strdup (t->basename);
-    if (dir) {
+    gchar ** names = g_strsplit (t->basename, ",", 0);
+    if (path) {
       g_free (t->basename);
       t->basename = NULL;
     }
-    gchar * s = strtok (basename, ",");
-    while (s) {
+    gchar ** s = names;
+    while (*s) {
       t->rs = g_realloc (t->rs, (t->nrs + 1)*sizeof (RSurface *));
-      if (dir) {
-	gchar * fname = s[0] == '/' ? g_strdup (s) : g_strconcat (dir, "/", s, NULL);
-	t->rs[t->nrs] = r_surface_open (fname, "r", -1);
+      if (path) {
+	/* search path */
+	gchar ** pathes = g_strsplit (path, ":", 0);
+	gchar ** spath = pathes, * fname;
+	g_assert (*spath);
+	do {
+	  fname = (*s)[0] == '/' ? g_strdup (*s) : g_strconcat (*spath, "/", *s, NULL);
+	  t->rs[t->nrs] = r_surface_open (fname, "r", -1);
+	} while (t->rs[t->nrs] == NULL && *(++spath));
+	g_strfreev (pathes);
+
 	if (t->basename) {
-	  gchar * dirbasename = g_strconcat (t->basename, ",", fname, NULL);
+	  gchar * pathbasename = g_strconcat (t->basename, ",", fname, NULL);
 	  g_free (t->basename);
-	  t->basename = dirbasename;
+	  t->basename = pathbasename;
 	  g_free (fname);
 	}
 	else
 	  t->basename = fname;
       }
       else
-	t->rs[t->nrs] = r_surface_open (s, "r", -1);
+	t->rs[t->nrs] = r_surface_open (*s, "r", -1);
       if (!t->rs[t->nrs]) {
-	gts_file_error (fp, "cannot open RSurface `%s'", s);
-	g_free (basename);
-	g_free (dir);
+	if (path)
+	  gts_file_error (fp, "cannot find/open terrain database `%s' in path:\n%s", *s, path);
+	else
+	  gts_file_error (fp, "cannot open terrain database `%s'", *s);
+	g_strfreev (names);
+	g_free (path);
 	return;
       }
       t->nrs++;
-      s = strtok (NULL, ",");
+      s++;
     }
-    g_free (basename);
+    g_strfreev (names);
   }
-  g_free (dir);
+  g_free (path);
 
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
   guint i;
@@ -1151,9 +1162,9 @@ const gchar * g_module_check_init (void);
 
 const gchar * g_module_check_init (void)
 {
-  gchar * dir = getenv ("GFS_RSURFACES_PATH");
-  if (dir)
-    default_dir = dir;
+  gchar * path = getenv ("GFS_TERRAIN_PATH");
+  if (path)
+    default_path = path;
   gfs_refine_terrain_class ();
   gfs_terrain_class ();
   return NULL;
