@@ -928,14 +928,14 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
   while (i) {
     GfsAdapt * a = i->data;
     if (a->active) {
-      if (level < gfs_function_value (a->maxlevel, cell) &&
-	  (* a->cost) (cell, a) > a->cmax) {
+      guint maxlevel = gfs_function_value (a->maxlevel, cell);
+      if (level < maxlevel && (* a->cost) (cell, a) > a->cmax) {
 	REFINABLE (cell, p) = TRUE;
 	COARSENABLE (cell, p) = FALSE;
 	return;
       }
       if (level < gfs_function_value (a->minlevel, cell) ||
-	  (* a->cost) (cell, a) > a->cmax/a->cfactor)
+	  (level <= maxlevel && (* a->cost) (cell, a) > a->cmax/a->cfactor))
 	COARSENABLE (cell, p) = FALSE;
     }
     i = i->next;
