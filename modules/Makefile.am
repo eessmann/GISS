@@ -71,9 +71,11 @@ libtide2D3_la_LIBADD = -Lfes2004 -lfes -lnetcdf $(GSL_LIBS)
 
 xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c rsurface.h
 xyz2rsurface_LDADD = -LRStarTree -lcSmRST
+xyz2rsurface_CFLAGS = $(AM_CFLAGS)
 
 rsurfacequery_SOURCES = rsurfacequery.c rsurface.c rsurface.h
 rsurfacequery_LDADD = -LRStarTree -lcSmRST
+rsurfacequery_CFLAGS = $(AM_CFLAGS)
 
 if HAVE_MODULES
 %.c : %.mod
