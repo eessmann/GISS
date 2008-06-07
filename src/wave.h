@@ -26,11 +26,16 @@ extern "C" {
 
 #include "simulation.h"
 
+/* GfsWave: Header */
+
 typedef struct _GfsWave    GfsWave;
 
 struct _GfsWave {
+  /*< private >*/
   GfsSimulation parent;
+  guint ik, ith;
 
+  /*< public >*/
   guint nk, ntheta;
   GfsVariable *** F;
 };
@@ -42,6 +47,26 @@ struct _GfsWave {
 							    gfs_wave_class ()))
 
 GfsSimulationClass * gfs_wave_class        (void);
+
+/* GfsInitWave: Header */
+
+typedef struct _GfsInitWave         GfsInitWave;
+
+struct _GfsInitWave {
+  /*< private >*/
+  GfsGenericInit parent;
+
+  /*< public >*/
+  GfsFunction * d, * hs;
+};
+
+#define GFS_INIT_WAVE(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsInitWave,\
+					         gfs_init_wave_class ())
+#define GFS_IS_INIT_WAVE(obj)         (gts_object_is_from_class (obj,\
+						 gfs_init_wave_class ()))
+
+GfsGenericInitClass * gfs_init_wave_class  (void);
 
 #ifdef __cplusplus
 }

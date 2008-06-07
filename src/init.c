@@ -146,6 +146,7 @@ GtsObjectClass ** gfs_classes (void)
 #if FTT_2D
     gfs_init_vorticity_class (),
 #endif /* FTT_2D */
+    gfs_init_wave_class (),
 
     gfs_adapt_class (),
       gfs_adapt_vorticity_class (),
