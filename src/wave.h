@@ -31,6 +31,7 @@ typedef struct _GfsWave    GfsWave;
 struct _GfsWave {
   GfsSimulation parent;
 
+  guint nk, ntheta;
   GfsVariable *** F;
 };
 

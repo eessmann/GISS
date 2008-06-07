@@ -23,8 +23,6 @@
 
 /* GfsWave: Object */
 
-#define NK 25
-#define NTHETA 24
 #define LENGTH 5000. /* box length: 5000 km */
 
 static double frequency (int ik)
@@ -45,40 +43,42 @@ static double costheta (double theta, double thetam, double thetapower)
   return a > 0. ? pow (a, thetapower) : 0.;
 }
       
-static double theta (int ith) 
+static double theta (guint ith, guint ntheta)
 {
-  return 2.*M_PI*ith/NTHETA;
+  return 2.*M_PI*ith/ntheta;
 }
 
-static void cg (int ik, int ith, FttVector * u) 
+static void cg (int ik, int ith, FttVector * u, guint ntheta)
 {
   double cg = 9.81/(4.*M_PI*frequency (ik))/1000./LENGTH*3600.;
-  u->x = cg*cos (theta (ith));
-  u->y = cg*sin (theta (ith));
+  u->x = cg*cos (theta (ith, ntheta));
+  u->y = cg*sin (theta (ith, ntheta));
   u->z = 0.;
 }
 
 static gdouble cell_E (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 {
-  GfsVariable *** F = GFS_WAVE (domain)->F;
+  GfsWave * wave = GFS_WAVE (domain);
+  GfsVariable *** F = wave->F;
   guint ik, ith;
   gdouble E = 0.;
-  for (ik = 0; ik < NK - 1; ik++) {
+  for (ik = 0; ik < wave->nk - 1; ik++) {
     gdouble df = (frequency (ik + 1) - frequency (ik))/2.;
-    for (ith = 0; ith < NTHETA; ith++)
+    for (ith = 0; ith < wave->ntheta; ith++)
       E += (GFS_VALUE (cell, F[ik + 1][ith]) + GFS_VALUE (cell, F[ik][ith]))*df;
   }
-  return E*2.*M_PI/NTHETA;
+  return E*2.*M_PI/wave->ntheta;
 }
 
 static void init_action (FttCell * cell, GfsVariable *** F)
 {
+  GfsWave * wave = GFS_WAVE (F[0][0]->domain);
   guint ik, ith;
-  for (ik = 0; ik < NK; ik++)
-    for (ith = 0; ith < NTHETA; ith++)
+  for (ik = 0; ik < wave->nk; ik++)
+    for (ith = 0; ith < wave->ntheta; ith++)
       GFS_VALUE (cell, F[ik][ith]) = 
 	gaussian (frequency (ik), 0.1, 0.01)*
-	costheta (theta (ith), 30.*M_PI/180., 2.);
+	costheta (theta (ith, wave->ntheta), 30.*M_PI/180., 2.);
 
   gdouble E = cell_E (cell, NULL, F[0][0]->domain);
   gdouble Hs = 2.5;
@@ -89,8 +89,8 @@ static void init_action (FttCell * cell, GfsVariable *** F)
   p.x -= xc;
   p.y -= yc;
   gdouble scaling = Hs*Hs/(16.*E)*gaussian (sqrt (p.x*p.x + p.y*p.y), 0., 150./LENGTH);
-  for (ik = 0; ik < NK; ik++)
-    for (ith = 0; ith < NTHETA; ith++)
+  for (ik = 0; ik < wave->nk; ik++)
+    for (ith = 0; ith < wave->ntheta; ith++)
       GFS_VALUE (cell, F[ik][ith]) *= scaling;
 }
 
@@ -103,10 +103,11 @@ static void set_group_velocity (const FttCellFace * face, FttVector * u)
 static void wave_run (GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
+  GfsWave * wave = GFS_WAVE (sim);
 
   gfs_simulation_refine (sim);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) init_action, GFS_WAVE (sim)->F);
+			    (FttCellTraverseFunc) init_action, wave->F);
   gfs_simulation_init (sim);
 
   while (sim->time.t < sim->time.end &&
@@ -125,9 +126,9 @@ static void wave_run (GfsSimulation * sim)
     
     /* spatial advection */
     guint ik, ith;
-    for (ik = 0; ik < NK; ik++) {
+    for (ik = 0; ik < wave->nk; ik++) {
       FttVector u;
-      cg (ik, 0, &u);
+      cg (ik, 0, &u, wave->ntheta);
       gfs_domain_face_traverse (domain, FTT_XYZ,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttFaceTraverseFunc) set_group_velocity, &u);
@@ -136,15 +137,15 @@ static void wave_run (GfsSimulation * sim)
       guint n = rint (dt/sim->advection_params.dt);
       g_assert (fabs (sim->time.t + sim->advection_params.dt*n - tnext) < 1e-12);
       while (n--) {
-	for (ith = 0; ith < NTHETA; ith++) {
+	for (ith = 0; ith < wave->ntheta; ith++) {
 	  FttVector u;
-	  cg (ik, ith, &u);
+	  cg (ik, ith, &u, wave->ntheta);
 	  gfs_domain_face_traverse (domain, FTT_XYZ,
 				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				    (FttFaceTraverseFunc) set_group_velocity, &u);
 	  GfsVariable * t = GFS_WAVE (sim)->F[ik][ith];
-	  GFS_VARIABLE_TRACER (t)->advection.dt = sim->advection_params.dt;
-	  gfs_tracer_advection_diffusion (domain, &GFS_VARIABLE_TRACER (t)->advection);
+	  sim->advection_params.v = t;
+	  gfs_tracer_advection_diffusion (domain, &sim->advection_params);
 	  gfs_domain_cell_traverse (domain,
 				    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 				    (FttCellTraverseFunc) t->fine_coarse, t);
@@ -169,13 +170,63 @@ static void wave_run (GfsSimulation * sim)
 
 static void wave_destroy (GtsObject * object)
 {
-  gfs_matrix_free (GFS_WAVE (object)->F);
+  if (GFS_WAVE (object)->F)
+    gfs_matrix_free (GFS_WAVE (object)->F);
   (* GTS_OBJECT_CLASS (gfs_wave_class ())->parent_class->destroy) (object);
+}
+
+static void wave_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_wave_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsWave * wave = GFS_WAVE (*o);
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_UINT, "nk",     TRUE},
+      {GTS_UINT, "ntheta", TRUE},
+      {GTS_NONE}
+    };
+    var[0].data = &wave->nk;
+    var[1].data = &wave->ntheta;
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;
+  }
+
+  GfsDomain * domain = GFS_DOMAIN (wave);
+  guint ik, ith;
+  wave->F = gfs_matrix_new (wave->nk, wave->ntheta, sizeof (GfsVariable *));
+  for (ik = 0; ik < wave->nk; ik++)
+    for (ith = 0; ith < wave->ntheta; ith++) {
+      gchar * name = g_strdup_printf ("F%d_%d", ik, ith);
+      gchar * description = g_strdup_printf ("Action density for f = %g Hz and theta = %g degrees",
+					     frequency (ik), theta (ith, wave->ntheta)*180./M_PI);
+      wave->F[ik][ith] = gfs_domain_get_or_add_variable (domain, name, description);
+      g_assert (wave->F[ik][ith]);
+      g_free (name);
+      g_free (description);
+    }
+}
+
+static void wave_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_wave_class ())->parent_class->write) (o, fp);
+
+  GfsWave * wave = GFS_WAVE (o);
+  fprintf (fp, " {\n"
+	   "  nk = %d\n"
+	   "  ntheta = %d\n"
+	   "}",
+	   wave->nk, wave->ntheta);
 }
 
 static void gfs_wave_class_init (GfsSimulationClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->destroy = wave_destroy;
+  GTS_OBJECT_CLASS (klass)->read = wave_read;
+  GTS_OBJECT_CLASS (klass)->write = wave_write;
   klass->run = wave_run;
 }
 
@@ -187,24 +238,16 @@ static gdouble cell_hs (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 
 static void wave_init (GfsWave * wave)
 {
-  guint ik, ith;
-  wave->F = gfs_matrix_new (NK, NTHETA, sizeof (GfsVariable *));
-  for (ik = 0; ik < NK; ik++)
-    for (ith = 0; ith < NTHETA; ith++) {
-      gchar * name = g_strdup_printf ("F%d_%d", ik, ith);
-      gchar * description = g_strdup_printf ("Action density for f = %g Hz and theta = %g degrees",
-					     frequency (ik), theta (ith)*180./M_PI);
-      wave->F[ik][ith] = gfs_domain_add_variable (GFS_DOMAIN (wave), 
-						  gfs_variable_tracer_class (), 
-						  name, description);
-      g_assert (wave->F[ik][ith]);
-      GFS_VARIABLE_TRACER (wave->F[ik][ith])->advection.use_centered_velocity = FALSE;
-      g_free (name);
-      g_free (description);
-    }
+  wave->nk = 25;
+  wave->ntheta = 24;
+
+  GfsAdvectionParams * par = &GFS_SIMULATION (wave)->advection_params;
+  par->gradient = gfs_center_van_leer_gradient;
+  par->flux = gfs_face_advection_flux;
+  par->use_centered_velocity = FALSE;  
 
   static GfsDerivedVariableInfo derived_variable[] = {
-    { "Hs", "significant wave height", cell_hs },
+    { "Hs", "Significant wave height", cell_hs },
     { NULL, NULL, NULL}
   };
   GfsDerivedVariableInfo * v = derived_variable;
