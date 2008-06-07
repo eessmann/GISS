@@ -7,7 +7,8 @@ EXAMPLES = \
 	tangaroa \
 	logo \
 	tides \
-	ship
+	ship \
+	garden
 
 EXTRA_DIST = \
 	template.tex \
