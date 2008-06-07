@@ -9,11 +9,11 @@ else
 fi
 
 for i in 6-24 0-24 0-60 0-120; do
-    echo "Save end-$i.gnu { format = Gnuplot }" | gfsview-batch2D end-$i.gfs end.gfv
+    echo "Save end-$i.gnu { format = Gnuplot }" | gfsview-batch2D end-$i.gfs.gz end.gfv
 done
 
 for i in 0 24 72 120; do
-    echo "Save mesh-$i.gnu { format = Gnuplot }" | gfsview-batch2D sim-0-120-$i.gfs mesh.gfv
+    echo "Save mesh-$i.gnu { format = Gnuplot }" | gfsview-batch2D sim-0-120-$i.gfs.gz mesh.gfv
 done
 
 cat <<EOF | gnuplot

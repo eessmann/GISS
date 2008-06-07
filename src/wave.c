@@ -65,10 +65,33 @@ static void set_group_velocity (const FttCellFace * face, FttVector * u)
     GFS_FACE_NORMAL_VELOCITY_LEFT (face) = (&u->x)[face->d/2];
 }
 
+typedef struct {
+  GfsAdvectionParams * p;
+  GfsVariable * div, * fv;
+} SolidFluxParams;
+
+static void solid_flux (FttCell * cell, SolidFluxParams * par)
+{
+  gfs_normal_divergence (cell, par->div);
+  if (GFS_VALUE (cell, par->div) < 0.) {
+    gdouble h = ftt_cell_size (cell);
+    GFS_VALUE (cell, par->fv) = GFS_VALUE (cell, par->div)*par->p->dt*
+      GFS_VALUE (cell, par->p->v)/(h*h);
+  }
+  else
+    GFS_VALUE (cell, par->fv) = 0.;
+}
+
 static void wave_run (GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
   GfsWave * wave = GFS_WAVE (sim);
+
+  SolidFluxParams par;
+  par.div = gfs_variable_from_name (domain->variables, "P");
+  g_assert (par.div);
+  par.p = &sim->advection_params;
+  par.fv = gfs_temporary_variable (domain);
 
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);
@@ -108,7 +131,13 @@ static void wave_run (GfsSimulation * sim)
 				    (FttFaceTraverseFunc) set_group_velocity, &u);
 	  GfsVariable * t = GFS_WAVE (sim)->F[ik][ith];
 	  sim->advection_params.v = t;
+	  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				    (FttCellTraverseFunc) solid_flux, &par);
 	  gfs_tracer_advection_diffusion (domain, &sim->advection_params);
+	  sim->advection_params.fv = par.fv;
+	  gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, 
+	  			      &sim->advection_params);
+	  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, t);
 	  gfs_domain_cell_traverse (domain,
 				    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 				    (FttCellTraverseFunc) t->fine_coarse, t);
@@ -129,6 +158,7 @@ static void wave_run (GfsSimulation * sim)
   }
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gts_object_destroy, NULL);
+  gts_object_destroy (GTS_OBJECT (par.fv));
 }
 
 static void wave_destroy (GtsObject * object)

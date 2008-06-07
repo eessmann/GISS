@@ -108,15 +108,12 @@
     OutputTime { istep = 1 } log-MINLEVEL-NTHETA
     OutputScalarStats { step = 12 } hs-MINLEVEL-NTHETA { v = Hs }
     OutputSimulation { step = 12 } sim-MINLEVEL-NTHETA-%g.gfs
+    EventScript { step = 12 } { gzip -f sim-*-*-*.gfs }
     OutputSimulation { start = end } end-MINLEVEL-NTHETA.gfs    
+    EventScript { start = end } { gzip -f end-*-*.gfs }
     OutputPPM { step = 12 } { ppm2mpeg > hs-MINLEVEL-NTHETA.mpg } { v = Hs maxlevel = 7 }
 } {
     # Number of discretised directions (default is 24)
     ntheta = NTHETA
 }
-GfsBox {
-    top = Boundary
-    bottom = Boundary
-    left = Boundary
-    right = Boundary
-}
+GfsBox {}
