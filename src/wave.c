@@ -221,6 +221,7 @@ static void wave_init (GfsWave * wave)
 
   static GfsDerivedVariableInfo derived_variable[] = {
     { "Hs", "Significant wave height", cell_hs },
+    { "Energy", "Wave energy", cell_E },
     { "Frequency", "Wave frequency", cell_frequency },
     { "Direction", "Wave direction (angle)", cell_direction },
     { NULL, NULL, NULL}
