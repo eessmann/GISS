@@ -25,24 +25,24 @@
 
 #define NK 25
 #define NTHETA 24
+#define LENGTH 5000. /* box length: 5000 km */
 
-static double frequency (int ik) 
+static double frequency (int ik)
 {
   double gamma = 1.1;
   double f0 = 0.04;
   return f0*pow(gamma, ik);
 }
       
-static double gaussian (double f, double fmean, double fsigma) 
+static double gaussian (double f, double fmean, double fsigma)
 {
   return exp (-((f - fmean)*(f - fmean))/(fsigma*fsigma));
 }
 
-static double costheta (double theta, double thetam, double thetapower) 
+static double costheta (double theta, double thetam, double thetapower)
 {
-  if (fabs (theta - thetam) > M_PI/2.) return 0.;
   double a = cos (theta - thetam);
-  return pow (a, thetapower);
+  return a > 0. ? pow (a, thetapower) : 0.;
 }
       
 static double theta (int ith) 
@@ -52,32 +52,46 @@ static double theta (int ith)
 
 static void cg (int ik, int ith, FttVector * u) 
 {
-  double cg = 9.81/(4.*M_PI*frequency (ik))/1000./5000.*3600.;
+  double cg = 9.81/(4.*M_PI*frequency (ik))/1000./LENGTH*3600.;
   u->x = cg*cos (theta (ith));
   u->y = cg*sin (theta (ith));
   u->z = 0.;
 }
 
-static double action (int ik, int ith, double x, double y, double amp) 
+static gdouble cell_E (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 {
-  double xc = -0.5 + 500./5000.;
-  double yc = -0.5 + 500./5000.;
-  x -= xc;
-  y -= yc;
-  return amp*
-    gaussian (frequency (ik), 0.1, 0.01)*
-    costheta (theta (ith), 30.*M_PI/180., 2.)*
-    gaussian (sqrt (x*x + y*y), 0., 150./5000.);
+  GfsVariable *** F = GFS_WAVE (domain)->F;
+  guint ik, ith;
+  gdouble E = 0.;
+  for (ik = 0; ik < NK - 1; ik++) {
+    gdouble df = (frequency (ik + 1) - frequency (ik))/2.;
+    for (ith = 0; ith < NTHETA; ith++)
+      E += (GFS_VALUE (cell, F[ik + 1][ith]) + GFS_VALUE (cell, F[ik][ith]))*df;
+  }
+  return E*2.*M_PI/NTHETA;
 }
 
 static void init_action (FttCell * cell, GfsVariable *** F)
 {
   guint ik, ith;
-  FttVector p;
-  gfs_cell_cm (cell, &p);
   for (ik = 0; ik < NK; ik++)
     for (ith = 0; ith < NTHETA; ith++)
-      GFS_VALUE (cell, F[ik][ith]) = action (ik, ith, p.x, p.y, 1.);
+      GFS_VALUE (cell, F[ik][ith]) = 
+	gaussian (frequency (ik), 0.1, 0.01)*
+	costheta (theta (ith), 30.*M_PI/180., 2.);
+
+  gdouble E = cell_E (cell, NULL, F[0][0]->domain);
+  gdouble Hs = 2.5;
+  FttVector p;
+  gfs_cell_cm (cell, &p);
+  double xc = -0.5 + 500./LENGTH;
+  double yc = -0.5 + 500./LENGTH;
+  p.x -= xc;
+  p.y -= yc;
+  gdouble scaling = Hs*Hs/(16.*E)*gaussian (sqrt (p.x*p.x + p.y*p.y), 0., 150./LENGTH);
+  for (ik = 0; ik < NK; ik++)
+    for (ith = 0; ith < NTHETA; ith++)
+      GFS_VALUE (cell, F[ik][ith]) *= scaling;
 }
 
 static void set_group_velocity (const FttCellFace * face, FttVector * u)
@@ -119,7 +133,7 @@ static void wave_run (GfsSimulation * sim)
 				(FttFaceTraverseFunc) set_group_velocity, &u);
       gfs_simulation_set_timestep (sim);
       /* subcycling */
-      guint n = ceil (dt/sim->advection_params.dt);
+      guint n = rint (dt/sim->advection_params.dt);
       g_assert (fabs (sim->time.t + sim->advection_params.dt*n - tnext) < 1e-12);
       while (n--) {
 	for (ith = 0; ith < NTHETA; ith++) {
@@ -165,6 +179,12 @@ static void gfs_wave_class_init (GfsSimulationClass * klass)
   klass->run = wave_run;
 }
 
+static gdouble cell_hs (FttCell * cell, FttCellFace * face, GfsDomain * domain)
+{
+  gdouble E = cell_E (cell, face, domain);
+  return E > 0. ? 4.*sqrt (E) : 0.;
+}
+
 static void wave_init (GfsWave * wave)
 {
   guint ik, ith;
@@ -182,6 +202,16 @@ static void wave_init (GfsWave * wave)
       g_free (name);
       g_free (description);
     }
+
+  static GfsDerivedVariableInfo derived_variable[] = {
+    { "Hs", "significant wave height", cell_hs },
+    { NULL, NULL, NULL}
+  };
+  GfsDerivedVariableInfo * v = derived_variable;
+  while (v->name) {
+    g_assert (gfs_domain_add_derived_variable (GFS_DOMAIN (wave), *v));
+    v++;
+  }
 }
 
 GfsSimulationClass * gfs_wave_class (void)
