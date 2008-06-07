@@ -2225,7 +2225,7 @@ gdouble gfs_domain_cfl (GfsDomain * domain,
 
   g_return_val_if_fail (domain != NULL, 0.);
 
-  p.cfl = 1.;
+  p.cfl = G_MAXDOUBLE;
   gfs_domain_face_traverse (domain, FTT_XYZ, FTT_PRE_ORDER, flags, max_depth, 
 			    (FttFaceTraverseFunc) minimum_mac_cfl, &p.cfl);
   p.v = gfs_domain_velocity (domain);
