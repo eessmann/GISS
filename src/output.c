@@ -1211,9 +1211,8 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (event);
-    
-    g_slist_free (domain->variables_io);
-    domain->variables_io = output->var;
+
+    domain->variables_io = output->var ? output->var : domain->variables;
     domain->binary =       output->binary;
     sim->output_solid   =  output->solid;
     switch (output->format) {
@@ -1298,16 +1297,6 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (*o);
-  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (output));
-  if (output->var == NULL) {
-    GSList * i = domain->variables;
-    
-    while (i) {
-      if (GFS_VARIABLE1 (i->data)->name)
-	output->var = g_slist_append (output->var, i->data);
-      i = i->next;
-    }
-  }
 
   if (fp->type == '{') {
     GtsFileVariable var[] = {
@@ -1333,6 +1322,7 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
 
     if (variables != NULL) {
       gchar * error = NULL;
+      GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (output));
       GSList * vars = gfs_variables_from_list (domain->variables, variables, &error);
 
       if (vars == NULL) {
@@ -1341,8 +1331,7 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
 	g_free (variables);
 	return;
       }
-      if (output->var)
-	g_slist_free (output->var);
+      g_slist_free (output->var);
       output->var = vars;
       g_free (variables);
     }
