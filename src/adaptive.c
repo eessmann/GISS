@@ -444,43 +444,54 @@ GfsEventClass * gfs_adapt_function_class (void)
 
 /* GfsAdaptGradient: Object */
 
+static void gfs_adapt_gradient_destroy (GtsObject * o)
+{
+  if (GFS_ADAPT_GRADIENT (o)->v && !gfs_function_get_variable (GFS_ADAPT_FUNCTION (o)->f))
+    gts_object_destroy (GTS_OBJECT (GFS_ADAPT_GRADIENT (o)->v));
+
+  (* GTS_OBJECT_CLASS (gfs_adapt_gradient_class ())->parent_class->destroy) (o);
+}
+
 static void gfs_adapt_gradient_read (GtsObject ** o, GtsFile * fp)
 {
-  GfsVariable * v;
-  GfsDomain * domain;
-
-  if (GTS_OBJECT_CLASS (gfs_adapt_gradient_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_adapt_gradient_class ())->parent_class->read) 
-      (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_adapt_gradient_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
-  if (fp->type != GTS_STRING) {
-    gts_file_error (fp, "expecting a string (variable name)");
-    return;
-  }
-  domain = GFS_DOMAIN (gfs_object_simulation (*o));
-  v = gfs_variable_from_name (domain->variables, fp->token->str);
-  if (v == NULL) {
-    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
-    return;
-  }
-  GFS_ADAPT_GRADIENT (*o)->v = v;
-  gts_file_next_token (fp);
+  GFS_ADAPT_GRADIENT (*o)->v = gfs_function_get_variable (GFS_ADAPT_FUNCTION (*o)->f);
+  if (GFS_ADAPT_GRADIENT (*o)->v == NULL)
+    GFS_ADAPT_GRADIENT (*o)->v = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
 }
 
-static void gfs_adapt_gradient_write (GtsObject * o, FILE * fp)
+static void update_f (FttCell * cell, GfsAdaptFunction * a)
 {
-  if (GTS_OBJECT_CLASS (gfs_adapt_gradient_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_adapt_gradient_class ())->parent_class->write) 
-      (o, fp);
-  fprintf (fp, " %s ", GFS_ADAPT_GRADIENT (o)->v->name);
+  GFS_VALUE (cell, GFS_ADAPT_GRADIENT (a)->v) = gfs_function_value (a->f, cell);
+}
+
+static gboolean gfs_adapt_gradient_event (GfsEvent * event, 
+					  GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_adapt_gradient_class ())->parent_class)->event) 
+      (event, sim)) {
+    if (!gfs_function_get_variable (GFS_ADAPT_FUNCTION (event)->f)) {
+      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) update_f, event);
+      GfsVariable * v = GFS_ADAPT_GRADIENT (event)->v;
+      gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				(FttCellTraverseFunc) v->fine_coarse, v);
+      gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, v);
+    }
+    return TRUE;
+  }
+  return FALSE;
 }
 
 static void gfs_adapt_gradient_class_init (GfsEventClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_adapt_gradient_destroy;
   GTS_OBJECT_CLASS (klass)->read = gfs_adapt_gradient_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_adapt_gradient_write;
+  klass->event = gfs_adapt_gradient_event;
 }
 
 static gdouble gradient_cost (FttCell * cell, GfsAdaptGradient * a)
@@ -517,7 +528,7 @@ GfsEventClass * gfs_adapt_gradient_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_adapt_class ()),
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_adapt_function_class ()),
 				  &gfs_adapt_gradient_info);
   }
 

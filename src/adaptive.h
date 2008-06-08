@@ -114,7 +114,7 @@ typedef struct _GfsAdaptGradient         GfsAdaptGradient;
 
 struct _GfsAdaptGradient {
   /*< private >*/
-  GfsAdapt parent;
+  GfsAdaptFunction parent;
 
   /*< public >*/
   GfsVariable * v;
