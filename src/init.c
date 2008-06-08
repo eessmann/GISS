@@ -87,7 +87,7 @@ static void gfs_log (const gchar * log_domain,
  * gfs_classes:
  *
  * Returns: a pointer to a NULL-terminated array of all the classes
- * used in Gerris parameter files.
+ * usable in Gerris parameter files.
  */
 GtsObjectClass ** gfs_classes (void)
 {

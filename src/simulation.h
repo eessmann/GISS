@@ -42,7 +42,7 @@ struct _GfsTime {
 };
 
 struct _GfsPhysicalParams {
-  gdouble g;
+  gdouble L, g;
   GfsFunction * alpha;
 };
 
@@ -109,6 +109,9 @@ void                 gfs_simulation_map          (GfsSimulation * sim,
 						  FttVector * p);
 void                 gfs_simulation_map_inverse  (GfsSimulation * sim, 
 						  FttVector * p);
+gdouble              gfs_dimensional_value       (GfsVariable * v, 
+						  gdouble val);
+gboolean             gfs_variable_is_dimensional (GfsVariable * v);
 void                 gfs_time_init               (GfsTime * t);
 void                 gfs_time_write              (GfsTime * t, 
 						  FILE * fp);

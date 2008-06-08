@@ -509,6 +509,7 @@ static VarFunc * var_func_new (GfsVariable * v, GfsFunction * f)
   VarFunc * vf = g_malloc (sizeof (VarFunc));
   vf->v = v;
   vf->f = f;
+  gfs_function_set_units (vf->f, vf->v->units);
   return vf;
 }
 
@@ -613,7 +614,7 @@ static void gfs_init_destroy (GtsObject * object)
 
 static void init_vf (FttCell * cell, VarFunc * vf)
 {
-  GFS_VARIABLE (cell, vf->v->i) = gfs_function_value (vf->f, cell);
+  GFS_VALUE (cell, vf->v) = gfs_function_value (vf->f, cell);
 }
 
 static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
@@ -1461,6 +1462,7 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
       gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
       return;
     }
+    s->diff->units = s->v->units;
     gts_file_next_token (fp);
   }
 }
@@ -1475,12 +1477,12 @@ static void gfs_event_stop_destroy (GtsObject * o)
 
 static void diff (FttCell * cell, GfsEventStop * s)
 {
-  GFS_VARIABLE (cell, s->oldv->i) -= GFS_VARIABLE (cell, s->v->i);
+  GFS_VALUE (cell, s->oldv) -= GFS_VALUE (cell, s->v);
 }
 
 static void copy (FttCell * cell, GfsEventStop * s)
 {
-  GFS_VARIABLE (cell, s->oldv->i) = GFS_VARIABLE (cell, s->v->i);
+  GFS_VALUE (cell, s->oldv) = GFS_VALUE (cell, s->v);
 }
 
 static gboolean gfs_event_stop_event (GfsEvent * event, GfsSimulation * sim)
@@ -1497,7 +1499,7 @@ static gboolean gfs_event_stop_event (GfsEvent * event, GfsSimulation * sim)
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) diff, s);
       n = gfs_domain_norm_variable (domain, s->oldv, NULL, FTT_TRAVERSE_LEAFS, -1);
-      if (n.infty <= s->max)
+      if (gfs_dimensional_value (s->v, n.infty) <= s->max)
 	sim->time.end = sim->time.t;
       if (s->diff) {
 	gfs_variables_swap (s->diff, s->oldv);

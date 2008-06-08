@@ -748,6 +748,7 @@ static void variable_position_read (GtsObject ** o, GtsFile * fp)
 					      GFS_VARIABLE_CURVATURE (v)->f->name, NULL);
   gts_file_next_token (fp);
   if (fp->type != '\n')
+    /* fixme: mapping? */
     v->ref = gfs_read_constant (fp, gfs_object_simulation (*o));
 }
 

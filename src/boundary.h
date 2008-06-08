@@ -68,9 +68,6 @@ struct _GfsBcClass {
 					gfs_bc_class ()))
 
 GfsBcClass * gfs_bc_class  (void);
-GfsBc *      gfs_bc_new    (GfsBcClass * k, 
-			    GfsVariable * v, 
-			    gboolean extra);
 
 /* GfsBcValue: Header */
 
@@ -91,10 +88,6 @@ struct _GfsBcValue {
 						 gfs_bc_value_class ()))
 
 GfsBcClass * gfs_bc_value_class  (void);
-GfsBc *      gfs_bc_value_new    (GfsBcClass * k, 
-				  GfsVariable * v, 
-				  GfsFunction * val,
-				  gboolean extra);
 
 /* GfsBcDirichlet: Header */
 

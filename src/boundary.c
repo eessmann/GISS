@@ -120,13 +120,15 @@ GfsBcClass * gfs_bc_class (void)
   return klass;
 }
 
-GfsBc * gfs_bc_new (GfsBcClass * k, GfsVariable * v, gboolean extra)
+static GfsBc * gfs_bc_new (GfsBcClass * k, GfsVariable * v, gboolean extra)
 {
   GfsBc * b;
 
   g_return_val_if_fail (k != NULL, NULL);
 
   b = GFS_BC (gts_object_new (GTS_OBJECT_CLASS (k)));
+  if (v)
+    gfs_object_simulation_set (b, v->domain);
   b->v = v;
   b->extra = extra;
 
@@ -194,10 +196,10 @@ GfsBcClass * gfs_bc_value_class (void)
   return klass;
 }
 
-GfsBc * gfs_bc_value_new (GfsBcClass * k,
-			  GfsVariable * v,
-			  GfsFunction * val,
-			  gboolean extra)
+static GfsBc * gfs_bc_value_new (GfsBcClass * k,
+				 GfsVariable * v,
+				 GfsFunction * val,
+				 gboolean extra)
 {
   GfsBcValue * bc = GFS_BC_VALUE (gfs_bc_new (k, v, extra));
 
@@ -213,19 +215,19 @@ GfsBc * gfs_bc_value_new (GfsBcClass * k,
 
 static void dirichlet (FttCellFace * f, GfsBc * b)
 {
-  GFS_VARIABLE (f->cell, b->v->i) = 
+  GFS_VALUE (f->cell, b->v) = 
     2.*gfs_function_face_value (GFS_BC_VALUE (b)->val, f)
-    - GFS_VARIABLE (f->neighbor, b->v->i);
+    - GFS_VALUE (f->neighbor, b->v);
 }
 
 static void dirichlet_vof (FttCellFace * f, GfsBc * b)
 {
-  GFS_VARIABLE (f->cell, b->v->i) = gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
+  GFS_VALUE (f->cell, b->v) = gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
 }
 
 static void homogeneous_dirichlet (FttCellFace * f, GfsBc * b)
 {
-  GFS_VARIABLE (f->cell, b->v->i) = - GFS_VARIABLE (f->neighbor, b->v->i);
+  GFS_VALUE (f->cell, b->v) = - GFS_VALUE (f->neighbor, b->v);
 }
 
 static void face_dirichlet (FttCellFace * f, GfsBc * b)
@@ -242,7 +244,8 @@ static void bc_dirichlet_read (GtsObject ** o, GtsFile * fp)
     (* GTS_OBJECT_CLASS (gfs_bc_dirichlet_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
-  
+
+  gfs_function_set_units (GFS_BC_VALUE (bc)->val, bc->v->units);
   if (GFS_IS_VARIABLE_TRACER_VOF (bc->v))
     bc->bc = (FttFaceTraverseFunc) dirichlet_vof;
 }
@@ -284,23 +287,35 @@ GfsBcClass * gfs_bc_dirichlet_class (void)
 
 static void neumann (FttCellFace * f, GfsBc * b)
 {
-  GFS_VARIABLE (f->cell, b->v->i) = 
-    GFS_VARIABLE (f->neighbor, b->v->i) +
+  GFS_VALUE (f->cell, b->v) = 
+    GFS_VALUE (f->neighbor, b->v) +
     gfs_function_face_value (GFS_BC_VALUE (b)->val, f)
     *ftt_cell_size (f->cell);
 }
 
 static void homogeneous_neumann (FttCellFace * f, GfsBc * b)
 {
-  GFS_VARIABLE (f->cell, b->v->i) = GFS_VARIABLE (f->neighbor, b->v->i);
+  GFS_VALUE (f->cell, b->v) = GFS_VALUE (f->neighbor, b->v);
 }
 
 static void face_neumann (FttCellFace * f, GfsBc * b)
 {
   GFS_STATE (f->cell)->f[f->d].v = 
-    GFS_VARIABLE (f->neighbor, b->v->i) +
+    GFS_VALUE (f->neighbor, b->v) +
     gfs_function_face_value (GFS_BC_VALUE (b)->val, f)
     *ftt_cell_size (f->cell)/2.;
+}
+
+static void bc_neumann_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsBc * bc = GFS_BC (*o);
+
+  if (GTS_OBJECT_CLASS (gfs_bc_neumann_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_bc_neumann_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  gfs_function_set_units (GFS_BC_VALUE (bc)->val, bc->v->units - 1.);
 }
 
 static void gfs_bc_neumann_init (GfsBc * object)
@@ -308,6 +323,11 @@ static void gfs_bc_neumann_init (GfsBc * object)
   object->bc =             (FttFaceTraverseFunc) neumann;
   object->homogeneous_bc = (FttFaceTraverseFunc) homogeneous_neumann;
   object->face_bc =        (FttFaceTraverseFunc) face_neumann;
+}
+
+static void gfs_bc_neumann_class_init (GtsObjectClass * klass)
+{
+  klass->read = bc_neumann_read;
 }
 
 GfsBcClass * gfs_bc_neumann_class (void)
@@ -319,7 +339,7 @@ GfsBcClass * gfs_bc_neumann_class (void)
       "GfsBcNeumann",
       sizeof (GfsBcValue),
       sizeof (GfsBcClass),
-      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectClassInitFunc) gfs_bc_neumann_class_init,
       (GtsObjectInitFunc) gfs_bc_neumann_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
@@ -358,6 +378,7 @@ static void bc_navier_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
   
+  /* fixme: units? */
   GFS_BC_NAVIER (*o)->lambda = gfs_read_constant (fp, gfs_object_simulation (*o));
 }
 
@@ -847,6 +868,7 @@ static void inflow_constant_read (GtsObject ** o, GtsFile * fp)
     return;
 
   gfs_function_read (un, gfs_box_domain (b->box), fp);
+  gfs_function_set_units (un, 1.);
 
   v = gfs_domain_velocity (gfs_box_domain (b->box));
   for (c = 0; c < FTT_DIMENSION; c++)

@@ -46,6 +46,7 @@ struct _GfsVariable {
   GtsContainer * sources;
   GfsSurfaceGenericBc * surface_bc;
   GfsDomain * domain;
+  gdouble units;
 };
 
 typedef struct _GfsVariableClass    GfsVariableClass;

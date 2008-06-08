@@ -656,9 +656,15 @@ static gdouble cell_rz (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
   return p.z;
 }
 
-static gdouble cell_dV (FttCell * cell)
+static gdouble cell_dV (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   gdouble dV = ftt_cell_volume (cell);
+  gdouble L = sim->physical_params.L;
+#if FTT_2D
+  dV *= L*L;
+#else
+  dV *= L*L*L;
+#endif
   return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a*dV : dV;
 }
 
@@ -684,12 +690,14 @@ static gdouble cell_divergence (FttCell * cell, FttCellFace * face, GfsDomain * 
 
 static gdouble cell_velocity_norm (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 {
-  return gfs_vector_norm (cell, gfs_domain_velocity (domain));
+  gdouble L = GFS_SIMULATION (domain)->physical_params.L;
+  return L*gfs_vector_norm (cell, gfs_domain_velocity (domain));
 }
 
 static gdouble cell_velocity_norm2 (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 {
-  return gfs_vector_norm2 (cell, gfs_domain_velocity (domain));
+  gdouble L = GFS_SIMULATION (domain)->physical_params.L;
+  return L*L*gfs_vector_norm2 (cell, gfs_domain_velocity (domain));
 }
 
 static gdouble cell_level (FttCell * cell)
@@ -749,7 +757,8 @@ static gdouble cell_velocity_lambda2 (FttCell * cell, FttCellFace * face, GfsDom
 
 static gdouble cell_streamline_curvature (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 {
-  return gfs_streamline_curvature (cell, gfs_domain_velocity (domain));
+  gdouble L = GFS_SIMULATION (domain)->physical_params.L;
+  return gfs_streamline_curvature (cell, gfs_domain_velocity (domain))/L;
 }
 
 static gdouble cell_2nd_principal_invariant (FttCell * cell, FttCellFace * face, GfsDomain * domain)
@@ -826,10 +835,10 @@ static void simulation_init (GfsSimulation * object)
 						    "z-component of the velocity"), FTT_Z);
 #endif /* FTT_3D */
 
-  GfsDerivedVariableInfo * v = derived_variable;
-  while (v->name) {
-    g_assert (gfs_domain_add_derived_variable (domain, *v));
-    v++;
+  GfsDerivedVariableInfo * dv = derived_variable;
+  while (dv->name) {
+    g_assert (gfs_domain_add_derived_variable (domain, *dv));
+    dv++;
   }
   domain->derived_variables = g_slist_reverse (domain->derived_variables);
 
@@ -1301,7 +1310,7 @@ void gfs_physical_params_write (GfsPhysicalParams * p, FILE * fp)
   g_return_if_fail (p != NULL);
   g_return_if_fail (fp != NULL);
 
-  fprintf (fp, "{ g = %g", p->g);
+  fprintf (fp, "{ g = %g L = %g", p->g, p->L);
   if (p->alpha) {
     fputs (" alpha =", fp);
     gfs_function_write (p->alpha, fp);
@@ -1319,7 +1328,7 @@ void gfs_physical_params_init (GfsPhysicalParams * p)
 {
   g_return_if_fail (p != NULL);
   
-  p->g = 1.;
+  p->g = p->L = 1.;
   p->alpha = NULL;
 }
 
@@ -1363,9 +1372,22 @@ void gfs_physical_params_read (GfsPhysicalParams * p, GfsDomain * domain, GtsFil
       gts_file_next_token (fp);
 
       if (!strcmp (id, "g")) {
+	/* fixme: units? */
 	p->g = gfs_read_constant (fp, domain);
 	if (fp->type == GTS_ERROR) {
 	  g_free (id);
+	  return;
+	}
+      }
+      else if (!strcmp (id, "L")) {
+	p->L = gfs_read_constant (fp, domain);
+	if (fp->type == GTS_ERROR) {
+	  g_free (id);
+	  return;
+	}
+	if (p->L == 0.) {
+	  g_free (id);
+	  gts_file_error (fp, "L must be different from zero");
 	  return;
 	}
       }
@@ -1458,6 +1480,9 @@ void gfs_simulation_map (GfsSimulation * sim, FttVector * p)
     (* GFS_MAP_CLASS (o->klass)->transform) (i->data, p, p);
     i = i->next;
   }
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&p->x)[c] *= (&GFS_DOMAIN (sim)->lambda.x)[c]/sim->physical_params.L;
 }
 
 /**
@@ -1473,12 +1498,48 @@ void gfs_simulation_map_inverse (GfsSimulation * sim, FttVector * p)
   g_return_if_fail (sim != NULL);
   g_return_if_fail (p != NULL);
   
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&p->x)[c] *= sim->physical_params.L/(&GFS_DOMAIN (sim)->lambda.x)[c];
   GSList * i = sim->maps->items;
   while (i) {
     GtsObject * o = i->data;
     (* GFS_MAP_CLASS (o->klass)->inverse) (i->data, p, p);
     i = i->next;
   }
+}
+
+/**
+ * gfs_dimensional_value:
+ * @v: a #GfsVariable.
+ * @val: a non-dimensional value of @v.
+ *
+ * Returns: the dimensional value of @val according to the units of @v.
+ */
+gdouble gfs_dimensional_value (GfsVariable * v, gdouble val)
+{
+  g_return_val_if_fail (v != NULL, 0.);
+
+  gdouble L;
+  if (val == G_MAXDOUBLE || v->units == 0. || 
+      (L = GFS_SIMULATION (v->domain)->physical_params.L) == 1.)
+    return val;
+  return val*pow (L, v->units);
+}
+
+/**
+ * gfs_variable_is_dimensional:
+ * @v: a #GfsVariable.
+ *
+ * Returns: %TRUE if @v has dimensions, %FALSE otherwise.
+ */
+gboolean gfs_variable_is_dimensional (GfsVariable * v)
+{
+  g_return_val_if_fail (v != NULL, FALSE);
+
+  if (v->units == 0. || GFS_SIMULATION (v->domain)->physical_params.L == 1.)
+    return FALSE;
+  return TRUE;
 }
 
 /* GfsAdvection: Object */

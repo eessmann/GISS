@@ -307,6 +307,7 @@ static void source_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GFS_SOURCE (*o)->intensity = gfs_function_new (gfs_function_class (), 0.);
+  gfs_function_set_units (GFS_SOURCE (*o)->intensity, GFS_SOURCE_SCALAR (*o)->v->units);
   gfs_function_read (GFS_SOURCE (*o)->intensity, gfs_object_simulation (*o), fp);
   if (fp->type != GTS_ERROR) {
     GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
@@ -383,6 +384,7 @@ static void source_control_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GFS_SOURCE_CONTROL (*o)->intensity = gfs_function_new (gfs_function_class (), 0.);
+  gfs_function_set_units (GFS_SOURCE_CONTROL (*o)->intensity, GFS_SOURCE_SCALAR (*o)->v->units);
   gfs_function_read (GFS_SOURCE_CONTROL (*o)->intensity, gfs_object_simulation (*o), fp);
 }
 
@@ -466,6 +468,7 @@ static void diffusion_read (GtsObject ** o, GtsFile * fp)
   gfs_function_read (d->val, gfs_object_simulation (*o), fp);
   if (fp->type == GTS_ERROR)
     return;
+  gfs_function_set_units (d->val, 2.);
 
   if (fp->type == '{') {
     gfs_multilevel_params_read (&d->par, fp);

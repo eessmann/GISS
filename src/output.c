@@ -1675,7 +1675,7 @@ static void gfs_output_scalar_write (GtsObject * o, FILE * fp)
 
 static void update_v (FttCell * cell, GfsOutputScalar * output)
 {
-  GFS_VARIABLE (cell, output->v->i) = gfs_function_value (output->f, cell);
+  GFS_VALUE (cell, output->v) = gfs_function_value (output->f, cell);
 }
 
 static gboolean gfs_output_scalar_event (GfsEvent * event,
@@ -1686,8 +1686,9 @@ static gboolean gfs_output_scalar_event (GfsEvent * event,
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
     GfsDomain * domain = GFS_DOMAIN (sim);
 
-    if (!(output->v = gfs_function_get_variable (output->f))) {
-      output->v = gfs_variable_new (gfs_variable_class (), domain, NULL, NULL);
+    if (!(output->v = gfs_function_get_variable (output->f)) ||
+	gfs_variable_is_dimensional (output->v)) {
+      output->v = gfs_temporary_variable (domain);
       gfs_domain_cell_traverse (domain,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) update_v, output);
@@ -1714,7 +1715,7 @@ static void gfs_output_scalar_post_event (GfsEvent * event,
 {
   GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
 
-  if (!gfs_function_get_variable (output->f)) {
+  if (output->v != gfs_function_get_variable (output->f)) {
     gts_object_destroy (GTS_OBJECT (output->v));
     output->v = NULL;
   }

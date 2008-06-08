@@ -1045,6 +1045,7 @@ static void gfs_source_friction_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
+  /* fixme: units? */
   GFS_SOURCE_FRICTION (*o)->f = gfs_read_constant (fp, domain);
   if (fp->type == GTS_ERROR)
     return;

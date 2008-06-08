@@ -198,6 +198,7 @@ struct _GfsFunction {
   gdouble val;
   gboolean spatial, constant;
   GtsFile fpd;
+  gdouble units;
 };
 
 static GtsSurface * read_surface (gchar * name, GtsFile * fp)
@@ -617,16 +618,20 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 	  i = lv;
 	  while (i) {
 	    GfsVariable * v = i->data;
-	    fprintf (fin, "    %s = GFS_VARIABLE (cell, GFS_VARIABLE1 (%p)->i);\n", 
-		     v->name, v);
+	    fprintf (fin, 
+		     "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%p),\n"
+		     "           GFS_VALUE (cell, GFS_VARIABLE1 (%p)));\n", 
+		     v->name, v, v);
 	    i = i->next;
 	  }
 	  fputs ("  } else {\n", fin);
 	  i = lv;
 	  while (i) {
 	    GfsVariable * v = i->data;
-	    fprintf (fin, "    %s = gfs_face_interpolated_value (face, GFS_VARIABLE1 (%p)->i);\n", 
-		     v->name, v);
+	    fprintf (fin, 
+		     "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%p),\n"
+		     "           gfs_face_interpolated_value (face, GFS_VARIABLE1 (%p)->i));\n", 
+		     v->name, v, v);
 	    i = i->next;
 	  }
 	  fputs ("  }\n", fin);
@@ -852,6 +857,20 @@ GfsFunction * gfs_function_new_from_variable (GfsFunctionClass * klass,
   return object;
 }
 
+/**
+ * gfs_function_set_units:
+ * @f: a #GfsFunction.
+ * @units: the units of @f.
+ *
+ * Sets the units of @f.
+ */
+void gfs_function_set_units (GfsFunction * f, 
+			     gdouble units)
+{
+  g_return_if_fail (f != NULL);
+  f->units = units;
+}
+
 static gdouble interpolated_value (GfsFunction * f, FttVector * p)
 {
   GtsPoint q;
@@ -903,6 +922,15 @@ gchar * gfs_function_description (GfsFunction * f,
   return s;
 }
 
+static gdouble adimensional_value (GfsFunction * f, gdouble v)
+{
+  gdouble L;
+  if (v == G_MAXDOUBLE || f->units == 0. || 
+      (L = gfs_object_simulation (f)->physical_params.L) == 1.)
+    return v;
+  return v*pow (L, - f->units);
+}
+
 /**
  * gfs_function_value:
  * @f: a #GfsFunction.
@@ -914,28 +942,30 @@ gdouble gfs_function_value (GfsFunction * f, FttCell * cell)
 {
   g_return_val_if_fail (f != NULL, 0.);
 
+  gdouble dimensional;
   if (f->s) {
     FttVector p;
     gfs_cell_cm (cell, &p);
-    return interpolated_value (f, &p);
+    dimensional = interpolated_value (f, &p);
   }
   else if (f->g) {
     FttVector p;
     gfs_cell_cm (cell, &p);
-    return interpolated_cgd (f, &p);
+    dimensional = interpolated_cgd (f, &p);
   }
   else if (f->v)
-    return GFS_VARIABLE (cell, f->v->i);
+    dimensional = gfs_dimensional_value (f->v, GFS_VALUE (cell, f->v));
   else if (f->dv)
-    return (* (GfsFunctionDerivedFunc) f->dv->func) (cell, NULL, 
-						     gfs_object_simulation (f), 
-						     f->dv->data);
+    dimensional = (* (GfsFunctionDerivedFunc) f->dv->func) (cell, NULL,
+							    gfs_object_simulation (f),
+							    f->dv->data);
   else if (f->f) {
     check_for_deferred_compilation (f);
-    return (* f->f) (cell, NULL, gfs_object_simulation (f));
+    dimensional = (* f->f) (cell, NULL, gfs_object_simulation (f));
   }
   else
-    return f->val;
+    dimensional = f->val;
+  return adimensional_value (f, dimensional);
 }
 
 /**
@@ -950,24 +980,26 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa)
   g_return_val_if_fail (f != NULL, 0.);
   g_return_val_if_fail (fa != NULL, 0.);
 
+  gdouble dimensional;
   if (f->s) {
     FttVector p;
 
     ftt_face_pos (fa, &p);
-    return interpolated_value (f, &p);
+    dimensional = interpolated_value (f, &p);
   }
   else if (f->v)
-    return gfs_face_interpolated_value (fa, f->v->i);
+    dimensional = gfs_dimensional_value (f->v, gfs_face_interpolated_value (fa, f->v->i));
   else if (f->dv)
-    return (* (GfsFunctionDerivedFunc) f->dv->func) (NULL, fa,
-						     gfs_object_simulation (f), 
-						     f->dv->data);
+    dimensional = (* (GfsFunctionDerivedFunc) f->dv->func) (NULL, fa,
+							    gfs_object_simulation (f),
+							    f->dv->data);
   else if (f->f) {
     check_for_deferred_compilation (f);
-    return (* f->f) (NULL, fa, gfs_object_simulation (f));
+    dimensional = (* f->f) (NULL, fa, gfs_object_simulation (f));
   }
   else
-    return f->val;
+    dimensional = f->val;
+  return adimensional_value (f, dimensional);
 }
 
 /**
@@ -1000,7 +1032,7 @@ gdouble gfs_function_get_constant_value (GfsFunction * f)
   if (f->f || f->s || f->v || f->dv)
     return G_MAXDOUBLE;
   else
-    return f->val;
+    return adimensional_value (f, f->val);
 }
 
 /**
@@ -1096,8 +1128,10 @@ gdouble gfs_function_spatial_value (GfsFunction * f, FttVector * p)
   g_return_val_if_fail (p != NULL, 0.);
 
   if (f->f) {
+    FttVector q = *p;
     check_for_deferred_compilation (f);
-    return (* (GfsFunctionSpatialFunc) f->f) (p->x, p->y, p->z);
+    gfs_simulation_map_inverse (gfs_object_simulation (f), &q);
+    return (* (GfsFunctionSpatialFunc) f->f) (q.x, q.y, q.z);
   }
   else
     return f->val;
@@ -1148,8 +1182,12 @@ gdouble gfs_read_constant (GtsFile * fp, gpointer domain)
 
   GfsFunction * f = gfs_function_new (gfs_function_constant_class (), 0.);
   gfs_function_read (f, domain, fp);
-  gdouble val = fp->type == GTS_ERROR ? G_MAXDOUBLE : gfs_function_get_constant_value (f);
+  if (fp->type == GTS_ERROR)
+    return G_MAXDOUBLE;
+  gdouble val = gfs_function_get_constant_value (f);
   gts_object_destroy (GTS_OBJECT (f));
+  if (val == G_MAXDOUBLE)
+    gts_file_error (fp, "expecting a constant");
   return val;
 }
 
