@@ -389,7 +389,14 @@ static void poisson_alpha_coeff (FttCellFace * face,
   gdouble v = lambda2[face->d/2]*alpha;
   GfsStateVector * s = GFS_STATE (face->cell);
 
-  g_assert (v > 0.);
+  if (alpha <= 0.) {
+    FttVector p;
+    ftt_face_pos (face, &p);
+    g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
+	   "alpha is negative (%g) at face (%g,%g,%g).\n"
+	   "Please check your definition.",
+	   alpha, p.x, p.y, p.z);
+  }
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
   s->f[face->d].v = v;
@@ -511,7 +518,14 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   }
   g_assert (v <= 1e6);
 
-  g_assert (alpha > 0.);
+  if (alpha <= 0.) {
+    FttVector p;
+    ftt_face_pos (face, &p);
+    g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
+	   "alpha is negative (%g) at face (%g,%g,%g).\n"
+	   "Please check your definition.",
+	   alpha, p.x, p.y, p.z);
+  }
   v *= alpha;
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
@@ -784,6 +798,14 @@ static void diffusion_mixed_coef (FttCell * cell, DiffusionCoeff * c)
   if (GFS_IS_MIXED (cell))
     GFS_STATE (cell)->solid->v = c->dt*gfs_source_diffusion_cell (c->d, cell);
   GFS_VARIABLE (cell, c->dia->i) = c->alpha ? 1./gfs_function_value (c->alpha, cell) : 1.;
+  if (GFS_VARIABLE (cell, c->dia->i) <= 0.) {
+    FttVector p;
+    ftt_cell_pos (cell, &p);
+    g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
+	   "density is negative (%g) at cell (%g,%g,%g).\n"
+	   "Please check your definition of alpha.",
+	   GFS_VARIABLE (cell, c->dia->i), p.x, p.y, p.z);
+  }
 }
 
 /**
