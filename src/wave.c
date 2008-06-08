@@ -23,8 +23,6 @@
 
 /* GfsWave: Object */
 
-#define LENGTH 5000. /* box length: 5000 km */
-
 static double frequency (int ik)
 {
   double gamma = 1.1;
@@ -37,9 +35,9 @@ static double theta (guint ith, guint ntheta)
   return 2.*M_PI*ith/ntheta;
 }
 
-static void cg (int ik, int ith, FttVector * u, guint ntheta)
+static void cg (int ik, int ith, FttVector * u, guint ntheta, gdouble g)
 {
-  double cg = 9.81/(4.*M_PI*frequency (ik))/1000./LENGTH*3600.;
+  double cg = g/(4.*M_PI*frequency (ik));
   u->x = cg*cos (theta (ith, ntheta));
   u->y = cg*sin (theta (ith, ntheta));
   u->z = 0.;
@@ -108,13 +106,14 @@ static void wave_run (GfsSimulation * sim)
 			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
     gfs_simulation_set_timestep (sim);
     gdouble dt = sim->advection_params.dt;
+    gdouble g = sim->physical_params.g/sim->physical_params.L;
     gdouble tnext = sim->tnext;
     
     /* spatial advection */
     guint ik, ith;
     for (ik = 0; ik < wave->nk; ik++) {
       FttVector u;
-      cg (ik, 0, &u, wave->ntheta);
+      cg (ik, 0, &u, wave->ntheta, g);
       gfs_domain_face_traverse (domain, FTT_XYZ,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttFaceTraverseFunc) set_group_velocity, &u);
@@ -125,7 +124,7 @@ static void wave_run (GfsSimulation * sim)
       while (n--) {
 	for (ith = 0; ith < wave->ntheta; ith++) {
 	  FttVector u;
-	  cg (ik, ith, &u, wave->ntheta);
+	  cg (ik, ith, &u, wave->ntheta, g);
 	  gfs_domain_face_traverse (domain, FTT_XYZ,
 				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				    (FttFaceTraverseFunc) set_group_velocity, &u);
@@ -243,6 +242,9 @@ static void wave_init (GfsWave * wave)
 {
   wave->nk = 25;
   wave->ntheta = 24;
+  /* default for g is acceleration of gravity on Earth with kilometres as
+     spatial units, hours as time units and Hz as frequency units */
+  GFS_SIMULATION (wave)->physical_params.g = 9.81/1000.*3600.;
 
   GfsAdvectionParams * par = &GFS_SIMULATION (wave)->advection_params;
   par->gradient = gfs_center_van_leer_gradient;

@@ -27,16 +27,16 @@ unset key
 set xtics 0,1000,4000
 set ytics 0,1000,3000
 set title 'Non-adaptive 24 directions'
-plot [-500:4000][-500:3000]'end-6-24.gnu' u (\$1*5000.+2000.):(\$2*5000.+2000.) w l
+plot [-500:4000][-500:3000]'end-6-24.gnu' u (\$1+2000.):(\$2+2000.) w l
 set origin 0.5,0.5
 set title 'Adaptive 24 directions'
-plot [-500:4000][-500:3000]'end-0-24.gnu' u (\$1*5000.+2000.):(\$2*5000.+2000.) w l
+plot [-500:4000][-500:3000]'end-0-24.gnu' u (\$1+2000.):(\$2+2000.) w l
 set origin 0,0
 set title 'Adaptive 60 directions'
-plot [-500:4000][-500:3000]'end-0-60.gnu' u (\$1*5000.+2000.):(\$2*5000.+2000.) w l
+plot [-500:4000][-500:3000]'end-0-60.gnu' u (\$1+2000.):(\$2+2000.) w l
 set origin 0.5,0
 set title 'Adaptive 120 directions'
-plot [-500:4000][-500:3000]'end-0-120.gnu' u (\$1*5000.+2000.):(\$2*5000.+2000.) w l
+plot [-500:4000][-500:3000]'end-0-120.gnu' u (\$1+2000.):(\$2+2000.) w l
 unset multiplot
 
 set output 'mesh.eps'
@@ -49,16 +49,16 @@ unset key
 set xtics 0,1000,4000
 set ytics 0,1000,3000
 set title 't = 0'
-plot [-500:4000][-500:3000]'mesh-0.gnu' u (\$1*5000.+2000.):(\$2*5000.+2000.) w l
+plot [-500:4000][-500:3000]'mesh-0.gnu' u (\$1+2000.):(\$2+2000.) w l
 set origin 0.5,0.5
 set title 't = 1 day'
-plot [-500:4000][-500:3000]'mesh-24.gnu' u (\$1*5000.+2000.):(\$2*5000.+2000.) w l
+plot [-500:4000][-500:3000]'mesh-24.gnu' u (\$1+2000.):(\$2+2000.) w l
 set origin 0,0
 set title 't = 3 days'
-plot [-500:4000][-500:3000]'mesh-72.gnu' u (\$1*5000.+2000.):(\$2*5000.+2000.) w l
+plot [-500:4000][-500:3000]'mesh-72.gnu' u (\$1+2000.):(\$2+2000.) w l
 set origin 0.5,0
 set title 't = 5 days'
-plot [-500:4000][-500:3000]'mesh-120.gnu' u (\$1*5000.+2000.):(\$2*5000.+2000.) w l
+plot [-500:4000][-500:3000]'mesh-120.gnu' u (\$1+2000.):(\$2+2000.) w l
 unset multiplot
 
 EOF

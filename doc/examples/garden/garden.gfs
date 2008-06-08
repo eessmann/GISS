@@ -64,7 +64,13 @@
 #
 1 0 GfsWave GfsBox GfsGEdge {} {
     Refine 6
+
+    # Default time units for wave model is hours
+    # 120 hours = 5 days
     Time { end = 120 }
+
+    # Default length units for wave model is km
+    PhysicalParams { L = 5000 }
 
     # Define some useful functions
     Global {
@@ -96,10 +102,10 @@
          *
          * Note: for some reason Tolman (2002) uses a factor of 0.5
          * for the Gaussian distribution "spread" */
-        x -= -0.5 + 500./5000.;
-        y -= -0.5 + 500./5000.;
+        x -= -2000.;
+        y -= -2000.;
         double Hsmax = 2.5;
-        double E = (Hsmax*Hsmax/16.)*gaussian (sqrt (x*x + y*y), 0., 150./5000./sqrt(0.5));
+        double E = (Hsmax*Hsmax/16.)*gaussian (sqrt (x*x + y*y), 0., 150./sqrt(0.5));
         return 4.*sqrt (E);
     }
 
