@@ -5,7 +5,6 @@ import os
 import os.path
 import glob
 import gfs2tex
-import gfsclasses
 
 if not os.access("examples",os.F_OK):
     os.mkdir("examples")
@@ -16,4 +15,4 @@ for start in sys.argv[1:]:
             example = gfs2tex.Example(root)
             if not os.access("examples/" + example.path,os.F_OK):
                 os.symlink("../" + example.path, "examples/" + example.path)
-            example.write(gfsclasses.klass,style="examples.css")
+            example.write(style="examples.css")

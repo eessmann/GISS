@@ -456,5 +456,6 @@ doc/Makefile
 doc/tutorial/Makefile
 doc/examples/Makefile
 doc/examples/gfs2doc
+doc/examples/gfs-highlight
 desktop/Makefile
 ])

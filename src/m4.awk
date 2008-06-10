@@ -9,7 +9,7 @@ BEGIN {
     print "m4_changecom()m4_dnl";
 }
 {
-    if ($1 == "Define") {
+    if ($1 == "GfsDefine" || $1 == "Define") {
 	macro = $2;
 	delete b;
 	if (match(macro, /(.+)\((.+)\)/, a)) {

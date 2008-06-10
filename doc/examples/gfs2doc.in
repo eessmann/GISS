@@ -8,7 +8,6 @@ import tempfile
 
 sys.path.append("@prefix@/lib/gerris")
 import gfs2tex
-import gfsclasses
 
 if len(sys.argv) < 2:
     print "usage: gfs2doc DIR1 DIR2..."
@@ -20,7 +19,7 @@ def myexit(s):
     
 for d in sys.argv[1:]:
     example = gfs2tex.Example(d)
-    example.write(gfsclasses.klass)
+    example.write()
     wdname = tempfile.mkdtemp()
     tex = open(wdname + "/" + example.name + ".tex", "w")
     tex.write(r"""

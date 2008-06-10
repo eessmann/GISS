@@ -1,0 +1,75 @@
+#!/bin/sh
+
+wiki="http:\/\/gfs.sf.net\/wiki\/index.php"
+title="Gerris simulation"
+css="darcs.css"
+
+path="/usr/local/share/gerris"
+
+usage()
+{
+	cat <<EOF
+Usage: gfs-highlight [OPTIONS] < input.gfs > output.html
+
+Syntax highlighting/hypertext linking of Gerris simulation files.
+
+Options:
+	[--title=TITLE] sets the page title
+	[--css=FILE]    sets the CSS stylesheet filename
+        [--help]        displays this message and exits
+EOF
+	exit $1
+}
+
+while test $# -gt 0; do
+  case "$1" in
+  -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+  *) optarg= ;;
+  esac
+
+  case $1 in
+    --title=*)
+      title=$optarg
+      ;;
+    --css=*)
+      css=$optarg
+      ;;
+    --help)
+      usage 0 1>&2
+      ;;
+    *)
+      usage 0 1>&2
+      ;;
+  esac
+  shift
+done
+
+cat <<EOF
+<html>
+<head>
+<title>$title</title>
+<link rel="stylesheet" type="text/css" href="$css">
+</head>
+<body><tt class="gfs">
+EOF
+
+file=`mktemp gfs-highlight.XXXXXX`
+ln -s -f $path/gfs.lang $file
+
+awk 'BEGIN{ infile=0 } {
+       if ($2 == "Generated" && $3 == "files:") {
+         infile = 1; 
+         while ($1 == "#") getline; 
+         print $0; 
+       } else if (infile) 
+         print $0;
+     }' | \
+source-highlight --lang-def=$file --out-format=html-css | \
+sed "s/\"gfs_keyword\">\(Gfs\)\{0,1\}\([a-zA-Z0-9_]*\)<\/span>/"gfs_keyword"><a href=\"$wiki\/Gfs\2\">\1\2<\/a><\/span>/g"
+
+rm -f $file
+
+cat <<EOF
+</tt></body>
+</html>
+EOF

@@ -15,7 +15,7 @@ Architecture: any
 Depends: libc6-dev | libc-dev, libgts-snapshot-dev (>= $GTS_VERSION), pkg-config, gcc, sed, gawk, m4, proj, libnetcdf3, libgsl0
 Conflicts: gerris
 Replaces: gerris
-Recommends: gfsview-snapshot
+Recommends: gfsview-snapshot, source-highlight
 Suggests: imagemagick, ffmpeg
 Description: Gerris Flow Solver (development snapshot)
  Gerris is a system for the solution of the partial differential

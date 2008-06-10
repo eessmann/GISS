@@ -95,7 +95,7 @@ class Example:
         else:
             self.runtime = None
             
-    def write(self,dico,file=None,style=None):
+    def write(self,file=None,style=""):
         if file == None:
             file = open(self.path + "/" + self.name + ".tex", 'w')
 	file.write(self.section + "{\\label{" + self.name + "}")
@@ -118,69 +118,15 @@ class Example:
         file.write("\\item[Running time]" + self.time + "\n")
         file.write("\\end{description}\n")
         file.write("\n".join(self.description))
-        self.colorize(dico,style)
+        self.colorize(style)
 
-    def colorize(self,dico,style=None):
-        file = open(self.path + "/" + self.name + ".gfs")
-        out = open(self.path + "/" + self.name + ".gfs.html", 'w')
-        path = "../" * (self.path.count("/") + 3) + "reference/"
-        out.write("<html><head><title>\n" + self.name + ".gfs")
-	if style == None:
-	    out.write('</title></head><body><tt class="gfs">\n')
-	else:
-	    out.write('</title><link rel="stylesheet" type="text/css" href="' + \
-		      ["../","../../"][self.path.count("/")] + \
-		      style + '"></head><body><tt class="gfs">\n')
-        infile = insthg = 0
-        for line in file:
-	    tab = ""
-            l = ""
-            first = 1
-            comment = 0
-            for c in line:
-                if c == " " and first:
-                    tab += "&nbsp;"
-                else:
-                    if first and c == "#":
-                        comment = 1
-                    first = 0
-                    if c == '<':
-                        l += "&lt;"
-                    elif c == '>':
-                        l += "&gt;"
-                    elif c == '&':
-                        l += "&amp;"
-                    else:
-                        l += c
-            if comment:
-                if infile:
-                    record = line.split()
-                    if insthg or len(record) > 1:
-                        out.write('<div class="comment">')
-			out.write(tab)
-                        out.write(l)
-                        out.write('</div>')
-                        insthg = 1
-                else:
-                    record = line.split()
-                    if len(record) > 2 and record[1] == "Generated" and record[2] == "files:":
-                        infile = 1
-                        insthg = 0
-            else:
-		out.write(tab)
-                record = l.split()
-                for r in record:
-                    key = None
-                    if dico.has_key(r):
-                        key = r
-                    elif dico.has_key("Gfs" + r):
-                        key = "Gfs" + r
-                    if key != None:
-                        out.write("<a href=\"" + dico[key] + "\">" + r + "</a> ")
-                    else:
-                        out.write(r + " ")
-                out.write("<br>\n")
-        out.write("</tt></body>\n</html>\n")
+    def colorize(self,style=""):
+        basename = self.path + "/" + self.name
+        if style != "":
+            style = " --css=" + ["../","../../"][self.path.count("/")] + style
+        os.system("gfs-highlight " + \
+                      "--title=" + self.name + ".gfs" + style + \
+                      " < " + basename + ".gfs > " + basename + ".gfs.html")
 
     def test(self):
         wdname = tempfile.mkdtemp()

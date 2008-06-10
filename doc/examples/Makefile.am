@@ -24,19 +24,22 @@ test.sh: $(EXAMPLES)
 	@chmod +x test.sh
 
 bin_SCRIPTS = \
-	gfs2doc
+	gfs2doc gfs-highlight
 
 BUILT_SOURCES= \
-	gfs2doc gfsclasses.py
+	gfs2doc gfs-highlight gfs.lang
 
 CLEANFILES = $(BUILT_SOURCES) Makefile.deps
 
-pkglib_DATA = gfs2tex.py gfsclasses.py
+pkglib_DATA = gfs2tex.py
+pkgdata_DATA = gfs.lang
 
-gfsclasses.py: classes
-	$(srcdir)/classes > gfsclasses.py
+gfs.lang: classes
+	$(srcdir)/classes > gfs.lang
 
 gfs2doc: gfs2doc.in
+
+gfs-highlight: gfs-highlight.in
 
 clean-generic:
 	$(RM) *.dvi *.aux *.log *.toc *.out examples.tex *.pyc test.sh gfs2doc
