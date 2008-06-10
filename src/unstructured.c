@@ -185,6 +185,19 @@ static void write_element (FttCell * cell, WriteParams * par)
   fputc ('\n', par->fp);
 }
 
+static void cell_count (FttCell * cell, guint * count)
+{
+  (*count)++; 
+}
+
+static guint local_domain_size (GfsDomain * domain, gint max_depth)
+{
+  guint n = 0;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, max_depth,
+			    (FttCellTraverseFunc) cell_count, &n);
+  return n;
+}
+
 /**
  * gfs_domain_write_vtk:
  * @domain: a #GfsDomain.
@@ -230,7 +243,7 @@ void gfs_domain_write_vtk (GfsDomain * domain, gint max_depth, GSList * variable
   fputc ('\n', fp);
 
   /* elements */
-  guint n_cells = gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, max_depth);
+  guint n_cells = local_domain_size (domain, max_depth);
   fprintf (fp, "CELLS %d %d\n", n_cells, n_cells*(NV + 1));
   WriteParams par;
   par.v = v;
@@ -335,7 +348,7 @@ void gfs_domain_write_tecplot (GfsDomain * domain, gint max_depth, GSList * vari
   fputc ('\n', fp);
 
   guint nv = g_slist_length (vertices);
-  guint n_cells = gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, max_depth);
+  guint n_cells = local_domain_size (domain, max_depth);
   fprintf (fp, " ZONE N=%i, E=%i, F=FEPOINT, ", nv, n_cells);
   fputs (FTT_DIMENSION == 2 ? "ET=QUADRILATERAL\n" : "ET=BRICK\n", fp);
   
