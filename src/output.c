@@ -1212,7 +1212,19 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (event);
 
-    domain->variables_io = output->var ? output->var : domain->variables;
+    g_slist_free (domain->variables_io);
+    if (output->var)
+      domain->variables_io = output->var;
+    else {
+      GSList * i = domain->variables;
+      domain->variables_io = NULL;
+      while (i) {
+	if (GFS_VARIABLE1 (i->data)->name)
+	  domain->variables_io = g_slist_append (domain->variables_io, i->data);
+	i = i->next;
+      }
+    }
+
     domain->binary =       output->binary;
     sim->output_solid   =  output->solid;
     switch (output->format) {
@@ -1228,8 +1240,8 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
 
       fputs ("# 1:X 2:Y: 3:Z", fp);
       while (i) {
-	if (GFS_VARIABLE1 (i->data)->name)
-	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
+	g_assert (GFS_VARIABLE1 (i->data)->name);
+	fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
 	i = i->next;
       }
       fputc ('\n', fp);
@@ -1250,6 +1262,8 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
     default:
       g_assert_not_reached ();
     }
+    if (!output->var)
+      g_slist_free (domain->variables_io);
     domain->variables_io = NULL;
     domain->binary =       TRUE;
     sim->output_solid   =  TRUE;
