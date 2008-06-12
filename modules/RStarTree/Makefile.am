@@ -1,9 +1,9 @@
 ## Process this file with automake to produce Makefile.in
 
-noinst_LIBRARIES = libcSmRST.a
+noinst_LTLIBRARIES = libcSmRST.la
 
-libcSmRST_a_CFLAGS = $(AM_CFLAGS) -D_FILE_OFFSET_BITS=64
-libcSmRST_a_SOURCES = \
+libcSmRST_la_CFLAGS = $(AM_CFLAGS) -D_FILE_OFFSET_BITS=64
+libcSmRST_la_SOURCES = \
 		RStarTree.c \
 		RStarTree.h \
 		RSTInstDel.c \

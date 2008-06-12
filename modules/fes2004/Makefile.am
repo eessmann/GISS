@@ -1,11 +1,11 @@
 if BUILD_TIDE
-TIDE = libfes.a
+TIDE = libfes.la
 endif
 
-noinst_LIBRARIES = $(TIDE)
+noinst_LTLIBRARIES = $(TIDE)
 
-libfes_a_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
-libfes_a_SOURCES = \
+libfes_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
+libfes_la_SOURCES = \
 	fes2004_alloc.c \
 	fes2004_error.c \
 	fes2004_extraction.c \
