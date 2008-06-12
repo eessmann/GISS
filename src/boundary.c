@@ -379,7 +379,7 @@ static void bc_navier_read (GtsObject ** o, GtsFile * fp)
     return;
   
   /* fixme: units? */
-  GFS_BC_NAVIER (*o)->lambda = gfs_read_constant (fp, gfs_object_simulation (*o));
+  GFS_BC_NAVIER (*o)->lambda = gfs_read_constant (fp, gfs_box_domain (GFS_BC (*o)->b->box));
 }
 
 static void bc_navier_write (GtsObject * o, FILE * fp)
