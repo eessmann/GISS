@@ -388,10 +388,16 @@ static void variable_filtered_write (GtsObject * o, FILE * fp)
 static void variable_filtered_event_half (GfsEvent * event, GfsSimulation * sim)
 {
   guint n = GFS_VARIABLE_FILTERED (event)->niter;
+  GfsDomain * domain = GFS_DOMAIN (sim);
+  GfsVariable * v = GFS_VARIABLE1 (event);
 
-  gfs_domain_filter (GFS_DOMAIN (sim), GFS_VARIABLE_FILTERED (event)->v, GFS_VARIABLE1 (event));
+  gfs_domain_filter (domain, GFS_VARIABLE_FILTERED (event)->v, v);
   while (--n)
-    gfs_domain_filter (GFS_DOMAIN (sim), GFS_VARIABLE1 (event), NULL);
+    gfs_domain_filter (domain, v, NULL);
+  gfs_domain_cell_traverse (domain,
+			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			    (FttCellTraverseFunc) v->fine_coarse, v);
+  gfs_domain_bc (domain, FTT_TRAVERSE_NON_LEAFS, -1, v);
 }
 
 static gboolean variable_filtered_event (GfsEvent * event, GfsSimulation * sim)
