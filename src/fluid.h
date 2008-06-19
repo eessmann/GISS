@@ -152,6 +152,9 @@ gdouble               gfs_cell_dirichlet_gradient_flux (FttCell * cell,
 gdouble               gfs_cell_dirichlet_value         (FttCell * cell,
 							GfsVariable * v,
 							gint max_level);
+gdouble               gfs_mixed_cell_interpolate       (FttCell * cell,
+							FttVector p,
+							GfsVariable * v);
 
 void                  gfs_normal_divergence          (FttCell * cell,
 						      GfsVariable * v);

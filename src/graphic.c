@@ -1668,6 +1668,21 @@ static void vorticity_vector (FttCell * cell, gpointer * data)
 }
 #endif /* 3D */
 
+static gdouble interpolated_velocity (FttCell * cell, FttVector p, GfsVariable ** U,
+				      gdouble direction,
+				      FttVector * u)
+{
+  FttComponent c;
+  gdouble nu = 0.;
+  gdouble (* interpolate) (FttCell *, FttVector, GfsVariable * v) = GFS_IS_MIXED (cell) ?
+    gfs_mixed_cell_interpolate : gfs_interpolate;
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    (&u->x)[c] = direction* (*interpolate) (cell, p, U[c]);
+    nu += (&u->x)[c]*(&u->x)[c];
+  }
+  return nu;
+}
+
 static GList * grow_curve (GfsDomain * domain,
 			   GfsVariable ** U,
 			   FttVector p,
@@ -1745,10 +1760,7 @@ static GList * grow_curve (GfsDomain * domain,
       nstep = 0;
     }
 
-    for (c = 0; c < FTT_DIMENSION; c++) {
-      (&u.x)[c] = direction*gfs_interpolate (cell, p, U[c]);
-      nu += (&u.x)[c]*(&u.x)[c];
-    }
+    nu = interpolated_velocity (cell, p, U, direction, &u);
     if (nu > 0) {
       FttVector p1 = p;
       FttCell * cell1;
@@ -1756,14 +1768,10 @@ static GList * grow_curve (GfsDomain * domain,
       nu = 2.*sqrt (nu);
       for (c = 0; c < FTT_DIMENSION; c++)
 	(&p1.x)[c] += h*(&u.x)[c]/nu;
-      nu = 0.;
       cell1 = gfs_domain_locate (domain, p1, -1);
       if (!cell1)
 	break;
-      for (c = 0; c < FTT_DIMENSION; c++) {
-	(&u.x)[c] = direction*gfs_interpolate (cell1, p1, U[c]);
-	nu += (&u.x)[c]*(&u.x)[c];
-      }
+      nu = interpolated_velocity (cell1, p1, U, direction, &u);
     }
     else
       break;

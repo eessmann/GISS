@@ -1302,6 +1302,59 @@ void gfs_mixed_cell_gradient (FttCell * cell,
 }
 
 /**
+ * gfs_mixed_cell_interpolate:
+ * @cell: a mixed #FttCell.
+ * @p: a #FttVector.
+ * @v: a #GfsVariable.
+ *
+ * Returns: the value of variable @v interpolated at position @p within @cell.
+ */
+gdouble gfs_mixed_cell_interpolate (FttCell * cell,
+				    FttVector p,
+				    GfsVariable * v)
+{
+  FttCell * n[N_CELLS];
+  gdouble m[N_CELLS - 1][N_CELLS - 1], a[N_CELLS - 1];
+  gdouble v0, h;
+  FttVector * o;
+  guint i, j;
+
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (GFS_IS_MIXED (cell), 0.);
+  g_return_val_if_fail (v != NULL, 0.);
+
+  o = &GFS_STATE (cell)->solid->cm;
+  v0 = GFS_VALUE (cell, v);
+
+  if (v->surface_bc) {
+    (* GFS_SURFACE_GENERIC_BC_CLASS (GTS_OBJECT (v->surface_bc)->klass)->bc) (cell, v->surface_bc);
+    if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0) {
+      o = &GFS_STATE (cell)->solid->ca;
+      v0 = GFS_STATE (cell)->solid->fv;
+    }
+  }
+  g_assert (cell_bilinear (cell, n, o, gfs_cell_cm, -1, m));
+
+  for (i = 0; i < N_CELLS - 1; i++) {
+    a[i] = 0.;
+    for (j = 0; j < N_CELLS - 1; j++)
+      a[i] += m[i][j]*(GFS_VALUE (n[j + 1], v) - v0);
+  }
+  
+  h = ftt_cell_size (cell);
+  p.x = (p.x - o->x)/h;
+  p.y = (p.y - o->y)/h;
+#if FTT_2D
+  return a[0]*p.x + a[1]*p.y + a[2]*p.x*p.y + v0;
+#else /* 3D */
+  p.z = (p.z - o->z)/h;
+  return (a[0]*p.x + a[1]*p.y + a[2]*p.z + 
+	  a[3]*p.x*p.y + a[4]*p.x*p.z + a[5]*p.y*p.z + 
+	  a[6]*p.x*p.y*p.z + v0);
+#endif /* 3D */
+}
+
+/**
  * gfs_cell_dirichlet_gradient_flux:
  * @cell: a #FttCell.
  * @v: a #GfsVariable index.
