@@ -114,6 +114,7 @@ GtsObjectClass ** gfs_classes (void)
   gfs_boundary_class (),
     gfs_boundary_inflow_constant_class (),
     gfs_boundary_outflow_class (),
+    gfs_boundary_gradient_class (),
     gfs_boundary_periodic_class (),
 #ifdef HAVE_MPI
     gfs_boundary_mpi_class (),

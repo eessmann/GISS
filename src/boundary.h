@@ -234,6 +234,13 @@ struct _GfsBoundaryOutflowClass {
      
 GfsBoundaryOutflowClass * gfs_boundary_outflow_class    (void);
 
+/* GfsBoundaryGradient: Header */
+
+#define GFS_IS_BOUNDARY_GRADIENT(obj)         (gts_object_is_from_class (obj,\
+					    gfs_boundary_gradient_class ()))
+     
+GfsBoundaryClass * gfs_boundary_gradient_class    (void);
+
 /* GfsBoundaryPeriodic: Header */
 
 typedef struct _GfsBoundaryPeriodic         GfsBoundaryPeriodic;

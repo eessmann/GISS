@@ -949,6 +949,61 @@ GfsBoundaryOutflowClass * gfs_boundary_outflow_class (void)
   return klass;
 }
 
+/* GfsBoundaryGradient: Object */
+
+static GtsColor gradient_color (GtsObject * o)
+{
+  GtsColor c = { 1., 1., 0. }; /* red-green */
+
+  return c;
+}
+
+static void set_gradient_boundary (FttCell * cell)
+{
+  cell->flags |= GFS_FLAG_GRADIENT_BOUNDARY;
+}
+
+static void gradient_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsBoundary * b = GFS_BOUNDARY (*o);
+
+  if (GTS_OBJECT_CLASS (gfs_boundary_gradient_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_boundary_gradient_class ())->parent_class->read) 
+      (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  ftt_cell_traverse (b->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+		     (FttCellTraverseFunc) set_gradient_boundary, NULL);
+}
+
+static void gfs_boundary_gradient_class_init (GfsBoundaryClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read   = gradient_read;
+  GTS_OBJECT_CLASS (klass)->color  = gradient_color;
+}
+
+GfsBoundaryClass * gfs_boundary_gradient_class (void)
+{
+  static GfsBoundaryClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_boundary_gradient_info = {
+      "GfsBoundaryGradient",
+      sizeof (GfsBoundary),
+      sizeof (GfsBoundaryClass),
+      (GtsObjectClassInitFunc) gfs_boundary_gradient_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_boundary_class ()),
+				  &gfs_boundary_gradient_info);
+  }
+
+  return klass;
+}
+
 /* GfsBoundaryPeriodic: object */
 
 static void boundary_periodic_destroy (GtsObject * object)
