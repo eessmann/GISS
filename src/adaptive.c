@@ -946,7 +946,7 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
 	return;
       }
       if (level < gfs_function_value (a->minlevel, cell) ||
-	  (level <= maxlevel && (* a->cost) (cell, a) > a->cmax/a->cfactor))
+	  (level < maxlevel && (* a->cost) (cell, a) > a->cmax/a->cfactor))
 	COARSENABLE (cell, p) = FALSE;
     }
     i = i->next;
