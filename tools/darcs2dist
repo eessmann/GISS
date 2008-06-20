@@ -1,5 +1,12 @@
 #!/bin/sh
 
+# see ../src/darcsversion.sh
+darcsversion()
+{
+    darcs changes --last=1 --xml-output | \
+	awk 'BEGIN{RS=" ";FS="="}{if ($1 == "date") print substr($2,4,6);}'
+}
+
 usage()
 {
 	cat <<EOF
@@ -23,6 +30,9 @@ wrkdir=`mktemp -d /tmp/darcs2dist.XXXXXX`
 cd $wrkdir
 if ( darcs get $repo $package && \
      cd $package && \
+     version=`darcsversion` && \
+     login=`echo $url | awk 'BEGIN{FS=":"}{print $1}'` && \
+     dir=`echo $url | awk 'BEGIN{FS=":"}{print $2}'` && \
      sh autogen.sh && \
      make && \
      make dist && \
@@ -30,9 +40,11 @@ if ( darcs get $repo $package && \
      cd  $package-[0-9].[0-9].[0-9] && \
      ./configure && make && cd .. && \
      rm -r -f $package-[0-9].[0-9].[0-9] && tar xzf $package-*.tar.gz && \
-     mv $package-[0-9].[0-9].[0-9] $package-snapshot-`date +%y%m%d` && \
-     tar chof - $package-snapshot-`date +%y%m%d` | gzip --best -c > $package-snapshot.tar.gz && \
-     scp -q $package-snapshot.tar.gz $url/$package-snapshot.tar.gz ) > msg 2>&1; then
+     mv $package-[0-9].[0-9].[0-9] $package-snapshot-$version && \
+     tar chof - $package-snapshot-$version | gzip --best -c > $package-snapshot-$version.tar.gz && \
+     ssh $login "cd $dir && rm -f $package-snapshot-*.tar.gz" && \
+     scp -q $package-snapshot-$version.tar.gz $url/$package-snapshot-$version.tar.gz && \
+     ssh $login "cd $dir && ln -s -f $package-snapshot-$version.tar.gz $package-snapshot.tar.gz") > msg 2>&1; then
     rm -f msg
     status=0
 else

@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# do not forget to update ../tools/darcs2dist when changing the way $version is computed
 version=`darcs changes --last=1 --xml-output | \
     awk 'BEGIN{RS=" ";FS="="}{if ($1 == "date") print substr($2,4,6) "-" substr($2,10,6);}'`
 changes=`darcs whatsnew -s | awk '{
