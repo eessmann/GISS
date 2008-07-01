@@ -8,27 +8,33 @@ Version: 1.2.0
 %else
 Version: %{current}
 %endif
-Release: 5.%{alphatag}cvs%{?dist}
+Release: 6.%{alphatag}cvs%{?dist}
 License: GPLv2
+# SuSE should have this macro set. If doubt specify in ~/.rpmmacros
+%if 0%{?suse_version}
 Group: Productivity/Scientific/Other
+%endif
+# For Fedora you must specify fedora_version in your ~/.rpmmacros file
+%if 0%{?fedora_version}
+Group: Applications/Engineering
+%endif
 URL: http://gfs.sourceforge.net
 Packager: Ivan Adam Vari <i.vari@niwa.co.nz>
 Source0: %{name}-stable.tar.gz
-Provides: %{name}
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires: gts-snapshot-devel >= 0.7.6 pkgconfig gcc sed gawk m4
 %if 0%{?fedora_version}
 Requires: proj gsl netcdf
-%elif 0%{?suse_version}
-Requires: proj4 gsl libnetcdf-4
 %endif
-BuildRequires: gts-snapshot-devel >= 0.7.6 glib2-devel geomview-devel
-BuildRequires: glibc-devel automake libtool gtkglext-devel
-BuildRequires: startup-notification-devel gsl-devel
+%if 0%{?suse_version}
+Requires: libproj0 gsl libnetcdf-4
+%endif
+BuildRequires: glibc-devel automake libtool gsl-devel gts-snapshot-devel >= 0.7.6
 %if 0%{?fedora_version}
-BuildRequires: libXt-devel netpbm-devel netcdf-devel
-%elif 0%{?suse_version}
-BuildRequires: xorg-x11-devel libnetpbm libnetcdf-devel
+BuildRequires: netcdf-devel proj-devel
+%endif
+%if 0%{?suse_version}
+BuildRequires: libnetcdf-devel libproj-devel
 %endif
 
 
@@ -36,10 +42,10 @@ BuildRequires: xorg-x11-devel libnetpbm libnetcdf-devel
 Gerris is an Open Source Free Software library for the solution of the 
 partial differential equations describing fluid flow. The source code 
 is available free of charge under the Free Software GPL license.
-Gerris is supported by NIWA (National Institute of Water and Atmospheric research) 
-and by the Marsden Fund of the Royal Society of New Zealand.
-The code is written entirely in C and uses both the GLib Library and 
-the GTS Library for geometrical functions and object-oriented programming. 
+Gerris is supported by NIWA (National Institute of Water and Atmospheric
+research) and by the Marsden Fund of the Royal Society of New Zealand.
+The code is written entirely in C and uses both the GLib Library and the
+GTS Library for geometrical functions and object-oriented programming. 
 
 
 %prep
@@ -48,13 +54,34 @@ the GTS Library for geometrical functions and object-oriented programming.
 
 %build
 RPM_OPT_FLAGS="$RPM_OPT_FLAGS -fPIC -DPIC"
+%if 0%{?suse_version}
 if [ -x ./configure ]; then
-    CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=%{_prefix} \
-	    --libdir=%{_prefix}/%_lib
+    CFLAGS="$RPM_OPT_FLAGS" ./configure \
+	--prefix=%{_prefix} \
+	--libdir=%{_prefix}/%_lib \
+	--disable-static
 else
-    CFLAGS="$RPM_OPT_FLAGS" sh autogen.sh --prefix=%{_prefix} \
-	    --libdir=%{_prefix}/%_lib
+    CFLAGS="$RPM_OPT_FLAGS" sh autogen.sh \
+	--prefix=%{_prefix} \
+	--libdir=%{_prefix}/%_lib \
+	--disable-static
 fi
+%endif
+%if 0%{?fedora_version}
+if [ -x ./configure ]; then
+    CFLAGS="$RPM_OPT_FLAGS" \
+    CPPFLAGS="-I%{_includedir}/netcdf-3" ./configure \
+	--prefix=%{_prefix} \
+	--libdir=%{_prefix}/%_lib \
+	--disable-static
+else
+    CFLAGS="$RPM_OPT_FLAGS" \
+    CPPFLAGS="-I%{_includedir}/netcdf-3" sh autogen.sh \
+	--prefix=%{_prefix} \
+	--libdir=%{_prefix}/%_lib \
+	--disable-static
+fi
+%endif
 
 %{__make}
 
@@ -63,6 +90,12 @@ fi
 rm -rf $RPM_BUILD_ROOT
 mkdir $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
+
+# Comply shared library policy
+find $RPM_BUILD_ROOT -name *.la -exec rm -f {} \;
+
+# Comply static build policy
+find $RPM_BUILD_ROOT -name *.a -exec rm -f {} \;
 
 
 %clean
@@ -78,7 +111,6 @@ elif [ -x /opt/gnome/bin/gtk-update-icon-cache ]; then
  /opt/gnome/bin/gtk-update-icon-cache -t --quiet %{_datadir}/icons/hicolor || :
 fi
 update-mime-database %{_datadir}/mime &> /dev/null || :
-
 
 
 %postun
@@ -100,8 +132,6 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 %{_includedir}/gerris/*.h
 %{_libdir}/*.so.*
 %{_libdir}/*.so
-%{_libdir}/*.a
-%{_libdir}/*.la
 %{_libdir}/gerris/*
 %{_libdir}/pkgconfig/*.pc
 %{_datadir}/mime/packages/*.xml
@@ -109,6 +139,14 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 
 
 %changelog
+* Thu May 15 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 6
+- Added fedora 8 support for x86 (32bit only)
+- Removed libtool config files to comply with shared
+  library policy
+- Removed static build bits to comply with shared
+  library policy
+- Fixed dependencies
+
 * Mon May 12 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 5
 - Added new package dependencies, minor fixes
 
