@@ -25,16 +25,13 @@
 static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
 {
   GfsCartesianGrid * cgd = GFS_CARTESIAN_GRID (*o);
-  guint i, j, taille = 1;
+  guint i, j, size = 1;
 
-  /* call read method of parent */
   if (GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->read) 
       (o, fp);
   if (fp->type == GTS_ERROR)
     return;
-
-  /* do object-specific read here */
 
   while (fp->type == '\n') 
     gts_file_next_token (fp);
@@ -45,34 +42,30 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
   cgd->N = atoi (fp->token->str);
   gts_file_next_token (fp);
 
-  cgd->name = g_malloc0 ((cgd->N + 1)*sizeof(char*));
-
-  for (i = 0; i < cgd->N + 1; i++) {
+  cgd->name = g_malloc0 (cgd->N*sizeof (char *));
+  for (i = 0; i < cgd->N; i++) {
     if (fp->type != GTS_STRING) {
       gts_file_error (fp, "expecting a string (name[%d])", i);
       return;
-    } 
+    }
     cgd->name[i] = g_strdup (fp->token->str);
     gts_file_next_token (fp);
   }
 
-  cgd->n = g_malloc(cgd->N*sizeof(guint));
-  
+  cgd->n = g_malloc (cgd->N*sizeof (guint));  
   for (i = 0; i < cgd->N; i++) {
     while (fp->type == '\n') 
       gts_file_next_token (fp);
-    if (fp->type != GTS_INT) {
+    if (fp->type != GTS_UINT) {
       gts_file_error (fp, "expecting an integer (n[%d])", i);
       return;
     }
-    
     cgd->n[i] = atoi (fp->token->str);
     gts_file_next_token (fp);
-    taille *= cgd->n[i];
+    size *= cgd->n[i];
   }
 
-  cgd->x = g_malloc0 (cgd->N*sizeof (gint));
-  
+  cgd->x = g_malloc0 (cgd->N*sizeof (gdouble *));
   for (i = 0; i < cgd->N; i++) {
     cgd->x[i] = g_malloc (cgd->n[i]*sizeof (gdouble));
     for (j = 0; j < cgd->n[i]; j++) {
@@ -87,13 +80,12 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
     }
   }
 
-  cgd->v = g_malloc (taille*sizeof (gdouble));
-  
-  for (i = 0; i < taille; i++) {
+  cgd->v = g_malloc (size*sizeof (gdouble));  
+  for (i = 0; i < size; i++) {
     if (fp->type == '\n')
       gts_file_next_token (fp);
     if (fp->type != GTS_FLOAT && fp->type != GTS_INT) {
-      gts_file_error (fp, "expecting a double");
+      gts_file_error (fp, "expecting a number");
       return;
     }
     cgd->v[i] = atof (fp->token->str);
@@ -104,40 +96,37 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
 static void gfs_cartesian_grid_write (GtsObject * o, FILE * fp)
 {
   GfsCartesianGrid * cgd = GFS_CARTESIAN_GRID (o);
-  guint i, j, taille = 1;
+  guint i, j, size = 1;
 
-  /* call write method of parent */
   if (GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->write)
     (* GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->write) 
       (o, fp);
 
-  /* do object specific write here */
   for (i = 0; i < cgd->N; i++)
-    taille *= cgd->n[i];
+    size *= cgd->n[i];
 
   fprintf (fp, "%d ", cgd->N);
-  for (i = 0; i < cgd->N+1; i++)
+  for (i = 0; i < cgd->N; i++)
     fprintf (fp, "%s ", cgd->name[i]);
   fputc ('\n', fp);
-  for (i=0;i<cgd->N;i++)
-    fprintf (fp,"%d\n",cgd->n[i]);
+  for (i = 0; i < cgd->N; i++)
+    fprintf (fp, "%d\n", cgd->n[i]);
 
   for (i = 0; i < cgd->N; i++)
     for (j = 0; j < cgd->n[i]; j++)
-      fprintf (fp,"%f\n",cgd->x[i][j]);
+      fprintf (fp, "%f\n", cgd->x[i][j]);
 
-  for (i = 0; i < taille; i++)
-    fprintf (fp,"%f\n", cgd->v[i]);  
+  for (i = 0; i < size; i++)
+    fprintf (fp, "%f\n", cgd->v[i]);  
 }
 
 static void gfs_cartesian_grid_destroy (GtsObject * object)
 {
-  /* do object-specific cleanup here */
   GfsCartesianGrid * cgd = GFS_CARTESIAN_GRID (object);  
 
   guint i;
   if (cgd->name) {
-    for (i = 0; i < cgd->N+1; i++)
+    for (i = 0; i < cgd->N; i++)
       g_free (cgd->name[i]);
     g_free (cgd->name);
   }
@@ -149,7 +138,6 @@ static void gfs_cartesian_grid_destroy (GtsObject * object)
   }
   g_free (cgd->v);
  
-  /* do not forget to call destroy method of the parent */
   (* GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->destroy) (object);
 }
 
