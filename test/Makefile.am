@@ -55,6 +55,8 @@ tests: tests.dvi
 	sh ../doc/share/fixnav.sh $(DOC)
 	cp -f ../doc/share/contents.png ../doc/share/next.png ../doc/share/prev.png $(DOC)
 	rm -f *_motif.gif $(DOC).h{tml,aux,ind,toc} $(DOC).image.tex $(DOC).css
+	sh ../doc/examples/crossref.sh --url=http://gfs.sourceforge.net/tests/tests $(TESTDIRS)
+	mv references tests
 
 tests.dvi: tests.tex tests.bib
 	latex -interaction=nonstopmode tests.tex > /dev/null 2>&1

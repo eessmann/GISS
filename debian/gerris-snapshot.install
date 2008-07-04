@@ -14,3 +14,4 @@ usr/lib/gerris/*.awk
 usr/lib/pkgconfig/*.pc
 usr/share/mime/packages/*.xml
 usr/share/icons/hicolor/48x48/mimetypes/*.png
+usr/share/gerris/*

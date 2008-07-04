@@ -8,7 +8,7 @@ Version: 1.2.0
 %else
 Version: %{current}
 %endif
-Release: 6.%{alphatag}cvs%{?dist}
+Release: 7.%{alphatag}cvs%{?dist}
 License: GPLv2
 # SuSE should have this macro set. If doubt specify in ~/.rpmmacros
 %if 0%{?suse_version}
@@ -22,20 +22,17 @@ URL: http://gfs.sourceforge.net
 Packager: Ivan Adam Vari <i.vari@niwa.co.nz>
 Source0: %{name}-stable.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-Requires: gts-snapshot-devel >= 0.7.6 pkgconfig gcc sed gawk m4
 %if 0%{?fedora_version}
 Requires: proj gsl netcdf
-%endif
-%if 0%{?suse_version}
-Requires: libproj0 gsl libnetcdf-4
-%endif
-BuildRequires: glibc-devel automake libtool gsl-devel gts-snapshot-devel >= 0.7.6
-%if 0%{?fedora_version}
 BuildRequires: netcdf-devel proj-devel
 %endif
 %if 0%{?suse_version}
+Requires: libproj0 gsl libnetcdf-4
 BuildRequires: libnetcdf-devel libproj-devel
 %endif
+# For both distros
+Requires: gts-snapshot-devel >= 0.7.6 pkgconfig gcc sed gawk m4
+BuildRequires: glibc-devel automake libtool gsl-devel gts-snapshot-devel >= 0.7.6
 
 
 %description
@@ -59,11 +56,13 @@ if [ -x ./configure ]; then
     CFLAGS="$RPM_OPT_FLAGS" ./configure \
 	--prefix=%{_prefix} \
 	--libdir=%{_prefix}/%_lib \
+	--disable-mpi \
 	--disable-static
 else
     CFLAGS="$RPM_OPT_FLAGS" sh autogen.sh \
 	--prefix=%{_prefix} \
 	--libdir=%{_prefix}/%_lib \
+	--disable-mpi \
 	--disable-static
 fi
 %endif
@@ -73,12 +72,14 @@ if [ -x ./configure ]; then
     CPPFLAGS="-I%{_includedir}/netcdf-3" ./configure \
 	--prefix=%{_prefix} \
 	--libdir=%{_prefix}/%_lib \
+	--disable-mpi \
 	--disable-static
 else
     CFLAGS="$RPM_OPT_FLAGS" \
     CPPFLAGS="-I%{_includedir}/netcdf-3" sh autogen.sh \
 	--prefix=%{_prefix} \
 	--libdir=%{_prefix}/%_lib \
+	--disable-mpi \
 	--disable-static
 fi
 %endif
@@ -125,7 +126,7 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 
 
 %files
-%defattr(-,root,root,-)
+%defattr(-,root,root)
 %doc NEWS README TODO COPYING
 %{_bindir}/*
 %{_includedir}/*.h
@@ -134,11 +135,17 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 %{_libdir}/*.so
 %{_libdir}/gerris/*
 %{_libdir}/pkgconfig/*.pc
+%{_datadir}/gerris/gfs.lang
 %{_datadir}/mime/packages/*.xml
 %{_datadir}/icons/hicolor/48x48/mimetypes/*.png
 
 
 %changelog
+* Thu Jul 3 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 7
+- Fixed typo in %files section (attr)
+- Added new file gfs.lang to %files section
+- Disabled MPI according to debian build rules
+
 * Thu May 15 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 6
 - Added fedora 8 support for x86 (32bit only)
 - Removed libtool config files to comply with shared

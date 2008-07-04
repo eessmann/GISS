@@ -457,5 +457,6 @@ doc/tutorial/Makefile
 doc/examples/Makefile
 doc/examples/gfs2doc
 doc/examples/gfs-highlight
+doc/examples/crossref.sh
 desktop/Makefile
 ])

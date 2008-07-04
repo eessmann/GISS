@@ -15,7 +15,8 @@ EXTRA_DIST = \
 	gfs2tex \
 	depend.py \
 	test.py \
-	Makefile.deps
+	Makefile.deps \
+	crossref.sh.in
 
 TESTS = test.sh
 
@@ -24,7 +25,7 @@ test.sh: $(EXAMPLES)
 	@chmod +x test.sh
 
 bin_SCRIPTS = \
-	gfs2doc gfs-highlight
+	gfs2doc gfs-highlight gfsxref
 
 BUILT_SOURCES= \
 	gfs2doc gfs-highlight gfs.lang
@@ -46,7 +47,7 @@ clean-generic:
 
 DOC = examples
 
-examples: examples.dvi
+examples: examples.dvi crossref.sh
 	hevea -fix $(DOC).tex
 	imagen -res 600 -extra "pnmscale 0.24" $(DOC)
 	hacha $(DOC).html
@@ -58,6 +59,8 @@ examples: examples.dvi
 	sh ../share/fixnav.sh $(DOC)
 	cp -f ../share/contents.png ../share/next.png ../share/prev.png $(DOC)
 	rm -f *_motif.gif $(DOC).h{tml,aux,ind,toc} $(DOC).image.tex $(DOC).css
+	sh ./crossref.sh --url=http://gfs.sourceforge.net/examples/examples $(EXAMPLES)
+	mv references examples
 
 examples.dvi: examples.tex
 	latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
