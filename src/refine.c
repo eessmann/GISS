@@ -488,7 +488,7 @@ static void refine_height_read (GtsObject ** o, GtsFile * fp)
     return;
 
   if (!GFS_SURFACE (GFS_REFINE_SURFACE (*o)->surface)->s) {
-    gts_file_error (fp, "RefineDistance only works with GTS surfaces");
+    gts_file_error (fp, "RefineHeight only works with GTS surfaces");
     return;
   }
 }
