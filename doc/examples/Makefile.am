@@ -16,7 +16,8 @@ EXTRA_DIST = \
 	depend.py \
 	test.py \
 	Makefile.deps \
-	crossref.sh.in
+	crossref.sh.in \
+	gfsxref
 
 TESTS = test.sh
 
