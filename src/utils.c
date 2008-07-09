@@ -983,9 +983,13 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa)
   gdouble dimensional;
   if (f->s) {
     FttVector p;
-
     ftt_face_pos (fa, &p);
     dimensional = interpolated_value (f, &p);
+  }
+  else if (f->g) {
+    FttVector p;
+    ftt_face_pos (fa, &p);
+    dimensional = interpolated_cgd (f, &p);
   }
   else if (f->v)
     dimensional = gfs_dimensional_value (f->v, gfs_face_interpolated_value (fa, f->v->i));

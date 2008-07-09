@@ -56,7 +56,7 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
   for (i = 0; i < cgd->N; i++) {
     while (fp->type == '\n') 
       gts_file_next_token (fp);
-    if (fp->type != GTS_UINT) {
+    if (fp->type != GTS_INT) {
       gts_file_error (fp, "expecting an integer (n[%d])", i);
       return;
     }
