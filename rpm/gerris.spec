@@ -1,14 +1,15 @@
 %define	alphatag %(date +%Y%m%d)
-%define current %(gerris2D -V 2>&1 | head -1 | cut -d' ' -f6)
+%define current %(pkg-config gerris2D --modversion)
+%define gts_version %(pkg-config gts --modversion)
 
-Summary: The Gerris Flow Solver
+Summary: The Gerris Flow Solver (development snapshot)
 Name: gerris
 %if "%{current}" == ""
-Version: 1.2.0
+Version: 1.3.0
 %else
 Version: %{current}
 %endif
-Release: 7.%{alphatag}cvs%{?dist}
+Release: 8.%{alphatag}cvs%{?dist}
 License: GPLv2
 # SuSE should have this macro set. If doubt specify in ~/.rpmmacros
 %if 0%{?suse_version}
@@ -31,18 +32,29 @@ Requires: libproj0 gsl libnetcdf-4
 BuildRequires: libnetcdf-devel libproj-devel
 %endif
 # For both distros
-Requires: gts-snapshot-devel >= 0.7.6 pkgconfig gcc sed gawk m4
-BuildRequires: glibc-devel automake libtool gsl-devel gts-snapshot-devel >= 0.7.6
+Requires: gts-snapshot-devel >= %{gts_version} pkgconfig gcc sed gawk m4
+BuildRequires: glibc-devel automake libtool gsl-devel gts-snapshot-devel >= %{gts_version}
 
 
 %description
 Gerris is an Open Source Free Software library for the solution of the 
-partial differential equations describing fluid flow. The source code 
-is available free of charge under the Free Software GPL license.
+partial differential equations describing fluid flow.
+
 Gerris is supported by NIWA (National Institute of Water and Atmospheric
 research) and by the Marsden Fund of the Royal Society of New Zealand.
-The code is written entirely in C and uses both the GLib Library and the
-GTS Library for geometrical functions and object-oriented programming. 
+
+A brief summary of its main (current) features:
+
+    * Quadtree-based (Octree in 3D) spatial discretisation with
+      automatic and dynamic refinement.
+    * Multigrid Poisson solver.
+    * Second-order Godunov type advection scheme.
+    * Solves the time-dependent incompressible Euler, Stokes ans Navier-Stokes
+      equations.
+    * Support for complex solid boundaries (automatic locally-refined
+      mesh generation).
+      
+See http://gfs.sf.net for more information and documentation.
 
 
 %prep
@@ -141,6 +153,11 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 
 
 %changelog
+* Wed Jul 16 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 8
+- Version change (1.2.0 -> 1.3.0) related minor fixes
+- Added macro for gts version specification
+  Some other changes found in debian packages
+
 * Thu Jul 3 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 7
 - Fixed typo in %files section (attr)
 - Added new file gfs.lang to %files section
