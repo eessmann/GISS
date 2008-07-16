@@ -2171,13 +2171,29 @@ typedef struct {
   GfsVariable ** v;
 } CflData;
 
-static void minimum_mac_cfl (FttCellFace * face, gdouble * cfl)
+static void minimum_mac_cfl (FttCellFace * face, CflData * p)
 {
   gdouble un = GFS_STATE (face->cell)->f[face->d].un;
   if (un != 0.) {
     gdouble cflu = ftt_cell_size (face->cell)/fabs (un);
-    if (cflu*cflu < *cfl)
-      *cfl = cflu*cflu;
+    if (cflu*cflu < p->cfl)
+      p->cfl = cflu*cflu;
+  }
+  FttComponent c = face->d/2;
+  if (p->v[c]->sources) {
+    gdouble g = 0.;
+    GSList * i = GTS_SLIST_CONTAINER (p->v[c]->sources)->items;
+    while (i) {
+      GfsSourceGeneric * s = i->data;
+      if (s->face_value)
+	g += (* s->face_value) (s, face, p->v[c]);
+      i = i->next;
+    }
+    if (g != 0.) {
+      gdouble cflg = 2.*ftt_cell_size (face->cell)/fabs (g);
+      if (cflg < p->cfl)
+	p->cfl = cflg;
+    }
   }
 }
 
@@ -2226,9 +2242,9 @@ gdouble gfs_domain_cfl (GfsDomain * domain,
   g_return_val_if_fail (domain != NULL, 0.);
 
   p.cfl = G_MAXDOUBLE;
-  gfs_domain_face_traverse (domain, FTT_XYZ, FTT_PRE_ORDER, flags, max_depth, 
-			    (FttFaceTraverseFunc) minimum_mac_cfl, &p.cfl);
   p.v = gfs_domain_velocity (domain);
+  gfs_domain_face_traverse (domain, FTT_XYZ, FTT_PRE_ORDER, flags, max_depth, 
+			    (FttFaceTraverseFunc) minimum_mac_cfl, &p);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
 			    (FttCellTraverseFunc) minimum_cfl, &p);
   gfs_all_reduce (domain, p.cfl, MPI_DOUBLE, MPI_MIN);
