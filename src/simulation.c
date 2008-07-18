@@ -824,15 +824,23 @@ static void simulation_init (GfsSimulation * object)
     { NULL, NULL, NULL}
   };
 
-  gfs_domain_add_variable (domain, "P", "Approximate projection pressure")->centered = TRUE;
-  gfs_domain_add_variable (domain, "Pmac", "MAC projection pressure")->centered = TRUE;
-  gfs_variable_set_vector (gfs_domain_add_variable (domain, "U", 
-						    "x-component of the velocity"), FTT_X);
-  gfs_variable_set_vector (gfs_domain_add_variable (domain, "V",
-						    "y-component of the velocity"), FTT_Y);
+  GfsVariable * v;
+  v = gfs_domain_add_variable (domain, "P",    "Approximate projection pressure");
+  v->centered = TRUE;
+  v->units = 2.;
+  v = gfs_domain_add_variable (domain, "Pmac", "MAC projection pressure");
+  v->centered = TRUE;  
+  v->units = 2.;
+  v = gfs_domain_add_variable (domain, "U",    "x-component of the velocity");
+  gfs_variable_set_vector (v, FTT_X);
+  v->units = 1.;
+  v = gfs_domain_add_variable (domain, "V",    "y-component of the velocity");
+  gfs_variable_set_vector (v, FTT_Y);
+  v->units = 1.;
 #if (!FTT_2D)
-  gfs_variable_set_vector (gfs_domain_add_variable (domain, "W",
-						    "z-component of the velocity"), FTT_Z);
+  v = gfs_domain_add_variable (domain, "W",    "z-component of the velocity");
+  gfs_variable_set_vector (v, FTT_Z);
+  v->units = 1.;
 #endif /* FTT_3D */
 
   GfsDerivedVariableInfo * dv = derived_variable;

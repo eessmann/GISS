@@ -30,7 +30,8 @@ static double dd (const gchar * name, FttComponent c) {
   if (v == NULL)
     return 0.;
   g_return_val_if_fail (_cell != NULL, 0.);
-  return gfs_center_gradient (_cell, c, v->i)/ftt_cell_size (_cell);
+  return gfs_dimensional_value (v, gfs_center_gradient (_cell, c, v->i)/
+				(_sim->physical_params.L*ftt_cell_size (_cell)));
 }
 
 static double dx (const gchar * name) { return dd (name, FTT_X); }

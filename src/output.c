@@ -946,6 +946,7 @@ static gboolean gfs_output_solid_force_event (GfsEvent * event,
     GfsDomain * domain = GFS_DOMAIN (sim);
     FILE * fp = GFS_OUTPUT (event)->file->fp;
     FttVector pf, vf, pm, vm;
+    gdouble L = sim->physical_params.L;
 
     if (GFS_OUTPUT (event)->first_call)
       fputs ("# 1: T (2,3,4): Pressure force (5,6,7): Viscous force "
@@ -954,8 +955,8 @@ static gboolean gfs_output_solid_force_event (GfsEvent * event,
     gfs_domain_solid_force (domain, &pf, &vf, &pm, &vm);
     fprintf (fp, "%g %g %g %g %g %g %g %g %g %g %g %g %g\n",
 	     sim->time.t,
-	     pf.x, pf.y, pf.z,
-	     vf.x, vf.y, vf.z,
+	     pf.x*L, pf.y*L, pf.z*L,
+	     vf.x*L, vf.y*L, vf.z*L,
 	     pm.x, pm.y, pm.z,
 	     vm.x, vm.y, vm.z);
     return TRUE;
@@ -1131,8 +1132,9 @@ static gboolean gfs_output_location_event (GfsEvent * event,
 	
 	fprintf (fp, "%g %g %g %g", sim->time.t, p.x, p.y, p.z);
 	while (i) {
-	  if (GFS_VARIABLE1 (i->data)->name)
-	    fprintf (fp, " %g", gfs_interpolate (cell, pm, i->data));
+	  GfsVariable * v = i->data;
+	  if (v->name)
+	    fprintf (fp, " %g", gfs_dimensional_value (v, gfs_interpolate (cell, pm, v)));
 	  i = i->next;
 	}
 	fputc ('\n', fp);
@@ -2788,7 +2790,7 @@ static gboolean gfs_output_streamline_event (GfsEvent * event,
 					 0., 0.,
 					 TRUE,
 					 NULL, NULL);
-
+    /* fixme: mapping is not taken into account */
     gfs_streamline_write (stream, GFS_OUTPUT (event)->file->fp);
     fflush (GFS_OUTPUT (event)->file->fp);
     gfs_streamline_destroy (stream);
@@ -2892,6 +2894,7 @@ static gboolean gfs_output_particle_event (GfsEvent * event,
     fprintf (fp, "%g %g %g %g\n", sim->time.t, pm.x, pm.y, pm.z);
     ret = TRUE;
   }
+  /* fixme: mapping is most probably incorrect */
   gfs_domain_advect_point (GFS_DOMAIN (sim), l->p, sim->advection_params.dt);
   return ret;
 }
