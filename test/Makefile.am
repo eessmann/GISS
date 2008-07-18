@@ -9,6 +9,7 @@ TESTDIRS = \
 	reynolds \
 	periodic \
 	merging \
+	axi \
 	lid \
 	poiseuille \
 	couette \
