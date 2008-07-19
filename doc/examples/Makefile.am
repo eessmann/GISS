@@ -46,6 +46,7 @@ gfs-highlight: gfs-highlight.in
 
 clean-generic:
 	$(RM) *.dvi *.aux *.log *.toc *.out examples.tex *.pyc test.sh gfs2doc
+	$(RM) -r examples
 
 DOC = examples
 
