@@ -40,4 +40,19 @@ static double dy (const gchar * name) { return dd (name, FTT_Y); }
 static double dz (const gchar * name) { return dd (name, FTT_Z); }
 #endif /* 3D */
 
+static double area (const gchar * name)
+{
+  GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (_sim)->variables, name);
+  if (v == NULL || !GFS_IS_VARIABLE_TRACER_VOF (v))
+    return 0.;
+  g_return_val_if_fail (_cell != NULL, 0.);
+  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
+  FttVector m, p;
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&m.x)[c] = GFS_VALUE (_cell, t->m[c]);
+  return gfs_plane_area_center (&m, GFS_VALUE (_cell, t->alpha), &p)/
+    (_sim->physical_params.L*ftt_cell_size (_cell));
+}
+
 #endif /* __FUNCTION_H__ */
