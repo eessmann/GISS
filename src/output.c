@@ -1888,7 +1888,8 @@ static gboolean gfs_output_scalar_sum_event (GfsEvent * event,
 			      output->maxlevel,
 			      (FttCellTraverseFunc) add, data);
     fprintf (GFS_OUTPUT (event)->file->fp, 
-	     "%s time: %g sum: % 15.6e\n", output->name, sim->time.t, sum);
+	     "%s time: %g sum: % 15.6e\n", output->name, sim->time.t, 
+	     sum*pow (sim->physical_params.L, FTT_DIMENSION));
     return TRUE;
   }
   return FALSE;

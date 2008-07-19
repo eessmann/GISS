@@ -57,7 +57,8 @@ static void vertex_pos (Vertex * v, FttVector * p, GfsSimulation * sim)
 
 static float vertex_value (Vertex * vertex, GfsVariable * v, gint max_depth)
 {
-  return gfs_cell_corner_value (vertex->cell, d[vertex->i], v, max_depth);
+  return gfs_dimensional_value (v, gfs_cell_corner_value (vertex->cell, d[vertex->i], 
+							  v, max_depth));
 }
 
 typedef struct {
