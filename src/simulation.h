@@ -135,6 +135,10 @@ GfsSimulationClass * gfs_advection_class          (void);
 
 GfsSimulationClass * gfs_poisson_class            (void);
 
+/* GfsAxi: Header */
+
+GfsSimulationClass * gfs_axi_class                (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

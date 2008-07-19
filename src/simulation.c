@@ -1780,3 +1780,47 @@ GfsSimulationClass * gfs_poisson_class (void)
 
   return klass;
 }
+
+/* GfsAxi: Object */
+
+static void axi_read (GtsObject ** object, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_axi_class ())->parent_class->read) (object, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GFS_DOMAIN (*object)->refpos.y = 0.5;
+}
+
+static gdouble axi_face_fraction (const GfsDomain * domain, const FttCellFace * face)
+{
+  FttVector p;
+  ftt_face_pos (face, &p);
+  return p.y;
+}
+
+static void axi_class_init (GfsSimulationClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = axi_read;
+  GFS_DOMAIN_CLASS (klass)->face_fraction = axi_face_fraction;
+}
+
+GfsSimulationClass * gfs_axi_class (void)
+{
+  static GfsSimulationClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_axi_info = {
+      "GfsAxi",
+      sizeof (GfsSimulation),
+      sizeof (GfsSimulationClass),
+      (GtsObjectClassInitFunc) axi_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_simulation_class ()), &gfs_axi_info);
+  }
+
+  return klass;
+}

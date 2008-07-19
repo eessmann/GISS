@@ -1818,29 +1818,16 @@ gdouble gfs_face_interpolated_value (const FttCellFace * face,
 void gfs_normal_divergence (FttCell * cell,
 			    GfsVariable * v)
 {
-  FttComponent c;
+  FttCellFace face;
   gdouble div = 0.;
 
   g_return_if_fail (cell != NULL);
   g_return_if_fail (v != NULL);
 
-  if (GFS_IS_MIXED (cell)) {
-    GfsSolidVector * solid = GFS_STATE (cell)->solid;
-    
-    for (c = 0; c < FTT_DIMENSION; c++) {
-      FttDirection d = 2*c;
-      
-      div += (solid->s[d]*GFS_STATE (cell)->f[d].un - 
-	      solid->s[d + 1]*GFS_STATE (cell)->f[d + 1].un);
-    }
-  }
-  else
-    for (c = 0; c < FTT_DIMENSION; c++) {
-      FttDirection d = 2*c;
-      
-      div += (GFS_STATE (cell)->f[d].un - 
-	      GFS_STATE (cell)->f[d + 1].un);
-    }
+  face.cell = cell;
+  for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++)
+    div += (FTT_FACE_DIRECT (&face) ? 1. : -1.)*
+      GFS_STATE (cell)->f[face.d].un*gfs_domain_face_fraction (v->domain, &face);
   GFS_VARIABLE (cell, v->i) = div*ftt_cell_size (cell);
 }
 

@@ -392,7 +392,7 @@ void gfs_face_advection_flux (const FttCellFace * face,
   g_return_if_fail (face != NULL);
   g_return_if_fail (par != NULL);
 
-  flux = GFS_FACE_FRACTION (face)*GFS_FACE_NORMAL_VELOCITY (face)*par->dt*
+  flux = gfs_domain_face_fraction (par->v->domain, face)*GFS_FACE_NORMAL_VELOCITY (face)*par->dt*
     gfs_face_upwinded_value (face, GFS_FACE_UPWINDING, NULL)/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
     flux = - flux;
@@ -437,7 +437,7 @@ void gfs_face_velocity_advection_flux (const FttCellFace * face,
   c = par->v->component;
   g_return_if_fail (c >= 0 && c < FTT_DIMENSION);
 
-  flux = GFS_FACE_FRACTION (face)*GFS_FACE_NORMAL_VELOCITY (face)*par->dt
+  flux = gfs_domain_face_fraction (par->v->domain, face)*GFS_FACE_NORMAL_VELOCITY (face)*par->dt
     /ftt_cell_size (face->cell);
 #if 0
   if (c == face->d/2) /* normal component */
@@ -487,7 +487,7 @@ void gfs_face_velocity_convective_flux (const FttCellFace * face,
 
   g_return_if_fail (face != NULL);
   g_return_if_fail (par != NULL);
-  g_return_if_fail (GFS_FACE_FRACTION (face) == 1.);
+  g_return_if_fail (gfs_domain_face_fraction (par->v->domain, face) == 1.);
 
   c = par->v->component;
   g_return_if_fail (c >= 0 && c < FTT_DIMENSION);
@@ -560,8 +560,8 @@ void gfs_face_advected_normal_velocity (const FttCellFace * face,
     break;
   case FTT_FINE_COARSE:
     GFS_FACE_NORMAL_VELOCITY_RIGHT (face) += 
-      u*GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*
-				       FTT_CELLS_DIRECTION (face->d));
+      u*gfs_domain_face_fraction (par->v->domain, face)/
+      (gfs_domain_face_fraction_right (par->v->domain, face)*FTT_CELLS_DIRECTION (face->d));
     break;
   default:
     g_assert_not_reached ();
@@ -594,8 +594,8 @@ void gfs_face_interpolated_normal_velocity (const FttCellFace * face, GfsVariabl
     break;
   case FTT_FINE_COARSE:
     GFS_FACE_NORMAL_VELOCITY_RIGHT (face) += 
-      u*GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*
-				       FTT_CELLS_DIRECTION (face->d));
+      u*gfs_domain_face_fraction (v[0]->domain, face)/
+      (gfs_domain_face_fraction_right (v[0]->domain, face)*FTT_CELLS_DIRECTION (face->d));
     break;
   default:
     g_assert_not_reached ();

@@ -369,25 +369,17 @@ static void reset_coeff (FttCell * cell)
     f[d].v = 0.;
 }
 
-static void poisson_coeff (FttCell * cell, gdouble * lambda2)
-{
-  GfsStateVector * s = GFS_STATE (cell);
-  FttDirection d;
+typedef struct {
+  gdouble lambda2[FTT_DIMENSION];
+  GfsFunction * alpha;
+  GfsDomain * domain;
+} PoissonCoeff;
 
-  for (d = 0; d < FTT_NEIGHBORS; d++)
-    s->f[d].v = lambda2[d/2];
-  if (s->solid)
-    for (d = 0; d < FTT_NEIGHBORS; d++)
-      s->f[d].v *= s->solid->s[d];
-}
-
-static void poisson_alpha_coeff (FttCellFace * face,
-				 gpointer * data)
+static void poisson_coeff (FttCellFace * face,
+			   PoissonCoeff * p)
 {
-  gdouble * lambda2 = data[0];
-  gdouble alpha = gfs_function_face_value (data[1], face);
-  gdouble v = lambda2[face->d/2]*alpha;
-  GfsStateVector * s = GFS_STATE (face->cell);
+  gdouble alpha = p->alpha ? gfs_function_face_value (p->alpha, face) : 1.;
+  gdouble v = p->lambda2[face->d/2]*alpha*gfs_domain_face_fraction (p->domain, face);
 
   if (alpha <= 0.) {
     FttVector p;
@@ -397,10 +389,8 @@ static void poisson_alpha_coeff (FttCellFace * face,
 	   "Please check your definition.",
 	   alpha, p.x, p.y, p.z);
   }
-  if (GFS_IS_MIXED (face->cell))
-    v *= s->solid->s[face->d];
-  s->f[face->d].v = v;
-
+  GFS_STATE (face->cell)->f[face->d].v = v;
+  
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
     GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v = v;
@@ -454,7 +444,7 @@ static void face_coeff_from_below (FttCell * cell)
 void gfs_poisson_coefficients (GfsDomain * domain,
 			       GfsFunction * alpha)
 {
-  gdouble lambda2[FTT_DIMENSION];
+  PoissonCoeff p;
   FttComponent i;
 
   g_return_if_fail (domain != NULL);
@@ -462,23 +452,16 @@ void gfs_poisson_coefficients (GfsDomain * domain,
   for (i = 0; i < FTT_DIMENSION; i++) {
     gdouble lambda = (&domain->lambda.x)[i];
 
-    lambda2[i] = lambda*lambda;
+    p.lambda2[i] = lambda*lambda;
   }
-  if (alpha == NULL)
-    gfs_domain_cell_traverse (domain,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) poisson_coeff, lambda2);
-  else {
-    gfs_domain_cell_traverse (domain,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) reset_coeff, NULL);
-    gpointer data[2];
-    data[0] = lambda2;
-    data[1] = alpha;
-    gfs_domain_face_traverse (domain, FTT_XYZ, 
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) poisson_alpha_coeff, data);
-  }
+  gfs_domain_cell_traverse (domain,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) reset_coeff, NULL);
+  p.alpha = alpha;
+  p.domain = domain;
+  gfs_domain_face_traverse (domain, FTT_XYZ, 
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttFaceTraverseFunc) poisson_coeff, &p);
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) face_coeff_from_below, NULL);
@@ -527,6 +510,7 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
 	   alpha, p.x, p.y, p.z);
   }
   v *= alpha;
+  /* fixme: mapping */
   if (GFS_IS_MIXED (face->cell))
     v *= s->solid->s[face->d];
   s->f[face->d].v = v;

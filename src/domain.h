@@ -72,7 +72,8 @@ struct _GfsDomain {
 struct _GfsDomainClass {
   GtsWGraphClass parent_class;
 
-  void (* post_read) (GfsDomain *, GtsFile * fp);
+  void    (* post_read)     (GfsDomain *, GtsFile * fp);
+  gdouble (* face_fraction) (const GfsDomain *, const FttCellFace *);
 };
 
 #define GFS_DOMAIN(obj)            GTS_OBJECT_CAST (obj,\
@@ -291,6 +292,43 @@ void         gfs_domain_sum                     (GfsDomain * domain,
 void         gfs_domain_filter                  (GfsDomain * domain, 
 						 GfsVariable * v,
 						 GfsVariable * fv);
+/**
+ * gfs_domain_face_fraction:
+ * @domain; a #GfsDomain.
+ * @face: a #FttCellFace.
+ *
+ * Returns: the surface fraction of @face taking into account any
+ * orthogonal mapping of @domain.
+ */
+static inline
+gdouble gfs_domain_face_fraction (const GfsDomain * domain, const FttCellFace * face)
+{
+  gdouble f = GFS_FACE_FRACTION (face);
+  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_fraction)
+    f *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_fraction) (domain, face);
+  return f;
+}
+
+/**
+ * gfs_domain_face_fraction_right:
+ * @domain; a #GfsDomain.
+ * @face: a #FttCellFace.
+ *
+ * Returns: the surface fraction "to the right" of @face taking into account any
+ * orthogonal mapping of @domain.
+ */
+static inline
+gdouble gfs_domain_face_fraction_right (const GfsDomain * domain, const FttCellFace * face)
+{
+  gdouble f = GFS_FACE_FRACTION_RIGHT (face);
+  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_fraction) {
+    FttCellFace face1;
+    face1.cell = face->neighbor;
+    face1.d = FTT_OPPOSITE_DIRECTION (face->d);
+    f *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_fraction) (domain, &face1);
+  }
+  return f;
+}
 
 #ifdef __cplusplus
 }

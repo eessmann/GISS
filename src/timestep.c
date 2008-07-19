@@ -50,6 +50,7 @@ static void scale_cell_gradients (FttCell * cell, gpointer * data)
   guint * dimension = data[1];
   FttComponent c;
 
+  /* fixme: mapping??? */
   if (GFS_IS_MIXED (cell)) {
     GfsSolidVector * s = GFS_STATE (cell)->solid;
 
@@ -116,9 +117,7 @@ static void correct_normal_velocity (FttCellFace * face,
   dp = (g.b - g.a*GFS_VARIABLE (face->cell, p->i))/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
     dp = - dp;
-
-  if (s->solid && s->solid->s[face->d] > 0.)
-    dp /= s->solid->s[face->d];
+  dp /= gfs_domain_face_fraction (p->domain, face);
 
   GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= dp*(*dt);
   if (gv)
