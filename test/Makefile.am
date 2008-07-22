@@ -10,6 +10,7 @@ TESTDIRS = \
 	periodic \
 	merging \
 	axi \
+	axiadvection \
 	lid \
 	poiseuille \
 	couette \

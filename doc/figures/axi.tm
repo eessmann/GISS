@@ -1,4 +1,4 @@
-<TeXmacs|1.0.6.10>
+<TeXmacs|1.0.6.11>
 
 <style|article>
 
@@ -6,13 +6,13 @@
   The incompressible Navier--Stokes equations in cylindrical coordinates are
 
   <\eqnarray*>
-    <tformat|<table|<row|<cell|>|<cell|<frac|\<partial\>v<rsub|r>|\<partial\>t>+<frac|1|r>*<frac|\<partial\>(r*v<rsub|r><rsup|2>)|\<partial\>r>+<frac|\<partial\>(v<rsub|r*>*v<rsub|z>)|\<partial\>z>=-<frac|\<partial\>\<phi\>|\<partial\>r>+<frac|1|r>*<frac|\<partial\>(r*S<rsub|rr>)|\<partial\>r>+<frac|\<partial\>S<rsub|zr>|\<partial\>z>-<frac|S<rsub|\<theta\>\<theta\>>|r>,>|<cell|<eq-number><label|momr>>>|<row|<cell|>|<cell|<frac|\<partial\>v<rsub|z>|\<partial\>t>+<frac|1|r>*<frac|\<partial\>(r*v<rsub|r>*v<rsub|z>)|\<partial\>r>+<frac|\<partial\>(v<rsup|2><rsub|z>)|\<partial\>z>=-<frac|\<partial\>\<phi\>|\<partial\>z>+<frac|1|r>*<frac|\<partial\>(r*S<rsub|zr>)|\<partial\>r>+<frac|\<partial\>S<rsub|zz>|\<partial\>z>,>|<cell|<eq-number><label|momz>>>|<row|<cell|>|<cell|<frac|1|r>*<frac|\<partial\>(r*v<rsub|r>)|\<partial\>r>+<frac|\<partial\>v<rsub|z>|\<partial\>z>=0,>|<cell|<eq-number><label|continuity>>>>>
+    <tformat|<table|<row|<cell|>|<cell|\<partial\><rsub|t>v<rsub|r>+<frac|1|r>*\<partial\><rsub|r>(r*v<rsub|r><rsup|2>)+\<partial\><rsub|z>(v<rsub|r*>*v<rsub|z>)=-\<partial\><rsub|r>\<phi\>+<frac|1|r>*\<partial\><rsub|r>(r*S<rsub|rr>)+\<partial\><rsub|z>S<rsub|zr>-<frac|S<rsub|\<theta\>\<theta\>>|r>,>|<cell|<eq-number><label|momr>>>|<row|<cell|>|<cell|\<partial\><rsub|t>v<rsub|z>+<frac|1|r>*\<partial\><rsub|r>(r*v<rsub|r>*v<rsub|z>)+\<partial\><rsub|z>(v<rsup|2><rsub|z>)=-\<partial\><rsub|z>\<phi\>+<frac|1|r>*\<partial\><rsub|r>(r*S<rsub|zr>)+\<partial\><rsub|z>S<rsub|zz>,>|<cell|<eq-number><label|momz>>>|<row|<cell|>|<cell|<frac|1|r>*\<partial\><rsub|r>(r*v<rsub|r>)+\<partial\><rsub|z>v<rsub|z>=0,>|<cell|<eq-number><label|continuity>>>>>
   </eqnarray*>
 
   with <math|\<phi\>=p/\<rho\>> and the stress tensor
 
   <\eqnarray*>
-    <tformat|<table|<row|<cell|S<rsub|rr>>|<cell|=>|<cell|2*\<nu\>*<frac|\<partial\>v<rsub|r>|\<partial\>r>,>>|<row|<cell|S<rsub|\<theta\>\<theta\>>>|<cell|=>|<cell|2*\<nu\>*<frac|v<rsub|r>|r>,>>|<row|<cell|S<rsub|zz>>|<cell|=>|<cell|2*\<nu\>*<frac|\<partial\>v<rsub|z>|\<partial\>z>,>>|<row|<cell|S<rsub|zr>>|<cell|=>|<cell|\<nu\>*<left|(><frac|\<partial\>v<rsub|z>|\<partial\>r>+<frac|\<partial\>v<rsub|r>|\<partial\>z><right|)>.>>>>
+    <tformat|<table|<row|<cell|S<rsub|rr>>|<cell|=>|<cell|2*\<nu\>*\<partial\><rsub|r>v<rsub|r>,>>|<row|<cell|S<rsub|\<theta\>\<theta\>>>|<cell|=>|<cell|2*\<nu\>*<frac|v<rsub|r>|r>,>>|<row|<cell|S<rsub|zz>>|<cell|=>|<cell|2*\<nu\>*\<partial\><rsub|z>v<rsub|z>,>>|<row|<cell|S<rsub|zr>>|<cell|=>|<cell|\<nu\>*<left|(>\<partial\><rsub|r>v<rsub|z>+\<partial\><rsub|z>v<rsub|r><right|)>.>>>>
   </eqnarray*>
 
   Considering a control volume <math|\<Omega\>> with boundary
@@ -90,8 +90,10 @@
   (<reference|continuity>) then gives
 
   <\eqnarray*>
-    <tformat|<table|<row|<cell|v<rsup|n+1/2><rsub|r>=v<rsub|r>+<frac|h|2>*\<partial\><rsub|r>v<rsub|r><rsup|n>+<frac|\<Delta\>t|2>*<left|(>-<frac|1|r>*<frac|\<partial\>(r*v<rsub|r><rsup|2>)|\<partial\>r>-<frac|\<partial\>(v<rsub|r*>*v<rsub|z>)|\<partial\>z>+src<rsup|n><left|)>>|<cell|>|<cell|>>>>
+    <tformat|<table|<row|<cell|v<rsup|n+1/2><rsub|r>=v<rsup|n><rsub|r>+<frac|1|2>*(h*-v<rsub|r>*\<Delta\>t)*\<partial\><rsub|r>v<rsub|r><rsup|n>+<frac|\<Delta\>t|2>*(-v<rsup|n><rsub|z>*\<partial\><rsub|z>v<rsup|n><rsub|r*>+src<rsup|n>),>|<cell|>|<cell|>>|<row|<cell|v<rsup|n+1/2><rsub|z>=v<rsub|z><rsup|n>+<frac|1|2>*(h-v<rsub|z>*\<Delta\>t)*\<partial\><rsub|z>v<rsub|z><rsup|n>+<frac|\<Delta\>t|2>*<left|(>-v<rsup|n><rsub|r>*\<partial\><rsub|r>v<rsup|n><rsub|z>+src<rsup|n><right|)>,>|<cell|>|<cell|>>>>
   </eqnarray*>
+
+  which is the same as in the two-dimensional case.
 
   \;
 </body>
@@ -105,3 +107,13 @@
     <associate|mon|<tuple|?|?>>
   </collection>
 </references>
+
+<\auxiliary>
+  <\collection>
+    <\associate|toc>
+      <with|par-left|<quote|3fn>|1<space|2spc>Advection term
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-1>>
+    </associate>
+  </collection>
+</auxiliary>

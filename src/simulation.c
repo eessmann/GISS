@@ -1799,10 +1799,18 @@ static gdouble axi_face_fraction (const GfsDomain * domain, const FttCellFace * 
   return p.y;
 }
 
+static gdouble axi_cell_fraction (const GfsDomain * domain, const FttCell * cell)
+{
+  FttVector p;
+  gfs_cell_cm (cell, &p);
+  return p.y;
+}
+
 static void axi_class_init (GfsSimulationClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = axi_read;
   GFS_DOMAIN_CLASS (klass)->face_fraction = axi_face_fraction;
+  GFS_DOMAIN_CLASS (klass)->cell_fraction = axi_cell_fraction;
 }
 
 GfsSimulationClass * gfs_axi_class (void)

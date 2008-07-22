@@ -1321,27 +1321,27 @@ static void vof_flux (FttCellFace * face, VofParms * p)
     ftt_face_pos (face, &p);
     g_warning ("CFL (%g) at (%g,%g,%g) is larger than 0.5!", un, p.x, p.y, p.z);
   }
-  un *= GFS_FACE_FRACTION (face);
+  un *= gfs_domain_face_fraction (p->par->fv->domain, face);
 
   gdouble flux = GFS_STATE (face->cell)->f[face->d].v*un;
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE: {
     if (un < 0.)
       flux = GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v*un;
-    GFS_VARIABLE (face->neighbor, p->par->fv->i) += flux;
-    GFS_VARIABLE (face->neighbor, p->vpar.fv->i) += un;
+    GFS_VALUE (face->neighbor, p->par->fv) += flux;
+    GFS_VALUE (face->neighbor, p->vpar.fv) += un;
     break;
   }
   case FTT_FINE_COARSE: {
-    GFS_VARIABLE (face->neighbor, p->par->fv->i) += flux/FTT_CELLS;
-    GFS_VARIABLE (face->neighbor, p->vpar.fv->i) += un/FTT_CELLS;
+    GFS_VALUE (face->neighbor, p->par->fv) += flux/FTT_CELLS;
+    GFS_VALUE (face->neighbor, p->vpar.fv) += un/FTT_CELLS;
     break;
   }
   default:
     g_assert_not_reached ();
   }
-  GFS_VARIABLE (face->cell, p->par->fv->i) -= flux;
-  GFS_VARIABLE (face->cell, p->vpar.fv->i) -= un;
+  GFS_VALUE (face->cell, p->par->fv) -= flux;
+  GFS_VALUE (face->cell, p->vpar.fv) -= un;
 }
 
 static void initialize_dV (FttCell * cell, GfsVariable * dV)

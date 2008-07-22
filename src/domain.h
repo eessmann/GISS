@@ -74,6 +74,7 @@ struct _GfsDomainClass {
 
   void    (* post_read)     (GfsDomain *, GtsFile * fp);
   gdouble (* face_fraction) (const GfsDomain *, const FttCellFace *);
+  gdouble (* cell_fraction) (const GfsDomain *, const FttCell *);
 };
 
 #define GFS_DOMAIN(obj)            GTS_OBJECT_CAST (obj,\
@@ -328,6 +329,23 @@ gdouble gfs_domain_face_fraction_right (const GfsDomain * domain, const FttCellF
     f *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_fraction) (domain, &face1);
   }
   return f;
+}
+
+/**
+ * gfs_domain_cell_fraction:
+ * @domain; a #GfsDomain.
+ * @cell: a #FttCell.
+ *
+ * Returns: the volume fraction of @cell taking into account any
+ * orthogonal mapping of @domain.
+ */
+static inline
+gdouble gfs_domain_cell_fraction (const GfsDomain * domain, const FttCell * cell)
+{
+  gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
+  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->cell_fraction)
+    a *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->cell_fraction) (domain, cell);
+  return a;
 }
 
 #ifdef __cplusplus

@@ -813,12 +813,10 @@ void gfs_advection_update (GSList * merged, const GfsAdvectionParams * par)
   if (merged->next == NULL) { /* cell is not merged */
     FttCell * cell = merged->data;
 
+    g_assert (!is_small (cell));
+
+#if 0 /* D. Calhoun approach (fixme: does not use gfs_domain_cell_fraction()) */
     if (GFS_IS_MIXED (cell)) {
-#if 1
-      g_assert (!is_small (cell));
-      GFS_VARIABLE (cell, par->v->i) += 
-	GFS_VARIABLE (cell, par->fv->i)/GFS_STATE (cell)->solid->a;
-#else /* D. Calhoun approach */
       FttDirection d;
       gdouble mins = G_MAXDOUBLE;
       GfsSolidVector * solid = GFS_STATE (cell)->solid;
@@ -829,18 +827,19 @@ void gfs_advection_update (GSList * merged, const GfsAdvectionParams * par)
 #if 0
 fprintf (stderr, "%g %g %g\n",
 	 solid->a, mins, 
-	 GFS_VARIABLE (cell, par->fv)/(mins*solid->a));
+	 GFS_VALUE (cell, par->fv)/(mins*solid->a));
 #endif
       if (mins*solid->a > 0.01)
-	GFS_VARIABLE (cell, par->v->i) += 
-	  GFS_VARIABLE (cell, par->fv->i)/(mins*solid->a);
+	GFS_VALUE (cell, par->v) += GFS_VALUE (cell, par->fv)/(mins*solid->a);
       else
-	GFS_VARIABLE (cell, par->v->i) += 100.*GFS_VARIABLE (cell, par->fv->i);
-      g_assert (GFS_VARIABLE (cell, par->v->i) < 10.);
-#endif
+	GFS_VALUE (cell, par->v) += 100.*GFS_VALUE (cell, par->fv);
+      g_assert (GFS_VALUE (cell, par->v) < 10.);
     }
     else
-      GFS_VARIABLE (cell, par->v->i) += GFS_VARIABLE (cell, par->fv->i);
+#endif
+
+      GFS_VALUE (cell, par->v) +=
+	GFS_VALUE (cell, par->fv)/gfs_domain_cell_fraction (par->v->domain, cell);
   }
   else if (par->average) {
     /* average value */
@@ -850,11 +849,10 @@ fprintf (stderr, "%g %g %g\n",
     while (i) {
       FttCell * cell = i->data;
       gdouble vol = ftt_cell_volume (cell);
-      gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
+      gdouble a = gfs_domain_cell_fraction (par->v->domain, cell);
       
       total_vol += vol*a;
-      w += vol*(a*GFS_VARIABLE (cell, par->v->i) + 
-		GFS_VARIABLE (cell, par->fv->i));
+      w += vol*(a*GFS_VALUE (cell, par->v) + GFS_VALUE (cell, par->fv));
       i = i->next;
     }
     w /= total_vol;
@@ -863,7 +861,7 @@ fprintf (stderr, "%g %g %g\n",
     while (i) {
       FttCell * cell = i->data;
 
-      GFS_VARIABLE (cell, par->v->i) = w;
+      GFS_VALUE (cell, par->v) = w;
       i = i->next;
     }
   }
@@ -875,14 +873,15 @@ fprintf (stderr, "%g %g %g\n",
       FttCell * cell = i->data;
       gdouble vol = ftt_cell_volume (cell);
       gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
+      gdouble f = gfs_domain_cell_fraction (par->v->domain, cell);
 
-      total_vol += vol*a;
+      total_vol += vol*f;
       if (a < SMALL) {
-	GFS_VARIABLE (cell, par->v->i) += GFS_VARIABLE (cell, par->fv->i)/SMALL;
-	w += vol*GFS_VARIABLE (cell, par->fv->i)*(1. - a/SMALL);
+	GFS_VALUE (cell, par->v) += GFS_VALUE (cell, par->fv)/(SMALL*f/a);
+	w += vol*GFS_VALUE (cell, par->fv)*(1. - a/SMALL);
       }
       else
-	GFS_VARIABLE (cell, par->v->i) += GFS_VARIABLE (cell, par->fv->i)/a;
+	GFS_VALUE (cell, par->v) += GFS_VALUE (cell, par->fv)/f;
 
       i = i->next;
     }
@@ -893,7 +892,7 @@ fprintf (stderr, "%g %g %g\n",
       FttCell * cell = i->data;
       /* fixme: small cells should be excluded here?? 
 	 (with corresponding modification in total_vol) */
-      GFS_VARIABLE (cell, par->v->i) += w;
+      GFS_VALUE (cell, par->v) += w;
       i = i->next;
     }
   }
