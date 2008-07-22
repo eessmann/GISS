@@ -57,7 +57,8 @@ examples: examples.dvi crossref.sh
 	rm -f $(DOC).html
 	mv -f $(DOC)[0-9][0-9][0-9].png $(DOC)
 ##	fixme: the character conversion below is a workaround for a bug in hevea version < 1.09
-	for f in *.html; do konwert iso1-utf8 < $$f > $(DOC)/$$f; rm -f $$f; done
+##	for f in *.html; do konwert iso1-utf8 < $$f > $(DOC)/$$f; rm -f $$f; done
+	mv -f *.html $(DOC)
 	cat $(DOC).css ../share/darcs.css > $(DOC)/$(DOC).css
 	sh ../share/fixnav.sh $(DOC)
 	cp -f ../share/contents.png ../share/next.png ../share/prev.png $(DOC)
