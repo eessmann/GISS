@@ -39,13 +39,14 @@
 # Generated files: error.eps order.eps isolines.eps
 #
 1 0 GfsAxi GfsBox GfsGEdge {} {
-    Time { iend = 0 end = 1 }
+    Time { end = 0 }
+    PhysicalParams { L = 50 }
     AdvectionParams { scheme = none }
     ApproxProjectionParams { tolerance = 1e-10 }
     Refine 4
-    Refine (LEVEL + 50.*(x*x + y*y)*(4. - LEVEL))
+    Refine (LEVEL + 1./50.*(x*x + y*y)*(4. - LEVEL))
     Global {
-	#define A0 0.01
+	#define A0 0.5
 	#define U0 1.
     }
     Solid (ellipse (0., 0., A0, A0))
@@ -53,8 +54,7 @@
 	U = U0
 	Phi = {
 	    double r = sqrt (cx*cx + cy*cy);
-	    double theta = atan2 (cy, cx);
-	    return U0*A0*A0*A0*cos(theta)/(2.*r*r);
+	    return U0*A0*A0*A0*cx/(2.*r*r*r);
 	}
     }
     OutputErrorNorm { start = end } { awk '{ print LEVEL " " $7 " " $9}' } { v = U } {
