@@ -2078,6 +2078,15 @@ gboolean ftt_refine_corner (const FttCell * cell)
 	  if (nc1 && !FTT_CELL_IS_LEAF (nc1))
 	    return TRUE;
 #endif /* FTT_3D */
+	  if (!FTT_CELL_IS_LEAF (c)) {
+	    FttCellChildren child;
+	    guint j, k;
+
+	    k = ftt_cell_children_direction (c, FTT_OPPOSITE_DIRECTION (i), &child);
+	    for (j = 0; j < k; j++)
+	      if (child.c[j])
+		return TRUE;
+	  }
 	}
       }	
     }
