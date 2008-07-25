@@ -946,7 +946,7 @@ static gboolean gfs_output_solid_force_event (GfsEvent * event,
     GfsDomain * domain = GFS_DOMAIN (sim);
     FILE * fp = GFS_OUTPUT (event)->file->fp;
     FttVector pf, vf, pm, vm;
-    gdouble L = sim->physical_params.L;
+    gdouble L = sim->physical_params.L, Ln = pow (L, 3. + FTT_DIMENSION - 2.);
 
     if (GFS_OUTPUT (event)->first_call)
       fputs ("# 1: T (2,3,4): Pressure force (5,6,7): Viscous force "
@@ -955,8 +955,8 @@ static gboolean gfs_output_solid_force_event (GfsEvent * event,
     gfs_domain_solid_force (domain, &pf, &vf, &pm, &vm);
     fprintf (fp, "%g %g %g %g %g %g %g %g %g %g %g %g %g\n",
 	     sim->time.t,
-	     pf.x*L, pf.y*L, pf.z*L,
-	     vf.x*L, vf.y*L, vf.z*L,
+	     pf.x*Ln, pf.y*Ln, pf.z*Ln,
+	     vf.x*Ln, vf.y*Ln, vf.z*Ln,
 	     pm.x, pm.y, pm.z,
 	     vm.x, vm.y, vm.z);
     return TRUE;
