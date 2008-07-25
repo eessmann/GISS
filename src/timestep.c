@@ -97,37 +97,37 @@ void gfs_scale_gradients (GfsDomain * domain, guint dimension, GfsVariable ** g)
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, g[c]);
 }
 
+typedef struct {
+  GfsVariable * p, ** gv;
+  gdouble dt;
+} CorrectPar;
+
 static void correct_normal_velocity (FttCellFace * face,
-				     gpointer * data)
+				     CorrectPar * par)
 {
   GfsGradient g;
-  gdouble dp;
-  GfsStateVector * s;
-  GfsVariable * p = data[0], ** gv = data[1];
-  gdouble * dt = data[2];
-  FttComponent c;
+  gdouble dp, f;
 
   if (GFS_FACE_FRACTION_RIGHT (face) == 0.)
     return;
 
-  s = GFS_STATE (face->cell);
-  c = face->d/2;
-
-  gfs_face_weighted_gradient (face, &g, p->i, -1);
-  dp = (g.b - g.a*GFS_VARIABLE (face->cell, p->i))/ftt_cell_size (face->cell);
+  gfs_face_weighted_gradient (face, &g, par->p->i, -1);
+  dp = (g.b - g.a*GFS_VALUE (face->cell, par->p))/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
     dp = - dp;
-  dp /= gfs_domain_face_fraction (p->domain, face);
+  f = gfs_domain_face_fraction (par->p->domain, face);
+  if (f > 0.)
+    dp /= f;
 
-  GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= dp*(*dt);
-  if (gv)
-    GFS_VARIABLE (face->cell, gv[c]->i) += dp*GFS_FACE_FRACTION_LEFT (face);
+  GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= dp*par->dt;
+  if (par->gv)
+    GFS_VALUE (face->cell, par->gv[face->d/2]) += dp*GFS_FACE_FRACTION_LEFT (face);
 
   if (ftt_face_type (face) == FTT_FINE_COARSE)
     dp *= GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*FTT_CELLS/2);
-  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*(*dt);
-  if (gv)
-    GFS_VARIABLE (face->neighbor, gv[c]->i) += dp*GFS_FACE_FRACTION_RIGHT (face);
+  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*par->dt;
+  if (par->gv)
+    GFS_VALUE (face->neighbor, par->gv[face->d/2]) += dp*GFS_FACE_FRACTION_RIGHT (face);
 }
 
 /**
@@ -152,17 +152,17 @@ void gfs_correct_normal_velocities (GfsDomain * domain,
 				    GfsVariable ** g,
 				    gdouble dt)
 {
-  gpointer data[3];
+  CorrectPar par;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (p != NULL);
 
-  data[0] = p;
-  data[1] = g;
-  data[2] = &dt;
+  par.p = p;
+  par.gv = g;
+  par.dt = dt;
   gfs_domain_face_traverse (domain, dimension == 2 ? FTT_XY : FTT_XYZ,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttFaceTraverseFunc) correct_normal_velocity, data);
+			    (FttFaceTraverseFunc) correct_normal_velocity, &par);
 }
 
 static void scale_divergence (FttCell * cell, gpointer * data)
