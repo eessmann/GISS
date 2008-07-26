@@ -873,6 +873,17 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
   }
 }
 
+static void reset_solid (FttCell * cell, GfsVariable * status)
+{
+  GFS_VALUE (cell, status) = 0.;
+  if (GFS_STATE (cell)->solid)
+    fprintf (stderr, "* %g %g %g %p\n",
+	     GFS_STATE (cell)->solid->ca.x, GFS_STATE (cell)->solid->ca.y,
+	     GFS_STATE (cell)->solid->a, cell);
+  g_free (GFS_STATE (cell)->solid);
+  GFS_STATE (cell)->solid = NULL;
+}
+
 /**
  * gfs_domain_init_solid_fractions:
  * @domain: a #GfsDomain.
@@ -906,7 +917,7 @@ guint gfs_domain_init_solid_fractions (GfsDomain * domain,
   p.status = status ? status : gfs_temporary_variable (domain);
   p.thin = 0;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, p.status);
+			    (FttCellTraverseFunc) reset_solid, p.status);
   while (i) {
     gfs_domain_traverse_cut (domain, i->data, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			     (FttCellTraverseCutFunc) set_solid_fractions_from_surface, &p);
