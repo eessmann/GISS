@@ -876,10 +876,6 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
 static void reset_solid (FttCell * cell, GfsVariable * status)
 {
   GFS_VALUE (cell, status) = 0.;
-  if (GFS_STATE (cell)->solid)
-    fprintf (stderr, "* %g %g %g %p\n",
-	     GFS_STATE (cell)->solid->ca.x, GFS_STATE (cell)->solid->ca.y,
-	     GFS_STATE (cell)->solid->a, cell);
   g_free (GFS_STATE (cell)->solid);
   GFS_STATE (cell)->solid = NULL;
 }
