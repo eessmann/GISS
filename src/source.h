@@ -32,6 +32,10 @@ void       gfs_domain_variable_centered_sources (GfsDomain * domain,
 						 GfsVariable * v,
 						 GfsVariable * sv,
 						 gdouble dt);
+GfsVariable * gfs_domain_variable_fluxes        (GfsDomain * domain,
+						 GfsVariable * v,
+						 gdouble dt);
+
 /* GfsSourceGeneric: Header */
 
 typedef struct _GfsSourceGeneric         GfsSourceGeneric;
@@ -45,6 +49,9 @@ struct _GfsSourceGeneric {
   gdouble (* mac_value)      (GfsSourceGeneric *, FttCell *, GfsVariable *);
   gdouble (* centered_value) (GfsSourceGeneric *, FttCell *, GfsVariable *);
   gdouble (* face_value)     (GfsSourceGeneric *, FttCellFace *, GfsVariable *);
+  void    (* flux)           (GfsSourceGeneric *, GfsDomain *, 
+			      GfsVariable *, GfsVariable *, 
+			      gdouble);
 };
 
 typedef struct _GfsSourceGenericClass    GfsSourceGenericClass;
@@ -255,6 +262,19 @@ GfsSourceGenericClass * gfs_source_viscosity_class  (void);
 
 /* GfsSourceViscosityExplicit: Header */
 
+typedef struct _GfsSourceViscosityExplicit         GfsSourceViscosityExplicit;
+
+struct _GfsSourceViscosityExplicit {
+  /*< private >*/
+  GfsSourceViscosity parent;
+
+  /*< public >*/
+  GfsVariable * v[FTT_DIMENSION];
+};
+
+#define GFS_SOURCE_VISCOSITY_EXPLICIT(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourceViscosityExplicit,\
+					         gfs_source_viscosity_class ())
 #define GFS_IS_SOURCE_VISCOSITY_EXPLICIT(obj) (gts_object_is_from_class (obj,\
 					       gfs_source_viscosity_explicit_class ()))
 

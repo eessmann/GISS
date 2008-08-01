@@ -72,9 +72,10 @@ struct _GfsDomain {
 struct _GfsDomainClass {
   GtsWGraphClass parent_class;
 
-  void    (* post_read)     (GfsDomain *, GtsFile * fp);
-  gdouble (* face_fraction) (const GfsDomain *, const FttCellFace *);
-  gdouble (* cell_fraction) (const GfsDomain *, const FttCell *);
+  void    (* post_read) (GfsDomain *, GtsFile * fp);
+  gdouble (* face_map)  (const GfsDomain *, const FttCellFace *);
+  gdouble (* cell_map)  (const GfsDomain *, const FttCell *);
+  gdouble (* solid_map) (const GfsDomain *, const FttCell *);
 };
 
 #define GFS_DOMAIN(obj)            GTS_OBJECT_CAST (obj,\
@@ -97,6 +98,8 @@ void         gfs_domain_cell_traverse         (GfsDomain * domain,
 					       gint max_depth,
 					       FttCellTraverseFunc func,
 					       gpointer data);
+#define gfs_domain_traverse_leaves(d,f,data)  (gfs_domain_cell_traverse(d, \
+					    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, f,data))
 void         gfs_domain_cell_traverse_condition (GfsDomain * domain,
 						 FttTraverseType order,
 						 FttTraverseFlags flags,
@@ -305,8 +308,8 @@ static inline
 gdouble gfs_domain_face_fraction (const GfsDomain * domain, const FttCellFace * face)
 {
   gdouble f = GFS_FACE_FRACTION (face);
-  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_fraction)
-    f *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_fraction) (domain, face);
+  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_map)
+    f *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_map) (domain, face);
   return f;
 }
 
@@ -322,11 +325,11 @@ static inline
 gdouble gfs_domain_face_fraction_right (const GfsDomain * domain, const FttCellFace * face)
 {
   gdouble f = GFS_FACE_FRACTION_RIGHT (face);
-  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_fraction) {
+  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_map) {
     FttCellFace face1;
     face1.cell = face->neighbor;
     face1.d = FTT_OPPOSITE_DIRECTION (face->d);
-    f *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_fraction) (domain, &face1);
+    f *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_map) (domain, &face1);
   }
   return f;
 }
@@ -343,9 +346,25 @@ static inline
 gdouble gfs_domain_cell_fraction (const GfsDomain * domain, const FttCell * cell)
 {
   gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
-  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->cell_fraction)
-    a *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->cell_fraction) (domain, cell);
+  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->cell_map)
+    a *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->cell_map) (domain, cell);
   return a;
+}
+
+/**
+ * gfs_domain_solid_map:
+ * @domain; a #GfsDomain.
+ * @cell: a mixed #FttCell.
+ *
+ * Returns: the coordinate mapping at the center of area of the solid
+ * surface contained within @cell.
+ */
+static inline
+gdouble gfs_domain_solid_map (const GfsDomain * domain, const FttCell * cell)
+{
+  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->solid_map)
+    return (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->solid_map) (domain, cell);
+  return 1.;
 }
 
 #ifdef __cplusplus

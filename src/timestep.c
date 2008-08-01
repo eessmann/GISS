@@ -701,6 +701,15 @@ static void variable_sources (GfsDomain * domain,
   }
   /* fixme: time should be set to t + dt/2 here for evaluation of
      source terms in the call below */
+  par->fv = gfs_domain_variable_fluxes (domain, par->v, par->dt);
+  if (par->fv) {
+    GfsVariable * v = par->v;
+    par->v = sv;
+    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, par);
+    par->v = v;
+    gts_object_destroy (GTS_OBJECT (par->fv));
+    par->fv = NULL;
+  }
   gfs_domain_variable_centered_sources (domain, par->v, sv, par->dt);
 }
 

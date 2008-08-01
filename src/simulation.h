@@ -137,6 +137,8 @@ GfsSimulationClass * gfs_poisson_class            (void);
 
 /* GfsAxi: Header */
 
+#define GFS_IS_AXI(obj)          (gts_object_is_from_class (obj, gfs_axi_class ()))
+
 GfsSimulationClass * gfs_axi_class                (void);
 
 #ifdef __cplusplus

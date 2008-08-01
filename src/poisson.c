@@ -752,16 +752,17 @@ typedef struct {
   gdouble dt;
   GfsVariable * dia;
   GfsFunction * alpha;
+  GfsDomain * domain;
 } DiffusionCoeff;
 
 static void diffusion_coef (FttCellFace * face, DiffusionCoeff * c)
 {
-  GfsStateVector * s = GFS_STATE (face->cell);
-  gdouble v = c->lambda2[face->d/2]*c->dt*gfs_source_diffusion_face (c->d, face);
+  gdouble v = 
+    c->lambda2[face->d/2]*c->dt*
+    gfs_source_diffusion_face (c->d, face)*
+    gfs_domain_face_fraction (c->domain, face);
 
-  if (GFS_IS_MIXED (face->cell))
-    v *= s->solid->s[face->d];
-  s->f[face->d].v = v;
+  GFS_STATE (face->cell)->f[face->d].v = v;
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
@@ -780,15 +781,18 @@ static void diffusion_mixed_coef (FttCell * cell, DiffusionCoeff * c)
 {
   reset_coeff (cell);
   if (GFS_IS_MIXED (cell))
-    GFS_STATE (cell)->solid->v = c->dt*gfs_source_diffusion_cell (c->d, cell);
-  GFS_VARIABLE (cell, c->dia->i) = c->alpha ? 1./gfs_function_value (c->alpha, cell) : 1.;
-  if (GFS_VARIABLE (cell, c->dia->i) <= 0.) {
-    FttVector p;
-    ftt_cell_pos (cell, &p);
-    g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
-	   "density is negative (%g) at cell (%g,%g,%g).\n"
-	   "Please check your definition of alpha.",
-	   GFS_VARIABLE (cell, c->dia->i), p.x, p.y, p.z);
+    GFS_STATE (cell)->solid->v = 
+      c->dt*gfs_domain_solid_map (c->domain, cell)*gfs_source_diffusion_cell (c->d, cell);
+  if (c->dia) {
+    GFS_VALUE (cell, c->dia) = c->alpha ? 1./gfs_function_value (c->alpha, cell) : 1.;
+    if (GFS_VALUE (cell, c->dia) <= 0.) {
+      FttVector p;
+      ftt_cell_pos (cell, &p);
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
+	     "density is negative (%g) at cell (%g,%g,%g).\n"
+	     "Please check your definition of alpha.",
+	     GFS_VALUE (cell, c->dia), p.x, p.y, p.z);
+    }
   }
 }
 
@@ -815,7 +819,6 @@ void gfs_diffusion_coefficients (GfsDomain * domain,
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (d != NULL);
-  g_return_if_fail (dia != NULL);
   g_return_if_fail (beta >= 0.5 && beta <= 1.);
 
   for (i = 0; i < FTT_DIMENSION; i++) {
@@ -827,6 +830,7 @@ void gfs_diffusion_coefficients (GfsDomain * domain,
   coef.dt = beta*dt;
   coef.dia = dia;
   coef.alpha = alpha;
+  coef.domain = domain;
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) diffusion_mixed_coef, &coef);

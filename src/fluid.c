@@ -655,6 +655,7 @@ static void face_weighted_gradient (const FttCellFace * face,
 	  g->b += w*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
 	}
       if (dimension > 2) {
+	/* fixme??? */
 	g->a /= n/2.;
 	g->b /= n/2.;
       }
@@ -1805,6 +1806,53 @@ gdouble gfs_face_interpolated_value (const FttCellFace * face,
   else
     return ((x1 - 0.5)*v0 + 0.5*v1)/x1;
 #endif
+}
+
+/**
+ * gfs_face_weighted_interpolated_value:
+ * @face: a #FttFace.
+ * @v: a #GfsVariable index.
+ *
+ * Computes the value of variable @v on the @face weighted by the
+ * value of the @v field of the face state vector using interpolation
+ * from the cell-centered values. The value returned is second order
+ * accurate in space and conservative, in the sense that values at a
+ * coarse/fine cell boundary are consistent.
+ *
+ * Returns: the weighted value of variable @v on the face.  
+ */
+gdouble gfs_face_weighted_interpolated_value (const FttCellFace * face,
+					      guint v)
+{
+  g_return_val_if_fail (face != NULL, 0.);
+
+  if (face->neighbor) {
+    if (FTT_CELL_IS_LEAF (face->neighbor)) {
+      gdouble w = GFS_STATE (face->cell)->f[face->d].v, x1 = 1., v1;
+      v1 = neighbor_value (face, v, &x1);
+      return w*((x1 - 0.5)*GFS_VARIABLE (face->cell, v) + 0.5*v1)/x1;
+    }
+    else {
+      /* neighbor is at a deeper level */
+      FttCellChildren children;
+      FttCellFace f;
+      gdouble val = 0.;
+      guint i, n;
+      
+      f.d = FTT_OPPOSITE_DIRECTION (face->d);
+      n = ftt_cell_children_direction (face->neighbor, f.d, &children);
+      f.neighbor = face->cell;
+      for (i = 0; i < n; i++)
+	if ((f.cell = children.c[i])) {
+	  gdouble w = GFS_STATE (f.cell)->f[f.d].v, x1 = 1., v1;
+	  v1 = neighbor_value (&f, v, &x1);
+	  val += w*v1;
+	}
+      return val/n;
+    }
+  }
+  else
+    return GFS_STATE (face->cell)->f[face->d].v*GFS_VARIABLE (face->cell, v);
 }
 
 /**

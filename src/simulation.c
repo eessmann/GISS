@@ -1792,25 +1792,32 @@ static void axi_read (GtsObject ** object, GtsFile * fp)
   GFS_DOMAIN (*object)->refpos.y = 0.5;
 }
 
-static gdouble axi_face_fraction (const GfsDomain * domain, const FttCellFace * face)
+static gdouble axi_face_map (const GfsDomain * domain, const FttCellFace * face)
 {
   FttVector p;
   ftt_face_pos (face, &p);
   return p.y;
 }
 
-static gdouble axi_cell_fraction (const GfsDomain * domain, const FttCell * cell)
+static gdouble axi_cell_map (const GfsDomain * domain, const FttCell * cell)
 {
   FttVector p;
   gfs_cell_cm (cell, &p);
   return p.y;
 }
 
+static gdouble axi_solid_map (const GfsDomain * domain, const FttCell * cell)
+{
+  g_assert (GFS_IS_MIXED (cell));
+  return GFS_STATE (cell)->solid->ca.y;
+}
+
 static void axi_class_init (GfsSimulationClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = axi_read;
-  GFS_DOMAIN_CLASS (klass)->face_fraction = axi_face_fraction;
-  GFS_DOMAIN_CLASS (klass)->cell_fraction = axi_cell_fraction;
+  GFS_DOMAIN_CLASS (klass)->face_map  = axi_face_map;
+  GFS_DOMAIN_CLASS (klass)->cell_map  = axi_cell_map;
+  GFS_DOMAIN_CLASS (klass)->solid_map = axi_solid_map;
 }
 
 GfsSimulationClass * gfs_axi_class (void)

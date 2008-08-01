@@ -102,6 +102,8 @@ void                  gfs_cell_coarse_fine          (FttCell * cell,
 						     GfsVariable * v);
 gdouble               gfs_face_interpolated_value   (const FttCellFace * face,
 						     guint v);
+gdouble               gfs_face_weighted_interpolated_value (const FttCellFace * face,
+							    guint v);
 typedef gdouble    (* GfsCenterGradient)            (FttCell * cell,
 						     FttComponent c,
 						     guint v);
