@@ -128,6 +128,29 @@ struct _GfsAdaptGradient {
 
 GfsEventClass * gfs_adapt_gradient_class  (void);
 
+/* GfsAdaptError: Header */
+
+typedef struct _GfsAdaptError         GfsAdaptError;
+
+struct _GfsAdaptError {
+  /*< private >*/
+  GfsAdaptGradient parent;
+  GfsVariable * dv;
+  FttComponent i;
+  GfsNorm norm;
+
+  /*< public >*/
+  GfsVariable * v;
+};
+
+#define GFS_ADAPT_ERROR(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsAdaptError,\
+					         gfs_adapt_error_class ())
+#define GFS_IS_ADAPT_ERROR(obj)         (gts_object_is_from_class (obj,\
+						 gfs_adapt_error_class ()))
+
+GfsEventClass * gfs_adapt_error_class  (void);
+
 /* GfsAdaptCurvature: Header */
 
 #define GFS_IS_ADAPT_CURVATURE(obj)         (gts_object_is_from_class (obj,\

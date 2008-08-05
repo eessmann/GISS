@@ -154,6 +154,7 @@ GtsObjectClass ** gfs_classes (void)
       gfs_adapt_streamline_curvature_class (),
       gfs_adapt_function_class (),
       gfs_adapt_gradient_class (),
+        gfs_adapt_error_class (),
         gfs_adapt_curvature_class (),
 
     gfs_event_sum_class (),

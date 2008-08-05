@@ -535,6 +535,112 @@ GfsEventClass * gfs_adapt_gradient_class (void)
   return klass;
 }
 
+/* GfsAdaptError: Object */
+
+static void gfs_adapt_error_destroy (GtsObject * o)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_ADAPT_ERROR (o)->v));
+
+  (* GTS_OBJECT_CLASS (gfs_adapt_error_class ())->parent_class->destroy) (o);
+}
+
+static void gfs_adapt_error_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_adapt_error_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GFS_ADAPT_ERROR (*o)->v = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
+}
+
+static void compute_gradient (FttCell * cell, GfsAdaptError * a)
+{
+  GFS_VALUE (cell, a->dv) = gfs_center_gradient (cell, a->i, GFS_ADAPT_GRADIENT (a)->v->i);
+}
+
+static void add_hessian (FttCell * cell, GfsAdaptError * a)
+{
+  FttComponent j;
+  for (j = 0; j < a->i; j++) {
+    gdouble ddv = gfs_center_gradient (cell, j, a->dv->i);
+    GFS_VALUE (cell, a->v) += ddv*ddv;
+  }
+  gdouble ddv = gfs_center_gradient (cell, a->i, a->dv->i);
+  GFS_VALUE (cell, a->v) += ddv*ddv;
+}
+
+static void normalize (FttCell * cell, GfsAdaptError * a)
+{
+  gdouble h = ftt_cell_size (cell);
+  GFS_VALUE (cell, a->v) = sqrt (GFS_VALUE (cell, a->v)/(FTT_DIMENSION*FTT_DIMENSION))
+    /(h*h*a->norm.infty);
+}
+
+static gboolean gfs_adapt_error_event (GfsEvent * event, 
+				       GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_adapt_error_class ())->parent_class)->event) 
+      (event, sim)) {
+    GfsAdaptError * a = GFS_ADAPT_ERROR (event);
+    GfsDomain * domain = GFS_DOMAIN (sim);
+
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) gfs_cell_reset, a->v);
+    a->norm = gfs_domain_norm_variable (domain, GFS_ADAPT_GRADIENT (event)->v, NULL,
+					FTT_TRAVERSE_LEAFS, -1);
+    if (a->norm.infty > 0.) {
+      a->dv = gfs_temporary_variable (domain);
+      for (a->i = 0; a->i < FTT_DIMENSION; a->i++) {
+	gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) compute_gradient, a);
+	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, a->dv);
+	gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_hessian, a);
+      }
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) normalize, a);
+      gts_object_destroy (GTS_OBJECT (a->dv));
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_adapt_error_class_init (GfsEventClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_adapt_error_destroy;
+  GTS_OBJECT_CLASS (klass)->read = gfs_adapt_error_read;
+  GFS_EVENT_CLASS (klass)->event = gfs_adapt_error_event;
+}
+
+static gdouble cost_error (FttCell * cell, GfsAdaptError * a)
+{
+  gdouble h = ftt_cell_size (cell);
+  return GFS_VALUE (cell, a->v)*h*h;
+}
+
+static void gfs_adapt_error_init (GfsAdaptError * object)
+{
+  GFS_ADAPT (object)->cost = (GtsKeyFunc) cost_error;
+}
+
+GfsEventClass * gfs_adapt_error_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_adapt_error_info = {
+      "GfsAdaptError",
+      sizeof (GfsAdaptError),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_adapt_error_class_init,
+      (GtsObjectInitFunc) gfs_adapt_error_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_adapt_gradient_class ()),
+				  &gfs_adapt_error_info);
+  }
+
+  return klass;
+}
+
 /* GfsAdaptCurvature: Object */
 
 static gdouble curvature_cost (FttCell * cell, GfsAdaptGradient * a)
