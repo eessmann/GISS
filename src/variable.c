@@ -418,6 +418,12 @@ static void variable_filtered_class_init (GtsObjectClass * klass)
   GFS_EVENT_CLASS (klass)->event_half = variable_filtered_event_half;
 }
 
+static void variable_filtered_init (GfsEvent * v)
+{
+  /* the variable/event may need to be initialised at the start */
+  v->start = -1;
+}
+
 GfsVariableClass * gfs_variable_filtered_class (void)
 {
   static GfsVariableClass * klass = NULL;
@@ -428,7 +434,7 @@ GfsVariableClass * gfs_variable_filtered_class (void)
       sizeof (GfsVariableFiltered),
       sizeof (GfsVariableClass),
       (GtsObjectClassInitFunc) variable_filtered_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) variable_filtered_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
