@@ -31,6 +31,7 @@ EXTRA_DIST = \
 	tests.bib \
 	depend.py \
 	test.py \
+	check.py \
 	gfs2tex \
 	Makefile.deps
 
