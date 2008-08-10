@@ -1844,8 +1844,9 @@ static gboolean curvature_along_direction (FttCell * cell,
       /* Gaussian curvature */
       gdouble kg = (hxx*hyy - hxy*hxy)/(size*size*dnm*dnm);
       gdouble a = km*km - kg;
-      g_assert (a >= 0.);
-      *kmax = fabs (km) + sqrt (a);
+      *kmax = fabs (km);
+      if (a >= 0.)
+	*kmax += sqrt (a);
     }
   }
 #endif /* 3D */
@@ -2034,8 +2035,9 @@ static gdouble parabola_fit_curvature (ParabolaFit * p, gdouble kappamax,
   if (kmax) {
     gdouble kg = (hxx*hyy - hxy*hxy)/(dnm*dnm);
     gdouble a = kappa*kappa/4. - kg;
-    g_assert (a >= 0.);
-    *kmax = fabs (kappa/2.) + sqrt (a);
+    *kmax = fabs (kappa/2.);
+    if (a >= 0.)
+      *kmax += sqrt (a);
   }
 #endif /* 3D */
   if (fabs (kappa) > kappamax) {
