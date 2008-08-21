@@ -55,4 +55,13 @@ static double area (const gchar * name)
     (_sim->physical_params.L*ftt_cell_size (_cell));
 }
 
+static double correctness (const gchar * name)
+{
+  GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (_sim)->variables, name);
+  if (v == NULL || !GFS_IS_VARIABLE_TRACER_VOF (v))
+    return 0.;
+  g_return_val_if_fail (_cell != NULL, 0.);
+  return gfs_vof_correctness (_cell, GFS_VARIABLE_TRACER_VOF (v));
+}
+
 #endif /* __FUNCTION_H__ */

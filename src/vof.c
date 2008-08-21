@@ -2257,3 +2257,43 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
   parabola_fit_destroy (&fit);
   return kappa;
 }
+
+/**
+ * gfs_vof_correctness:
+ * @cell: a #FttCell.
+ * @t: a #GfsVariableTracerVOF.
+ *
+ * An implementation of the criterion of Cerne et al (2002), to
+ * measure how well an interface is represented by a local VOF field.
+ *
+ * Returns: the "correctness" of the interface representation.
+ */
+gdouble gfs_vof_correctness (FttCell * cell, GfsVariableTracerVOF * t)
+{
+  GfsVariable * v = GFS_VARIABLE1 (t);
+  gdouble F(3,3,3);
+  
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (t != NULL, 0.);
+
+  if (GFS_VALUE (cell, v) <= 0. || GFS_VALUE (cell, v) >= 1.)
+    return 1.;
+
+  stencil (cell, v, f);
+#if FTT_2D
+  gdouble dx = f[2][0] + f[2][1] + f[2][2] - f[0][0] - f[0][1] - f[0][2];
+  gdouble dy = f[0][2] + f[1][2] + f[2][2] - f[0][0] - f[1][0] - f[2][0];
+  return sqrt ((dx*dx + dy*dy)/9.);
+#else
+  gdouble dx = (f[2][0][0] + f[2][1][0] + f[2][2][0] - f[0][0][0] - f[0][1][0] - f[0][2][0] +
+		f[2][0][1] + f[2][1][1] + f[2][2][1] - f[0][0][1] - f[0][1][1] - f[0][2][1] +
+		f[2][0][2] + f[2][1][2] + f[2][2][2] - f[0][0][2] - f[0][1][2] - f[0][2][2]);
+  gdouble dy = (f[0][2][0] + f[1][2][0] + f[2][2][0] - f[0][0][0] - f[1][0][0] - f[2][0][0] +
+		f[0][2][1] + f[1][2][1] + f[2][2][1] - f[0][0][1] - f[1][0][1] - f[2][0][1] +
+		f[0][2][2] + f[1][2][2] + f[2][2][2] - f[0][0][2] - f[1][0][2] - f[2][0][2]);
+  gdouble dz = (f[0][0][2] + f[1][0][2] + f[2][0][2] - f[0][0][0] - f[1][0][0] - f[2][0][0] +
+		f[0][1][2] + f[1][1][2] + f[2][1][2] - f[0][1][0] - f[1][1][0] - f[2][1][0] +
+		f[0][2][2] + f[1][2][2] + f[2][2][2] - f[0][2][0] - f[1][2][0] - f[2][2][0]);  
+  return sqrt ((dx*dx + dy*dy + dz*dz)/27.);
+#endif
+}

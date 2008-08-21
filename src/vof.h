@@ -108,6 +108,8 @@ gdouble  gfs_height_curvature      (FttCell * cell,
 gdouble  gfs_fit_curvature         (FttCell * cell,
 				    GfsVariableTracerVOF * t,
 				    gdouble * kmax);
+gdouble  gfs_vof_correctness       (FttCell * cell, 
+				    GfsVariableTracerVOF * t);
 
 #ifdef __cplusplus
 }
