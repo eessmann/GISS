@@ -572,7 +572,7 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
       i = i->next;
     }
     if (f->spatial)
-      fputs ("double f (double x, double y, double z) {\n"
+      fputs ("double f (double x, double y, double z, double t) {\n"
 	     "  _x = x; _y = y; _z = z;\n", 
 	     fin);
     else if (f->constant)
@@ -1116,7 +1116,7 @@ GfsFunctionClass * gfs_function_spatial_class (void)
   return klass;
 }
 
-typedef gdouble (* GfsFunctionSpatialFunc) (double x, double y, double z);
+typedef gdouble (* GfsFunctionSpatialFunc) (double x, double y, double z, double t);
 
 /**
  * gfs_function_spatial_value:
@@ -1132,10 +1132,11 @@ gdouble gfs_function_spatial_value (GfsFunction * f, FttVector * p)
   g_return_val_if_fail (p != NULL, 0.);
 
   if (f->f) {
+    GfsSimulation * sim = gfs_object_simulation (f);
     FttVector q = *p;
     check_for_deferred_compilation (f);
-    gfs_simulation_map_inverse (gfs_object_simulation (f), &q);
-    return (* (GfsFunctionSpatialFunc) f->f) (q.x, q.y, q.z);
+    gfs_simulation_map_inverse (sim, &q);
+    return (* (GfsFunctionSpatialFunc) f->f) (q.x, q.y, q.z, sim->time.t);
   }
   else
     return f->val;
