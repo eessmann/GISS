@@ -110,7 +110,11 @@ GString *          gfs_function_expression  (GtsFile * fp,
 #define GFS_IS_FUNCTION_SPATIAL(obj)         (gts_object_is_from_class (obj,\
 					      gfs_function_spatial_class ()))
 
+typedef gdouble (* GfsFunctionSpatialFunc)    (double x, double y, double z, double t);
+
 GfsFunctionClass * gfs_function_spatial_class (void);
+GfsFunction *      gfs_function_spatial_new   (GfsFunctionClass * klass, 
+					       GfsFunctionSpatialFunc func);
 gdouble            gfs_function_spatial_value (GfsFunction * f, FttVector * p);
 
 /* GfsFunctionConstant: Header */

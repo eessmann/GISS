@@ -19,7 +19,9 @@ pkglib_LTLIBRARIES = \
 	libterrain2D.la \
 	libterrain3D.la \
 	libterrain2D3.la \
-	$(TIDE)
+	$(TIDE) \
+	libstokes2D.la \
+	libstokes3D.la
 
 bin_PROGRAMS = \
 	xyz2rsurface \
@@ -29,12 +31,14 @@ bin_PROGRAMS = \
 EXTRA_DIST = \
 	map.mod \
 	tide.mod \
-	terrain.mod
+	terrain.mod \
+	stokes.mod
 
 BUILT_SOURCES = \
 	map.c \
 	tide.c \
-	terrain.c
+	terrain.c \
+	stokes.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -69,6 +73,11 @@ libtide2D_la_LIBADD = -Lfes2004 -lfes -lnetcdf $(GSL_LIBS)
 libtide2D3_la_SOURCES = tide.c
 libtide2D3_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D3=1
 libtide2D3_la_LIBADD = -Lfes2004 -lfes -lnetcdf $(GSL_LIBS)
+
+libstokes3D_la_SOURCES = stokes.c CW263.f
+libstokes3D_la_CFLAGS = $(AM_CFLAGS)
+libstokes2D_la_SOURCES = stokes.c CW263.f
+libstokes2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
 xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c rsurface.h
 xyz2rsurface_LDADD = -LRStarTree -lcSmRST

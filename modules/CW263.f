@@ -171,18 +171,18 @@ c
       endif
       zel= 2*pi/k
 c
-      open(12,file='cw263.psi')
-      itl= 'Solved by CW263'
-      datim= 'Space for date & time:'
-      ver= 5.01
-      el0= 9.81*zt**2/(2*pi)
-      hl0= zh/el0
-      dl0= zd/el0
-      wl0= zel/el0
-      write(12,101) itl,datim,ver,hl0,dl0,wl0,zh,zd,zt,nfun-1,zu
-      write(12,102) (eta(i),c(i+1),i=1,nfun-1),eta(nfun)
-      write(12,107) (amp(i)/zh,i=0,nfun-1)
-      close(12)
+c$$$      open(12,file='cw263.psi')
+c$$$      itl= 'Solved by CW263'
+c$$$      datim= 'Space for date & time:'
+c$$$      ver= 5.01
+c$$$      el0= 9.81*zt**2/(2*pi)
+c$$$      hl0= zh/el0
+c$$$      dl0= zd/el0
+c$$$      wl0= zel/el0
+c$$$      write(12,101) itl,datim,ver,hl0,dl0,wl0,zh,zd,zt,nfun-1,zu
+c$$$      write(12,102) (eta(i),c(i+1),i=1,nfun-1),eta(nfun)
+c$$$      write(12,107) (amp(i)/zh,i=0,nfun-1)
+c$$$      close(12)
 c
   101 format(a/a,f10.2/3f16.10/3f16.10,i5,f16.10)
   102 format(1p2e25.16)
@@ -784,9 +784,9 @@ c
          rat= ha/hb
       endif
 c
-      if (nverb.ne.0.or.rat.gt.1.0) then
-         write(*,'(a,f5.3)') ' H/Hb              = ',rat
-      endif
+c      if (nverb.ne.0.or.rat.gt.1.0) then
+c         write(*,'(a,f5.3)') ' H/Hb              = ',rat
+c      endif
       if (rat.gt.1.0) stop
 c
       return

@@ -1118,8 +1118,6 @@ GfsFunctionClass * gfs_function_spatial_class (void)
   return klass;
 }
 
-typedef gdouble (* GfsFunctionSpatialFunc) (double x, double y, double z, double t);
-
 /**
  * gfs_function_spatial_value:
  * @f: a #GfsFunction.
@@ -1142,6 +1140,19 @@ gdouble gfs_function_spatial_value (GfsFunction * f, FttVector * p)
   }
   else
     return f->val;
+}
+
+GfsFunction * gfs_function_spatial_new (GfsFunctionClass * klass, 
+					GfsFunctionSpatialFunc func)
+{
+  GfsFunction * object;
+
+  g_return_val_if_fail (func != NULL, NULL);
+
+  object = GFS_FUNCTION (gts_object_new (GTS_OBJECT_CLASS (klass)));
+  object->f = func;
+
+  return object;
 }
 
 /* GfsFunctionConstant: object */
