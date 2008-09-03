@@ -37,6 +37,7 @@ struct _GfsVariableDistance {
 
   /*< public >*/
   GfsVariable * v;
+  gboolean stencil;
 };
 
 #define GFS_VARIABLE_DISTANCE(obj)            GTS_OBJECT_CAST (obj,\

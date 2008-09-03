@@ -1656,6 +1656,71 @@ guint gfs_vof_facet (FttCell * cell,
 }
 
 /**
+ * gfs_vof_facet_distance2:
+ * @cell: a #FttCell.
+ * @t: a #GfsVariableTracerVOF.
+ * @p: a #GtsPoint.
+ *
+ * Returns: the square of the distance between point @p and the
+ * VOF-reconstructed interface facet defined by @t or %G_MAXDOUBLE if
+ * @cell does not contain an interface.
+ */
+gdouble gfs_vof_facet_distance2 (FttCell * cell,
+				 GfsVariableTracerVOF * t,
+				 GtsPoint * p)
+{
+  g_return_val_if_fail (cell != NULL, G_MAXDOUBLE);
+  g_return_val_if_fail (t != NULL, G_MAXDOUBLE);
+  g_return_val_if_fail (p != NULL, G_MAXDOUBLE);
+
+  if (GFS_IS_FULL (GFS_VALUE (cell, GFS_VARIABLE1 (t))))
+    return G_MAXDOUBLE;
+
+  FttVector q, m;
+  ftt_cell_pos (cell, &q);
+  gdouble h = ftt_cell_size (cell), lambda = 0., norm2 = 0.;
+  FttComponent c;
+  q.x -= h/2.; q.y -= h/2.; q.z -= h/2.;
+  /* compute position of closest point on VOF plane m*x + m*y + m*z = alpha */
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    (&m.x)[c] = GFS_VALUE (cell, t->m[c]);
+    lambda += (&m.x)[c]*((&p->x)[c] - (&q.x)[c])/h;
+    norm2 += (&m.x)[c]*(&m.x)[c];
+  }
+  gdouble alpha = GFS_VALUE (cell, t->alpha);
+  g_assert (norm2 > 0.);
+  lambda = (lambda - alpha)/norm2;
+
+  FttVector o;
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    (&o.x)[c] = ((&p->x)[c] - (&q.x)[c])/h - lambda*(&m.x)[c];
+    if ((&o.x)[c] <= 0. || (&o.x)[c] >= 1.) {
+      /* closest point on VOF plane is not within cell
+	 return minimum distance from facet edges */
+      FttVector q[FTT_DIMENSION*(FTT_DIMENSION - 1) + 1];
+      gdouble dmin = G_MAXDOUBLE;
+      guint i, n = gfs_vof_facet (cell, t, q, &m);
+#if !FTT_2D
+      if (n > 2)
+	q[n++] = q[0];
+#endif
+      for (i = 0; i < n - 1; i++) {
+	GtsPoint p1, p2;
+	p1.x = q[i].x; p1.y = q[i].y; p1.z = q[i].z;
+	p2.x = q[i + 1].x; p2.y = q[i + 1].y; p2.z = q[i + 1].z;
+	GtsSegment s;
+	s.v1 = (GtsVertex *) &p1; s.v2 = (GtsVertex *) &p2;
+	gdouble d = gts_point_segment_distance2 (p, &s);
+	if (d < dmin)
+	  dmin = d;
+      }
+      return dmin;
+    }
+  }
+  return h*h*lambda*lambda*norm2;
+}
+
+/**
  * gfs_vof_center:
  * @cell: a #FttCell.
  * @t: a #GfsVariableTracerVOF.

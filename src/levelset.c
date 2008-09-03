@@ -47,6 +47,15 @@ static void variable_distance_read (GtsObject ** o, GtsFile * fp)
 					       "Distance to the interface defined by tracer",
 					       fp->token->str, NULL);
   gts_file_next_token (fp);
+
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_INT, "stencil", TRUE},
+      {GTS_NONE}
+    };
+    var[0].data = &GFS_VARIABLE_DISTANCE (*o)->stencil; 
+    gts_file_assign_variables (fp, var);
+  }
 }
 
 static void variable_distance_write (GtsObject * o, FILE * fp)
@@ -54,58 +63,55 @@ static void variable_distance_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_variable_distance_class ())->parent_class->write) (o, fp);
 
   fprintf (fp, " %s", GFS_VARIABLE_DISTANCE (o)->v->name);
+  if (GFS_VARIABLE_DISTANCE (o)->stencil)
+    fputs (" { stencil = 1 }", fp);
 }
 
 static gdouble vof_distance2 (FttCell * cell, GtsPoint * t, gpointer v)
 {
-  gdouble f = GFS_VARIABLE (cell, GFS_VARIABLE1 (v)->i);
+  gdouble f = GFS_VALUE (cell, GFS_VARIABLE1 (v));
   
   if (GFS_IS_FULL (f))
     return G_MAXDOUBLE;
   if (!FTT_CELL_IS_LEAF (cell))
     return ftt_cell_point_distance2_min (cell, t);
-  else {
-    FttVector p[2], m;
-    guint n = gfs_vof_facet (cell, v, p, &m);
-
-#if FTT_3D
-    g_assert_not_implemented ();
-#endif
-
-    if (n != 2)
-      return G_MAXDOUBLE;
-
-    GtsPoint p1, p2;
-    p1.x = p[0].x; p1.y = p[0].y; p1.z = 0.;
-    p2.x = p[1].x; p2.y = p[1].y; p2.z = 0.;
-    GtsSegment s;
-    s.v1 = (GtsVertex *) &p1; s.v2 = (GtsVertex *) &p2;
-    return gts_point_segment_distance2 (t, &s);
-  }
+  else
+    return gfs_vof_facet_distance2 (cell, v, t);
 }
 
-static void distance (FttCell * cell, gpointer * data)
+static void distance_for_stencil (FttCell * cell, gpointer * data)
 {
   GfsVariable * v = data[0];
   GfsVariable * s2 = data[2];
 
-  if (GFS_VARIABLE (cell, s2->i)) {
+  if (GFS_VALUE (cell, s2)) {
     GfsVariableDistance * l = GFS_VARIABLE_DISTANCE (v);
     GtsPoint p;
     gdouble d2;
     
     ftt_cell_pos (cell, (FttVector *) &p.x);
     d2 = gfs_domain_cell_point_distance2 (v->domain, &p, vof_distance2, l->v, NULL);
-    GFS_VARIABLE (cell, v->i) = GFS_VARIABLE (cell, l->v->i) > 0.5 ? sqrt (d2) : -sqrt (d2);
+    GFS_VALUE (cell, v) = GFS_VALUE (cell, l->v) > 0.5 ? sqrt (d2) : -sqrt (d2);
   }
   else
-    GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
+    GFS_VALUE (cell, v) = G_MAXDOUBLE;
+}
+
+static void distance (FttCell * cell, GfsVariable * v)
+{
+  GfsVariableDistance * l = GFS_VARIABLE_DISTANCE (v);
+  GtsPoint p;
+  gdouble d2;
+    
+  ftt_cell_pos (cell, (FttVector *) &p.x);
+  d2 = gfs_domain_cell_point_distance2 (v->domain, &p, vof_distance2, l->v, NULL);
+  GFS_VALUE (cell, v) = GFS_VALUE (cell, l->v) > 0.5 ? sqrt (d2) : -sqrt (d2);
 }
 
 static void stencil_interpolate (FttCell * cell, gpointer * data)
 {
   GfsVariableDistance * v = data[0];
-  gdouble f = GFS_VARIABLE (cell, v->v->i);
+  gdouble f = GFS_VALUE (cell, v->v);
   
   if (!GFS_IS_FULL (f))
     gfs_interpolate_stencil (cell, data[1]);
@@ -117,7 +123,7 @@ static void stencil_gradient (FttCell * cell, gpointer * data)
   GfsVariable * s2 = data[2];
   FttComponent c;
 
-  if (GFS_VARIABLE (cell, s1->i))
+  if (GFS_VALUE (cell, s1))
     for (c = 0; c < FTT_DIMENSION; c++)
       gfs_center_gradient_stencil (cell, c, s2->i);
 }
@@ -126,33 +132,40 @@ static void variable_distance_event_half (GfsEvent * event, GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
   GfsVariableDistance * v = GFS_VARIABLE_DISTANCE (event);
-  gpointer data[3], tmp;
 
   gfs_domain_timer_start (domain, "distance");
 
-  data[0] = v;
-  data[1] = gfs_temporary_variable (domain);
-  data[2] = gfs_temporary_variable (domain);
-  gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, data[1]);
-  gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) stencil_interpolate, data);
-  gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, data[2]);
-  gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) stencil_gradient, data);
-  tmp = data[1]; data[1] = data[2]; data[2] = tmp;
-  gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) stencil_gradient, data);
+  if (v->stencil) { /* fixme: this "acceleration technique"
+		       i.e. computing distance only in a band around
+		       the interface seems to be slower than computing
+		       the distance function everywhere! */
+    gpointer data[3], tmp;
+    data[0] = v;
+    data[1] = gfs_temporary_variable (domain);
+    data[2] = gfs_temporary_variable (domain);
+    gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, data[1]);
+    gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) stencil_interpolate, data);
+    gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, data[2]);
+    gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) stencil_gradient, data);
+    tmp = data[1]; data[1] = data[2]; data[2] = tmp;
+    gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) stencil_gradient, data);
 
-  gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-  			    (FttCellTraverseFunc) v->v->fine_coarse, v->v);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) distance, data);
+    gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) v->v->fine_coarse, v->v);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) distance_for_stencil, data);
+    gts_object_destroy (data[1]);
+    gts_object_destroy (data[2]);
+  }
+  else
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) distance, v);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
-
-  gts_object_destroy (data[1]);
-  gts_object_destroy (data[2]);
 
   gfs_domain_timer_stop (domain, "distance");
 }

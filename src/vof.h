@@ -90,6 +90,9 @@ guint    gfs_vof_facet             (FttCell * cell,
 				    GfsVariableTracerVOF * t,
 				    FttVector * p,
 				    FttVector * m);
+gdouble  gfs_vof_facet_distance2   (FttCell * cell,
+				    GfsVariableTracerVOF * t,
+				    GtsPoint * p);
 gdouble  gfs_vof_center            (FttCell * cell,
 				    GfsVariableTracerVOF * t,
 				    FttVector * p);
