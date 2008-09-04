@@ -154,7 +154,7 @@ static void output_mixed_pressure (FttCell * cell, GfsVariable * p)
   GfsSolidVector * s = GFS_STATE (cell)->solid;
 
   printf ("%g %g %g %g\n", s->ca.x, s->ca.y, s->ca.z, 
-	  gfs_cell_dirichlet_value (cell, p, -1));
+	  gfs_dimensional_value (p, gfs_interpolate (cell, s->ca, p)));
 }
 
 static void output_mixed_variable (FttCell * cell, GfsVariable * v)
@@ -162,7 +162,7 @@ static void output_mixed_variable (FttCell * cell, GfsVariable * v)
   GfsSolidVector * s = GFS_STATE (cell)->solid;
 
   printf ("%g %g %g %g\n", s->ca.x, s->ca.y, s->ca.z,
-	  GFS_VARIABLE (cell, v->i));
+	  gfs_dimensional_value (v, GFS_VALUE (cell, v)));
 }
 
 /* SVertex: Header */
