@@ -2812,6 +2812,9 @@ void gfs_domain_solid_force (GfsDomain * domain,
   g_return_if_fail (pm != NULL);
   g_return_if_fail (vm != NULL);
 
+  if (GFS_IS_AXI (domain))
+    g_assert_not_implemented ();
+
   pf->x = pf->y = pf->z = 0.;
   pm->x = pm->y = pm->z = 0.;
   data[0] = pf;

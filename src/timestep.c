@@ -580,7 +580,8 @@ void gfs_predicted_face_velocities (GfsDomain * domain,
  * @par: the multilevel parameters.
  * @v: a #GfsVariable.
  * @rhs: the right-hand side.
- * @dia: the diagonal weight.
+ * @rhoc: the mass.
+ * @axi: the axisymmetric term.
  *
  * Solves a diffusion equation for variable @v using a Crank-Nicholson
  * scheme with multilevel relaxations.
@@ -593,7 +594,8 @@ void gfs_diffusion (GfsDomain * domain,
 		    GfsMultilevelParams * par,
 		    GfsVariable * v,
 		    GfsVariable * rhs, 
-		    GfsVariable * dia)
+		    GfsVariable * rhoc,
+		    GfsVariable * axi)
 {
   guint minlevel, maxlevel;
   GfsVariable * res;
@@ -602,7 +604,7 @@ void gfs_diffusion (GfsDomain * domain,
   g_return_if_fail (par != NULL);
   g_return_if_fail (v != NULL);
   g_return_if_fail (rhs != NULL);
-  g_return_if_fail (dia != NULL);
+  g_return_if_fail (rhoc != NULL);
 
   res = gfs_temporary_variable (domain);
 
@@ -610,14 +612,14 @@ void gfs_diffusion (GfsDomain * domain,
   if (par->minlevel > minlevel)
     minlevel = par->minlevel;
   maxlevel = gfs_domain_depth (domain);
-  gfs_diffusion_residual (domain, v, rhs, dia, res);
+  gfs_diffusion_residual (domain, v, rhs, rhoc, axi, res);
   par->residual_before = par->residual = 
     gfs_domain_norm_variable (domain, res, NULL, FTT_TRAVERSE_LEAFS, -1);
   gdouble res_max_before = par->residual.infty;
   par->niter = 0;
   while (par->niter < par->nitermin ||
 	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
-    gfs_diffusion_cycle (domain, minlevel, maxlevel, par->nrelax, v, rhs, dia, res);
+    gfs_diffusion_cycle (domain, minlevel, maxlevel, par->nrelax, v, rhs, rhoc, axi, res);
     par->residual = gfs_domain_norm_variable (domain, res, NULL, FTT_TRAVERSE_LEAFS, -1);
     if (par->residual.infty == res_max_before) /* convergence has stopped!! */
       break;
@@ -719,19 +721,22 @@ static void variable_diffusion (GfsDomain * domain,
 				GfsVariable * rhs,
 				GfsFunction * alpha)
 {
-  GfsVariable * dia;
+  GfsVariable * rhoc, * axi;
 
-  dia = gfs_temporary_variable (domain);
+  rhoc = gfs_temporary_variable (domain);
+  axi = GFS_IS_AXI (domain) && par->v->component == FTT_Y ? gfs_temporary_variable (domain) : NULL;
 
-  gfs_diffusion_coefficients (domain, d, par->dt, dia, alpha, d->D->par.beta);
+  gfs_diffusion_coefficients (domain, d, par->dt, rhoc, axi, alpha, d->D->par.beta);
   gfs_domain_surface_bc (domain, par->v);
-  gfs_diffusion_rhs (domain, par->v, rhs, dia, d->D->par.beta);
+  gfs_diffusion_rhs (domain, par->v, rhs, rhoc, axi, d->D->par.beta);
   /* fixme: time shoud be set to t + dt here in case boundary values are
      time-dependent in the call below */
   gfs_domain_surface_bc (domain, par->v);
-  gfs_diffusion (domain, &d->D->par, par->v, rhs, dia);
+  gfs_diffusion (domain, &d->D->par, par->v, rhs, rhoc, axi);
 
-  gts_object_destroy (GTS_OBJECT (dia));
+  if (axi)
+    gts_object_destroy (GTS_OBJECT (axi));
+  gts_object_destroy (GTS_OBJECT (rhoc));
 }
 
 /**

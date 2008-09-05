@@ -262,19 +262,6 @@ GfsSourceGenericClass * gfs_source_viscosity_class  (void);
 
 /* GfsSourceViscosityExplicit: Header */
 
-typedef struct _GfsSourceViscosityExplicit         GfsSourceViscosityExplicit;
-
-struct _GfsSourceViscosityExplicit {
-  /*< private >*/
-  GfsSourceViscosity parent;
-
-  /*< public >*/
-  GfsVariable * v[FTT_DIMENSION];
-};
-
-#define GFS_SOURCE_VISCOSITY_EXPLICIT(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsSourceViscosityExplicit,\
-					         gfs_source_viscosity_class ())
 #define GFS_IS_SOURCE_VISCOSITY_EXPLICIT(obj) (gts_object_is_from_class (obj,\
 					       gfs_source_viscosity_explicit_class ()))
 

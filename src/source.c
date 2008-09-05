@@ -119,6 +119,9 @@ GfsVariable * gfs_domain_variable_fluxes (GfsDomain * domain,
   g_return_val_if_fail (domain != NULL, NULL);
   g_return_val_if_fail (v != NULL, NULL);
 
+  if (!v->sources)
+    return NULL;
+
   GSList * i = GTS_SLIST_CONTAINER (v->sources)->items;
   while (i) {
     if (GFS_SOURCE_GENERIC (i->data)->flux) {
@@ -892,6 +895,65 @@ GfsSourceGenericClass * gfs_source_diffusion_explicit_class (void)
 
 /* GfsSourceViscosity: Object */
 
+typedef struct {
+  GfsSourceGeneric * s;
+  GfsVariable * v, * sv, * tv;
+  gdouble dt;
+} FluxPar;
+
+static void add_viscosity_transverse_flux (FttCell * cell, FluxPar * p)
+{
+  FttCellFace f;
+  FttCellNeighbors n;
+  gdouble transverse = 0.;
+
+  f.cell = cell;
+  ftt_cell_neighbors (cell, &n);
+#if FTT_2D
+  FttComponent ortho = (p->v->component + 1) % FTT_DIMENSION;
+
+  for (f.d = 2*ortho; f.d <= 2*ortho + 1; f.d++) {
+    f.neighbor = n.c[f.d];
+    transverse += (FTT_FACE_DIRECT (&f) ? 1. : -1.)*
+      gfs_face_weighted_interpolated_value (&f, p->tv->i);
+  }
+#else
+  g_assert_not_implemented ();
+#endif  
+
+  GfsFunction * alpha = gfs_object_simulation (p->s)->physical_params.alpha;
+  gdouble h = ftt_cell_size (cell);
+  GFS_VALUE (cell, p->sv) += (alpha ? gfs_function_value (alpha, cell) : 1.)*transverse/h;
+}
+
+static void compute_transverse (FttCell * cell, FluxPar * p)
+{
+  GfsVariable ** v = GFS_SOURCE_VISCOSITY (p->s)->v;
+  gdouble h = ftt_cell_size (cell);
+  GFS_VALUE (cell, p->tv) = gfs_center_gradient (cell, 
+						 p->v->component, 
+						 v[(p->v->component + 1) % FTT_DIMENSION]->i)/h;
+}
+
+static void source_viscosity_transverse_flux (GfsSourceGeneric * s, 
+					      GfsDomain * domain, 
+					      GfsVariable * v, GfsVariable * sv, 
+					      gdouble dt)
+{
+  FluxPar p;
+
+  gfs_diffusion_coefficients (domain, GFS_SOURCE_DIFFUSION (s), dt, NULL, NULL, NULL, 1.);
+  p.s = s;
+  p.v = v;
+  p.sv = sv;
+  p.dt = dt;
+  p.tv = gfs_temporary_variable (domain);
+  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) compute_transverse, &p);
+  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.tv);
+  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_viscosity_transverse_flux, &p);
+  gts_object_destroy (GTS_OBJECT (p.tv));
+}
+
 static void source_viscosity_read (GtsObject ** o, GtsFile * fp)
 {
   GfsSourceViscosity * source;
@@ -906,10 +968,10 @@ static void source_viscosity_read (GtsObject ** o, GtsFile * fp)
   source = GFS_SOURCE_VISCOSITY (*o);
   domain =  GFS_DOMAIN (gfs_object_simulation (source));
   if (GFS_IS_AXI (domain) && !GFS_IS_SOURCE_VISCOSITY_EXPLICIT (source)) {
-    gts_file_error (fp, 
-		    "GfsSourceViscosity does not work for axisymmetric flows (yet)\n"
-		    "Use GfsSourceViscosityExplicit instead\n");
-    return;
+    GfsSourceGeneric * s = GFS_SOURCE_GENERIC (source);
+    s->mac_value = NULL;
+    s->centered_value = NULL;
+    s->flux = source_viscosity_transverse_flux;
   }
   if (!(source->v = gfs_domain_velocity (domain))) {
     gts_file_error (fp, "cannot find velocity components");
@@ -975,6 +1037,7 @@ static void source_viscosity_init (GfsSourceGeneric * s)
 {
   s->mac_value = source_viscosity_value;
   s->centered_value = source_viscosity_non_diffusion_value;
+  s->flux = NULL;
 }
 
 GfsSourceGenericClass * gfs_source_viscosity_class (void)
@@ -1000,31 +1063,6 @@ GfsSourceGenericClass * gfs_source_viscosity_class (void)
 
 /* GfsSourceViscosityExplicit: Object */
 
-static void gfs_source_viscosity_explicit_destroy (GtsObject * o)
-{
-  GfsVariable ** v = GFS_SOURCE_VISCOSITY_EXPLICIT (o)->v;
-  
-  if (v[0]) {
-    FttComponent c;
-    for (c = 0; c < FTT_DIMENSION; c++)
-      gts_object_destroy (GTS_OBJECT (v[c]));
-  }
-
-  (* GTS_OBJECT_CLASS (gfs_source_viscosity_explicit_class ())->parent_class->destroy) (o);
-}
-
-static void gfs_source_viscosity_explicit_read (GtsObject ** o, GtsFile * fp)
-{
-  (* GTS_OBJECT_CLASS (gfs_source_viscosity_explicit_class ())->parent_class->read) (o, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-
-  FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    GFS_SOURCE_VISCOSITY_EXPLICIT (*o)->v[c] = 
-      gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
-}
-
 static gdouble source_viscosity_stability (GfsSourceGeneric * s,
 					   GfsSimulation * sim)
 {
@@ -1038,43 +1076,10 @@ static gdouble source_viscosity_stability (GfsSourceGeneric * s,
   return 0.1*par.dtmax;
 }
 
-static void compute_transverse (FttCell * cell, GfsSourceViscosityExplicit * s)
-{
-  GfsVariable ** v = GFS_SOURCE_VISCOSITY (s)->v;
-  gdouble h = ftt_cell_size (cell);
-  FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    GFS_VALUE (cell, s->v[c]) = gfs_center_gradient (cell, (c + 1) % FTT_DIMENSION, v[c]->i)/h;
-}
-
-static gboolean gfs_source_viscosity_explicit_event (GfsEvent * event, GfsSimulation * sim)
-{
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_source_viscosity_explicit_class ())->parent_class)->event) (event, sim)) {
-    FttComponent c;
-
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) compute_transverse, event);
-    for (c = 0; c < FTT_DIMENSION; c++)
-      gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1,
-		     GFS_SOURCE_VISCOSITY_EXPLICIT (event)->v[c]);
-    return TRUE;
-  }
-  return FALSE;
-}
-
 static void source_viscosity_explicit_class_init (GfsSourceGenericClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->destroy = gfs_source_viscosity_explicit_destroy;
-  GTS_OBJECT_CLASS (klass)->read = gfs_source_viscosity_explicit_read;
-  GFS_EVENT_CLASS (klass)->event = gfs_source_viscosity_explicit_event;
   klass->stability = source_viscosity_stability;
 }
-
-typedef struct {
-  GfsSourceGeneric * s;
-  GfsVariable * v, * sv;
-  gdouble dt;
-} FluxPar;
 
 /* Defining this will use the divergence-free condition to decouple
    the diffusion equations for each component. This only works of
@@ -1086,7 +1091,7 @@ static void add_viscosity_explicit_flux (FttCell * cell, FluxPar * p)
   FttCellFace f;
   FttCellNeighbors n;
   GfsGradient g = { 0., 0. };
-  gdouble v0, h;
+  gdouble v0;
 
   if (GFS_IS_MIXED (cell)) {
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
@@ -1110,7 +1115,6 @@ static void add_viscosity_explicit_flux (FttCell * cell, FluxPar * p)
     g.a += e.a;
     g.b += e.b;
   }
-  h = ftt_cell_size (cell);
 
   gdouble transverse = 0.;
 #ifndef NOTRANSVERSE
@@ -1119,19 +1123,8 @@ static void add_viscosity_explicit_flux (FttCell * cell, FluxPar * p)
 
   for (f.d = 2*ortho; f.d <= 2*ortho + 1; f.d++) {
     f.neighbor = n.c[f.d];
-#if 0
     transverse += (FTT_FACE_DIRECT (&f) ? 1. : -1.)*
-      p->dt*
-      gfs_source_diffusion_face (GFS_SOURCE_DIFFUSION (p->s), &f)*
-      gfs_domain_face_fraction (p->v->domain, &f)*
-      gfs_face_interpolated_value (&f, GFS_SOURCE_VISCOSITY_EXPLICIT (p->s)->v[ortho]->i);
-#elif 0
-    transverse += (FTT_FACE_DIRECT (&f) ? 1. : -1.)*GFS_STATE (cell)->f[f.d].v*
-      gfs_face_interpolated_value (&f, GFS_SOURCE_VISCOSITY_EXPLICIT (p->s)->v[ortho]->i);
-#else
-    transverse += (FTT_FACE_DIRECT (&f) ? 1. : -1.)*
-      gfs_face_weighted_interpolated_value (&f, GFS_SOURCE_VISCOSITY_EXPLICIT (p->s)->v[ortho]->i);
-#endif
+      gfs_face_weighted_interpolated_value (&f, p->tv->i);
   }
 #else
   g_assert_not_implemented ();
@@ -1139,6 +1132,7 @@ static void add_viscosity_explicit_flux (FttCell * cell, FluxPar * p)
 #endif
 
   GfsFunction * alpha = gfs_object_simulation (p->s)->physical_params.alpha;
+  gdouble h = ftt_cell_size (cell);
   GFS_VALUE (cell, p->sv) += (alpha ? gfs_function_value (alpha, cell) : 1.)*
     ((g.b - g.a*v0)/h + transverse)/h;
 }
@@ -1162,17 +1156,19 @@ static void source_viscosity_explicit_flux (GfsSourceGeneric * s,
 {
   FluxPar p;
 
-  gfs_diffusion_coefficients (domain, GFS_SOURCE_DIFFUSION (s), dt, NULL, NULL, 1.);
+  gfs_diffusion_coefficients (domain, GFS_SOURCE_DIFFUSION (s), dt, NULL, NULL, NULL, 1.);
   gfs_domain_surface_bc (domain, v);
   p.s = s;
   p.v = v;
   p.sv = sv;
   p.dt = dt;
+  p.tv = gfs_temporary_variable (domain);
+  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) compute_transverse, &p);
+  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.tv);
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_viscosity_explicit_flux, &p);
-#if 1
   if (GFS_IS_AXI (domain) && v->component == FTT_Y)
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_axisymmetric_term, &p);
-#endif
+  gts_object_destroy (GTS_OBJECT (p.tv));
 }
 
 static void source_viscosity_explicit_init (GfsSourceGeneric * s)
@@ -1189,7 +1185,7 @@ GfsSourceGenericClass * gfs_source_viscosity_explicit_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo source_viscosity_explicit_info = {
       "GfsSourceViscosityExplicit",
-      sizeof (GfsSourceViscosityExplicit),
+      sizeof (GfsSourceViscosity),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) source_viscosity_explicit_class_init,
       (GtsObjectInitFunc) source_viscosity_explicit_init,

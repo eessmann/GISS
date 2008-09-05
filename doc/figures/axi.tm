@@ -80,7 +80,7 @@
     <tformat|<table|<row|<cell|>|<cell|c<rsup|i,j>*<frac|(v<rsub|z><rsup|\<star\>>)<rsup|i,j>-v<rsup|i,j><rsub|z>|\<Delta\>t>+(s<rsub|z>*v<rsup|2><rsub|z>)<rsup|i+1/2,j>-(s<rsub|z>*v<rsup|2><rsub|z>)<rsup|i-1/2,j>+(s<rsub|r>*v<rsub|r><rsup|>*v<rsub|z>)<rsup|i,j+1/2>-(s<rsub|r>*v<rsub|r><rsup|>*v<rsub|z>)<rsup|i,j-1/2>=>|<cell|>>|<row|<cell|>|<cell|(s<rsub|z>*S<rsub|zz>)<rsup|i+1/2,j>-(s<rsub|z>*S<rsub|zz>)<rsup|i-1/2,j>+(s<rsub|r>*S<rsub|zr>)<rsup|i,j+1/2>-(s<rsub|r>*S<rsub|zr>)<rsup|i,j-1/2>.>|<cell|>>>>
   </eqnarray*>
 
-  <subsubsection|Advection term>
+  <subsection|Advection term>
 
   <\equation*>
     u<rsup|n+1/2><rsub|d>=u<rsup|n>+<frac|h|2>*\<partial\><rsub|d>u<rsup|n>+<frac|\<Delta\>t|2>*\<partial\><rsub|t>u<rsup|n>+\<cal-O\>(h<rsup|2>,\<Delta\>t<rsup|2>),
@@ -95,12 +95,68 @@
 
   which is the same as in the two-dimensional case.
 
-  \;
+  <subsection|Implicit diffusion>
+
+  <subsubsection|Original implicit diffusion>
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|>|<cell|c*<frac|v<rsup|\<star\>>-v<rsup|n>|\<Delta\>t>-\<beta\>*\<nabla\>s*S<rsup|\<star\>><rsup|*>=src<rsup|n+1/2>+(1-\<beta\>)*\<nabla\>s*S<rsup|n>>|<cell|>>>>
+  </eqnarray*>
+
+  which can be rewritten
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|>|<cell|c*v<rsup|\<star\>>-\<nabla\><wide|s|^>*S<rsup|\<star\>>=c*v<rsup|n>+\<Delta\>t*src<rsup|n+1/2>+<frac|1-\<beta\>|\<beta\>>*\<nabla\><wide|s|^>*S<rsup|n>,>|<cell|>>>>
+  </eqnarray*>
+
+  with
+
+  <\equation*>
+    <wide|s|^>\<equiv\>\<beta\>*\<Delta\>t*s.
+  </equation*>
+
+  This finally gives
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|>|<cell|v<rsup|\<star\>>-<frac|1|c>\<nabla\><wide|s|^>*S<rsup|\<star\>>=v<rsup|n>+\<Delta\>t*<wide|src|^><rsup|n+1/2>+<frac|<wide|\<beta\>|^>|c>*\<nabla\><wide|s|^>*S<rsup|n>,>|<cell|>>>>
+  </eqnarray*>
+
+  with <math|><with|mode|math|<wide|\<beta\>|^>\<equiv\>(1-\<beta\>)/\<beta\>>.
+
+  <subsubsection|Axisymmetric version>
+
+  To account for the axisymmetric term this needs to be rewritten
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|>|<cell|c*<frac|v<rsup|\<star\>>-v<rsup|n>|\<Delta\>t>-\<beta\>*\<nabla\>s*S<rsup|\<star\>>+\<beta\>*a*2*\<nu\>*<frac|v<rsup|\<star\>>|r>=src<rsup|n+1/2>+(1-\<beta\>)*\<nabla\>s*S<rsup|n>-(1-\<beta\>)*a*2*\<nu\>*<frac|v<rsup|n>|r>>|<cell|>>>>
+  </eqnarray*>
+
+  which can be rewritten
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|>|<cell|c*v<rsup|\<star\>>*-\<nabla\><wide|s|^>*S<rsup|\<star\>>+2*\<beta\>*\<Delta\>t*a*\<nu\>*<frac|v<rsup|\<star\>>|r>=c*v<rsup|n>+\<Delta\>t*src<rsup|n+1/2>+<frac|1-\<beta\>|\<beta\>>*\<nabla\><wide|s|^>*S<rsup|n>-2*(1-\<beta\>)*\<Delta\>t*a*\<nu\>*<frac|v<rsup|n>|r>>|<cell|>>>>
+  </eqnarray*>
+
+  this finally gives
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|>|<cell|v<rsup|\<star\>>*-<frac|1|c>*\<nabla\><wide|s|^>*S<rsup|\<star\>>+2*\<beta\>*\<Delta\>t*\<nu\>*<frac|v<rsup|\<star\>>|r<rsup|2>>=v<rsup|n>+\<Delta\>t*<wide|src|^><rsup|n+1/2>+<frac|1-\<beta\>|\<beta\>*c>*\<nabla\><wide|s|^>*S<rsup|n>-2*(1-\<beta\>)*\<Delta\>t*\<nu\>*<frac|v<rsup|n>|r<rsup|2>>>|<cell|>>>>
+  </eqnarray*>
+
+  Posing <math|d\<equiv\>2*\<beta\>*\<Delta\>t*\<nu\>/r<rsup|2>> then gives
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|>|<cell|v<rsup|\<star\>>*(1+d)-<frac|1|c>*\<nabla\><wide|s|^>*S<rsup|\<star\>>=v<rsup|n>*<left|(>1-<wide|\<beta\>*|^>*d<right|)>+\<Delta\>t*<wide|src|^><rsup|n+1/2>+<frac|<wide|\<beta\>*|^>*|c>*\<nabla\><wide|s|^>*S<rsup|n>.>|<cell|>>>>
+  </eqnarray*>
 </body>
 
 <\references>
   <\collection>
     <associate|auto-1|<tuple|1|?>>
+    <associate|auto-2|<tuple|2|?>>
+    <associate|auto-3|<tuple|2.1|?>>
+    <associate|auto-4|<tuple|2.2|?>>
+    <associate|auto-5|<tuple|3|?>>
     <associate|continuity|<tuple|3|?>>
     <associate|momr|<tuple|1|?>>
     <associate|momz|<tuple|2|?>>
