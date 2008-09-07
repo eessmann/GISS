@@ -376,6 +376,8 @@ static void variable_filtered_read (GtsObject ** o, GtsFile * fp)
   if (GFS_VARIABLE1 (v)->description)
     g_free (GFS_VARIABLE1 (v)->description);
   GFS_VARIABLE1 (v)->description = g_strjoin (" ", "Variable", v->v->name, "filtered", NULL);
+
+  GFS_VARIABLE1 (v)->units = v->v->units;
 }
 
 static void variable_filtered_write (GtsObject * o, FILE * fp)

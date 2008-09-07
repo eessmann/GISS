@@ -45,14 +45,15 @@ static void gfs_source_tension_generic_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
-  s->sigma = gfs_read_constant (fp, domain);
+  s->sigma = gfs_read_constant (fp, domain)/pow (GFS_SIMULATION (domain)->physical_params.L, 3.);
 }
 
 static void gfs_source_tension_generic_write (GtsObject * o, FILE * fp)
 {
   GfsSourceTensionGeneric * t = GFS_SOURCE_TENSION_GENERIC (o);
   (* GTS_OBJECT_CLASS (gfs_source_tension_generic_class ())->parent_class->write) (o, fp);
-  fprintf (fp, " %s %g", t->c->name, t->sigma);
+  fprintf (fp, " %s %g", t->c->name, 
+	   t->sigma*pow (gfs_object_simulation (o)->physical_params.L, 3.));
 }
 
 typedef struct {
@@ -692,6 +693,7 @@ static void variable_curvature_init (GfsVariable * v)
 {
   v->coarse_fine = curvature_coarse_fine;
   v->fine_coarse = curvature_fine_coarse;
+  v->units = -1.;
 }
 
 GfsVariableClass * gfs_variable_curvature_class (void)
@@ -803,6 +805,11 @@ static void variable_position_class_init (GtsObjectClass * klass)
   GFS_EVENT_CLASS (klass)->event = variable_position_event;
 }
 
+static void variable_position_init (GfsVariable * v)
+{
+  v->units = 1.;
+}
+
 GfsVariableClass * gfs_variable_position_class (void)
 {
   static GfsVariableClass * klass = NULL;
@@ -813,7 +820,7 @@ GfsVariableClass * gfs_variable_position_class (void)
       sizeof (GfsVariablePosition),
       sizeof (GfsVariableClass),
       (GtsObjectClassInitFunc) variable_position_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) variable_position_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };

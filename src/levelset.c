@@ -191,6 +191,11 @@ static void variable_distance_class_init (GtsObjectClass * klass)
   GFS_EVENT_CLASS (klass)->event_half = variable_distance_event_half;
 }
 
+static void variable_distance_init (GfsVariable * v)
+{
+  v->units = 1.;
+}
+
 GfsVariableClass * gfs_variable_distance_class (void)
 {
   static GfsVariableClass * klass = NULL;
@@ -201,7 +206,7 @@ GfsVariableClass * gfs_variable_distance_class (void)
       sizeof (GfsVariableDistance),
       sizeof (GfsVariableClass),
       (GtsObjectClassInitFunc) variable_distance_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) variable_distance_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
