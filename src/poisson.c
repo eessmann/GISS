@@ -472,11 +472,10 @@ void gfs_poisson_coefficients (GfsDomain * domain,
 static void tension_coeff (FttCellFace * face, gpointer * data)
 {
   gdouble * lambda2 = data[0];
-  GfsStateVector * s = GFS_STATE (face->cell);
   GfsSourceTensionGeneric * t = data[1];
-  gdouble v = lambda2[face->d/2]*t->sigma;
-  gdouble alpha = data[2] ? gfs_function_face_value (data[2], face) : 1.;
   GfsVariable * kappa = GFS_SOURCE_TENSION (data[1])->k;
+  gdouble alpha = data[2] ? gfs_function_face_value (data[2], face) : 1.;
+  gdouble v = lambda2[face->d/2]*alpha*gfs_domain_face_fraction (kappa->domain, face)*t->sigma;
   gdouble k1 = GFS_VARIABLE (face->cell, kappa->i);
   gdouble k2 = GFS_VARIABLE (face->neighbor, kappa->i);
 #if 0
@@ -511,11 +510,7 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
 	   "Please check your definition.",
 	   alpha, p.x, p.y, p.z);
   }
-  v *= alpha;
-  /* fixme: mapping */
-  if (GFS_IS_MIXED (face->cell))
-    v *= s->solid->s[face->d];
-  s->f[face->d].v = v;
+  GFS_STATE (face->cell)->f[face->d].v = v;
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:

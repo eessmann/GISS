@@ -1877,6 +1877,19 @@ static gboolean curvature_along_direction (FttCell * cell,
     *kappa = hxx/(size*sqrt (dnm*dnm*dnm));
     if (kmax)
       *kmax = fabs (*kappa);
+    if (GFS_IS_AXI (v->domain)) {
+      gdouble nr, r = p.y;
+      if (c == FTT_X)
+	nr = hx;
+      else {
+	r += (d == FTT_TOP ? - H*size : H*size);
+	nr = (d == FTT_TOP ? 1. : -1.);
+      }
+      gdouble kaxi = nr/(sqrt(dnm)*r);
+      *kappa += kaxi;
+      if (kmax)
+	*kmax = MAX (*kmax, fabs (kaxi));
+    }
   }
 #else  /* 3D */  
   static FttComponent or[3][2] = { { FTT_Y, FTT_Z }, { FTT_X, FTT_Z }, { FTT_X, FTT_Y } };
@@ -2113,6 +2126,18 @@ static gdouble parabola_fit_curvature (ParabolaFit * p, gdouble kappamax,
   return kappa;
 }
 
+#if FTT_2D
+static void parabola_fit_axi_curvature (const ParabolaFit * p, gdouble r, 
+					gdouble * kappa, gdouble * kmax)
+{
+  gdouble nr = (p->m[0]*p->a[1] + p->m[1])/sqrt (1. + p->a[1]*p->a[1]);
+  gdouble kaxi = - nr/r;
+  *kappa += kaxi;
+  if (kmax)
+    *kmax = MAX (*kmax, fabs (kaxi));
+}
+#endif /* 2D */
+
 static void parabola_fit_destroy (ParabolaFit * p)
 {
 #if (FTT_2D || PARABOLA_SIMPLER)
@@ -2207,6 +2232,10 @@ gdouble gfs_fit_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble * k
   gdouble kappa = parabola_fit_curvature (&fit, 2., kmax)/h;
   if (kmax)
     *kmax /= h;
+#if FTT_2D
+  if (GFS_IS_AXI (v->domain))
+    parabola_fit_axi_curvature (&fit, fc.y*h + p.y, &kappa, kmax);
+#endif
   parabola_fit_destroy (&fit);
   return kappa;
 }
@@ -2319,6 +2348,10 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
   kappa = parabola_fit_curvature (&fit, 2., kmax)/h;
   if (kmax)
     *kmax /= h;
+#if FTT_2D
+  if (GFS_IS_AXI (v->domain))
+    parabola_fit_axi_curvature (&fit, fc.y*h + p.y, &kappa, kmax);
+#endif
   parabola_fit_destroy (&fit);
   return kappa;
 }

@@ -640,6 +640,9 @@ static void variable_curvature_from_distance (GfsEvent * event, GfsSimulation * 
 
   gfs_domain_timer_start (domain, "variable_curvature");
 
+  if (GFS_IS_AXI (sim))
+    g_assert_not_implemented ();
+
   for (c = 0; c < FTT_DIMENSION + 1; c++) {
     n[c] = gfs_temporary_variable (domain);
     gfs_variable_set_vector (n[c], c);
