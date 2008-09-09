@@ -29,16 +29,16 @@ extern "C" {
 
 #define GFS_IS_FULL(f)             ((f) == 0. || (f) == 1.)
 
-gdouble gfs_line_area              (FttVector * m, 
+gdouble gfs_line_area              (const FttVector * m, 
 				    gdouble alpha);
-void    gfs_line_center            (FttVector * m, 
+void    gfs_line_center            (const FttVector * m, 
 				    gdouble alpha, 
 				    gdouble a, 
 				    FttVector * p);
-gdouble gfs_line_area_center       (FttVector * m, 
+gdouble gfs_line_area_center       (const FttVector * m, 
 				    gdouble alpha, 
 				    FttVector * p);
-gdouble gfs_line_alpha             (FttVector * m, 
+gdouble gfs_line_alpha             (const FttVector * m, 
 				    gdouble c);
 #if FTT_2D
 #  define gfs_plane_volume         gfs_line_area
@@ -46,15 +46,15 @@ gdouble gfs_line_alpha             (FttVector * m,
 #  define gfs_plane_center         gfs_line_center
 #  define gfs_plane_area_center     gfs_line_area_center
 #else /* 3D */
-gdouble gfs_plane_volume           (FttVector * m, 
+gdouble gfs_plane_volume           (const FttVector * m, 
 				    gdouble alpha);
-gdouble gfs_plane_alpha            (FttVector * m, 
+gdouble gfs_plane_alpha            (const FttVector * m, 
 				    gdouble c);
-void    gfs_plane_center           (FttVector * m, 
+void    gfs_plane_center           (const FttVector * m, 
 				    gdouble alpha, 
 				    gdouble a,
 				    FttVector * p);
-gdouble gfs_plane_area_center      (FttVector * m, 
+gdouble gfs_plane_area_center      (const FttVector * m, 
 				    gdouble alpha, 
 				    FttVector * p);
 #endif /* 3D */

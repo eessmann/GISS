@@ -432,38 +432,38 @@ static void height_curvature (FttCell * cell, GfsVariable * v)
 {
   GfsVariable * t = GFS_VARIABLE_CURVATURE (v)->f;
   GfsVariable * kmax = GFS_VARIABLE_CURVATURE (v)->kmax;
-  gdouble f = GFS_VARIABLE (cell, t->i);
+  gdouble f = GFS_VALUE (cell, t);
 
   if (GFS_IS_FULL (f)) {
-    GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
+    GFS_VALUE (cell, v) = G_MAXDOUBLE;
     if (kmax)
-      GFS_VARIABLE (cell, kmax->i) = G_MAXDOUBLE;
+      GFS_VALUE (cell, kmax) = G_MAXDOUBLE;
   }
   else {
     if (kmax) {
       gdouble k;
-      GFS_VARIABLE (cell, v->i) = gfs_height_curvature (cell, GFS_VARIABLE_TRACER_VOF (t), &k);
-      GFS_VARIABLE (cell, kmax->i) = k;
+      GFS_VALUE (cell, v) = gfs_height_curvature (cell, GFS_VARIABLE_TRACER_VOF (t), &k);
+      GFS_VALUE (cell, kmax) = k;
     }
     else
-      GFS_VARIABLE (cell, v->i) = gfs_height_curvature (cell, GFS_VARIABLE_TRACER_VOF (t), NULL);
+      GFS_VALUE (cell, v) = gfs_height_curvature (cell, GFS_VARIABLE_TRACER_VOF (t), NULL);
   }
 }
 
 static void fit_curvature (FttCell * cell, GfsVariable * v)
 {
   GfsVariable * t = GFS_VARIABLE_CURVATURE (v)->f;
-  gdouble f = GFS_VARIABLE (cell, t->i);
+  gdouble f = GFS_VALUE (cell, t);
 
-  if (!GFS_IS_FULL (f) && GFS_VARIABLE (cell, v->i) == G_MAXDOUBLE) {
+  if (!GFS_IS_FULL (f) && GFS_VALUE (cell, v) == G_MAXDOUBLE) {
     GfsVariable * kmax = GFS_VARIABLE_CURVATURE (v)->kmax;
     if (kmax) {
       gdouble k;
-      GFS_VARIABLE (cell, v->i) = gfs_fit_curvature (cell, GFS_VARIABLE_TRACER_VOF (t), &k);
-      GFS_VARIABLE (cell, kmax->i) = k;
+      GFS_VALUE (cell, v) = gfs_fit_curvature (cell, GFS_VARIABLE_TRACER_VOF (t), &k);
+      GFS_VALUE (cell, kmax) = k;
     }
     else
-      GFS_VARIABLE (cell, v->i) = gfs_fit_curvature (cell, GFS_VARIABLE_TRACER_VOF (t), NULL);    
+      GFS_VALUE (cell, v) = gfs_fit_curvature (cell, GFS_VARIABLE_TRACER_VOF (t), NULL);    
   }
 }
 
@@ -578,7 +578,6 @@ static void variable_curvature_from_fraction (GfsEvent * event, GfsSimulation * 
   gfs_domain_timer_stop (domain, "variable_curvature");
 }
 
-
 static void normal (FttCell * cell, gpointer * data)
 {
   GfsVariable ** nv = data[0];
@@ -601,7 +600,7 @@ static void distance_curvature (FttCell * cell, gpointer * data)
 
   for (c = 0; c < FTT_DIMENSION; c++)
     kappa += gfs_center_gradient (cell, c, nv[c]->i);
-  GFS_VARIABLE (cell, nv[FTT_DIMENSION]->i) = kappa/ftt_cell_size (cell);
+  GFS_VALUE (cell, nv[FTT_DIMENSION]) = kappa/ftt_cell_size (cell);
 }
 
 static void interface_curvature (FttCell * cell, gpointer * data)
