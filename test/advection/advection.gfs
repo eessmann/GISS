@@ -28,7 +28,7 @@
 # Author: St\'ephane Popinet
 # Command: sh advection.sh advection.gfs
 # Version: 0.8.0
-# Required files: advection.sh error.ref
+# Required files: advection.sh error.ref order.ref
 # Generated files: error.eps order.eps
 #
 1 0 GfsAdvection GfsBox GfsGEdge {} {
