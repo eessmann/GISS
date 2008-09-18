@@ -271,11 +271,18 @@ static void gfs_source_tension_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   gts_file_next_token (fp);
+
+  if (GFS_IS_VARIABLE_POSITION (s->k))
+    GFS_SOURCE_TENSION_GENERIC (s)->sigma *= pow (gfs_object_simulation (s)->physical_params.L, 2.);
 }
 
 static void gfs_source_tension_write (GtsObject * o, FILE * fp)
 {
+  if (GFS_IS_VARIABLE_POSITION (GFS_SOURCE_TENSION (o)->k))
+    GFS_SOURCE_TENSION_GENERIC (o)->sigma /= pow (gfs_object_simulation (o)->physical_params.L, 2.);
   (* GTS_OBJECT_CLASS (gfs_source_tension_class ())->parent_class->write) (o, fp);
+  if (GFS_IS_VARIABLE_POSITION (GFS_SOURCE_TENSION (o)->k))
+    GFS_SOURCE_TENSION_GENERIC (o)->sigma *= pow (gfs_object_simulation (o)->physical_params.L, 2.);
   fprintf (fp, " %s", GFS_SOURCE_TENSION (o)->k->name);
 }
 
