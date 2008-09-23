@@ -13,8 +13,8 @@ darcs_gerris=$HOME/local/src/darcs/gerris
 darcs_gts=$HOME/local/src/darcs/gts
 darcs_gfsview=$HOME/local/src/darcs/gfsview
 
-gtsweb=popinet@gts.sf.net:/home/groups/g/gt/gts/htdocs
-gerrisweb=popinet@gfs.sf.net:/home/groups/g/gf/gfs/htdocs
+gtsweb=popinet,gts@web.sourceforge.net:/home/groups/g/gt/gts/htdocs
+gerrisweb=popinet,gfs@web.sourceforge.net:/home/groups/g/gf/gfs/htdocs
 localgerrisweb=/var/www/gerris
 
 export PATH=$wdir/local/bin:$PATH:/usr/local/bin
@@ -238,8 +238,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	       ( $gts_changed || $gerris_changed || $gfsview_changed ) ; then
 	       if ( cd $HOME/local/debian && \
                     dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz && \
-		    ssh popinet@gfs.sf.net rm -f /home/groups/g/gf/gfs/htdocs/debian/* && \
-                    scp -q $HOME/local/debian/* $gerrisweb/debian ) \
+		    rsync -az --delete --rsh=ssh $HOME/local/debian $gerrisweb/debian ) \
                > $wdir/debian 2>&1 ; then :
 	       else
 		   echo
@@ -284,6 +283,6 @@ if ( $build_gerris || $build_gfsview ) ; then
 fi
 
 # Darcs mirroring
-rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gfsview/* popinet@gfs.sourceforge.net:/home/groups/g/gf/gfs/htdocs/darcs/gfsview/
-rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gerris/* popinet@gfs.sourceforge.net:/home/groups/g/gf/gfs/htdocs/darcs/gerris
-rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gts/* popinet@gts.sourceforge.net:/home/groups/g/gt/gts/htdocs/darcs
+rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gfsview/* $gerrisweb/darcs/gfsview/
+rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gerris/* $gerrisweb/darcs/gerris
+rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gts/* $gtsweb/darcs
