@@ -42,9 +42,15 @@ if ( darcs get $repo $package && \
      rm -r -f $package-[0-9].[0-9].[0-9] && tar xzf $package-*.tar.gz && \
      mv $package-[0-9].[0-9].[0-9] $package-snapshot-$version && \
      tar chof - $package-snapshot-$version | gzip --best -c > $package-snapshot-$version.tar.gz && \
-     ssh $login "cd $dir/tarballs && rm -f $package-snapshot-*.tar.gz" && \
-     scp -q $package-snapshot-$version.tar.gz $url/tarballs/$package-snapshot-$version.tar.gz && \
-     ssh $login "cd $dir && ln -s -f tarballs/$package-snapshot-$version.tar.gz $package-snapshot.tar.gz") > msg 2>&1; then
+     cat <<EOF | sftp $login
+     cd $dir/tarballs
+     -rm $package-snapshot-*.tar.gz
+     put $package-snapshot-$version.tar.gz
+     cd $dir
+     -rm $package-snapshot.tar.gz
+     symlink tarballs/$package-snapshot-$version.tar.gz $package-snapshot.tar.gz
+EOF
+) > msg 2>&1; then
     rm -f msg
     status=0
 else
