@@ -106,7 +106,28 @@ void r_surface_query_region (RSurface * rt,
   RegionQuery (rt->t, rect, unused, Intersects, Intersects, ManageQuery, data);
 }
 
+void r_surface_sum_init (RSurfaceSum * sum)
+{
+  memset (sum, 0, sizeof (RSurfaceSum));
+  sum->Hmin = 1e30;
+  sum->Hmax = - 1e30;
+}
+
+void r_surface_query_region_sum (RSurface * rt,
+				 RSurfaceCheck includes,
+				 RSurfaceCheck intersects,
+				 void * data,
+				 RSurfaceSum * sum)
+{
+  RegionQueryInfo (rt->t, (Check) includes, (Check) intersects, data, (typdirinfo *) sum);
+}
+
 const char * r_surface_name (RSurface * rt)
 {
   return rt->name;
+}
+
+void r_surface_update (RSurface * rt)
+{
+  Update (rt->t);
 }

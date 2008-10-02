@@ -60,8 +60,9 @@ typedef enum {
              } Side;
 
 typedef struct {
-               typrect  rect;
-               int      ptrtosub;
+               typrect    rect;
+               int        ptrtosub;
+               typdirinfo info;
                } typDIRent, *refDIRent;		/* inner entry */
 typedef struct {
                typrect  rect;

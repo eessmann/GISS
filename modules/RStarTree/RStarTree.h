@@ -83,6 +83,19 @@ typedef struct {
            associated with a data record.
            RESTRICTION: sizeof(typinfo) >= sizeof(int) must hold! */
 
+typedef struct {
+  double m01, m02, m03;
+  double m11, m13;
+  double m22, m23, m33;
+  double H0, H1, H2, H3, H4;
+  float Hmin, Hmax;
+  int n;
+} typdirinfo;
+
+/* A typdirinfo is a struct which may contain arbitrary information
+   associated with a directory record. */
+
+typedef int (* Check) (typrect rect, void * data);
 
 /* ------------------------- private includes -------------------------- */
 
@@ -432,6 +445,11 @@ boolean  RegionQuery(RSTREE           rst,
             pointer:
             Arbitrary pointer passed through to the procedure Manage. */
 
+boolean RegionQueryInfo(RSTREE R,
+			Check includes,
+			Check intersects,
+			void * data,
+			typdirinfo * info);
 
 boolean  AllQuery(RSTREE           rst,
                   QueryManageProc  Manage,
@@ -459,6 +477,9 @@ boolean  AllQuery(RSTREE           rst,
 
             See also RegionQuery. */
 
+boolean  Update(RSTREE           rst);
+
+         /* Updates the directory nodes typdirinfo. */
 
 boolean  JoinCountNv(RSTREE         rst1,
                      RSTREE         rst2,

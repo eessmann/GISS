@@ -42,13 +42,22 @@ void RgnQuery(RSTREE R,
               void *buf,
               boolean *finish);
 
-
 void All(RSTREE R,
          int depth,
          QueryManageProc Manage,
          void *buf,
          boolean *finish);
 
+void UpdateAll(RSTREE R,
+	       int depth,
+	       typdirinfo * info);
+
+void RgnQueryInfo(RSTREE R,
+		  int depth,
+		  Check includes,
+		  Check intersects,
+		  void * data,
+		  typdirinfo * info);
 
 #endif /* !__RSTQuery_h */
 

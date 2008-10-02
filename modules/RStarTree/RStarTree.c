@@ -303,13 +303,12 @@ boolean ExistsRegion(RSTREE R,
                      boolean *regionfound)
 
 {
-  int i;
-  
   if (R == NULL) {
     *regionfound= FALSE;
     return FALSE;
   }
-  /**/
+  /*
+  int i;
   for (i= 2; i <= (*R).parameters._.height; i++) {
     if ((*R).Nmodified[i]) {
       PutNode(R,(*R).N[i],(*R).P[i],i);
@@ -317,7 +316,7 @@ boolean ExistsRegion(RSTREE R,
     }
     (*R).P[i]= 0;
   }
-  /**//* to be inserted, if main memory path shall be initialized
+  *//* to be inserted, if main memory path shall be initialized
          for test purpose */
   
   (*R).RSTDone= TRUE;
@@ -336,13 +335,12 @@ boolean RegionCount(RSTREE R,
                     int *recordcount)
 
 {
-  int i;
-  
   if (R == NULL) {
     *recordcount= 0;
     return FALSE;
   }
-  /**/
+  /*
+  int i;  
   for (i= 2; i <= (*R).parameters._.height; i++) {
     if ((*R).Nmodified[i]) {
       PutNode(R,(*R).N[i],(*R).P[i],i);
@@ -350,7 +348,7 @@ boolean RegionCount(RSTREE R,
     }
     (*R).P[i]= 0;
   }
-  /**//* to be inserted, if main memory path shall be initialized
+  *//* to be inserted, if main memory path shall be initialized
          for test purpose */
   
   (*R).RSTDone= TRUE;
@@ -371,12 +369,12 @@ boolean RegionQuery(RSTREE R,
 
 {
   boolean finish;
-  int i;
   
   if (R == NULL) {
     return FALSE;
   }
-  /**/
+  /*
+  int i;
   for (i= 2; i <= (*R).parameters._.height; i++) {
     if ((*R).Nmodified[i]) {
       PutNode(R,(*R).N[i],(*R).P[i],i);
@@ -384,7 +382,7 @@ boolean RegionQuery(RSTREE R,
     }
     (*R).P[i]= 0;
   }
-  /**//* to be inserted, if main memory path shall be initialized
+  *//* to be inserted, if main memory path shall be initialized
          for test purpose */
   
   (*R).RSTDone= TRUE;
@@ -396,18 +394,18 @@ boolean RegionQuery(RSTREE R,
 
 /************************************************************************/
 
-boolean AllQuery(RSTREE R,
-                 QueryManageProc ManageProc,
-                 void *buf)
+boolean RegionQueryInfo(RSTREE R,
+			Check includes,
+			Check intersects,
+			void * data,
+			typdirinfo * info)
 
 {
-  boolean finish;
-  int i;
-  
   if (R == NULL) {
     return FALSE;
   }
-  /**/
+  /*
+  int i;
   for (i= 2; i <= (*R).parameters._.height; i++) {
     if ((*R).Nmodified[i]) {
       PutNode(R,(*R).N[i],(*R).P[i],i);
@@ -415,7 +413,36 @@ boolean AllQuery(RSTREE R,
     }
     (*R).P[i]= 0;
   }
-  /**//* to be inserted, if main memory path shall be initialized
+  *//* to be inserted, if main memory path shall be initialized
+         for test purpose */
+  
+  (*R).RSTDone= TRUE;
+  RgnQueryInfo(R,1,includes,intersects,data,info);
+  return (*R).RSTDone;
+}
+
+/************************************************************************/
+
+boolean AllQuery(RSTREE R,
+                 QueryManageProc ManageProc,
+                 void *buf)
+
+{
+  boolean finish;
+  
+  if (R == NULL) {
+    return FALSE;
+  }
+  /*
+  int i;
+  for (i= 2; i <= (*R).parameters._.height; i++) {
+    if ((*R).Nmodified[i]) {
+      PutNode(R,(*R).N[i],(*R).P[i],i);
+      (*R).Nmodified[i]= FALSE;
+    }
+    (*R).P[i]= 0;
+  }
+  *//* to be inserted, if main memory path shall be initialized
          for test purpose */
   
   (*R).RSTDone= TRUE;
@@ -423,6 +450,34 @@ boolean AllQuery(RSTREE R,
   All(R,1,ManageProc,buf,&finish);
   return (*R).RSTDone;
 }
+
+/************************************************************************/
+
+boolean Update(RSTREE R)
+
+{
+  typdirinfo info;
+
+  if (R == NULL) {
+    return FALSE;
+  }
+  /*
+  int i;
+  for (i= 2; i <= (*R).parameters._.height; i++) {
+    if ((*R).Nmodified[i]) {
+      PutNode(R,(*R).N[i],(*R).P[i],i);
+      (*R).Nmodified[i]= FALSE;
+    }
+    (*R).P[i]= 0;
+  }
+  *//* to be inserted, if main memory path shall be initialized
+         for test purpose */
+  
+  (*R).RSTDone= TRUE;
+  UpdateAll(R,1,&info);
+  return (*R).RSTDone;
+}
+
 /************************************************************************/
 
 boolean JoinCountNv(RSTREE R1, RSTREE R2,
@@ -463,7 +518,7 @@ boolean JoinCountNv(RSTREE R1, RSTREE R2,
       abort();
     }
   }
-  /**/
+  /*
   for (i= 2; i <= (*R1).parameters._.height; i++) {
     if ((*R1).Nmodified[i]) {
       PutNode(R1,(*R1).N[i],(*R1).P[i],i);
@@ -478,7 +533,7 @@ boolean JoinCountNv(RSTREE R1, RSTREE R2,
     }
     (*R2).P[i]= 0;
   }
-  /**//* to be inserted, if main memory path shall be initialized
+  *//* to be inserted, if main memory path shall be initialized
          for test purpose */
   
   if (! ((*R1).RSTDone && (*R2).RSTDone) ) {
@@ -541,7 +596,7 @@ boolean JoinNv(RSTREE R1, RSTREE R2,
       abort();
     }
   }
-  /**/
+  /*
   for (i= 2; i <= (*R1).parameters._.height; i++) {
     if ((*R1).Nmodified[i]) {
       PutNode(R1,(*R1).N[i],(*R1).P[i],i);
@@ -556,7 +611,7 @@ boolean JoinNv(RSTREE R1, RSTREE R2,
     }
     (*R2).P[i]= 0;
   }
-  /**//* to be inserted, if main memory path shall be initialized
+  *//* to be inserted, if main memory path shall be initialized
          for test purpose */
   
   if (! ((*R1).RSTDone && (*R2).RSTDone) ) {

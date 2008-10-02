@@ -100,6 +100,7 @@ int main (int argc, char** argv)
     if (verbose && (count % 1000) == 0)
       fprintf (stderr, "\rxyz2rsurface: %9d points inserted", count);
   }
+  r_surface_update (rs);
   r_surface_close (rs);
   if (verbose)
     fprintf (stderr, "\rxyz2rsurface: %9d points inserted\n", count);

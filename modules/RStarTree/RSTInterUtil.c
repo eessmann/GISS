@@ -213,6 +213,7 @@ void SetCheckDir(RSTREE R, boolean creation)
   if (creation) {
     (*par).direntrylen= sizeof(typDIRent);			/* set */
     PACKEDdirentrylen= sizeof(typrect) + sizeof(int);
+#if 0
     if (PACKEDdirentrylen != (*par).direntrylen) {
       printf("\n%s\n","     -----  WARNING  -----");
       printf("%s\n","Directory entries are not packed!");
@@ -220,6 +221,7 @@ void SetCheckDir(RSTREE R, boolean creation)
       printf("%s %d\n","            Real space needed:",(*par).direntrylen);
       printf("%s\n",/* implicitly */"Applying the latter!");
     }
+#endif
   }
   
   SIZE_DIRnodeOf3= sizeof(typDIRnodeOf3);
