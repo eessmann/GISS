@@ -238,7 +238,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	       ( $gts_changed || $gerris_changed || $gfsview_changed ) ; then
 	       if ( cd $HOME/local/debian && \
                     dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz && \
-		    rsync -az --delete --rsh=ssh $HOME/local/debian $gerrisweb/debian ) \
+		    rsync -az --delete --rsh=ssh $HOME/local/debian/ $gerrisweb/debian/ ) \
                > $wdir/debian 2>&1 ; then :
 	       else
 		   echo

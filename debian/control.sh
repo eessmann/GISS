@@ -1,5 +1,4 @@
 GTS_VERSION=`pkg-config gts --modversion`
-GERRIS_VERSION=`pkg-config gerris2D --modversion`
 
 cat <<EOF > debian/control
 Source: gerris-snapshot
@@ -35,7 +34,8 @@ Description: Gerris Flow Solver (development snapshot)
  See http://gfs.sf.net for more information and documentation.
 EOF
 
-version=`date +%y%m%d`
+GERRIS_VERSION=`grep GFS_VERSION config.h | awk 'BEGIN{FS=" |\""}{print $4}'`
+version=`grep GFS_BUILD_VERSION src/version.h | awk 'BEGIN{FS=" |\"|-"}{print $4}'`
 date=`date +"%a, %e %b %Y %T %z"`
 cat <<EOF > debian/changelog
 gerris-snapshot ($GERRIS_VERSION-$version) testing; urgency=low

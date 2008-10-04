@@ -15,7 +15,7 @@ ChangeLog: $(DARCS_CHANGELOG)
 changelog:
 	darcs changes > ChangeLog
 
-debian-snapshot: $(DARCS_CHANGELOG)
+debian-snapshot: $(DARCS_CHANGELOG) config.h src/version.h
 	sh debian/control.sh
 	dpkg-buildpackage -rfakeroot -b -d
 	rm -f debian/repo/*
