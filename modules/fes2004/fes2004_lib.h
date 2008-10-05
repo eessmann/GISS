@@ -14,7 +14,6 @@
 #include <math.h>
 #include <string.h>   
 #include <strings.h>
-#include <malloc.h>
 
 // standard multithread include //
 //#include <pthread.h>
