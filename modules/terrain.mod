@@ -935,6 +935,16 @@ static void terrain_refine (GfsRefine * refine, GfsSimulation * sim)
 static void refine_terrain_destroy (GtsObject * object)
 {
   GfsRefineTerrain * t = GFS_REFINE_TERRAIN (object);
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (object));
+
+  gchar * dname = g_strconcat (t->name, "min", NULL);
+  gfs_domain_remove_derived_variable (domain, dname);
+  g_free (dname);
+
+  dname = g_strconcat (t->name, "max", NULL);
+  gfs_domain_remove_derived_variable (domain, dname);
+  g_free (dname);
+  
   g_free (t->name);
   g_free (t->basename);
   if (t->rs) {
@@ -943,8 +953,42 @@ static void refine_terrain_destroy (GtsObject * object)
       r_surface_close (t->rs[i]);
     g_free (t->rs);
   }
-  gts_object_destroy (GTS_OBJECT (t->criterion));
+  gts_object_destroy (GTS_OBJECT (t->criterion));  
   (* GTS_OBJECT_CLASS (gfs_refine_terrain_class ())->parent_class->destroy) (object);
+}
+
+static gdouble terrain_hmin (FttCell * cell, FttCellFace * face, 
+			     GfsDomain * domain, GfsRefineTerrain * t)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+
+  gdouble dx, dy, min = G_MAXDOUBLE;
+  gdouble H0 = GFS_VALUE (cell, t->h[0]), H1 = GFS_VALUE (cell, t->h[1]);
+  gdouble H2 = GFS_VALUE (cell, t->h[2]), H3 = GFS_VALUE (cell, t->h[3]);
+
+  for (dx = -1.; dx <= 1.; dx += 2.)
+    for (dy = -1.; dy <= 1.; dy += 2.) {
+      double v = H0 + dx*H1 + dy*H2 + dx*dy*H3;
+      if (v < min) min = v;
+    }
+  return min;
+}
+
+static gdouble terrain_hmax (FttCell * cell, FttCellFace * face, 
+			     GfsDomain * domain, GfsRefineTerrain * t)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+
+  gdouble dx, dy, max = - G_MAXDOUBLE;
+  gdouble H0 = GFS_VALUE (cell, t->h[0]), H1 = GFS_VALUE (cell, t->h[1]);
+  gdouble H2 = GFS_VALUE (cell, t->h[2]), H3 = GFS_VALUE (cell, t->h[3]);
+
+  for (dx = -1.; dx <= 1.; dx += 2.)
+    for (dy = -1.; dy <= 1.; dy += 2.) {
+      double v = H0 + dx*H1 + dy*H2 + dx*dy*H3;
+      if (v > max) max = v;
+    }
+  return max;
 }
 
 static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
@@ -1074,6 +1118,30 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
   name = g_strjoin (NULL, t->name, "n", NULL);
   t->hn = gfs_domain_get_or_add_variable (domain, name, "Terrain samples #");
   g_free (name);
+
+  GfsDerivedVariableInfo v;
+
+  v.name = g_strjoin (NULL, t->name, "min", NULL);
+  v.description = "Minimum terrain height";
+  v.func = terrain_hmin;
+  v.data = t;
+  if (!gfs_domain_add_derived_variable (domain, v)) {
+    gts_file_error (fp, "derived variable `%s' already defined", v.name);
+    g_free (v.name);
+    return;
+  }
+  g_free (v.name);
+
+  v.name = g_strjoin (NULL, t->name, "max", NULL);
+  v.description = "Maximum terrain height";
+  v.func = terrain_hmax;
+  v.data = t;
+  if (!gfs_domain_add_derived_variable (domain, v)) {
+    gts_file_error (fp, "derived variable `%s' already defined", v.name);
+    g_free (v.name);
+    return;
+  }
+  g_free (v.name);
 
   gfs_function_read (t->criterion, domain, fp);
 }
