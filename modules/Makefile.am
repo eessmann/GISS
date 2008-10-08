@@ -23,7 +23,8 @@ pkglib_LTLIBRARIES = \
 
 bin_PROGRAMS = \
 	xyz2rsurface \
-	rsurfacequery
+	rsurfacequery \
+	rsurfacedraw
 
 EXTRA_DIST = \
 	map.mod \
@@ -76,6 +77,10 @@ xyz2rsurface_CFLAGS = $(AM_CFLAGS)
 rsurfacequery_SOURCES = rsurfacequery.c rsurface.c rsurface.h
 rsurfacequery_LDADD = -LRStarTree -lcSmRST
 rsurfacequery_CFLAGS = $(AM_CFLAGS)
+
+rsurfacedraw_SOURCES = rsurfacedraw.c rsurface.c rsurface.h
+rsurfacedraw_LDADD = -LRStarTree -lcSmRST
+rsurfacedraw_CFLAGS = $(AM_CFLAGS)
 
 if HAVE_MODULES
 %.c : %.mod
