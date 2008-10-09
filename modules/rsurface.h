@@ -15,7 +15,7 @@ typedef struct {
 
 typedef RSurfaceInterval  RSurfaceRect[2];
 
-typedef int (* RSurfaceCheck) (RSurfaceRect rect, void * data);
+typedef int (* RSurfaceCheck) (RSurfaceRect rect, void * data, int depth);
 
 RSurface * r_surface_new      (const char * fname, int size, FILE * fp);
 RSurface * r_surface_open     (const char * fname, const char * mode, int size);
@@ -35,5 +35,6 @@ void       r_surface_query_region_sum (RSurface * rt,
 				       RSurfaceCheck includes,
 				       RSurfaceCheck intersects,
 				       void * data,
+				       RSurfaceRect rect,
 				       RSurfaceSum * sum);
 const char * r_surface_name (RSurface * rt);

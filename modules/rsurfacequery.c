@@ -24,7 +24,8 @@ int main (int argc, char** argv)
       fprintf (stderr, "\r%d", count);
     count++;
   }
-  fputc ('\n', stderr);
+  if (count >= 1000)
+    fputc ('\n', stderr);
   r_surface_close (rs);
 
   return 0.;

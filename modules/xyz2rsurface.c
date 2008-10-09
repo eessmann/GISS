@@ -30,7 +30,7 @@
 
 int main (int argc, char** argv)
 {
-  int c = 0, pagesize = 4096;
+  int c = 0, pagesize = 1024;
   int verbose = 0;
 
   /* parse options using getopt */
@@ -62,7 +62,7 @@ int main (int argc, char** argv)
 	       "R*-tree-indexed database suitable for use with the\n"
 	       "GfsRefineTerrain object of Gerris.\n"
 	       "\n"
-	       "  -p N  --pagesize=N  sets the pagesize in bytes (default is 4096)\n"
+	       "  -p N  --pagesize=N  sets the pagesize in bytes (default is 1024)\n"
 	       "  -v    --verbose     display progress bar\n"
 	       "  -h    --help        display this help and exit\n"
 	       "\n"
@@ -100,10 +100,12 @@ int main (int argc, char** argv)
     if (verbose && (count % 1000) == 0)
       fprintf (stderr, "\rxyz2rsurface: %9d points inserted", count);
   }
+  if (verbose) {
+    fprintf (stderr, "\rxyz2rsurface: %9d points inserted\n", count);
+    fprintf (stderr, "xyz2rsurface: updating...\n");
+  }
   r_surface_update (rs);
   r_surface_close (rs);
-  if (verbose)
-    fprintf (stderr, "\rxyz2rsurface: %9d points inserted\n", count);
 
   return 0.;
 }

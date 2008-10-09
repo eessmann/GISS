@@ -50,6 +50,7 @@ void All(RSTREE R,
 
 void UpdateAll(RSTREE R,
 	       int depth,
+	       typrect rect,
 	       typdirinfo * info);
 
 void RgnQueryInfo(RSTREE R,
@@ -57,6 +58,7 @@ void RgnQueryInfo(RSTREE R,
 		  Check includes,
 		  Check intersects,
 		  void * data,
+		  typrect rect,
 		  typdirinfo * info);
 
 #endif /* !__RSTQuery_h */

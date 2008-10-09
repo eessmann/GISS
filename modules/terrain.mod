@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+
 #include <stdlib.h>
 #include <glob.h>
 #if GSL
@@ -72,13 +73,14 @@ typedef struct {
   FttCell * cell;
 } Polygon;
 
-static void map_inverse (GfsSimulation * sim, FttVector * p, gdouble min[2], gdouble max[2])
+static void map_inverse (GfsSimulation * sim, FttVector * p, Polygon * poly)
 {
   gfs_simulation_map_inverse (sim, p);
-  if (p->x < min[0]) min[0] = p->x;
-  if (p->x > max[0]) max[0] = p->x;
-  if (p->y < min[1]) min[1] = p->y;
-  if (p->y > max[1]) max[1] = p->y;
+  if (p->x < poly->min[0]) poly->min[0] = p->x;
+  if (p->x > poly->max[0]) poly->max[0] = p->x;
+  if (p->y < poly->min[1]) poly->min[1] = p->y;
+  if (p->y > poly->max[1]) poly->max[1] = p->y;
+  poly->c.x += p->x; poly->c.y += p->y;
 }
 
 static void polygon_init (Polygon * p, FttCell * cell, GfsRefineTerrain * t)
@@ -88,18 +90,20 @@ static void polygon_init (Polygon * p, FttCell * cell, GfsRefineTerrain * t)
   ftt_cell_pos (cell, &q);
   p->cell = cell;
   p->t = t;
-  p->c = q;
-  p->h = ftt_cell_size (cell)/2.;
   p->min[0] = p->min[1] = G_MAXDOUBLE;
   p->max[0] = p->max[1] = - G_MAXDOUBLE;
+  p->c.x = p->c.y = 0.;
+  p->h = ftt_cell_size (cell)/2.;
   p->p[0].x = q.x + p->h; p->p[0].y = q.y + p->h;
-  map_inverse (sim, &p->p[0], p->min, p->max);
+  map_inverse (sim, &p->p[0], p);
   p->p[1].x = q.x - p->h; p->p[1].y = q.y + p->h;
-  map_inverse (sim, &p->p[1], p->min, p->max);
+  map_inverse (sim, &p->p[1], p);
   p->p[2].x = q.x - p->h; p->p[2].y = q.y - p->h;
-  map_inverse (sim, &p->p[2], p->min, p->max);
+  map_inverse (sim, &p->p[2], p);
   p->p[3].x = q.x + p->h; p->p[3].y = q.y - p->h;
-  map_inverse (sim, &p->p[3], p->min, p->max);
+  map_inverse (sim, &p->p[3], p);
+  p->c.x /= 4; p->c.y /= 4;
+  p->h = MAX (p->max[0] - p->min[0], p->max[1] - p->min[1])/2.;
 }
 
 static gboolean right (const double a[2], const double b[2], const double c[2])
@@ -150,7 +154,6 @@ typedef struct {
   gdouble h[NM], he, cond, min, max;
   GfsRefineTerrain * t;
   FttCell * cell;
-  Polygon * p;
   gboolean relative;
 } RMS;
 
@@ -162,7 +165,6 @@ static void rms_init (RMS * rms, Polygon * p, gboolean relative)
   for (i = 0; i < NM; i++)
     for (j = 0; j < NM; j++)
       rms->m[i][j] = 0.;
-  rms->p = p;
   rms->t = p->t;
   rms->cell = p->cell;
   rms->relative = relative;
@@ -170,21 +172,50 @@ static void rms_init (RMS * rms, Polygon * p, gboolean relative)
   rms->max = - G_MAXDOUBLE;
 }
 
-static gdouble rms_minimum (RMS * rms)
+static void unprojected_coefficients (const gdouble * h, const Polygon * poly, gdouble * hu)
+{
+  gdouble H[4];
+  /* values at the corners */
+  H[0] = h[0] + h[1] + h[2] + h[3];
+  H[1] = h[0] - h[1] + h[2] - h[3];
+  H[2] = h[0] - h[1] - h[2] + h[3];
+  H[3] = h[0] + h[1] - h[2] - h[3];
+  /* get the coefficient in the non-projected coordinate system */
+  GtsMatrix m[4], * im;
+  guint i;
+  for (i = 0; i < 4; i++) {
+    gdouble x = (poly->p[i].x - poly->c.x)/poly->h;
+    gdouble y = (poly->p[i].y - poly->c.y)/poly->h;
+    m[i][0] = 1.; m[i][1] = x; m[i][2] = y; m[i][3] = x*y;
+  }
+  im = gts_matrix_inverse (m);
+  g_assert (im);
+  for (i = 0; i < 4; i++) {
+    guint j;
+    hu[i] = 0.;
+    for (j = 0; j < 4; j++)
+      hu[i] += im[i][j]*H[j];
+  }
+  gts_matrix_destroy (im);
+}
+
+static gdouble rms_minimum (RMS * rms, Polygon * poly)
 {
   if (rms->m[0][0] == 0.)
     return 0.;
-  return sqrt (fabs (rms->h[0]*(rms->h[0]*rms->m[0][0] + 
-				2.*(rms->h[1]*rms->m[0][1] + 
-				    rms->h[2]*rms->m[0][2] +
-				    rms->h[3]*rms->m[0][3] - rms->H[0])) +
-		     rms->h[1]*(rms->h[1]*rms->m[1][1] + 
-				2.*(rms->h[2]*rms->m[1][2] +
-				    rms->h[3]*rms->m[1][3] - rms->H[1])) +
-		     rms->h[2]*(rms->h[2]*rms->m[2][2] +
-				2.*(rms->h[3]*rms->m[2][3] - rms->H[2])) +
-		     rms->h[3]*(rms->h[3]*rms->m[3][3] +
-				- 2.*rms->H[3]) +
+  gdouble h[4];
+  unprojected_coefficients (rms->h, poly, h);
+  return sqrt (fabs (h[0]*(h[0]*rms->m[0][0] + 
+			   2.*(h[1]*rms->m[0][1] + 
+			       h[2]*rms->m[0][2] +
+			       h[3]*rms->m[0][3] - rms->H[0])) +
+		     h[1]*(h[1]*rms->m[1][1] + 
+			   2.*(h[2]*rms->m[1][2] +
+			       h[3]*rms->m[1][3] - rms->H[1])) +
+		     h[2]*(h[2]*rms->m[2][2] +
+			   2.*(h[3]*rms->m[2][3] - rms->H[2])) +
+		     h[3]*(h[3]*rms->m[3][3] +
+			   - 2.*rms->H[3]) +
 		     rms->H[4])/rms->m[0][0]);
 }
 
@@ -203,23 +234,10 @@ static gdouble cell_value (FttCell * cell, GfsVariable * h[NM], FttVector p)
   ftt_cell_pos (cell, &q);
   p.x = (p.x - q.x)/size;
   p.y = (p.y - q.y)/size;
-  return GFS_VALUE (cell, h[0]) + 
-    GFS_VALUE (cell, h[1])*p.x + 
-    GFS_VALUE (cell, h[2])*p.y + 
-    GFS_VALUE (cell, h[3])*p.x*p.y;
-}
-
-static void cell_coefficients (FttCell * cell, GfsVariable * h[NM], gdouble hp[NM])
-{
-  gdouble size = ftt_cell_size (cell)/2.;
-  FttVector q;
-  ftt_cell_pos (cell, &q);
-  hp[0] = GFS_VALUE (cell, h[0]) 
-    - (GFS_VALUE (cell, h[1])*q.x + GFS_VALUE (cell, h[2])*q.y
-       - GFS_VALUE (cell, h[3])*q.x*q.y/size)/size;
-  hp[1] = (GFS_VALUE (cell, h[1]) - GFS_VALUE (cell, h[3])*q.y/size)/size;
-  hp[2] = (GFS_VALUE (cell, h[2]) - GFS_VALUE (cell, h[3])*q.x/size)/size;
-  hp[3] = GFS_VALUE (cell, h[3])/(size*size);
+  return (GFS_VALUE (cell, h[0]) + 
+	  GFS_VALUE (cell, h[1])*p.x + 
+	  GFS_VALUE (cell, h[2])*p.y + 
+	  GFS_VALUE (cell, h[3])*p.x*p.y);
 }
 
 static void corners_from_parent (FttCell * cell, GfsRefineTerrain * t, gdouble H[4])
@@ -238,39 +256,29 @@ static void corners_from_parent (FttCell * cell, GfsRefineTerrain * t, gdouble H
   H[3] = cell_value (parent, t->h, p);
 }
 
-static gdouble clamp (gdouble x, gdouble min, gdouble max)
-{
-  if (x > max) return max;
-  if (x < min) return min;
-  return x;
-}
-
-static void variance_check (RMS * rms)
+static void variance_check (RMS * rms, Polygon * poly)
 {
   g_assert (rms->m[0][0] >= NM);
-  gdouble H[4];
+  gdouble H[4], h[4];
+  guint i;
+  for (i = 0; i < 4; i++) {
+    gdouble x = (poly->p[i].x - poly->c.x)/poly->h;
+    gdouble y = (poly->p[i].y - poly->c.y)/poly->h;
+    h[i] = rms->h[0] + x*rms->h[1] + y*rms->h[2] + x*y*rms->h[3];
+  }
   if (rms->relative) {
     gdouble H0[4];
     corners_from_parent (rms->cell, rms->t, H0);
-    H[0] = clamp (rms->h[0] + rms->h[1] + rms->h[2] + rms->h[3], 
-		  rms->min - H0[0], rms->max - H0[0]);
-    H[1] = clamp (rms->h[0] - rms->h[1] + rms->h[2] - rms->h[3], 
-		  rms->min - H0[1], rms->max - H0[1]);
-    H[2] = clamp (rms->h[0] - rms->h[1] - rms->h[2] + rms->h[3], 
-		  rms->min - H0[2], rms->max - H0[2]);
-    H[3] = clamp (rms->h[0] + rms->h[1] - rms->h[2] - rms->h[3], 
-		  rms->min - H0[3], rms->max - H0[3]);
+    for (i = 0; i < 4; i++)
+      H[i] = CLAMP (h[i], rms->min - H0[i], rms->max - H0[i]);
   }
-  else {
-    H[0] = clamp (rms->h[0] + rms->h[1] + rms->h[2] + rms->h[3], rms->min, rms->max);
-    H[1] = clamp (rms->h[0] - rms->h[1] + rms->h[2] - rms->h[3], rms->min, rms->max);
-    H[2] = clamp (rms->h[0] - rms->h[1] - rms->h[2] + rms->h[3], rms->min, rms->max);
-    H[3] = clamp (rms->h[0] + rms->h[1] - rms->h[2] - rms->h[3], rms->min, rms->max);
-  }
+  else
+    for (i = 0; i < 4; i++)
+      H[i] = CLAMP (h[i], rms->min, rms->max);
   function_from_corners (rms->h, H);
 }
 
-static void rms_update (RMS * rms)
+static void rms_update (RMS * rms, Polygon * poly)
 {
   guint i;
   if (rms->m[0][0] == 0.) {
@@ -300,8 +308,8 @@ static void rms_update (RMS * rms)
       gsl_vector_view gH = gsl_vector_view_array (rms->H, NM);
       gsl_vector_view gh = gsl_vector_view_array (rms->h, NM);
       gsl_linalg_SV_solve (&gm.matrix, &gv.matrix, &gs.vector, &gH.vector, &gh.vector);
-      variance_check (rms);
-      rms->he = rms_minimum (rms);
+      variance_check (rms, poly);
+      rms->he = rms_minimum (rms, poly);
       return;
     }
 #else
@@ -316,8 +324,8 @@ static void rms_update (RMS * rms)
 	  rms->h[i] += m[i][j]*rms->H[j];
       }
       gfs_matrix_free (m);
-      variance_check (rms);
-      rms->he = rms_minimum (rms);
+      variance_check (rms, poly);
+      rms->he = rms_minimum (rms, poly);
       return;
     }
     gfs_matrix_free (m);
@@ -326,7 +334,7 @@ static void rms_update (RMS * rms)
   rms->h[0] = rms->H[0]/rms->m[0][0];
   for (i = 1; i < NM; i++)
     rms->h[i] = 0.;
-  rms->he = rms_minimum (rms);
+  rms->he = rms_minimum (rms, poly);
 }
 
 #if DEBUG
@@ -366,15 +374,40 @@ static int write_points (double p[3], RMS * rms)
 #define CONTAINS_SURFACE 4. /* 3D-only */
 #define BOUNDARY 5.         /* 3D-only */
 
-static int rms_add (double p[3], RMS * rms)
+static void cell_coefficients (FttCell * parent, Polygon * child,
+			       gdouble hP[NM])
 {
-  if (polygon_contains (rms->p, p)) {
-    gfs_simulation_map (gfs_object_simulation (rms->p->t), (FttVector *) p);
+  Polygon poly;
+  gdouble h[4], hu[4];
+  guint i;
+  for (i = 0; i < 4; i++)
+    h[i] = GFS_VALUE (parent, child->t->h[i]);
+  polygon_init (&poly, parent, child->t);
+  unprojected_coefficients (h, &poly, hu);
+
+  double ha = child->h, hp = poly.h, hahp = ha/hp;
+  double xaxp = (child->c.x - poly.c.x)/hp;
+  double yayp = (child->c.y - poly.c.y)/hp;
+
+  hP[0] = hu[0] +  hu[1]*xaxp + (hu[2] + hu[3]*xaxp)*yayp;
+  hP[1] = (hu[1] + hu[3]*yayp)*hahp;
+  hP[2] = (hu[2] + hu[3]*xaxp)*hahp;
+  hP[3] = hu[3]*hahp*hahp;
+}
+
+#if OLD
+static int rms_add (double p[3], gpointer * data)
+{
+  RMS * rms = data[0];
+  Polygon * poly = data[1];
+  if (polygon_contains (poly, p)) {
     if (p[2] > rms->max) rms->max = p[2];
     if (p[2] < rms->min) rms->min = p[2];
-    if (rms->relative)
-      p[2] -= cell_value (ftt_cell_parent (rms->p->cell), rms->p->t->h, *((FttVector *) p));
-    p[0] = (p[0] - rms->p->c.x)/rms->p->h; p[1] = (p[1] - rms->p->c.y)/rms->p->h;
+    p[0] = (p[0] - poly->c.x)/poly->h; p[1] = (p[1] - poly->c.y)/poly->h;
+    if (rms->relative) {
+      gdouble * hp = data[2];
+      p[2] -= hp[0] + hp[1]*p[0] + hp[2]*p[1] + hp[3]*p[0]*p[1];
+    }
     rms->m[0][1] += p[0];      rms->m[0][2] += p[1];      rms->m[0][3] += p[0]*p[1];
     rms->m[1][1] += p[0]*p[0]; rms->m[1][2] += p[0]*p[1]; rms->m[1][3] += p[0]*p[0]*p[1];
                                rms->m[2][2] += p[1]*p[1]; rms->m[2][3] += p[0]*p[1]*p[1];
@@ -396,77 +429,51 @@ static void update_terrain_rms (FttCell * cell, GfsRefineTerrain * t, gboolean r
   polygon_init (&poly, cell, t);
   rms_init (rms, &poly, relative);
   guint i;
+  gpointer data[3];
+  data[0] = rms;
+  data[1] = &poly;
+  gdouble hp[4];
+  data[2] = hp;
+  if (rms->relative)
+    cell_coefficients (ftt_cell_parent (rms->cell), rms->t, hp);
   for (i = 0; i < t->nrs; i++)
-    r_surface_query_region (t->rs[i], poly.min, poly.max, (RSurfaceQuery) rms_add, rms);
-  rms->p = NULL;
+    r_surface_query_region (t->rs[i], poly.min, poly.max, (RSurfaceQuery) rms_add, data);
 }
+#endif
 
-static void update_terrain_rms1 (FttCell * cell, GfsRefineTerrain * t, gboolean relative,
-				 RMS * rms)
+static void update_terrain_rms1 (Polygon * poly, gboolean relative, RMS * rms)
 {
-  Polygon poly;
-  polygon_init (&poly, cell, t);
-  rms_init (rms, &poly, relative);
+  rms_init (rms, poly, relative);
   RSurfaceSum s;
   r_surface_sum_init (&s);
   guint i;
-  for (i = 0; i < t->nrs; i++)
-    r_surface_query_region_sum (t->rs[i],
+  RSurfaceRect rect;
+  rect[0].l = poly->c.x - poly->h/2.; rect[0].h = poly->c.x + poly->h/2.; 
+  rect[1].l = poly->c.y - poly->h/2.; rect[1].h = poly->c.y + poly->h/2.; 
+  for (i = 0; i < poly->t->nrs; i++)
+    r_surface_query_region_sum (poly->t->rs[i],
 				(RSurfaceCheck) polygon_includes,
-				(RSurfaceCheck) polygon_intersects,
-				&poly, &s);
+				(RSurfaceCheck) polygon_intersects, poly, 
+				rect, &s);
   rms->m[0][0] = s.n;
   if (s.n > 0) {
-    gdouble xc = poly.c.x, yc = poly.c.y;
-    gdouble h = poly.h;
-    /* See terrain.mac for a "maxima" derivation of the terms below */
-    rms->m[0][1] = s.m01 - xc*s.n;
-    rms->m[0][1] /= h;
-    rms->m[0][2] = s.m02 - yc*s.n;
-    rms->m[0][2] /= h;
-    rms->m[0][3] = xc*yc*s.n - s.m01*yc - s.m02*xc + s.m03;
-    rms->m[0][3] /= h*h;
+    rms->m[0][1] = s.m01;
+    rms->m[0][2] = s.m02;
+    rms->m[0][3] = s.m03;
     rms->m[1][2] = rms->m[0][3];
-    rms->m[1][1] = xc*xc*s.n - 2.*s.m01*xc + s.m11;
-    rms->m[1][1] /= h*h;
-    rms->m[2][2] = yc*yc*s.n - 2.*s.m02*yc + s.m22;
-    rms->m[2][2] /= h*h;
-    rms->m[1][3] = - xc*xc*yc*s.n + 2.*s.m01*xc*yc - s.m11*yc + s.m02*xc*xc - 2.*s.m03*xc + s.m13;
-    rms->m[1][3] /= h*h*h;
-    rms->m[2][3] = - xc*yc*yc*s.n + s.m01*yc*yc + 2.*s.m02*xc*yc - 2.*s.m03*yc - s.m22*xc + s.m23;
-    rms->m[2][3] /= h*h*h;
-    rms->m[3][3] = xc*xc*yc*yc*s.n - 2.*s.m01*xc*yc*yc + s.m11*yc*yc - 2.*s.m02*xc*xc*yc 
-      + 4.*s.m03*xc*yc - 2.*s.m13*yc + s.m22*xc*xc - 2.*s.m23*xc + s.m33;
-    rms->m[3][3] /= h*h*h*h;  
+    rms->m[1][1] = s.m11;
+    rms->m[2][2] = s.m22;
+    rms->m[1][3] = s.m13;
+    rms->m[2][3] = s.m23;
+    rms->m[3][3] = s.m33;
     if (rms->relative) {
       double hp[NM];
-      cell_coefficients (ftt_cell_parent (rms->cell), rms->t->h, hp);
+      cell_coefficients (ftt_cell_parent (rms->cell), poly, hp);
       rms->H[0] = s.H0 - s.n*hp[0] - s.m01*hp[1] - s.m02*hp[2] - s.m03*hp[3];
       /* See terrain.mac for a "maxima" derivation of the terms below */
-      rms->H[1] = (s.H1 - xc*s.H0 
-		   + s.m03*(hp[3]*xc - hp[2])
-		   + s.m01*(hp[1]*xc - hp[0])
-		   + hp[2]*s.m02*xc
-		   + hp[0]*xc*s.n
-		   - hp[3]*s.m13
-		   - hp[1]*s.m11);
-      rms->H[2] = (s.H2 - yc*s.H0 
-		   + s.m03*(hp[3]*yc - hp[1])
-		   + s.m02*(hp[2]*yc - hp[0])
-		   + hp[1]*s.m01*yc
-		   + hp[0]*yc*s.n
-		   - hp[3]*s.m23
-		   - hp[2]*s.m22);
-      rms->H[3] = (s.H3 - xc*s.H2 - yc*s.H1 + xc*yc*s.H0 
-		   - s.m03*(hp[3]*xc*yc - hp[2]*yc - hp[1]*xc + hp[0]) 
-		   + s.m13*(hp[3]*yc - hp[1]) 
-		   - s.m02*xc*(hp[2]*yc - hp[0]) 
-		   - s.m01*(hp[1]* xc - hp[0])*yc 
-		   - hp[0]*xc*yc*s.n
-		   + hp[1]*s.m11*yc 
-		   + s.m23*(hp[3]*xc - hp[2]) 
-		   + hp[2]*s.m22*xc 
-		   - hp[3]*s.m33);
+      rms->H[1] = s.H1 - hp[0]*s.m01 - hp[1]*s.m11 - hp[2]*s.m03 - hp[3]*s.m13;
+      rms->H[2] = s.H2 - hp[0]*s.m02 - hp[1]*s.m03 - hp[2]*s.m22 - hp[3]*s.m23;
+      rms->H[3] = s.H3 - hp[0]*s.m03 - hp[1]*s.m13 - hp[2]*s.m23 - hp[3]*s.m33;
       rms->H[4] = (s.H4 - 2.*hp[3]*s.H3 - 2.*hp[2]*s.H2 - 2.*hp[1]*s.H1 - 2.*hp[0]*s.H0
 		   + hp[3]*hp[3]*s.m33
 		   + 2.*hp[2]*hp[3]*s.m23
@@ -480,18 +487,14 @@ static void update_terrain_rms1 (FttCell * cell, GfsRefineTerrain * t, gboolean 
     }
     else {
       rms->H[0] = s.H0;
-      rms->H[1] = s.H1 - xc*s.H0;    
-      rms->H[2] = s.H2 - yc*s.H0;
-      rms->H[3] = s.H3- xc*s.H2 - yc*s.H1 + xc*yc*s.H0;
+      rms->H[1] = s.H1;
+      rms->H[2] = s.H2;
+      rms->H[3] = s.H3;
       rms->H[4] = s.H4;
     }
-    rms->H[1] /= h;
-    rms->H[2] /= h;
-    rms->H[3] /= h*h;
     rms->max = s.Hmax;
     rms->min = s.Hmin;
   }
-  rms->p = NULL;
 }
 
 static void update_terrain (FttCell * cell, GfsRefineTerrain * t)
@@ -499,32 +502,16 @@ static void update_terrain (FttCell * cell, GfsRefineTerrain * t)
   RMS rms;
   guint i;
   g_assert (GFS_VALUE (cell, t->type) == REFINED);
+  Polygon poly;
+  polygon_init (&poly, cell, t);
+#if OLD
   update_terrain_rms (cell, t, ftt_cell_parent (cell) != NULL, &rms);
-#if 1
-  RMS rms1;
-  update_terrain_rms1 (cell, t, ftt_cell_parent (cell) != NULL, &rms1);
-  {
-    guint i, j;
-    for (i = 0; i < NM; i++)
-      for (j = 0; j <= i; j++)
-	fprintf (stderr, "m%d%d: %g %g\n", j, i, rms.m[j][i], rms1.m[j][i]);
-  }
-  {
-    guint i;
-    for (i = 0; i < NM + 1; i++)
-      fprintf (stderr, "H%s%d: %g %g\n", rms.relative ? "*" : "", i, rms.H[i], rms1.H[i]);
-  }
-  if (rms1.m[0][0] > 0.) {
-    fprintf (stderr, "min: %g %g\n", rms.min, rms1.min);
-    fprintf (stderr, "max: %g %g\n", rms.max, rms1.max);
-  }
-  rms_update (&rms1);
+#else
+  update_terrain_rms1 (&poly, ftt_cell_parent (cell) != NULL, &rms);
 #endif
-  rms_update (&rms);
-  for (i = 0; i < NM; i++) {
+  rms_update (&rms, &poly);
+  for (i = 0; i < NM; i++)
     GFS_VALUE (cell, t->h[i]) = rms.h[i];
-    fprintf (stderr, "h%d: %g %g\n", i, rms.h[i], rms1.h[i]);
-  }
   GFS_VALUE (cell, t->he) = rms.he;
   GFS_VALUE (cell, t->hn) = rms.m[0][0];
   GFS_VALUE (cell, t->type) = RAW;
@@ -587,17 +574,16 @@ static void update_error_estimate (FttCell * cell, GfsRefineTerrain * t, gboolea
   if (GFS_VALUE (cell, t->hn) > 0.) {
     RMS rms;
     guint i;
+    Polygon poly;
+    polygon_init (&poly, cell, t);
+#if OLD
     update_terrain_rms (cell, t, relative, &rms);
+#else
+    update_terrain_rms1 (&poly, relative, &rms);
+#endif
     for (i = 0; i < NM; i++)
       rms.h[i] = GFS_VALUE (cell, t->h[i]);
-#if 1
-    RMS rms1;
-    update_terrain_rms1 (cell, t, relative, &rms1);
-    for (i = 0; i < NM; i++)
-      rms1.h[i] = GFS_VALUE (cell, t->h[i]);
-    fprintf (stderr, "he: %g %g\n", rms_minimum (&rms), rms_minimum (&rms1));
-#endif
-    GFS_VALUE (cell, t->he) = rms_minimum (&rms);
+    GFS_VALUE (cell, t->he) = rms_minimum (&rms, &poly);
   }
   else
     GFS_VALUE (cell, t->he) = 0.;
@@ -1399,7 +1385,7 @@ const gchar * g_module_check_init (void);
 const gchar * g_module_check_init (void)
 {
   gchar * path = getenv ("GFS_TERRAIN_PATH");
-  if (path)
+  if (path && path[0] != '\0')
     default_path = path;
   gfs_refine_terrain_class ();
   gfs_terrain_class ();

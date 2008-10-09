@@ -346,30 +346,55 @@ static void dirinfo_init (typdirinfo * info)
   info->Hmax = - 1e30;
 }
 
-static void dirinfo_add_dir (typdirinfo * info, typdirinfo * a)
+static void relative (typrect rect, double * o, double * h)
 {
-  info->m01 += a->m01;
-  info->m02 += a->m02;
-  info->m03 += a->m03;
-  info->m11 += a->m11;
-  info->m13 += a->m13;
-  info->m22 += a->m22;
-  info->m23 += a->m23;  
-  info->m33 += a->m33;
+  o[0] = (((double)rect[0].l) + ((double)rect[0].h))/2.;
+  o[1] = (((double)rect[1].l) + ((double)rect[1].h))/2.;
+  *h = ((double)rect[0].h) - ((double)rect[0].l);
+  if (((double)rect[1].h) - ((double)rect[1].l) > *h)
+    *h = ((double)rect[1].h) - ((double)rect[1].l);
+}
+
+static void dirinfo_add_dir (typrect parent, typdirinfo * info, typrect rect, typdirinfo * a)
+{
+  double op[2], oa[2], hp, ha;
+
+  relative (parent, op, &hp);
+  relative (rect, oa, &ha);
+  
+  double oap0 = oa[0] - op[0], oap1 = oa[1] - op[1];
+  double an = a->n;
+  double ha2 = ha*ha, hp2 = hp*hp;
+  info->m01 += (an*oap0 + a->m01*ha)/hp;
+  info->m02 += (an*oap1 + a->m02*ha)/hp;
+  info->m03 += (oap0*(an*oap1 + a->m02*ha) + ha*(a->m01*oap1 + a->m03*ha))/hp2;
+  double m11 = (oap0*(an*oap0 + 2.*a->m01*ha) + a->m11*ha2)/hp2;
+  info->m11 += m11;
+  double m13 = ha*(oap0*(a->m02*oap0 + 2.*a->m03*ha) + a->m13*ha2)/hp2;
+  info->m13 += (oap1*m11 + m13)/hp;
+  double m22 = (oap1*(an*oap1 + 2.*a->m02*ha) + a->m22*ha2)/hp2;
+  info->m22 += m22;
+  info->m23 += (oap0*m22 + ha*(oap1*(oap1*a->m01 + 2.*a->m03*ha) + a->m23*ha2)/hp2)/hp;
+  info->m33 += (oap1*(oap1*m11 + 2.*m13) + 
+		ha2*(oap0*(oap0*a->m22 + 2.*a->m23*ha) + ha2*a->m33)/hp2)/hp2;
   info->H0 += a->H0;
-  info->H1 += a->H1;
-  info->H2 += a->H2;
-  info->H3 += a->H3;
+  info->H1 += (a->H0*oap0 + a->H1*ha)/hp;
+  info->H2 += (a->H0*oap1 + a->H2*ha)/hp;
+  info->H3 += (ha*(ha*a->H3 + oap0*a->H2 + oap1*a->H1) + oap0*oap1*a->H0)/hp2;
   info->H4 += a->H4;
   info->n += a->n;
   if (a->Hmin < info->Hmin) info->Hmin = a->Hmin;
   if (a->Hmax > info->Hmax) info->Hmax = a->Hmax;
 }
 
-static void dirinfo_add_data (typdirinfo * info, typrect rect, refinfo data)
+static void dirinfo_add_data (typrect parent, typdirinfo * info, typrect rect, refinfo data)
 {
-  double p[3];
-  p[0] = rect[0].l; p[1] = rect[1].l; p[2] = data->height;
+  double p[3], o[2], h;
+
+  relative (parent, o, &h);
+
+  p[0] = (((double) rect[0].l) - o[0])/h; p[1] = (((double)rect[1].l) - o[1])/h; 
+  p[2] = data->height;
   info->m01 += p[0];
   info->m02 += p[1];
   info->m03 += p[0]*p[1];
@@ -390,6 +415,7 @@ static void dirinfo_add_data (typdirinfo * info, typrect rect, refinfo data)
 
 void UpdateAll(RSTREE R,
 	       int depth,
+	       typrect rect,
 	       typdirinfo * info)
 
 {
@@ -409,8 +435,8 @@ void UpdateAll(RSTREE R,
       }
       dirinfo_init (&(*DIN).entries[i].info);
       (*R).Nmodified[depth] = 1;
-      UpdateAll(R,depth+1,&(*DIN).entries[i].info);
-      dirinfo_add_dir (info, &(*DIN).entries[i].info);
+      UpdateAll(R,depth+1,(*DIN).entries[i].rect,&(*DIN).entries[i].info);
+      dirinfo_add_dir (rect,info,(*DIN).entries[i].rect,&(*DIN).entries[i].info);
     }
   }
   else {
@@ -421,7 +447,7 @@ void UpdateAll(RSTREE R,
       (*R).E[depth]= i;
 
       CopyRect(R,(*DAN).entries[i].rect,rectfound); /* avoid modification */
-      dirinfo_add_data (info, rectfound, &(*DAN).entries[i].info);
+      dirinfo_add_data (rect,info,rectfound,&(*DAN).entries[i].info);
     }
   }
 }
@@ -433,6 +459,7 @@ void RgnQueryInfo(RSTREE R,
 		  Check includes,
 		  Check intersects,
 		  void * data,
+		  typrect rect,
 		  typdirinfo * info)
 
 {
@@ -453,15 +480,15 @@ void RgnQueryInfo(RSTREE R,
     DIN= &(*(*R).N[depth]).DIR;
     
     for (i= 0; i < (*DIN).nofentries; i++) {
-      if ((* includes) ((*DIN).entries[i].rect,data))
-	dirinfo_add_dir (info, &(*DIN).entries[i].info);
-	   else if ((* intersects) ((*DIN).entries[i].rect,data)) {
+      if ((* includes) ((*DIN).entries[i].rect,data,depth))
+	dirinfo_add_dir (rect, info, (*DIN).entries[i].rect, &(*DIN).entries[i].info);
+      else if ((* intersects) ((*DIN).entries[i].rect,data,depth)) {
         (*R).E[depth]= i;
         istoread= (*DIN).entries[i].ptrtosub != (*R).P[depth+1];
         if (istoread) {
           NewNode(R,depth+1);
         }
-        RgnQueryInfo(R,depth+1,includes,intersects,data,info);
+        RgnQueryInfo(R,depth+1,includes,intersects,data,rect,info);
       }
     }
   }
@@ -476,11 +503,11 @@ void RgnQueryInfo(RSTREE R,
     
     for (i= 0; i < (*DAN).nofentries; i++) {
 
-      if ((* includes) ((*DAN).entries[i].rect,data)) {
+      if ((* includes) ((*DAN).entries[i].rect,data,depth)) {
         (*R).E[depth]= i;
 	        
         CopyRect(R,(*DAN).entries[i].rect,rectfound); /* avoid modification */
-	dirinfo_add_data (info, rectfound, &(*DAN).entries[i].info);
+	dirinfo_add_data (rect, info, rectfound, &(*DAN).entries[i].info);
       }
     }
   }

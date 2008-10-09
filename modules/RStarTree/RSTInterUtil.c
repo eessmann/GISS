@@ -215,11 +215,11 @@ void SetCheckDir(RSTREE R, boolean creation)
     PACKEDdirentrylen= sizeof(typrect) + sizeof(int);
 #if 0
     if (PACKEDdirentrylen != (*par).direntrylen) {
-      printf("\n%s\n","     -----  WARNING  -----");
-      printf("%s\n","Directory entries are not packed!");
-      printf("%s %d\n","Packed directory entry length:",PACKEDdirentrylen);
-      printf("%s %d\n","            Real space needed:",(*par).direntrylen);
-      printf("%s\n",/* implicitly */"Applying the latter!");
+      fprintf(stderr,"\n%s\n","     -----  WARNING  -----");
+      fprintf(stderr,"%s\n","Directory entries are not packed!");
+      fprintf(stderr,"%s %d\n","Packed directory entry length:",PACKEDdirentrylen);
+      fprintf(stderr,"%s %d\n","            Real space needed:",(*par).direntrylen);
+      fprintf(stderr,"%s\n",/* implicitly */"Applying the latter!");
     }
 #endif
   }
@@ -229,20 +229,20 @@ void SetCheckDir(RSTREE R, boolean creation)
   REALdirentrylen= SIZE_DIRnodeOf3 - SIZE_DIRnodeOf2;
   if (creation) {
     if (REALdirentrylen != (*par).direntrylen) {
-      printf("\n%s\n","     -----  WARNING  -----");
-      printf("%s\n","Directory nodes are not packed!");
-      printf("%s %d\n","Directory entry length:",(*par).direntrylen);
-      printf("%s %d\n","Space needed in a node:",REALdirentrylen);
-      printf("%s\n",/* explicitly */"Applying the latter!");
+      fprintf(stderr,"\n%s\n","     -----  WARNING  -----");
+      fprintf(stderr,"%s\n","Directory nodes are not packed!");
+      fprintf(stderr,"%s %d\n","Directory entry length:",(*par).direntrylen);
+      fprintf(stderr,"%s %d\n","Space needed in a node:",REALdirentrylen);
+      fprintf(stderr,"%s\n",/* explicitly */"Applying the latter!");
       (*par).direntrylen= REALdirentrylen;			/* reset */
     }
   }
   else {
     if ((*par).direntrylen != REALdirentrylen) {		/* check */
-      printf("\n%s\n","FATAL ERROR:");
-      printf("%s\n","Incompatible R*-tree file!");
-      printf("%s %d\n","Size of a directory entry:",(*par).direntrylen);
-      printf("%s %d\n","                Expecting:",REALdirentrylen);
+      fprintf(stderr,"\n%s\n","FATAL ERROR:");
+      fprintf(stderr,"Incompatible R*-tree file '%s'\n", R->dirname);
+      fprintf(stderr,"%s %d\n","Size of a directory entry:",(*par).direntrylen);
+      fprintf(stderr,"%s %d\n","                Expecting:",REALdirentrylen);
     }
   }
   
@@ -251,25 +251,25 @@ void SetCheckDir(RSTREE R, boolean creation)
   (*par).SIZE_DIRnofentries= REALSIZE_DIRnofentries;		/* set */
   if (creation) {
     if (PACKEDSIZE_DIRnofentries != (*par).SIZE_DIRnofentries) {
-      printf("\n%s\n","     -----  WARNING  -----");
-      printf("%s\n","Gap before directory entries!");
+      fprintf(stderr,"\n%s\n","     -----  WARNING  -----");
+      fprintf(stderr,"%s\n","Gap before directory entries!");
     }
   }
   else {
     if ((*par).SIZE_DIRnofentries != REALSIZE_DIRnofentries) {
-      printf("\n%s\n","FATAL ERROR:");
-      printf("%s\n","Incompatible R*-tree file!");
-      printf("%s %d\n","Offset for entries:",(*par).SIZE_DIRnofentries);
-      printf("%s %d\n","         Expecting:",REALSIZE_DIRnofentries);
+      fprintf(stderr,"\n%s\n","FATAL ERROR:");
+      fprintf(stderr,"Incompatible R*-tree file '%s'\n", R->dirname);
+      fprintf(stderr,"%s %d\n","Offset for entries:",(*par).SIZE_DIRnofentries);
+      fprintf(stderr,"%s %d\n","         Expecting:",REALSIZE_DIRnofentries);
     }
   }
   
   if (! creation) {
     if ((*par).maxdim+1 != NumbOfDim) {
-      printf("\n%s\n","FATAL ERROR:");
-      printf("%s\n","Incompatible R*-tree file!");
-      printf("%s %d\n","Number of dimensions:",(*par).maxdim+1);
-      printf("%s %d\n","           Expecting:",NumbOfDim);
+      fprintf(stderr,"\n%s\n","FATAL ERROR:");
+      fprintf(stderr,"Incompatible R*-tree file '%s'\n", R->dirname);
+      fprintf(stderr,"%s %d\n","Number of dimensions:",(*par).maxdim+1);
+      fprintf(stderr,"%s %d\n","           Expecting:",NumbOfDim);
     }
   }
   
@@ -294,11 +294,11 @@ void SetCheckData(RSTREE R, boolean creation)
     (*par).dataentrylen= sizeof(typDATAent);			/* set */
     PACKEDdataentrylen= sizeof(typrect) + sizeof(typinfo);
     if (PACKEDdataentrylen != (*par).dataentrylen) {
-      printf("\n%s\n","     -----  WARNING  -----");
-      printf("%s\n","Data entries are not packed!");
-      printf("%s %d\n","Packed data entry length:",PACKEDdataentrylen);
-      printf("%s %d\n","       Real space needed:",(*par).dataentrylen);
-      printf("%s\n",/* implicitly */"Applying the latter!");
+      fprintf(stderr,"\n%s\n","     -----  WARNING  -----");
+      fprintf(stderr,"%s\n","Data entries are not packed!");
+      fprintf(stderr,"%s %d\n","Packed data entry length:",PACKEDdataentrylen);
+      fprintf(stderr,"%s %d\n","       Real space needed:",(*par).dataentrylen);
+      fprintf(stderr,"%s\n",/* implicitly */"Applying the latter!");
     }
   }
   
@@ -307,20 +307,20 @@ void SetCheckData(RSTREE R, boolean creation)
   REALdataentrylen= SIZE_DATAnodeOf3 - SIZE_DATAnodeOf2;
   if (creation) {
     if (REALdataentrylen != (*par).dataentrylen) {
-      printf("\n%s\n","     -----  WARNING  -----");
-      printf("%s\n","Data nodes are not packed!");
-      printf("%s %d\n","     Data entry length:",(*par).dataentrylen);
-      printf("%s %d\n","Space needed in a node:",REALdataentrylen);
-      printf("%s\n",/* explicitly */"Applying the latter!");
+      fprintf(stderr,"\n%s\n","     -----  WARNING  -----");
+      fprintf(stderr,"%s\n","Data nodes are not packed!");
+      fprintf(stderr,"%s %d\n","     Data entry length:",(*par).dataentrylen);
+      fprintf(stderr,"%s %d\n","Space needed in a node:",REALdataentrylen);
+      fprintf(stderr,"%s\n",/* explicitly */"Applying the latter!");
       (*par).dataentrylen= REALdataentrylen;			/* reset */
     }
   }
   else {
     if ((*par).dataentrylen != REALdataentrylen) {		/* check */
-      printf("\n%s\n","FATAL ERROR:");
-      printf("%s\n","Incompatible R*-tree file!");
-      printf("%s %d\n","Size of a data entry:",(*par).dataentrylen);
-      printf("%s %d\n","           Expecting:",REALdataentrylen);
+      fprintf(stderr,"\n%s\n","FATAL ERROR:");
+      fprintf(stderr,"Incompatible R*-tree file '%s'\n", R->dirname);
+      fprintf(stderr,"%s %d\n","Size of a data entry:",(*par).dataentrylen);
+      fprintf(stderr,"%s %d\n","           Expecting:",REALdataentrylen);
     }
   }
   
@@ -329,24 +329,24 @@ void SetCheckData(RSTREE R, boolean creation)
   (*par).SIZE_DATAnofentries= REALSIZE_DATAnofentries;		/* set */
   if (creation) {
     if (PACKEDSIZE_DATAnofentries != (*par).SIZE_DATAnofentries) {
-      printf("\n%s\n","     -----  WARNING  -----");
-      printf("%s\n","Gap before data entries!");
+      fprintf(stderr,"\n%s\n","     -----  WARNING  -----");
+      fprintf(stderr,"%s\n","Gap before data entries!");
     }
   }
   else {
     if ((*par).SIZE_DATAnofentries != REALSIZE_DATAnofentries) {
-      printf("\n%s\n","FATAL ERROR:");
-      printf("%s\n","Incompatible R*-tree file!");
-      printf("%s %d\n","Offset for entries:",(*par).SIZE_DATAnofentries);
-      printf("%s %d\n","         Expecting:",REALSIZE_DATAnofentries);
+      fprintf(stderr,"\n%s\n","FATAL ERROR:");
+      fprintf(stderr,"Incompatible R*-tree file '%s'\n", R->dirname);
+      fprintf(stderr,"%s %d\n","Offset for entries:",(*par).SIZE_DATAnofentries);
+      fprintf(stderr,"%s %d\n","         Expecting:",REALSIZE_DATAnofentries);
     }
   }
   
   if (! creation) {
     if ((*par).SIZEinfo != sizeof(typinfo)) {
-      printf("\n%s\n","FATAL ERROR:");
-      printf("%s %d\n","Size of an info part:",(*par).SIZEinfo);
-      printf("%s %d\n","           Expecting:",sizeof(typinfo));
+      fprintf(stderr,"\n%s\n","FATAL ERROR:");
+      fprintf(stderr,"%s %d\n","Size of an info part:",(*par).SIZEinfo);
+      fprintf(stderr,"%s %d\n","           Expecting:",sizeof(typinfo));
     }
   }
   

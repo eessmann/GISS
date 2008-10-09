@@ -113,13 +113,22 @@ void r_surface_sum_init (RSurfaceSum * sum)
   sum->Hmax = - 1e30;
 }
 
+/**
+ * Fills @sum using @rect to normalise the results i.e. the sums are
+ * expressed in a coordinate system centered on 
+ * (rect[0].l + rect[0].h, rect[1].l + rect[1].h)/2 
+ * and scaled by 
+ * MAX(rect[0].h - rect[0].l, rect[1].h - rect[1].l).
+ */
 void r_surface_query_region_sum (RSurface * rt,
 				 RSurfaceCheck includes,
 				 RSurfaceCheck intersects,
 				 void * data,
+				 RSurfaceRect rect,
 				 RSurfaceSum * sum)
 {
-  RegionQueryInfo (rt->t, (Check) includes, (Check) intersects, data, (typdirinfo *) sum);
+  RegionQueryInfo (rt->t, (Check) includes, (Check) intersects, data, (typinterval *) rect,
+		   (typdirinfo *) sum);
 }
 
 const char * r_surface_name (RSurface * rt)

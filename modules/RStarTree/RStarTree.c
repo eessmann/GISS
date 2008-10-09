@@ -398,6 +398,7 @@ boolean RegionQueryInfo(RSTREE R,
 			Check includes,
 			Check intersects,
 			void * data,
+			typrect rect,
 			typdirinfo * info)
 
 {
@@ -417,7 +418,7 @@ boolean RegionQueryInfo(RSTREE R,
          for test purpose */
   
   (*R).RSTDone= TRUE;
-  RgnQueryInfo(R,1,includes,intersects,data,info);
+  RgnQueryInfo(R,1,includes,intersects,data,rect,info);
   return (*R).RSTDone;
 }
 
@@ -472,9 +473,12 @@ boolean Update(RSTREE R)
   }
   *//* to be inserted, if main memory path shall be initialized
          for test purpose */
-  
+
+  typrect rect;
+  rect[0].l = -0.5; rect[0].h = 0.5;
+  rect[1].l = -0.5; rect[1].h = 0.5;
   (*R).RSTDone= TRUE;
-  UpdateAll(R,1,&info);
+  UpdateAll(R,1,rect,&info);
   return (*R).RSTDone;
 }
 
@@ -513,8 +517,8 @@ boolean JoinCountNv(RSTREE R1, RSTREE R2,
     R2= NULL;
     success= OpenRST(&R2,(*R1).dirname); /* NEW(R2) */
     if (! success) {
-      printf("%s\n","FATAL INTERNAL ERROR");
-      printf("%s\n","JoinCountNv 1");
+      fprintf(stderr,"%s\n","FATAL INTERNAL ERROR");
+      fprintf(stderr,"%s\n","JoinCountNv 1");
       abort();
     }
   }
@@ -591,8 +595,8 @@ boolean JoinNv(RSTREE R1, RSTREE R2,
     R2= NULL;
     success= OpenRST(&R2,(*R1).dirname); /* NEW(R2) */
     if (! success) {
-      printf("%s\n","FATAL INTERNAL ERROR");
-      printf("%s\n","JoinCountNv 1");
+      fprintf(stderr,"%s\n","FATAL INTERNAL ERROR");
+      fprintf(stderr,"%s\n","JoinCountNv 1");
       abort();
     }
   }
@@ -808,41 +812,41 @@ boolean GetHeight(RSTREE R,
 static void BasicCheck()
 {
   if (sizeof(byte) != 1) {
-    printf("%s\n","FATAL ERROR:");
-    printf("%s\n","BasicCheck 1");
-    printf("%s\n","sizeof(byte) != 1");
-    printf("%s %d\n","sizeof(byte):",sizeof(byte));
+    fprintf(stderr,"%s\n","FATAL ERROR:");
+    fprintf(stderr,"%s\n","BasicCheck 1");
+    fprintf(stderr,"%s\n","sizeof(byte) != 1");
+    fprintf(stderr,"%s %d\n","sizeof(byte):",sizeof(byte));
     abort();
     /* concerning application of type ByteArray */
   }
   if (sizeof(int) < 4) {
-    printf("%s\n","BasicCheck 2");
-    printf("%s\n","sizeof(int) < 4");
-    printf("%s %d\n","sizeof(int):",sizeof(int));
-    printf("%s\n","WARNING: bigger int range assumed.");
+    fprintf(stderr,"%s\n","BasicCheck 2");
+    fprintf(stderr,"%s\n","sizeof(int) < 4");
+    fprintf(stderr,"%s %d\n","sizeof(int):",sizeof(int));
+    fprintf(stderr,"%s\n","WARNING: bigger int range assumed.");
   }
   if (sizeof(typinfo) < sizeof(int)) {
-    printf("%s\n","FATAL ERROR:");
-    printf("%s\n","BasicCheck 3");
-    printf("%s\n","sizeof(typinfo) < sizeof(int)");
-    printf("%s %d\n","sizeof(typinfo):",sizeof(typinfo));
-    printf("%s %d\n","    sizeof(int):",sizeof(int));
+    fprintf(stderr,"%s\n","FATAL ERROR:");
+    fprintf(stderr,"%s\n","BasicCheck 3");
+    fprintf(stderr,"%s\n","sizeof(typinfo) < sizeof(int)");
+    fprintf(stderr,"%s %d\n","sizeof(typinfo):",sizeof(typinfo));
+    fprintf(stderr,"%s %d\n","    sizeof(int):",sizeof(int));
     abort();
   }
   if (sizeof(typpagedir) > sizeof(typfixblock)) {
-    printf("%s\n","FATAL ERROR:");
-    printf("%s\n","BasicCheck 4");
-    printf("%s\n","sizeof(typpagedir) > sizeof(typfixblock)");
-    printf("%s %d\n"," sizeof(typpagedir):",sizeof(typpagedir));
-    printf("%s %d\n","sizeof(typfixblock):",sizeof(typfixblock));
+    fprintf(stderr,"%s\n","FATAL ERROR:");
+    fprintf(stderr,"%s\n","BasicCheck 4");
+    fprintf(stderr,"%s\n","sizeof(typpagedir) > sizeof(typfixblock)");
+    fprintf(stderr,"%s %d\n"," sizeof(typpagedir):",sizeof(typpagedir));
+    fprintf(stderr,"%s %d\n","sizeof(typfixblock):",sizeof(typfixblock));
     abort();
   }
   if (sizeof(typparameters) > sizeof(typfixblock)) {
-    printf("%s\n","FATAL ERROR:");
-    printf("%s\n","BasicCheck 5");
-    printf("%s\n","sizeof(typparameters) > sizeof(typfixblock)");
-    printf("%s %d\n","sizeof(typparameters):",sizeof(typparameters));
-    printf("%s %d\n","  sizeof(typfixblock):",sizeof(typfixblock));
+    fprintf(stderr,"%s\n","FATAL ERROR:");
+    fprintf(stderr,"%s\n","BasicCheck 5");
+    fprintf(stderr,"%s\n","sizeof(typparameters) > sizeof(typfixblock)");
+    fprintf(stderr,"%s %d\n","sizeof(typparameters):",sizeof(typparameters));
+    fprintf(stderr,"%s %d\n","  sizeof(typfixblock):",sizeof(typfixblock));
     abort();
   }
 }

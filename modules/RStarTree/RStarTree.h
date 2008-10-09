@@ -95,7 +95,7 @@ typedef struct {
 /* A typdirinfo is a struct which may contain arbitrary information
    associated with a directory record. */
 
-typedef int (* Check) (typrect rect, void * data);
+typedef int (* Check) (typrect rect, void * data, int depth);
 
 /* ------------------------- private includes -------------------------- */
 
@@ -449,6 +449,7 @@ boolean RegionQueryInfo(RSTREE R,
 			Check includes,
 			Check intersects,
 			void * data,
+			typrect rect,
 			typdirinfo * info);
 
 boolean  AllQuery(RSTREE           rst,
