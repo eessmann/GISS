@@ -265,8 +265,9 @@ boolean  RemoveRST(char *name);
          /* RemoveRST removes all files corresponding to an R*-tree. */
 
 
-boolean  OpenRST(RSTREE  *rst,
-                 char    *name);
+boolean  OpenRST(RSTREE        *rst,
+                 const char    *name,
+		 const char    *mode);
 
          /* OpenRST opens the R*-tree named name. */
 

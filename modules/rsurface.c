@@ -26,7 +26,7 @@ RSurface * r_surface_open (const char * fname, const char * mode, int size)
     }
   }
   rt->t = NULL;
-  if (!OpenRST (&rt->t, fname)) {
+  if (!OpenRST (&rt->t, fname, !strcmp (mode, "w") ? "rw" : "r")) {
     free (rt);
     return NULL;
   }

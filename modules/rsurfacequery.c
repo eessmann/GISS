@@ -16,6 +16,11 @@ int main (int argc, char** argv)
   }
 
   RSurface * rs = r_surface_open (argv[1], "r", 0);
+  if (rs == NULL) {
+    fprintf (stderr, "rsurfacequery: could not open `%s'\n", argv[1]);
+    return -1;
+  }    
+
   double min[2], max[2];
   int count = 0;
   while (scanf ("%lf %lf %lf %lf", &min[0], &min[1], &max[0], &max[1]) == 4) {

@@ -46,11 +46,10 @@ void CreateRSFiles(RSTREE R)
 
 /***********************************************************************/
 
-void OpenRSFiles(RSTREE R)
+void OpenRSFiles(RSTREE R, int O_MODE)
 
 {
   RSTName SufName;
-  int O_MODE= O_RDWR;
     
   (*R).dir.f= open((*R).dirname,O_MODE,STDMODE);
   if ((*R).dir.f == -1) {

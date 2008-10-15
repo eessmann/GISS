@@ -122,7 +122,8 @@ boolean RemoveRST(char *name)
 /************************************************************************/
 
 boolean OpenRST(RSTREE *r,
-                char *name)
+                const char *name,
+		const char *mode)
 
 {
   RSTREE R;
@@ -135,7 +136,7 @@ boolean OpenRST(RSTREE *r,
   R= *r;
   strcpy((*R).dirname,name);
   (*R).RSTDone= TRUE;
-  OpenRSFiles(R);
+  OpenRSFiles(R, strcmp (mode, "rw") ? O_RDONLY : O_RDWR);
   if (! (*R).RSTDone) {
     free(R); *r= NULL;
     return FALSE;
@@ -515,7 +516,7 @@ boolean JoinCountNv(RSTREE R1, RSTREE R2,
       }
     } /* syncronize R1 */
     R2= NULL;
-    success= OpenRST(&R2,(*R1).dirname); /* NEW(R2) */
+    success= OpenRST(&R2,(*R1).dirname,"rw"); /* NEW(R2) */
     if (! success) {
       fprintf(stderr,"%s\n","FATAL INTERNAL ERROR");
       fprintf(stderr,"%s\n","JoinCountNv 1");
@@ -593,7 +594,7 @@ boolean JoinNv(RSTREE R1, RSTREE R2,
       }
     } /* syncronize R1 */
     R2= NULL;
-    success= OpenRST(&R2,(*R1).dirname); /* NEW(R2) */
+    success= OpenRST(&R2,(*R1).dirname,"rw"); /* NEW(R2) */
     if (! success) {
       fprintf(stderr,"%s\n","FATAL INTERNAL ERROR");
       fprintf(stderr,"%s\n","JoinCountNv 1");

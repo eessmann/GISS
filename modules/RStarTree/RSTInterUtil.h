@@ -17,7 +17,7 @@
 /* declarations */
 
 void CreateRSFiles(RSTREE R);
-void OpenRSFiles(RSTREE R);
+void OpenRSFiles(RSTREE R, int O_MODE);
 void FastCloseRSFiles(RSTREE R);
 void CloseRSFiles(RSTREE R);
 void SetBase(RSTREE R, int pagelen, boolean unique);
