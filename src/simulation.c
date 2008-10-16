@@ -668,6 +668,13 @@ static gdouble cell_dV (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
   return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a*dV : dV;
 }
 
+static gdouble cell_dL (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
+{
+  gdouble dL = ftt_cell_size (cell);
+  gdouble L = sim->physical_params.L;
+  return L*dL;
+}
+
 static gdouble cell_t (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   return sim->time.t;
@@ -799,6 +806,7 @@ static void simulation_init (GfsSimulation * object)
     { "ry", "y-coordinate of the center of the cell (internal)", cell_ry },
     { "rz", "z-coordinate of the center of the cell (internal)", cell_rz },
     { "dV", "volume of the cell", cell_dV},
+    { "dL", "length of the cell", cell_dL},
     { "t",  "Physical time", cell_t },
     { "dt", "Timestep", cell_dt },
     { "Vorticity", "Norm of the vorticity vector of the velocity field", cell_vorticity },
