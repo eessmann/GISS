@@ -4,7 +4,10 @@ typedef struct { /* needs to be identical to typdirinfo in RStarTree.h */
   double m01, m02, m03;
   double m11, m13;
   double m22, m23, m33;
+  double m44, m55, m66, m77;
+  double m67, m76;
   double H0, H1, H2, H3, H4;
+  double H5, H6;
   float Hmin, Hmax;
   int n;
 } RSurfaceSum;

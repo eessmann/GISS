@@ -377,11 +377,27 @@ static void dirinfo_add_dir (typrect parent, typdirinfo * info, typrect rect, ty
   info->m23 += (oap0*m22 + ha*(oap1*(oap1*a->m01 + 2.*a->m03*ha) + a->m23*ha2)/hp2)/hp;
   info->m33 += (oap1*(oap1*m11 + 2.*m13) + 
 		ha2*(oap0*(oap0*a->m22 + 2.*a->m23*ha) + ha2*a->m33)/hp2)/hp2;
+  double ha3 = ha2*ha, hp3 = hp2*hp;
+  info->m44 += (oap0*(oap0*(oap0*an + 3.*ha*a->m01) + 3.*ha2*a->m11) + ha3*a->m44)/hp3;
+  info->m55 += (oap1*(oap1*(oap1*an + 3.*ha*a->m02) + 3.*ha2*a->m22) + ha3*a->m55)/hp3;
+  double ha4 = ha3*ha, hp4 = hp3*hp;
+  info->m66 += (oap0*(oap0*(oap0*(oap0*an + 4.*ha*a->m01) + 6.*ha2*a->m11) 
+		      + 4.*ha3*a->m44) + ha4*a->m66)/hp4;
+  info->m77 += (oap1*(oap1*(oap1*(oap1*an + 4.*ha*a->m02) + 6.*ha2*a->m22)
+		      + 4.*ha3*a->m55) + ha4*a->m77)/hp4;
+  info->m67 += (oap1*(oap0*(oap0*(oap0*an + 3.*ha*a->m01) + 3.*ha2*a->m11) + ha3*a->m44)
+		+ oap0*(oap0*(ha*a->m02*oap0 + 3.*ha2*a->m03) + 3.*ha3*a->m13) 
+		+ ha4*a->m67)/hp4;
+  info->m76 += (oap0*(oap1*(oap1*(oap1*an + 3.*ha*a->m02) + 3.*ha2*a->m22) + ha3*a->m55)
+		+ oap1*(oap1*(ha*a->m01*oap1 + 3.*ha2*a->m03) + 3.*ha3*a->m23)
+		+ ha4*a->m76)/hp4;
   info->H0 += a->H0;
   info->H1 += (a->H0*oap0 + a->H1*ha)/hp;
   info->H2 += (a->H0*oap1 + a->H2*ha)/hp;
   info->H3 += (ha*(ha*a->H3 + oap0*a->H2 + oap1*a->H1) + oap0*oap1*a->H0)/hp2;
   info->H4 += a->H4;
+  info->H5 += (oap0*(2.*ha*a->H1 + oap0*a->H0) + ha2*a->H5)/hp2;
+  info->H6 += (oap1*(2.*ha*a->H2 + oap1*a->H0) + ha2*a->H6)/hp2;
   info->n += a->n;
   if (a->Hmin < info->Hmin) info->Hmin = a->Hmin;
   if (a->Hmax > info->Hmax) info->Hmax = a->Hmax;
@@ -403,11 +419,19 @@ static void dirinfo_add_data (typrect parent, typdirinfo * info, typrect rect, r
   info->m22 += p[1]*p[1];
   info->m23 += p[0]*p[1]*p[1];
   info->m33 += p[0]*p[0]*p[1]*p[1];
+  info->m44 += p[0]*p[0]*p[0];
+  info->m55 += p[1]*p[1]*p[1];
+  info->m66 += p[0]*p[0]*p[0]*p[0];
+  info->m77 += p[1]*p[1]*p[1]*p[1];
+  info->m67 += p[0]*p[0]*p[0]*p[1];
+  info->m76 += p[1]*p[1]*p[1]*p[0];
   info->H0 += p[2];
   info->H1 += p[0]*p[2];
   info->H2 += p[1]*p[2];
   info->H3 += p[0]*p[1]*p[2];
   info->H4 += p[2]*p[2];
+  info->H5 += p[0]*p[0]*p[2];
+  info->H6 += p[1]*p[1]*p[2];
   info->n++;
   if (p[2] < info->Hmin) info->Hmin = p[2];
   if (p[2] > info->Hmax) info->Hmax = p[2];
