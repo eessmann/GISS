@@ -398,6 +398,8 @@ static void ocean_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_ocean_class ())->parent_class->destroy) (object);  
 }
 
+#define MAXLEVEL 16
+
 static void ocean_read (GtsObject ** object, GtsFile * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_ocean_class ())->parent_class->read) (object, fp);
@@ -405,7 +407,30 @@ static void ocean_read (GtsObject ** object, GtsFile * fp)
     return;
 
   GFS_DOMAIN (*object)->refpos.z = -0.5;
+#if !FTT_2D3
+  GfsSimulation * sim = GFS_SIMULATION (*object);
+  sim->physical_params.g /= sim->physical_params.L*GFS_DOMAIN (sim)->lambda.z;
+  GfsVariable * H = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, "H");
+  g_assert (H);
+  H->units = 1. - log(GFS_DOMAIN (sim)->lambda.z)/log(sim->physical_params.L);
+  GFS_DOMAIN (sim)->lambda.z /= 1 << MAXLEVEL;
+#endif
 }
+
+#if !FTT_2D3
+static void ocean_write (GtsObject * object, FILE * fp)
+{
+  FttVector * lambda = &GFS_DOMAIN (object)->lambda;
+  GfsPhysicalParams * p = &GFS_SIMULATION (object)->physical_params;
+  gdouble g = p->g;
+
+  lambda->z *= 1 << MAXLEVEL;
+  p->g *= p->L*lambda->z;
+  (* GTS_OBJECT_CLASS (gfs_ocean_class ())->parent_class->write) (object, fp);
+  lambda->z /= 1 << MAXLEVEL;
+  p->g = g;
+}
+#endif /* 3D */
 
 static void new_layer (GfsOcean * ocean)
 {
@@ -472,8 +497,6 @@ static void compute_w (FttCell * c, GfsVariable * W)
     c = ftt_cell_neighbor (c, FTT_FRONT);
   }
 }
-
-#define MAXLEVEL 16
 
 static void compute_div (FttCell * c, GfsVariable * W)
 {
@@ -781,6 +804,9 @@ static void gfs_ocean_class_init (GfsSimulationClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->destroy = ocean_destroy;
   GTS_OBJECT_CLASS (klass)->read = ocean_read;
+#if !FTT_2D3
+  GTS_OBJECT_CLASS (klass)->write = ocean_write;
+#endif
   GFS_DOMAIN_CLASS (klass)->post_read = ocean_post_read;
   klass->run = ocean_run;
 }
@@ -1203,14 +1229,20 @@ static gdouble flather_value (FttCellFace * f, GfsBc * b)
       return 0.;
 
   H = gfs_face_interpolated_value (f, GFS_BC_FLATHER (b)->h->i);
-  if (H > 2e-3) { /* fixme: 2e-3 is an arbitrary constant which should be a parameter or sthg*/
+  if (H > 2e-3) { /* fixme: 2e-3 is an arbitrary constant which should be a parameter or sthg */
     GfsSimulation * sim = GFS_SIMULATION (gfs_box_domain (b->b->box));
     gdouble cg = sqrt (sim->physical_params.g*H);
+    /* non-dimensional pressure at the boundary */
+    gdouble lz = GFS_DOMAIN (sim)->lambda.z;
+#if !FTT_2D && !FTT_2D3
+    lz *= 1 << MAXLEVEL;
+#endif
+    gdouble pb = gfs_function_face_value (GFS_BC_FLATHER (b)->val, f)*
+      sim->physical_params.g*lz/sim->physical_params.L;
     
     return gfs_function_face_value (GFS_BC_VALUE (b)->val, f) +
       (FTT_FACE_DIRECT (f) ? -1. : 1.)*
-      (GFS_VARIABLE (f->neighbor, GFS_BC_FLATHER (b)->p->i) - 
-       gfs_function_face_value (GFS_BC_FLATHER (b)->val, f))*
+      (GFS_VALUE (f->neighbor, GFS_BC_FLATHER (b)->p) - pb)*
       cg/sim->physical_params.g
 #if !FTT_2D
       /H
