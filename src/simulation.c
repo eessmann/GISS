@@ -1489,7 +1489,7 @@ void gfs_simulation_map (GfsSimulation * sim, FttVector * p)
     i = i->next;
   }
   FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
+  for (c = 0; c < 3; c++)
     (&p->x)[c] *= (&GFS_DOMAIN (sim)->lambda.x)[c]/sim->physical_params.L;
 }
 
@@ -1507,7 +1507,7 @@ void gfs_simulation_map_inverse (GfsSimulation * sim, FttVector * p)
   g_return_if_fail (p != NULL);
   
   FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
+  for (c = 0; c < 3; c++)
     (&p->x)[c] *= sim->physical_params.L/(&GFS_DOMAIN (sim)->lambda.x)[c];
   GSList * i = sim->maps->items;
   while (i) {

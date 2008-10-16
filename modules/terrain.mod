@@ -43,7 +43,7 @@ struct _GfsRefineTerrain {
 
 #if !FTT_2D
   GfsVariable * min, * max;
-  gdouble front;
+  gdouble front, scale;
 #endif
 
   RSurface ** rs;
@@ -696,25 +696,31 @@ static void reset_terrain (FttCell * cell, GfsRefineTerrain * t)
 # define traverse_boundary(domain,order,flags,depth,func,data) \
          gfs_domain_cell_traverse_boundary(domain,FTT_FRONT,order,flags,depth,func,data)
 
-static void terrain_min_max (FttCell * cell, GfsVariable * h[NM], gdouble minmax[2])
+static void terrain_min_max (gdouble H[NM], gdouble minmax[2], gdouble scale)
 {
   gdouble dx, dy;
-  gdouble H0 = GFS_VALUE (cell, h[0]), H1 = GFS_VALUE (cell, h[1]);
-  gdouble H2 = GFS_VALUE (cell, h[2]), H3 = GFS_VALUE (cell, h[3]);
   minmax[0] = G_MAXDOUBLE; minmax[1] = - G_MAXDOUBLE;
   for (dx = -1.; dx <= 1.; dx += 2.)
     for (dy = -1.; dy <= 1.; dy += 2.) {
-      gdouble v = H0 + dx*H1 + dy*H2 + dx*dy*H3;
+      gdouble v = H[0] + dx*H[1] + dy*H[2] + dx*dy*H[3];
       if (v < minmax[0]) minmax[0] = v;
       if (v > minmax[1]) minmax[1] = v;
     }
+  minmax[0] *= scale;
+  minmax[1] *= scale;
 }
 
 static void min_max (FttCell * cell, GfsRefineTerrain * t)
 {
   gdouble minmax[2] = { G_MAXDOUBLE, - G_MAXDOUBLE };
   if (FTT_CELL_IS_LEAF (cell)) {
-    terrain_min_max (cell, t->h, minmax);
+    gdouble h[4];
+    h[0] = GFS_VALUE (cell, t->h[0]);
+    h[1] = GFS_VALUE (cell, t->h[1]);
+    h[2] = GFS_VALUE (cell, t->h[2]);
+    h[3] = GFS_VALUE (cell, t->h[3]);
+    terrain_min_max (h, minmax, t->scale);
+
     FttVector p;
     ftt_cell_pos (cell, &p);
     if (p.z > t->front)
@@ -883,15 +889,10 @@ static void terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 	hc[3] = h[3]/4.;
 #if !FTT_2D
 	ftt_cell_pos (child.c[n], &p);
-	gdouble zmin = p.z - size, zmax = p.z + size;
-	gdouble dx, dy;
-	gdouble minmax[2] = { G_MAXDOUBLE, - G_MAXDOUBLE };
-	for (dx = -1.; dx <= 1.; dx += 2.)
-	  for (dy = -1.; dy <= 1.; dy += 2.) {
-	    gdouble v = hc[0] + dx*hc[1] + dy*hc[2] + dx*dy*hc[3];
-	    if (v < minmax[0]) minmax[0] = v;
-	    if (v > minmax[1]) minmax[1] = v;
-	  }
+	gdouble zmin = p.z - size, zmax = p.z + size, minmax[2];
+	p.z = 1.;
+	gfs_simulation_map (GFS_SIMULATION (v->domain), &p);
+	terrain_min_max (hc, minmax, p.z);
 	if (minmax[0] > zmax || minmax[1] < zmin)
 	  GFS_VALUE (child.c[n], v) = G_MAXDOUBLE;
 	else
@@ -938,6 +939,9 @@ static void terrain_refine (GfsRefine * refine, GfsSimulation * sim)
   t->min = gfs_temporary_variable (domain);
   t->max = gfs_temporary_variable (domain);
   t->front = - G_MAXDOUBLE;
+  FttVector p = {0.,0.,1.};
+  gfs_simulation_map (sim, &p);
+  t->scale = p.z;
   gfs_domain_cell_traverse_boundary (domain, FTT_FRONT, FTT_POST_ORDER, FTT_TRAVERSE_ALL, -1,
 				     (FttCellTraverseFunc) min_max, t);
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) refine_box, t);
@@ -960,13 +964,15 @@ static void refine_terrain_destroy (GtsObject * object)
   GfsRefineTerrain * t = GFS_REFINE_TERRAIN (object);
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (object));
 
-  gchar * dname = g_strconcat (t->name, "min", NULL);
-  gfs_domain_remove_derived_variable (domain, dname);
-  g_free (dname);
-
-  dname = g_strconcat (t->name, "max", NULL);
-  gfs_domain_remove_derived_variable (domain, dname);
-  g_free (dname);
+  if (t->name) {
+    gchar * dname = g_strconcat (t->name, "min", NULL);
+    gfs_domain_remove_derived_variable (domain, dname);
+    g_free (dname);
+    
+    dname = g_strconcat (t->name, "max", NULL);
+    gfs_domain_remove_derived_variable (domain, dname);
+    g_free (dname);
+  }
   
   g_free (t->name);
   g_free (t->basename);
@@ -1222,6 +1228,7 @@ struct _GfsSurfaceTerrain {
   /*< private >*/
   GfsGenericSurface parent;
   GfsVariable * h[NM];
+  gdouble scale;
 
   /*< public >*/
   gchar * name;
@@ -1282,6 +1289,16 @@ static GfsGenericSurface * cell_is_cut (FttCell * cell, GfsGenericSurface * s1,
   return GFS_VALUE (cell, GFS_SURFACE_TERRAIN (s1)->h[0]) != G_MAXDOUBLE ? s1 : NULL;
 }
 
+static gdouble zscale (GfsSurfaceTerrain * t)
+{
+  if (t->scale == 0.) {
+    FttVector p = {0.,0.,1.};
+    gfs_simulation_map (gfs_object_simulation (t), &p);
+    t->scale = p.z;
+  }
+  return t->scale;
+}
+
 static guint surface_segment_intersection (GfsGenericSurface * s1,
 					   FttCell * cell,
 					   GfsSegment * I)
@@ -1293,8 +1310,9 @@ static guint surface_segment_intersection (GfsGenericSurface * s1,
   FttVector pE, pD;
   pE.x = I->E->x; pE.y = I->E->y;
   pD.x = I->D->x; pD.y = I->D->y;
-  gdouble vE = I->E->z - cell_value (cell, GFS_SURFACE_TERRAIN (s1)->h, pE);
-  gdouble vD = I->D->z - cell_value (cell, GFS_SURFACE_TERRAIN (s1)->h, pD);
+  GfsSurfaceTerrain * t = GFS_SURFACE_TERRAIN (s1);
+  gdouble vE = I->E->z - cell_value (cell, t->h, pE)*zscale (t);
+  gdouble vD = I->D->z - cell_value (cell, t->h, pD)*zscale (t);
   
   if ((vE > 0. && vD <= 0.) || (vE <= 0. && vD > 0.)) {
     I->n = 1;
@@ -1341,7 +1359,7 @@ static void surface_segment_normal (GfsGenericSurface * s1,
   p.y = (p.y - q.y)/size;
   n[0] = - (GFS_VALUE (cell, h[1]) + GFS_VALUE (cell, h[3])*p.y)/size;
   n[1] = - (GFS_VALUE (cell, h[2]) + GFS_VALUE (cell, h[3])*p.x)/size;
-  n[2] = 1.;
+  n[2] = 1./zscale (GFS_SURFACE_TERRAIN (s1));
 }
 
 static void gfs_surface_terrain_class_init (GfsGenericSurfaceClass * klass)
