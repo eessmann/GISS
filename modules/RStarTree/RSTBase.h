@@ -19,7 +19,6 @@ Vector types are always called <..>Array.
 */
 /***   End    -----  naming rules for structured types  -----   **********/
 
-
 /* constants */
 
 #define SIZEfixblock 512
@@ -62,6 +61,7 @@ typedef enum {
 typedef struct {
                typrect    rect;
                int        ptrtosub;
+               PADDING_32_BITS;
                typdirinfo info;
                } typDIRent, *refDIRent;		/* inner entry */
 typedef struct {
@@ -84,6 +84,7 @@ typedef typDATAent  typDATAentries[EntryRange];
 
 typedef struct {
                int            nofentries;
+               PADDING_32_BITS;
                typDIRentries  entries;		/* 0 .. nofentries-1 !! */
                } typDIRnode, *refDIRnode;	/* inner node */
 typedef struct {
@@ -166,6 +167,7 @@ typedef struct {
                typparamblock  parameters;
                typcount       count;
                boolean        RSTDone;
+               PADDING_32_BITS;
                refnode        helpdirnode, helpdatanode, Ntosplit, Nsibling;
                typfiledesc    dir, data, dirPD, dataPD;
                RSTName        dirname;
@@ -182,6 +184,7 @@ typedef
 typedef
   struct {
            int nofentries;
+           PADDING_32_BITS;
            typ2DIRentries entries;
          } typDIRnodeOf2;	/* inner node containing 2 entries */
 typedef
@@ -197,6 +200,7 @@ typedef
 typedef
   struct {
            int nofentries;
+           PADDING_32_BITS;
            typ3DIRentries entries;
          } typDIRnodeOf3;	/* inner node containing 3 entries */
 typedef

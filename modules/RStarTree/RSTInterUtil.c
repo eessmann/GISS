@@ -249,10 +249,12 @@ void SetCheckDir(RSTREE R, boolean creation)
   REALSIZE_DIRnofentries= SIZE_DIRnodeOf3 - 3 * (*par).direntrylen;
   (*par).SIZE_DIRnofentries= REALSIZE_DIRnofentries;		/* set */
   if (creation) {
+#if 0
     if (PACKEDSIZE_DIRnofentries != (*par).SIZE_DIRnofentries) {
       fprintf(stderr,"\n%s\n","     -----  WARNING  -----");
       fprintf(stderr,"%s\n","Gap before directory entries!");
     }
+#endif
   }
   else {
     if ((*par).SIZE_DIRnofentries != REALSIZE_DIRnofentries) {

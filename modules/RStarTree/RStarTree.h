@@ -36,6 +36,14 @@
 #include <fcntl.h>
 
 
+/* padding on 32 bits systems (to match automatic 64 bits padding) */
+
+#if defined (__LP64__) || defined (__64BIT__) || defined (_LP64) || (__WORDSIZE == 64)
+  #define PADDING_32_BITS
+#else
+  #define PADDING_32_BITS int padding
+#endif
+
 /* ----------------------------- constants ----------------------------- */
 
 #define byte unsigned char
@@ -93,6 +101,7 @@ typedef struct {
   double H5, H6;
   float Hmin, Hmax;
   int n;
+  PADDING_32_BITS;
 } typdirinfo;
 
 /* A typdirinfo is a struct which may contain arbitrary information
