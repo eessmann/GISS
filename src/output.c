@@ -1199,7 +1199,7 @@ static void write_text (FttCell * cell, GfsOutputSimulation * output)
 
   gfs_cell_cm (cell, &p);
   gfs_simulation_map_inverse (gfs_object_simulation (output), &p);
-  fprintf (fp, "%g %g %g", p.x, p.y, p.z);
+  fprintf (fp, "%.6f %.6f %.6f", p.x, p.y, p.z);
   while (i) {
     if (GFS_VARIABLE1 (i->data)->name)
       fprintf (fp, " %g", GFS_VARIABLE (cell, GFS_VARIABLE1 (i->data)->i));
