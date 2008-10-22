@@ -1151,6 +1151,7 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
     return;
   }
+  s->z->units = s->v->units;
   gts_file_next_token (fp);
 
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
@@ -1163,6 +1164,7 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
       gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
       return;
     }
+    s->e->units = s->v->units;
     gts_file_next_token (fp);
   }
 
@@ -1196,6 +1198,7 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
       gts_file_error (fp, "`%s' is a reserved keyword", u);
       return;
     }
+    s->A[i]->units = s->v->units;
     g_free (u);
     u = g_strdup_printf ("%s%d", s->Bname, i);
     if (!(s->B[i] = gfs_domain_get_or_add_variable (domain, u,
@@ -1203,6 +1206,8 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
       gts_file_error (fp, "`%s' is a reserved keyword", u);
       return;
     }
+    s->B[i]->units = s->v->units;
+    g_free (u);
   }
 
   if (fp->type == '{') {
