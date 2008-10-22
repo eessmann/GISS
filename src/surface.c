@@ -259,9 +259,15 @@ static void check_solid_surface (GtsSurface * s,
   g_string_free (name, TRUE);
 }
 
+static void point_map (GtsPoint * p, GfsSimulation * sim)
+{
+  gfs_simulation_map (sim, (FttVector *) &p->x);
+}
+
 static void surface_read (GtsObject ** o, GtsFile * fp)
 {
   GfsSurface * surface = GFS_SURFACE (*o);
+  gboolean dimensional = FALSE;
 
   if (fp->type == '(') { /* implicit surface */
     gts_file_next_token (fp);
@@ -326,6 +332,7 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
     check_solid_surface (surface->s, fp->token->str, fp);
     if (fp->type == GTS_ERROR)
       return;
+    dimensional = TRUE;
   }
   gts_file_next_token (fp);
 
@@ -406,6 +413,11 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
       gts_matrix_destroy (surface->m);
       surface->m = i;
     }
+  }
+
+  if (dimensional) {
+    g_assert (surface->s);
+    gts_surface_foreach_vertex (surface->s, (GtsFunc) point_map, gfs_object_simulation (*o));
   }
 }
 

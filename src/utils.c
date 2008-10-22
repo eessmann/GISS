@@ -281,6 +281,7 @@ static gdouble interpolated_cgd (GfsFunction * f, FttVector * p)
   gdouble val;
   guint i;
 
+  gfs_simulation_map_inverse (gfs_object_simulation (f), p);
   for (i = 0; i < f->g->N; i++)
     switch (f->index[i]) {
     case 0: vecteur[i] = p->x; break;
@@ -876,6 +877,7 @@ static gdouble interpolated_value (GfsFunction * f, FttVector * p)
   GtsPoint q;
   GtsFace * t;
 
+  gfs_simulation_map_inverse (gfs_object_simulation (f), p);
   q.x = p->x; q.y = p->y;
   t = gts_point_locate (&q, f->s, NULL);
   if (t == NULL)
