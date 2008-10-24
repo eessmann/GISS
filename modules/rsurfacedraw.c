@@ -12,6 +12,7 @@
 
 typedef struct {
   FILE ** fp;
+  double * ratio;
   int * size;
   char * name, * ext;
   int maxdepth;
@@ -38,6 +39,11 @@ static int intersects (RSurfaceRect RSTrect, Params * p, int depth)
 	   RSTrect[0].h, RSTrect[1].h,
 	   RSTrect[0].l, RSTrect[1].h,
 	   RSTrect[0].l, RSTrect[1].l);
+  double w = RSTrect[0].h - RSTrect[0].l, h = RSTrect[1].h - RSTrect[1].l;
+  double ratio = 1e10;
+  if (w > 0. && h > 0.)
+    ratio = w > h ? w/h : h/w;
+  p->ratio[depth] += ratio;
   p->size[depth]++;
   return (depth < p->maxdepth);
 }
@@ -110,6 +116,7 @@ int main (int argc, char** argv)
   p.ext = &p.name[strlen (p.name)];
   p.fp = calloc (p.maxdepth + 1, sizeof (FILE *));
   p.size = calloc (p.maxdepth + 1, sizeof (int));
+  p.ratio = calloc (p.maxdepth + 1, sizeof (double));
   r_surface_sum_init (&s);
   r_surface_query_region_sum (rs, (RSurfaceCheck) includes, (RSurfaceCheck) intersects, &p, 
 			      rect, &s);
@@ -119,9 +126,11 @@ int main (int argc, char** argv)
     int i;
     for (i = 1; i <= p.maxdepth; i++)
       if (p.size[i] > 0) {
-	fprintf (stderr, "level %d: %d", i, p.size[i]);
+	fprintf (stderr, "level %d: %d\n", i, p.size[i]);
 	if (i < p.maxdepth && p.size[i + 1] > 0)
-	  fprintf (stderr, " average # of entries: %d\n", p.size[i + 1]/p.size[i]);
+	  fprintf (stderr, "\taverage ratio: %g average # of entries: %g\n",
+		   p.ratio[i]/p.size[i],
+		   p.size[i + 1]/(double) p.size[i]);
 	else
 	  fputc ('\n', stderr);
       }
