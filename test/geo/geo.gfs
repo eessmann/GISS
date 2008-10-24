@@ -6,7 +6,7 @@
 # Dupont {\cite{dupont}} and Le Roux et al {\cite{leroux98}}. A Gaussian bump
 # \[ \eta ( x, y ) = \eta_0 e^{^{- \frac{x^2 + y^2}{R^2}}} \]
 # is initialised in a 1000$\times$1000 km, 1000 m deep square basin. A reduced
-# gravity $g = 0.01$ m/s is used to approximate a 10 m-thick stratified surface
+# gravity $g = 0.01$ m/s$^2$ is used to approximate a 10 m-thick stratified surface
 # layer. On an $f$-plane the corresponding geostrophic velocities are given by
 # \begin{eqnarray*}
 #   u ( x, y ) & = & \frac{2 g \eta_0 y}{f_0 R^2} e^{- \frac{x^2 + y^2}{R^2}},\\

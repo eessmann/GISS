@@ -1240,7 +1240,7 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
       GSList * i = domain->variables_io;
       guint nv = 4;
 
-      fputs ("# 1:X 2:Y: 3:Z", fp);
+      fputs ("# 1:X 2:Y 3:Z", fp);
       while (i) {
 	g_assert (GFS_VARIABLE1 (i->data)->name);
 	fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);

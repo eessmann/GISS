@@ -499,6 +499,7 @@ static gdouble gradient_cost (FttCell * cell, GfsAdaptGradient * a)
   FttComponent c;
   gdouble sum2 = 0;
   gdouble * lambda;
+  GfsSimulation * sim = gfs_object_simulation (a);
 
   lambda = (gdouble *) &GFS_DOMAIN (gfs_object_simulation (a))->lambda;
   for (c = 0; c < FTT_DIMENSION; c++) {

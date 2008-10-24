@@ -25,6 +25,9 @@ int main (int argc, char * argv[])
   key_value_pair ("GfsProjectionParams", stdout);
   key_value_pair ("GfsApproxProjectionParams", stdout);
 
+  /* Map module  */
+  key_value_pair ("GfsMapProjection", stdout);
+
   while (*klass) {
     key_value_pair ((*klass)->info.name, stdout);
     klass++;

@@ -402,18 +402,24 @@ static void ocean_destroy (GtsObject * object)
 
 static void ocean_read (GtsObject ** object, GtsFile * fp)
 {
+#if !FTT_2D3
+  /* fixme: lambda.z cannot be changed */
+  GfsSimulation * sim = GFS_SIMULATION (*object);
+  GFS_DOMAIN (sim)->lambda.z = 1./(1 << MAXLEVEL);
+#endif
+
   (* GTS_OBJECT_CLASS (gfs_ocean_class ())->parent_class->read) (object, fp);
   if (fp->type == GTS_ERROR)
     return;
 
   GFS_DOMAIN (*object)->refpos.z = -0.5;
 #if !FTT_2D3
-  GfsSimulation * sim = GFS_SIMULATION (*object);
-  sim->physical_params.g /= sim->physical_params.L*GFS_DOMAIN (sim)->lambda.z;
+  g_assert (GFS_DOMAIN (sim)->lambda.z == 1./(1 << MAXLEVEL));
+  sim->physical_params.g /= sim->physical_params.L/* *GFS_DOMAIN (sim)->lambda.z*/;
   GfsVariable * H = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, "H");
   g_assert (H);
-  H->units = 1. - log(GFS_DOMAIN (sim)->lambda.z)/log(sim->physical_params.L);
-  GFS_DOMAIN (sim)->lambda.z /= 1 << MAXLEVEL;
+  H->units = 1. - log(/*GFS_DOMAIN (sim)->lambda.z*/1.)/log(sim->physical_params.L);
+  GFS_DOMAIN (sim)->lambda.z = 1./(1 << MAXLEVEL);
 #endif
 }
 
@@ -1228,9 +1234,9 @@ static gdouble flather_value (FttCellFace * f, GfsBc * b)
       /* if the boundary cell is bounded by more than one boundary -> no flux */
       return 0.;
 
+  GfsSimulation * sim = GFS_SIMULATION (gfs_box_domain (b->b->box));
   H = gfs_face_interpolated_value (f, GFS_BC_FLATHER (b)->h->i);
-  if (H > 2e-3) { /* fixme: 2e-3 is an arbitrary constant which should be a parameter or sthg */
-    GfsSimulation * sim = GFS_SIMULATION (gfs_box_domain (b->b->box));
+  if (H > 10./sim->physical_params.L) { /* fixme: this a bit crappy */
     gdouble cg = sqrt (sim->physical_params.g*H);
     /* non-dimensional pressure at the boundary */
     gdouble lz = GFS_DOMAIN (sim)->lambda.z;
