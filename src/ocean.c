@@ -1183,6 +1183,7 @@ static void bc_flather_read (GtsObject ** o, GtsFile * fp)
 
   (* GTS_OBJECT_CLASS (gfs_bc_flather_class ())->parent_class->read) (o, fp);
 
+  gfs_function_set_units (GFS_BC_VALUE (bc)->val, 1.);
   if (fp->type == GTS_ERROR)
     return;
   if (fp->type != GTS_STRING) {
@@ -1208,6 +1209,7 @@ static void bc_flather_read (GtsObject ** o, GtsFile * fp)
   if (bc->val == NULL)
     bc->val = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (bc->val, gfs_box_domain (GFS_BC (bc)->b->box), fp);
+  gfs_function_set_units (bc->val, 1.);
 
   ftt_cell_traverse (GFS_BC (bc)->b->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 		     (FttCellTraverseFunc) set_gradient_boundary, NULL);
@@ -1243,8 +1245,7 @@ static gdouble flather_value (FttCellFace * f, GfsBc * b)
 #if !FTT_2D && !FTT_2D3
     lz *= 1 << MAXLEVEL;
 #endif
-    gdouble pb = gfs_function_face_value (GFS_BC_FLATHER (b)->val, f)*
-      sim->physical_params.g*lz/sim->physical_params.L;
+    gdouble pb = gfs_function_face_value (GFS_BC_FLATHER (b)->val, f)*sim->physical_params.g*lz;
     
     return gfs_function_face_value (GFS_BC_VALUE (b)->val, f) +
       (FTT_FACE_DIRECT (f) ? -1. : 1.)*
