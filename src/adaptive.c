@@ -458,9 +458,11 @@ static void gfs_adapt_gradient_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  GFS_ADAPT_GRADIENT (*o)->v = gfs_function_get_variable (GFS_ADAPT_FUNCTION (*o)->f);
-  if (GFS_ADAPT_GRADIENT (*o)->v == NULL)
-    GFS_ADAPT_GRADIENT (*o)->v = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
+  GfsAdaptGradient * a = GFS_ADAPT_GRADIENT (*o);
+  a->v = gfs_function_get_variable (GFS_ADAPT_FUNCTION (a)->f);
+  if (a->v == NULL)
+    a->v = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (a)));
+  a->dimension = pow (gfs_object_simulation (a)->physical_params.L, a->v->units);
 }
 
 static void update_f (FttCell * cell, GfsAdaptFunction * a)
@@ -499,7 +501,6 @@ static gdouble gradient_cost (FttCell * cell, GfsAdaptGradient * a)
   FttComponent c;
   gdouble sum2 = 0;
   gdouble * lambda;
-  GfsSimulation * sim = gfs_object_simulation (a);
 
   lambda = (gdouble *) &GFS_DOMAIN (gfs_object_simulation (a))->lambda;
   for (c = 0; c < FTT_DIMENSION; c++) {
@@ -507,12 +508,13 @@ static gdouble gradient_cost (FttCell * cell, GfsAdaptGradient * a)
 
     sum2 += g*g;
   }
-  return sqrt (sum2);
+  return sqrt (sum2)*a->dimension;
 }
 
 static void gfs_adapt_gradient_init (GfsAdaptGradient * object)
 {
   GFS_ADAPT (object)->cost = (GtsKeyFunc) gradient_cost;
+  GFS_ADAPT_GRADIENT (object)->dimension = 1.;
 }
 
 GfsEventClass * gfs_adapt_gradient_class (void)

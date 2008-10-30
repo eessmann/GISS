@@ -115,6 +115,7 @@ typedef struct _GfsAdaptGradient         GfsAdaptGradient;
 struct _GfsAdaptGradient {
   /*< private >*/
   GfsAdaptFunction parent;
+  gdouble dimension;
 
   /*< public >*/
   GfsVariable * v;

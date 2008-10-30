@@ -66,8 +66,8 @@ Define U0 1.
     Solid (ellipse (0., 0., A0, A0))
     SourceViscosity 1./RE
     Init {} { U = U0 }
-    AdaptGradient { istep = 1 } { cmax = 1e-3 maxlevel = LEVEL } U
-    AdaptGradient { istep = 1 } { cmax = 1e-3 maxlevel = LEVEL } V
+    AdaptGradient { istep = 1 } { cmax = 5e-2 maxlevel = LEVEL } U
+    AdaptGradient { istep = 1 } { cmax = 5e-2 maxlevel = LEVEL } V
     AdaptFunction { istep = 1 } { cmax = 1e-2 maxlevel = LEVEL } {
 	return (fabs(dx("U"))+fabs(dy("U")))/fabs(U)*ftt_cell_size (cell);
     }
