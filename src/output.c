@@ -957,8 +957,8 @@ static gboolean gfs_output_solid_force_event (GfsEvent * event,
 	     sim->time.t,
 	     pf.x*Ln, pf.y*Ln, pf.z*Ln,
 	     vf.x*Ln, vf.y*Ln, vf.z*Ln,
-	     pm.x, pm.y, pm.z,
-	     vm.x, vm.y, vm.z);
+	     pm.x*Ln*L, pm.y*Ln*L, pm.z*Ln*L,
+	     vm.x*Ln*L, vm.y*Ln*L, vm.z*Ln*L);
     return TRUE;
   }
   return FALSE;
