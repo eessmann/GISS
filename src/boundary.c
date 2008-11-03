@@ -356,7 +356,7 @@ GfsBcClass * gfs_bc_neumann_class (void)
 static void navier (FttCellFace * f, GfsBc * b)
 {
   gdouble h = ftt_cell_size (f->cell);
-  gdouble lambda = GFS_BC_NAVIER (b)->lambda;
+  gdouble lambda = gfs_function_face_value (GFS_BC_NAVIER (b)->lambda, f);
   GFS_VARIABLE (f->cell, b->v->i) = 
     (2.*gfs_function_face_value (GFS_BC_VALUE (b)->val, f)*h
      - (h - 2.*lambda)*GFS_VARIABLE (f->neighbor, b->v->i))/(h + 2.*lambda);
@@ -365,7 +365,7 @@ static void navier (FttCellFace * f, GfsBc * b)
 static void face_navier (FttCellFace * f, GfsBc * b)
 {
   gdouble h = ftt_cell_size (f->cell);
-  gdouble lambda = GFS_BC_NAVIER (b)->lambda;
+  gdouble lambda = gfs_function_face_value (GFS_BC_NAVIER (b)->lambda, f);
   GFS_STATE (f->cell)->f[f->d].v = GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = 
     (gfs_function_face_value (GFS_BC_VALUE (b)->val, f)*h + 
      2.*lambda*GFS_VARIABLE (f->neighbor, b->v->i))/(h + 2.*lambda);
@@ -377,15 +377,18 @@ static void bc_navier_read (GtsObject ** o, GtsFile * fp)
     (* GTS_OBJECT_CLASS (gfs_bc_navier_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
-  
-  /* fixme: units? */
-  GFS_BC_NAVIER (*o)->lambda = gfs_read_constant (fp, gfs_box_domain (GFS_BC (*o)->b->box));
+  GfsBcNavier * bc = GFS_BC_NAVIER (*o);
+  if (bc->lambda == NULL)
+    bc->lambda = gfs_function_new (gfs_function_class (), 0.);
+  gfs_function_set_units (bc->lambda, 1.);
+  gfs_function_read (bc->lambda, gfs_box_domain (GFS_BC (bc)->b->box), fp);
 }
 
 static void bc_navier_write (GtsObject * o, FILE * fp)
 {  
   (* GTS_OBJECT_CLASS (gfs_bc_navier_class ())->parent_class->write) (o, fp);
-  fprintf (fp, " %g", GFS_BC_NAVIER (o)->lambda);
+  if (GFS_BC_NAVIER (o)->lambda)
+    gfs_function_write (GFS_BC_NAVIER (o)->lambda, fp);
 }
 
 static void gfs_bc_navier_init (GfsBc * object)

@@ -112,7 +112,7 @@ struct _GfsBcNavier {
   GfsBcValue parent;
 
   /*< public >*/
-  gdouble lambda;
+  GfsFunction * lambda;
 };
 
 #define GFS_BC_NAVIER(obj)            GTS_OBJECT_CAST (obj,\
