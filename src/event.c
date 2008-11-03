@@ -1809,7 +1809,7 @@ static gboolean gfs_remove_droplets_event (GfsEvent * event, GfsSimulation * sim
       gfs_domain_remove_droplets (domain, d->v, d->c, d->min);
     else {
       d->v = gfs_temporary_variable (domain);
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 				(FttCellTraverseFunc) compute_v, d);
       gfs_domain_remove_droplets (domain, d->v, d->c, d->min);
       gts_object_destroy (GTS_OBJECT (d->v));
