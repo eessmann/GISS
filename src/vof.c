@@ -42,7 +42,7 @@
 gdouble gfs_line_area (const FttVector * m, gdouble alpha)
 {
   FttVector n;
-  gdouble alpha1, a, v;
+  gdouble alpha1, a, v, area;
 
   g_return_val_if_fail (m != NULL, 0.);
 
@@ -64,9 +64,9 @@ gdouble gfs_line_area (const FttVector * m, gdouble alpha)
     return 1.;
 
   if (n.x == 0.)
-    return alpha1/n.y;
+    area = alpha1/n.y;
   else if (n.y == 0.)
-    return alpha1/n.x;
+    area = alpha1/n.x;
   else {
     v = alpha1*alpha1;
 
@@ -78,8 +78,10 @@ gdouble gfs_line_area (const FttVector * m, gdouble alpha)
     if (a > 0.)
       v -= a*a;
 
-    return v/(2.*n.x*n.y);
+    area = v/(2.*n.x*n.y);
   }
+
+  return CLAMP (area, 0., 1.);
 }
 
 /**
@@ -118,7 +120,7 @@ gdouble gfs_line_alpha (const FttVector * m, gdouble c)
   return alpha;
 }
 
-#define EPS 1e-6
+#define EPS 1e-4
 
 /**
  * gfs_line_center:
@@ -329,7 +331,8 @@ gdouble gfs_plane_volume (const FttVector * m, gdouble alpha)
     tmp = (al0*al0*(3. - 2.*al0) + b1*b1*(b1 - 3.*al0) + 
 	   b2*b2*(b2 - 3.*al0) + b3*b3*(b3 - 3.*al0))/pr;
 
-  return al <= 0.5 ? tmp : 1. - tmp;
+  gdouble volume = al <= 0.5 ? tmp : 1. - tmp;
+  return CLAMP (volume, 0., 1.);
 }
 
 /**
