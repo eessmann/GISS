@@ -1182,11 +1182,15 @@ GfsOutputClass * gfs_output_location_class (void)
 
 /* GfsOutputSimulation: Object */
 
+static gchar default_precision[] = "%g";
+
 static void output_simulation_destroy (GtsObject * object)
 {
   GfsOutputSimulation * output = GFS_OUTPUT_SIMULATION (object);
 
   g_slist_free (output->var);
+  if (output->precision != default_precision)
+    g_free (output->precision);
 
   (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->destroy) (object);
 }
@@ -1199,12 +1203,17 @@ static void write_text (FttCell * cell, GfsOutputSimulation * output)
 
   gfs_cell_cm (cell, &p);
   gfs_simulation_map_inverse (gfs_object_simulation (output), &p);
-  fprintf (fp, "%.6f %.6f %.6f", p.x, p.y, p.z);
+  gchar * format = g_strdup_printf ("%s %s %s", 
+				    output->precision, output->precision, output->precision);
+  fprintf (fp, format, p.x, p.y, p.z);
+  g_free (format);
+  format = g_strdup_printf (" %s", output->precision);
   while (i) {
     if (GFS_VARIABLE1 (i->data)->name)
-      fprintf (fp, " %g", GFS_VARIABLE (cell, GFS_VARIABLE1 (i->data)->i));
+      fprintf (fp, format, GFS_VARIABLE (cell, GFS_VARIABLE1 (i->data)->i));
     i = i->next;
   }
+  g_free (format);
   fputc ('\n', fp);
 }
 
@@ -1252,12 +1261,12 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
       break;
     }
     case GFS_VTK: {
-      gfs_domain_write_vtk (domain, output->max_depth, domain->variables_io,
+      gfs_domain_write_vtk (domain, output->max_depth, domain->variables_io, output->precision,
 			    GFS_OUTPUT (event)->file->fp);
       break;
     }
     case GFS_TECPLOT: {
-      gfs_domain_write_tecplot (domain, output->max_depth, domain->variables_io,
+      gfs_domain_write_tecplot (domain, output->max_depth, domain->variables_io, output->precision,
 				GFS_OUTPUT (event)->file->fp);
       break;
     }
@@ -1303,6 +1312,8 @@ static void output_simulation_write (GtsObject * o, FILE * fp)
   case GFS_TECPLOT: fputs (" format = Tecplot", fp); break;
   default: break;
   }
+  if (output->precision != default_precision)
+    fprintf (fp, " precision = %s", output->precision);
   fputs (" }", fp);
 }
 
@@ -1316,20 +1327,22 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
 
   if (fp->type == '{') {
     GtsFileVariable var[] = {
-      {GTS_INT,    "depth",    TRUE},
-      {GTS_STRING, "variables",TRUE},
-      {GTS_INT,    "binary",   TRUE},
-      {GTS_INT,    "solid",    TRUE},
-      {GTS_STRING, "format",   TRUE},
+      {GTS_INT,    "depth",     TRUE},
+      {GTS_STRING, "variables", TRUE},
+      {GTS_INT,    "binary",    TRUE},
+      {GTS_INT,    "solid",     TRUE},
+      {GTS_STRING, "format",    TRUE},
+      {GTS_STRING, "precision", TRUE},
       {GTS_NONE}
     };
-    gchar * variables = NULL, * format = NULL;
+    gchar * variables = NULL, * format = NULL, * precision = NULL;
 
     var[0].data = &output->max_depth;
     var[1].data = &variables;
     var[2].data = &output->binary;
     var[3].data = &output->solid;
     var[4].data = &format;
+    var[5].data = &precision;
     gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR) {
       g_free (variables);
@@ -1369,6 +1382,12 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
       }
       g_free (format);
     }
+
+    if (precision != NULL) {
+      if (output->precision != default_precision)
+	g_free (output->precision);
+      output->precision = precision;
+    }
   }
 }
 
@@ -1387,6 +1406,7 @@ static void gfs_output_simulation_init (GfsOutputSimulation * object)
   object->binary = 1;
   object->solid = 1;
   object->format = GFS;
+  object->precision = default_precision;
 }
 
 GfsOutputClass * gfs_output_simulation_class (void)

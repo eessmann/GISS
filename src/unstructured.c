@@ -204,14 +204,17 @@ static guint local_domain_size (GfsDomain * domain, gint max_depth)
  * @domain: a #GfsDomain.
  * @max_depth: the maximum depth to consider.
  * @variables: a list of #GfsVariable to output.
+ * @precision: the formatting string for converting float to ASCII.
  * @fp: a file pointer.
  *
  * Writes in @fp a VTK-formatted representation of @domain and of the
  * corresponding variables in the given list.
  */
-void gfs_domain_write_vtk (GfsDomain * domain, gint max_depth, GSList * variables, FILE * fp)
+void gfs_domain_write_vtk (GfsDomain * domain, gint max_depth, GSList * variables, 
+			   const gchar * precision, FILE * fp)
 {
   g_return_if_fail (domain != NULL);
+  g_return_if_fail (precision != NULL);
   g_return_if_fail (fp != NULL);
 
   GfsVariable * v[NV];
@@ -234,13 +237,15 @@ void gfs_domain_write_vtk (GfsDomain * domain, gint max_depth, GSList * variable
   /* vertices */
   guint nv = g_slist_length (vertices);
   fprintf (fp, "POINTS %d float\n", nv);
+  gchar * format = g_strdup_printf ("%s %s %s\n", precision, precision, precision);
   GSList * j = vertices;
   while (j) {
     FttVector p;
     vertex_pos (j->data, &p, GFS_SIMULATION (domain));
-    fprintf (fp, "%g %g %g\n", p.x, p.y, p.z);
+    fprintf (fp, format, p.x, p.y, p.z);
     j = j->next;
   }
+  g_free (format);
   fputc ('\n', fp);
 
   /* elements */
@@ -270,6 +275,7 @@ void gfs_domain_write_vtk (GfsDomain * domain, gint max_depth, GSList * variable
   
   /* write scalar fields */
   if (variables) {
+    gchar * format = g_strdup_printf ("%s\n", precision);
     fprintf (fp, "POINT_DATA %d\n", nv);
     GSList * i = variables;
     while (i) {
@@ -278,12 +284,13 @@ void gfs_domain_write_vtk (GfsDomain * domain, gint max_depth, GSList * variable
       GSList * j = vertices;
       while (j) {
 	Vertex * vertex = j->data;
-	fprintf (fp, "%g\n", vertex_value (vertex, v, max_depth));
+	fprintf (fp, format, vertex_value (vertex, v, max_depth));
 	j = j->next;
       }
       fputc ('\n', fp);
       i = i->next;
     }
+    g_free (format);
   }
 
   /* cleanup */
@@ -316,14 +323,17 @@ static void write_tecplot_element (FttCell * cell, WriteParams * par)
  * @domain: a #GfsDomain.
  * @max_depth: the maximum depth to consider.
  * @variables: a list of #GfsVariable to output.
+ * @precision: the formatting string for converting float to ASCII.
  * @fp: a file pointer.
  *
  * Writes in @fp a Tecplot-formatted representation of @domain and of the
  * corresponding variables in the given list.
  */
-void gfs_domain_write_tecplot (GfsDomain * domain, gint max_depth, GSList * variables, FILE * fp)
+void gfs_domain_write_tecplot (GfsDomain * domain, gint max_depth, GSList * variables, 
+			       const gchar * precision, FILE * fp)
 {
   g_return_if_fail (domain != NULL);
+  g_return_if_fail (precision != NULL);
   g_return_if_fail (fp != NULL);
 
   GfsVariable * v[NV];
@@ -354,24 +364,29 @@ void gfs_domain_write_tecplot (GfsDomain * domain, gint max_depth, GSList * vari
   fputs (FTT_DIMENSION == 2 ? "ET=QUADRILATERAL\n" : "ET=BRICK\n", fp);
   
   /* vertices and scalar data */
+  gchar * xyzformat = 
+#if FTT_2D
+    g_strdup_printf ("%s %s", precision, precision);
+#else
+    g_strdup_printf ("%s %s %s", precision, precision, precision);
+#endif
+  gchar * format = g_strdup_printf (" %s", precision);
   j = vertices;
   while (j) {
     Vertex * vertex = j->data;
     FttVector p;
     vertex_pos (vertex, &p, GFS_SIMULATION (domain));
-#if FTT_2D
-    fprintf (fp, "%g %g", p.x, p.y);
-#else
-    fprintf (fp, "%g %g %g", p.x, p.y, p.z);
-#endif
+    fprintf (fp, xyzformat, p.x, p.y, p.z);
     GSList * k = variables;
     while (k) {
-      fprintf (fp, " %g", vertex_value (vertex, k->data, max_depth));
+      fprintf (fp, format, vertex_value (vertex, k->data, max_depth));
       k = k->next;
     }
     fputc ('\n', fp);
     j = j->next;
   }
+  g_free (format);
+  g_free (xyzformat);
 
   /* elements */
   WriteParams par;

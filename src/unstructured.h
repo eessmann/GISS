@@ -30,10 +30,12 @@ extern "C" {
 void gfs_domain_write_vtk     (GfsDomain * domain, 
 			       gint max_depth, 
 			       GSList * variables, 
+			       const gchar * precision,
 			       FILE * fp);
 void gfs_domain_write_tecplot (GfsDomain * domain, 
 			       gint max_depth, 
 			       GSList * variables, 
+			       const gchar * precision,
 			       FILE * fp);
 
 #ifdef __cplusplus
