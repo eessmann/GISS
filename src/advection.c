@@ -912,7 +912,9 @@ void gfs_advection_params_write (GfsAdvectionParams * par, FILE * fp)
 	   par->cfl,
 	   par->gradient == gfs_center_gradient ? 
 	   "gfs_center_gradient" :
-	   "gfs_center_van_leer_gradient",
+	   par->gradient == gfs_center_van_leer_gradient ?
+	   "gfs_center_van_leer_gradient" :
+	   "none",
 	   par->flux == gfs_face_advection_flux ?
 	   "gfs_face_advection_flux" :
 	   par->flux == gfs_face_velocity_advection_flux ?
@@ -944,6 +946,11 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->scheme = GFS_GODUNOV;
   par->average = FALSE;
   par->gc = FALSE;
+}
+
+static gdouble none (FttCell * cell, FttComponent c, guint v)
+{
+  return 0.;
 }
 
 void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
@@ -980,6 +987,8 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
       par->gradient = gfs_center_gradient;
     else if (!strcmp (gradient, "gfs_center_van_leer_gradient"))
       par->gradient = gfs_center_van_leer_gradient;
+    else if (!strcmp (gradient, "none"))
+      par->gradient = none;
     else if (fp->type != GTS_ERROR)
       gts_file_variable_error (fp, var, "gradient",
 			       "unknown gradient parameter `%s'", gradient);
