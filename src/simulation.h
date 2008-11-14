@@ -83,7 +83,8 @@ struct _GfsSimulation {
 struct _GfsSimulationClass {
   GfsDomainClass parent_class;
 
-  void (* run) (GfsSimulation *);
+  void    (* run) (GfsSimulation *);
+  gdouble (* cfl) (GfsSimulation *);
 };
 
 #define GFS_SIMULATION(obj)            GTS_OBJECT_CAST (obj,\

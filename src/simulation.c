@@ -486,6 +486,11 @@ static void simulation_run (GfsSimulation * sim)
   }
 }
 
+static gdouble simulation_cfl (GfsSimulation * sim)
+{
+  return gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
+}
+
 static void gfs_simulation_class_init (GfsSimulationClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->write =   simulation_write;
@@ -493,6 +498,7 @@ static void gfs_simulation_class_init (GfsSimulationClass * klass)
   GTS_OBJECT_CLASS (klass)->destroy = simulation_destroy;
 
   klass->run = simulation_run;
+  klass->cfl = simulation_cfl;
 }
 
 /* Derived variables */
@@ -1177,7 +1183,7 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
 
   t = sim->time.t;
   if ((cfl = min_cfl (sim)) < G_MAXDOUBLE)
-    sim->advection_params.dt = cfl*gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
+    sim->advection_params.dt = cfl*(* GFS_SIMULATION_CLASS (GTS_OBJECT (sim)->klass)->cfl) (sim);
   else
     sim->advection_params.dt = G_MAXINT;
   if (sim->advection_params.dt > sim->time.dtmax)

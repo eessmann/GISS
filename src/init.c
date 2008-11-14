@@ -40,6 +40,7 @@
 #include "levelset.h"
 #include "vof.h"
 #include "solid.h"
+#include "river.h"
 
 #include "modules.h"
 
@@ -102,6 +103,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_poisson_class (),
     gfs_axi_class (),
     gfs_wave_class (),
+    gfs_river_class (),
 
   gfs_surface_bc_class (),
 
