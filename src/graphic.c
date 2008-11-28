@@ -434,9 +434,11 @@ static void write_gnuplot (FttCell * cell, gpointer * data)
 
   if (bbox == NULL || (pos.x >= bbox->x1 && pos.x <= bbox->x2 &&
 		       pos.y >= bbox->y1 && pos.y <= bbox->y2 &&
-		       pos.z >= bbox->z1 && pos.z <= bbox->z2))
+		       pos.z >= bbox->z1 && pos.z <= bbox->z2)) {
+    gfs_simulation_map_inverse (GFS_SIMULATION (v->domain), &pos);
     fprintf (fp, "%g %g %g %g\n", 
 	     pos.x, pos.y, pos.z, GFS_VARIABLE (cell, v->i));
+  }
 }
 
 void gfs_write_gnuplot (GfsDomain * domain, 
