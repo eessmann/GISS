@@ -2102,7 +2102,7 @@ gdouble gfs_domain_cell_point_distance2 (GfsDomain * domain,
 /**
  * gfs_domain_advect_point:
  * @domain: a #GfsDomain.
- * @p: a #GtsPoint.
+ * @p: a #FttVector.
  * @dt: the time step.
  *
  * Updates the coordinates of point @p at time t + @dt using the
@@ -2111,7 +2111,7 @@ gdouble gfs_domain_cell_point_distance2 (GfsDomain * domain,
  * If @p is not contained within @domain, the coordinates are unchanged.
  */
 void gfs_domain_advect_point (GfsDomain * domain, 
-			      GtsPoint * p,
+			      FttVector * p,
 			      gdouble dt)
 {
   FttCell * cell;
@@ -2122,9 +2122,7 @@ void gfs_domain_advect_point (GfsDomain * domain,
   g_return_if_fail (domain != NULL);
   g_return_if_fail (p != NULL);
 
-  p0.x = p1.x = p->x; 
-  p0.y = p1.y = p->y;
-  p0.z = p1.z = p->z;
+  p0 = p1 = *p;
   cell = gfs_domain_locate (domain, p0, -1);
   if (cell == NULL)
     return;

@@ -210,7 +210,7 @@ gdouble      gfs_domain_cell_point_distance2  (GfsDomain * domain,
 					       gpointer data,
 					       FttCell ** closest);
 void         gfs_domain_advect_point          (GfsDomain * domain, 
-					       GtsPoint * p,
+					       FttVector * p,
 					       gdouble dt);
 guint        gfs_domain_size                  (GfsDomain * domain,
 					       FttTraverseFlags flags,

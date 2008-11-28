@@ -2850,87 +2850,39 @@ GfsOutputClass * gfs_output_streamline_class (void)
 
 /* GfsOutputParticle: Object */
 
-static void gfs_output_particle_destroy (GtsObject * o)
-{
-  GfsOutputParticle * l = GFS_OUTPUT_PARTICLE (o);
-
-  gts_object_destroy (GTS_OBJECT (l->p));
-  
-  (* GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class->destroy) (o);
-}
-
-static void gfs_output_particle_read (GtsObject ** o, GtsFile * fp)
-{
-  GfsOutputParticle * l = GFS_OUTPUT_PARTICLE (*o);
-
-  if (GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class->read) 
-      (o, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (p.x)");
-    return;
-  }
-  l->p->x = atof (fp->token->str);
-  gts_file_next_token (fp);
-
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (p.y)");
-    return;
-  }
-  l->p->y = atof (fp->token->str);
-  gts_file_next_token (fp);
-
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (p.z)");
-    return;
-  }
-  l->p->z = atof (fp->token->str);
-  gts_file_next_token (fp);
-}
-
-static void gfs_output_particle_write (GtsObject * o, FILE * fp)
-{
-  GfsOutputParticle * l = GFS_OUTPUT_PARTICLE (o);
-
-  if (GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class->write) (o, fp);
-  fprintf (fp, " %g %g %g", l->p->x, l->p->y, l->p->z);
-}
-
 static gboolean gfs_output_particle_event (GfsEvent * event, 
 					   GfsSimulation * sim)
 {
-  GfsOutputParticle * l = GFS_OUTPUT_PARTICLE (event);
+  GfsOutputLocation * location = GFS_OUTPUT_LOCATION (event);
   gboolean ret = FALSE;
+  guint i;
 
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_particle_class ())->parent_class)->event)
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_location_class ())->parent_class)->event)
       (event,sim)) {
     FILE * fp = GFS_OUTPUT (event)->file->fp;
-    FttVector pm;
-    pm.x = l->p->x; pm.y = l->p->y; pm.z = l->p->z;
-    gfs_simulation_map_inverse (sim, &pm);
-    fprintf (fp, "%g %g %g %g\n", sim->time.t, pm.x, pm.y, pm.z);
+
+    for (i = 0; i < location->p->len; i++) {
+      FttVector p = g_array_index (location->p, FttVector, i);
+      fprintf (fp, "%d %g %g %g %g\n", i, sim->time.t, p.x, p.y, p.z);
+    }
+    fflush (fp);
     ret = TRUE;
   }
-  /* fixme: mapping is most probably incorrect */
-  gfs_domain_advect_point (GFS_DOMAIN (sim), l->p, sim->advection_params.dt);
+  
+  for (i = 0; i < location->p->len; i++) {
+    FttVector p = g_array_index (location->p, FttVector, i);
+    gfs_simulation_map (sim, &p);
+    gfs_domain_advect_point (GFS_DOMAIN (sim), &p, sim->advection_params.dt);
+    gfs_simulation_map_inverse (sim, &p);
+    g_array_index (location->p, FttVector, i) = p;
+  }
+
   return ret;
 }
 
 static void gfs_output_particle_class_init (GfsOutputClass * klass)
 {
   GFS_EVENT_CLASS (klass)->event = gfs_output_particle_event;
-  GTS_OBJECT_CLASS (klass)->read = gfs_output_particle_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_output_particle_write;
-  GTS_OBJECT_CLASS (klass)->destroy = gfs_output_particle_destroy;
-}
-
-static void gfs_output_particle_init (GfsOutputParticle * l)
-{
-  l->p = gts_point_new (gts_point_class (), 0., 0., 0.);
 }
 
 GfsOutputClass * gfs_output_particle_class (void)
@@ -2940,15 +2892,14 @@ GfsOutputClass * gfs_output_particle_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo gfs_output_particle_info = {
       "GfsOutputParticle",
-      sizeof (GfsOutputParticle),
+      sizeof (GfsOutputLocation),
       sizeof (GfsOutputClass),
       (GtsObjectClassInitFunc) gfs_output_particle_class_init,
-      (GtsObjectInitFunc) gfs_output_particle_init,
+      (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS 
-				  (gfs_output_class ()),
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_output_location_class ()),
 				  &gfs_output_particle_info);
   }
 

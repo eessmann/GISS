@@ -333,21 +333,8 @@ GfsOutputClass * gfs_output_streamline_class  (void);
 
 /* GfsOutputParticle: Header */
 
-typedef struct _GfsOutputParticle         GfsOutputParticle;
-
-struct _GfsOutputParticle {
-  /*< private >*/
-  GfsOutput parent;
-
-  /*< public >*/
-  GtsPoint * p;
-};
-
-#define GFS_OUTPUT_PARTICLE(obj)         GTS_OBJECT_CAST (obj,\
-					       GfsOutputParticle,\
-					       gfs_output_particle_class ())
 #define GFS_IS_OUTPUT_PARTICLE(obj)     (gts_object_is_from_class (obj,\
-					       gfs_output_particle_class ()))
+								   gfs_output_particle_class ()))
 
 GfsOutputClass * gfs_output_particle_class  (void);
 
