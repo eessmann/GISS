@@ -295,3 +295,62 @@ GfsSimulationClass * gfs_river_class (void)
   return klass;
 }
 
+/* GfsBcSubcritical: Object */
+
+static void subcritical (FttCellFace * f, GfsBc * b)
+{
+  gdouble hb = gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
+  GfsRiver * river = GFS_RIVER (b->v->domain);
+  gdouble hi = GFS_VALUE (f->neighbor, river->p.v[0]);
+
+  GFS_VALUE (f->cell, b->v) = GFS_VALUE (f->neighbor, b->v) -
+    2.*hi*(sqrt (river->p.g*hi) - sqrt (river->p.g*hb));
+}
+
+static void bc_subcritical_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsBc * bc = GFS_BC (*o);
+
+  if (GTS_OBJECT_CLASS (gfs_bc_subcritical_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_bc_subcritical_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (!GFS_IS_RIVER (bc->v->domain)) {
+    gts_file_error (fp, "GfsBcSubcritical only makes sense for GfsRiver simulations");
+    return;
+  }
+
+  gfs_function_set_units (GFS_BC_VALUE (bc)->val, 1.);
+}
+
+static void gfs_bc_subcritical_init (GfsBc * object)
+{
+  object->bc =  (FttFaceTraverseFunc) subcritical;
+}
+
+static void gfs_bc_subcritical_class_init (GtsObjectClass * klass)
+{
+  klass->read = bc_subcritical_read;
+}
+
+GfsBcClass * gfs_bc_subcritical_class (void)
+{
+  static GfsBcClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_bc_subcritical_info = {
+      "GfsBcSubcritical",
+      sizeof (GfsBcValue),
+      sizeof (GfsBcClass),
+      (GtsObjectClassInitFunc) gfs_bc_subcritical_class_init,
+      (GtsObjectInitFunc) gfs_bc_subcritical_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_bc_value_class ()),
+				  &gfs_bc_subcritical_info);
+  }
+
+  return klass;
+}

@@ -32,3 +32,10 @@ struct _GfsRiver {
 						   gfs_river_class ()))
 
 GfsSimulationClass * gfs_river_class        (void);
+
+/* GfsBcSubcritical: Header */
+
+#define GFS_IS_BC_SUBCRITICAL(obj)         (gts_object_is_from_class (obj,\
+						 gfs_bc_subcritical_class ()))
+
+GfsBcClass * gfs_bc_subcritical_class  (void);
