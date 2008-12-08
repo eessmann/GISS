@@ -521,7 +521,7 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
       v0 = GFS_VARIABLE (cell, v);
       v1 = neighbor_value (&f1, v, &x1);
       v2 = neighbor_value (&f2, v, &x2);
-      
+
       s1 = 2.*(v0 - v1);
       s2 = 2.*(v2 - v0);
 
@@ -538,7 +538,62 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
   /* only one or no neighbors */
   return 0.;
 }
-					 
+
+static gdouble limiter (gdouble r, gdouble beta)
+{
+  gdouble v1 = MIN (r, beta), v2 = MIN (beta*r, 1.);
+  v1 = MAX (0., v1);
+  return MAX (v1, v2);
+}
+
+/**
+ * gfs_center_minmod_gradient:
+ * @cell: a #FttCell.
+ * @c: a component.
+ * @v: a #GfsVariable index.
+ *
+ * The gradient is normalized by the size of the cell and is limited
+ * using a minmod limiter.
+ *
+ * Returns: the value of the @c component of the gradient of variable @v
+ * at the center of the cell.  
+ */
+gdouble gfs_center_minmod_gradient (FttCell * cell,
+				    FttComponent c,
+				    guint v)
+{
+  FttDirection d = 2*c;
+  FttCellFace f1;
+  gdouble v0;
+
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (c < FTT_DIMENSION, 0.);
+
+  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+  v0 = GFS_VARIABLE (cell, v);
+  if (f1.neighbor) {
+    FttCellFace f2 = gfs_cell_face (cell, d);
+    gdouble x1 = 1., v1;
+    
+    v1 = neighbor_value (&f1, v, &x1);
+    if (f2.neighbor) {
+      /* two neighbors */
+      gdouble x2 = 1., v2;
+      
+      v2 = neighbor_value (&f2, v, &x2);
+
+      gdouble g;
+      if (v0 == v1)
+	g = 0.;
+      else
+	g = limiter ((v2 - v0)*x1/((v0 - v1)*x2), 1.)*(v0 - v1)/x1;
+      return g;
+    }
+  }
+  /* only one or no neighbors */
+  return 0.;
+}
+
 /**
  * gfs_face_gradient:
  * @face: a #FttCellFace.
@@ -549,7 +604,10 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
  * Set the value of @g as the gradient of variable @v on the
  * @face. The value returned is second order accurate in space and
  * conservative, in the sense that values at a coarse/fine cell
- * boundary are consistent.  
+ * boundary are consistent.
+ *
+ * The value of the gradient (normalised by the size of @face->cell)
+ * is given by: @g->b - @g->a*GFS_VARIABLE (@face->cell, @v).
  */
 void gfs_face_gradient (const FttCellFace * face,
 			GfsGradient * g,

@@ -116,6 +116,9 @@ void                  gfs_center_gradient_stencil   (FttCell * cell,
 gdouble               gfs_center_van_leer_gradient  (FttCell * cell,
 						     FttComponent c,
 						     guint v);
+gdouble               gfs_center_minmod_gradient    (FttCell * cell,
+						     FttComponent c,
+						     guint v);
 
 typedef struct _GfsGradient GfsGradient;
 
