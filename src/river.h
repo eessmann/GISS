@@ -4,25 +4,19 @@
 
 #define GFS_RIVER_NVAR 3
 
-typedef struct {
+typedef struct _GfsRiver GfsRiver;
+
+struct _GfsRiver {
   /*< private >*/
+  GfsSimulation parent;
   FttDirection d;
   gdouble cfl;
 
   /*< public >*/
-  GfsVariable * v[GFS_RIVER_NVAR];
-  GfsVariable * fv[FTT_NEIGHBORS][GFS_RIVER_NVAR];
+  GfsVariable * v[GFS_RIVER_NVAR], * v1[GFS_RIVER_NVAR], * dv[FTT_DIMENSION][GFS_RIVER_NVAR];
   GfsVariable * flux[GFS_RIVER_NVAR];
   gdouble g, dt;
-  GfsCenterGradient gradient;
-} GfsRiverParams;
-
-typedef struct _GfsRiver GfsRiver;
-
-struct _GfsRiver {
-  GfsSimulation parent;
-  
-  GfsRiverParams p;
+  GfsCenterGradient gradient;  
 };
 
 #define GFS_RIVER(obj)            GTS_OBJECT_CAST (obj,\
