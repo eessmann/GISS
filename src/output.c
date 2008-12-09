@@ -1210,7 +1210,8 @@ static void write_text (FttCell * cell, GfsOutputSimulation * output)
   format = g_strdup_printf (" %s", output->precision);
   while (i) {
     if (GFS_VARIABLE1 (i->data)->name)
-      fprintf (fp, format, GFS_VARIABLE (cell, GFS_VARIABLE1 (i->data)->i));
+      fprintf (fp, format, gfs_dimensional_value (i->data, 
+						  GFS_VALUE (cell, GFS_VARIABLE1 (i->data))));
     i = i->next;
   }
   g_free (format);
