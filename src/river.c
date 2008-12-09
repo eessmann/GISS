@@ -156,10 +156,8 @@ static void riemann_hllc (const gdouble * uL, const gdouble * uR,
     gdouble fL[3], fR[3];
     flux (uL, g, fL);
     flux (uR, g, fR);
-    guint i;
-    for (i = 0; i < 2; i++)
-      f[i] = (SR*fL[i] - SL*fR[i] + SL*SR*(uR[i] - uL[i]))/(SR - SL);
-
+    f[0] = (SR*fL[0] - SL*fR[0] + SL*SR*(uR[0] - uL[0]))/(SR - SL);
+    f[1] = (SR*fL[1] - SL*fR[1] + SL*SR*(uR[0]*uR[1] - uL[0]*uL[1]))/(SR - SL);
     gdouble SM = ((SL*uR[0]*(uR[1] - SR) - SR*uL[0]*(uL[1] - SL))/
 		  (uR[0]*(uR[1] - SR) - uL[0]*(uL[1] - SL)));
     if (SL <= 0. && 0. <= SM)
