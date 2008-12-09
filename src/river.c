@@ -188,31 +188,29 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     {V, -1., U,  1.}
   };
   Sym * s = &sym[face->d];
-  gdouble zbL = 0.;
+  gdouble zb = gfs_face_interpolated_value (face, r->zb->i);
   gdouble uL[4], uR[4], f[3];
   
   uL[0] = (GFS_VALUE (face->cell, r->v1[0]) + 
-	   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0])) - zbL; /* h = eta - zb */
+	   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0])) - zb; /* h = eta - zb */
   g_assert (uL[0] > 0.);
   uL[1] = s->du*(GFS_VALUE (face->cell, r->v1[s->u]) +
 		 s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->u]))/uL[0]; /* u = uh/h */
   uL[2] = s->dv*(GFS_VALUE (face->cell, r->v1[s->v]) +
 		 s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->v]))/uL[0]; /* v = vh/h */
-  uL[3] = zbL;
-
-  gdouble zbR = 0.;
+  uL[3] = zb;
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE: case FTT_FINE_COARSE:
     /* fixme: this is only first-order accurate for fine/coarse */
     uR[0] = (GFS_VALUE (face->neighbor, r->v1[0]) -
-	     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][0])) - zbR; /* h = eta - zb */
+	     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][0])) - zb; /* h = eta - zb */
     g_assert (uR[0] > 0.);
     uR[1] = s->du*(GFS_VALUE (face->neighbor, r->v1[s->u]) -
 		   s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->u]))/uR[0]; /* u = uh/h */
     uR[2] = s->dv*(GFS_VALUE (face->neighbor, r->v1[s->v]) -
 		   s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->v]))/uR[0]; /* v = vh/h */
-    uR[3] = zbR;
+    uR[3] = zb;
     break;
 
   default:
@@ -253,13 +251,53 @@ static void reset_fluxes (FttCell * cell, const GfsRiver * r)
     GFS_VALUE (cell, r->flux[v]) = 0.;
 }
 
-static void reset_predicted_fluxes (FttCell * cell, const GfsRiver * r)
+static void sources (FttCell * cell, GfsRiver * r)
+{
+  gdouble eta = GFS_VALUE (cell, r->v1[0]);
+  gdouble delta = ftt_cell_size (cell);
+  FttCellFace f1, f2;
+  FttCellNeighbors n;
+  ftt_cell_neighbors (cell, &n);
+  f1.cell = cell; f2.cell = cell;
+  f1.d = FTT_RIGHT; f2.d = FTT_LEFT;
+  f1.neighbor = n.c[f1.d]; f2.neighbor = n.c[f2.d];
+  GFS_VALUE (cell, r->vc[1]) -= r->dt*r->g*eta*(gfs_face_interpolated_value (&f1, r->zb->i) - 
+						gfs_face_interpolated_value (&f2, r->zb->i))/delta;
+  f1.d = FTT_TOP; f2.d = FTT_BOTTOM;
+  f1.neighbor = n.c[f1.d]; f2.neighbor = n.c[f2.d];
+  GFS_VALUE (cell, r->vc[2]) -= r->dt*r->g*eta*(gfs_face_interpolated_value (&f1, r->zb->i) - 
+						gfs_face_interpolated_value (&f2, r->zb->i))/delta;
+}
+
+static void advance (GfsRiver * r, GfsVariable ** v, gdouble dt)
+{
+  GfsDomain * domain = GFS_DOMAIN (r);
+  guint i;
+
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) reset_fluxes, r);
+  r->dt = dt;
+  gfs_domain_face_traverse (domain, FTT_XYZ,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttFaceTraverseFunc) face_fluxes, r);
+  r->vc = v;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) sources, r);
+  for (i = 0; i < GFS_RIVER_NVAR; i++) {
+    GfsAdvectionParams par;
+    par.v = v[i];
+    par.fv = r->flux[i];
+    par.average = FALSE;
+    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, &par);
+    gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->v[i], par.v);
+  }
+}
+
+static void copy (FttCell * cell, const GfsRiver * r)
 {
   guint v;
-  for (v = 0; v < GFS_RIVER_NVAR; v++) {
+  for (v = 0; v < GFS_RIVER_NVAR; v++)
     GFS_VALUE (cell, r->v1[v]) = GFS_VALUE (cell, r->v[v]);
-    GFS_VALUE (cell, r->flux[v]) = 0.;
-  }
 }
 
 static void river_run (GfsSimulation * sim)
@@ -292,36 +330,14 @@ static void river_run (GfsSimulation * sim)
 
     /* predictor */
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) reset_predicted_fluxes, r);
+			      (FttCellTraverseFunc) copy, r);
+    /* fixme: it would be more efficient to just copy the boundary values */
     for (v = 0; v < GFS_RIVER_NVAR; v++)
       gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->v[v], r->v1[v]);
-
-    r->dt = sim->advection_params.dt/2.;
-    gfs_domain_face_traverse (domain, FTT_XYZ,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) face_fluxes, r);
-    for (v = 0; v < GFS_RIVER_NVAR; v++) {
-      GfsAdvectionParams par;
-      par.v = r->v1[v];
-      par.fv = r->flux[v];
-      gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, &par);
-      gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->v[v], par.v);
-    }
+    advance (r, r->v1, sim->advection_params.dt/2.);
 
     /* corrector */
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) reset_fluxes, r);
-    r->dt = sim->advection_params.dt;
-    gfs_domain_face_traverse (domain, FTT_XYZ,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) face_fluxes, r);
-    for (v = 0; v < GFS_RIVER_NVAR; v++) {
-      GfsAdvectionParams par;
-      par.v = r->v[v];
-      par.fv = r->flux[v];
-      gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, &par);
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, par.v);
-    }
+    advance (r, r->v, sim->advection_params.dt);
 
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
@@ -346,7 +362,7 @@ static void minimum_cfl (FttCell * cell, GfsRiver * r)
 {
   gdouble size = ftt_cell_size (cell);
   gdouble eta = GFS_VALUE (cell, r->v[0]);
-  gdouble zb = 0.;
+  gdouble zb = GFS_VALUE (cell, r->zb);
   gdouble h = eta - zb;
   if (h > 0.) {
     gdouble uh = fabs (GFS_VALUE (cell, r->v[1]));
@@ -388,6 +404,8 @@ static void river_init (GfsRiver * r)
   r->v[1]->units = 2.;
   r->v[2] = gfs_variable_from_name (domain->variables, "V");
   r->v[2]->units = 2.;
+  r->zb = gfs_domain_add_variable (domain, "Zb", "Bed elevation above datum");
+  r->zb->units = 1.;
 
   r->flux[0] = gfs_domain_add_variable (domain, "fP", NULL);
   r->flux[1] = gfs_domain_add_variable (domain, "fU", NULL);
@@ -436,8 +454,8 @@ static void subcritical (FttCellFace * f, GfsBc * b)
   GfsRiver * river = GFS_RIVER (b->v->domain);
   gdouble hi = GFS_VALUE (f->neighbor, river->v[0]);
 
-  GFS_VALUE (f->cell, b->v) = GFS_VALUE (f->neighbor, b->v) -
-    2.*hi*(sqrt (river->g*hi) - sqrt (river->g*hb));
+  GFS_VALUE (f->cell, b->v) = GFS_VALUE (f->neighbor, b->v) + 
+    (FTT_FACE_DIRECT (f) ? -1. : 1.)*2.*hi*(sqrt (river->g*hi) - sqrt (river->g*hb));
 }
 
 static void bc_subcritical_read (GtsObject ** o, GtsFile * fp)

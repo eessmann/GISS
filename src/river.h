@@ -9,11 +9,12 @@ typedef struct _GfsRiver GfsRiver;
 struct _GfsRiver {
   /*< private >*/
   GfsSimulation parent;
-  FttDirection d;
+  GfsVariable ** vc;
   gdouble cfl;
 
   /*< public >*/
-  GfsVariable * v[GFS_RIVER_NVAR], * v1[GFS_RIVER_NVAR], * dv[FTT_DIMENSION][GFS_RIVER_NVAR];
+  GfsVariable * v[GFS_RIVER_NVAR], * v1[GFS_RIVER_NVAR], * zb;
+  GfsVariable * dv[FTT_DIMENSION][GFS_RIVER_NVAR];
   GfsVariable * flux[GFS_RIVER_NVAR];
   gdouble g, dt;
   GfsCenterGradient gradient;  
