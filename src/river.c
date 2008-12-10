@@ -8,7 +8,7 @@ static void cell_gradients (FttCell * cell,
   guint v;
 
   for (c = 0; c < FTT_DIMENSION; c++)
-    for (v = 0; v < GFS_RIVER_NVAR; v++)
+    for (v = 0; v < GFS_RIVER_NVAR + 1; v++)
       GFS_VALUE (cell, r->dv[c][v]) = (* r->gradient) (cell, c, r->v[v]->i)/2.;
 }
 
@@ -184,6 +184,9 @@ typedef struct {
   gdouble dv;
 } Sym;
 
+#define ABBKP 1
+
+#if !ABBKP
 static void face_fluxes (FttCellFace * face, GfsRiver * r)
 {
   static Sym sym[4] = {
@@ -256,6 +259,86 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     g_assert_not_reached ();
   }
 }
+#else
+static void face_fluxes (FttCellFace * face, GfsRiver * r)
+{
+  static Sym sym[4] = {
+    {U,  1., V,  1.},
+    {U, -1., V, -1.},
+    {V,  1., U, -1.},
+    {V, -1., U,  1.}
+  };
+  Sym * s = &sym[face->d];
+  gdouble etaL = (GFS_VALUE (face->cell, r->v1[0]) + 
+		  s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0]));
+  gdouble zbL = (GFS_VALUE (face->cell, r->v1[3]) + 
+		 s->du*GFS_VALUE (face->cell, r->dv[face->d/2][3]));
+  gdouble zbR = (GFS_VALUE (face->neighbor, r->v1[3]) -
+		 s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][3]));  
+  gdouble zbLR = MAX (zbL, zbR);
+  gdouble uL[4], uR[4], f[3];
+
+  uL[0] = etaL - zbL; /* h = eta - zb */
+  if (uL[0] > 1e-6) {
+    uL[1] = s->du*(GFS_VALUE (face->cell, r->v1[s->u]) +
+		   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->u]))/uL[0]; /* u = uh/h */
+    uL[2] = s->dv*(GFS_VALUE (face->cell, r->v1[s->v]) +
+		   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->v]))/uL[0]; /* v = vh/h */
+  }
+  else
+    uL[1] = uL[2] = 0.;
+  uL[0] = MAX (0., etaL - zbLR);
+  uL[3] = 0.;
+
+  gdouble etaR = (GFS_VALUE (face->neighbor, r->v1[0]) -
+		  s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][0]));
+  switch (ftt_face_type (face)) {
+  case FTT_FINE_FINE: case FTT_FINE_COARSE:
+    /* fixme: this is only first-order accurate for fine/coarse */
+    uR[0] = etaR - zbR; /* h = eta - zb */
+    if (uR[0] > 1e-6) {
+      uR[1] = s->du*(GFS_VALUE (face->neighbor, r->v1[s->u]) -
+		     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->u]))/uR[0]; /* u = uh/h */
+      uR[2] = s->dv*(GFS_VALUE (face->neighbor, r->v1[s->v]) -
+		     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->v]))/uR[0]; /* v = vh/h */
+    }
+    else
+      uR[1] = uR[2] = 0.;
+    uR[0] = MAX (0., etaR - zbLR);
+    uR[3] = 0.;
+    break;
+
+  default:
+    g_assert_not_reached ();
+  }
+
+  riemann_hllc (uL, uR, r->g, f);
+
+  gdouble dt = gfs_domain_face_fraction (r->v[0]->domain, face)*r->dt/ftt_cell_size (face->cell);
+  GFS_VALUE (face->cell, r->flux[0])    -= dt*f[0];
+  GFS_VALUE (face->cell, r->flux[s->u]) -= 
+    s->du*dt*(f[1] - r->g/2.*(uL[0]*uL[0] - (etaL - zbL)*(etaL - zbL)));
+  GFS_VALUE (face->cell, r->flux[s->v]) -= s->dv*dt*f[2];
+
+  switch (ftt_face_type (face)) {
+  case FTT_FINE_FINE:
+    GFS_VALUE (face->neighbor, r->flux[0])    += dt*f[0];
+    GFS_VALUE (face->neighbor, r->flux[s->u]) += 
+      s->du*dt*(f[1] - r->g/2.*(uR[0]*uR[0] - (etaR - zbR)*(etaR - zbR)));
+    GFS_VALUE (face->neighbor, r->flux[s->v]) += s->dv*dt*f[2];
+    break;
+
+  case FTT_FINE_COARSE:
+    GFS_VALUE (face->neighbor, r->flux[0])    += dt*f[0]/FTT_CELLS;
+    GFS_VALUE (face->neighbor, r->flux[s->u]) += s->du*dt*f[1]/FTT_CELLS;
+    GFS_VALUE (face->neighbor, r->flux[s->v]) += s->dv*dt*f[2]/FTT_CELLS;
+    break;
+    
+  default:
+    g_assert_not_reached ();
+  }
+}
+#endif
 
 /* GfsRiver: Object */
 
@@ -266,6 +349,7 @@ static void reset_fluxes (FttCell * cell, const GfsRiver * r)
     GFS_VALUE (cell, r->flux[v]) = 0.;
 }
 
+#if !ABBKP
 static void sources (FttCell * cell, GfsRiver * r)
 {
   gdouble eta = GFS_VALUE (cell, r->v1[0]);
@@ -283,6 +367,26 @@ static void sources (FttCell * cell, GfsRiver * r)
   GFS_VALUE (cell, r->vc[2]) -= r->dt*r->g*eta*(gfs_face_interpolated_value (&f1, r->zb->i) - 
 						gfs_face_interpolated_value (&f2, r->zb->i))/delta;
 }
+#else
+static void sources (FttCell * cell, GfsRiver * r)
+{
+  gdouble delta = ftt_cell_size (cell);
+
+  gdouble etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[0][0]);
+  gdouble zbL = GFS_VALUE (cell, r->v1[3]) - GFS_VALUE (cell, r->dv[0][3]);
+  gdouble etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[0][0]);
+  gdouble zbR = GFS_VALUE (cell, r->v1[3]) + GFS_VALUE (cell, r->dv[0][3]);
+
+  GFS_VALUE (cell, r->vc[1]) += r->dt*r->g/2.*(etaL - zbL + etaR - zbR)*(zbL - zbR)/delta;
+
+  etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[1][0]);
+  zbL = GFS_VALUE (cell, r->v1[3]) - GFS_VALUE (cell, r->dv[1][3]);
+  etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[1][0]);
+  zbR = GFS_VALUE (cell, r->v1[3]) + GFS_VALUE (cell, r->dv[1][3]);
+
+  GFS_VALUE (cell, r->vc[2]) += r->dt*r->g/2.*(etaL - zbL + etaR - zbR)*(zbL - zbR)/delta;
+}
+#endif
 
 static void advance (GfsRiver * r, GfsVariable ** v, gdouble dt)
 {
@@ -340,7 +444,7 @@ static void river_run (GfsSimulation * sim)
     FttComponent c;
     guint v;
     for (c = 0; c < FTT_DIMENSION; c++)
-      for (v = 0; v < GFS_RIVER_NVAR; v++)
+      for (v = 0; v < GFS_RIVER_NVAR + 1; v++)
 	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->dv[c][v]);
 
     /* predictor */
@@ -419,8 +523,10 @@ static void river_init (GfsRiver * r)
   r->v[1]->units = 2.;
   r->v[2] = gfs_variable_from_name (domain->variables, "V");
   r->v[2]->units = 2.;
+
   r->zb = gfs_domain_add_variable (domain, "Zb", "Bed elevation above datum");
   r->zb->units = 1.;
+  r->v[3] = r->zb;
 
   r->flux[0] = gfs_domain_add_variable (domain, "fP", NULL);
   r->flux[1] = gfs_domain_add_variable (domain, "fU", NULL);
@@ -438,6 +544,8 @@ static void river_init (GfsRiver * r)
   r->dv[1][1] = gfs_domain_add_variable (domain, "Uy", NULL);
   r->dv[0][2] = gfs_domain_add_variable (domain, "Vx", NULL);
   r->dv[1][2] = gfs_domain_add_variable (domain, "Vy", NULL);
+  r->dv[0][3] = gfs_domain_add_variable (domain, "Zbx", NULL);
+  r->dv[1][3] = gfs_domain_add_variable (domain, "Zby", NULL);
 }
 
 GfsSimulationClass * gfs_river_class (void)

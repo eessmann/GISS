@@ -13,8 +13,8 @@ struct _GfsRiver {
   gdouble cfl;
 
   /*< public >*/
-  GfsVariable * v[GFS_RIVER_NVAR], * v1[GFS_RIVER_NVAR], * zb;
-  GfsVariable * dv[FTT_DIMENSION][GFS_RIVER_NVAR];
+  GfsVariable * v[GFS_RIVER_NVAR + 1], * v1[GFS_RIVER_NVAR], * zb;
+  GfsVariable * dv[FTT_DIMENSION][GFS_RIVER_NVAR + 1];
   GfsVariable * flux[GFS_RIVER_NVAR];
   gdouble g, dt;
   GfsCenterGradient gradient;  
