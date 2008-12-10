@@ -164,8 +164,13 @@ static void riemann_hllc (const gdouble * uL, const gdouble * uR,
       f[2] = uL[2]*f[0];
     else if (SM <= 0. && 0. <= SR)
       f[2] = uR[2]*f[0];
-    else
+    else {
+      fprintf (stderr, "L: %g %g %g R: %g %g %g\n",
+	       uL[0], uL[1], uL[2],
+	       uR[0], uR[1], uR[2]);
+      fprintf (stderr, "SL: %g SR: %g SM: %g\n", SL, SR, SM);
       g_assert_not_reached ();
+    }
   }
 }
 
@@ -193,11 +198,16 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   
   uL[0] = (GFS_VALUE (face->cell, r->v1[0]) + 
 	   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0])) - zb; /* h = eta - zb */
-  g_assert (uL[0] > 0.);
-  uL[1] = s->du*(GFS_VALUE (face->cell, r->v1[s->u]) +
-		 s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->u]))/uL[0]; /* u = uh/h */
-  uL[2] = s->dv*(GFS_VALUE (face->cell, r->v1[s->v]) +
-		 s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->v]))/uL[0]; /* v = vh/h */
+  if (uL[0] > 1e-6) {
+    uL[1] = s->du*(GFS_VALUE (face->cell, r->v1[s->u]) +
+		   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->u]))/uL[0]; /* u = uh/h */
+    uL[2] = s->dv*(GFS_VALUE (face->cell, r->v1[s->v]) +
+		   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->v]))/uL[0]; /* v = vh/h */
+  }
+  else {
+    uL[0] = 0.;
+    uL[1] = uL[2] = 0.;
+  }
   uL[3] = zb;
 
   switch (ftt_face_type (face)) {
@@ -205,11 +215,16 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     /* fixme: this is only first-order accurate for fine/coarse */
     uR[0] = (GFS_VALUE (face->neighbor, r->v1[0]) -
 	     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][0])) - zb; /* h = eta - zb */
-    g_assert (uR[0] > 0.);
-    uR[1] = s->du*(GFS_VALUE (face->neighbor, r->v1[s->u]) -
-		   s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->u]))/uR[0]; /* u = uh/h */
-    uR[2] = s->dv*(GFS_VALUE (face->neighbor, r->v1[s->v]) -
-		   s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->v]))/uR[0]; /* v = vh/h */
+    if (uR[0] > 1e-6) {
+      uR[1] = s->du*(GFS_VALUE (face->neighbor, r->v1[s->u]) -
+		     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->u]))/uR[0]; /* u = uh/h */
+      uR[2] = s->dv*(GFS_VALUE (face->neighbor, r->v1[s->v]) -
+		     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->v]))/uR[0]; /* v = vh/h */
+    }
+    else {
+      uR[0] = 0.;
+      uR[1] = uR[2] = 0.;
+    }
     uR[3] = zb;
     break;
 
