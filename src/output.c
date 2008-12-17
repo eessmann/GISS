@@ -133,6 +133,14 @@ static gboolean gfs_output_event (GfsEvent * event, GfsSimulation * sim)
     GfsOutput * output = GFS_OUTPUT (event);
     gchar * fname;
 
+    if (!output->parallel && GFS_DOMAIN (sim)->pid > 0) {
+      if (output->file)
+	output->first_call = FALSE;
+      else
+	gfs_output_mute (output);
+      return (output->file != NULL);
+    }
+
     if (!output->dynamic) {
       if (output->file) {
 	fflush (output->file->fp);
@@ -268,9 +276,11 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
 					       format_new (startf, len, ITER));
 	    output->dynamic = TRUE;
 	  }
-	  else
+	  else {
 	    output->formats = g_slist_prepend (output->formats,
 					       format_new (startf, len, PID));
+	    output->parallel = TRUE;
+	  }
 	}
 	else if (gfs_char_in_string (*c, "eEfFgGaA")) {
 	  output->formats = g_slist_prepend (output->formats,
@@ -327,6 +337,7 @@ static void gfs_output_init (GfsOutput * object)
   object->format = NULL;
   object->formats = NULL;
   object->dynamic = FALSE;
+  object->parallel = FALSE;
   object->first_call = TRUE;
 }
 

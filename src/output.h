@@ -38,7 +38,7 @@ struct _GfsOutput {
   GfsOutputFile * file;
   gchar * format;
   GSList * formats;
-  gboolean dynamic, first_call;
+  gboolean dynamic, parallel, first_call;
 };
 
 struct _GfsOutputClass {

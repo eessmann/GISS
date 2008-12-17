@@ -386,12 +386,6 @@ void gfs_event_init (GfsEvent * event,
   g_return_if_fail (event != NULL);
   g_return_if_fail (sim != NULL);
 
-  if (GFS_DOMAIN (sim)->pid > 0 &&
-      GFS_IS_OUTPUT (event) && 
-      (!strcmp (GFS_OUTPUT (event)->format, "stderr") ||
-       !strcmp (GFS_OUTPUT (event)->format, "stdout")))
-    gfs_output_mute (GFS_OUTPUT (event));
-  
   if (event->start < 0.) { /* "init" event */
     g_assert (GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event);
     (* GFS_EVENT_CLASS (GTS_OBJECT (event)->klass)->event) (event, sim);
