@@ -1914,6 +1914,7 @@ static gboolean gfs_output_scalar_sum_event (GfsEvent * event,
 			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
 			      output->maxlevel,
 			      (FttCellTraverseFunc) add, data);
+    gfs_all_reduce (GFS_DOMAIN (sim), sum, MPI_DOUBLE, MPI_SUM);
     fprintf (GFS_OUTPUT (event)->file->fp, 
 	     "%s time: %g sum: % 15.6e\n", output->name, sim->time.t, 
 	     sum*pow (sim->physical_params.L, FTT_DIMENSION));
