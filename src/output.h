@@ -79,6 +79,7 @@ struct _GfsOutputTime {
 
   /*< public >*/
   GfsClock * clock;
+  GTimer * timer;
 };
 
 #define GFS_OUTPUT_TIME(obj)            GTS_OBJECT_CAST (obj,\

@@ -464,6 +464,7 @@ void gfs_output_file_close (GfsOutputFile * file)
 static void time_destroy (GtsObject * o)
 {
   gfs_clock_destroy (GFS_OUTPUT_TIME (o)->clock);
+  g_timer_destroy (GFS_OUTPUT_TIME (o)->timer);
 
   (* GTS_OBJECT_CLASS (gfs_output_time_class ())->parent_class->destroy) (o);  
 }
@@ -471,13 +472,17 @@ static void time_destroy (GtsObject * o)
 static gboolean time_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
-    if (!GFS_OUTPUT_TIME (event)->clock->started)
-      gfs_clock_start (GFS_OUTPUT_TIME (event)->clock);
+    GfsOutputTime * t = GFS_OUTPUT_TIME (event);
+    if (!t->clock->started) {
+      gfs_clock_start (t->clock);
+      g_timer_start (t->timer);
+    }
     fprintf (GFS_OUTPUT (event)->file->fp,
-	     "step: %7u t: %15.8f dt: %13.6e cpu: %15.8f\n",
+	     "step: %7u t: %15.8f dt: %13.6e cpu: %15.8f real: %15.8f\n",
 	     sim->time.i, sim->time.t, 
 	     sim->advection_params.dt,
-	     gfs_clock_elapsed (GFS_OUTPUT_TIME (event)->clock));
+	     gfs_clock_elapsed (t->clock),
+	     g_timer_elapsed (t->timer, NULL));
     return TRUE;
   }
   return FALSE;
@@ -492,6 +497,7 @@ static void gfs_output_time_class_init (GfsEventClass * klass)
 static void gfs_output_time_init (GfsOutputTime * time)
 {
   time->clock = gfs_clock_new ();
+  time->timer = g_timer_new ();
 }
 
 GfsOutputClass * gfs_output_time_class (void)
