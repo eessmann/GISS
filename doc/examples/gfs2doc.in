@@ -59,14 +59,16 @@ for d in sys.argv[1:]:
     hname = wdname + "/" + example.name + "_html"
     os.mkdir(hname)
     os.symlink("../" + example.name, hname + "/" + example.name)
+    wdir = os.getcwd()
     if os.system("cd " + wdname + \
-		 "&& hevea -fix " + example.name + ".tex" + \
-		 "&& imagen -res 600 -extra \"pnmscale 0.24\" " + example.name + " " + \
-		 "&& mv " + example.name + "[0-9][0-9][0-9].png " + example.name + ".html " + \
-		 hname + \
-                  " && mv " + hname + " " + os.getcwd()):
+		 "&& hevea -fix " + example.name + ".tex"):
         print "\n\n**** Errors occured while generating directory ****: " + example.name + "_html"
         myexit(1)
+    os.system("cd " + wdname + \
+                  "; imagen -res 600 -extra \"pnmscale 0.24\" " + example.name + " " + \
+                  "; mv -f " + example.name + "[0-9][0-9][0-9].png " + example.name + ".html " + \
+                  hname + \
+                  "; mv " + hname + " " + wdir)
         
     print "\n\n**** Successfully generated directory ****: " + example.name + "_html\n"
     files = example.name + "/" + example.name + ".gfs"
