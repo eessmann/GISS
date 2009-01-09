@@ -273,9 +273,9 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   Sym * s = &sym[face->d];
   gdouble etaL = (GFS_VALUE (face->cell, r->v1[0]) + 
 		  s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0]));
-  gdouble zbL = (GFS_VALUE (face->cell, r->v1[3]) + 
+  gdouble zbL = (GFS_VALUE (face->cell, r->v[3]) + 
 		 s->du*GFS_VALUE (face->cell, r->dv[face->d/2][3]));
-  gdouble zbR = (GFS_VALUE (face->neighbor, r->v1[3]) -
+  gdouble zbR = (GFS_VALUE (face->neighbor, r->v[3]) -
 		 s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][3]));  
   gdouble zbLR = MAX (zbL, zbR);
   gdouble uL[4], uR[4], f[3];
@@ -315,28 +315,22 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   riemann_hllc (uL, uR, r->g, f);
 
   gdouble dt = gfs_domain_face_fraction (r->v[0]->domain, face)*r->dt/ftt_cell_size (face->cell);
-  GFS_VALUE (face->cell, r->flux[0])    -= dt*f[0];
+  f[0] *= dt;
+  f[2] = s->dv*dt*f[2];
+  GFS_VALUE (face->cell, r->flux[0])    -= f[0];
   GFS_VALUE (face->cell, r->flux[s->u]) -= 
     s->du*dt*(f[1] - r->g/2.*(uL[0]*uL[0] - etaL*etaL));
-  GFS_VALUE (face->cell, r->flux[s->v]) -= s->dv*dt*f[2];
+  GFS_VALUE (face->cell, r->flux[s->v]) -= f[2];
 
-  switch (ftt_face_type (face)) {
-  case FTT_FINE_FINE:
-    GFS_VALUE (face->neighbor, r->flux[0])    += dt*f[0];
-    GFS_VALUE (face->neighbor, r->flux[s->u]) += 
-      s->du*dt*(f[1] - r->g/2.*(uR[0]*uR[0] - etaR*etaR));
-    GFS_VALUE (face->neighbor, r->flux[s->v]) += s->dv*dt*f[2];
-    break;
-
-  case FTT_FINE_COARSE:
-    GFS_VALUE (face->neighbor, r->flux[0])    += dt*f[0]/FTT_CELLS;
-    GFS_VALUE (face->neighbor, r->flux[s->u]) += s->du*dt*f[1]/FTT_CELLS;
-    GFS_VALUE (face->neighbor, r->flux[s->v]) += s->dv*dt*f[2]/FTT_CELLS;
-    break;
-    
-  default:
-    g_assert_not_reached ();
+  f[1] = s->du*dt*(f[1] - r->g/2.*(uR[0]*uR[0] - etaR*etaR));
+  if (ftt_face_type (face) == FTT_FINE_COARSE) {
+    f[0] /= FTT_CELLS;
+    f[1] /= FTT_CELLS;
+    f[2] /= FTT_CELLS;
   }
+  GFS_VALUE (face->neighbor, r->flux[0])    += f[0];
+  GFS_VALUE (face->neighbor, r->flux[s->u]) += f[1];
+  GFS_VALUE (face->neighbor, r->flux[s->v]) += f[2];
 }
 #endif
 
@@ -373,16 +367,16 @@ static void sources (FttCell * cell, GfsRiver * r)
   gdouble delta = ftt_cell_size (cell);
 
   gdouble etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[0][0]);
-  gdouble zbL = GFS_VALUE (cell, r->v1[3]) - GFS_VALUE (cell, r->dv[0][3]);
+  gdouble zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[0][3]);
   gdouble etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[0][0]);
-  gdouble zbR = GFS_VALUE (cell, r->v1[3]) + GFS_VALUE (cell, r->dv[0][3]);
+  gdouble zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[0][3]);
 
   GFS_VALUE (cell, r->vc[1]) += r->dt*r->g/2.*(etaL + etaR)*(zbL - zbR)/delta;
 
   etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[1][0]);
-  zbL = GFS_VALUE (cell, r->v1[3]) - GFS_VALUE (cell, r->dv[1][3]);
+  zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[1][3]);
   etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[1][0]);
-  zbR = GFS_VALUE (cell, r->v1[3]) + GFS_VALUE (cell, r->dv[1][3]);
+  zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[1][3]);
 
   GFS_VALUE (cell, r->vc[2]) += r->dt*r->g/2.*(etaL + etaR)*(zbL - zbR)/delta;
 }
