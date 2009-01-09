@@ -3115,7 +3115,7 @@ void gfs_domain_remove_ponds (GfsDomain * domain,
 			      gpointer data)
 {
   GArray * sizes;
-  gpointer dat[5];
+  gpointer dat[6];
   guint minsize;
   gboolean changed = FALSE;
   GfsVariable * v;
