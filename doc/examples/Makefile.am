@@ -8,7 +8,8 @@ EXAMPLES = \
 	logo \
 	tides \
 	ship \
-	garden
+	garden \
+	dam
 
 EXTRA_DIST = \
 	template.tex \
