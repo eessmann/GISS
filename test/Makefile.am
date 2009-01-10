@@ -24,7 +24,8 @@ TESTDIRS = \
 	oscillation \
 	geo \
 	waves \
-	nz
+	nz \
+	parabola
 
 EXTRA_DIST = \
 	template.tex \
