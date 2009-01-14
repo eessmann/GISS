@@ -347,44 +347,84 @@ static void river_class_init (GfsSimulationClass * klass)
   klass->cfl = river_cfl;
 }
 
+static gdouble cell_velocity (FttCell * cell, FttCellFace * face, GfsRiver * r)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+
+  gdouble D = GFS_VALUE (cell, r->v[0]);
+  gdouble L = GFS_SIMULATION (r)->physical_params.L;
+  return D > DRY ? L*gfs_vector_norm (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/D : 0.;
+}
+
+static gdouble cell_velocity2 (FttCell * cell, FttCellFace * face, GfsRiver * r)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+
+  gdouble D = GFS_VALUE (cell, r->v[0]);
+  gdouble L = GFS_SIMULATION (r)->physical_params.L;
+  return D > DRY ? L*L*gfs_vector_norm2 (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/(D*D) : 0.;
+}
+
 static void river_init (GfsRiver * r)
 {
   GfsDomain * domain = GFS_DOMAIN (r);
 
+  gts_object_destroy (GTS_OBJECT (gfs_variable_from_name (domain->variables, "Pmac")));
+
   r->v[0] = gfs_variable_from_name (domain->variables, "P");
   r->v[0]->units = 1.;
+  g_free (r->v[0]->description);
+  r->v[0]->description = g_strdup ("Fluid thickness");
+
   r->v[1] = gfs_variable_from_name (domain->variables, "U");
   r->v[1]->units = 2.;
+  g_free (r->v[1]->description);
+  r->v[1]->description = g_strdup ("x-component of the fluid flux");
+
   r->v[2] = gfs_variable_from_name (domain->variables, "V");
   r->v[2]->units = 2.;
+  g_free (r->v[2]->description);
+  r->v[2]->description = g_strdup ("y-component of the fluid flux");
 
   r->zb = gfs_domain_add_variable (domain, "Zb", "Bed elevation above datum");
   r->zb->units = 1.;
   r->v[3] = r->zb;
 
-  r->H = gfs_domain_add_variable (domain, "H", "Elevation above datum");
+  r->H = gfs_domain_add_variable (domain, "H", "Elevation above datum (Zb + P)");
   r->H->units = 1.;
 
-  r->flux[0] = gfs_domain_add_variable (domain, "fP", NULL);
-  r->flux[1] = gfs_domain_add_variable (domain, "fU", NULL);
-  r->flux[2] = gfs_domain_add_variable (domain, "fV", NULL);
+  r->flux[0] = gfs_domain_add_variable (domain, NULL, NULL);
+  r->flux[1] = gfs_domain_add_variable (domain, NULL, NULL);
+  r->flux[2] = gfs_domain_add_variable (domain, NULL, NULL);
 
-  r->v1[0] = gfs_domain_add_variable (domain, "P1", NULL);
-  r->v1[1] = gfs_domain_add_variable (domain, "U1", NULL);
+  r->v1[0] = gfs_domain_add_variable (domain, NULL, NULL);
+  r->v1[1] = gfs_domain_add_variable (domain, NULL, NULL);
   r->v1[1]->component = FTT_X;
-  r->v1[2] = gfs_domain_add_variable (domain, "V1", NULL);
+  r->v1[2] = gfs_domain_add_variable (domain, NULL, NULL);
   r->v1[2]->component = FTT_Y;
 
-  r->dv[0][0] = gfs_domain_add_variable (domain, "Px", NULL);
-  r->dv[1][0] = gfs_domain_add_variable (domain, "Py", NULL);
-  r->dv[0][1] = gfs_domain_add_variable (domain, "Ux", NULL);
-  r->dv[1][1] = gfs_domain_add_variable (domain, "Uy", NULL);
-  r->dv[0][2] = gfs_domain_add_variable (domain, "Vx", NULL);
-  r->dv[1][2] = gfs_domain_add_variable (domain, "Vy", NULL);
-  r->dv[0][3] = gfs_domain_add_variable (domain, "Zbx", NULL);
-  r->dv[1][3] = gfs_domain_add_variable (domain, "Zby", NULL);
+  r->dv[0][0] = gfs_domain_add_variable (domain, "Px", "x-component of the thickness gradient");
+  r->dv[1][0] = gfs_domain_add_variable (domain, "Py", "y-component of the thickness gradien");
+  r->dv[0][1] = gfs_domain_add_variable (domain, "Ux", "x-component of the flux gradient");
+  r->dv[1][1] = gfs_domain_add_variable (domain, "Uy", "y-component of the flux gradient");
+  r->dv[0][2] = gfs_domain_add_variable (domain, "Vx", "x-component of the flux gradient");
+  r->dv[1][2] = gfs_domain_add_variable (domain, "Vy", "y-component of the flux gradient");
+  r->dv[0][3] = gfs_domain_add_variable (domain, "Zbx", "x-component of the bed slope");
+  r->dv[1][3] = gfs_domain_add_variable (domain, "Zby", "y-component of the bed slope");
 
   GFS_SIMULATION (r)->advection_params.gradient = gfs_center_minmod_gradient;
+  GFS_SIMULATION (r)->advection_params.cfl = 0.5;
+
+  GfsDerivedVariable * v = gfs_derived_variable_from_name (domain->derived_variables, "Velocity");
+  v->func = cell_velocity;
+  v = gfs_derived_variable_from_name (domain->derived_variables, "Velocity2");
+  v->func = cell_velocity2;
+
+  gfs_domain_remove_derived_variable (domain, "Vorticity");
+  gfs_domain_remove_derived_variable (domain, "Divergence");
+  gfs_domain_remove_derived_variable (domain, "Lambda2");
+  gfs_domain_remove_derived_variable (domain, "Curvature");
+  gfs_domain_remove_derived_variable (domain, "D2");
 }
 
 GfsSimulationClass * gfs_river_class (void)

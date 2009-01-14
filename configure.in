@@ -14,7 +14,7 @@ dnl are available for $ac_help expansion (don't we all *love* autoconf?)
 # Remember to update rpm/gerris.spec when changing the version number.
 GFS_MAJOR_VERSION=1
 GFS_MINOR_VERSION=3
-GFS_MICRO_VERSION=1
+GFS_MICRO_VERSION=2
 GFS_INTERFACE_AGE=0
 GFS_BINARY_AGE=0
 GFS_VERSION=$GFS_MAJOR_VERSION.$GFS_MINOR_VERSION.$GFS_MICRO_VERSION
