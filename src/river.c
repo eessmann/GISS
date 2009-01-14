@@ -374,22 +374,25 @@ static void river_run (GfsSimulation * sim)
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
     /* gradients */
+    gfs_domain_timer_start (domain, "gradients");
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) cell_gradients, r);
     FttComponent c;
     guint v;
     for (c = 0; c < FTT_DIMENSION; c++)
       for (v = 0; v < GFS_RIVER_NVAR + 1; v++)
 	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->dv[c][v]);
+    gfs_domain_timer_stop (domain, "gradients");
 
     /* predictor */
-    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) copy, r);
-    /* fixme: it would be more efficient to just copy the boundary values */
-    for (v = 0; v < GFS_RIVER_NVAR; v++)
-      gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->v[v], r->v1[v]);
+    gfs_domain_timer_start (domain, "predictor");
+    domain_traverse_all_leaves (domain, (FttCellTraverseFunc) copy, r);
     advance (r, r->v1, sim->advection_params.dt/2.);
+    gfs_domain_timer_stop (domain, "predictor");
 
     /* corrector */
+    gfs_domain_timer_start (domain, "corrector");
     advance (r, r->v, sim->advection_params.dt);
+    gfs_domain_timer_stop (domain, "corrector");
 
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
