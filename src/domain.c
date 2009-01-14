@@ -2659,7 +2659,7 @@ GfsVariable * gfs_domain_add_variable (GfsDomain * domain,
  *
  * Adds a new variable @name to @domain or returns the variable of
  * @domain with the same name. In either case the description of the
- * variable name is set to @description.
+ * variable name is set to @description (if it is not %NULL).
  *
  * Returns: the new or already existing variable or %NULL if @name is a
  * reserved variable name.
@@ -2675,9 +2675,11 @@ GfsVariable * gfs_domain_get_or_add_variable (GfsDomain * domain,
 
   v = gfs_variable_from_name (domain->variables, name);
   if (v != NULL) {
-    if (v->description)
-      g_free (v->description);
-    v->description = description ? g_strdup (description) : NULL;
+    if (description) {
+      if (v->description)
+	g_free (v->description);
+      v->description = g_strdup (description);
+    }
   }
   else
     v = gfs_domain_add_variable (domain, name, description);
