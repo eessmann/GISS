@@ -612,7 +612,7 @@ int main (int argc, char * argv[])
 #if FTT_2D
   else if (triangulate) {
     GtsSurface * ss1, * ss2;
-    gpointer data[3];
+    gpointer data[4];
 
     gfs_clock_start (GFS_DOMAIN (s1)->timer);
     gfs_clock_start (GFS_DOMAIN (s2)->timer);
