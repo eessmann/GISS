@@ -27,8 +27,22 @@ extern "C" {
 #include <gmodule.h>
 #include "ftt.h"
 
-/* gfs_all_reduce() defaults to nothing without MPI */
-#define gfs_all_reduce(domain, p, type, op)
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#  ifdef HAVE_MPI
+#    include <mpi.h>
+#    define gfs_all_reduce(domain, p, type, op) {				\
+      if ((domain)->pid >= 0) {						\
+        union { int a; float b; double c;} global;			\
+        MPI_Allreduce (&(p), &global, 1, type, op, MPI_COMM_WORLD);	\
+        memcpy (&(p), &global, sizeof (p));				\
+      }									\
+    }
+#else
+    /* gfs_all_reduce() defaults to nothing without MPI */
+#    define gfs_all_reduce(domain, p, type, op)
+#  endif /* HAVE_MPI */
+#endif /* HAVE_CONFIG_H */
 
 #define GFS_DOUBLE_TO_POINTER(d)     (*((gpointer *) &(d)))
 

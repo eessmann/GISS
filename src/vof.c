@@ -20,11 +20,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include "vof.h"
-
-#include "config.h"
-#ifdef HAVE_MPI
-#  include "mpi_boundary.h"
-#endif
 #include "variable.h"
 #include "adaptive.h"
 #include "graphic.h"

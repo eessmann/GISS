@@ -32,9 +32,6 @@
 #include "tension.h"
 #include "map.h"
 #include "version.h"
-#ifdef HAVE_MPI
-#  include "mpi_boundary.h"
-#endif /* HAVE_MPI */
 
 /* GfsSimulation: object */
 

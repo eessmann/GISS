@@ -23,10 +23,11 @@
 #include <string.h>
 #include "domain.h"
 
-#include "config.h"
 #include "advection.h"
 #include "source.h"
 #include "solid.h"
+
+#include "config.h"
 #ifdef HAVE_MPI
 #  include "mpi_boundary.h"
 #  include "init.h"

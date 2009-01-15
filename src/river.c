@@ -337,7 +337,7 @@ static gdouble river_cfl (GfsSimulation * sim)
   GfsRiver * r = GFS_RIVER (sim);
   r->cfl = G_MAXDOUBLE;
   gfs_domain_traverse_leaves (GFS_DOMAIN (sim), (FttCellTraverseFunc) minimum_cfl, r);
-  gfs_all_reduce (domain, r->cfl, MPI_DOUBLE, MPI_MIN);
+  gfs_all_reduce (GFS_DOMAIN (sim), r->cfl, MPI_DOUBLE, MPI_MIN);
   return r->cfl;
 }
 
