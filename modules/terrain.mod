@@ -1179,9 +1179,8 @@ static void refine_terrain_write (GtsObject * o, FILE * fp)
 {
   GfsRefineTerrain * t = GFS_REFINE_TERRAIN (o);
   (* GTS_OBJECT_CLASS (gfs_refine_terrain_class ())->parent_class->write) (o, fp);
-  fprintf (fp, " %s ", t->name);
+  fprintf (fp, " %s { basename = %s }", t->name, t->basename);
   gfs_function_write (t->criterion, fp);
-  fprintf (fp, " { basename = %s }", t->basename);
 }
 
 static void gfs_refine_terrain_class_init (GfsRefineClass * klass)
