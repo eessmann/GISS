@@ -239,13 +239,13 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
     output->format = g_strdup (fp->token->str);
     gts_file_next_token (fp);
     
-    if (!strcmp (output->format, "stderr")) {
-      output->file = gfs_output_file_open ("stderr", "w");
-      return;
-    }
-    
-    if (!strcmp (output->format, "stdout")) {
-      output->file = gfs_output_file_open ("stdout", "w");
+    if (!strcmp (output->format, "stderr") || !strcmp (output->format, "stdout")) {
+      if (GFS_DOMAIN (gfs_object_simulation (output))->pid > 0)
+	gfs_output_mute (output);
+      else {
+	g_assert (!output->file);
+	output->file = gfs_output_file_open (output->format, "w");
+      }
       return;
     }
     
