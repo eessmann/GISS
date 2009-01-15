@@ -99,6 +99,10 @@ typedef struct {
 
 static void face_fluxes (FttCellFace * face, GfsRiver * r)
 {
+  if (GFS_VALUE (face->cell, r->v1[0]) <= DRY &&
+      GFS_VALUE (face->neighbor, r->v1[0]) <= DRY)
+    return;
+
   static Sym sym[4] = {
     {U,  1., V,  1.},
     {U, -1., V, -1.},
@@ -529,6 +533,69 @@ GfsBcClass * gfs_bc_subcritical_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_bc_value_class ()),
 				  &gfs_bc_subcritical_info);
+  }
+
+  return klass;
+}
+
+/* GfsBcValve: Object */
+
+static void valve (FttCellFace * f, GfsBc * b)
+{
+  gdouble un = (FTT_FACE_DIRECT (f) ? - 1. : 1.)*GFS_VALUE (f->neighbor, b->v);
+  if (un > 0.) /* Valve opened (Neumann) */
+    GFS_VALUE (f->cell, b->v) = 
+      GFS_VALUE (f->neighbor, b->v) +
+      gfs_function_face_value (GFS_BC_VALUE (b)->val, f)
+      *ftt_cell_size (f->cell);
+  else /* Valve closed (Dirichlet 0) */
+    GFS_VALUE (f->cell, b->v) = - GFS_VALUE (f->neighbor, b->v);
+}
+
+static void homogeneous_valve (FttCellFace * f, GfsBc * b)
+{
+  gdouble un = (FTT_FACE_DIRECT (f) ? - 1. : 1.)*GFS_VALUE (f->neighbor, b->v);
+  if (un > 0.) /* Valve opened (Neumann 0) */
+    GFS_VALUE (f->cell, b->v) = GFS_VALUE (f->neighbor, b->v);
+  else /* Valve closed (Dirichlet 0) */
+    GFS_VALUE (f->cell, b->v) = - GFS_VALUE (f->neighbor, b->v);
+}
+
+static void face_valve (FttCellFace * f, GfsBc * b)
+{
+  gdouble un = (FTT_FACE_DIRECT (f) ? - 1. : 1.)*GFS_VALUE (f->neighbor, b->v);
+  if (un > 0.) /* Valve opened (Neumann) */
+    GFS_STATE (f->cell)->f[f->d].v = 
+      GFS_VALUE (f->neighbor, b->v) +
+      gfs_function_face_value (GFS_BC_VALUE (b)->val, f)
+      *ftt_cell_size (f->cell)/2.;
+  else /* Valve closed (Dirichlet 0) */
+    GFS_STATE (f->cell)->f[f->d].v = 0.;
+}
+
+static void gfs_bc_valve_init (GfsBc * object)
+{
+  object->bc =             (FttFaceTraverseFunc) valve;
+  object->homogeneous_bc = (FttFaceTraverseFunc) homogeneous_valve;
+  object->face_bc =        (FttFaceTraverseFunc) face_valve;
+}
+
+GfsBcClass * gfs_bc_valve_class (void)
+{
+  static GfsBcClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_bc_valve_info = {
+      "GfsBcValve",
+      sizeof (GfsBcValue),
+      sizeof (GfsBcClass),
+      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_bc_valve_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_bc_value_class ()),
+				  &gfs_bc_valve_info);
   }
 
   return klass;
