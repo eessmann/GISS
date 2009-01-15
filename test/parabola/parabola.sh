@@ -142,7 +142,7 @@ if cat <<EOF | gnuplot ; then :
     bed(x) = h0*(x/a)**2
     set key top center
     plot [-5000:5000] \
-      'sim-6-1500.txt' u 1:8:(\$4+\$8) w filledcu lc 3 t 'Numerical', \
+      'sim-6-1500.txt' u 1:7:8 w filledcu lc 3 t 'Numerical', \
       psi(x) > bed(x) ? psi(x) : bed(x) lc 2 t 'Analytical', \
       bed(x) lw 3 lc 1 lt 1 t 'Bed profile'
 EOF
