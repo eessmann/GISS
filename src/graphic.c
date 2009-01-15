@@ -749,7 +749,7 @@ gint gfs_combine_ppm (gchar ** fname, guint nname, FILE * fp)
       for (y = 0; y < image[i]->height; y++)
 	for (x = 0; x < image[i]->width; x++) {
 	  gint x1 = x + image[i]->min.x - combo->min.x;
-	  gint y1 = y + image[i]->min.y - combo->min.y;
+	  gint y1 = y + combo->min.y + combo->height - image[i]->min.y - image[i]->height;
 	  guchar r = image[i]->data[y][x][0];
 	  guchar g = image[i]->data[y][x][1];
 	  guchar b = image[i]->data[y][x][2];
@@ -764,6 +764,7 @@ gint gfs_combine_ppm (gchar ** fname, guint nname, FILE * fp)
     image_write (combo, fp);
     image_destroy (combo);
   }
+  gfs_combine_close (f, image, nname, 0);
 }
 
 static void write_square (FttCell * cell, gpointer * data)
