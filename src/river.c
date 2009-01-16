@@ -282,6 +282,8 @@ static void river_run (GfsSimulation * sim)
   GfsDomain * domain = GFS_DOMAIN (sim);
   GfsRiver * r = GFS_RIVER (sim);
 
+  r->v[3] = r->zb = gfs_variable_from_name (domain->variables, "Zb");
+
   r->g = sim->physical_params.g/sim->physical_params.L;
   r->gradient = sim->advection_params.gradient;
 
@@ -416,9 +418,8 @@ static void river_init (GfsRiver * r)
   g_free (r->v[2]->description);
   r->v[2]->description = g_strdup ("y-component of the fluid flux");
 
-  r->zb = gfs_domain_add_variable (domain, "Zb", "Bed elevation above datum");
-  r->zb->units = 1.;
-  r->v[3] = r->zb;
+  GfsVariable * zb = gfs_domain_add_variable (domain, "Zb", "Bed elevation above datum");
+  zb->units = 1.;
 
   r->H = gfs_domain_add_variable (domain, "H", "Elevation above datum (Zb + P)");
   r->H->units = 1.;

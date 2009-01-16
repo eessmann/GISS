@@ -28,6 +28,133 @@
 
 static gchar * default_path = ".";
 
+/* RSurfaces */
+
+typedef struct {
+  RSurface ** rs;
+  guint nrs; 
+  gchar * basename;  
+} RSurfaces;
+
+static void rsurfaces_destroy (RSurfaces * rs)
+{
+  g_free (rs->basename);
+  if (rs->rs) {
+    guint i;
+    for (i = 0; i < rs->nrs; i++)
+      r_surface_close (rs->rs[i]);
+    g_free (rs->rs);
+  }
+}
+
+static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
+{
+  gchar * path = NULL;
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_STRING, "basename", TRUE},
+      {GTS_STRING, "path",      TRUE},
+      {GTS_NONE}
+    };
+    gchar * basename = NULL;
+    var[0].data = &basename;
+    var[1].data = &path;
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;
+    if (var[0].set) { g_free (rs->basename); rs->basename = basename; }
+    if (!var[1].set) path = g_strdup (default_path);
+  }
+  else
+    path = g_strdup (default_path);
+
+  if (!strcmp (rs->basename, "*")) { /* file globbing */
+    gchar * pattern = g_strconcat (path, "/*.Data", NULL);
+    glob_t pglob;
+    if (glob (pattern, GLOB_ERR, NULL, &pglob)) {
+      gts_file_error (fp, "cannot find/open terrain databases in path:\n%s", pattern);
+      g_free (pattern);
+      g_free (path);
+      return;
+    }
+    g_free (pattern);
+    g_free (rs->basename);
+    rs->basename = NULL;
+    guint i;
+    for (i = 0; i < pglob.gl_pathc; i++) {
+      pglob.gl_pathv[i][strlen (pglob.gl_pathv[i]) - 5] = '\0';
+      rs->rs = g_realloc (rs->rs, (rs->nrs + 1)*sizeof (RSurface *));
+      rs->rs[rs->nrs] = r_surface_open (pglob.gl_pathv[i], "r", -1);
+      if (!rs->rs[rs->nrs]) {
+	gts_file_error (fp, "cannot open terrain database `%s'", pglob.gl_pathv[i]);
+	globfree (&pglob);
+	g_free (path);
+	return;
+      }
+      if (rs->basename) {
+	gchar * pathbasename = g_strconcat (rs->basename, ",", pglob.gl_pathv[i], NULL);
+	g_free (rs->basename);
+	rs->basename = pathbasename;
+      }
+      else
+	rs->basename = g_strdup (pglob.gl_pathv[i]);
+      rs->nrs++;
+    }
+    globfree (&pglob);
+  }
+  else { /* basename is of the form: set1,set2,set3... */
+    gchar ** names = g_strsplit (rs->basename, ",", 0);
+    if (path) {
+      g_free (rs->basename);
+      rs->basename = NULL;
+    }
+    gchar ** s = names;
+    while (*s) {
+      rs->rs = g_realloc (rs->rs, (rs->nrs + 1)*sizeof (RSurface *));
+      if (path) {
+	/* search path */
+	gchar ** pathes = g_strsplit (path, ":", 0);
+	gchar ** spath = pathes, * fname;
+	g_assert (*spath);
+	do {
+	  fname = (*s)[0] == '/' ? g_strdup (*s) : g_strconcat (*spath, "/", *s, NULL);
+	  rs->rs[rs->nrs] = r_surface_open (fname, "r", -1);
+	} while (rs->rs[rs->nrs] == NULL && *(++spath));
+	g_strfreev (pathes);
+
+	if (rs->basename) {
+	  gchar * pathbasename = g_strconcat (rs->basename, ",", fname, NULL);
+	  g_free (rs->basename);
+	  rs->basename = pathbasename;
+	  g_free (fname);
+	}
+	else
+	  rs->basename = fname;
+      }
+      else
+	rs->rs[rs->nrs] = r_surface_open (*s, "r", -1);
+      if (!rs->rs[rs->nrs]) {
+	if (path)
+	  gts_file_error (fp, "cannot find/open terrain database `%s' in path:\n%s", *s, path);
+	else
+	  gts_file_error (fp, "cannot open terrain database `%s'", *s);
+	g_strfreev (names);
+	g_free (path);
+	return;
+      }
+      rs->nrs++;
+      s++;
+    }
+    g_strfreev (names);
+  }
+  g_free (path);
+}
+
+static void rsurfaces_write (RSurfaces * rs, FILE * fp)
+{
+  fprintf (fp, " { basename = %s }", rs->basename);
+}
+
 /* GfsRefineTerrain: Header */
 
 typedef struct _GfsRefineTerrain         GfsRefineTerrain;
@@ -46,11 +173,10 @@ struct _GfsRefineTerrain {
   gdouble front, scale;
 #endif
 
-  RSurface ** rs;
-  guint nrs;
+  RSurfaces rs;
 
   /*< public >*/
-  gchar * name, * basename;  
+  gchar * name;
   GfsVariable * h[NM], * he, * hn;
   GfsFunction * criterion;
 };
@@ -69,7 +195,7 @@ typedef struct {
   FttVector c;
   FttVector p[4];
   gdouble min[2], max[2], h;
-  GfsRefineTerrain * t;
+  RSurfaces * rs;
   FttCell * cell;
 } Polygon;
 
@@ -83,13 +209,12 @@ static void map_inverse (GfsSimulation * sim, FttVector * p, Polygon * poly)
   poly->c.x += p->x; poly->c.y += p->y;
 }
 
-static void polygon_init (Polygon * p, FttCell * cell, GfsRefineTerrain * t)
+static void polygon_init (GfsSimulation * sim, Polygon * p, FttCell * cell, RSurfaces * rs)
 {
-  GfsSimulation * sim = gfs_object_simulation (t);
   FttVector q;
   ftt_cell_pos (cell, &q);
   p->cell = cell;
-  p->t = t;
+  p->rs = rs;
   p->min[0] = p->min[1] = G_MAXDOUBLE;
   p->max[0] = p->max[1] = - G_MAXDOUBLE;
   p->c.x = p->c.y = 0.;
@@ -157,7 +282,7 @@ typedef struct {
   gboolean relative;
 } RMS;
 
-static void rms_init (RMS * rms, Polygon * p, gboolean relative)
+static void rms_init (GfsRefineTerrain * t, RMS * rms, Polygon * p, gboolean relative)
 {
   guint i, j;
   for (i = 0; i < NM + 1; i++)
@@ -165,7 +290,7 @@ static void rms_init (RMS * rms, Polygon * p, gboolean relative)
   for (i = 0; i < NM; i++)
     for (j = 0; j < NM; j++)
       rms->m[i][j] = 0.;
-  rms->t = p->t;
+  rms->t = t;
   rms->cell = p->cell;
   rms->relative = relative;
   rms->min = G_MAXDOUBLE;
@@ -361,53 +486,6 @@ static void parent_cell_coefficients (FttCell * cell, GfsVariable ** v, gdouble 
   hP[3] = h[3]/4.;
 }
 
-#if OLD
-static int rms_add (double p[3], gpointer * data)
-{
-  RMS * rms = data[0];
-  Polygon * poly = data[1];
-  if (polygon_contains (poly, p)) {
-    FttVector r;
-    r.x = p[0]; r.y = p[1];
-    gfs_simulation_map (gfs_object_simulation (poly->t), &r);
-    if (p[2] > rms->max) rms->max = p[2];
-    if (p[2] < rms->min) rms->min = p[2];
-    if (rms->relative)
-      p[2] -= cell_value (ftt_cell_parent (poly->cell), poly->t->h, r);
-    FttVector q;
-    gdouble h = ftt_cell_size (poly->cell)/2.;
-    ftt_cell_pos (poly->cell, &q);
-    p[0] = (r.x - q.x)/h; p[1] = (r.y - q.y)/h;
-    rms->m[0][1] += p[0];      rms->m[0][2] += p[1];      rms->m[0][3] += p[0]*p[1];
-    rms->m[1][1] += p[0]*p[0]; rms->m[1][2] += p[0]*p[1]; rms->m[1][3] += p[0]*p[0]*p[1];
-                               rms->m[2][2] += p[1]*p[1]; rms->m[2][3] += p[0]*p[1]*p[1];
-                                                          rms->m[3][3] += p[0]*p[0]*p[1]*p[1];
-    rms->H[0] += p[2];
-    rms->H[1] += p[0]*p[2];
-    rms->H[2] += p[1]*p[2];
-    rms->H[3] += p[0]*p[1]*p[2];
-    rms->H[4] += p[2]*p[2];
-    rms->m[0][0] += 1.;
-  }
-  return 0;
-}
-
-static void update_terrain_rms (FttCell * cell, GfsRefineTerrain * t, gboolean relative,
-				RMS * rms)
-{
-  Polygon poly;
-  polygon_init (&poly, cell, t);
-  rms_init (rms, &poly, relative);
-  guint i;
-  gpointer data[2];
-  data[0] = rms;
-  data[1] = &poly;
-  for (i = 0; i < t->nrs; i++)
-    r_surface_query_region (t->rs[i], poly.min, poly.max, (RSurfaceQuery) rms_add, data);
-}
-
-#else
-
 static void projection_matrix (Polygon * poly, double m[2][2])
 {
   double x[4], y[4];
@@ -422,17 +500,17 @@ static void projection_matrix (Polygon * poly, double m[2][2])
   m[1][1] = (y[0] + y[1] - y[3] - y[2])/4.;
 }
 
-static void update_terrain_rms1 (Polygon * poly, gboolean relative, RMS * rms)
+static void update_terrain_rms (GfsRefineTerrain * t, Polygon * poly, gboolean relative, RMS * rms)
 {
-  rms_init (rms, poly, relative);
+  rms_init (t, rms, poly, relative);
   RSurfaceSum s;
   r_surface_sum_init (&s);
   guint i;
   RSurfaceRect rect;
   rect[0].l = poly->c.x - poly->h/2.; rect[0].h = poly->c.x + poly->h/2.; 
   rect[1].l = poly->c.y - poly->h/2.; rect[1].h = poly->c.y + poly->h/2.; 
-  for (i = 0; i < poly->t->nrs; i++)
-    r_surface_query_region_sum (poly->t->rs[i],
+  for (i = 0; i < poly->rs->nrs; i++)
+    r_surface_query_region_sum (poly->rs->rs[i],
 				(RSurfaceCheck) polygon_includes,
 				(RSurfaceCheck) polygon_intersects, poly, 
 				rect, &s);
@@ -533,20 +611,14 @@ static void update_terrain_rms1 (Polygon * poly, gboolean relative, RMS * rms)
   }
 }
 
-#endif
-
 static void update_terrain (FttCell * cell, GfsRefineTerrain * t)
 {
   RMS rms;
   guint i;
   g_assert (GFS_VALUE (cell, t->type) == REFINED);
   Polygon poly;
-  polygon_init (&poly, cell, t);
-#if OLD
-  update_terrain_rms (cell, t, ftt_cell_parent (cell) != NULL, &rms);
-#else
-  update_terrain_rms1 (&poly, ftt_cell_parent (cell) != NULL, &rms);
-#endif
+  polygon_init (gfs_object_simulation (t), &poly, cell, &t->rs);
+  update_terrain_rms (t, &poly, ftt_cell_parent (cell) != NULL, &rms);
   rms_update (&rms);
 
   for (i = 0; i < NM; i++)
@@ -614,12 +686,8 @@ static void update_error_estimate (FttCell * cell, GfsRefineTerrain * t, gboolea
     RMS rms;
     guint i;
     Polygon poly;
-    polygon_init (&poly, cell, t);
-#if OLD
-    update_terrain_rms (cell, t, relative, &rms);
-#else
-    update_terrain_rms1 (&poly, relative, &rms);
-#endif
+    polygon_init (gfs_object_simulation (t), &poly, cell, &t->rs);
+    update_terrain_rms (t, &poly, relative, &rms);
     for (i = 0; i < NM; i++)
       rms.h[i] = GFS_VALUE (cell, t->h[i]);
     GFS_VALUE (cell, t->he) = rms_minimum (&rms);
@@ -975,15 +1043,10 @@ static void refine_terrain_destroy (GtsObject * object)
     gfs_domain_remove_derived_variable (domain, dname);
     g_free (dname);
   }
-  
   g_free (t->name);
-  g_free (t->basename);
-  if (t->rs) {
-    guint i;
-    for (i = 0; i < t->nrs; i++)
-      r_surface_close (t->rs[i]);
-    g_free (t->rs);
-  }
+
+  rsurfaces_destroy (&t->rs);
+  
   gts_object_destroy (GTS_OBJECT (t->criterion));  
   (* GTS_OBJECT_CLASS (gfs_refine_terrain_class ())->parent_class->destroy) (object);
 }
@@ -1036,105 +1099,9 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
   t->name = g_strdup (fp->token->str);
   gts_file_next_token (fp);
 
-  gchar * path = NULL;
-  if (fp->type == '{') {
-    GtsFileVariable var[] = {
-      {GTS_STRING, "basename", TRUE},
-      {GTS_STRING, "path",      TRUE},
-      {GTS_NONE}
-    };
-    gchar * basename = NULL;
-    var[0].data = &basename;
-    var[1].data = &path;
-    gts_file_assign_variables (fp, var);
-    if (fp->type == GTS_ERROR)
-      return;
-    if (var[0].set) { g_free (t->basename); t->basename = basename; }
-    if (!var[1].set) path = g_strdup (default_path);
-  }
-  else
-    path = g_strdup (default_path);
-
-  if (!strcmp (t->basename, "*")) { /* file globbing */
-    gchar * pattern = g_strconcat (path, "/*.Data", NULL);
-    glob_t pglob;
-    if (glob (pattern, GLOB_ERR, NULL, &pglob)) {
-      gts_file_error (fp, "cannot find/open terrain databases in path:\n%s", pattern);
-      g_free (pattern);
-      g_free (path);
-      return;
-    }
-    g_free (pattern);
-    g_free (t->basename);
-    t->basename = NULL;
-    guint i;
-    for (i = 0; i < pglob.gl_pathc; i++) {
-      pglob.gl_pathv[i][strlen (pglob.gl_pathv[i]) - 5] = '\0';
-      t->rs = g_realloc (t->rs, (t->nrs + 1)*sizeof (RSurface *));
-      t->rs[t->nrs] = r_surface_open (pglob.gl_pathv[i], "r", -1);
-      if (!t->rs[t->nrs]) {
-	gts_file_error (fp, "cannot open terrain database `%s'", pglob.gl_pathv[i]);
-	globfree (&pglob);
-	g_free (path);
-	return;
-      }
-      if (t->basename) {
-	gchar * pathbasename = g_strconcat (t->basename, ",", pglob.gl_pathv[i], NULL);
-	g_free (t->basename);
-	t->basename = pathbasename;
-      }
-      else
-	t->basename = g_strdup (pglob.gl_pathv[i]);
-      t->nrs++;
-    }
-    globfree (&pglob);
-  }
-  else { /* basename is of the form: set1,set2,set3... */
-    gchar ** names = g_strsplit (t->basename, ",", 0);
-    if (path) {
-      g_free (t->basename);
-      t->basename = NULL;
-    }
-    gchar ** s = names;
-    while (*s) {
-      t->rs = g_realloc (t->rs, (t->nrs + 1)*sizeof (RSurface *));
-      if (path) {
-	/* search path */
-	gchar ** pathes = g_strsplit (path, ":", 0);
-	gchar ** spath = pathes, * fname;
-	g_assert (*spath);
-	do {
-	  fname = (*s)[0] == '/' ? g_strdup (*s) : g_strconcat (*spath, "/", *s, NULL);
-	  t->rs[t->nrs] = r_surface_open (fname, "r", -1);
-	} while (t->rs[t->nrs] == NULL && *(++spath));
-	g_strfreev (pathes);
-
-	if (t->basename) {
-	  gchar * pathbasename = g_strconcat (t->basename, ",", fname, NULL);
-	  g_free (t->basename);
-	  t->basename = pathbasename;
-	  g_free (fname);
-	}
-	else
-	  t->basename = fname;
-      }
-      else
-	t->rs[t->nrs] = r_surface_open (*s, "r", -1);
-      if (!t->rs[t->nrs]) {
-	if (path)
-	  gts_file_error (fp, "cannot find/open terrain database `%s' in path:\n%s", *s, path);
-	else
-	  gts_file_error (fp, "cannot open terrain database `%s'", *s);
-	g_strfreev (names);
-	g_free (path);
-	return;
-      }
-      t->nrs++;
-      s++;
-    }
-    g_strfreev (names);
-  }
-  g_free (path);
+  rsurfaces_read (&t->rs, fp);
+  if (fp->type == GTS_ERROR)
+    return;
 
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
   guint i;
@@ -1181,7 +1148,8 @@ static void refine_terrain_write (GtsObject * o, FILE * fp)
 {
   GfsRefineTerrain * t = GFS_REFINE_TERRAIN (o);
   (* GTS_OBJECT_CLASS (gfs_refine_terrain_class ())->parent_class->write) (o, fp);
-  fprintf (fp, " %s { basename = %s }", t->name, t->basename);
+  fprintf (fp, " %s", t->name);
+  rsurfaces_write (&t->rs, fp);
   gfs_function_write (t->criterion, fp);
 }
 
@@ -1197,7 +1165,7 @@ static void gfs_refine_terrain_class_init (GfsRefineClass * klass)
 static void gfs_refine_terrain_init (GfsRefineTerrain * t)
 {
   t->criterion = gfs_function_new (gfs_function_class (), 0.);
-  t->basename = g_strdup ("*");
+  t->rs.basename = g_strdup ("*");
 }
 
 GfsRefineClass * gfs_refine_terrain_class (void)
@@ -1431,6 +1399,116 @@ GfsEventClass * gfs_terrain_class (void)
   return klass;
 }
 
+/* GfsVariableTerrain: header */
+
+typedef struct _GfsVariableTerrain                GfsVariableTerrain;
+
+struct _GfsVariableTerrain {
+  /*< private >*/
+  GfsVariable parent;
+
+  /*< public >*/
+  RSurfaces rs;
+};
+
+#define GFS_VARIABLE_TERRAIN(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsVariableTerrain,\
+					           gfs_variable_terrain_class ())
+#define GFS_IS_VARIABLE_TERRAIN(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_terrain_class ()))
+
+GfsVariableClass * gfs_variable_terrain_class  (void);
+
+/* GfsVariableTerrain: Object */
+
+static void variable_terrain_destroy (GtsObject * o)
+{
+  rsurfaces_destroy (&GFS_VARIABLE_TERRAIN (o)->rs);
+
+  (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->destroy) (o);
+}
+
+static void variable_terrain_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  rsurfaces_read (&GFS_VARIABLE_TERRAIN (*o)->rs, fp);
+}
+
+static void variable_terrain_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->write) (o, fp);
+
+  rsurfaces_write (&GFS_VARIABLE_TERRAIN (o)->rs, fp);
+}
+
+static void variable_terrain_class_init (GtsObjectClass * klass)
+{
+  klass->destroy = variable_terrain_destroy;
+  klass->read = variable_terrain_read;
+  klass->write = variable_terrain_write;
+}
+
+static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
+{
+  GfsSimulation * sim = GFS_SIMULATION (v->domain);
+  FttCellChildren child;
+  guint j;
+
+  ftt_cell_children (parent, &child);
+  for (j = 0; j < FTT_CELLS; j++) 
+    if (child.c[j]) {
+      Polygon poly;
+      RSurfaceRect rect;
+      RSurfaceSum s;
+      guint i;
+      polygon_init (sim, &poly, child.c[j], &GFS_VARIABLE_TERRAIN (v)->rs);
+      r_surface_sum_init (&s);
+      rect[0].l = poly.c.x - poly.h/2.; rect[0].h = poly.c.x + poly.h/2.; 
+      rect[1].l = poly.c.y - poly.h/2.; rect[1].h = poly.c.y + poly.h/2.; 
+      for (i = 0; i < poly.rs->nrs; i++)
+	r_surface_query_region_sum (poly.rs->rs[i],
+				    (RSurfaceCheck) polygon_includes,
+				    (RSurfaceCheck) polygon_intersects, &poly, 
+				    rect, &s);
+      if (s.n > 0)
+	GFS_VALUE (child.c[j], v) = s.H0/s.n/sim->physical_params.L;
+      else
+	GFS_VALUE (child.c[j], v) = GFS_VALUE (parent, v);
+    }
+}
+
+static void variable_terrain_init (GfsVariableTerrain * v)
+{
+  GFS_VARIABLE1 (v)->units = 1.;
+  GFS_VARIABLE1 (v)->description = g_strdup ("Terrain");
+  GFS_VARIABLE1 (v)->coarse_fine = variable_terrain_coarse_fine;
+  v->rs.basename = g_strdup ("*");
+}
+
+GfsVariableClass * gfs_variable_terrain_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_terrain_info = {
+      "GfsVariableTerrain",
+      sizeof (GfsVariableTerrain),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_terrain_class_init,
+      (GtsObjectInitFunc) variable_terrain_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
+				  &gfs_variable_terrain_info);
+  }
+
+  return klass;
+}
+
 /* Initialize module */
 
 /* only define gfs_module_name for "official" modules (i.e. those installed in
@@ -1445,5 +1523,6 @@ const gchar * g_module_check_init (void)
     default_path = path;
   gfs_refine_terrain_class ();
   gfs_terrain_class ();
+  gfs_variable_terrain_class ();
   return NULL;
 }
