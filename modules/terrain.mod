@@ -33,11 +33,12 @@ static gchar * default_path = ".";
 typedef struct {
   RSurface ** rs;
   guint nrs; 
-  gchar * basename;  
+  gchar * path, * basename;  
 } RSurfaces;
 
 static void rsurfaces_destroy (RSurfaces * rs)
 {
+  g_free (rs->path);
   g_free (rs->basename);
   if (rs->rs) {
     guint i;
@@ -56,14 +57,12 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
       {GTS_STRING, "path",      TRUE},
       {GTS_NONE}
     };
-    gchar * basename = NULL;
-    var[0].data = &basename;
-    var[1].data = &path;
+    var[0].data = &rs->basename;
+    var[1].data = &rs->path;
     gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR)
       return;
-    if (var[0].set) { g_free (rs->basename); rs->basename = basename; }
-    if (!var[1].set) path = g_strdup (default_path);
+    path = g_strconcat (default_path, ":", rs->path, NULL);
   }
   else
     path = g_strdup (default_path);
@@ -78,8 +77,6 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
       return;
     }
     g_free (pattern);
-    g_free (rs->basename);
-    rs->basename = NULL;
     guint i;
     for (i = 0; i < pglob.gl_pathc; i++) {
       pglob.gl_pathv[i][strlen (pglob.gl_pathv[i]) - 5] = '\0';
@@ -91,23 +88,12 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
 	g_free (path);
 	return;
       }
-      if (rs->basename) {
-	gchar * pathbasename = g_strconcat (rs->basename, ",", pglob.gl_pathv[i], NULL);
-	g_free (rs->basename);
-	rs->basename = pathbasename;
-      }
-      else
-	rs->basename = g_strdup (pglob.gl_pathv[i]);
       rs->nrs++;
     }
     globfree (&pglob);
   }
   else { /* basename is of the form: set1,set2,set3... */
     gchar ** names = g_strsplit (rs->basename, ",", 0);
-    if (path) {
-      g_free (rs->basename);
-      rs->basename = NULL;
-    }
     gchar ** s = names;
     while (*s) {
       rs->rs = g_realloc (rs->rs, (rs->nrs + 1)*sizeof (RSurface *));
@@ -121,15 +107,6 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
 	  rs->rs[rs->nrs] = r_surface_open (fname, "r", -1);
 	} while (rs->rs[rs->nrs] == NULL && *(++spath));
 	g_strfreev (pathes);
-
-	if (rs->basename) {
-	  gchar * pathbasename = g_strconcat (rs->basename, ",", fname, NULL);
-	  g_free (rs->basename);
-	  rs->basename = pathbasename;
-	  g_free (fname);
-	}
-	else
-	  rs->basename = fname;
       }
       else
 	rs->rs[rs->nrs] = r_surface_open (*s, "r", -1);
@@ -152,7 +129,14 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
 
 static void rsurfaces_write (RSurfaces * rs, FILE * fp)
 {
-  fprintf (fp, " { basename = %s }", rs->basename);
+  if (rs->path || rs->basename) {
+    fputs (" {\n", fp);
+    if (rs->path)
+      fprintf (fp, "  path = %s\n", rs->path);
+    if (rs->basename)
+      fprintf (fp, "  basename = %s\n", rs->basename);
+    fputc ('}', fp);
+  }
 }
 
 /* GfsRefineTerrain: Header */
