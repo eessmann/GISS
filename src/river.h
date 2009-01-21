@@ -9,7 +9,6 @@ typedef struct _GfsRiver GfsRiver;
 struct _GfsRiver {
   /*< private >*/
   GfsSimulation parent;
-  GfsVariable ** vc;
   gdouble cfl;
 
   /*< public >*/

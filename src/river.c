@@ -1,5 +1,25 @@
+/* Gerris - The GNU Flow Solver
+ * Copyright (C) 2001-2009 National Institute of Water and Atmospheric Research
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.  
+ */
+
 #include "river.h"
 #include "adaptive.h"
+#include "source.h"
 
 #define DRY 1e-6
 
@@ -163,17 +183,17 @@ static void sources (FttCell * cell, GfsRiver * r)
   gdouble etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[0][0]);
   gdouble zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[0][3]);
 
-  GFS_VALUE (cell, r->vc[1]) += r->dt*r->g/2.*(etaL + etaR)*(zbL - zbR)/delta;
+  GFS_VALUE (cell, r->v[1]) += r->dt*r->g/2.*(etaL + etaR)*(zbL - zbR)/delta;
 
   etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[1][0]);
   zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[1][3]);
   etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[1][0]);
   zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[1][3]);
 
-  GFS_VALUE (cell, r->vc[2]) += r->dt*r->g/2.*(etaL + etaR)*(zbL - zbR)/delta;
+  GFS_VALUE (cell, r->v[2]) += r->dt*r->g/2.*(etaL + etaR)*(zbL - zbR)/delta;
 }
 
-static void advance (GfsRiver * r, GfsVariable ** v, gdouble dt)
+static void advance (GfsRiver * r, gdouble dt)
 {
   GfsDomain * domain = GFS_DOMAIN (r);
   guint i;
@@ -183,16 +203,18 @@ static void advance (GfsRiver * r, GfsVariable ** v, gdouble dt)
   gfs_domain_face_traverse (domain, FTT_XYZ,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) face_fluxes, r);
-  r->vc = v;
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) sources, r);
   for (i = 0; i < GFS_RIVER_NVAR; i++) {
     GfsAdvectionParams par;
-    par.v = v[i];
+    par.v = r->v[i];
     par.fv = r->flux[i];
     par.average = FALSE;
     gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, &par);
-    gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->v[i], par.v);
+    gfs_domain_variable_centered_sources (domain, par.v, par.v, dt);
   }
+  gfs_source_coriolis_implicit (domain, dt);
+  for (i = 0; i < GFS_RIVER_NVAR; i++)
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->v[i]);
 }
 
 static void copy (FttCell * cell, const GfsRiver * r)
@@ -287,12 +309,16 @@ static void river_run (GfsSimulation * sim)
     /* predictor */
     gfs_domain_timer_start (domain, "predictor");
     domain_traverse_all_leaves (domain, (FttCellTraverseFunc) copy, r);
-    advance (r, r->v1, sim->advection_params.dt/2.);
+    for (v = 0; v < GFS_RIVER_NVAR; v++)
+      gfs_variables_swap (r->v[v], r->v1[v]);
+    advance (r, sim->advection_params.dt/2.);
+    for (v = 0; v < GFS_RIVER_NVAR; v++)
+      gfs_variables_swap (r->v[v], r->v1[v]);
     gfs_domain_timer_stop (domain, "predictor");
 
     /* corrector */
     gfs_domain_timer_start (domain, "corrector");
-    advance (r, r->v, sim->advection_params.dt);
+    advance (r, sim->advection_params.dt);
     gfs_domain_timer_stop (domain, "corrector");
 
     gfs_domain_cell_traverse (domain,
