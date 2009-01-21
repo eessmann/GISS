@@ -672,8 +672,10 @@ static void update_height_and_check_for_refinement (FttCell * cell, GfsRefineTer
       ftt_cell_children (cell, &child);
       for (i = 0; i < FTT_CELLS; i++)
 	GFS_VALUE (child.c[i], t->type) = REFINED;
-      t->refined = TRUE;
     }
+
+    if (!FTT_CELL_IS_LEAF (cell))
+      t->refined = TRUE;
   }
   else
     g_assert (GFS_VALUE (cell, t->type) == NEW_CHILD);
