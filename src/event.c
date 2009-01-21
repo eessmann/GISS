@@ -419,11 +419,16 @@ void gfs_event_do (GfsEvent * event, GfsSimulation * sim)
 
   g_return_if_fail (event != NULL);
   g_return_if_fail (sim != NULL);
+  
+  gchar * name = GTS_OBJECT (event)->klass->info.name;
+  gfs_domain_timer_start (GFS_DOMAIN (sim), name);
 
   klass = GFS_EVENT_CLASS (GTS_OBJECT (event)->klass);
   g_assert (klass->event);
   if ((* klass->event) (event, sim) && klass->post_event)
     (* klass->post_event) (event, sim);
+
+  gfs_domain_timer_stop (GFS_DOMAIN (sim), name);
 }
 
 /**
