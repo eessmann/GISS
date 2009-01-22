@@ -100,9 +100,7 @@ Define G 9.81
 	Pt = MAX (0., h0 + Psi (x, t) - Zb)
     }
     PhysicalParams { g = G }
-    Init { istep = 1 } {
-	U = (P <= 0. ? 0. : U/(1. + dt*tau))
-    }
+    SourceCoriolis 0 tau
     Time { end = 6000 }
     OutputSimulation { start = 1500 } sim-LEVEL-%g.txt { format = text }
     OutputSimulation { start = end } end-LEVEL.txt { format = text }
