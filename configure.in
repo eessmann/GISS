@@ -307,6 +307,10 @@ if test x$netcdf = xfalse -o x$no_gsl = xyes; then
 fi
 AM_CONDITIONAL(BUILD_TIDE, test x$netcdf = xtrue -a x$no_gsl = x)
 
+# Stokes module requires a fortran compiler
+AC_PROG_F77
+AM_CONDITIONAL(BUILD_STOKES, test x$F77 != x)
+
 dnl header file checks
 AC_CHECK_HEADERS(fpu_control.h,
   AC_CHECK_DECL(_FPU_SETCW, 

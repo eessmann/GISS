@@ -13,6 +13,9 @@ endif
 if BUILD_TIDE
 TIDE = libtide2D.la libtide3D.la libtide2D3.la
 endif
+if BUILD_STOKES
+STOKES = libstokes2D.la libstokes3D.la
+endif
 
 pkglib_LTLIBRARIES = \
 	$(MAP) \
@@ -20,8 +23,7 @@ pkglib_LTLIBRARIES = \
 	libterrain3D.la \
 	libterrain2D3.la \
 	$(TIDE) \
-	libstokes2D.la \
-	libstokes3D.la
+	$(STOKES)
 
 bin_PROGRAMS = \
 	xyz2rsurface \

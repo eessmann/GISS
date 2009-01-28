@@ -5,11 +5,11 @@
 Summary: The Gerris Flow Solver (development snapshot)
 Name: gerris
 %if "%{current}" == ""
-Version: 1.3.0
+Version: 1.3.2
 %else
 Version: %{current}
 %endif
-Release: 8.%{alphatag}cvs%{?dist}
+Release: 9.%{alphatag}cvs%{?dist}
 License: GPLv2
 # SuSE should have this macro set. If doubt specify in ~/.rpmmacros
 %if 0%{?suse_version}
@@ -25,11 +25,11 @@ Source0: %{name}-stable.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %if 0%{?fedora_version}
 Requires: proj gsl netcdf
-BuildRequires: netcdf-devel proj-devel
+BuildRequires: netcdf-devel proj-devel gcc-gfortran
 %endif
 %if 0%{?suse_version}
 Requires: libproj0 gsl libnetcdf-4
-BuildRequires: libnetcdf-devel libproj-devel
+BuildRequires: libnetcdf-devel libproj-devel gcc-gfortran
 %endif
 # For both distros
 Requires: gts-snapshot-devel >= %{gts_version} pkgconfig gcc sed gawk m4
@@ -153,6 +153,10 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 
 
 %changelog
+* Thu Jan 29 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 9
+- Version change (1.3.1 -> 1.3.2) related minor fixes
+- Added fortran dependency
+
 * Wed Jul 16 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 8
 - Version change (1.2.0 -> 1.3.0) related minor fixes
 - Added macro for gts version specification

@@ -5,7 +5,7 @@ Source: gerris-snapshot
 Section: math
 Priority: extra
 Maintainer: Stephane Popinet <popinet@users.sf.net>
-Build-Depends: debhelper (>> 4), autotools-dev, netcdfg-dev, libgsl0-dev
+Build-Depends: debhelper (>> 4), autotools-dev, netcdfg-dev, libgsl0-dev, g77 | gfortran
 
 Package: gerris-snapshot
 Section: math
