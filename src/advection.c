@@ -759,10 +759,10 @@ static void traverse_non_merged (FttCell * cell, gpointer * datum)
   else {
     GfsMergedTraverseFunc func = (GfsMergedTraverseFunc) datum[0];
     gpointer data = datum[1];
-    GSList * merged = g_slist_prepend (NULL, cell);
-
-    (* func) (merged, data);
-    g_slist_free (merged);    
+    GSList merged;
+    merged.data = cell;
+    merged.next = NULL;
+    (* func) (&merged, data);
   }
 }
 
