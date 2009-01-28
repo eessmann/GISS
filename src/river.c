@@ -99,6 +99,10 @@ typedef struct {
 
 static void face_fluxes (FttCellFace * face, GfsRiver * r)
 {
+  if (GFS_VALUE (face->cell, r->v1[0]) <= DRY &&
+      GFS_VALUE (face->neighbor, r->v1[0]) <= DRY)
+    return;
+
   static Sym sym[4] = {
     {U,  1., V,  1.},
     {U, -1., V, -1.},
