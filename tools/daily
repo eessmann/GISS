@@ -75,7 +75,7 @@ darcs_upgrade()
 
 build_gts=false
 if ( cd $wdir/$gts && make -k clean && \
-    ( darcs pull -a | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then
+    ( darcs pull -a $darcs_gts/gts-mainline | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then
     gts_changed=false
 else
     gts_changed=true
@@ -93,7 +93,7 @@ fi
 
 build_gerris=false
 if ( cd $wdir/$gerris && make -k clean && \
-    ( darcs pull -a | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then
+    ( darcs pull -a $darcs_gerris/gerris-devel | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then
     gerris_changed=false
     if $build_gts ; then
 	build_gerris=true
@@ -116,7 +116,7 @@ fi
 
 build_gfsview=false
 if ( cd $wdir/$gfsview && make -k clean && \
-    ( darcs pull -a | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then :
+    ( darcs pull -a $darcs_gfsview/gfsview-devel | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then :
     gfsview_changed=false
     if $build_gerris ; then
 	build_gfsview=true
