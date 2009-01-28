@@ -153,7 +153,7 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-if (Curve('error',1,4) - Curve('error.ref',1,4)).max() > 1e-4:
+if (Curve('error',1,4) - Curve('error.ref',1,4)).max() > 1e-3:
     print (Curve('error',1,4) - Curve('error.ref',1,4)).max()
     exit(1)
 EOF
