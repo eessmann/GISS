@@ -58,6 +58,7 @@ static void gfs_variable_read (GtsObject ** o, GtsFile * fp)
     if ((i = g_slist_find (domain->variables_io, old)))
       i->data = v;
     domain->variables = g_slist_remove (domain->variables, old);
+    v->units = old->units;
     gts_object_destroy (GTS_OBJECT (old));
   }
   variable_init_domain (v, domain);
@@ -525,6 +526,81 @@ GfsVariableClass * gfs_variable_diagonal_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
 				  &gfs_variable_diagonal_info);
+  }
+
+  return klass;
+}
+
+/* GfsVariableFunction: Object */
+
+static void variable_function_destroy (GtsObject * o)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_VARIABLE_FUNCTION (o)->f));
+
+  (* GTS_OBJECT_CLASS (gfs_variable_function_class ())->parent_class->destroy) (o);
+}
+
+static void variable_function_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_function_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsVariableFunction * v = GFS_VARIABLE_FUNCTION (*o);
+  gfs_function_read (v->f, GFS_DOMAIN (gfs_object_simulation (*o)), fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  gfs_function_set_units (v->f, GFS_VARIABLE1 (*o)->units);
+}
+
+static void variable_function_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_function_class ())->parent_class->write) (o, fp);
+
+  gfs_function_write (GFS_VARIABLE_FUNCTION (o)->f, fp);
+}
+
+static void variable_function_class_init (GtsObjectClass * klass)
+{
+  klass->destroy = variable_function_destroy;
+  klass->read = variable_function_read;
+  klass->write = variable_function_write;
+}
+
+static void variable_function_coarse_fine (FttCell * parent, GfsVariable * v)
+{
+  GfsFunction * f = GFS_VARIABLE_FUNCTION (v)->f;
+  FttCellChildren child;
+  guint n;
+
+  ftt_cell_children (parent, &child);
+  for (n = 0; n < FTT_CELLS; n++)
+    if (child.c[n])
+      GFS_VALUE (child.c[n], v) = gfs_function_value (f, child.c[n]);
+}
+
+static void variable_function_init (GfsVariableFunction * v)
+{
+  GFS_VARIABLE1 (v)->coarse_fine = variable_function_coarse_fine;
+  v->f = gfs_function_new (gfs_function_class (), 0.);
+}
+
+GfsVariableClass * gfs_variable_function_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_function_info = {
+      "GfsVariableFunction",
+      sizeof (GfsVariableFunction),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_function_class_init,
+      (GtsObjectInitFunc) variable_function_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
+				  &gfs_variable_function_info);
   }
 
   return klass;

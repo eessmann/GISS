@@ -136,6 +136,26 @@ GfsVariableClass * gfs_variable_filtered_class  (void);
 
 GfsVariableClass * gfs_variable_diagonal_class  (void);
 
+/* GfsVariableFunction: header */
+
+typedef struct _GfsVariableFunction                GfsVariableFunction;
+
+struct _GfsVariableFunction {
+  /*< private >*/
+  GfsVariable parent;
+
+  /*< public >*/
+  GfsFunction * f;
+};
+
+#define GFS_VARIABLE_FUNCTION(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsVariableFunction,\
+					           gfs_variable_function_class ())
+#define GFS_IS_VARIABLE_FUNCTION(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_function_class ()))
+
+GfsVariableClass * gfs_variable_function_class  (void);
+
 /* GfsDerivedVariable: Header */
 
 struct _GfsDerivedVariable {
