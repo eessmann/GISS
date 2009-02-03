@@ -343,7 +343,7 @@ int main(int argc, char *argv[])
 	{
 	  if(LOAD_cdf_filename!=NULL)sprintf(netcdf_filename,"%s",LOAD_cdf_filename);
 	  else {printf("=======>> The load Netcdf file was not given\n");usage();}
-	  rstatus=fes2004_prediction(netcdf_filename,0,nb_position,lat,lon,time,prediction,1);
+	  rstatus=fes2004_prediction(netcdf_filename,time_reference,nb_position,lat,lon,time,prediction,1);
 	  sprintf(output_filename,"loading.pred");
 	  rstatus=prediction_output(nb_position,prediction,lat,lon,time,time_reference,output_filename);
 	}
@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
 	  if(TIDE_cdf_filename!=NULL)sprintf(netcdf_filename,"%s",TIDE_cdf_filename);
 	  else {printf("=======>> The tide Netcdf file was not given do not forget the -A option !!!!\n");usage();printf("=======>> The tide Netcdf file was not given do not forget the -A option !!!!\n");}
 	  printf("entering in the prediction function ...\n");
-	  rstatus=fes2004_prediction(netcdf_filename,0,nb_position,lat,lon,time,prediction,1);
+	  rstatus=fes2004_prediction(netcdf_filename,time_reference,nb_position,lat,lon,time,prediction,1);
 	  sprintf(output_filename,"tide.pred");
 	  rstatus=prediction_output(nb_position,prediction,lat,lon,time,time_reference,output_filename);
 	}

@@ -276,9 +276,9 @@ void  init_admittance_coeff(int *sindice,int *aindice,int *nb,int GROUPE)
 	sindice[1]=6;
 	sindice[2]=8;
 	aindice[0]=31;
-	aindice[0]=32;
-	aindice[0]=33;
-	aindice[0]=34;
+	aindice[1]=32;// LR, modif: 2008/12/18
+	aindice[2]=33;// LR, modif: 2008/12/18
+	aindice[3]=34;// LR, modif: 2008/12/18
 	*nb=4;
 	break;
       }

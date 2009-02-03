@@ -178,7 +178,7 @@ extern void * pred_coeur(void *);
 extern void * extract_coeur(void *);
 extern double predic_and_admit(float *,float *,int ,mega_struct *,double ,double );
 extern int interpolation_w_mask(double ,double ,int ,int ,double *,float *);
-extern void compute_admittance(gsl_matrix *,gsl_permutation *,gsl_vector *,gsl_vector *,gsl_vector *,gsl_vector *,spectrum_struct *,int ,int * ,int *);
+extern void compute_admittance(gsl_matrix *,gsl_permutation *,gsl_vector *,gsl_vector *,gsl_vector *,gsl_vector *,spectrum_struct *,int ,int * ,int *,double);
 extern double geo_d_km(double ,double ,double ,double );
 //##############################################################################################################################
 //          the next functions are a part of the Aktarus tide library developped 

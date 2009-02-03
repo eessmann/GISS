@@ -296,17 +296,20 @@ double predic_and_admit(float *data_amp,float *data_phi,int pt,mega_struct *P,do
   /*------------------------------------------------------------------------------*/
   /* spline admittance coefficients for semi-diurnal tidal waves                  */
   /*------------------------------------------------------------------------------*/      
-  compute_admittance(P->Mat,P->Perm,P->sec_r,P->sec_i,P->res_r,P->res_i,P->spectrum, SEMI_DIURNAL,P->sindice,P->aindice);
+  // compute_admittance(P->Mat,P->Perm,P->sec_r,P->sec_i,P->res_r,P->res_i,P->spectrum, SEMI_DIURNAL,P->sindice,P->aindice); LR, change: 2008/12/17 
+  compute_admittance(P->Mat,P->Perm,P->sec_r,P->sec_i,P->res_r,P->res_i,P->spectrum, SEMI_DIURNAL,P->sindice,P->aindice,P->time[P->cnt]);
   
   /*------------------------------------------------------------------------------*/
   /* spline admittance coefficients for diurnal tidal waves                       */
   /*------------------------------------------------------------------------------*/
-  compute_admittance(P->Mat,P->Perm,P->sec_r,P->sec_i,P->res_r,P->res_i,P->spectrum, DIURNAL,P->sindice,P->aindice);
+  // compute_admittance(P->Mat,P->Perm,P->sec_r,P->sec_i,P->res_r,P->res_i,P->spectrum, DIURNAL,P->sindice,P->aindice); LR, change: 2008/12/17 
+  compute_admittance(P->Mat,P->Perm,P->sec_r,P->sec_i,P->res_r,P->res_i,P->spectrum, DIURNAL,P->sindice,P->aindice,P->time[P->cnt]);
   
   /*------------------------------------------------------------------------------*/
   /* spline admittance coefficients for long period tidal waves                   */
   /*------------------------------------------------------------------------------*/  
-  compute_admittance(P->Mat,P->Perm,P->sec_r,P->sec_i,P->res_r,P->res_i,P->spectrum, LONG,P->sindice,P->aindice);
+  // compute_admittance(P->Mat,P->Perm,P->sec_r,P->sec_i,P->res_r,P->res_i,P->spectrum, LONG,P->sindice,P->aindice); LR, change: 2008/12/17 
+  compute_admittance(P->Mat,P->Perm,P->sec_r,P->sec_i,P->res_r,P->res_i,P->spectrum, LONG,P->sindice,P->aindice,P->time[P->cnt]);
   
   /*------------------------------------------------------------------------------*/
   /* compute prediction for Ssa tidal wave                                        */
@@ -448,7 +451,7 @@ int interpolation_w_mask(double lon,double lat,int indice_x,int indice_y,double 
 /*                                                    */
 /*####################################################*/
 
-void compute_admittance(gsl_matrix *Mat,gsl_permutation *Perm,gsl_vector *sec_r,gsl_vector *sec_i,gsl_vector *res_r,gsl_vector *res_i,spectrum_struct *spectrum,int GROUPE,int *sindice ,int *aindice)
+void compute_admittance(gsl_matrix *Mat,gsl_permutation *Perm,gsl_vector *sec_r,gsl_vector *sec_i,gsl_vector *res_r,gsl_vector *res_i,spectrum_struct *spectrum,int GROUPE,int *sindice ,int *aindice, double time)
 {
 
   int i,n,gsl_out;
@@ -483,7 +486,7 @@ void compute_admittance(gsl_matrix *Mat,gsl_permutation *Perm,gsl_vector *sec_r,
       
       spectrum[aindice[i]].Z.reel=(gsl_vector_get(res_r,0)*cos(tau*omega*d2r)+gsl_vector_get(res_r,1)*sin(tau*omega*d2r)+gsl_vector_get(res_r,2))*spectrum[aindice[i]].wave.Ap;
       spectrum[aindice[i]].Z.imag=(gsl_vector_get(res_i,0)*cos(tau*omega*d2r)+gsl_vector_get(res_i,1)*sin(tau*omega*d2r)+gsl_vector_get(res_i,2))*spectrum[aindice[i]].wave.Ap;
-      spectrum[aindice[i]].prediction=Tide_prediction(spectrum[aindice[i]].time,spectrum[aindice[i]].wave,spectrum[aindice[i]].Z,0,spectrum[aindice[i]].CTO); 
+      spectrum[aindice[i]].prediction=Tide_prediction(time,spectrum[aindice[i]].wave,spectrum[aindice[i]].Z,0,spectrum[aindice[i]].CTO); 
     }
 
 }
