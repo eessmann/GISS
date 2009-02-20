@@ -34,6 +34,7 @@ struct _GfsWave {
   /*< private >*/
   GfsSimulation parent;
   guint ik, ith;
+  void (* source) (GfsWave * wave);
 
   /*< public >*/
   guint nk, ntheta;

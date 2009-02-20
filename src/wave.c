@@ -23,10 +23,13 @@
 
 /* GfsWave: Object */
 
+#define F0 0.04
+#define GAMMA 1.1
+
 static double frequency (int ik)
 {
-  double gamma = 1.1;
-  double f0 = 0.04;
+  double gamma = GAMMA;
+  double f0 = F0;
   return f0*pow(gamma, ik);
 }
       
@@ -48,11 +51,14 @@ static gdouble cell_E (FttCell * cell, FttCellFace * face, GfsDomain * domain)
   GfsWave * wave = GFS_WAVE (domain);
   GfsVariable *** F = wave->F;
   guint ik, ith;
-  gdouble E = 0.;
-  for (ik = 0; ik < wave->nk - 1; ik++) {
-    gdouble df = (frequency (ik + 1) - frequency (ik))/2.;
+  gdouble E = 0., sigma = 2.*M_PI*F0, sgamma = (GAMMA - 1./GAMMA)/2.;
+  for (ik = 0; ik < wave->nk; ik++) {
+    gdouble df = sigma*sgamma;
+    gdouble dE = 0.;
     for (ith = 0; ith < wave->ntheta; ith++)
-      E += (GFS_VALUE (cell, F[ik + 1][ith]) + GFS_VALUE (cell, F[ik][ith]))*df;
+      dE += GFS_VALUE (cell, F[ik][ith]);
+    E += dE*df;
+    sigma *= GAMMA;
   }
   return E*2.*M_PI/wave->ntheta;
 }
@@ -147,6 +153,11 @@ static void wave_run (GfsSimulation * sim)
     }
 
     sim->advection_params.dt = dt;
+
+    /* source terms */
+    if (wave->source)
+      (* wave->source) (wave);
+
     sim->time.t = sim->tnext = tnext;
     sim->time.i++;
 
@@ -321,7 +332,7 @@ static void gfs_init_wave_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_init_wave_class ())->parent_class->destroy) (object);
 }
 
-static void init_action (FttCell * cell, GfsInitWave * event)
+static void init_energy (FttCell * cell, GfsInitWave * event)
 {
   GfsWave * wave = GFS_WAVE (gfs_object_simulation (event));
   for (wave->ik = 0; wave->ik < wave->nk; wave->ik++)
@@ -342,7 +353,7 @@ static gboolean gfs_init_wave_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_wave_class ())->parent_class)->event) 
       (event, sim)) {
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) init_action, event);
+			      (FttCellTraverseFunc) init_energy, event);
     return TRUE;
   }
   return FALSE;

@@ -238,9 +238,9 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 	sim->modules = g_slist_prepend (sim->modules, module);
 	gts_file_next_token (fp);
 
-	void (* module_read) (GtsFile *);
+	void (* module_read) (GtsFile *, GfsSimulation * sim);
 	if (g_module_symbol (module, "gfs_module_read", (gpointer) &module_read)) {
-	  (* module_read) (fp);
+	  (* module_read) (fp, sim);
 	  if (fp->type == GTS_ERROR)
 	    return;
 	}
