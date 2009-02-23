@@ -7,7 +7,7 @@ if [ "$#" -gt '3' ] || [ "$#" -lt 1 ]; then
     echo "usage: gfsad3 file.ftn" 1>&2 ; exit 1
 fi
 
-if test -f $HOME/.wwatch3.env; then
+if test -r $HOME/.wwatch3.env; then
     main_dir=`awk '{if ($1 == "WWATCH3_DIR") print $2;}' < $HOME/.wwatch3.env`
     tmp_dir=`awk '{if ($1 == "WWATCH3_TMP") print $2;}' < $HOME/.wwatch3.env`
 else
@@ -37,12 +37,16 @@ if test -f $tmp_dir/w3adc.err; then
 fi
 
 if test -f $tmp_dir/$basename.l; then
-    awk -v basename=$basename 'BEGIN{FS=":| "; i = 0;}{
+    if awk -v basename=$basename 'BEGIN{FS=":| "; i = 0;}{
       if ($1 == basename ".f90") i = 1;
       if (i == 1)
         print $0;
-    }' < $tmp_dir/$basename.l > /dev/stderr
-    exit 1
+    }END{
+      exit (i == 0);
+    }' < $tmp_dir/$basename.l > $tmp_dir/$basename.l.error; then
+	cat $tmp_dir/$basename.l.error > /dev/stderr
+	exit 1
+    fi
 fi
 
 mv -f $main_dir/obj/$basename.o .

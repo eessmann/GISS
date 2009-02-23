@@ -312,7 +312,7 @@ AC_PROG_F77
 AM_CONDITIONAL(BUILD_STOKES, test x$F77 != x)
 
 # Build wavewatch module if wavewatch is installed
-AM_CONDITIONAL(BUILD_WAVEWATCH, test -f $HOME/.wwatch3.env)
+AM_CONDITIONAL(BUILD_WAVEWATCH, test -r $HOME/.wwatch3.env)
 
 dnl header file checks
 AC_CHECK_HEADERS(fpu_control.h,
