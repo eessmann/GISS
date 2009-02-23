@@ -153,7 +153,7 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 
 
 %changelog
-* Thu Jan 29 2008 Ivan Adam Vari <i.vari@niwa.co.nz> - 9
+* Thu Jan 29 2009 Ivan Adam Vari <i.vari@niwa.co.nz> - 9
 - Version change (1.3.1 -> 1.3.2) related minor fixes
 - Added fortran dependency
 
