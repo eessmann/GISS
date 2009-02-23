@@ -87,9 +87,10 @@ libstokes3D_la_CFLAGS = $(AM_CFLAGS)
 libstokes2D_la_SOURCES = stokes.c CW263.f
 libstokes2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
-libwavewatch2D_la_SOURCES = wavewatch.c wavewatch.h
+libwavewatch2D_la_SOURCES = wavewatch.c
 libwavewatch2D_la_LIBADD = -Lwavewatch -lwavewatch -L/usr/lib/gcc/i486-linux-gnu/4.2 -lgfortran
 libwavewatch2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+libwavewatch2D_la_DEPENDENCIES = wavewatch/libwavewatch.a
 
 xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c rsurface.h
 xyz2rsurface_LDADD = -LRStarTree -lcSmRST

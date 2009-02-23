@@ -1,8 +1,4 @@
-/*
- * These types must match the lengths of wavewatch's REAL and INTEGER types
- */
-typedef double REAL;
-typedef long long INTEGER;
+#include "cfortrantypes.h"
 
 /**
  * Initialisation of wavewatch
