@@ -16,23 +16,30 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/wait.h>
 #include "wave.h"
 #include "wavewatch/wavewatch.h"
 
 #define DEBUG 0
 
 /* fixme: needs to be identical to the same function in wave.c */
+#define GAMMA 1.1
+#define F0 0.04
+
 static double frequency (int ik)
 {
-  double gamma = 1.1;
-  double f0 = 0.04;
-  return f0*pow(gamma, ik);
+  return F0*pow(GAMMA, ik);
 }
-      
+
+#if DEBUG      
 static double theta (guint ith, guint ntheta)
 {
   return 2.*M_PI*ith/ntheta;
 }
+#endif
 
 typedef struct {
   GfsWave * wave;
@@ -103,20 +110,101 @@ static void source (FttCell * cell, SourceParams * p)
   GFS_VALUE (cell, p->fpi) = FPI;
 }
 
+static void deletedir (const char * name)
+{
+  gchar * command = g_strconcat ("rm -r -f ", name, NULL);
+  system (command);
+  g_free (command);
+}
+
+static void initialize (GfsWave * wave)
+{
+  static gboolean initialized = FALSE;
+  if (!initialized) {
+
+    /* Creates temporary directory */
+    char template[] = "/tmp/gfswavewatch.XXXXXX", * tmp;
+    tmp = mkdtemp (template);
+    if (tmp == NULL) {
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR, 
+	     "wavewatch module: could not create temporary directory\n"
+	     "%s\n", strerror (errno));
+      return;
+    }
+
+    /* Creates wavewatch ww3_grid.inp input file */
+    gchar * sinput = g_strconcat (tmp, "/ww3_grid.inp", NULL);
+    FILE * input = fopen (sinput, "w");
+    g_free (sinput);
+    if (input == NULL) {
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR, 
+	     "wavewatch module: could not create input file\n"
+	     "%s\n", strerror (errno));
+      deletedir (tmp);
+      return;      
+    }
+    fprintf (input,
+	     "$\n"
+	     "      'Gerris wavewatch module'\n"
+	     "   %g  %g  %d  %d  0.\n"
+	     "   F F F F F T\n"
+	     "    900. 950. 900. 300.\n"
+	     "END OF NAMELISTS\n",
+	     GAMMA, F0, wave->nk, wave->ntheta);
+
+    /* Dummy wavewatch parameters */
+    static gchar constant_parameters[] =
+      "      3      3\n"
+      "      1000.     1000.     1.\n"
+      "     -1000.    -1000.     1.\n"
+      "     -0.1 2.50  10  -1000. 3 1 '(....)' 'NAME' 'bottom.inp'\n"
+      "  1 1 1\n"
+      "  1 1 1\n"
+      "  1 1 1\n"
+      "   10 3 1 '(....)' 'PART' 'mapsta.inp'\n"
+      "      0   0   F\n"
+      "      0   0   F\n"
+      "      0   0\n"
+      "     0.    0.    0.    0.       0\n";  
+    fputs (constant_parameters, input);
+    fclose (input);
+
+    /* Calls 'ww3_grid' of wavewatch to generate 'mod_def.w3'
+     * required to initialize wavewatch. */
+    char * wdir = getcwd (NULL, 0);
+    char * command = g_strconcat ("cd ",  tmp, " && "
+				  "test -f $HOME/.wwatch3.env && "
+				  "`grep WWATCH3_DIR /home/popinet/.wwatch3.env | "
+				  "awk '{print $2}'`/exe/ww3_grid > ", wdir, "/log_grid.ww3 && "
+				  "mv mod_def.ww3 ", wdir, " && "
+				  "rm -r -f ", tmp,
+				  NULL);
+    int status = system (command);
+    deletedir (tmp);
+    free (wdir);
+    g_free (command);
+    if (status == -1 || WEXITSTATUS (status) != 0) {
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR, 
+	     "wavewatch module: error when running ww3_grid\nsee log_grid.ww3 for details");
+      return;
+    }
+
+    /* Initialize wavewatch */
+    __gfsw3init__gfsw3_init ();
+
+    /* cleanup */
+    remove ("mod_def.ww3");
+    initialized = TRUE;
+  }
+}
+
 static void wavewatch_source (GfsWave * wave)
 {
   GfsDomain * domain = GFS_DOMAIN (wave);
-
-  if (wave->nk != 25 || wave->ntheta != 24)
-    g_assert_not_implemented ();
-
-  static gboolean initialized = FALSE;
-  if (!initialized) {
-    __gfsw3init__gfsw3_init ();
-    initialized = TRUE;
-  }
-
   SourceParams p;
+
+  initialize (wave);
+
   p.wave = wave;
   p.A = g_malloc (wave->nk*wave->ntheta*sizeof (REAL));
   p.CG = g_malloc (wave->nk*sizeof (REAL));

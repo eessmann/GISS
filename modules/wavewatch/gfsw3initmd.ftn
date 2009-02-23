@@ -227,6 +227,9 @@ CONTAINS
       CALL W3SETA ( 1, 6, 6 )
       CALL W3SETO ( 1, 6, 6 )
       CALL W3SETI ( 1, 6, 6 )
+
+! Time is not set
+      TIME(1) = -1
 !
 !/SHRD      NAPROC = 1
 !/SHRD      IAPROC = 1
@@ -240,9 +243,9 @@ CONTAINS
 ! 1.  IO set-up
 ! 1.a For shell
 !
-      NDSO   =  6
-      NDSE   =  6
-      NDST   =  6
+      NDSO   =  20
+      NDSE   =  20
+      NDST   =  20
 !
 !/NCO/!
 !/NCO/! Redo according to NCO standard and docblock
@@ -257,10 +260,10 @@ CONTAINS
 ! 1.b For WAVEWATCH-III (See W3INIT)
 !
       NDS( 1) = 20
-      NDS( 2) =  6
-!     NDS( 3) =  6
-      NDS( 3) = 21
-      NDS( 4) =  6
+      NDS( 2) = 20
+!     NDS( 3) = 20
+      NDS( 3) = 20
+      NDS( 4) = 20
       NDS( 5) = 30
       NDS( 6) = 30
       NDS( 7) = 31
