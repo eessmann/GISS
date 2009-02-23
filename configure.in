@@ -311,6 +311,9 @@ AM_CONDITIONAL(BUILD_TIDE, test x$netcdf = xtrue -a x$no_gsl = x)
 AC_PROG_F77
 AM_CONDITIONAL(BUILD_STOKES, test x$F77 != x)
 
+# Build wavewatch module if wavewatch is installed
+AM_CONDITIONAL(BUILD_WAVEWATCH, test -f $HOME/.wwatch3.env)
+
 dnl header file checks
 AC_CHECK_HEADERS(fpu_control.h,
   AC_CHECK_DECL(_FPU_SETCW, 
@@ -455,6 +458,7 @@ tools/Makefile
 modules/Makefile
 modules/RStarTree/Makefile
 modules/fes2004/Makefile
+modules/wavewatch/Makefile
 test/Makefile
 doc/Makefile
 doc/tutorial/Makefile

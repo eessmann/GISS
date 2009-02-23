@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = RStarTree fes2004
+SUBDIRS = RStarTree fes2004 wavewatch
 
 AM_CPPFLAGS = -DGFS_MODULES_DIR=\"$(libdir)/gerris\"
 
@@ -16,6 +16,9 @@ endif
 if BUILD_STOKES
 STOKES = libstokes2D.la libstokes3D.la
 endif
+if BUILD_WAVEWATCH
+WAVEWATCH = libwavewatch2D.la
+endif
 
 pkglib_LTLIBRARIES = \
 	$(MAP) \
@@ -23,7 +26,8 @@ pkglib_LTLIBRARIES = \
 	libterrain3D.la \
 	libterrain2D3.la \
 	$(TIDE) \
-	$(STOKES)
+	$(STOKES) \
+	$(WAVEWATCH)
 
 bin_PROGRAMS = \
 	xyz2rsurface \
@@ -34,13 +38,15 @@ EXTRA_DIST = \
 	map.mod \
 	tide.mod \
 	terrain.mod \
-	stokes.mod
+	stokes.mod \
+	wavewatch.mod
 
 BUILT_SOURCES = \
 	map.c \
 	tide.c \
 	terrain.c \
-	stokes.c
+	stokes.c \
+	wavewatch.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -80,6 +86,10 @@ libstokes3D_la_SOURCES = stokes.c CW263.f
 libstokes3D_la_CFLAGS = $(AM_CFLAGS)
 libstokes2D_la_SOURCES = stokes.c CW263.f
 libstokes2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+
+libwavewatch2D_la_SOURCES = wavewatch.c wavewatch.h
+libwavewatch2D_la_LIBADD = -Lwavewatch -lwavewatch -L/usr/lib/gcc/i486-linux-gnu/4.2 -lgfortran
+libwavewatch2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
 xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c rsurface.h
 xyz2rsurface_LDADD = -LRStarTree -lcSmRST
