@@ -495,7 +495,7 @@ void GetTestParameters(File file, char *name)
   if (end == 0) {
     end= GetLOF(file) / sizeof(data);
   }
-  pos= lseek(file,begin*sizeof(data),L_SET);
+  pos= lseek(file,begin*sizeof(data),SEEK_SET);
   if (pos == -1) {
     DisplErr(name);
   }
