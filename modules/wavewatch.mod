@@ -174,7 +174,7 @@ static void initialize (GfsWave * wave)
     char * wdir = getcwd (NULL, 0);
     char * command = g_strconcat ("cd ",  tmp, " && "
 				  "test -f $HOME/.wwatch3.env && "
-				  "`grep WWATCH3_DIR /home/popinet/.wwatch3.env | "
+				  "`grep WWATCH3_DIR $HOME/.wwatch3.env | "
 				  "awk '{print $2}'`/exe/ww3_grid > ", wdir, "/log_grid.ww3 && "
 				  "mv mod_def.ww3 ", wdir, " && "
 				  "rm -r -f ", tmp,
