@@ -475,7 +475,8 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   GfsSourceTensionGeneric * t = data[1];
   GfsVariable * kappa = GFS_SOURCE_TENSION (data[1])->k;
   gdouble alpha = data[2] ? gfs_function_face_value (data[2], face) : 1.;
-  gdouble v = lambda2[face->d/2]*alpha*gfs_domain_face_fraction (kappa->domain, face)*t->sigma;
+  gdouble v = lambda2[face->d/2]*alpha*gfs_domain_face_fraction (kappa->domain, face)*
+    gfs_function_face_value (t->sigma, face);
   gdouble k1 = GFS_VARIABLE (face->cell, kappa->i);
   gdouble k2 = GFS_VARIABLE (face->neighbor, kappa->i);
 #if 0

@@ -26,6 +26,12 @@
 
 /* GfsSourceTensionGeneric: Object */
 
+static void gfs_source_tension_generic_destroy (GtsObject * o)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_SOURCE_TENSION_GENERIC (o)->sigma));
+  (* GTS_OBJECT_CLASS (gfs_source_tension_generic_class ())->parent_class->destroy) (o);
+}
+
 static void gfs_source_tension_generic_read (GtsObject ** o, GtsFile * fp)
 {
   GfsSourceTensionGeneric * s = GFS_SOURCE_TENSION_GENERIC (*o);
@@ -45,20 +51,25 @@ static void gfs_source_tension_generic_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
-  s->sigma = gfs_read_constant (fp, domain)/pow (GFS_SIMULATION (domain)->physical_params.L, 3.);
+  gfs_function_read (s->sigma, domain, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  gfs_function_set_units (s->sigma, 3.);
 }
 
 static void gfs_source_tension_generic_write (GtsObject * o, FILE * fp)
 {
   GfsSourceTensionGeneric * t = GFS_SOURCE_TENSION_GENERIC (o);
   (* GTS_OBJECT_CLASS (gfs_source_tension_generic_class ())->parent_class->write) (o, fp);
-  fprintf (fp, " %s %g", t->c->name, 
-	   t->sigma*pow (gfs_object_simulation (o)->physical_params.L, 3.));
+  fprintf (fp, " %s", t->c->name);
+  gfs_function_write (t->sigma, fp);
 }
 
 typedef struct {
   gdouble amin, amax;
   guint depth;
+  gdouble sigma;
+  GfsSourceTensionGeneric * t;
   GfsFunction * alpha;
   GfsVariable * c;
 } StabilityParams;
@@ -67,9 +78,12 @@ static void interface_level (FttCell * cell, StabilityParams * p)
 {
   guint level = ftt_cell_level (cell);
   if (level > p->depth &&
-      GFS_VARIABLE (cell, p->c->i) > 1e-3 && 
-      GFS_VARIABLE (cell, p->c->i) < 1. - 1.e-3)
+      GFS_VALUE (cell, p->c) > 1e-3 && 
+      GFS_VALUE (cell, p->c) < 1. - 1.e-3) {
     p->depth = level;
+    /* fixme: this may not work for a variable surface tension coefficient */
+    p->sigma = gfs_function_value (p->t->sigma, cell);
+  }
 }
 
 static void min_max_alpha (FttCell * cell, StabilityParams * p)
@@ -91,22 +105,32 @@ static gdouble gfs_source_tension_generic_stability (GfsSourceGeneric * s,
 
   p.alpha = sim->physical_params.alpha;
   p.c = t->c;
+  p.t = t;
+  p.sigma = 0.;
   gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) min_max_alpha, &p);
+  if (p.sigma == 0.) /* no interface */
+    return G_MAXDOUBLE;
   h = ftt_level_size (p.depth);
   if (p.alpha) {
     gdouble rhom = (1./p.amin + 1./p.amax)/2.;
-    return sqrt (rhom*h*h*h/(M_PI*t->sigma));
+    return sqrt (rhom*h*h*h/(M_PI*p.sigma));
   }
   else
-    return sqrt (h*h*h/(M_PI*t->sigma));
+    return sqrt (h*h*h/(M_PI*p.sigma));
 }
 
 static void gfs_source_tension_generic_class_init (GfsSourceGenericClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->read =       gfs_source_tension_generic_read;
-  GTS_OBJECT_CLASS (klass)->write =      gfs_source_tension_generic_write;
-  klass->stability =                     gfs_source_tension_generic_stability;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_source_tension_generic_destroy;
+  GTS_OBJECT_CLASS (klass)->read =    gfs_source_tension_generic_read;
+  GTS_OBJECT_CLASS (klass)->write =   gfs_source_tension_generic_write;
+  klass->stability =                  gfs_source_tension_generic_stability;
+}
+
+static void gfs_source_tension_generic_init (GfsSourceTensionGeneric * t)
+{
+  t->sigma = gfs_function_new (gfs_function_class (), 0.);
 }
 
 GfsSourceGenericClass * gfs_source_tension_generic_class (void)
@@ -119,7 +143,7 @@ GfsSourceGenericClass * gfs_source_tension_generic_class (void)
       sizeof (GfsSourceTensionGeneric),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) gfs_source_tension_generic_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_source_tension_generic_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -154,7 +178,8 @@ static void foreach_cell_normal (FttCell * cell, GfsSourceTensionCSS * s)
 {
   FttVector n;
   gdouble nn = 0.;
-  gdouble sigh = GFS_SOURCE_TENSION_GENERIC (s)->sigma/ftt_cell_size (cell);
+  gdouble sigh = gfs_function_value (GFS_SOURCE_TENSION_GENERIC (s)->sigma, cell)
+    /ftt_cell_size (cell);
   FttComponent c;
 
   gfs_youngs_gradient (cell, GFS_SOURCE_TENSION_GENERIC (s)->c, &n);
@@ -273,16 +298,12 @@ static void gfs_source_tension_read (GtsObject ** o, GtsFile * fp)
   gts_file_next_token (fp);
 
   if (GFS_IS_VARIABLE_POSITION (s->k))
-    GFS_SOURCE_TENSION_GENERIC (s)->sigma *= pow (gfs_object_simulation (s)->physical_params.L, 2.);
+    gfs_function_set_units (GFS_SOURCE_TENSION_GENERIC (s)->sigma, 1.);
 }
 
 static void gfs_source_tension_write (GtsObject * o, FILE * fp)
 {
-  if (GFS_IS_VARIABLE_POSITION (GFS_SOURCE_TENSION (o)->k))
-    GFS_SOURCE_TENSION_GENERIC (o)->sigma /= pow (gfs_object_simulation (o)->physical_params.L, 2.);
   (* GTS_OBJECT_CLASS (gfs_source_tension_class ())->parent_class->write) (o, fp);
-  if (GFS_IS_VARIABLE_POSITION (GFS_SOURCE_TENSION (o)->k))
-    GFS_SOURCE_TENSION_GENERIC (o)->sigma *= pow (gfs_object_simulation (o)->physical_params.L, 2.);
   fprintf (fp, " %s", GFS_SOURCE_TENSION (o)->k->name);
 }
 
@@ -293,9 +314,11 @@ static gdouble gfs_source_tension_stability (GfsSourceGeneric * s,
     /* reduced gravity */
     StabilityParams p = { G_MAXDOUBLE, -G_MAXDOUBLE, 0 };
     p.c = GFS_SOURCE_TENSION_GENERIC (s)->c;
+    p.t = GFS_SOURCE_TENSION_GENERIC (s);
+    p.sigma = 0.;
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) interface_level, &p);
-    return sqrt (ftt_level_size (p.depth)/fabs (GFS_SOURCE_TENSION_GENERIC (s)->sigma));
+    return p.sigma > 0. ? sqrt (ftt_level_size (p.depth)/fabs (p.sigma)) : G_MAXDOUBLE;
   }
   else 
     /* surface tension */

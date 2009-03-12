@@ -36,7 +36,7 @@ struct _GfsSourceTensionGeneric {
   
   /*< public >*/
   GfsVariable * c;
-  gdouble sigma;
+  GfsFunction * sigma;
 };
 
 #define GFS_SOURCE_TENSION_GENERIC(obj)            GTS_OBJECT_CAST (obj,\
