@@ -445,6 +445,9 @@ static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "variable `%s' is neither a tracer nor a distance", fp->token->str);
     return;
   }
+  GFS_VARIABLE1 (v)->units = -1.;
+  if (v->kmax)
+    v->kmax->units = -1.;
 }
 
 static void variable_curvature_write (GtsObject * o, FILE * fp)
@@ -780,6 +783,7 @@ static void variable_position_read (GtsObject ** o, GtsFile * fp)
   GFS_VARIABLE1 (v)->description = g_strjoin (" ", fp->token->str,
 					      "coordinate of the interface defined by tracer",
 					      GFS_VARIABLE_CURVATURE (v)->f->name, NULL);
+  GFS_VARIABLE1 (v)->units = 1.;
   gts_file_next_token (fp);
   if (fp->type != '\n')
     /* fixme: mapping? */
