@@ -2339,8 +2339,12 @@ static void gfs_output_droplet_sums_write (GtsObject * o, FILE * fp)
 }
 
 typedef struct {
+  double v, f;
+} VolumePair;
+
+typedef struct {
   GfsVariable * s, * c, * tag;
-  double * v;
+  VolumePair * v;
   guint n;
   GfsFunction * fc;
 } DropSumsPar;
@@ -2348,13 +2352,22 @@ typedef struct {
 static void droplet_sums (FttCell * cell, DropSumsPar * p)
 {
   guint i = GFS_VALUE (cell, p->tag);
-  if (i > 0)
-    p->v[i - 1] += GFS_VALUE (cell, p->s);
+  if (i > 0) {
+    p->v[i - 1].v += GFS_VALUE (cell, p->c)*ftt_cell_volume (cell);
+    p->v[i - 1].f += GFS_VALUE (cell, p->s);
+  }
 }
 
 static void compute_c (FttCell * cell, DropSumsPar * p)
 {
   GFS_VALUE (cell, p->c) = gfs_function_value (p->fc, cell);
+}
+
+static int volume_sort (const void * p1, const void * p2)
+{
+  VolumePair * a = (VolumePair *) p1;
+  VolumePair * b = (VolumePair *) p2;
+  return a->v < b->v ? 1 : -1;
 }
 
 static gboolean gfs_output_droplet_sums_event (GfsEvent * event, GfsSimulation * sim)
@@ -2374,12 +2387,13 @@ static gboolean gfs_output_droplet_sums_event (GfsEvent * event, GfsSimulation *
     p.tag = d->tag ? d->tag : gfs_temporary_variable (domain);
     p.n = gfs_domain_tag_droplets (domain, p.c, p.tag);
     if (p.n > 0) {
-      p.v = g_malloc0 (p.n*sizeof (double));
+      p.v = g_malloc0 (p.n*sizeof (VolumePair));
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) droplet_sums, &p);
+      qsort (p.v, p.n, sizeof (VolumePair), volume_sort);
       guint i;
       for (i = 0; i < p.n; i++)
-	fprintf (GFS_OUTPUT (event)->file->fp, "%g %d %.12g\n", sim->time.t, i + 1, p.v[i]);
+	fprintf (GFS_OUTPUT (event)->file->fp, "%g %d %.12g\n", sim->time.t, i + 1, p.v[i].f);
       g_free (p.v);
     }
     if (p.tag != d->tag)
