@@ -41,6 +41,7 @@ pkgdata_DATA = gfs.lang
 
 gfs.lang: classes
 	$(srcdir)/classes > gfs.lang
+	$(srcdir)/classes | awk '$$1 ~ /gfs_keyword/ {print $$3}' | sed 's/"//g' > $(HOME)/.vim/dictionaries/gerris.dic
 
 gfs2doc: gfs2doc.in
 
