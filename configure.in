@@ -113,7 +113,7 @@ fi
 
 dnl Fix for MacOSX and cygwin libtool
 case "$build" in
-  *-apple-darwin*) NO_UNDEFINED="-module" ;;
+  *-apple-darwin*) NO_UNDEFINED="" ;;
   *-pc-cygwin*)    NO_UNDEFINED="" ;;
   *)               NO_UNDEFINED="-no-undefined" ;;
 esac
