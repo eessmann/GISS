@@ -32,16 +32,18 @@ bin_SCRIPTS = \
 	gfs2doc gfs-highlight gfsxref
 
 BUILT_SOURCES= \
-	gfs2doc gfs-highlight gfs.lang
+	gfs2doc gfs-highlight gfs.lang gerris.dic
 
 CLEANFILES = $(BUILT_SOURCES) Makefile.deps
 
 pkglib_DATA = gfs2tex.py
-pkgdata_DATA = gfs.lang
+pkgdata_DATA = gfs.lang gerris.dic
 
 gfs.lang: classes
 	$(srcdir)/classes > gfs.lang
-	$(srcdir)/classes | awk '$$1 ~ /gfs_keyword/ {print $$3}' | sed 's/"//g' > $(HOME)/.vim/dictionaries/gerris.dic
+
+gerris.dic: classes
+	$(srcdir)/classes | awk '$$1 ~ /gfs_keyword/ {print $$3}' | sed 's/"//g' > gerris.dic
 
 gfs2doc: gfs2doc.in
 
