@@ -1496,7 +1496,7 @@ void gfs_clock_start (GfsClock * t)
   g_return_if_fail (t != NULL);
   g_return_if_fail (!t->started);
 
-  if (times (&tm) < 0)
+  if (times (&tm) == (clock_t) -1)
     g_warning ("cannot read clock");
   t->start = tm.tms_utime;
   t->started = TRUE;
@@ -1515,7 +1515,7 @@ void gfs_clock_stop (GfsClock * t)
   g_return_if_fail (t != NULL);
   g_return_if_fail (t->started);
 
-  if (times (&tm) < 0)
+  if (times (&tm) == (clock_t) -1)
     g_warning ("cannot read clock");
   t->stop = tm.tms_utime;
   t->started = FALSE;
@@ -1536,7 +1536,7 @@ gdouble gfs_clock_elapsed (GfsClock * t)
     return (t->stop - t->start)/(gdouble) sysconf (_SC_CLK_TCK);
   else {
     struct tms tm;
-    if (times (&tm) < 0)
+    if (times (&tm) == (clock_t) -1)
       g_warning ("cannot read clock");
     return (tm.tms_utime - t->start)/(gdouble) sysconf (_SC_CLK_TCK);
   }
