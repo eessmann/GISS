@@ -18,7 +18,7 @@ for start in sys.argv[1:]:
             dists += "\\\n\t" + name
             depends += "\\\n\t" + name
             for f in example.required:
-                if os.path.exists("../../_darcs/pristine/doc/examples/" + example.path + "/" + f):
+                if os.path.exists("../../_darcs/current/doc/examples/" + example.path + "/" + f):
                     dists += "\\\n\t" + example.path + "/" + f
             for f in example.generated:
                 depends += "\\\n\t" + example.path + "/" + f
