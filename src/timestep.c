@@ -975,15 +975,16 @@ static void gfs_surface_bc_write (GtsObject * o, FILE * fp)
 static void gfs_surface_bc_bc (FttCell * cell, GfsSurfaceGenericBc * b)
 {
   GfsSurfaceBc * bc = GFS_SURFACE_BC (b);
-  gdouble val = gfs_function_value (bc->val, cell);
 
   if (gfs_function_value (bc->type, cell) > 0.) {
     cell->flags |= GFS_FLAG_DIRICHLET;
-    GFS_STATE (cell)->solid->fv = val;
+    gfs_function_set_units (bc->val, GFS_SURFACE_GENERIC_BC (bc)->v->units);
+    GFS_STATE (cell)->solid->fv = gfs_function_value (bc->val, cell);
   }
   else {
     cell->flags &= ~GFS_FLAG_DIRICHLET;
-    GFS_STATE (cell)->solid->fv = val; /* fixme: scaling is probably wrong */
+    gfs_function_set_units (bc->val, GFS_SURFACE_GENERIC_BC (bc)->v->units - 1.);
+    GFS_STATE (cell)->solid->fv = gfs_function_value (bc->val, cell);
   }
 }
 
