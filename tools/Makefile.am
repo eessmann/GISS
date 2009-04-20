@@ -19,6 +19,7 @@ bin_SCRIPTS = \
 	bat2gts \
 	ppm2mpeg \
 	ppm2theora \
+	ppm2video \
 	gfs2gfs \
 	gfsjoin
 
