@@ -123,6 +123,12 @@ struct _GfsSurface {
 GfsGenericSurfaceClass *   gfs_surface_class          (void);
 gdouble            gfs_surface_implicit_value (GfsSurface * s, 
 					       GtsPoint p);
+void               gfs_surface_transformation (GtsSurface * surface, 
+					       GtsVector rotate,
+					       GtsVector translate, 
+					       GtsVector scale,
+					       gboolean flip,
+					       GtsMatrix ** matrix);
 
 #ifdef __cplusplus
 }

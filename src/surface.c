@@ -259,6 +259,63 @@ static void check_solid_surface (GtsSurface * s,
   g_string_free (name, TRUE);
 }
 
+/**
+ * gfs_surface_transformation:
+ * @surface: a #GtsSurface
+ * @rotate: a #GtsVector
+ * @translate: a #GtsVector 
+ * @scale: a #GtsVector
+ * @s: a #gdouble
+ * @flip: a #gboolean
+ * @matrix: a pointer on a #GtsMatrix
+ * 
+ * Translates, rotates, scales and flips @surface.
+ */
+void gfs_surface_transformation (GtsSurface * surface, 
+				 GtsVector rotate,
+				 GtsVector translate, 
+				 GtsVector scale,
+				 gboolean flip,
+				 GtsMatrix ** matrix)
+{
+  GtsMatrix * m;
+  gint c;
+
+  g_return_if_fail (matrix != NULL);
+  
+  m = gts_matrix_translate (NULL, translate);    
+  for (c = 2; c >= 0; c--)
+    if (rotate[c] != 0.) {
+      GtsVector r = {0.,0.,0.};
+      r[c] = 1.;
+      GtsMatrix * mr = gts_matrix_rotate (NULL, r, rotate[c]*M_PI/180.);
+      GtsMatrix * m1 = gts_matrix_product (m, mr);
+      gts_matrix_destroy (m);
+      gts_matrix_destroy (mr);
+      m = m1;
+    }
+
+  GtsMatrix * ms = gts_matrix_scale (NULL, scale);
+  if (*matrix)
+    gts_matrix_destroy (*matrix);
+  *matrix = gts_matrix_product (m, ms);
+  gts_matrix_destroy (m);
+  gts_matrix_destroy (ms);
+  
+  if (surface) {
+    gts_surface_foreach_vertex (surface, (GtsFunc) gts_point_transform, *matrix);
+    gts_matrix_destroy (*matrix);
+    *matrix = NULL;
+    if (flip)
+      gts_surface_foreach_face (surface, (GtsFunc) gts_triangle_revert, NULL);
+  }
+  else {
+    GtsMatrix * i = gts_matrix_inverse (*matrix);
+    gts_matrix_destroy (*matrix);
+    *matrix = i;
+  }
+}
+
 static void point_map (GtsPoint * p, GfsSimulation * sim)
 {
   gfs_simulation_map (sim, (FttVector *) &p->x);
@@ -376,42 +433,22 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
     if (fp->type == GTS_ERROR)
       return;
 
-    if (var[9].set) {
-      surface->scale[0] *= scale;
-      surface->scale[1] *= scale;
-      surface->scale[2] *= scale;
-    }
+    gboolean set = FALSE;
+    guint i;
+    for (i = 0; i < 11 && !set; i++)
+      if (var[i].set)
+	set = TRUE;
 
-    GtsMatrix * m = gts_matrix_translate (NULL, surface->translate);
-    gint c;
-    for (c = 2; c >= 0; c--)
-      if (surface->rotate[c] != 0.) {
-	GtsVector r = {0.,0.,0.};
-	r[c] = 1.;
-	GtsMatrix * mr = gts_matrix_rotate (NULL, r, surface->rotate[c]*M_PI/180.);
-	GtsMatrix * m1 = gts_matrix_product (m, mr);
-	gts_matrix_destroy (m);
-	gts_matrix_destroy (mr);
-	m = m1;
+    if (set) {
+      if (var[9].set) {
+	surface->scale[0] *= scale;
+	surface->scale[1] *= scale;
+	surface->scale[2] *= scale;
       }
-    GtsMatrix * ms = gts_matrix_scale (NULL, surface->scale);
-    if (surface->m)
-      gts_matrix_destroy (surface->m);
-    surface->m = gts_matrix_product (m, ms);
-    gts_matrix_destroy (m);
-    gts_matrix_destroy (ms);
-
-    if (surface->s) {
-      gts_surface_foreach_vertex (surface->s, (GtsFunc) gts_point_transform, surface->m);
-      gts_matrix_destroy (surface->m);
-      surface->m = NULL;
-      if (surface->flip)
-	gts_surface_foreach_face (surface->s, (GtsFunc) gts_triangle_revert, NULL);
-    }
-    else {
-      GtsMatrix * i = gts_matrix_inverse (surface->m);
-      gts_matrix_destroy (surface->m);
-      surface->m = i;
+      gfs_surface_transformation (surface->s, 
+				  surface->rotate, surface->translate, surface->scale,
+				  surface->flip, 
+				  &surface->m);
     }
   }
 
@@ -442,26 +479,24 @@ static void surface_write (GtsObject * o, FILE * fp)
     gfs_function_write (surface->f, fp);
     fputs (" )", fp);
   }
-  if (surface->m) {
-    fputs (" {\n", fp);
-    if (gts_vector_norm (surface->translate) > 0.)
-      fprintf (fp, "  tx = %g ty = %g tz = %g\n",
-	       surface->translate[0], surface->translate[1], surface->translate[2]);
-    if (surface->scale[0] != 1. || surface->scale[1] != 1. || surface->scale[2] != 1.)
-      fprintf (fp, "  sx = %g sy = %g sz = %g\n",
-	       surface->scale[0], surface->scale[1], surface->scale[2]);
-    if (surface->rotate[0] != 0.)
-      fprintf (fp, "  rx = %g\n", surface->rotate[0]);
-    if (surface->rotate[1] != 0.)
-      fprintf (fp, "  ry = %g\n", surface->rotate[1]);
-    if (surface->rotate[2] != 0.)
-      fprintf (fp, "  rz = %g\n", surface->rotate[2]);
-    if (surface->flip)
-      fputs ("  flip = 1\n", fp);
-    if (surface->twod)
-      fputs ("  twod = 1\n", fp);
-    fputc ('}', fp);
-  }
+  fputs (" {\n", fp);
+  if (gts_vector_norm (surface->translate) > 0.)
+    fprintf (fp, "  tx = %g ty = %g tz = %g\n",
+	     surface->translate[0], surface->translate[1], surface->translate[2]);
+  if (surface->scale[0] != 1. || surface->scale[1] != 1. || surface->scale[2] != 1.)
+    fprintf (fp, "  sx = %g sy = %g sz = %g\n",
+	     surface->scale[0], surface->scale[1], surface->scale[2]);
+  if (surface->rotate[0] != 0.)
+    fprintf (fp, "  rx = %g\n", surface->rotate[0]);
+  if (surface->rotate[1] != 0.)
+    fprintf (fp, "  ry = %g\n", surface->rotate[1]);
+  if (surface->rotate[2] != 0.)
+    fprintf (fp, "  rz = %g\n", surface->rotate[2]);
+  if (surface->flip)
+    fputs ("  flip = 1\n", fp);
+  if (surface->twod)
+    fputs ("  twod = 1\n", fp);
+  fputc ('}', fp);
 }
 
 static void surface_destroy (GtsObject * object)
