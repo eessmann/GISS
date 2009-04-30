@@ -26,6 +26,8 @@ extern "C" {
 
 #include "domain.h"
 
+#define GFS_SMALL 0.5
+
 typedef enum {
   GFS_GODUNOV,
   GFS_NONE
@@ -76,6 +78,7 @@ void         gfs_face_advected_normal_velocity     (const FttCellFace * face,
 void         gfs_face_interpolated_normal_velocity (const FttCellFace * face,
 						    GfsVariable ** v);
 void         gfs_face_reset_normal_velocity        (const FttCellFace * face);
+gboolean     gfs_cell_is_small                     (const FttCell * cell);
 void         gfs_set_merged                        (GfsDomain * domain);
 typedef void (* GfsMergedTraverseFunc)             (GSList * merged,
 						    gpointer data);

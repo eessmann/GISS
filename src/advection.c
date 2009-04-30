@@ -616,10 +616,16 @@ void gfs_face_reset_normal_velocity (const FttCellFace * face)
     GFS_FACE_NORMAL_VELOCITY_LEFT (face) = 0.;
 }
 
-#define SMALL 0.5
-
-static gboolean is_small (FttCell * cell)
+/**
+ * gfs_cell_is_small:
+ * @cell: a #FttCell.
+ *
+ * Returns: %TRUE if @cell is "small" (i.e. should be merged with a neighbhor).
+ */
+gboolean gfs_cell_is_small (const FttCell * cell)
 {
+  g_return_val_if_fail (cell != NULL, FALSE);
+
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
 
   if (solid) {
@@ -629,7 +635,7 @@ static gboolean is_small (FttCell * cell)
     ftt_cell_neighbors (cell, &n);
     for (d = 0; d < FTT_NEIGHBORS; d++)
       if (n.c[d] && !GFS_CELL_IS_BOUNDARY (n.c[d]) && solid->s[d] > 0. && 
-	  solid->a/solid->s[d] < SMALL)
+	  solid->a/solid->s[d] < GFS_SMALL)
 	return TRUE;
   }
   return FALSE;
@@ -639,7 +645,7 @@ static void set_merged (FttCell * cell)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
 
-  if (!is_small (cell))
+  if (!gfs_cell_is_small (cell))
     solid->merged = NULL;
   else {
     FttCellNeighbors neighbor;
@@ -813,7 +819,7 @@ void gfs_advection_update (GSList * merged, const GfsAdvectionParams * par)
   if (merged->next == NULL) { /* cell is not merged */
     FttCell * cell = merged->data;
 
-    g_assert (!is_small (cell));
+    g_assert (!gfs_cell_is_small (cell));
 
 #if 0 /* D. Calhoun approach (fixme: does not use gfs_domain_cell_fraction()) */
     if (GFS_IS_MIXED (cell)) {
@@ -876,9 +882,9 @@ fprintf (stderr, "%g %g %g\n",
       gdouble f = gfs_domain_cell_fraction (par->v->domain, cell);
 
       total_vol += vol*f;
-      if (a < SMALL) {
-	GFS_VALUE (cell, par->v) += GFS_VALUE (cell, par->fv)/(SMALL*f/a);
-	w += vol*GFS_VALUE (cell, par->fv)*(1. - a/SMALL);
+      if (a < GFS_SMALL) {
+	GFS_VALUE (cell, par->v) += GFS_VALUE (cell, par->fv)/(GFS_SMALL*f/a);
+	w += vol*GFS_VALUE (cell, par->fv)*(1. - a/GFS_SMALL);
       }
       else
 	GFS_VALUE (cell, par->v) += GFS_VALUE (cell, par->fv)/f;
