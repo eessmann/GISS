@@ -62,6 +62,7 @@ typedef enum
   FTT_TRAVERSE_NON_LEAFS      = 1 << 1,
   FTT_TRAVERSE_LEVEL          = 1 << 2,
   FTT_TRAVERSE_BOUNDARY_FACES = 1 << 3,
+  FTT_TRAVERSE_DESTROYED      = 1 << 4,
   FTT_TRAVERSE_ALL            = FTT_TRAVERSE_LEAFS | FTT_TRAVERSE_NON_LEAFS
 } FttTraverseFlags;
 

@@ -89,7 +89,7 @@ static void cell_traverse_cut (FttCell * cell,
     for (n = 0; n < FTT_CELLS; n++) {
       FttCell * c = &(children->cell[n]);
 
-      if (!FTT_CELL_IS_DESTROYED (c))
+      if ((flags & FTT_TRAVERSE_DESTROYED) != 0 || !FTT_CELL_IS_DESTROYED (c))
 	cell_traverse_cut (c, s1, order, flags, func, data, flatten);
     }
   }
