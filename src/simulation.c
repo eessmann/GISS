@@ -1008,7 +1008,7 @@ static void set_permanent (FttCell * cell)
  * gfs_simulation_get_solids:
  * @sim: a #GfsSimulation.
  *
- * Returns: a new list of #GfsSurface defining the solid boundaries
+ * Returns: a new list of #GfsSolid defining the solid boundaries
  * contained in @sim.
  */
 GSList * gfs_simulation_get_solids (GfsSimulation * sim)
@@ -1017,7 +1017,7 @@ GSList * gfs_simulation_get_solids (GfsSimulation * sim)
 
   GSList * solids = NULL, * i = sim->solids->items;
   while (i) {
-    solids = g_slist_prepend (solids, GFS_SOLID (i->data)->s);
+    solids = g_slist_prepend (solids, i->data);
     i = i->next;
   }
   return solids;
@@ -1027,7 +1027,8 @@ GSList * gfs_simulation_get_solids (GfsSimulation * sim)
  * gfs_simulation_refine:
  * @sim: a #GfsSimulation.
  *
- * Calls the @refine() methods of the #GfsRefine of @sim. Matches the
+ * Calls the @refine() methods of the #GfsRefine of @sim. Initialize the
+ * solid fractions by calling gfs_init_solid_fractions(). Matches the
  * boundaries by calling gfs_domain_match().
  */
 void gfs_simulation_refine (GfsSimulation * sim)
@@ -1055,8 +1056,8 @@ void gfs_simulation_refine (GfsSimulation * sim)
   depth = gfs_domain_depth (domain);
   for (l = depth - 2; l >= 0; l--)
     gfs_domain_cell_traverse (domain,
-			     FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-			     (FttCellTraverseFunc) refine_cell_corner, 
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
+			      (FttCellTraverseFunc) refine_cell_corner, 
 			      domain);
 
   gfs_domain_match (domain);

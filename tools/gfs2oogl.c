@@ -1159,15 +1159,16 @@ int main (int argc, char * argv[])
       GSList * l = gfs_simulation_get_solids (simulation), * i = l;
 	
       while (i) {
-	GfsSurface * s = i->data;
-	  
-	if (s->s) {
+	GtsSurface * s = GFS_IS_SURFACE (GFS_SOLID (i->data)->s) ?  
+	  GFS_SURFACE (GFS_SOLID (i->data)->s)->s : NULL;
+  
+	if (s) {
 	  if (refine)
-	    gts_surface_refine (s->s, 
+	    gts_surface_refine (s, 
 				(GtsKeyFunc) local_size_ratio, domain,
 				NULL, NULL,
 				(GtsStopFunc) stop, NULL);
-	  gfs_draw_surface (domain, s->s, 
+	  gfs_draw_surface (domain, s, 
 			    var, stats.min, stats.max,
 			    stdout);
 	}

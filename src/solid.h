@@ -29,11 +29,25 @@
 extern "C" {
 #endif /* __cplusplus */
 
+enum {
+  GFS_STATUS_UNDEFINED = 0,
+  GFS_STATUS_SOLID     = 1,
+  GFS_STATUS_FLUID     = 2
+};
+
 void         gfs_cell_fluid                              (FttCell * cell);
 gboolean     gfs_solid_is_thin                           (FttCell * cell, 
 							  GfsGenericSurface * s);
 gboolean     gfs_set_2D_solid_fractions_from_surface     (FttCell * cell,
 							  GfsGenericSurface * s);
+guint        gfs_init_solid_fractions_leaves             (GfsDomain * domain,
+							  GSList * i,
+							  GfsVariable * status);
+void         gfs_init_solid_fractions_from_children      (GfsDomain * domain,
+							  gboolean destroy_solid,
+							  FttCellCleanupFunc cleanup,
+							  gpointer data,
+							  GfsVariable * status);
 guint        gfs_domain_init_solid_fractions             (GfsDomain * domain,
 							  GSList * i,
 							  gboolean destroy_solid,

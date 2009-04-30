@@ -280,7 +280,7 @@ static void deal_with_thin_cell (FttCell * cell, InitSolidParams * p)
 {
   cell->flags |= GFS_FLAG_THIN;
   if (thin_cell_is_solid (cell))
-    GFS_VARIABLE (cell, p->status->i) = 1.;
+    GFS_VALUE (cell, p->status) = GFS_STATUS_SOLID;
   else {
     GfsSolidVector * solid = GFS_STATE (cell)->solid;
     FttDirection d;
@@ -303,7 +303,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
     deal_with_thin_cell (cell, p);
   }
   else if (GFS_STATE (cell)->solid && GFS_STATE (cell)->solid->a == 0.)
-    GFS_VARIABLE (cell, p->status->i) = 1.;
+    GFS_VALUE (cell, p->status) = GFS_STATUS_SOLID;
 }
 
 /**
@@ -585,7 +585,7 @@ static void set_solid_fractions_from_surface (FttCell * cell,
     deal_with_thin_cell (cell, p);
   }
   if (solid->a == 0.)
-    GFS_VARIABLE (cell, p->status->i) = 1.;
+    GFS_VALUE (cell, p->status) = GFS_STATUS_SOLID;
 }
 
 /**
@@ -728,8 +728,8 @@ static void push_leaf (GtsFifo * fifo, FttCell * cell, FttDirection d, gdouble a
 		       GfsVariable * status)
 {
   if (FTT_CELL_IS_LEAF (cell)) {
-    if (!GFS_IS_MIXED (cell) && GFS_VARIABLE (cell, status->i) == 0.) {
-      GFS_VARIABLE (cell, status->i) = a;
+    if (!GFS_IS_MIXED (cell) && GFS_VALUE (cell, status) == GFS_STATUS_UNDEFINED) {
+      GFS_VALUE (cell, status) = a;
       gts_fifo_push (fifo, cell);
     }
   }
@@ -739,9 +739,10 @@ static void push_leaf (GtsFifo * fifo, FttCell * cell, FttDirection d, gdouble a
     
     n = ftt_cell_children_direction (cell, FTT_OPPOSITE_DIRECTION (d), &child);
     for (i = 0; i < n; i++)
-      if (child.c[i] && !GFS_IS_MIXED (child.c[i]) && GFS_VARIABLE (child.c[i], status->i) == 0.) {
+      if (child.c[i] && !GFS_IS_MIXED (child.c[i]) && 
+	  GFS_VALUE (child.c[i], status) == GFS_STATUS_UNDEFINED) {
 	g_assert (FTT_CELL_IS_LEAF (child.c[i]));
-	GFS_VARIABLE (child.c[i], status->i) = a;
+	GFS_VALUE (child.c[i], status) = a;
 	gts_fifo_push (fifo, child.c[i]);
       }
   }
@@ -810,21 +811,21 @@ static void solid_fractions_from_children (FttCell * cell, InitSolidParams * p)
 	solid_fractions_from_children (child.c[i], p);
     if (FTT_CELL_IS_LEAF (cell))
       /* all the children have been destroyed i.e. the cell is solid */
-      GFS_VARIABLE (cell, p->status->i) = 1.;
+      GFS_VALUE (cell, p->status) = GFS_STATUS_SOLID;
     else {
       gfs_cell_init_solid_fractions_from_children (cell);
       if (p->destroy_solid)
-	GFS_VARIABLE (cell, p->status->i) = 0.;
+	GFS_VALUE (cell, p->status) = GFS_STATUS_UNDEFINED;
       else if (!GFS_IS_MIXED (cell)) {
 	ftt_cell_children (cell, &child);
-	GFS_VARIABLE (cell, p->status->i) = 1.;
+	GFS_VALUE (cell, p->status) = GFS_STATUS_SOLID;
 	for (i = 0; i < FTT_CELLS; i++)
-	  if (child.c[i] && GFS_VARIABLE (child.c[i], p->status->i) == 2.)
-	    GFS_VARIABLE (cell, p->status->i) = 2.;
+	  if (child.c[i] && GFS_VALUE (child.c[i], p->status) == GFS_STATUS_FLUID)
+	    GFS_VALUE (cell, p->status) = GFS_STATUS_FLUID;
       }
     }
   }
-  if (p->destroy_solid && GFS_VARIABLE (cell, p->status->i) == 1.) {
+  if (p->destroy_solid && GFS_VALUE (cell, p->status) == GFS_STATUS_SOLID) {
     if (FTT_CELL_IS_ROOT (cell))
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
 	     "root cell is entirely outside of the fluid domain\n"
@@ -873,17 +874,80 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
   }
 }
 
-static void reset_solid (FttCell * cell, GfsVariable * status)
+/**
+ * gfs_init_solid_fractions_leaves:
+ * @domain: a #GfsDomain.
+ * @i: a list of #GfsSolids.
+ * @status: a temporary variable or %NULL.
+ *
+ * Initializes the solid fractions of the leaf cells of @domain.
+ *
+ * Returns: the number of thin cells.
+ */
+guint gfs_init_solid_fractions_leaves (GfsDomain * domain,
+				       GSList * i,
+				       GfsVariable * status)
 {
-  GFS_VALUE (cell, status) = 0.;
-  g_free (GFS_STATE (cell)->solid);
-  GFS_STATE (cell)->solid = NULL;
+  InitSolidParams p;
+
+  g_return_val_if_fail (domain != NULL, 0);
+
+  p.status = status ? status : gfs_temporary_variable (domain);
+  p.thin = 0;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, p.status);
+  while (i) {
+    gfs_domain_traverse_cut (domain, GFS_SOLID (i->data)->s, 
+			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			     (FttCellTraverseCutFunc) set_solid_fractions_from_surface, &p);
+    i = i->next;
+  }
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) paint_mixed_leaf, p.status);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) match_fractions, p.status);
+  if (status == NULL)
+    gts_object_destroy (GTS_OBJECT (p.status));
+
+  return p.thin;
+}
+
+/**
+ * gfs_init_solid_fractions_from_children:
+ * @domain: a #GfsDomain.
+ * @destroy_solid: controls what to do with solid cells.
+ * @cleanup: a #FttCellCleanupFunc or %NULL.
+ * @data: user data to pass to @cleanup.
+ * @status: the status variable.
+ *
+ * Initializes the solid fractions of the non-leaf cells of @domain
+ * using the values of the leaf cells.
+ *
+ * If @destroy_solid is set to %TRUE, the cells entirely contained in
+ * the solid are destroyed using @cleanup as cleanup function.  
+ */
+void gfs_init_solid_fractions_from_children (GfsDomain * domain,
+					     gboolean destroy_solid,
+					     FttCellCleanupFunc cleanup,
+					     gpointer data,
+					     GfsVariable * status)
+{
+  InitSolidParams p;
+
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (status != NULL);
+
+  p.destroy_solid = destroy_solid;
+  p.cleanup = cleanup;
+  p.data = data;
+  p.status = status;
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) foreach_box, &p);
 }
 
 /**
  * gfs_domain_init_solid_fractions:
  * @domain: a #GfsDomain.
- * @i: a list of #GfsGenericSurfaces.
+ * @i: a list of #GfsSolids.
  * @destroy_solid: controls what to do with solid cells.
  * @cleanup: a #FttCellCleanupFunc or %NULL.
  * @data: user data to pass to @cleanup.
@@ -903,31 +967,17 @@ guint gfs_domain_init_solid_fractions (GfsDomain * domain,
 				       gpointer data,
 				       GfsVariable * status)
 {
-  InitSolidParams p;
+  GfsVariable * status1;
 
   g_return_val_if_fail (domain != NULL, 0);
 
-  p.destroy_solid = destroy_solid;
-  p.cleanup = cleanup;
-  p.data = data;
-  p.status = status ? status : gfs_temporary_variable (domain);
-  p.thin = 0;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) reset_solid, p.status);
-  while (i) {
-    gfs_domain_traverse_cut (domain, i->data, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			     (FttCellTraverseCutFunc) set_solid_fractions_from_surface, &p);
-    i = i->next;
-  }
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) paint_mixed_leaf, p.status);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) match_fractions, p.status);
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) foreach_box, &p);
+  status1 = status ? status : gfs_temporary_variable (domain);
+  guint thin = gfs_init_solid_fractions_leaves (domain, i, status1);
+  gfs_init_solid_fractions_from_children (domain, destroy_solid, cleanup, data, status1);
   if (status == NULL)
-    gts_object_destroy (GTS_OBJECT (p.status));
+    gts_object_destroy (GTS_OBJECT (status1));
 
-  return p.thin;
+  return thin;
 }
 
 static gboolean check_area_fractions (const FttCell * root)
@@ -1124,20 +1174,21 @@ static void restore_solid (FttCell * cell, gpointer * data)
   GfsVariable * status = data[2];
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
 
-  GFS_STATE (cell)->solid = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, c->i));
+  GFS_STATE (cell)->solid = GFS_DOUBLE_TO_POINTER (GFS_VALUE (cell, c));
   if (solid) {
-    GFS_VARIABLE (cell, c->i) = solid->a;
+    GFS_VALUE (cell, c) = solid->a;
     g_free (solid);
     *not_cut = FALSE;
   }
-  else if (GFS_VARIABLE (cell, status->i) == 0.) {
+  else if (GFS_VALUE (cell, status) == GFS_STATUS_UNDEFINED) {
     /* fixme: this can fail for non-contiguous domains (e.g. non-connected GfsBoxes) */
     g_assert (*not_cut);
-    GFS_VARIABLE (cell, c->i) = 0.;
+    GFS_VALUE (cell, c) = 0.;
   }
   else {
-    g_assert (GFS_VARIABLE (cell, status->i) == 1. || GFS_VARIABLE (cell, status->i) == 2.);
-    GFS_VARIABLE (cell, c->i) = GFS_VARIABLE (cell, status->i) - 1.;
+    g_assert (GFS_VALUE (cell, status) == GFS_STATUS_SOLID || 
+	      GFS_VALUE (cell, status) == GFS_STATUS_FLUID);
+    GFS_VALUE (cell, c) = GFS_VALUE (cell, status) - 1.;
   }
 }
 
@@ -1166,7 +1217,9 @@ void gfs_domain_init_fraction (GfsDomain * domain,
 
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) save_solid, c);
-  GSList * l = g_slist_prepend (NULL, s);
+  GfsSolid tmp;
+  tmp.s = s;
+  GSList * l = g_slist_prepend (NULL, &tmp);
   gfs_domain_init_solid_fractions (domain, l, FALSE, NULL, NULL, status);
   g_slist_free (l);
   data[0] = c;
