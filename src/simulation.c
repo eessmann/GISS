@@ -348,8 +348,16 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   sim->modules = g_slist_reverse (sim->modules);
 }
 
-static void advance_tracers (GfsDomain * domain, gdouble dt)
+/**
+ * gfs_advance_tracers:
+ * @domain: a #GfsDomain.
+ *
+ * Performs advection/difussion of tracers associated with @domain.
+ */
+void gfs_advance_tracers (GfsDomain * domain, gdouble dt)
 {
+  g_return_if_fail (domain != NULL);
+
   GSList * i = domain->variables;
   while (i) {
     if (GFS_IS_VARIABLE_TRACER_VOF (i->data)) {
@@ -414,7 +422,7 @@ static void simulation_run (GfsSimulation * sim)
 				&sim->advection_params,
 				p, sim->physical_params.alpha, res, g);
     gfs_simulation_set_timestep (sim);
-    advance_tracers (domain, sim->advection_params.dt/2.);
+    gfs_advance_tracers (domain, sim->advection_params.dt/2.);
   }
   else if (sim->advection_params.gc)
     gfs_update_gradients (domain, p, sim->physical_params.alpha, g);
@@ -466,7 +474,7 @@ static void simulation_run (GfsSimulation * sim)
     sim->time.i++;
 
     gfs_simulation_set_timestep (sim);
-    advance_tracers (domain, sim->advection_params.dt);
+    gfs_advance_tracers (domain, sim->advection_params.dt);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
@@ -1586,7 +1594,7 @@ static void advection_run (GfsSimulation * sim)
 
     gfs_simulation_set_timestep (sim);
 
-    advance_tracers (domain, sim->advection_params.dt);
+    gfs_advance_tracers (domain, sim->advection_params.dt);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
