@@ -1918,7 +1918,7 @@ gdouble gfs_face_weighted_interpolated_value (const FttCellFace * face,
  * @cell: a #FttCell.
  * @v: a #GfsVariable.
  *
- * Fills variable @v of @cell with the integral of the divergence
+ * Adds to variable @v of @cell the integral of the divergence
  * of the (MAC) velocity field in this cell.  
  */
 void gfs_normal_divergence (FttCell * cell,
@@ -1934,7 +1934,7 @@ void gfs_normal_divergence (FttCell * cell,
   for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++)
     div += (FTT_FACE_DIRECT (&face) ? 1. : -1.)*
       GFS_STATE (cell)->f[face.d].un*gfs_domain_face_fraction (v->domain, &face);
-  GFS_VARIABLE (cell, v->i) = div*ftt_cell_size (cell);
+  GFS_VALUE (cell, v) += div*ftt_cell_size (cell);
 }
 
 /**
