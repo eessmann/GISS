@@ -954,6 +954,7 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->scheme = GFS_GODUNOV;
   par->average = FALSE;
   par->gc = FALSE;
+  par->update = (GfsMergedTraverseFunc) gfs_advection_update;
 }
 
 static gdouble none (FttCell * cell, FttComponent c, guint v)
@@ -1012,6 +1013,8 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
       par->flux = gfs_face_velocity_advection_flux;
     else if (!strcmp (flux, "gfs_face_velocity_convective_flux"))
       par->flux = gfs_face_velocity_convective_flux;
+    else if (!strcmp (flux, "NULL"))
+      par->flux = gfs_face_advection_flux;
     else if (fp->type != GTS_ERROR)
       gts_file_variable_error (fp, var, "flux",
 			       "unknown flux parameter `%s'", flux);

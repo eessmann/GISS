@@ -43,6 +43,8 @@ typedef struct _GfsAdvectionParams GfsAdvectionParams;
 typedef
 void      (* GfsFaceAdvectionFluxFunc)       (const FttCellFace * face,
 					      const GfsAdvectionParams * par);
+typedef void (* GfsMergedTraverseFunc)       (GSList * merged,
+					      gpointer data);
 
 struct _GfsAdvectionParams {
   gdouble cfl, dt;
@@ -53,6 +55,7 @@ struct _GfsAdvectionParams {
   GfsFaceAdvectionFluxFunc flux;
   GfsAdvectionScheme scheme;
   gboolean average, gc;
+  GfsMergedTraverseFunc update;
 };
 
 void         gfs_advection_params_init        (GfsAdvectionParams * par);
@@ -80,13 +83,11 @@ void         gfs_face_interpolated_normal_velocity (const FttCellFace * face,
 void         gfs_face_reset_normal_velocity        (const FttCellFace * face);
 gboolean     gfs_cell_is_small                     (const FttCell * cell);
 void         gfs_set_merged                        (GfsDomain * domain);
-typedef void (* GfsMergedTraverseFunc)             (GSList * merged,
+void         gfs_domain_traverse_merged            (GfsDomain * domain,
+						    GfsMergedTraverseFunc func,
 						    gpointer data);
-void         gfs_domain_traverse_merged           (GfsDomain * domain,
-						   GfsMergedTraverseFunc func,
-						   gpointer data);
-void         gfs_advection_update            (GSList * merged, 
-					      const GfsAdvectionParams * par);
+void         gfs_advection_update                  (GSList * merged, 
+					            const GfsAdvectionParams * par);
 
 #ifdef __cplusplus
 }

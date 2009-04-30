@@ -702,7 +702,7 @@ static void variable_sources (GfsDomain * domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) par->flux, par);
     par->v = sv;
-    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, par);
+    gfs_domain_traverse_merged (domain, par->update, par);
     par->v = v;
     par->u = par->g = NULL;
     gts_object_destroy (GTS_OBJECT (par->fv));
