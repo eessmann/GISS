@@ -19,11 +19,10 @@
 
 #include "config.h"
 
-#ifdef HAVE_FPU_SETCW
-# include <fpu_control.h>
-  static fpu_control_t fpu_trap_exceptions = 
-       _FPU_IEEE & ~(_FPU_MASK_ZM /*| _FPU_MASK_IM | _FPU_MASK_OM*/);
-#endif /* HAVE_FPU_SETCW */
+#ifdef HAVE_FENV_H
+# define _GNU_SOURCE
+# include <fenv.h>
+#endif /* HAVE_FENV_H */
 
 #include <stdlib.h>
 #include <locale.h>
@@ -266,9 +265,11 @@ void gfs_init (int * argc, char *** argv)
 #endif /* HAVE_MPI */
   initialized = TRUE;
 
-#ifdef HAVE_FPU_SETCW
-   _FPU_SETCW (fpu_trap_exceptions);
-#endif /* HAVE_FPU_SETCW */
+#ifdef FE_NOMASK_ENV
+# ifdef FE_DIVBYZERO
+  feenableexcept (FE_DIVBYZERO);
+# endif /* FE_DIVBYZERO */
+#endif /* FE_NO_MASK_ENV */
 
   g_log_set_handler (G_LOG_DOMAIN,
 		     G_LOG_LEVEL_ERROR |
