@@ -22,6 +22,10 @@ export LD_LIBRARY_PATH=$wdir/local/lib:$LD_LIBRARY_PATH:/usr/local/lib
 export PKG_CONFIG_PATH=$wdir/local/lib/pkgconfig:$PKG_CONFIG_PATH
 ulimit -c unlimited
 
+# debian build looks for shlibs and symbols file in locally compiled
+# libgts-snapshot debian packages:
+export DEB_DH_SHLIBDEPS_ARGS_ALL="-- -S$wdir/$gts/debian/libgts-snapshot -S$wdir/$gerris/debian/gerris-snapshot"
+
 # kill all running rsync processes. Assumes the only ones would be
 # hanging rsync from previous calls of this script!!
 killall rsync 2> /dev/null

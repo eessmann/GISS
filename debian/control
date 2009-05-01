@@ -1,0 +1,31 @@
+Source: gerris-snapshot
+Section: science
+Priority: optional
+Maintainer: Stephane Popinet <popinet@users.sf.net>
+Build-Depends: cdbs, debhelper (>= 5), autotools-dev,
+	       libnetcdf-dev, libgsl0-dev, libglib2.0-dev,
+	       python, g77 | gfortran, chrpath
+Homepage: http://gfs.sourceforge.net/
+
+Package: gerris-snapshot
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, pkg-config, gcc, sed, gawk, m4, proj
+Replaces: gerris
+Recommends: gfsview-snapshot, source-highlight
+Suggests: imagemagick, ffmpeg
+Description: Gerris Flow Solver (development snapshot)
+ Gerris is a system for the solution of the partial differential
+ equations describing fluid flow.
+ .
+ A brief summary of its main features:
+ .
+    * Quadtree-based (Octree in 3D) spatial discretisation with
+      automatic and dynamic refinement.
+    * Multigrid Poisson solver.
+    * Second-order Godunov type advection scheme.
+    * Solves the time-dependent incompressible Euler, Stokes ans Navier-Stokes
+      equations.
+    * Support for complex solid boundaries (automatic locally-refined
+      mesh generation).
+ .
+ See http://gfs.sf.net for more information and documentation.
