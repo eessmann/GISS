@@ -1,10 +1,10 @@
 Original Authors
 ----------------
-Stéphane Popinet   <s.popinet@niwa.cri.nz>
+Stéphane Popinet   <popinet@users.sf.net>
 
 Contributors
 ------------
-Marcelo E. Magallon: Debian packages.
+Marcelo E. Magallon, Ruben Molina, Drew Parsons: Debian packages.
 Ruben Scardovelli: - author of the Fortran version of gfs_plane_alpha()
       		   - Mixed Youngs-Centered VOF normal calculation
 Ivan Adam Vari: RPM packages.

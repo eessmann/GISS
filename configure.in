@@ -463,6 +463,7 @@ test/Makefile
 doc/Makefile
 doc/tutorial/Makefile
 doc/examples/Makefile
+doc/manpages/Makefile
 doc/examples/gfs2doc
 doc/examples/gfs-highlight
 doc/examples/crossref.sh
