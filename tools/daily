@@ -17,6 +17,8 @@ gtsweb=popinet,gts@web.sourceforge.net:/home/groups/g/gt/gts/htdocs
 gerrisweb=popinet,gfs@web.sourceforge.net:/home/groups/g/gf/gfs/htdocs
 localgerrisweb=/var/www/gerris
 
+archive_key=$HOME/.gnupg/popinet_key.asc
+
 export PATH=$wdir/local/bin:$PATH:/usr/local/bin
 export LD_LIBRARY_PATH=$wdir/local/lib:$LD_LIBRARY_PATH:/usr/local/lib
 export PKG_CONFIG_PATH=$wdir/local/lib/pkgconfig:$PKG_CONFIG_PATH
@@ -74,6 +76,28 @@ darcs_upgrade()
 	else
 	    return 1;
 	fi	
+    fi
+}
+
+# Creates signed Packages and Release files in a debian repository
+debian_release()
+{
+    cat <<EOF > Release
+Archive: stable
+Component: contrib
+Origin: Stephane Popinet
+Label: stable
+Architecture: i386
+EOF
+    if ( rm -f Release.gpg Packages.gz Packages && \
+	apt-ftparchive packages . > Packages && \
+	gzip -9c < Packages > Packages.gz && \
+	apt-ftparchive release . | awk '{if ($3 != "Release") print $0;}' >> Release && \
+	gpg -abs -o Release.gpg Release && \
+	cp -f $archive_key . ) ; then
+	return 0;
+    else
+	return 1;
     fi
 }
 
@@ -177,6 +201,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	   if $gts_changed ; then
 	       if ( darcs2dist gts $darcs_gts/$gts $gtsweb && \
                     cd $wdir/$gts && make ChangeLog debian-snapshot && \
+		    cd debian/repo && debian_release && \
 		    rsync -rz --delete --rsh=ssh $wdir/$gts/debian/repo/ $gtsweb/debian/ ) \
                > $wdir/snapshot 2>&1 ; then :
 	       else
@@ -241,7 +266,7 @@ if ( $build_gerris || $build_gfsview ) ; then
            if $gts_snapshot && $gerris_debian && $gfsview_debian && \
 	       ( $gts_changed || $gerris_changed || $gfsview_changed ) ; then
 	       if ( cd $HOME/local/debian && \
-                    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz && \
+                    debian_release && \
 		    rsync -az --delete --rsh=ssh $HOME/local/debian/ $gerrisweb/debian/ ) \
                > $wdir/debian 2>&1 ; then :
 	       else
