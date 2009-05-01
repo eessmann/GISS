@@ -1,4 +1,4 @@
-man_MANS = \
+dist_man_MANS = \
 	bat2gts.1 \
 	gerris2D.1 \
 	gerris2D3.1 \
