@@ -19,6 +19,7 @@ TESTDIRS = \
 	boundaries \
 	channel \
 	plate \
+	hexagon \
 	spurious \
 	capwave \
 	oscillation \

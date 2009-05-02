@@ -1,0 +1,76 @@
+# Title: Translation of an hexagon in a uniform flow
+#
+# Description: An hexagonal solid objects translates uniformly in a
+# fluid moving at the same speed.
+#
+# Only the advection scheme is ON (no diffusion)
+#
+# The second_order scheme should compute the solid flux exactly and
+# generate very small errors which is not the case for the first order
+# scheme.
+#
+# Scheme conservative properties can be checked by filling the
+# simulation domain with tracer and computing the total amount at each
+# time step.
+# 
+# \begin{figure}[htbp]
+# \caption{\label{errorvelocitytime} In blue are the regions where the
+# error on the velocity field at the end of the test is less than
+# 0.001 and in red where it is larger. The domain should be all blue
+# for the second order method.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{end-2.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{ordertime} Evolution of the global error on the
+# velocity field in norm2 with time.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: S\'ebastien Delaux
+# Command: sh hexagon.sh hexagon.gfs
+# Version: 090502
+# Required files: hexagon.sh hexagon.gts hexagon.gfv
+# Generated files: error.eps end-2.eps
+#
+2 1 GfsMovingSimulation GfsBox GfsGEdge {} {
+  Time { end = .1875 }
+  Refine 7
+
+  SolidMoving { istep = 1 } hexagon.gts { scale = 0.250001 } { vx = 1. level = 7 }
+  AdvectionParams { moving_order = ORDER }
+  
+  ProjectionParams { tolerance = 1e-10 }
+  ApproxProjectionParams { tolerance = 1e-10 }
+
+  AdaptVorticity { istep = 1 } { minlevel = 4 maxlevel = 7 cmax = 1e-2 }
+
+  VariableTracer T
+ 
+  SurfaceBc U Dirichlet 1.
+  SurfaceBc V Dirichlet 0.
+
+  Init {} { U = 1 T = 1 }
+
+  OutputErrorNorm { istep = 1 } {
+      awk '{ printf ("%e %e %e %e\n", $3, $5, $7, $9) }' > momentumerror-ORDER
+  } { v = sqrt((U - 1.)*(U - 1.) + V*V) } { s = 0. }
+
+  OutputScalarSum { istep = 1 } {
+      awk '{ printf ("%e %e\n", $3, $5 - 1.953125) }' > tracersum-ORDER
+  } { v = T }
+  OutputSimulation { start = end } end-ORDER.gfs
+  
+}
+GfsBox {
+    left = Boundary {
+	BcDirichlet U 1
+	BcDirichlet T 1
+    }
+}
+GfsBox { right = BoundaryOutflow }
+1 2 right
