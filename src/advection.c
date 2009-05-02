@@ -936,6 +936,8 @@ void gfs_advection_params_write (GfsAdvectionParams * par, FILE * fp)
   case GFS_GODUNOV: fputs ("  scheme   = godunov\n", fp); break;
   case GFS_NONE:    fputs ("  scheme   = none\n", fp); break;
   }
+  if (par->moving_order != 1)
+    fputs ("  moving_order = 2\n", fp);
   fputc ('}', fp);
 }
 
@@ -955,6 +957,7 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->average = FALSE;
   par->gc = FALSE;
   par->update = (GfsMergedTraverseFunc) gfs_advection_update;
+  par->moving_order = 1;
 }
 
 static gdouble none (FttCell * cell, FttComponent c, guint v)
@@ -965,12 +968,13 @@ static gdouble none (FttCell * cell, FttComponent c, guint v)
 void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
 {
   GtsFileVariable var[] = {
-    {GTS_DOUBLE, "cfl",      TRUE},
-    {GTS_STRING, "gradient", TRUE},
-    {GTS_STRING, "flux",     TRUE},
-    {GTS_STRING, "scheme",   TRUE},
-    {GTS_INT,    "average",  TRUE},
-    {GTS_INT,    "gc",       TRUE},
+    {GTS_DOUBLE, "cfl",          TRUE},
+    {GTS_STRING, "gradient",     TRUE},
+    {GTS_STRING, "flux",         TRUE},
+    {GTS_STRING, "scheme",       TRUE},
+    {GTS_INT,    "average",      TRUE},
+    {GTS_INT,    "gc",           TRUE},
+    {GTS_UINT,   "moving_order", TRUE},
     {GTS_NONE}
   };
   gchar * gradient = NULL, * flux = NULL, * scheme = NULL;
@@ -984,6 +988,7 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
   var[3].data = &scheme;
   var[4].data = &par->average;
   var[5].data = &par->gc;
+  var[6].data = &par->moving_order;
 
   gts_file_assign_variables (fp, var);
 

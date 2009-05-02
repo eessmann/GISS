@@ -39,6 +39,7 @@
 #include "levelset.h"
 #include "vof.h"
 #include "solid.h"
+#include "moving.h"
 #include "river.h"
 
 #include "modules.h"
@@ -100,6 +101,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_ocean_class (),
     gfs_advection_class (),
     gfs_poisson_class (),
+    gfs_moving_simulation_class (),
     gfs_axi_class (),
     gfs_wave_class (),
     gfs_river_class (),
@@ -144,6 +146,7 @@ GtsObjectClass ** gfs_classes (void)
       gfs_variable_distance_class (),
 
     gfs_solid_class (),
+      gfs_solid_moving_class(),
 
     gfs_init_class (),
     gfs_init_flow_constant_class (),

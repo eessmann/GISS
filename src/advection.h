@@ -48,7 +48,7 @@ typedef void (* GfsMergedTraverseFunc)       (GSList * merged,
 
 struct _GfsAdvectionParams {
   gdouble cfl, dt;
-  GfsVariable * v, * fv, ** u, ** g;
+  GfsVariable * v, * fv, ** u, ** g, * vn;
   GfsCenterGradient gradient;
   gboolean use_centered_velocity;
   GfsUpwinding upwinding;
@@ -56,6 +56,7 @@ struct _GfsAdvectionParams {
   GfsAdvectionScheme scheme;
   gboolean average, gc;
   GfsMergedTraverseFunc update;
+  guint moving_order;
 };
 
 void         gfs_advection_params_init        (GfsAdvectionParams * par);

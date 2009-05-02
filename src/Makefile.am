@@ -64,6 +64,7 @@ GFS_HDS = \
 	unstructured.h \
 	map.h \
 	river.h \
+	moving.h \
 	version.h \
 	$(MPI_HDS)
 
@@ -108,6 +109,7 @@ SRC = \
 	unstructured.c \
 	map.c \
 	river.c \
+	moving.c \
 	$(GFS_HDS)
 
 simulation.c: version.h
