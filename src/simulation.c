@@ -1067,7 +1067,7 @@ void gfs_simulation_refine (GfsSimulation * sim)
   if (solids) {
     gfs_domain_timer_start (domain, "solid_fractions");
     sim->thin = gfs_domain_init_solid_fractions (domain, solids, TRUE,
-						 (FttCellCleanupFunc) gfs_cell_cleanup, NULL,  
+						 (FttCellCleanupFunc) gfs_cell_cleanup, domain,  
 						 NULL);
     g_slist_free (solids);
     gfs_domain_match (domain);

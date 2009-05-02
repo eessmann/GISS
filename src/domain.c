@@ -245,12 +245,26 @@ static void free_pair (gpointer key, gpointer value)
   g_free (value);
 }
 
+static void cleanup_each_box (GfsBox * box, GfsDomain * domain)
+{
+  ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+		     (FttCellTraverseFunc) gfs_cell_cleanup, domain);
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d]))
+      ftt_cell_traverse (GFS_BOUNDARY (box->neighbor[d])->root, 
+			 FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			 (FttCellTraverseFunc) gfs_cell_cleanup, domain);
+}
+
 static void domain_destroy (GtsObject * o)
 {
   GfsDomain * domain = GFS_DOMAIN (o);
   GSList * i;
 
   gfs_clock_destroy (domain->timer);
+
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) cleanup_each_box, domain);
 
   i = domain->variables;
   while (i) {
@@ -1773,7 +1787,7 @@ static void box_split (GfsBox * box, SplitPar * p)
       for (i = 0; i < FTT_CELLS; i++)
 	if (child.c[i] && FTT_CELL_IS_LEAF (child.c[i]))
 	  ftt_cell_refine_single (child.c[i], (FttCellInitFunc) gfs_cell_init, domain);
-      ftt_cell_destroy_root (boundary->root, &child, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+      ftt_cell_destroy_root (boundary->root, &child, (FttCellCleanupFunc) gfs_cell_cleanup, domain);
       boundary->root = NULL;
 
       ftt_cell_children_direction (box->root, d, &child);
@@ -1897,7 +1911,8 @@ static void box_destroy (GfsBox * box, GfsVariable * newboxp)
     else
       newbox[i] = NULL;
 
-  ftt_cell_destroy_root (box->root, &child, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+  ftt_cell_destroy_root (box->root, &child, (FttCellCleanupFunc) gfs_cell_cleanup, 
+			 gfs_box_domain (box));
   box->root = NULL;
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i]) {
@@ -2312,7 +2327,7 @@ void gfs_cell_fine_init (FttCell * parent, GfsDomain * domain)
   gfs_cell_init (parent, domain);
 
   if (!GFS_CELL_IS_BOUNDARY (parent) && GFS_IS_MIXED (parent))
-    gfs_solid_coarse_fine (parent);
+    gfs_solid_coarse_fine (parent, domain);
 
   i = domain->variables;
   while (i) {
@@ -2362,7 +2377,7 @@ void gfs_cell_copy (const FttCell * from,
     }
   }
   else if (tos != NULL)
-    gfs_cell_cleanup (to);
+    gfs_cell_cleanup (to, domain);
 }
 
 /**

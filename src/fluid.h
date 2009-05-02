@@ -30,6 +30,7 @@ extern "C" {
 
 typedef struct _GfsVariable               GfsVariable;
 typedef struct _GfsDerivedVariable        GfsDerivedVariable;
+typedef struct _GfsDomain                 GfsDomain;
 
 typedef struct _GfsStateVector     GfsStateVector;
 typedef struct _GfsSolidVector     GfsSolidVector;
@@ -93,7 +94,8 @@ typedef enum {
 
 FttCellFace           gfs_cell_face                 (FttCell * cell,
 						     FttDirection d);
-void                  gfs_cell_cleanup              (FttCell * cell);
+void                  gfs_cell_cleanup              (FttCell * cell,
+						     GfsDomain * domain);
 void                  gfs_cell_reset                (FttCell * cell, 
 						     GfsVariable * v);
 void                  gfs_get_from_below_intensive  (FttCell * cell, 

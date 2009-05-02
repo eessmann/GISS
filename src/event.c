@@ -1985,7 +1985,7 @@ static gboolean gfs_remove_ponds_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_remove_ponds_class ())->parent_class)->event) 
       (event, sim)) {
     gfs_domain_remove_ponds (GFS_DOMAIN (sim), GFS_REMOVE_PONDS (event)->min,
-			     (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+			     (FttCellCleanupFunc) gfs_cell_cleanup, sim);
     return TRUE;
   }
   return FALSE;

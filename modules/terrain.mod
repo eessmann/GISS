@@ -846,7 +846,7 @@ static void coarsen_box (GfsBox * box, GfsRefineTerrain * t)
 {
   ftt_cell_coarsen (box->root,
 		    (FttCellCoarsenFunc) coarsen_boundary, t,
-		    (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+		    (FttCellCleanupFunc) gfs_cell_cleanup, gfs_box_domain (box));
 }
 
 static void reset_empty_cell (FttCell * cell, GfsRefineTerrain * t)

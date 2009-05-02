@@ -436,9 +436,13 @@ static void gfs_boundary_destroy (GtsObject * object)
 {
   GfsBoundary * boundary = GFS_BOUNDARY (object);
 
-  if (boundary->root)
-    ftt_cell_destroy (boundary->root, 
-		      (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+  if (boundary->root) {
+    GfsDomain * domain = gfs_box_domain (boundary->box);
+    if (domain == NULL) /* domain has been destroyed */
+      ftt_cell_destroy (boundary->root, NULL, NULL);
+    else
+      ftt_cell_destroy (boundary->root, (FttCellCleanupFunc) gfs_cell_cleanup, domain);
+  }
   boundary->box->neighbor[FTT_OPPOSITE_DIRECTION (boundary->d)] = NULL;
 
   gts_object_destroy (GTS_OBJECT (boundary->default_bc));
@@ -464,7 +468,7 @@ static void match (FttCell * cell, GfsBoundary * boundary)
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
 	     "root cell is entirely outside of the fluid domain\n"
 	     "the solid surface orientation may be incorrect");
-    ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+    ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup, gfs_box_domain (boundary->box));
     boundary->changed = TRUE;
     return;
   }
@@ -476,7 +480,8 @@ static void match (FttCell * cell, GfsBoundary * boundary)
 	g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
 	       "root cell is entirely outside of the fluid domain\n"
 	       "the solid surface orientation may be incorrect");
-      ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+      ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup,
+			gfs_box_domain (boundary->box));
       boundary->changed = TRUE;
       return;
     }
@@ -538,7 +543,8 @@ static void boundary_match (GfsBoundary * boundary)
     l++;
   }
   if (boundary->changed)
-    ftt_cell_flatten (boundary->root, boundary->d, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+    ftt_cell_flatten (boundary->root, boundary->d, (FttCellCleanupFunc) gfs_cell_cleanup, 
+		      gfs_box_domain (boundary->box));
 }
 
 static void is_extra (GfsVariable * v, GfsBc * bc, gboolean * extra)
@@ -1202,7 +1208,7 @@ static void match_update (FttCell * cell,
       g_assert (boundary->rcvcount < boundary->rcvbuf->len);
       is_destroyed[i] = g_array_index (boundary->rcvbuf, gdouble, boundary->rcvcount++);
       if (is_destroyed[i] && child.c[i]) {
-	ftt_cell_destroy (child.c[i], (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+	ftt_cell_destroy (child.c[i], (FttCellCleanupFunc) gfs_cell_cleanup, domain);
 	child.c[i] = NULL;
 	GFS_BOUNDARY (boundary)->changed = TRUE;
       }
@@ -1236,7 +1242,8 @@ static void receive (GfsBoundary * bb,
     match_update (GFS_BOUNDARY (boundary)->root, boundary);
     ftt_cell_flatten (GFS_BOUNDARY (boundary)->root, 
 		      GFS_BOUNDARY (boundary)->d,
-		      (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+		      (FttCellCleanupFunc) gfs_cell_cleanup, 
+		      gfs_box_domain (GFS_BOUNDARY (boundary)->box));
     break;
 
   default:
@@ -1458,8 +1465,13 @@ static void gfs_box_destroy (GtsObject * object)
   GfsBox * box = GFS_BOX (object);
   FttDirection d;
 
-  if (box->root)
-    ftt_cell_destroy (box->root, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+  if (box->root) {
+    GfsDomain * domain = gfs_box_domain (box);
+    if (domain == NULL) /* domain has been destroyed */
+      ftt_cell_destroy (box->root, NULL, NULL);
+    else
+      ftt_cell_destroy (box->root, (FttCellCleanupFunc) gfs_cell_cleanup, domain);
+  }
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOUNDARY (box->neighbor[d]))
       gts_object_destroy (box->neighbor[d]);
@@ -1590,7 +1602,7 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == '{') {
     FttDirection d;
 
-    ftt_cell_destroy (b->root, (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+    ftt_cell_destroy (b->root, (FttCellCleanupFunc) gfs_cell_cleanup, domain);
     fp->scope_max++;
     if (domain->binary) {
       if (gts_file_getc (fp) != '\n') {

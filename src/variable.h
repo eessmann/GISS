@@ -46,6 +46,7 @@ struct _GfsVariable {
   GtsContainer * sources;
   GfsSurfaceGenericBc * surface_bc;
   GfsDomain * domain;
+  FttCellCleanupFunc cleanup;
   gdouble units;
 };
 

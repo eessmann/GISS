@@ -1385,16 +1385,18 @@ static void outer_fractions_coarse_fine (FttCell * parent, FttDirection d)
 /**
  * gfs_solid_coarse_fine:
  * @parent: a mixed #FttCell with children.
+ * @domain: a #GfsDomain.
  *
  * Fills the solid properties of the children of @parent.
  * Destroys all children entirely contained in the solid.
  */
-void gfs_solid_coarse_fine (FttCell * parent)
+void gfs_solid_coarse_fine (FttCell * parent, GfsDomain * domain)
 {
 #if FTT_2D3
   g_assert_not_implemented ();
 #endif
   g_return_if_fail (parent);
+  g_return_if_fail (domain);
   g_return_if_fail (GFS_IS_MIXED (parent));
   g_return_if_fail (!FTT_CELL_IS_LEAF (parent));
 
@@ -1481,7 +1483,7 @@ void gfs_solid_coarse_fine (FttCell * parent)
 	}
     }
     else if (a == 0.)
-      ftt_cell_destroy (child.c[i], (FttCellCleanupFunc) gfs_cell_cleanup, NULL);
+      ftt_cell_destroy (child.c[i], (FttCellCleanupFunc) gfs_cell_cleanup, domain);
   }
 
 #if !FTT_2D

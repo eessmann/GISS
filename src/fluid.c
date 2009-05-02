@@ -1634,19 +1634,30 @@ void gfs_cell_coarse_fine (FttCell * parent, GfsVariable * v)
 /**
  * gfs_cell_cleanup:
  * @cell: a #FttCell.
+ * @domain: a #GfsDomain.
  *
  * Frees the memory allocated for extra data associated with @cell.
  *
  * This function must be used as "cleanup function" when using
  * ftt_cell_destroy().
  */
-void gfs_cell_cleanup (FttCell * cell)
+void gfs_cell_cleanup (FttCell * cell, GfsDomain * domain)
 {
   g_return_if_fail (cell != NULL);
+  g_return_if_fail (domain != NULL);
   
-  if (cell->data && GFS_STATE (cell)->solid) {
-    g_free (GFS_STATE (cell)->solid);
-    GFS_STATE (cell)->solid = NULL;
+  if (cell->data) {
+    GSList * i = domain->variables;
+    while (i) {
+      GfsVariable * v = i->data;
+      if (v->cleanup)
+	(* v->cleanup) (cell, v);
+      i = i->next;
+    }
+    if (GFS_STATE (cell)->solid) {
+      g_free (GFS_STATE (cell)->solid);
+      GFS_STATE (cell)->solid = NULL;
+    }    
   }
   g_free (cell->data);
   cell->data = NULL;

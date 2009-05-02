@@ -875,7 +875,7 @@ static void fine_cell_cleanup (FttCell * cell, AdaptParams * p)
     if ((o = CELL_HFINE (cell)))
       gts_eheap_remove (p->hfine, o);
   }
-  gfs_cell_cleanup (cell);
+  gfs_cell_cleanup (cell, GFS_DOMAIN (p->sim));
 }
 
 static void cell_fine_init (FttCell * cell, AdaptParams * p)
@@ -1003,7 +1003,7 @@ static gboolean coarsen_cell (FttCell * cell, AdaptLocalParams * p)
 
 static void cell_cleanup (FttCell * cell, AdaptLocalParams * p)
 {
-  gfs_cell_cleanup (cell);
+  gfs_cell_cleanup (cell, GFS_DOMAIN (p->sim));
   p->s->removed++;
   p->nc--;
 }

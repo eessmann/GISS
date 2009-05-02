@@ -27,7 +27,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-typedef struct _GfsDomain                 GfsDomain;
 typedef struct _GfsBox                    GfsBox;
 typedef struct _GfsBoxClass               GfsBoxClass;
 typedef struct _GfsBoundary               GfsBoundary;
