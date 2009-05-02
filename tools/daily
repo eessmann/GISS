@@ -65,7 +65,7 @@ darcs_upgrade()
 	   ( darcs changes | \
 	       $HOME/local/bin/redate | \
 	       source-highlight -f html -s changelog -c mystyle --no-doc > $package"_all_changes" ) && \
-	   ( grep -c date $package"_changes" | awk '{printf ("%d", $1)}' > $package"_changes_number" ) && \
+	   ( grep -c 'class="date"' $package"_changes" | awk '{printf ("%d", $1)}' > $package"_changes_number" ) && \
 	   ( darcs changes --last=1 --xml-output | \
 	      awk 'BEGIN{RS=" ";FS="="} {
                 if ($1 == "date") 
@@ -103,7 +103,7 @@ EOF
 
 build_gts=false
 if ( cd $wdir/$gts && make -k clean && \
-    ( darcs pull -a $darcs_gts/gts-mainline | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then
+    ( darcs pull -a $darcs_gts/gts-devel | grep "No remote changes to pull in" ) ) > /dev/null 2>&1 ; then
     gts_changed=false
 else
     gts_changed=true
