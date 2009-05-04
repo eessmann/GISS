@@ -120,7 +120,15 @@ GfsBcClass * gfs_bc_class (void)
   return klass;
 }
 
-static GfsBc * gfs_bc_new (GfsBcClass * k, GfsVariable * v, gboolean extra)
+/**
+ * gfs_bc_new:
+ * @k: a #GfsBcClass.
+ * @v: a variable associated with the BC or %NULL.
+ * @extra:
+ *
+ * Returns: a new #GfsBc.
+ */
+GfsBc * gfs_bc_new (GfsBcClass * k, GfsVariable * v, gboolean extra)
 {
   GfsBc * b;
 
@@ -793,7 +801,12 @@ GfsBc * gfs_boundary_lookup_bc (GfsBoundary * b, GfsVariable * v)
   g_return_val_if_fail (v != NULL, NULL);
 
   if (!v->name || !(bv = g_hash_table_lookup (b->bc, v->name))) {
-    bv = b->default_bc;
+    if (v->default_bc) {
+      bv = v->default_bc;
+      bv->b = b;
+    }
+    else
+      bv = b->default_bc;
     bv->v = v;
   }
   return bv;
@@ -816,6 +829,25 @@ void gfs_boundary_set_default_bc (GfsBoundary * b, GfsBc * bc)
     gts_object_destroy (GTS_OBJECT (b->default_bc));
   b->default_bc = bc;
   bc->b = b;
+}
+
+/**
+ * gfs_variable_set_default_bc:
+ * @v: a #GfVariable.
+ * @bc: a #GfsBc.
+ *
+ * Sets the default boundary condition for @v to @bc.
+ */
+void gfs_variable_set_default_bc (GfsVariable * v, GfsBc * bc)
+{
+  g_return_if_fail (v != NULL);
+  g_return_if_fail (bc != NULL);
+  g_return_if_fail (bc->v == NULL || bc->v == v);
+
+  if (v->default_bc)
+    gts_object_destroy (GTS_OBJECT (v->default_bc));
+  v->default_bc = bc;
+  bc->v = v;
 }
 
 /**

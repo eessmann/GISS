@@ -1645,7 +1645,7 @@ void gfs_cell_cleanup (FttCell * cell, GfsDomain * domain)
 {
   g_return_if_fail (cell != NULL);
   g_return_if_fail (domain != NULL);
-  
+
   if (cell->data) {
     GSList * i = domain->variables;
     while (i) {

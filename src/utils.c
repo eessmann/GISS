@@ -1150,7 +1150,7 @@ GfsFunction * gfs_function_spatial_new (GfsFunctionClass * klass,
   g_return_val_if_fail (func != NULL, NULL);
 
   object = GFS_FUNCTION (gts_object_new (GTS_OBJECT_CLASS (klass)));
-  object->f = func;
+  object->f = (GfsFunctionFunc) func;
 
   return object;
 }

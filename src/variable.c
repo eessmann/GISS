@@ -82,6 +82,8 @@ static void gfs_variable_destroy (GtsObject * object)
     gts_object_destroy (GTS_OBJECT (v->sources));
   if (v->surface_bc)
     gts_object_destroy (GTS_OBJECT (v->surface_bc));
+  if (v->default_bc)
+    gts_object_destroy (GTS_OBJECT (v->default_bc));
   if (v->domain) {
     gfs_domain_free (v->domain, v->i);
     v->domain->variables = g_slist_remove (v->domain->variables, v);

@@ -45,6 +45,7 @@ struct _GfsVariable {
   GfsVariableFineCoarseFunc fine_coarse, coarse_fine;
   GtsContainer * sources;
   GfsSurfaceGenericBc * surface_bc;
+  GfsBc * default_bc;
   GfsDomain * domain;
   FttCellCleanupFunc cleanup;
   gdouble units;

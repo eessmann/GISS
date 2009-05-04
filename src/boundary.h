@@ -67,6 +67,9 @@ struct _GfsBcClass {
 					gfs_bc_class ()))
 
 GfsBcClass * gfs_bc_class  (void);
+GfsBc *      gfs_bc_new    (GfsBcClass * k, 
+			    GfsVariable * v, 
+			    gboolean extra);
 
 /* GfsBcValue: Header */
 
@@ -180,6 +183,8 @@ void               gfs_boundary_synchronize          (GfsBoundary * boundary);
 GfsBc *            gfs_boundary_lookup_bc            (GfsBoundary * b, 
 						      GfsVariable * v);
 void               gfs_boundary_set_default_bc       (GfsBoundary * b, 
+						      GfsBc * bc);
+void               gfs_variable_set_default_bc       (GfsVariable * v, 
 						      GfsBc * bc);
 void               gfs_boundary_add_bc               (GfsBoundary * b, 
 						      GfsBc * bc);
