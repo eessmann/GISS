@@ -1,0 +1,24 @@
+#
+# Valgrind suppresion for ld-*.so dl_open()
+#
+
+{
+   ld-*.so/dl_open(Addr4)
+   Memcheck:Addr4
+   obj:/lib*/ld-*.so
+   obj:/lib*/libdl-*.so
+}
+
+{
+   ld-*.so/dl_open(Addr4)
+   Memcheck:Addr4
+   obj:/lib/ld-*.so
+   obj:/lib/ld-*.so
+}
+
+{
+   ld-*.so/dl_open(Cond)
+   Memcheck:Cond
+   obj:/lib/ld-*.so
+   obj:/lib/ld-*.so
+}
