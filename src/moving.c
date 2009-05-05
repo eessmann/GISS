@@ -950,10 +950,7 @@ static void redistribute_old_face (FttCell * cell, FttCell * merged, GfsVariable
   FttCellNeighbors neighbors;
   FttDirection d;
 
-  g_assert (cell != NULL);
-
   ftt_cell_neighbors (cell,&neighbors);
-  
   for (d = 0; d< FTT_NEIGHBORS; d++)
     if (neighbors.c[d])
       redistribute_old_face_in_merged (cell, neighbors.c[d], d, old_solid);
@@ -962,6 +959,7 @@ static void redistribute_old_face (FttCell * cell, FttCell * merged, GfsVariable
 typedef struct {
   GfsDomain * domain;
   GfsVariable * status;
+  GfsVariable ** v;
 } ReInitParams;
 
 static void redistribute_destroyed_cells_content (FttCell * cell, ReInitParams * p)
@@ -971,8 +969,6 @@ static void redistribute_destroyed_cells_content (FttCell * cell, ReInitParams *
 
   GfsDomain * domain = p->domain;
   GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (domain)->old_solid;
-  GfsVariable * var;
-  GfsVariable ** v;
   GSList * i;
   FttCell * merged, * next;
   gdouble s1, s2;
@@ -986,35 +982,26 @@ static void redistribute_destroyed_cells_content (FttCell * cell, ReInitParams *
   s1 = ftt_cell_volume (cell);
   s2 = ftt_cell_volume (merged);
 
-  /* Advection of the velocity */
-  v = gfs_domain_velocity (domain);
+  /* redistribution of the velocity */
   for (c = 0; c < FTT_DIMENSION; c++) {
-    var = v[c];
-    if (OLD_SOLID (merged)) 
-      GFS_VALUE (merged, var) = (s1/s2*OLD_SOLID (cell)->a*GFS_VALUE (cell, var)
-				 + OLD_SOLID (merged)->a*GFS_VALUE (merged, var))
-	/(s1/s2*OLD_SOLID (cell)->a + OLD_SOLID (merged)->a);
-    else
-      GFS_VALUE (merged, var) = (s1/s2*OLD_SOLID (cell)->a*GFS_VALUE(cell, var)
-				 + GFS_VALUE (merged, var))
-	/(s1/s2*OLD_SOLID (cell)->a + 1.);
+    gdouble a = OLD_SOLID (merged) ? OLD_SOLID (merged)->a : 1.;
+    GfsVariable * var = p->v[c];
+    GFS_VALUE (merged, var) = (s1*OLD_SOLID (cell)->a*GFS_VALUE (cell, var) +
+			       s2*a*GFS_VALUE (merged, var))
+      /(s1*OLD_SOLID (cell)->a + s2*a);
   }
-
-  /* Advection of tracers */
+  
+  /* redistribution of tracers */
   i = domain->variables;
   while (i) {
-    if GFS_IS_VARIABLE_TRACER (i->data) {
-	GfsVariableTracer * t = GFS_VARIABLE_TRACER(i->data);
-	var = t->advection.v;
-	if (OLD_SOLID (merged))
-	  GFS_VALUE (merged, var) = (s1/s2*OLD_SOLID (cell)->a*GFS_VALUE (cell, var)
-				     + OLD_SOLID (merged)->a*GFS_VALUE (merged, var))
-	    /(s1/s2*OLD_SOLID (cell)->a + OLD_SOLID (merged)->a);
-	else if (OLD_SOLID (merged))
-	  GFS_VALUE (merged, var) = (s1/s2*OLD_SOLID (cell)->a*GFS_VALUE (cell, var)
-				     + GFS_VALUE (merged, var))
-	    /(s1/s2*OLD_SOLID (cell)->a + 1.);	  
-      }
+    if (GFS_IS_VARIABLE_TRACER (i->data)) {
+      gdouble a = OLD_SOLID (merged) ? OLD_SOLID (merged)->a : 1.;
+      GfsVariableTracer * t = GFS_VARIABLE_TRACER(i->data);
+      GfsVariable * var = t->advection.v;
+      GFS_VALUE (merged, var) = (s1*OLD_SOLID (cell)->a*GFS_VALUE (cell, var) +
+				 s2*a*GFS_VALUE (merged, var))
+	/(s1*OLD_SOLID (cell)->a + s2*a);
+    }
     i = i->next;
   }
     
@@ -1058,6 +1045,7 @@ static guint domain_reinit_solid_fractions (GfsSimulation * sim,
     ReInitParams rp;
     rp.domain = domain;
     rp.status = status;
+    rp.v = gfs_domain_velocity (domain);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) redistribute_destroyed_cells_content, &rp);
   }
@@ -1116,15 +1104,12 @@ static void moving_advection_update (GSList * merged, const GfsAdvectionParams *
   if (merged->next == NULL) { /* cell is not merged */
     FttCell * cell = merged->data;
     gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
+    gdouble olda = OLD_SOLID (cell) ? OLD_SOLID (cell)->a : 1.;
 
     if (GFS_IS_MIXED (cell))
       g_assert (!gfs_cell_is_small (cell));
 
-    if (OLD_SOLID (cell))
-      GFS_VALUE (cell, par->v) = (OLD_SOLID (cell)->a*GFS_VALUE (cell, par->vn) + 
-				  GFS_VALUE (cell, par->fv))/a;
-    else
-      GFS_VALUE (cell, par->v) = (GFS_VALUE (cell, par->vn) + GFS_VALUE (cell, par->fv))/a;
+    GFS_VALUE (cell, par->v) = (olda*GFS_VALUE (cell, par->vn) + GFS_VALUE (cell, par->fv))/a;
   }
   else if (1 /* par->average */) {
     /* average value */
@@ -1135,12 +1120,10 @@ static void moving_advection_update (GSList * merged, const GfsAdvectionParams *
       FttCell * cell = i->data;
       gdouble vol = ftt_cell_volume (cell);
       gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
+      gdouble olda = OLD_SOLID (cell) ? OLD_SOLID (cell)->a : 1.;
       
       total_vol += vol*a;
-      if (OLD_SOLID (cell))
-	w += vol*(OLD_SOLID (cell)->a*GFS_VALUE (cell, par->vn) + GFS_VALUE (cell, par->fv));
-      else
-	w += vol*(GFS_VALUE (cell, par->vn) + GFS_VALUE (cell, par->fv));
+      w += vol*(olda*GFS_VALUE (cell, par->vn) + GFS_VALUE (cell, par->fv));
       i = i->next;
     }
     w /= total_vol;
@@ -1160,25 +1143,16 @@ static void moving_advection_update (GSList * merged, const GfsAdvectionParams *
       FttCell * cell = i->data;
       gdouble vol = ftt_cell_volume (cell);
       gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
+      gdouble olda = OLD_SOLID (cell) ? OLD_SOLID (cell)->a : 1.;
 
       total_vol += vol*a;
       if (a < GFS_SMALL) {
-	if (OLD_SOLID (cell))
-	  GFS_VALUE (cell, par->v) = OLD_SOLID (cell)->a*GFS_VALUE (cell, par->vn)/a + 
-	    GFS_VALUE (cell, par->fv)/GFS_SMALL;
-	else
-	  GFS_VALUE (cell, par->v) = GFS_VALUE (cell, par->vn)/a + 
-	    GFS_VALUE (cell, par->fv)/GFS_SMALL;
+	GFS_VALUE (cell, par->v) = olda*GFS_VALUE (cell, par->vn)/a + 
+	  GFS_VALUE (cell, par->fv)/GFS_SMALL;
 	w += vol*GFS_VALUE (cell, par->fv)*(1. - a/GFS_SMALL);   
       }
-      else {
-	if (OLD_SOLID (cell))
-	  GFS_VALUE (cell, par->v) = (OLD_SOLID (cell)->a*GFS_VALUE (cell, par->vn) +
-				      GFS_VALUE (cell, par->fv))/a;
-	else
-	  GFS_VALUE (cell, par->v) = (GFS_VALUE (cell, par->vn) +
-				      GFS_VALUE (cell, par->fv))/a;
-      }
+      else
+	GFS_VALUE (cell, par->v) = (olda*GFS_VALUE (cell, par->vn) + GFS_VALUE (cell, par->fv))/a;
       i = i->next;
     }
     w /= total_vol;
@@ -1596,18 +1570,10 @@ static void moving_divergence_mac (FttCell * cell, DivergenceData * p)
 {
   GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (p->domain)->old_solid;
   gdouble size = ftt_cell_size (cell);
-
-  if (OLD_SOLID (cell)) {
-    if (GFS_STATE (cell)->solid)
-      GFS_VALUE (cell, p->div) = (OLD_SOLID (cell)->a - GFS_STATE (cell)->solid->a)*
-	size*size/p->dt;
-    else
-      GFS_VALUE (cell, p->div) = (OLD_SOLID (cell)->a - 1.)*size*size/p->dt;
-  }
-  else if (GFS_STATE (cell)->solid)
-    GFS_VALUE (cell, p->div) = (1. - GFS_STATE (cell)->solid->a)*size*size/p->dt;
-  else
-    GFS_VALUE (cell, p->div) = 0.;
+  gdouble a = GFS_STATE (cell)->solid ? GFS_STATE (cell)->solid->a : 1.;
+  gdouble olda = OLD_SOLID (cell) ? OLD_SOLID (cell)->a : 1.;
+  
+  GFS_VALUE (cell, p->div) = (olda - a)*size*size/p->dt;
 }
 
 static void moving_mac_projection (GfsSimulation * sim,
@@ -1703,7 +1669,6 @@ static void moving_simulation_run (GfsSimulation * sim)
 
     gfs_variables_swap (p, pmac);
     
-
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
    
     gfs_centered_velocity_advection_diffusion (domain,
@@ -1800,7 +1765,8 @@ GfsSimulationClass * gfs_moving_simulation_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_simulation_class ()), &gfs_moving_simulation_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_simulation_class ()), 
+				  &gfs_moving_simulation_info);
   }
 
   return klass;
