@@ -36,21 +36,48 @@
 typedef struct {
   GfsSimulation * sim;
   GfsSolidMoving * s;
-  GfsVariable * old_solid_v, ** sold2;
+  GfsVariable * old_solid_v, ** sold2, ** v;
 } SolidInfo;
 
-static void init_new_cell_velocity_from_solid (FttCell * cell, SolidInfo * solid_info)
+static double surface_value (FttCell * cell, GfsVariable * v, FttVector * ca)
 {
-  GfsSolidMoving * solid = solid_info->s;
-  GfsDomain * domain = GFS_DOMAIN (solid_info->sim);
-  GfsVariable ** v;
-  
-  v = gfs_domain_velocity (domain);
-  GFS_VALUE (cell, v[0]) = gfs_function_value (solid->vx, NULL);
-  GFS_VALUE (cell, v[1]) = gfs_function_value (solid->vy, NULL);
-#if !FTT_2D
-  GFS_VALUE (cell, v[2]) = gfs_function_value (solid->vz, NULL);
-#endif
+  gdouble val = 0.;
+  if (!v->surface_bc)
+    /* default surface BC for velocity is zero */
+    return 0.;
+  else if (GFS_STATE (cell)->solid) {
+    FttVector oldca;
+    if (ca) {
+      oldca = GFS_STATE (cell)->solid->ca;
+      GFS_STATE (cell)->solid->ca = *ca;
+    }
+    (* GFS_SURFACE_GENERIC_BC_CLASS (GTS_OBJECT (v->surface_bc)->klass)->bc) (cell, v->surface_bc);
+    if (ca)
+      GFS_STATE (cell)->solid->ca = oldca;
+    val = GFS_STATE (cell)->solid->fv;
+  }
+  else {
+    GfsSolidVector solid;
+    if (ca)
+      solid.ca = *ca;
+    else
+      ftt_cell_pos (cell, &solid.ca);
+    solid.cm = solid.ca;
+    GFS_STATE (cell)->solid = &solid;
+    (* GFS_SURFACE_GENERIC_BC_CLASS (GTS_OBJECT (v->surface_bc)->klass)->bc) (cell, v->surface_bc);
+    GFS_STATE (cell)->solid = NULL;
+    val = solid.fv;
+  }
+  if (!(cell->flags & GFS_FLAG_DIRICHLET))
+    g_assert_not_implemented ();
+  return val;
+}
+
+static void init_new_cell_velocity_from_solid (FttCell * cell, SolidInfo * p)
+{
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    GFS_VALUE (cell, p->v[c]) = surface_value (cell, p->v[c], NULL);
 }
 
 static void update_neighbors (FttCell * cell)
@@ -192,10 +219,11 @@ static void remesh_surface_moving (GfsSimulation * sim, GfsSolidMoving * s)
   solid_info.sim = sim;
   solid_info.s = s;
   solid_info.sold2 = GFS_MOVING_SIMULATION (sim)->sold2;
+  solid_info.v = gfs_domain_velocity (domain);
   gfs_domain_traverse_cut (domain, GFS_SOLID (s)->s,
 			   FTT_POST_ORDER, FTT_TRAVERSE_LEAFS | FTT_TRAVERSE_DESTROYED,
 			   (FttCellTraverseCutFunc) create_new_cells, &solid_info);
-  
+  /* fixme: can this be moved outside the solid loop in move_solids()? */
   depth = gfs_domain_depth (domain);
   for (l = depth - 2; l >= 0; l--)
     gfs_domain_cell_traverse (domain,
@@ -204,23 +232,8 @@ static void remesh_surface_moving (GfsSimulation * sim, GfsSolidMoving * s)
 }
 
 static void solid_moving_destroy (GtsObject * object)
-{  
-  gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->vx));
-  gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->vy));
-  gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->vz));
-
-  gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->ox));
-  gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->oy));
-  gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->oz));
-
-  gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->sx));
-  gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->sy));
-  gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->sz));
-
-  gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->scale));
-
+{
   gts_object_destroy (GTS_OBJECT (GFS_SOLID_MOVING (object)->level));
-
   (* GTS_OBJECT_CLASS (gfs_solid_moving_class ())->parent_class->destroy) (object);
 }
 
@@ -255,97 +268,7 @@ static void solid_moving_read (GtsObject ** o, GtsFile * fp)
       gts_file_error (fp, "expecting a keyword");
       return;
     }
-    else if (!strcmp (fp->token->str, "vx")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=') {
-	gts_file_error (fp, "expecting '='");
-	return;
-      }
-      gts_file_next_token (fp);
-      gfs_function_read (solid->vx, gfs_object_simulation (*o), fp);
-    }
-    else if (!strcmp (fp->token->str, "vy")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=') {
-	gts_file_error (fp, "expecting '='");
-	return;
-      }
-      gts_file_next_token (fp);
-      gfs_function_read (solid->vy, gfs_object_simulation (*o), fp);
-    }
-    else if (!strcmp (fp->token->str, "vz")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=') {
-	gts_file_error (fp, "expecting '='");
-	return;
-      }
-      gts_file_next_token (fp);
-      gfs_function_read (solid->vz, gfs_object_simulation (*o), fp);
-    }
-    else if (!strcmp (fp->token->str, "ox")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=') {
-	gts_file_error (fp, "expecting '='");
-	return;
-      }
-      gts_file_next_token (fp);
-      gfs_function_read (solid->ox, gfs_object_simulation (*o), fp);
-    }
-    else if (!strcmp (fp->token->str, "oy")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=') {
-	gts_file_error (fp, "expecting '='");
-	return;
-      }
-      gts_file_next_token (fp);
-      gfs_function_read (solid->oy, gfs_object_simulation (*o), fp);
-    }
-    else if (!strcmp (fp->token->str, "oz")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=') {
-	gts_file_error (fp, "expecting '='");
-	return;
-      }
-      gts_file_next_token (fp);
-      gfs_function_read (solid->oz, gfs_object_simulation (*o), fp);
-    }
-    else if (!strcmp (fp->token->str, "sx")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=') {
-	gts_file_error (fp, "expecting '='");
-	return;
-      }
-      gts_file_next_token (fp);
-      gfs_function_read (solid->sx, gfs_object_simulation (*o), fp);
-    }
-    else if (!strcmp (fp->token->str, "sy")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=') {
-	gts_file_error (fp, "expecting '='");
-	return;
-      }
-      gts_file_next_token (fp);
-      gfs_function_read (solid->sy, gfs_object_simulation (*o), fp);
-    }
-    else if (!strcmp (fp->token->str, "sz")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=') {
-	gts_file_error (fp, "expecting '='");
-	return;
-      }
-      gts_file_next_token (fp);
-      gfs_function_read (solid->sz, gfs_object_simulation (*o), fp);
-    }
-    else if (!strcmp (fp->token->str, "scale")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=') {
-	gts_file_error (fp, "expecting '='");
-	return;
-      }
-      gts_file_next_token (fp);
-      gfs_function_read (solid->scale, gfs_object_simulation (*o), fp);
-    }
-    else if (!strcmp (fp->token->str, "level")) {
+    if (!strcmp (fp->token->str, "level")) {
       gts_file_next_token (fp);
       if (fp->type != '=') {
 	gts_file_error (fp, "expecting '='");
@@ -376,27 +299,7 @@ static void solid_moving_write (GtsObject * object, FILE * fp)
   if (GTS_OBJECT_CLASS (gfs_solid_moving_class ())->parent_class->write)
     (* GTS_OBJECT_CLASS (gfs_solid_moving_class ())->parent_class->write) 
       (object, fp);
-  fputs (" { vx =", fp);
-  gfs_function_write (solid->vx, fp);
-  fputs ("  vy =", fp);
-  gfs_function_write (solid->vy, fp);
-  fputs ("  vz =", fp);
-  gfs_function_write (solid->vz, fp);
-  fputs ("  ox =", fp);
-  gfs_function_write (solid->ox, fp);
-  fputs ("  oy =", fp);
-  gfs_function_write (solid->oy, fp);
-  fputs ("  oz =", fp);
-  gfs_function_write (solid->oz, fp);
-  fputs ("  sx =", fp);
-  gfs_function_write (solid->sx, fp);
-  fputs ("  sy =", fp);
-  gfs_function_write (solid->sy, fp);
-  fputs ("  sz =", fp);
-  gfs_function_write (solid->sz, fp);
-  fputs ("  scale =", fp);
-  gfs_function_write (solid->scale, fp);
-  fputs ("  level =", fp);
+  fputs (" { level =", fp);
   gfs_function_write (solid->level, fp);
   fputc ('}', fp);
 }
@@ -1182,7 +1085,7 @@ static void moving_face_advection_flux (const FttCellFace * face,
 {
   gdouble flux;
   
-  /* fixme: GFS_FACE_FRACTION_HALF should be replaced with the generic fraction method */
+  /* fixme: what's up with face mapping? */
   flux = face_fraction_half (face, par)*GFS_FACE_NORMAL_VELOCITY (face)*par->dt*
     gfs_face_upwinded_value (face, GFS_FACE_UPWINDING, NULL)/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
@@ -1210,7 +1113,7 @@ static void moving_face_velocity_advection_flux (const FttCellFace * face,
 
   g_return_if_fail (c >= 0 && c < FTT_DIMENSION);
 
-  /* fixme: GFS_FACE_FRACTION_HALF should be replaced with the generic fraction method */
+  /* fixme: what's up with face mapping? */
   flux = face_fraction_half (face, par)*GFS_FACE_NORMAL_VELOCITY (face)*
     par->dt/ftt_cell_size (face->cell);
 #if 0
@@ -1285,16 +1188,6 @@ static void solid_moving_init (GfsSolidMoving * solid)
   gfs_event_set (GFS_EVENT (solid),
 		 0., G_MAXDOUBLE/2., -1.,
 		 0, G_MAXINT/2, 1);
-  solid->vx = gfs_function_new (gfs_function_class (), 0.);
-  solid->vy = gfs_function_new (gfs_function_class (), 0.);
-  solid->vz = gfs_function_new (gfs_function_class (), 0.);
-  solid->ox = gfs_function_new (gfs_function_class (), 0.);
-  solid->oy = gfs_function_new (gfs_function_class (), 0.);
-  solid->oz = gfs_function_new (gfs_function_class (), 0.);
-  solid->sx = gfs_function_new (gfs_function_class (), 1.);
-  solid->sy = gfs_function_new (gfs_function_class (), 1.);
-  solid->sz = gfs_function_new (gfs_function_class (), 1.);
-  solid->scale = gfs_function_new (gfs_function_class (), 1.);
   solid->level = gfs_function_new (gfs_function_class (), 0.);
 }
 
@@ -1320,20 +1213,19 @@ GfsEventClass * gfs_solid_moving_class (void)
 
 /* GfsMovingRun: Object */
 
-static void solid_moving_timestep (GfsEvent * event, GfsSimulation * sim)
-{
-  if (GFS_IS_SOLID_MOVING (event)) {
-    GfsSolidMoving * solid = GFS_SOLID_MOVING (event);
-    gdouble v, size = ftt_level_size (gfs_function_value (solid->level, NULL));
-    gdouble vx = gfs_function_value (solid->vx, NULL);
-    gdouble vy = gfs_function_value (solid->vy, NULL);
-    gdouble vz = gfs_function_value (solid->vz, NULL);
+#define MOVING_CFL 0.45
 
-    v = sqrt (vx*vx + vy*vy + vz*vz);
-    if (v != 0) {
-      gdouble dt = size*0.45/v;
-      if (dt < sim->time.dtmax)
-	sim->time.dtmax = dt;
+static void set_dtmax (FttCell * cell, SolidInfo * p)
+{
+  gdouble size = ftt_cell_size (cell);
+  FttComponent c;
+
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    gdouble v = fabs (surface_value (cell, p->v[c], NULL));
+    if (v != 0.) {
+      gdouble dt = size*MOVING_CFL/v;
+      if (dt < p->sim->time.dtmax)
+	p->sim->time.dtmax = dt;
     }
   }
 }
@@ -1341,7 +1233,11 @@ static void solid_moving_timestep (GfsEvent * event, GfsSimulation * sim)
 static void moving_simulation_set_timestep (GfsSimulation * sim)
 {
   gdouble dtmax = sim->time.dtmax;
-  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) solid_moving_timestep, sim);
+  SolidInfo p;
+  p.sim = sim;
+  p.v = gfs_domain_velocity (GFS_DOMAIN (sim));
+  gfs_domain_traverse_mixed (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			     (FttCellTraverseFunc) set_dtmax, &p);
   gfs_simulation_set_timestep (sim);
   sim->time.dtmax = dtmax;
 }
@@ -1458,33 +1354,31 @@ static void swap_face_fractions_back (GfsSimulation * sim)
 			    GFS_MOVING_SIMULATION (sim)->old_solid);
 }
 
+static void move_vertex (GtsPoint * p, SolidInfo * par)
+{ 
+  FttVector pos = *((FttVector *) &p->x);
+  FttCell * cell = gfs_domain_locate (GFS_DOMAIN (par->sim), pos, -1);
+  if (cell) {
+    gdouble dt = par->sim->advection_params.dt;
+    FttComponent c;
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&p->x)[c] += surface_value (cell, par->v[c], &pos)*dt;
+  }
+}
+
 static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
 {
   GfsSurface * surface = GFS_SURFACE (GFS_SOLID (solid)->s);
-  GtsVector rotate, translate, scale;
-  gboolean flip = 0;
-  GtsMatrix * matrix = NULL;
-
-  rotate[0] = 0;
-  rotate[1] = 0;
-  rotate[2] = 0;
-    
-  translate[0] = gfs_function_value (solid->vx, NULL)*sim->advection_params.dt;
-  translate[1] = gfs_function_value (solid->vy, NULL)*sim->advection_params.dt;
-  translate[2] = gfs_function_value (solid->vz, NULL)*sim->advection_params.dt;
-    
-  scale[0] = 1.;
-  scale[1] = 1.;
-  scale[2] = 1.;
-    
-  gfs_surface_transformation (surface->s, rotate, translate, scale, flip, &matrix);
-  if (surface->m) {
-    GtsMatrix * i = gts_matrix_product (matrix, surface->m);
-    gts_matrix_destroy (matrix);
-    gts_matrix_destroy (surface->m);
-    surface->m = i;
+  if (surface->s) {
+    SolidInfo p;
+    p.sim = sim;
+    p.s = solid;
+    p.v = gfs_domain_velocity (GFS_DOMAIN (sim));
+    gts_surface_foreach_vertex (surface->s, (GtsFunc) move_vertex, &p);
   }
-    
+  else
+    /* implicit surface */
+    g_assert_not_implemented ();
   remesh_surface_moving (sim, solid);
 }
 

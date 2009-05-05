@@ -37,10 +37,6 @@ struct _GfsSolidMoving {
   GfsSolid parent;
 
   /*< public >*/
-  GfsFunction * vx, * vy, * vz;
-  GfsFunction * ox ,* oy, * oz;
-  GfsFunction * sx ,* sy, * sz;
-  GfsFunction * scale;
   GfsFunction * level;
   gboolean active;
 };
