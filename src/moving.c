@@ -1402,250 +1402,30 @@ GfsEventClass * gfs_solid_moving_class (void)
 
 /* GfsMovingRun: Object */
 
-static void min_face_fraction (FttCell * cell,
-				 gdouble * min)
-{
-  FttComponent c;
-
-  g_assert (cell);
-  g_assert(min);
-
-
-  if (GFS_IS_MIXED(cell)) {
-    GfsSolidVector * solid = GFS_STATE (cell)->solid;
-    for (c = 0; c < FTT_DIMENSION; c++) {
-      FttDirection d = 2*c;
-      gdouble dx;
-      
-      dx = ftt_cell_size(cell);
-      
-      if (solid->s[d]*dx < *min  && solid->s[d]*dx > 0.0)
-	*min = solid->s[d]*dx;
-      if ((1.-solid->s[d])*dx < *min  && (1.-solid->s[d]) > 0.0)
-	*min = (1.-solid->s[d])*dx;
-      if (solid->s[d+1]*dx < *min && solid->s[d+1]*dx > 0.0)
-	*min = solid->s[d+1]*dx;
-      if ((1.-solid->s[d+1])*dx < *min  && (1.-solid->s[d+1]) > 0.0)
-	*min = (1.-solid->s[d+1])*dx;
-    }
-  }
-}
-
-static void solid_moving_timestep_init (GfsEvent * event, GfsSimulation * sim)
-{
-  g_return_if_fail (sim != NULL);
-  g_return_if_fail (event != NULL);
-
-  if (GFS_IS_SOLID_MOVING(event)) {
-    GfsSolidMoving * solid = GFS_SOLID_MOVING(event);
-    gdouble v, dt, min = 1;
-    gdouble size = ftt_level_size(gfs_function_value(solid->level, NULL));
-
-    v = sqrt(gfs_function_value(solid->vx, NULL)*gfs_function_value(solid->vx, NULL) + gfs_function_value(solid->vy, NULL)*gfs_function_value(solid->vy, NULL) + gfs_function_value(solid->vz, NULL)*gfs_function_value(solid->vz, NULL));
-
-    if (v != 0.) {
-      dt = size*0.45/v;
-
-      gfs_domain_cell_traverse (GFS_DOMAIN(sim),
-				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) min_face_fraction, &min);
-      
-      if (dt > 0.5*min/v)
-	dt = 0.5*min/v;
-
-      if (dt < sim->advection_params.dt){
-	sim->advection_params.dt = dt;
-
-	gdouble t = sim->time.t;
-	gdouble tnext = G_MAXINT;
-	GSList * i = sim->events->items;
-	while (i) {
-	  gdouble next = gfs_event_next (i->data, sim);
-	  if (t < next && next < tnext)
-	    tnext = next + 1e-9;
-	  i = i->next;
-	}
-	if (sim->time.end < tnext)
-	  tnext = sim->time.end;
-	
-	gdouble n = ceil ((tnext - t)/sim->advection_params.dt);
-	if (n > 0. && n < G_MAXINT) {
-	  sim->advection_params.dt = (tnext - t)/n;
-	  if (n == 1.)
-	    sim->tnext = tnext;
-	  else
-	    sim->tnext = t + sim->advection_params.dt;
-	}
-	else
-	  sim->tnext = t + sim->advection_params.dt;
-	
-	if (sim->advection_params.dt < 1e-9)
-	  sim->advection_params.dt = 1e-9;
-      }
-    }
-  }
-}
-
 static void solid_moving_timestep (GfsEvent * event, GfsSimulation * sim)
 {
-  g_return_if_fail (sim != NULL);
-  g_return_if_fail (event != NULL);
+  if (GFS_IS_SOLID_MOVING (event)) {
+    GfsSolidMoving * solid = GFS_SOLID_MOVING (event);
+    gdouble v, size = ftt_level_size (gfs_function_value (solid->level, NULL));
+    gdouble vx = gfs_function_value (solid->vx, NULL);
+    gdouble vy = gfs_function_value (solid->vy, NULL);
+    gdouble vz = gfs_function_value (solid->vz, NULL);
 
-  if (GFS_IS_SOLID_MOVING(event)) {
-    GfsSolidMoving * solid = GFS_SOLID_MOVING(event);
-    gdouble v, dt;
-    gdouble size = ftt_level_size(gfs_function_value(solid->level, NULL));
-
-    v = sqrt(gfs_function_value(solid->vx, NULL)*gfs_function_value(solid->vx, NULL) + gfs_function_value(solid->vy, NULL)*gfs_function_value(solid->vy, NULL) + gfs_function_value(solid->vz, NULL)*gfs_function_value(solid->vz, NULL));
-
+    v = sqrt (vx*vx + vy*vy + vz*vz);
     if (v != 0) {
-      dt = size*0.45/v;
-
-      if (dt < sim->advection_params.dt) {
-	sim->advection_params.dt = dt;
-      }
+      gdouble dt = size*0.45/v;
+      if (dt < sim->time.dtmax)
+	sim->time.dtmax = dt;
     }
   }
-}
-
-static gdouble min_cfl (GfsSimulation * sim)
-{
-  gdouble cfl = (sim->advection_params.scheme == GFS_NONE ?
-		 G_MAXDOUBLE :
-		 sim->advection_params.cfl);
-  GSList * i = GFS_DOMAIN (sim)->variables;
-  
-  while (i) {
-    GfsVariable * v = i->data;
-
-    if (GFS_IS_VARIABLE_TRACER (v) && 
-	GFS_VARIABLE_TRACER (v)->advection.scheme != GFS_NONE &&
-	GFS_VARIABLE_TRACER (v)->advection.cfl < cfl)
-      cfl = GFS_VARIABLE_TRACER (v)->advection.cfl;
-    i = i->next;
-  }
-
-  return cfl;
-}
-
-static void moving_simulation_set_timestep_init (GfsSimulation * sim)
-{
-  gdouble t, cfl;
-
-  g_return_if_fail (sim != NULL);
-  
-  t = sim->time.t;
-  if ((cfl = min_cfl (sim)) < G_MAXDOUBLE)
-    sim->advection_params.dt = cfl*gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
-  else
-    sim->advection_params.dt = G_MAXINT;
-  if (sim->advection_params.dt > sim->time.dtmax)
-    sim->advection_params.dt = sim->time.dtmax;
-  
-  GSList *  i = GFS_DOMAIN (sim)->variables;
-  while (i) {
-    GfsVariable * v = i->data;
-    if (v->sources) {
-      GSList * j = GTS_SLIST_CONTAINER (v->sources)->items;
-      while (j) {
-	GfsSourceGeneric * s = j->data;
-	if (GFS_SOURCE_GENERIC_CLASS (GTS_OBJECT (s)->klass)->stability) {
-	  gdouble dt = (* GFS_SOURCE_GENERIC_CLASS (GTS_OBJECT (s)->klass)->stability) (s, sim);
-	  if (dt < sim->advection_params.dt)
-	    sim->advection_params.dt = dt;
-	}
-	j = j->next;
-      }
-    }
-    i = i->next;
-  }
-
-  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) solid_moving_timestep_init, sim);
-
-  gdouble tnext = G_MAXINT;
-  i = sim->events->items;
-  while (i) {
-    gdouble next = gfs_event_next (i->data, sim);
-    if (t < next && next < tnext)
-      tnext = next + 1e-9;
-    i = i->next;
-  }
-  if (sim->time.end < tnext)
-    tnext = sim->time.end;
-  
-  gdouble n = ceil ((tnext - t)/sim->advection_params.dt);
-  if (n > 0. && n < G_MAXINT) {
-    sim->advection_params.dt = (tnext - t)/n;
-    if (n == 1.)
-      sim->tnext = tnext;
-    else
-      sim->tnext = t + sim->advection_params.dt;
-  }
-  else
-    sim->tnext = t + sim->advection_params.dt;
-  
-  if (sim->advection_params.dt < 1e-9)
-    sim->advection_params.dt = 1e-9;
 }
 
 static void moving_simulation_set_timestep (GfsSimulation * sim)
 {
-  gdouble t, cfl;
-
-  g_return_if_fail (sim != NULL);
-  
-  t = sim->time.t;
-  if ((cfl = min_cfl (sim)) < G_MAXDOUBLE)
-    sim->advection_params.dt = cfl*gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
-  else
-    sim->advection_params.dt = G_MAXINT;
-  if (sim->advection_params.dt > sim->time.dtmax)
-    sim->advection_params.dt = sim->time.dtmax;
-  
-  GSList *  i = GFS_DOMAIN (sim)->variables;
-  while (i) {
-    GfsVariable * v = i->data;
-    if (v->sources) {
-      GSList * j = GTS_SLIST_CONTAINER (v->sources)->items;
-      while (j) {
-	GfsSourceGeneric * s = j->data;
-	if (GFS_SOURCE_GENERIC_CLASS (GTS_OBJECT (s)->klass)->stability) {
-	  gdouble dt = (* GFS_SOURCE_GENERIC_CLASS (GTS_OBJECT (s)->klass)->stability) (s, sim);
-	  if (dt < sim->advection_params.dt)
-	    sim->advection_params.dt = dt;
-	}
-	j = j->next;
-      }
-    }
-    i = i->next;
-  }
-
+  gdouble dtmax = sim->time.dtmax;
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) solid_moving_timestep, sim);
-
-  gdouble tnext = G_MAXINT;
-  i = sim->events->items;
-  while (i) {
-    gdouble next = gfs_event_next (i->data, sim);
-    if (t < next && next < tnext)
-      tnext = next + 1e-9;
-    i = i->next;
-  }
-  if (sim->time.end < tnext)
-    tnext = sim->time.end;
-  
-  gdouble n = ceil ((tnext - t)/sim->advection_params.dt);
-  if (n > 0. && n < G_MAXINT) {
-    sim->advection_params.dt = (tnext - t)/n;
-    if (n == 1.)
-      sim->tnext = tnext;
-    else
-      sim->tnext = t + sim->advection_params.dt;
-  }
-  else
-    sim->tnext = t + sim->advection_params.dt;
-  
-  if (sim->advection_params.dt < 1e-9)
-    sim->advection_params.dt = 1e-9;
+  gfs_simulation_set_timestep (sim);
+  sim->time.dtmax = dtmax;
 }
 
 static void swap_fractions (FttCell * cell, GfsVariable * old_solid_v) {
@@ -1948,10 +1728,9 @@ static void moving_simulation_run (GfsSimulation * sim)
     i = i->next;
   }
 
-  /* fixmov: maybe simplified */
-  moving_simulation_set_timestep_init (sim);
   moving_init (sim);
 
+  moving_simulation_set_timestep (sim);
   if (sim->time.i == 0)
     moving_approximate_projection (domain,
 				   &sim->approx_projection_params,
@@ -1963,9 +1742,6 @@ static void moving_simulation_run (GfsSimulation * sim)
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
     gdouble tstart = gfs_clock_elapsed (domain->timer);
-  
-    if (sim->time.t != 0.)
-      moving_simulation_set_timestep (sim);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
@@ -2016,6 +1792,8 @@ static void moving_simulation_run (GfsSimulation * sim)
 
     sim->time.t = sim->tnext;
     sim->time.i++;
+
+    moving_simulation_set_timestep (sim);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
