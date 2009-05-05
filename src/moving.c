@@ -42,14 +42,14 @@ typedef struct {
 static void init_new_cell_velocity_from_solid (FttCell * cell, SolidInfo * solid_info)
 {
   GfsSolidMoving * solid = solid_info->s;
-  GfsDomain * domain = GFS_DOMAIN(solid_info->sim);
+  GfsDomain * domain = GFS_DOMAIN (solid_info->sim);
   GfsVariable ** v;
   
   v = gfs_domain_velocity (domain);
-  GFS_VARIABLE(cell,v[0]->i) =  gfs_function_value(solid->vx, NULL);
-  GFS_VARIABLE(cell,v[1]->i) =  gfs_function_value(solid->vy, NULL);
+  GFS_VALUE (cell, v[0]) = gfs_function_value (solid->vx, NULL);
+  GFS_VALUE (cell, v[1]) = gfs_function_value (solid->vy, NULL);
 #if !FTT_2D
-  GFS_VARIABLE(cell,v[2]->i) =  gfs_function_value(solid->vz, NULL);
+  GFS_VALUE (cell, v[2]) = gfs_function_value (solid->vz, NULL);
 #endif
 }
 
@@ -72,141 +72,105 @@ static gboolean refine_maxlevel (FttCell * cell, gint * maxlevel)
 
 static void moving_cell_coarse_fine (FttCell * cell, GfsVariable * v)
 {
-  FttCellChildren child;
-  guint n;
   FttCell * parent = ftt_cell_parent (cell);
 
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (parent != NULL);
-  g_return_if_fail (!FTT_CELL_IS_LEAF (parent));
-  g_return_if_fail (v != NULL);
-
-  ftt_cell_children (parent, &child);
-  for (n = 0; n < FTT_CELLS; n++)
-    if (child.c[n] == cell)
-      GFS_VARIABLE (child.c[n], v->i) = GFS_VARIABLE (parent, v->i);
-
+  GFS_VALUE (cell, v) = GFS_VALUE (parent, v);
   if (!GFS_CELL_IS_BOUNDARY (parent)) {
-    FttVector g;
+    FttVector p;
     FttComponent c;
-    
+
+    ftt_cell_relative_pos (cell, &p);    
     for (c = 0; c < FTT_DIMENSION; c++)
-      (&g.x)[c] = gfs_center_van_leer_gradient (parent, c, v->i);
-
-    for (n = 0; n < FTT_CELLS; n++) 
-      if (child.c[n] == cell) {
-	FttVector p;
-
-	ftt_cell_relative_pos (child.c[n], &p);
-	for (c = 0; c < FTT_DIMENSION; c++)
-	  GFS_VARIABLE (child.c[n], v->i) += (&p.x)[c]*(&g.x)[c];
-      }
+      GFS_VALUE (cell, v) += (&p.x)[c]*gfs_center_van_leer_gradient (parent, c, v->i);
   }
 }
 
 #define OLD_SOLID(c) (*((GfsSolidVector **) &(GFS_VALUE (c, old_solid_v))))
 #define SOLD2(c, d)  (GFS_VALUE (c, sold2[d]))
 
-static void moving_cell_fine_init (FttCell * cell, SolidInfo * solid_info)
+static void sold2_fine_init (FttCell * parent, GfsVariable * v)
+{
+  FttCellChildren child;
+  guint n;
+
+  ftt_cell_children (parent, &child);
+  for (n = 0; n < FTT_CELLS; n++)
+    if (child.c[n])
+      GFS_VALUE (child.c[n], v) = 1.;
+}
+
+static void moving_cell_init (FttCell * cell, SolidInfo * solid_info)
 {
   GSList * i;
   gint k;
   GfsDomain * domain = GFS_DOMAIN (solid_info->sim);
   GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (domain)->old_solid;
 
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (FTT_CELL_IS_LEAF (cell));
-  g_return_if_fail (domain != NULL);
-  
   gfs_cell_init (cell, domain);
 
   i = domain->variables;
   while (i) {
     GfsVariable * v = i->data;
     
-    if (v->coarse_fine == (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine) {
-      FttCell * parent = ftt_cell_parent (cell);
-      g_return_if_fail (!FTT_CELL_IS_LEAF (parent));
-      
-      moving_cell_coarse_fine ( cell, v);
-      /* gfs_cell_coarse_fine (parent, v); */
-    }
-#if 0
-    else
-      /* if (v->coarse_fine == (GfsVariableFineCoarseFunc) gfs_vof_coarse_fine) { */
-      /*  FttOct * parentOct = cell->parent; */
-      /*       FttCell * parent = parentOct->parent; */
-      /*       g_return_if_fail (!FTT_CELL_IS_LEAF (parent)); */
-
-      /*       gfs_vof_coarse_fine (parent, v); */
-      /* 	moving_vof_coarse_fine (cell, v); }*/
-      /*       else */
-      fprintf(stderr, "** The moving part of the code doesn't know which coarse_fine routine to use to initialize the new cells (moving.c:function )\n or no gfs_vof_coarse_fine for now \n");
-#endif    
+    if (v->coarse_fine == (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine)
+      moving_cell_coarse_fine (cell, v);
+    /* these are variables specific to moving solid boudaries */
+    else if (v->coarse_fine != sold2_fine_init && v != old_solid_v)
+      g_assert_not_implemented ();
     i = i->next;
   }
 
   g_assert (OLD_SOLID (cell) == NULL);
   OLD_SOLID (cell) = g_malloc0 (sizeof (GfsSolidVector));
-
   OLD_SOLID (cell)->a = 0.;
   GfsVariable ** sold2 = solid_info->sold2;
   if (sold2)
     for (k = 0; k < FTT_NEIGHBORS; k++)
       SOLD2 (cell, k) = OLD_SOLID (cell)->s[k] = 0.;
 
-  init_new_cell_velocity_from_solid (cell,solid_info);
+  init_new_cell_velocity_from_solid (cell, solid_info);
 }
 
-static void moving_cell_fine_init2 (FttCell * cell, SolidInfo * solid_info)
+static void moving_cell_fine_init (FttCell * cell, SolidInfo * solid_info)
 {
   GfsDomain * domain = GFS_DOMAIN(solid_info->sim);
   GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (domain)->old_solid;
   GfsVariable ** sold2 = solid_info->sold2;
-  GfsGenericSurface * s = GFS_SOLID (solid_info->s)->s;
   FttCellChildren child;
   guint n;
-  gboolean x = FALSE;
-  GfsSolidMoving * solid = solid_info->s; 
-  int maxlevel = gfs_function_value(solid->level, cell);
  
   gfs_cell_fine_init (cell, domain);
 
+  /* need to update the neighbors of the "undestroyed" parent cell */
   update_neighbors (cell);
  
   ftt_cell_children (cell, &child);
   for (n = 0; n < FTT_CELLS; n++) {
-    /* this is very expensive... */
-    GfsGenericSurface * cut = gfs_cell_is_cut (child.c[n], s, x, maxlevel);
-    if (cut) {
-      GfsSolidVector * solid = OLD_SOLID (child.c[n]);
-      gint k;
-      g_assert (solid); /* not sure about this */
-      // solid = OLD_SOLID (child.c[n]) = g_malloc0 (sizeof (GfsSolidVector));
-      solid->a = 0.;
-      if (sold2)
-	for (k = 0; k < FTT_NEIGHBORS; k++)
-	  SOLD2 (child.c[n], k) = solid->s[k] = 0.;
-      if (cut != s)
-	gts_object_destroy (GTS_OBJECT (cut));
-    }
+    GfsSolidVector * solid = OLD_SOLID (child.c[n]);
+    gint k;
+    g_assert (!solid);
+    solid = OLD_SOLID (child.c[n]) = g_malloc0 (sizeof (GfsSolidVector));
+    solid->a = 0.;
+    if (sold2)
+      for (k = 0; k < FTT_NEIGHBORS; k++)
+	SOLD2 (child.c[n], k) = solid->s[k] = 0.;
   }
 }
 
-static void create_new_cells  (FttCell * cell, GfsSurface * s, SolidInfo * solid_info)
+static void create_new_cells (FttCell * cell, GfsSurface * s, SolidInfo * solid_info)
 {
   GfsSolidMoving * solid = solid_info->s;
   gint maxlevel = gfs_function_value (solid->level, cell);
 
-  if (FTT_CELL_IS_DESTROYED (cell) && (ftt_cell_level (cell) <= maxlevel)) {
+  if (FTT_CELL_IS_DESTROYED (cell) && ftt_cell_level (cell) <= maxlevel) {
     cell->flags &= ~FTT_FLAG_DESTROYED;
-    moving_cell_fine_init (cell, solid_info);
-    if (FTT_CELL_IS_LEAF (cell) && (ftt_cell_level (cell) < maxlevel))
+    moving_cell_init (cell, solid_info);
+    if (ftt_cell_level (cell) < maxlevel)
       ftt_cell_refine (cell,
 		       (FttCellRefineFunc) refine_maxlevel, &maxlevel,
-		       (FttCellInitFunc) moving_cell_fine_init2, solid_info);
+		       (FttCellInitFunc) moving_cell_fine_init, solid_info);
   }
-  if (FTT_CELL_IS_LEAF (cell) && (ftt_cell_level(cell) < maxlevel))
+  else if (ftt_cell_level (cell) < maxlevel)
     ftt_cell_refine (cell,
 		     (FttCellRefineFunc) refine_maxlevel, &maxlevel,
 		     (FttCellInitFunc) gfs_cell_fine_init, solid_info->sim);
@@ -218,33 +182,25 @@ static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
     ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
 }
 
-static void remesh_surface_moving (GfsSimulation * sim,GfsSolidMoving * s)
+static void remesh_surface_moving (GfsSimulation * sim, GfsSolidMoving * s)
 {
-  GfsDomain * domain = GFS_DOMAIN(sim);
-  GfsGenericSurface * surface = GFS_SOLID (s)->s;
+  GfsDomain * domain = GFS_DOMAIN (sim);
   SolidInfo solid_info;
   guint depth;
   gint l;
 
-
-  g_assert (sim != NULL);
-  g_assert (s != NULL);
-  g_assert (surface != NULL);
-  g_assert (domain != NULL);
- 
   solid_info.sim = sim;
   solid_info.s = s;
   solid_info.sold2 = GFS_MOVING_SIMULATION (sim)->sold2;
-  gfs_domain_traverse_cut (domain, surface,
-			   FTT_PRE_ORDER, FTT_TRAVERSE_ALL | FTT_TRAVERSE_DESTROYED,
+  gfs_domain_traverse_cut (domain, GFS_SOLID (s)->s,
+			   FTT_POST_ORDER, FTT_TRAVERSE_LEAFS | FTT_TRAVERSE_DESTROYED,
 			   (FttCellTraverseCutFunc) create_new_cells, &solid_info);
   
   depth = gfs_domain_depth (domain);
   for (l = depth - 2; l >= 0; l--)
     gfs_domain_cell_traverse (domain,
     			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-    			      (FttCellTraverseFunc) refine_cell_corner,
-    			      domain);
+    			      (FttCellTraverseFunc) refine_cell_corner, domain);
 }
 
 static void solid_moving_destroy (GtsObject * object)
@@ -877,8 +833,7 @@ static void second_order_face_fractions (FttCell * cell, GfsMovingSimulation * s
 
 static void set_old_solid (FttCell * cell, GfsVariable * old_solid_v)
 {
-  if (OLD_SOLID (cell))
-    g_free (OLD_SOLID (cell));
+  g_free (OLD_SOLID (cell));
   OLD_SOLID (cell) = GFS_STATE (cell)->solid;
   GFS_STATE (cell)->solid = NULL;
   cell->flags &= ~GFS_FLAG_PERMANENT;
@@ -1309,12 +1264,6 @@ static void moving_face_velocity_advection_flux (const FttCellFace * face,
   }
 }
 
-static void reset_old_solid (FttCell * cell, GfsVariable * old_solid_v)
-{
-  g_free (OLD_SOLID (cell));
-  OLD_SOLID (cell) = NULL;
-}
-
 static void moving_init (GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN(sim);
@@ -1340,11 +1289,6 @@ static void moving_init (GfsSimulation * sim)
     }
     i = i->next;
   }
-
-  GfsVariable * old_solid = GFS_MOVING_SIMULATION (sim)->old_solid;
-  g_assert (old_solid);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) reset_old_solid, old_solid);
 }
 
 static gboolean solid_moving_event (GfsEvent * event, GfsSimulation * sim)
@@ -1447,8 +1391,8 @@ static void swap_fractions (FttCell * cell, GfsVariable * old_solid_v) {
 	    solid_old->s[c] = (solid_old->s[c]+solid->s[c])/2. ;	
       }
       else
-	for (c = 0; c < 2*FTT_DIMENSION; c++)   
-	  solid_old->s[c] = (solid_old->s[c]+1.)/2. ;	
+	for (c = 0; c < 2*FTT_DIMENSION; c++)
+	  solid_old->s[c] = (solid_old->s[c]+1.)/2. ;
     }
     else if (GFS_STATE (cell)->solid) {
       GfsSolidVector * solid = GFS_STATE (cell)->solid;
@@ -1566,7 +1510,6 @@ static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
     gts_matrix_destroy (surface->m);
     surface->m = i;
   }
-  /* fixme */
     
   remesh_surface_moving (sim, solid);
 }
@@ -1582,8 +1525,10 @@ static void move_solids (GfsSimulation * sim)
 
   if (sim->advection_params.moving_order == 2) {
     FttDirection d;
-    for (d = 0; d < FTT_NEIGHBORS; d++)
-      sold2[d] = gfs_temporary_variable (domain);
+    for (d = 0; d < FTT_NEIGHBORS; d++) {
+      sold2[d] = gfs_domain_add_variable (domain, NULL, NULL);
+      sold2[d]->coarse_fine = sold2_fine_init;
+    }
     GFS_MOVING_SIMULATION (sim)->sold2 = sold2;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) set_sold2, sim);
@@ -1815,30 +1760,6 @@ static void moving_simulation_class_init (GfsSimulationClass * klass)
   klass->run = moving_simulation_run;
 }
 
-static void old_solid_coarse_fine (FttCell * parent, GfsVariable * v)
-{
-  if (!GFS_CELL_IS_BOUNDARY (parent) && !GFS_IS_MIXED (parent)) { /* WAS_MIXED would be right */
-    GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (v->domain)->old_solid;
-    GfsVariable ** sold2 = GFS_MOVING_SIMULATION (v->domain)->sold2;
-    FttCellChildren child;
-    guint i, n;
-
-    ftt_cell_children (parent, &child);
-    for (n = 0; n < FTT_CELLS; n++)
-      if (child.c[n]) {
-	OLD_SOLID (child.c[n]) = g_malloc0 (sizeof (GfsSolidVector));
-	g_assert (!GFS_STATE (child.c[n])->solid);
-	OLD_SOLID (child.c[n])->a = 1.;
-	if (sold2)
-	  for (i = 0; i < FTT_NEIGHBORS; i++)
-	    SOLD2 (child.c[n], i) = OLD_SOLID (child.c[n])->s[i] =  1.;
-      }
-  }
-}
-
-static void donot_interpolate_pointers (FttCell * parent, GfsVariable * v)
-{}
-
 static void old_solid_cleanup (FttCell * cell, GfsVariable * old_solid_v)
 {
   g_free (OLD_SOLID (cell));
@@ -1854,9 +1775,9 @@ static void moving_simulation_init (GfsDomain * domain)
   /* old_solid will hold a pointer to a GfsSolidVector */
   GfsVariable * old_solid = gfs_domain_add_variable (domain, NULL, NULL); 
   GFS_MOVING_SIMULATION (domain)->old_solid = old_solid;
-  /* pointers need to be "interpolated" correctly */
-  old_solid->coarse_fine = old_solid_coarse_fine;
-  old_solid->fine_coarse = donot_interpolate_pointers;
+  /* pointers need to be "interpolated" correctly (i.e. not at all) */
+  old_solid->coarse_fine = (GfsVariableFineCoarseFunc) none;
+  old_solid->fine_coarse = (GfsVariableFineCoarseFunc) none;
   /* the memory needs to be freed when the cell is cleaned up */
   old_solid->cleanup = (FttCellCleanupFunc) old_solid_cleanup;
   /* switch off boundary conditions */
