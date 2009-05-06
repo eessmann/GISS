@@ -1531,11 +1531,15 @@ void ftt_cell_flatten (FttCell * root,
  * ftt_cell_locate:
  * @root: a #FttCell.
  * @target: position of the point to look for.
- * @max_depth: maximum depth to consider (-1 means no restriction).
+ * @max_depth: maximum depth to consider (-1 means no restriction, see below for -2).
  *
  * Locates the cell of the tree defined by @root containing
  * @target. This is done efficiently in log(n) operations by using the
  * topology of the tree.
+ *
+ * If @max_depth is set to -2, the finest cell containing @target is
+ * returned. This cell is not necessarily a leaf-cell in contrast to
+ * the case where @max_depth is set to -1.
  *
  * Returns: a #FttCell of the tree defined by @root and
  * containing (boundary included) the point defined by @target or
@@ -1581,7 +1585,7 @@ FttCell * ftt_cell_locate (FttCell * root,
     pos.z += coords[n][2]*size;
 #endif /* 3D */
   } while (!FTT_CELL_IS_DESTROYED (root));
-  return NULL;
+  return max_depth == -2 ? ftt_cell_parent (root) : NULL;
 }
 
 static void bubble_sort (FttCellChildren * child, gdouble * d)

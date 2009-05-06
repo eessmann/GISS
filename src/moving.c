@@ -1357,13 +1357,15 @@ static void swap_face_fractions_back (GfsSimulation * sim)
 static void move_vertex (GtsPoint * p, SolidInfo * par)
 { 
   FttVector pos = *((FttVector *) &p->x);
-  FttCell * cell = gfs_domain_locate (GFS_DOMAIN (par->sim), pos, -1);
+  FttCell * cell = gfs_domain_locate (GFS_DOMAIN (par->sim), pos, -2);
   if (cell) {
     gdouble dt = par->sim->advection_params.dt;
     FttComponent c;
     for (c = 0; c < FTT_DIMENSION; c++)
       (&p->x)[c] += surface_value (cell, par->v[c], &pos)*dt;
   }
+  else
+    g_warning ("point %g,%g not in domain", pos.x, pos.y);
 }
 
 static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)

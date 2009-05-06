@@ -1996,11 +1996,15 @@ static void box_locate (GfsBox * box, LocateArgs * a)
  * gfs_domain_locate:
  * @domain: a #GfsDomain.
  * @target: position of the point to look for.
- * @max_depth: maximum depth to consider (-1 means no restriction).
+ * @max_depth: maximum depth to consider (-1 means no restriction, see below for -2).
  *
  * Locates the cell of @domain containing @target. This is done
  * efficiently in log(n) operations by using the topology of the cell
  * trees.
+ *
+ * If @max_depth is set to -2, the finest cell containing @target is
+ * returned. This cell is not necessarily a leaf-cell in contrast to
+ * the case where @max_depth is set to -1.
  *
  * Returns: a #FttCell of @domain containing (boundary included) the
  * point defined by @target or %NULL if @target is not contained in
