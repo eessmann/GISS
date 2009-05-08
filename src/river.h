@@ -42,7 +42,8 @@ struct _GfsRiver {
   GfsVariable * dv[FTT_DIMENSION][GFS_RIVER_NVAR + 1];
   GfsVariable * flux[GFS_RIVER_NVAR];
   gdouble g, dt;
-  GfsCenterGradient gradient;  
+  GfsCenterGradient gradient;
+  guint time_order;
 };
 
 #define GFS_RIVER(obj)            GTS_OBJECT_CAST (obj,\

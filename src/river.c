@@ -313,15 +313,16 @@ static void river_run (GfsSimulation * sim)
     gfs_domain_timer_stop (domain, "gradients");
 
     /* predictor */
-    gfs_domain_timer_start (domain, "predictor");
     domain_traverse_all_leaves (domain, (FttCellTraverseFunc) copy, r);
-    for (v = 0; v < GFS_RIVER_NVAR; v++)
-      gfs_variables_swap (r->v[v], r->v1[v]);
-    advance (r, sim->advection_params.dt/2.);
-    for (v = 0; v < GFS_RIVER_NVAR; v++)
-      gfs_variables_swap (r->v[v], r->v1[v]);
-    gfs_domain_timer_stop (domain, "predictor");
-
+    if (r->time_order == 2) {
+      gfs_domain_timer_start (domain, "predictor");
+      for (v = 0; v < GFS_RIVER_NVAR; v++)
+	gfs_variables_swap (r->v[v], r->v1[v]);
+      advance (r, sim->advection_params.dt/2.);
+      for (v = 0; v < GFS_RIVER_NVAR; v++)
+	gfs_variables_swap (r->v[v], r->v1[v]);
+      gfs_domain_timer_stop (domain, "predictor");
+    }
     /* corrector */
     gfs_domain_timer_start (domain, "corrector");
     advance (r, sim->advection_params.dt);
@@ -373,8 +374,40 @@ static gdouble river_cfl (GfsSimulation * sim)
   return r->cfl;
 }
 
+static void river_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_river_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsRiver * river = GFS_RIVER (*o);
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_UINT, "time_order", TRUE},
+      {GTS_NONE}
+    };
+    var[0].data = &river->time_order;
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;
+  }
+}
+
+static void river_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_river_class ())->parent_class->write) (o, fp);
+
+  GfsRiver * river = GFS_RIVER (o);
+  fprintf (fp, " {\n"
+	   "  time_order = %d\n"
+	   "}",
+	   river->time_order);
+}
+
 static void river_class_init (GfsSimulationClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->read = river_read;
+  GTS_OBJECT_CLASS (klass)->write = river_write;
   klass->run = river_run;
   klass->cfl = river_cfl;
 }
@@ -456,6 +489,8 @@ static void river_init (GfsRiver * r)
   gfs_domain_remove_derived_variable (domain, "Lambda2");
   gfs_domain_remove_derived_variable (domain, "Curvature");
   gfs_domain_remove_derived_variable (domain, "D2");
+
+  r->time_order = 2;
 }
 
 GfsSimulationClass * gfs_river_class (void)
