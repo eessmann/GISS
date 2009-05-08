@@ -13,7 +13,7 @@ endif
 ChangeLog: $(DARCS_CHANGELOG)
 
 changelog:
-	darcs changes > ChangeLog
+	darcs changes | grep -v Ignore-this: > ChangeLog
 
 debian-snapshot: $(DARCS_CHANGELOG) config.h src/version.h
 	sh debian/changelog.sh
