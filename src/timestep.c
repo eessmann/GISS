@@ -702,9 +702,7 @@ static void variable_sources (GfsDomain * domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) par->flux, par);
     par->v = sv;
-    par->vn = v;
     gfs_domain_traverse_merged (domain, par->update, par);
-    par->vn = NULL;
     par->v = v;
     par->u = par->g = NULL;
     gts_object_destroy (GTS_OBJECT (par->fv));
@@ -724,6 +722,7 @@ static void variable_sources (GfsDomain * domain,
   if (par->fv) {
     GfsVariable * v = par->v;
     par->v = sv;
+    /* fixme: for axi and moving should this be par->update? */
     gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, par);
     par->v = v;
     gts_object_destroy (GTS_OBJECT (par->fv));
@@ -756,11 +755,16 @@ static void variable_diffusion (GfsDomain * domain,
   gts_object_destroy (GTS_OBJECT (rhoc));
 }
 
+static void copy_v_rhs (FttCell * cell, GfsAdvectionParams * apar)
+{
+  GFS_VALUE (cell, apar->fv) = GFS_VALUE (cell, apar->v);
+}
+
 /**
  * gfs_centered_velocity_advection_diffusion:
  * @domain: a #GfsDomain.
  * @dimension: the number of dimensions (2 or 3).
- * @apar: the advection parameters.
+ * @par: the advection parameters.
  * @gmac: the MAC pressure gradient.
  * @g: the pressure gradient.
  * @alpha: the inverse of density or %NULL.
@@ -780,7 +784,7 @@ static void variable_diffusion (GfsDomain * domain,
  */
 void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 						guint dimension,
-						GfsAdvectionParams * apar,
+						GfsAdvectionParams * par,
 						GfsVariable ** gmac,
 						GfsVariable ** g,
 						GfsFunction * alpha)
@@ -789,30 +793,30 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
   GfsVariable ** v;
 
   g_return_if_fail (domain != NULL);
-  g_return_if_fail (apar != NULL);
+  g_return_if_fail (par != NULL);
   g_return_if_fail (gmac != NULL);
 
   gfs_domain_timer_start (domain, "centered_velocity_advection_diffusion");
 
-  apar->use_centered_velocity = FALSE;
+  par->use_centered_velocity = FALSE;
   v = gfs_domain_velocity (domain);
   for (c = 0; c < dimension; c++) {
     GfsSourceDiffusion * d = source_diffusion (v[c]);
 
-    apar->v = v[c];
+    par->v = v[c];
     if (d) {
       GfsVariable * rhs;
 
-      rhs = gfs_temporary_variable (domain);
+      par->fv = rhs = gfs_temporary_variable (domain);
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) gfs_cell_reset, rhs);
-      variable_sources (domain, apar, rhs, gmac, g);
-      variable_diffusion (domain, d, apar, rhs, alpha);
+				(FttCellTraverseFunc) copy_v_rhs, par);
+      variable_sources (domain, par, rhs, gmac, g);
+      variable_diffusion (domain, d, par, rhs, alpha);
       gts_object_destroy (GTS_OBJECT (rhs));
     }
     else {
-      variable_sources (domain, apar, apar->v, gmac, g);
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, apar->v);
+      variable_sources (domain, par, par->v, gmac, g);
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, par->v);
     }
   }
   gfs_domain_timer_stop (domain, "centered_velocity_advection_diffusion");
@@ -839,9 +843,9 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
   if ((d = source_diffusion (par->v))) {
     GfsVariable * rhs;
 
-    rhs = gfs_temporary_variable (domain);
+    par->fv = rhs = gfs_temporary_variable (domain);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_reset, rhs);
+			      (FttCellTraverseFunc) copy_v_rhs, par);
     variable_sources (domain, par, rhs, NULL, NULL);
     variable_diffusion (domain, d, par, rhs, NULL);
     gts_object_destroy (GTS_OBJECT (rhs));

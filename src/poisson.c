@@ -881,7 +881,7 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
     }
     f += g.b - g.a*val;
   }
-  GFS_VARIABLE (cell, p->rhs) += val + p->beta*f/(h*h*GFS_VARIABLE (cell, p->dia));
+  GFS_VARIABLE (cell, p->rhs) += p->beta*f/(h*h*GFS_VARIABLE (cell, p->dia));
   if (p->axi)
     GFS_VARIABLE (cell, p->rhs) -= val*p->beta*GFS_VARIABLE (cell, p->axi);
 }

@@ -1012,7 +1012,7 @@ static void moving_advection_update (GSList * merged, const GfsAdvectionParams *
     if (GFS_IS_MIXED (cell))
       g_assert (!gfs_cell_is_small (cell));
 
-    GFS_VALUE (cell, par->v) = (olda*GFS_VALUE (cell, par->vn) + GFS_VALUE (cell, par->fv))/a;
+    GFS_VALUE (cell, par->v) = (olda*GFS_VALUE (cell, par->v) + GFS_VALUE (cell, par->fv))/a;
   }
   else if (1 /* par->average */) {
     /* average value */
@@ -1026,7 +1026,7 @@ static void moving_advection_update (GSList * merged, const GfsAdvectionParams *
       gdouble olda = OLD_SOLID (cell) ? OLD_SOLID (cell)->a : 1.;
       
       total_vol += vol*a;
-      w += vol*(olda*GFS_VALUE (cell, par->vn) + GFS_VALUE (cell, par->fv));
+      w += vol*(olda*GFS_VALUE (cell, par->v) + GFS_VALUE (cell, par->fv));
       i = i->next;
     }
     w /= total_vol;
@@ -1050,12 +1050,12 @@ static void moving_advection_update (GSList * merged, const GfsAdvectionParams *
 
       total_vol += vol*a;
       if (a < GFS_SMALL) {
-	GFS_VALUE (cell, par->v) = olda*GFS_VALUE (cell, par->vn)/a + 
+	GFS_VALUE (cell, par->v) = olda*GFS_VALUE (cell, par->v)/a + 
 	  GFS_VALUE (cell, par->fv)/GFS_SMALL;
 	w += vol*GFS_VALUE (cell, par->fv)*(1. - a/GFS_SMALL);   
       }
       else
-	GFS_VALUE (cell, par->v) = (olda*GFS_VALUE (cell, par->vn) + GFS_VALUE (cell, par->fv))/a;
+	GFS_VALUE (cell, par->v) = (olda*GFS_VALUE (cell, par->v) + GFS_VALUE (cell, par->fv))/a;
       i = i->next;
     }
     w /= total_vol;
