@@ -893,18 +893,18 @@ static void cell_fine_init (FttCell * cell, AdaptParams * p)
     p->nc += FTT_CELLS;
 }
 
-static void adapt_global (GfsSimulation * simulation,
-			  guint * depth,
-			  GfsAdaptStats * s,
-			  guint mincells, guint maxcells,
-			  GfsVariable * c,
-			  gdouble cmax)
+static gboolean adapt_global (GfsSimulation * simulation,
+			      guint * depth,
+			      GfsAdaptStats * s,
+			      guint mincells, guint maxcells,
+			      GfsVariable * c,
+			      gdouble cmax)
 {
   GfsDomain * domain = GFS_DOMAIN (simulation);
   gint l;
   gdouble ccoarse = 0., cfine = 0.;
   FttCell * coarse, * fine;
-  gboolean changed = TRUE;
+  gboolean changed = TRUE, global_changed = FALSE;
   AdaptParams apar;
   
   apar.sim = simulation;
@@ -956,7 +956,7 @@ static void adapt_global (GfsSimulation * simulation,
 #endif /* DEBUG */
       fine = remove_top_fine (apar.hfine, &cfine, apar.hfinev);
       s->removed += n - apar.nc;
-      changed = TRUE;
+      changed = global_changed = TRUE;
     }
     if (coarse && ((-ccoarse > cfine && apar.nc < mincells) ||
 		   (-ccoarse > cmax && apar.nc <= maxcells))) {
@@ -971,7 +971,7 @@ static void adapt_global (GfsSimulation * simulation,
 #endif /* DEBUG */
       coarse = remove_top_coarse (apar.hcoarse, &ccoarse, apar.hcoarsev);
       s->created += apar.nc - n;
-      changed = TRUE;
+      changed = global_changed = TRUE;
     }
   }
   gts_range_add_value (&s->cmax, -ccoarse);
@@ -982,6 +982,8 @@ static void adapt_global (GfsSimulation * simulation,
   gts_object_destroy (GTS_OBJECT (apar.costv));
   gts_object_destroy (GTS_OBJECT (apar.hcoarsev));
   gts_object_destroy (GTS_OBJECT (apar.hfinev));  
+
+  return global_changed;
 }
 
 typedef struct {
@@ -989,6 +991,7 @@ typedef struct {
   guint depth, nc;
   GfsVariable * r, * c;
   GfsAdaptStats * s;
+  gboolean changed;
 } AdaptLocalParams;
 
 #define REFINABLE(cell, p) (GFS_VARIABLE (cell, (p)->r->i))
@@ -1006,6 +1009,7 @@ static void cell_cleanup (FttCell * cell, AdaptLocalParams * p)
   gfs_cell_cleanup (cell, GFS_DOMAIN (p->sim));
   p->s->removed++;
   p->nc--;
+  p->changed = TRUE;
 }
 
 static void coarsen_box (GfsBox * box, AdaptLocalParams * p)
@@ -1062,7 +1066,7 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
   }
 }
 
-static void adapt_local (GfsSimulation * sim, guint * depth, GfsAdaptStats * s)
+static gboolean adapt_local (GfsSimulation * sim, guint * depth, GfsAdaptStats * s)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
   AdaptLocalParams p;
@@ -1072,6 +1076,7 @@ static void adapt_local (GfsSimulation * sim, guint * depth, GfsAdaptStats * s)
   p.c = gfs_temporary_variable (domain);
   p.s = s;
   p.nc = 0;
+  p.changed = FALSE;
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) refine_cell_mark, &p);
@@ -1084,6 +1089,7 @@ static void adapt_local (GfsSimulation * sim, guint * depth, GfsAdaptStats * s)
   *depth = p.depth;
 
   gts_range_add_value (&s->ncells, p.nc);
+  return p.changed;
 }
 
 /**
@@ -1129,13 +1135,17 @@ void gfs_simulation_adapt (GfsSimulation * simulation)
   }
   if (active) {
     guint depth = gfs_domain_depth (domain);
+    gboolean changed;
 
     if (maxcells < G_MAXINT)
-      adapt_global (simulation, &depth, &simulation->adapts_stats, mincells, maxcells, c, cmax);
+      changed = adapt_global (simulation, &depth, &simulation->adapts_stats, 
+			      mincells, maxcells, c, cmax);
     else
-      adapt_local (simulation, &depth, &simulation->adapts_stats);
+      changed = adapt_local (simulation, &depth, &simulation->adapts_stats);
 
-    gfs_domain_reshape (domain, depth);
+    gfs_all_reduce (domain, changed, MPI_INT, MPI_MAX);
+    if (changed)
+      gfs_domain_reshape (domain, depth);
   }
 
   gfs_domain_timer_stop (domain, "adapt");

@@ -676,6 +676,20 @@ static void box_changed (GfsBox * box, gboolean * changed)
       *changed |= GFS_BOUNDARY (box->neighbor[d])->changed;
 }
 
+static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
+{
+  if (ftt_refine_corner (cell))
+    ftt_cell_refine_single (cell, domain->cell_init, domain->cell_init_data);
+}
+
+static void box_depth (GfsBox * box, guint * depth)
+{
+  guint d = ftt_cell_depth (box->root);
+
+  if (d > *depth)
+    *depth = d;
+}
+
 static gboolean domain_match (GfsDomain * domain)
 {
   FttComponent c = FTT_XYZ;
@@ -692,6 +706,15 @@ static gboolean domain_match (GfsDomain * domain)
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, datum);
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_synchronize, &c);
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_changed, &changed);
+  if (changed) {
+    gint l;
+    guint depth = 0;
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_depth, &depth);
+    for (l = depth - 2; l >= 0; l--)
+      gfs_domain_cell_traverse (domain,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
+				(FttCellTraverseFunc) refine_cell_corner, domain);
+  }
   gfs_all_reduce (domain, changed, MPI_INT, MPI_MAX);
   return changed;
 }
@@ -1051,14 +1074,6 @@ void gfs_domain_traverse_cut_2D (GfsDomain * domain,
   g_return_if_fail (func != NULL);
 
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) traverse_cut_2D, &p);
-}
-
-static void box_depth (GfsBox * box, guint * depth)
-{
-  guint d = ftt_cell_depth (box->root);
-
-  if (d > *depth)
-    *depth = d;
 }
 
 /**
