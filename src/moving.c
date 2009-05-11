@@ -203,18 +203,10 @@ static void create_new_cells (FttCell * cell, GfsSurface * s, SolidInfo * solid_
 		     (FttCellInitFunc) gfs_cell_fine_init, solid_info->sim);
 }
 
-static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
-{
-  if (ftt_refine_corner (cell))
-    ftt_cell_refine_single (cell, (FttCellInitFunc) gfs_cell_fine_init, domain);
-}
-
 static void remesh_surface_moving (GfsSimulation * sim, GfsSolidMoving * s)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
   SolidInfo solid_info;
-  guint depth;
-  gint l;
 
   solid_info.sim = sim;
   solid_info.s = s;
@@ -223,12 +215,6 @@ static void remesh_surface_moving (GfsSimulation * sim, GfsSolidMoving * s)
   gfs_domain_traverse_cut (domain, GFS_SOLID (s)->s,
 			   FTT_POST_ORDER, FTT_TRAVERSE_LEAFS | FTT_TRAVERSE_DESTROYED,
 			   (FttCellTraverseCutFunc) create_new_cells, &solid_info);
-  /* fixme: can this be moved outside the solid loop in move_solids()? */
-  depth = gfs_domain_depth (domain);
-  for (l = depth - 2; l >= 0; l--)
-    gfs_domain_cell_traverse (domain,
-    			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-    			      (FttCellTraverseFunc) refine_cell_corner, domain);
 }
 
 static void solid_moving_destroy (GtsObject * object)
@@ -1412,7 +1398,7 @@ static void move_solids (GfsSimulation * sim)
   }
   g_slist_free (solids);
   reinit_solid_fractions (sim);
-  gfs_set_merged (domain);
+  gfs_domain_reshape (domain, gfs_domain_depth (domain));
 
   if (sim->advection_params.moving_order == 2) {
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
