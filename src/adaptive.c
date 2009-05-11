@@ -1038,6 +1038,7 @@ static void refine_cell (FttCell * cell, AdaptLocalParams * p)
     ftt_cell_refine_single (cell, (FttCellInitFunc) local_cell_fine_init, p);
     if (level + 1 > p->depth)
       p->depth = level + 1;
+    p->changed = TRUE;
   }
 }
 
