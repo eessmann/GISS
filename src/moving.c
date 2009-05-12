@@ -121,7 +121,7 @@ static void moving_cell_init (FttCell * cell, SolidInfo * solid_info)
   GSList * i;
   gint k;
   GfsDomain * domain = GFS_DOMAIN (solid_info->sim);
-  GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (domain)->old_solid;
+  GfsVariable * old_solid_v = GFS_SIMULATION_MOVING (domain)->old_solid;
 
   gfs_cell_init (cell, domain);
 
@@ -151,7 +151,7 @@ static void moving_cell_init (FttCell * cell, SolidInfo * solid_info)
 static void moving_cell_fine_init (FttCell * cell, SolidInfo * solid_info)
 {
   GfsDomain * domain = GFS_DOMAIN(solid_info->sim);
-  GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (domain)->old_solid;
+  GfsVariable * old_solid_v = GFS_SIMULATION_MOVING (domain)->old_solid;
   GfsVariable ** sold2 = solid_info->sold2;
   FttCellChildren child;
   guint n;
@@ -200,7 +200,7 @@ static void remesh_surface_moving (GfsSimulation * sim, GfsSolidMoving * s)
 
   solid_info.sim = sim;
   solid_info.s = s;
-  solid_info.sold2 = GFS_MOVING_SIMULATION (sim)->sold2;
+  solid_info.sold2 = GFS_SIMULATION_MOVING (sim)->sold2;
   solid_info.v = gfs_domain_velocity (domain);
   gfs_domain_traverse_cut (domain, GFS_SOLID (s)->s,
 			   FTT_POST_ORDER, FTT_TRAVERSE_LEAFS | FTT_TRAVERSE_DESTROYED,
@@ -328,7 +328,7 @@ static void redistribute_destroyed_cells_content (FttCell * cell, ReInitParams *
     return;
 
   GfsDomain * domain = p->domain;
-  GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (domain)->old_solid;
+  GfsVariable * old_solid_v = GFS_SIMULATION_MOVING (domain)->old_solid;
   GSList * i;
   FttCell * merged, * next;
   gdouble s1, s2;
@@ -371,7 +371,7 @@ static void redistribute_destroyed_cells_content (FttCell * cell, ReInitParams *
   }
   OLD_SOLID (merged)->a += s1/s2*OLD_SOLID (cell)->a;
   if (GFS_SIMULATION (domain)->advection_params.moving_order == 2)
-    redistribute_old_face (cell, merged, GFS_MOVING_SIMULATION (domain)->old_solid);
+    redistribute_old_face (cell, merged, GFS_SIMULATION_MOVING (domain)->old_solid);
 }
 
 /**
@@ -460,7 +460,7 @@ static void reinit_solid_fractions (GfsSimulation * sim)
 /* see gfs_advection_update() for a description of what this function does */
 static void moving_advection_update (GSList * merged, const GfsAdvectionParams * par)
 {
-  GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (par->v->domain)->old_solid;
+  GfsVariable * old_solid_v = GFS_SIMULATION_MOVING (par->v->domain)->old_solid;
 
   if (merged->next == NULL) { /* cell is not merged */
     FttCell * cell = merged->data;
@@ -618,7 +618,7 @@ static void set_dtmax (FttCell * cell, SolidInfo * p)
   }
 }
 
-static void moving_simulation_set_timestep (GfsSimulation * sim)
+static void simulation_moving_set_timestep (GfsSimulation * sim)
 {
   gdouble dtmax = sim->time.dtmax;
   SolidInfo p;
@@ -663,7 +663,7 @@ static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
 static void move_solids (GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
-  GfsVariable * old_solid = GFS_MOVING_SIMULATION (sim)->old_solid;
+  GfsVariable * old_solid = GFS_SIMULATION_MOVING (sim)->old_solid;
   GfsVariable * sold2[FTT_NEIGHBORS];
 
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
@@ -675,7 +675,7 @@ static void move_solids (GfsSimulation * sim)
       sold2[d] = gfs_domain_add_variable (domain, NULL, NULL);
       sold2[d]->coarse_fine = sold2_fine_init;
     }
-    GFS_MOVING_SIMULATION (sim)->sold2 = sold2;
+    GFS_SIMULATION_MOVING (sim)->sold2 = sold2;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) set_sold2, sim);
   }
@@ -696,7 +696,7 @@ static void move_solids (GfsSimulation * sim)
     FttDirection d;
     for (d = 0; d < FTT_NEIGHBORS; d++)
       gts_object_destroy (GTS_OBJECT (sold2[d]));    
-    GFS_MOVING_SIMULATION (sim)->sold2 = NULL;
+    GFS_SIMULATION_MOVING (sim)->sold2 = NULL;
   }
 }
 
@@ -740,7 +740,7 @@ static void moving_approximate_projection (GfsDomain * domain,
 
 static void moving_divergence_mac (FttCell * cell, DivergenceData * p)
 {
-  GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (p->domain)->old_solid;
+  GfsVariable * old_solid_v = GFS_SIMULATION_MOVING (p->domain)->old_solid;
   gdouble size = ftt_cell_size (cell);
   gdouble a = GFS_STATE (cell)->solid ? GFS_STATE (cell)->solid->a : 1.;
   gdouble olda = OLD_SOLID (cell) ? OLD_SOLID (cell)->a : 1.;
@@ -776,7 +776,7 @@ static void moving_mac_projection (GfsSimulation * sim,
     swap_face_fractions_back (sim);
 }
 
-static void moving_simulation_run (GfsSimulation * sim)
+static void simulation_moving_run (GfsSimulation * sim)
 {
   GfsVariable * p, * pmac, * res = NULL, * g[FTT_DIMENSION], * gmac[FTT_DIMENSION];
   GfsVariable ** gc = sim->advection_params.gc ? g : NULL;
@@ -813,7 +813,7 @@ static void moving_simulation_run (GfsSimulation * sim)
 
   moving_init (sim);
 
-  moving_simulation_set_timestep (sim);
+  simulation_moving_set_timestep (sim);
   if (sim->time.i == 0)
     moving_approximate_projection (domain,
 				   &sim->approx_projection_params,
@@ -875,7 +875,7 @@ static void moving_simulation_run (GfsSimulation * sim)
     sim->time.t = sim->tnext;
     sim->time.i++;
 
-    moving_simulation_set_timestep (sim);
+    simulation_moving_set_timestep (sim);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
@@ -892,9 +892,9 @@ static void moving_simulation_run (GfsSimulation * sim)
   }
 }
 
-static void moving_simulation_class_init (GfsSimulationClass * klass)
+static void simulation_moving_class_init (GfsSimulationClass * klass)
 {
-  klass->run = moving_simulation_run;
+  klass->run = simulation_moving_run;
 }
 
 static void old_solid_cleanup (FttCell * cell, GfsVariable * old_solid_v)
@@ -905,13 +905,13 @@ static void old_solid_cleanup (FttCell * cell, GfsVariable * old_solid_v)
 
 static void none (void) {}
 
-static void moving_simulation_init (GfsDomain * domain)
+static void simulation_moving_init (GfsDomain * domain)
 {
   gfs_domain_add_variable (domain, "div", "Divergence")->centered = TRUE;
 
   /* old_solid will hold a pointer to a GfsSolidVector */
   GfsVariable * old_solid = gfs_domain_add_variable (domain, NULL, NULL); 
-  GFS_MOVING_SIMULATION (domain)->old_solid = old_solid;
+  GFS_SIMULATION_MOVING (domain)->old_solid = old_solid;
   /* pointers need to be "interpolated" correctly (i.e. not at all) */
   old_solid->coarse_fine = (GfsVariableFineCoarseFunc) none;
   old_solid->fine_coarse = (GfsVariableFineCoarseFunc) none;
@@ -923,22 +923,22 @@ static void moving_simulation_init (GfsDomain * domain)
   gfs_variable_set_default_bc (old_solid, bc);
 }
 
-GfsSimulationClass * gfs_moving_simulation_class (void)
+GfsSimulationClass * gfs_simulation_moving_class (void)
 {
   static GfsSimulationClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_moving_simulation_info = {
-      "GfsMovingSimulation",
-      sizeof (GfsMovingSimulation),
+    GtsObjectClassInfo gfs_simulation_moving_info = {
+      "GfsSimulationMoving",
+      sizeof (GfsSimulationMoving),
       sizeof (GfsSimulationClass),
-      (GtsObjectClassInitFunc) moving_simulation_class_init,
-      (GtsObjectInitFunc) moving_simulation_init,
+      (GtsObjectClassInitFunc) simulation_moving_class_init,
+      (GtsObjectInitFunc) simulation_moving_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_simulation_class ()), 
-				  &gfs_moving_simulation_info);
+				  &gfs_simulation_moving_info);
   }
 
   return klass;

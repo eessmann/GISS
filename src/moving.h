@@ -49,11 +49,11 @@ GfsEventClass * gfs_solid_moving_class (void);
 #define GFS_IS_SOLID_MOVING(obj)         (gts_object_is_from_class (obj,\
 						 gfs_solid_moving_class ()))
 
-/* GfsMovingSimulation: Header */
+/* GfsSimulationMoving: Header */
 
-typedef struct _GfsMovingSimulation         GfsMovingSimulation;
+typedef struct _GfsSimulationMoving         GfsSimulationMoving;
 
-struct _GfsMovingSimulation {
+struct _GfsSimulationMoving {
   /*< private >*/
   GfsSimulation parent;
 
@@ -61,13 +61,13 @@ struct _GfsMovingSimulation {
   GfsVariable * old_solid, ** sold2;
 };
 
-#define GFS_MOVING_SIMULATION(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsMovingSimulation,\
-					         gfs_moving_simulation_class ())
-#define GFS_IS_MOVING_SIMULATION(obj)         (gts_object_is_from_class (obj,\
-						 gfs_moving_simulation_class ()))
+#define GFS_SIMULATION_MOVING(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSimulationMoving,\
+					         gfs_simulation_moving_class ())
+#define GFS_IS_SIMULATION_MOVING(obj)         (gts_object_is_from_class (obj,\
+						 gfs_simulation_moving_class ()))
 
-GfsSimulationClass * gfs_moving_simulation_class            (void);
+GfsSimulationClass * gfs_simulation_moving_class            (void);
 
 #ifdef __cplusplus
 }

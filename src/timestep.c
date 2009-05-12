@@ -143,8 +143,8 @@ static void correct_normal_velocity (FttCellFace * face,
  * Assumes that the Poisson weighting coefficients have already been
  * computed using gfs_poisson_coefficients().
  *
- * Also allocates the @g variables (if @g is not %NULL) and fills them
- * with the centered gradient of @p.
+ * Also fills the @g variables (if not %NULL) with the centered
+ * gradient of @p.
  */
 void gfs_correct_normal_velocities (GfsDomain * domain,
 				    guint dimension,

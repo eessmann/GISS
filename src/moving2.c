@@ -243,7 +243,7 @@ static double new_solid_old_solid (FttCell * cell, FttDirection d1,
   return -1.;
 }
 
-static void second_order_face_fractions (FttCell * cell, GfsMovingSimulation * sim)
+static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * sim)
 {
 #ifndef FTT_2D /* 3D */
   g_assert_not_implemented ();
@@ -464,7 +464,7 @@ static void second_order_face_fractions (FttCell * cell, GfsMovingSimulation * s
 	OLD_SOLID (cell)->s[d] = -1.+dto1+dto2;
 }
 
-static void set_sold2 (FttCell * cell, GfsMovingSimulation * sim)
+static void set_sold2 (FttCell * cell, GfsSimulationMoving * sim)
 {
   GfsVariable * old_solid_v = sim->old_solid;
   GfsVariable ** sold2 = sim->sold2;
@@ -555,7 +555,7 @@ static void redistribute_old_face (FttCell * cell, FttCell * merged, GfsVariable
 
 static double face_fraction_half (const FttCellFace * face, const GfsAdvectionParams * par)
 {
-  GfsVariable * old_solid_v = GFS_MOVING_SIMULATION (par->v->domain)->old_solid;
+  GfsVariable * old_solid_v = GFS_SIMULATION_MOVING (par->v->domain)->old_solid;
   if (face->cell && OLD_SOLID (face->cell))
     return OLD_SOLID (face->cell)->s[face->d];
   return 1.;
@@ -704,7 +704,7 @@ static void swap_face_fractions (GfsSimulation * sim)
   GfsDomain * domain = GFS_DOMAIN (sim);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) swap_fractions, 
-			    GFS_MOVING_SIMULATION (sim)->old_solid);
+			    GFS_SIMULATION_MOVING (sim)->old_solid);
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) foreach_box, NULL);
 }
 
@@ -732,5 +732,5 @@ static void swap_face_fractions_back (GfsSimulation * sim)
 {
   gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) swap_fractions_back,
-			    GFS_MOVING_SIMULATION (sim)->old_solid);
+			    GFS_SIMULATION_MOVING (sim)->old_solid);
 }

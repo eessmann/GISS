@@ -31,7 +31,7 @@
 # Required files: hexagon.sh hexagon.gts hexagon.gfv
 # Generated files: error.eps end-2.eps
 #
-2 1 GfsMovingSimulation GfsBox GfsGEdge {} {
+2 1 GfsSimulationMoving GfsBox GfsGEdge {} {
   Time { end = .1875 }
   Refine 7
 

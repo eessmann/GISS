@@ -101,7 +101,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_ocean_class (),
     gfs_advection_class (),
     gfs_poisson_class (),
-    gfs_moving_simulation_class (),
+    gfs_simulation_moving_class (),
     gfs_axi_class (),
     gfs_wave_class (),
     gfs_river_class (),
