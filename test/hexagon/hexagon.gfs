@@ -1,31 +1,25 @@
 # Title: Translation of an hexagon in a uniform flow
 #
-# Description: An hexagonal solid objects translates uniformly in a
-# fluid moving at the same speed.
+# Description: 
 #
-# Only the advection scheme is ON (no diffusion)
+# An hexagonal solid object translates uniformly in a fluid moving at
+# the same speed (U = 1). There is no diffusion.
 #
-# The second_order scheme should compute the solid flux exactly and
-# generate very small errors which is not the case for the first order
-# scheme.
-#
-# Scheme conservative properties can be checked by filling the
-# simulation domain with tracer and computing the total amount at each
-# time step.
+# The conservation properties of the scheme can be checked by filling
+# the simulation domain with tracer and computing the total amount at
+# each time step.
 # 
 # \begin{figure}[htbp]
-# \caption{\label{errorvelocitytime} In blue are the regions where the
-# error on the velocity field at the end of the test is less than
-# 0.001 and in red where it is larger. The domain should be all blue
-# for the second order method.}
+# \caption{\label{errorvelocitytime} Error in the horizontal component
+# of the velocity field. Dark blue is zero, dark red 0.1.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{end-2.eps}
 # \end{center}
 # \end{figure}
 #
 # \begin{figure}[htbp]
-# \caption{\label{ordertime} Evolution of the global error on the
-# velocity field in norm2 with time.}
+# \caption{\label{ordertime} Evolution of the global RMS error on the
+# velocity field.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{error.eps}
 # \end{center}
@@ -41,8 +35,13 @@
   Time { end = .1875 }
   Refine 7
 
-  SolidMoving { istep = 1 } hexagon.gts { scale = 0.250001 } { vx = 1. level = 7 }
-  AdvectionParams { moving_order = ORDER }
+  SolidMoving hexagon.gts { scale = 0.250001 } { level = 7 }
+  AdvectionParams { 
+      moving_order = ORDER 
+      # uncommenting the following line leads to instabilities for the
+      # first-order scheme 
+      # cfl = 0.45
+  }
   
   ProjectionParams { tolerance = 1e-10 }
   ApproxProjectionParams { tolerance = 1e-10 }
@@ -52,7 +51,6 @@
   VariableTracer T
  
   SurfaceBc U Dirichlet 1.
-  SurfaceBc V Dirichlet 0.
 
   Init {} { U = 1 T = 1 }
 
