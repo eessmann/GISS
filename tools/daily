@@ -170,7 +170,7 @@ if ( $build_gerris || $build_gfsview ) ; then
    else
        check=1
    fi
-   if ( cd $wdir/$gerris/test && make -k tests && \
+   if ( cd $wdir/$gerris/test && make -k tests.tar.gz && \
         cd $wdir/$gerris/doc/tutorial && make -k tutorial.pdf tutorial.tar.gz && \
         cd $wdir/$gerris/doc/examples && make -k examples.tar.gz && \
         cd $wdir/$gerris/doc && make -k templates sgml html ) > $wdir/tests 2>&1 ; then :
@@ -284,11 +284,11 @@ if ( $build_gerris || $build_gfsview ) ; then
        fi
    fi
    if test -z "$tests"; then
-       if ( cd $wdir/$gerris/test && make tests.tar.gz && \
+       if ( cd $wdir/$gerris/test && \
            rm -r -f $localgerrisweb/tests/* && \
            cp tests.tar.gz $localgerrisweb/tests/ && \
 	   cd $localgerrisweb/tests/ && \
-	   tar xzf tests.tar.gz && \
+	   tar xzf tests.tar.gz && rm -f tests.tar.gz && \
 	   cd $wdir/$gerris/doc/examples && \
            rm -r -f $HOME/local/src/gerris-www/publish/examples/* && \
            cp examples.tar.gz $HOME/local/src/gerris-www/publish/examples/ && \
