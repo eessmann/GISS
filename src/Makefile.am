@@ -137,6 +137,7 @@ EXTRA_DIST = \
 	mpi_boundary.c \
 	mpi_boundary.h \
 	ftt_internal.c \
+	moving2.c \
 	m4.awk
 
 bin_PROGRAMS = gerris2D gerris3D gerris2D3
