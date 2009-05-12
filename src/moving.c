@@ -228,6 +228,11 @@ static void solid_moving_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
+  if (!GFS_IS_SIMULATION_MOVING (gfs_object_simulation (*o))) {
+    gts_file_error (fp, "GfsSolidMoving only makes sense with GfsSimulationMoving");
+    return;
+  }
+
   if (fp->type != '{') {
     gts_file_error (fp, "expecting an opening brace");
     return;
