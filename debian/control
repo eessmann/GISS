@@ -5,6 +5,7 @@ Maintainer: Stephane Popinet <popinet@users.sf.net>
 Build-Depends: cdbs, debhelper (>= 5), autotools-dev, libglib2.0-dev,
 	       libgts-snapshot-dev,
 	       libnetcdf-dev, libgsl0-dev, proj,
+               libopenmpi-dev [i386 amd64], openmpi-bin [i386 amd64],
 	       python, g77 | gfortran, chrpath
 Homepage: http://gfs.sourceforge.net/
 

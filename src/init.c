@@ -128,9 +128,6 @@ GtsObjectClass ** gfs_classes (void)
     gfs_boundary_outflow_class (),
     gfs_boundary_gradient_class (),
     gfs_boundary_periodic_class (),
-#ifdef HAVE_MPI
-    gfs_boundary_mpi_class (),
-#endif /* HAVE_MPI */
 
   gfs_refine_class (),
     gfs_refine_solid_class (),
@@ -295,6 +292,9 @@ void gfs_init (int * argc, char *** argv)
 
   /* Instantiates classes before reading any domain or simulation file */
   gfs_classes ();
+#ifdef HAVE_MPI
+  gfs_boundary_mpi_class ();
+#endif /* HAVE_MPI */
 
   /* If modules are not supported, calls modules init functions */
 #include "modules.c"
