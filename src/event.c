@@ -1610,7 +1610,10 @@ FILE * gfs_popen (GfsSimulation * sim, const char * command, const char * type)
   g_return_val_if_fail (type != NULL, NULL);
   
   gchar sname[] = "/tmp/gfsXXXXXX";
-  mktemp (sname);
+  if (!mktemp (sname)) {
+    g_warning ("gfs_popen() cannot create unique temporary filename");
+    return NULL;
+  }
   if (mkfifo (sname, 0666)) {
     g_warning ("gfs_popen() cannot create FIFO: %s", strerror (errno));
     return NULL;

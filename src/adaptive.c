@@ -1054,7 +1054,7 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
     GfsAdapt * a = i->data;
     if (a->active) {
       guint maxlevel = gfs_function_value (a->maxlevel, cell);
-      if (level < maxlevel && (* a->cost) (cell, a) > a->cmax) {
+      if (FTT_CELL_IS_LEAF (cell) && level < maxlevel && (* a->cost) (cell, a) > a->cmax) {
 	REFINABLE (cell, p) = TRUE;
 	COARSENABLE (cell, p) = FALSE;
 	return;
@@ -1064,6 +1064,11 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
 	COARSENABLE (cell, p) = FALSE;
     }
     i = i->next;
+  }
+  if (!FTT_CELL_IS_LEAF (cell)) {
+    FttCell * parent = ftt_cell_parent (cell);    
+    if (parent)
+      COARSENABLE (parent, p) = FALSE;
   }
 }
 
