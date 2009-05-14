@@ -21,8 +21,6 @@
 #include "adaptive.h"
 #include "source.h"
 
-#define DRY 1e-6
-
 /* GfsRiver: Object */
 
 static void flux (const gdouble * u, gdouble g, gdouble * f)
@@ -99,8 +97,8 @@ typedef struct {
 
 static void face_fluxes (FttCellFace * face, GfsRiver * r)
 {
-  if (GFS_VALUE (face->cell, r->v1[0]) <= DRY &&
-      GFS_VALUE (face->neighbor, r->v1[0]) <= DRY)
+  if (GFS_VALUE (face->cell, r->v1[0]) <= GFS_RIVER_DRY &&
+      GFS_VALUE (face->neighbor, r->v1[0]) <= GFS_RIVER_DRY)
     return;
 
   static Sym sym[4] = {
@@ -119,7 +117,7 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   gdouble zbLR = MAX (zbL, zbR);
   gdouble uL[4], uR[4], f[3];
 
-  if (etaL > DRY) {
+  if (etaL > GFS_RIVER_DRY) {
     uL[1] = s->du*(GFS_VALUE (face->cell, r->v1[s->u]) +
 		   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->u]))/etaL; /* u = uh/h */
     uL[2] = s->dv*(GFS_VALUE (face->cell, r->v1[s->v]) +
@@ -135,7 +133,7 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE: case FTT_FINE_COARSE:
     /* fixme: this is only first-order accurate for fine/coarse */
-    if (etaR > DRY) {
+    if (etaR > GFS_RIVER_DRY) {
       uR[1] = s->du*(GFS_VALUE (face->neighbor, r->v1[s->u]) -
 		     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->u]))/etaR; /* u = uh/h */
       uR[2] = s->dv*(GFS_VALUE (face->neighbor, r->v1[s->v]) -
@@ -351,7 +349,7 @@ static void minimum_cfl (FttCell * cell, GfsRiver * r)
 {
   gdouble size = ftt_cell_size (cell);
   gdouble h = GFS_VALUE (cell, r->v[0]);
-  if (h > DRY) {
+  if (h > GFS_RIVER_DRY) {
     gdouble uh = fabs (GFS_VALUE (cell, r->v[1]));
     gdouble c = sqrt (r->g*h);
     gdouble cfl = size/(uh/h + c);
@@ -418,7 +416,7 @@ static gdouble cell_velocity (FttCell * cell, FttCellFace * face, GfsRiver * r)
 
   gdouble D = GFS_VALUE (cell, r->v[0]);
   gdouble L = GFS_SIMULATION (r)->physical_params.L;
-  return D > DRY ? L*gfs_vector_norm (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/D : 0.;
+  return D > GFS_RIVER_DRY ? L*gfs_vector_norm (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/D : 0.;
 }
 
 static gdouble cell_velocity2 (FttCell * cell, FttCellFace * face, GfsRiver * r)
@@ -427,7 +425,8 @@ static gdouble cell_velocity2 (FttCell * cell, FttCellFace * face, GfsRiver * r)
 
   gdouble D = GFS_VALUE (cell, r->v[0]);
   gdouble L = GFS_SIMULATION (r)->physical_params.L;
-  return D > DRY ? L*L*gfs_vector_norm2 (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/(D*D) : 0.;
+  return D > GFS_RIVER_DRY ? 
+    L*L*gfs_vector_norm2 (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/(D*D) : 0.;
 }
 
 static void river_init (GfsRiver * r)

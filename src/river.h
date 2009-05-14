@@ -29,6 +29,7 @@ extern "C" {
 /* GfsRiver: Header */
 
 #define GFS_RIVER_NVAR 3
+#define GFS_RIVER_DRY 1e-6
 
 typedef struct _GfsRiver GfsRiver;
 

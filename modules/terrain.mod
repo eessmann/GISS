@@ -25,6 +25,7 @@
 #include "refine.h"
 #include "solid.h"
 #include "rsurface.h"
+#include "river.h"
 
 static gchar * default_path = ".";
 
@@ -1392,6 +1393,7 @@ struct _GfsVariableTerrain {
   GfsVariable parent;
 
   /*< public >*/
+  GfsVariable * p, * H;
   RSurfaces rs;
 };
 
@@ -1412,13 +1414,30 @@ static void variable_terrain_destroy (GtsObject * o)
   (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->destroy) (o);
 }
 
+static void none (FttCell * parent, GfsVariable * v)
+{
+}
+
 static void variable_terrain_read (GtsObject ** o, GtsFile * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
-  rsurfaces_read (&GFS_VARIABLE_TERRAIN (*o)->rs, fp);
+  GfsVariableTerrain * v = GFS_VARIABLE_TERRAIN (*o);
+  rsurfaces_read (&v->rs, fp);
+
+  GfsSimulation * sim = gfs_object_simulation (*o);
+  if (GFS_IS_RIVER (sim)) {
+    v->p = GFS_RIVER (sim)->v[0];
+    v->H = GFS_RIVER (sim)->H;
+    /* the coarse -> fine and fine -> coarse interpolations of p and H
+       are taken over by variable_terrain_coarse_fine (below )*/
+    v->p->coarse_fine = none;
+    v->H->coarse_fine = none;
+    v->p->fine_coarse = none;
+    v->H->fine_coarse = none;
+  }
 }
 
 static void variable_terrain_write (GtsObject * o, FILE * fp)
@@ -1437,18 +1456,20 @@ static void variable_terrain_class_init (GtsObjectClass * klass)
 
 static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 {
+  GfsVariableTerrain * t = GFS_VARIABLE_TERRAIN (v);
   GfsSimulation * sim = GFS_SIMULATION (v->domain);
   FttCellChildren child;
-  guint j;
+  guint n;
 
+  /* Reconstruct terrain */
   ftt_cell_children (parent, &child);
-  for (j = 0; j < FTT_CELLS; j++) 
-    if (child.c[j]) {
+  for (n = 0; n < FTT_CELLS; n++) 
+    if (child.c[n]) {
       Polygon poly;
       RSurfaceRect rect;
       RSurfaceSum s;
       guint i;
-      polygon_init (sim, &poly, child.c[j], &GFS_VARIABLE_TERRAIN (v)->rs);
+      polygon_init (sim, &poly, child.c[n], &t->rs);
       r_surface_sum_init (&s);
       rect[0].l = poly.c.x - poly.h/2.; rect[0].h = poly.c.x + poly.h/2.; 
       rect[1].l = poly.c.y - poly.h/2.; rect[1].h = poly.c.y + poly.h/2.; 
@@ -1458,10 +1479,123 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 				    (RSurfaceCheck) polygon_intersects, &poly, 
 				    rect, &s);
       if (s.n > 0)
-	GFS_VALUE (child.c[j], v) = s.H0/s.n/sim->physical_params.L;
-      else
-	GFS_VALUE (child.c[j], v) = GFS_VALUE (parent, v);
+	GFS_VALUE (child.c[n], v) = s.H0/s.n/sim->physical_params.L;
+      else {
+	GFS_VALUE (child.c[n], v) = GFS_VALUE (parent, v);
+	if (!GFS_CELL_IS_BOUNDARY (parent)) {
+	  FttVector p;
+	  FttComponent c;
+	  
+	  ftt_cell_relative_pos (child.c[n], &p);
+	  for (c = 0; c < FTT_DIMENSION; c++)
+	    GFS_VALUE (child.c[n], v) += (&p.x)[c]*gfs_center_minmod_gradient (parent, c, v->i);
+	}
+      }
     }
+
+  /* If we are part of GfsRiver, reconstruct H and P */
+  if (t->H) {
+    /* Reconstruct H */
+    if (GFS_VALUE (parent, t->p) < GFS_RIVER_DRY) {
+      /* Dry cell */
+      FttCellNeighbors neighbor;
+      ftt_cell_neighbors (parent, &neighbor);
+      FttDirection d;
+      gdouble H = 0., s = 0.;
+      for (d = 0; d < FTT_NEIGHBORS; d++)
+	if (neighbor.c[d] && GFS_VALUE (neighbor.c[d], t->p) >= GFS_RIVER_DRY) {
+	  H += GFS_VALUE (neighbor.c[d], t->H);
+	  s += 1.;
+	}
+      if (s > 0.) {
+	H /= s; /* average H of neighbouring wet cells */
+	for (n = 0; n < FTT_CELLS; n++)
+	  if (child.c[n])
+	    GFS_VALUE (child.c[n], t->H) = H;
+      }
+      else { /* surrounded by dry cells */
+	for (n = 0; n < FTT_CELLS; n++)
+	  if (child.c[n])
+	    GFS_VALUE (child.c[n], t->H) = GFS_VALUE (child.c[n], v); /* dry cell */
+      }
+    }
+    else {
+      /* wet cell */
+      GfsVariable * v = t->H;
+      for (n = 0; n < FTT_CELLS; n++)
+	if (child.c[n])
+	  GFS_VALUE (child.c[n], v) = GFS_VALUE (parent, v);
+      
+      if (!GFS_CELL_IS_BOUNDARY (parent)) {
+	FttVector g;
+	FttComponent c;
+	FttCellNeighbors neighbor;
+	ftt_cell_neighbors (parent, &neighbor);
+
+	for (c = 0; c < FTT_DIMENSION; c++)
+	  if (neighbor.c[2*c] && GFS_VALUE (neighbor.c[2*c], t->p) >= GFS_RIVER_DRY &&
+	      neighbor.c[2*c + 1] && GFS_VALUE (neighbor.c[2*c + 1], t->p) >= GFS_RIVER_DRY)
+	    (&g.x)[c] = gfs_center_minmod_gradient (parent, c, v->i);
+	  else
+	    (&g.x)[c] = 0.;
+	
+	for (n = 0; n < FTT_CELLS; n++) 
+	  if (child.c[n]) {
+	    FttVector p;
+	    
+	    ftt_cell_relative_pos (child.c[n], &p);
+	    for (c = 0; c < FTT_DIMENSION; c++)
+	      GFS_VALUE (child.c[n], v) += (&p.x)[c]*(&g.x)[c];
+	  }
+      }
+    }
+    /* Deduce P from the reconstruction of Zb and H */
+    for (n = 0; n < FTT_CELLS; n++)
+      if (child.c[n]) {
+	GFS_VALUE (child.c[n], t->p) = MAX (0., (GFS_VALUE (child.c[n], t->H) - 
+						 GFS_VALUE (child.c[n], v)));
+	GFS_VALUE (child.c[n], t->H) = GFS_VALUE (child.c[n], t->p) + GFS_VALUE (child.c[n], v);
+      }
+  }
+}
+
+static void variable_terrain_fine_coarse (FttCell * parent, GfsVariable * v)
+{
+  FttCellChildren child;
+  guint n;
+
+  /* Reconstruct terrain (weighted average) */
+  gdouble Zb = 0., sa = 0.;
+  ftt_cell_children (parent, &child);
+  for (n = 0; n < FTT_CELLS; n++) 
+    if (child.c[n]) {
+      gdouble a = GFS_IS_MIXED (child.c[n]) ? GFS_STATE (child.c[n])->solid->a : 1.;
+      Zb += GFS_VALUE (child.c[n], v)*a;
+      sa += a;
+    }
+  if (sa > 0.)
+    GFS_VALUE (parent, v) = Zb/sa;
+
+  /* If we are part of GfsRiver, reconstruct H and P */
+  GfsVariableTerrain * t = GFS_VARIABLE_TERRAIN (v);
+  if (t->H) {
+    /* Reconstruct H */
+    gdouble H = 0., sa = 0.;
+    for (n = 0; n < FTT_CELLS; n++) 
+      if (child.c[n] && GFS_VALUE (child.c[n], t->p) >= GFS_RIVER_DRY) {
+	gdouble a = GFS_IS_MIXED (child.c[n]) ? GFS_STATE (child.c[n])->solid->a : 1.;
+	H += GFS_VALUE (child.c[n], t->H)*a;
+	sa += a;
+      }
+    if (sa > 0.) {
+      GFS_VALUE (parent, t->H) = H/sa;
+      GFS_VALUE (parent, t->p) = MAX (0., GFS_VALUE (parent, t->H) - GFS_VALUE (parent, v));
+    }
+    else { /* dry cell */
+      GFS_VALUE (parent, t->p) = 0.;
+      GFS_VALUE (parent, t->H) = GFS_VALUE (parent, v);
+    }
+  }
 }
 
 static void variable_terrain_init (GfsVariableTerrain * v)
@@ -1469,6 +1603,7 @@ static void variable_terrain_init (GfsVariableTerrain * v)
   GFS_VARIABLE1 (v)->units = 1.;
   GFS_VARIABLE1 (v)->description = g_strdup ("Terrain");
   GFS_VARIABLE1 (v)->coarse_fine = variable_terrain_coarse_fine;
+  GFS_VARIABLE1 (v)->fine_coarse = variable_terrain_fine_coarse;
   v->rs.basename = g_strdup ("*");
 }
 

@@ -573,13 +573,10 @@ gdouble gfs_center_minmod_gradient (FttCell * cell,
   v0 = GFS_VARIABLE (cell, v);
   if (f1.neighbor) {
     FttCellFace f2 = gfs_cell_face (cell, d);
-    gdouble x1 = 1., v1;
-    
-    v1 = neighbor_value (&f1, v, &x1);
     if (f2.neighbor) {
       /* two neighbors */
-      gdouble x2 = 1., v2;
-      
+      gdouble x1 = 1., v1, x2 = 1., v2;
+      v1 = neighbor_value (&f1, v, &x1);
       v2 = neighbor_value (&f2, v, &x2);
 
       gdouble g;
@@ -1611,7 +1608,7 @@ void gfs_cell_coarse_fine (FttCell * parent, GfsVariable * v)
   ftt_cell_children (parent, &child);
   for (n = 0; n < FTT_CELLS; n++)
     if (child.c[n])
-      GFS_VARIABLE (child.c[n], v->i) = GFS_VARIABLE (parent, v->i);
+      GFS_VALUE (child.c[n], v) = GFS_VALUE (parent, v);
 
   if (!GFS_CELL_IS_BOUNDARY (parent)) {
     FttVector g;
@@ -1626,7 +1623,7 @@ void gfs_cell_coarse_fine (FttCell * parent, GfsVariable * v)
 	
 	ftt_cell_relative_pos (child.c[n], &p);
 	for (c = 0; c < FTT_DIMENSION; c++)
-	  GFS_VARIABLE (child.c[n], v->i) += (&p.x)[c]*(&g.x)[c];
+	  GFS_VALUE (child.c[n], v) += (&p.x)[c]*(&g.x)[c];
       }
   }
 }
