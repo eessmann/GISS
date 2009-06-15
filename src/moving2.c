@@ -74,13 +74,16 @@ static int cell_is_corner (FttCell * cell)
 
   gfs_solid_normal (neighbors.c[d1], &n1);
   norm= sqrt(n1.x*n1.x+n1.y*n1.y);
-  n1.x /= norm;
-  n1.y /= norm;
+  if ( norm != 0.) {
+    n1.x /= norm;
+    n1.y /= norm;
+  }
   gfs_solid_normal (neighbors.c[d2], &n2);
   norm= sqrt(n2.x*n2.x+n2.y*n2.y);
-  n2.x /= norm;
-  n2.y /= norm;
-
+  if ( norm != 0.) {
+    n2.x /= norm;
+    n2.y /= norm;
+  }
 
   if (d1/2 == d2/2)
     return 0;
@@ -136,12 +139,15 @@ static int cell_was_corner (FttCell * cell, GfsVariable * old_solid_v, GfsVariab
 	(&n2.x)[c] = (SOLD2 (neighbors.c[d2], 2*c + 1) - SOLD2 (neighbors.c[d2], 2*c));
   
     norm= sqrt(n1.x*n1.x+n1.y*n1.y);
-    n1.x /= norm;
-    n1.y /= norm;
+    if ( norm != 0.) {
+      n1.x /= norm;
+      n1.y /= norm;
+    }
     norm= sqrt(n2.x*n2.x+n2.y*n2.y);
-    n2.x /= norm;
-    n2.y /= norm;
-
+    if ( norm != 0.) {
+      n2.x /= norm;
+      n2.y /= norm;
+    }
     
     
     if (neighbors.c[d1] && neighbors.c[d2])
