@@ -282,7 +282,7 @@ static void solid_moving_write (GtsObject * object, FILE * fp)
       (object, fp);
   fputs (" { level =", fp);
   gfs_function_write (solid->level, fp);
-  fputc ('}', fp);
+  fputs (" }", fp);
 }
 
 static void set_old_solid (FttCell * cell, GfsVariable * old_solid_v)

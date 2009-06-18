@@ -499,6 +499,8 @@ static void surface_write (GtsObject * o, FILE * fp)
       fputs ("  twod = 1\n", fp);
     fputc ('}', fp);
   }
+  else
+    fputs (" {}", fp);
 }
 
 static void surface_destroy (GtsObject * object)
