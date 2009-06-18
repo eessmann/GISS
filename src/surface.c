@@ -479,24 +479,26 @@ static void surface_write (GtsObject * o, FILE * fp)
     gfs_function_write (surface->f, fp);
     fputs (" )", fp);
   }
-  fputs (" {\n", fp);
-  if (gts_vector_norm (surface->translate) > 0.)
-    fprintf (fp, "  tx = %g ty = %g tz = %g\n",
-	     surface->translate[0], surface->translate[1], surface->translate[2]);
-  if (surface->scale[0] != 1. || surface->scale[1] != 1. || surface->scale[2] != 1.)
-    fprintf (fp, "  sx = %g sy = %g sz = %g\n",
-	     surface->scale[0], surface->scale[1], surface->scale[2]);
-  if (surface->rotate[0] != 0.)
-    fprintf (fp, "  rx = %g\n", surface->rotate[0]);
-  if (surface->rotate[1] != 0.)
-    fprintf (fp, "  ry = %g\n", surface->rotate[1]);
-  if (surface->rotate[2] != 0.)
-    fprintf (fp, "  rz = %g\n", surface->rotate[2]);
-  if (surface->flip)
-    fputs ("  flip = 1\n", fp);
-  if (surface->twod)
-    fputs ("  twod = 1\n", fp);
-  fputc ('}', fp);
+  if (surface->m) {
+    fputs (" {\n", fp);
+    if (gts_vector_norm (surface->translate) > 0.)
+      fprintf (fp, "  tx = %g ty = %g tz = %g\n",
+	       surface->translate[0], surface->translate[1], surface->translate[2]);
+    if (surface->scale[0] != 1. || surface->scale[1] != 1. || surface->scale[2] != 1.)
+      fprintf (fp, "  sx = %g sy = %g sz = %g\n",
+	       surface->scale[0], surface->scale[1], surface->scale[2]);
+    if (surface->rotate[0] != 0.)
+      fprintf (fp, "  rx = %g\n", surface->rotate[0]);
+    if (surface->rotate[1] != 0.)
+      fprintf (fp, "  ry = %g\n", surface->rotate[1]);
+    if (surface->rotate[2] != 0.)
+      fprintf (fp, "  rz = %g\n", surface->rotate[2]);
+    if (surface->flip)
+      fputs ("  flip = 1\n", fp);
+    if (surface->twod)
+      fputs ("  twod = 1\n", fp);
+    fputc ('}', fp);
+  }
 }
 
 static void surface_destroy (GtsObject * object)
