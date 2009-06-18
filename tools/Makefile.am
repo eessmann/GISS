@@ -12,6 +12,8 @@ bin_PROGRAMS = \
 	gfscompare2D \
 	gfscompare2D3 \
 	gfscompare3D \
+	gfsjoin2D \
+	gfsjoin3D \
 	shapes
 
 bin_SCRIPTS = \
@@ -31,6 +33,8 @@ gfs2oogl3D_SOURCES = gfs2oogl.c
 gfscompare2D_SOURCES = gfscompare.c
 gfscompare2D3_SOURCES = gfscompare.c
 gfscompare3D_SOURCES = gfscompare.c
+gfsjoin2D_SOURCES = gfsjoin2.c
+gfsjoin3D_SOURCES = gfsjoin2.c
 
 gfs2oogl2D_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 gfs2oogl2D3_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
@@ -42,6 +46,9 @@ gfscompare2D3_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 gfscompare2D_LDADD = $(GFS2D_LIBS)
 gfscompare2D3_LDADD = $(GFS2D3_LIBS)
 gfscompare3D_LDADD = $(GFS3D_LIBS)
+gfsjoin2D_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+gfsjoin2D_LDADD = $(GFS2D_LIBS)
+gfsjoin3D_LDADD = $(GFS3D_LIBS)
 
 ppmcombine_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 ppmcombine_LDADD = $(GFS2D_LIBS)

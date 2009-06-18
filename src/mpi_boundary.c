@@ -17,11 +17,34 @@
  * 02111-1307, USA.  
  */
 
+#include <stdlib.h>
 #include "domain.h"
 #include "mpi_boundary.h"
 #include "adaptive.h"
 
 /* #define DEBUG mpi_debug */
+
+static void boundary_mpi_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_boundary_mpi_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %d %d", GFS_BOUNDARY_MPI (o)->process, GFS_BOUNDARY_MPI (o)->id);
+}
+
+static void boundary_mpi_read (GtsObject ** o, GtsFile * fp)
+{
+  if (fp->type == GTS_INT) {
+    GFS_BOUNDARY_MPI (*o)->process = atoi (fp->token->str);
+    gts_file_next_token (fp);
+    if (fp->type != GTS_INT) {
+      gts_file_error (fp, "expecting an integer (id)");
+      return;
+    }
+    GFS_BOUNDARY_MPI (*o)->id = atoi (fp->token->str);
+    gts_file_next_token (fp);
+  }
+  else
+    GFS_BOUNDARY_MPI (*o)->process = GFS_BOUNDARY_MPI (*o)->id = -1;
+}
 
 #ifdef DEBUG
 FILE * mpi_debug = NULL;
@@ -38,6 +61,9 @@ static void send (GfsBoundary * bb)
   GfsBoundaryPeriodic * boundary = GFS_BOUNDARY_PERIODIC (bb);
   GfsBoundaryMpi * mpi = GFS_BOUNDARY_MPI (bb);
   GfsDomain * domain = gfs_box_domain (bb->box);
+
+  if (domain->pid < 0)
+    return;
 
   g_assert (boundary->sndcount <= boundary->sndbuf->len);
   if (GFS_BOUNDARY (boundary)->type == GFS_BOUNDARY_MATCH_VARIABLE) {
@@ -76,8 +102,13 @@ static void receive (GfsBoundary * bb,
 {
   GfsBoundaryPeriodic * boundary = GFS_BOUNDARY_PERIODIC (bb);
   GfsBoundaryMpi * mpi = GFS_BOUNDARY_MPI (bb);
+  GfsDomain * domain = gfs_box_domain (bb->box);
   MPI_Status status;
   gint count;
+
+  if (domain->pid < 0)
+    return;
+
 #ifdef PROFILE_MPI
   GfsDomain * domain = gfs_box_domain (bb->box);
   gdouble start, end;
@@ -180,6 +211,8 @@ static void synchronize (GfsBoundary * bb)
 
 static void gfs_boundary_mpi_class_init (GfsBoundaryClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->read = boundary_mpi_read;
+  GTS_OBJECT_CLASS (klass)->write = boundary_mpi_write;
   klass->send        = send;
   klass->receive     = receive;
   klass->synchronize = synchronize;

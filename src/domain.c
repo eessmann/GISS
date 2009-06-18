@@ -196,16 +196,10 @@ static void mpi_links (GfsBox * box, GfsDomain * domain)
 
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (neighbor[d])
-#ifndef DUMMY_MPI
       gfs_boundary_mpi_new (gfs_boundary_mpi_class (),
 			    GFS_BOX (neighbor[d]), 
 			    FTT_OPPOSITE_DIRECTION (d), 
 			    pid, id);
-#else  /* DUMMY_MPI */
-      gfs_boundary_new (GFS_BOUNDARY_CLASS (gfs_boundary_outflow_class ()),
-			GFS_BOX (neighbor[d]), 
-			FTT_OPPOSITE_DIRECTION (d));
-#endif /* DUMMY_MPI */
 }
 #endif /* HAVE_MPI */
 
