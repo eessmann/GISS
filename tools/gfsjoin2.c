@@ -36,12 +36,14 @@ static void add_box (GfsBox * box, GfsSimulation * sim)
   gts_container_add (GTS_CONTAINER (sim), GTS_CONTAINEE (box));
 }
 
-static void hash_id (GfsBox * box, GHashTable * hash)
+static void add_id (GfsBox * box, GPtrArray * ids)
 {
-  g_hash_table_insert (hash, &box->id, box);
+  if (box->id > ids->len)
+    g_ptr_array_set_size (ids, box->id);
+  g_ptr_array_index (ids, box->id - 1) = box;
 }
 
-static void convert_boundary_mpi_into_edges (GfsBox * box, GHashTable * hash)
+static void convert_boundary_mpi_into_edges (GfsBox * box, GPtrArray * ids)
 {
 #ifdef HAVE_MPI
   FttDirection d;
@@ -54,31 +56,28 @@ static void convert_boundary_mpi_into_edges (GfsBox * box, GHashTable * hash)
 		 "gfsjoin: id < 0, you maybe trying to join old parallel simulation files\n");
 	exit (1);
       }
-      GfsBox * nbox = g_hash_table_lookup (hash, &b->id);
-      if (!nbox) {
-	fprintf (stderr, "gfsjoin: inconsistent MPI boundary: pid = %d, id = %d\n",
-		 b->process, b->id);
-	exit (1);
+      GfsBox * nbox = g_ptr_array_index (ids, b->id - 1);
+      if (nbox) {
+	if (nbox->pid != b->process) {
+	  fprintf (stderr, "gfsjoin: inconsistent MPI boundary: pid = %d, nbox->pid = %d\n",
+		   b->process, nbox->pid);
+	  exit (1);
+	}
+	if (!GFS_IS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)])) {
+	  fprintf (stderr, "gfsjoin: inconsistent MPI boundary: nbox[%d] is not an MPI boundary\n",
+		   FTT_OPPOSITE_DIRECTION (d));
+	  exit (1);
+	}
+	GfsBoundaryMpi * nb = GFS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)]);
+	if (box->pid != nb->process || box->id != nb->id) {
+	  fprintf (stderr, "gfsjoin: inconsistent MPI boundary\n"
+		   "box->pid != nb->process || box->id != nb->id\n");
+	  exit (1);
+	}
+	gts_object_destroy (GTS_OBJECT (b));
+	gts_object_destroy (GTS_OBJECT (nb));
+	gfs_gedge_new (gfs_gedge_class (), box, nbox, d);
       }
-      if (nbox->pid != b->process) {
-	fprintf (stderr, "gfsjoin: inconsistent MPI boundary: pid = %d, nbox->pid = %d\n",
-		 b->process, nbox->pid);
-	exit (1);
-      }
-      if (!GFS_IS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)])) {
-	fprintf (stderr, "gfsjoin: inconsistent MPI boundary: nbox[%d] is not an MPI boundary\n",
-		 FTT_OPPOSITE_DIRECTION (d));
-	exit (1);
-      }
-      GfsBoundaryMpi * nb = GFS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)]);
-      if (box->pid != nb->process || box->id != nb->id) {
-	fprintf (stderr, "gfsjoin: inconsistent MPI boundary\n"
-		 "box->pid != nb->process || box->id != nb->id\n");
-	exit (1);
-      }
-      gts_object_destroy (GTS_OBJECT (b));
-      gts_object_destroy (GTS_OBJECT (nb));
-      gfs_gedge_new (gfs_gedge_class (), box, nbox, d);
     }
 #endif /* HAVE_MPI */
 }
@@ -86,7 +85,7 @@ static void convert_boundary_mpi_into_edges (GfsBox * box, GHashTable * hash)
 int main (int argc, char * argv[])
 {
   int c = 0;
-  gboolean verbose = FALSE;
+  gboolean verbose = FALSE, keep = FALSE;
 
   gfs_init (&argc, &argv);
 
@@ -94,18 +93,22 @@ int main (int argc, char * argv[])
   while (c != EOF) {
 #ifdef HAVE_GETOPT_LONG
     static struct option long_options[] = {
+      {"keep", no_argument, NULL, 'k'},
       {"help", no_argument, NULL, 'h'},
       {"verbose", no_argument, NULL, 'v'},
       { NULL }
     };
     int option_index = 0;
     switch ((c = getopt_long (argc, argv, 
-			      "hv",
+			      "hvk",
 			      long_options, &option_index))) {
 #else /* not HAVE_GETOPT_LONG */
     switch ((c = getopt (argc, argv, 
-			 "hv"))) {
+			 "hvk"))) {
 #endif /* not HAVE_GETOPT_LONG */
+    case 'k': /* keep */
+      keep = TRUE;
+      break;
     case 'v': /* verbose */
       verbose = TRUE;
       break;
@@ -114,6 +117,7 @@ int main (int argc, char * argv[])
 	       "Usage: gfsjoin [OPTION] NAME1 NAME2... > JOINED\n"
 	       "Joins several parallel Gerris simulation files\n"
 	       "\n"
+	       "  -k      --keep        keep MPI boundaries\n"
 	       "  -v      --verbose     display statistics and other info\n"
 	       "  -h      --help        display this help and exit\n"
 	       "\n"
@@ -166,12 +170,16 @@ int main (int argc, char * argv[])
   for (c = 1; c < argc - optind; c++)
     gts_container_foreach (GTS_CONTAINER (sim[c]), (GtsFunc) add_box, sim[0]);
 
-  /* Create hash table for fast linking of ids to GfsBox pointers */
-  GHashTable * hash = g_hash_table_new (g_int_hash, g_int_equal);
-  gts_container_foreach (GTS_CONTAINER (sim[0]), (GtsFunc) hash_id, hash);
+  if (!keep) {
+    /* Create array for fast linking of ids to GfsBox pointers */
+    GPtrArray * ids = g_ptr_array_new ();
+    gts_container_foreach (GTS_CONTAINER (sim[0]), (GtsFunc) add_id, ids);
+    
+    /* Convert GfsBoundaryMpi into graph edges */
+    gts_container_foreach (GTS_CONTAINER (sim[0]), (GtsFunc) convert_boundary_mpi_into_edges, ids);
 
-  /* Convert GfsBoundaryMpi into graph edges */
-  gts_container_foreach (GTS_CONTAINER (sim[0]), (GtsFunc) convert_boundary_mpi_into_edges, hash);
+    g_ptr_array_free (ids, TRUE);
+  }
 
   gfs_simulation_write (sim[0], -1, stdout);
 
