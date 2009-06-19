@@ -201,6 +201,40 @@ static void mpi_links (GfsBox * box, GfsDomain * domain)
 			    FTT_OPPOSITE_DIRECTION (d), 
 			    pid, id);
 }
+
+static void add_id (GfsBox * box, GPtrArray * ids)
+{
+  if (box->id > ids->len)
+    g_ptr_array_set_size (ids, box->id);
+  g_ptr_array_index (ids, box->id - 1) = box;
+}
+
+static void convert_boundary_mpi_into_edges (GfsBox * box, GPtrArray * ids)
+{
+  FttDirection d;
+
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
+      GfsBoundaryMpi * b = GFS_BOUNDARY_MPI (box->neighbor[d]);
+      GfsBox * nbox;
+      if (b->id >= 0 && (nbox = g_ptr_array_index (ids, b->id - 1))) {
+	if (nbox->pid != b->process)
+	  g_warning ("nbox->pid != b->process");
+	else if (!GFS_IS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)]))
+	  g_warning ("!GFS_IS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)])");
+	else {
+	  GfsBoundaryMpi * nb = GFS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)]);
+	  if (box->pid != nb->process || box->id != nb->id)
+	    g_warning ("box->pid != nb->process || box->id != nb->id");
+	  else {
+	    gts_object_destroy (GTS_OBJECT (b));
+	    gts_object_destroy (GTS_OBJECT (nb));
+	    gfs_gedge_new (gfs_gedge_class (), box, nbox, d);
+	  }
+	}
+      }
+    }
+}
 #endif /* HAVE_MPI */
 
 static void domain_post_read (GfsDomain * domain, GtsFile * fp)
@@ -209,7 +243,7 @@ static void domain_post_read (GfsDomain * domain, GtsFile * fp)
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) set_ref_pos, &domain->refpos);
 
 #ifdef HAVE_MPI
-  if (domain->pid >= 0) {
+  if (domain->pid >= 0) { /* Multiple PEs */
     GSList * removed = NULL;
     guint np = 0;
     gpointer data[3];
@@ -228,6 +262,16 @@ static void domain_post_read (GfsDomain * domain, GtsFile * fp)
     g_slist_foreach (removed, (GFunc) mpi_links, domain);
     g_slist_free (removed);
   }
+  else { /* Single PE */
+    /* Create array for fast linking of ids to GfsBox pointers */
+    GPtrArray * ids = g_ptr_array_new ();
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) add_id, ids);
+    
+    /* Convert GfsBoundaryMpi into graph edges */
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) convert_boundary_mpi_into_edges, ids);
+
+    g_ptr_array_free (ids, TRUE);
+  }    
 #endif /* HAVE_MPI */
 
   gfs_domain_match (domain);
