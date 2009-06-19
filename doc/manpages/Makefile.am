@@ -19,4 +19,6 @@ dist_man_MANS = \
 	rsurfacequery.1 \
 	shapes.1 \
 	streamanime.1 \
-	xyz2rsurface.1
+	xyz2rsurface.1 \
+	gfsjoin2D.1 \
+	gfsjoin3D.1
