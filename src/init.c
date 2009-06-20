@@ -229,6 +229,8 @@ GtsObjectClass ** gfs_classes (void)
   return classes;
 }
 
+typedef void (* AtExitFunc) (void);
+
 /**
  * gfs_init:
  * @argc: a pointer on the number of command line arguments passed to
@@ -265,6 +267,7 @@ void gfs_init (int * argc, char *** argv)
       MPI_Init (argc, argv);
     MPI_Errhandler_set (MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
   }
+  atexit ((AtExitFunc) MPI_Finalize);
 #endif /* HAVE_MPI */
   initialized = TRUE;
 
