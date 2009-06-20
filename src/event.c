@@ -1644,7 +1644,7 @@ static gboolean gfs_event_script_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_script_class ())->parent_class)->event) 
       (event, sim)) {
     GfsEventScript * s = GFS_EVENT_SCRIPT (event);
-    if (s->script) {
+    if (s->script && GFS_DOMAIN (sim)->pid <= 0) {
       FILE * fp = gfs_popen (sim, s->script, "w");
       if (fp == NULL) {
 	g_warning ("GfsEventScript cannot start script");
