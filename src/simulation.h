@@ -104,6 +104,9 @@ void                 gfs_simulation_init         (GfsSimulation * sim);
 void                 gfs_simulation_write        (GfsSimulation * sim,
 						  gint max_depth,  
 						  FILE * fp);
+void                 gfs_simulation_union_write  (GfsSimulation * sim,
+						  gint max_depth,  
+						  FILE * fp);
 GfsSimulation *      gfs_simulation_read         (GtsFile * fp);
 GSList *             gfs_simulation_get_solids   (GfsSimulation * sim);
 void                 gfs_simulation_refine       (GfsSimulation * sim);

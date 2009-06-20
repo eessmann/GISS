@@ -1212,10 +1212,11 @@ static void output_simulation_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_output_simulation_class ())->parent_class->destroy) (object);
 }
 
-static void write_text (FttCell * cell, GfsOutputSimulation * output)
+static void write_text (FttCell * cell, gpointer * data)
 {
+  GfsOutputSimulation * output = data[0];  
+  FILE * fp = data[1];
   GSList * i = GFS_DOMAIN (gfs_object_simulation (output))->variables_io;
-  FILE * fp = GFS_OUTPUT (output)->file->fp;
   FttVector p;
 
   gfs_cell_cm (cell, &p);
@@ -1257,37 +1258,61 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
     domain->binary =       output->binary;
     sim->output_solid   =  output->solid;
     switch (output->format) {
-    case GFS:
-      gfs_simulation_write (sim,
-			    output->max_depth,
-			    GFS_OUTPUT (event)->file->fp);
-      break;
-    case GFS_TEXT: {
-      FILE * fp = GFS_OUTPUT (event)->file->fp;
-      GSList * i = domain->variables_io;
-      guint nv = 4;
 
-      fputs ("# 1:X 2:Y 3:Z", fp);
-      while (i) {
-	g_assert (GFS_VARIABLE1 (i->data)->name);
-	fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
-	i = i->next;
+    case GFS:
+      if (GFS_OUTPUT (output)->parallel)
+	gfs_simulation_write (sim,
+			      output->max_depth,
+			      GFS_OUTPUT (event)->file->fp);
+      else
+	gfs_simulation_union_write (sim,
+				    output->max_depth,
+				    GFS_OUTPUT (event)->file->fp);
+      break;
+
+    case GFS_TEXT: {
+      if (GFS_OUTPUT (output)->parallel || domain->pid == 0) {
+	FILE * fp = GFS_OUTPUT (event)->file->fp;
+	GSList * i = domain->variables_io;
+	guint nv = 4;
+
+	fputs ("# 1:X 2:Y 3:Z", fp);
+	while (i) {
+	  g_assert (GFS_VARIABLE1 (i->data)->name);
+	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
+	  i = i->next;
+	}
+	fputc ('\n', fp);
       }
-      fputc ('\n', fp);
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) write_text, event);
+      gpointer data[2];
+      data[0] = output;
+      if (GFS_OUTPUT (output)->parallel) {
+	data[1] = GFS_OUTPUT (event)->file->fp;
+	gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				  (FttCellTraverseFunc) write_text, data);
+      }
+      else {
+	FILE * fpp = gfs_union_open (GFS_OUTPUT (event)->file->fp, domain->pid);
+	data[1] = fpp;
+	gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				  (FttCellTraverseFunc) write_text, data);
+	gfs_union_close (GFS_OUTPUT (event)->file->fp, domain->pid, fpp);
+      }
       break;
     }
+
     case GFS_VTK: {
       gfs_domain_write_vtk (domain, output->max_depth, domain->variables_io, output->precision,
 			    GFS_OUTPUT (event)->file->fp);
       break;
     }
+
     case GFS_TECPLOT: {
       gfs_domain_write_tecplot (domain, output->max_depth, domain->variables_io, output->precision,
 				GFS_OUTPUT (event)->file->fp);
       break;
     }
+
     default:
       g_assert_not_reached ();
     }

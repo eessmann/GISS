@@ -1149,6 +1149,110 @@ void gfs_simulation_write (GfsSimulation * sim,
   domain->max_depth_write = depth;
 }
 
+#ifdef HAVE_MPI
+static void count_edges (GtsGEdge * e, guint * nedge)
+{
+  (*nedge)++;
+}
+
+static void write_node (GtsObject * node, gpointer * data)
+{
+  FILE * fp = data[0];
+  guint * nnode = data[1];
+
+  node->reserved = GUINT_TO_POINTER ((*nnode)++);
+  if (node->klass->write)
+    (* node->klass->write) (node, fp);
+  fputc ('\n', fp);
+}
+
+static void write_edge (GtsGEdge * edge, FILE * fp)
+{
+  fprintf (fp, "%u %u", 
+	   GPOINTER_TO_UINT (GTS_OBJECT (edge->n1)->reserved),
+	   GPOINTER_TO_UINT (GTS_OBJECT (edge->n2)->reserved));
+  if (GTS_OBJECT (edge)->klass->write)
+    (* GTS_OBJECT (edge)->klass->write) (GTS_OBJECT (edge), fp);
+  fputc ('\n', fp);
+}
+#endif /* HAVE_MPI */
+
+/**
+ * gfs_simulation_union_write:
+ * @sim: a #GfsSimulation.
+ * @max_depth: the maximum depth at which to stop writing cell tree
+ * data (-1 means no limit).
+ * @fp: a file pointer.
+ *
+ * Identical to gfs_simulation_write() for serial simulations. For
+ * parallel simulations writes the union of the simulations on all
+ * processes to @fp.
+ */
+void gfs_simulation_union_write (GfsSimulation * sim,
+				 gint max_depth,		  
+				 FILE * fp)
+{
+  GfsDomain * domain = GFS_DOMAIN (sim);
+
+  g_return_if_fail (sim != NULL);
+  g_return_if_fail (fp != NULL);
+
+  if (domain->pid < 0)
+    gfs_simulation_write (sim, max_depth, fp);
+  else {
+#ifdef HAVE_MPI
+    int gsize;
+    guint * nbox;
+
+    MPI_Comm_size (MPI_COMM_WORLD, &gsize);
+    nbox = g_malloc (sizeof (guint)*gsize);
+    nbox[domain->pid] = gts_container_size (GTS_CONTAINER (sim));
+    MPI_Allgather (&nbox[domain->pid], 1, MPI_UNSIGNED, nbox, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
+    /* nbox[] now contains the number of boxes on each PE */
+
+    /* see gts/src/graph.c:gts_graph_write() for the original (serial) implementation */
+    GtsGraph * g = GTS_GRAPH (sim);
+    guint nedge = 0;
+    gts_graph_foreach_edge (g, (GtsFunc) count_edges, &nedge);
+    gfs_all_reduce (domain, nedge, MPI_UNSIGNED, MPI_SUM);
+
+    if (domain->pid == 0) {
+      fprintf (fp, "# Gerris Flow Solver %dD version %s (%s)\n",
+	       FTT_DIMENSION, GFS_VERSION, GFS_BUILD_VERSION);
+      guint i, nboxes = 0;
+      for (i = 0; i < gsize; i++)
+	nboxes += nbox[i];
+      fprintf (fp, "%u %u", nboxes, nedge);
+      if (GTS_OBJECT (g)->klass->write)
+	(* GTS_OBJECT (g)->klass->write) (GTS_OBJECT (g), fp);
+      fputc ('\n', fp);
+    }
+
+    gint depth = domain->max_depth_write;
+    guint i, nnode = 1;
+    gpointer data[2];
+
+    for (i = 0; i < domain->pid; i++)
+      nnode += nbox[i];
+    g_free (nbox);
+
+    FILE * fpp = gfs_union_open (fp, domain->pid);
+    data[0] = fpp;
+    data[1] = &nnode;
+    domain->max_depth_write = max_depth;
+    gts_container_foreach (GTS_CONTAINER (g), (GtsFunc) write_node, data);
+    domain->max_depth_write = depth;
+    gfs_union_close (fp, domain->pid, fpp);
+
+    fpp = gfs_union_open (fp, domain->pid);
+    gts_graph_foreach_edge (g, (GtsFunc) write_edge, fpp);
+    gfs_union_close (fp, domain->pid, fpp);
+
+    gts_container_foreach (GTS_CONTAINER (g), (GtsFunc) gts_object_reset_reserved, NULL);
+#endif /* HAVE_MPI */
+  }
+}
+
 static gdouble min_cfl (GfsSimulation * sim)
 {
   gdouble cfl = (sim->advection_params.scheme == GFS_NONE ?

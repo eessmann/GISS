@@ -19,7 +19,9 @@
 
 #include <stdlib.h>
 #include <ctype.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <signal.h>
 #include <math.h>
@@ -1553,4 +1555,86 @@ void gfs_clock_destroy (GfsClock * t)
   g_return_if_fail (t != NULL);
 
   g_free (t);
+}
+
+/**
+ * gfs_union_open:
+ * @fp: a file pointer.
+ * @rank: the rank of the current parallel process.
+ *
+ * Opens a "parallel" file which serialises multiple parallel (write)
+ * accesses to the file pointed to by @fp.
+ *
+ * This file must be closed with gfs_union_close().
+ *
+ * Returns: a "parallel" file pointer associated with @fp.
+ */
+FILE * gfs_union_open (FILE * fp, int rank)
+{
+  g_return_val_if_fail (fp != NULL, NULL);
+
+  if (rank <= 0) /* master */
+    return fp;
+  else { /* slaves */
+#ifdef HAVE_MPI
+    MPI_Status status;
+    int pe;
+    MPI_Recv (&pe, 1, MPI_INT, 0, rank, MPI_COMM_WORLD, &status);
+    g_assert (rank == pe);
+#endif /* HAVE_MPI */
+    return tmpfile ();
+  }
+}
+
+/**
+ * gfs_union_close:
+ * @fp: a file pointer.
+ * @rank: the rank of the current parallel process.
+ * @fpp: a "parallel" file pointer returned by a call to gfs_union_open().
+ *
+ * Closes a "parallel" file previously opened using gfs_union_open().
+ */
+void gfs_union_close (FILE * fp, int rank, FILE * fpp)
+{
+  g_return_if_fail (fp != NULL);
+  g_return_if_fail (fpp != NULL);
+
+  if (rank == 0) { /* master */
+#ifdef HAVE_MPI
+    int pe, npe;
+    MPI_Comm_size (MPI_COMM_WORLD, &npe);
+    for (pe = 1; pe < npe; pe++) {
+      MPI_Send (&pe, 1, MPI_INT, pe, pe, MPI_COMM_WORLD);
+      MPI_Status status;
+      long length;
+      MPI_Recv (&length, 1, MPI_LONG, pe, pe, MPI_COMM_WORLD, &status);
+      /*      fprintf (stderr, "receiving %ld bytes from PE %d\n", length, pe); */
+      if (length > 0) {
+	char * buf = g_malloc (length);
+	MPI_Recv (buf, length, MPI_BYTE, pe, pe + 1, MPI_COMM_WORLD, &status);
+	int rcvcount;
+	MPI_Get_count (&status, MPI_BYTE, &rcvcount);
+	fwrite (buf, 1, rcvcount, fp);
+	g_free (buf);
+      }
+    }
+#endif /* HAVE_MPI */
+  }
+  else if (rank > 0) { /* slaves */
+#ifdef HAVE_MPI
+    int fd = fileno (fpp);
+    struct stat sb;
+    fflush (fpp);
+    g_assert (fstat (fd, &sb) != -1);
+    long length = sb.st_size;
+    MPI_Send (&length, 1, MPI_LONG, 0, rank, MPI_COMM_WORLD);
+    if (length > 0) {
+      char * buf = mmap (NULL, length, PROT_READ, MAP_PRIVATE, fd, 0);
+      g_assert (buf != MAP_FAILED);
+      MPI_Send (buf, length, MPI_BYTE, 0, rank + 1, MPI_COMM_WORLD);
+      munmap (buf, length);
+    }
+#endif /* HAVE_MPI */
+    fclose (fpp);
+  }
 }

@@ -150,6 +150,12 @@ void               gfs_clock_stop           (GfsClock * t);
 gdouble            gfs_clock_elapsed        (GfsClock * t);
 void               gfs_clock_destroy        (GfsClock * t);
 
+FILE *             gfs_union_open           (FILE * fp, 
+					     int rank);
+void               gfs_union_close          (FILE * fp, 
+					     int rank, 
+					     FILE * fpp);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
