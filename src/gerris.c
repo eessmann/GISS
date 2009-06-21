@@ -123,16 +123,34 @@ int main (int argc, char * argv[])
       break;
     case 'V': /* version */
       fprintf (stderr,
-     "gerris: using %dD libgfs version %s (%s)\n"
-     "compiled with flags: %s\n"
-     "sizeof (GfsStateVector): %d sizeof (FttCell): %d sizeof (FttOct): %d\n",
+	       "gerris: using %dD libgfs version %s (%s)\n"
+	       "  compiled with flags: %s\n"
+	       "  MPI:          %s\n"
+	       "  pkg-config:   %s\n"
+	       "  m4 and awk:   %s\n"
+	       "Copyright (C) 2001-2009 NIWA.\n"
+	       "This is free software; see the source for copying conditions.  There is NO\n"
+	       "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
 	       FTT_DIMENSION,
 	       GFS_VERSION,
 	       GFS_BUILD_VERSION,
 	       GFS_COMPILATION_FLAGS,
-	       sizeof (GfsStateVector),
-	       sizeof (FttCell),
-	       sizeof (struct _FttOct));
+#ifdef HAVE_MPI
+	       "yes",
+#else
+	       "no",
+#endif
+#ifdef HAVE_PKG_CONFIG
+	       "yes",
+#else
+	       "no",
+#endif
+#ifdef HAVE_M4
+	       "yes"
+#else
+	       "no"
+#endif
+	       );
       return 0; /* succes */
       break;
     case '?': /* wrong options */
