@@ -43,5 +43,5 @@ launchpad-snapshot: $(DARCS_CHANGELOG) config.h src/version.h dist
 	cd gerris-?.?.? && ./configure && sh debian/changelog.sh $(LOG) && dpkg-buildpackage -rfakeroot -k$(KEY) -S -sa
 	rm -f gerris-?.?.?.tar.gz
 	rm -r -f gerris-?.?.?
-	$(DPUT) $(PPA) gerris-snapshot_?.?.?-*_source.changes
-	rm -f gerris-snapshot_?.?.?-*
+	$(DPUT) $(PPA) gerris-snapshot_*_source.changes
+	rm -f gerris-snapshot_*
