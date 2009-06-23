@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <string.h>
 #include <math.h>
 #include "output.h"
 #include "graphic.h"
@@ -232,15 +233,15 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   else {
-    gchar * c, * start, * fname, * fnamebak;
-    FILE * fptr;
+    GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (output));
+    gchar * c, * start;
     guint len;
 
     output->format = g_strdup (fp->token->str);
     gts_file_next_token (fp);
     
     if (!strcmp (output->format, "stderr") || !strcmp (output->format, "stdout")) {
-      if (GFS_DOMAIN (gfs_object_simulation (output))->pid > 0)
+      if (domain->pid > 0)
 	gfs_output_mute (output);
       else {
 	g_assert (!output->file);
@@ -299,26 +300,28 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
       }
       c++;
     }
-    len = GPOINTER_TO_UINT (c) -  GPOINTER_TO_UINT (start);
+    len = GPOINTER_TO_UINT (c) - GPOINTER_TO_UINT (start);
     if (len > 0)
       output->formats = g_slist_prepend (output->formats,
 					 format_new (start, len, NONE));
     output->formats = g_slist_reverse (output->formats);
-    
-    fname = format_string (output->formats, -1, 0, 0.);
-    fnamebak = g_strconcat (fname, "~", NULL);
-    g_free (fname);
-    fptr = fopen (fnamebak, "w");
-    if (fptr == NULL) {
-      gts_file_error (fp, "cannot open file specified by format `%s'",
-		      output->format);
+
+    if (output->parallel || domain->pid <= 0) {
+      gchar * fname = format_string (output->formats, domain->pid, 0, 0.);
+      gchar * fnamebak = g_strconcat (fname, "~", NULL);
+      g_free (fname);
+      FILE * fptr = fopen (fnamebak, "w");
+      if (fptr == NULL) {
+	gts_file_error (fp, "cannot open file specified by format `%s'\n  %s",
+			output->format, strerror (errno));
+	g_free (fnamebak);
+	output_free (output);
+	return;
+      }
+      fclose (fptr);
+      remove (fnamebak);
       g_free (fnamebak);
-      output_free (output);
-      return;
     }
-    fclose (fptr);
-    remove (fnamebak);
-    g_free (fnamebak);
   }
 }
 
