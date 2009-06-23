@@ -97,7 +97,7 @@ int main (int argc, char * argv[])
       maxlevel = -1;
       break;
     case 'h': /* help */
-      fprintf (stderr,
+      gfs_error (0,
              "Usage: gerris [OPTION] FILE\n"
 	     "The Gerris flow solver simulation engine.\n"
 	     "\n"
@@ -122,7 +122,7 @@ int main (int argc, char * argv[])
       return 0; /* success */
       break;
     case 'V': /* version */
-      fprintf (stderr,
+      gfs_error (0,
 	       "gerris: using %dD libgfs version %s (%s)\n"
 	       "  compiled with flags: %s\n"
 	       "  MPI:          %s\n"
@@ -154,13 +154,13 @@ int main (int argc, char * argv[])
       return 0; /* succes */
       break;
     case '?': /* wrong options */
-      fprintf (stderr, "Try `gerris --help' for more information.\n");
+      gfs_error (0, "Try `gerris --help' for more information.\n");
       return 1; /* failure */
     }
   }
 
   if (optind >= argc) { /* missing FILE */
-    fprintf (stderr, 
+    gfs_error (0, 
 	     "gerris: missing FILE\n"
 	     "Try `gerris --help' for more information.\n");
     return 1; /* failure */
@@ -186,13 +186,13 @@ int main (int argc, char * argv[])
   g_free (m4_options);
 
   if (fptr == NULL) {
-    fprintf (stderr, "gerris: unable to open file `%s'\n", argv[optind]);
+    gfs_error (-1, "gerris: unable to open file `%s'\n", argv[optind]);
     return 1;
   }
 
   fp = gts_file_new (fptr);
   if (!(simulation = gfs_simulation_read (fp))) {
-    fprintf (stderr, 
+    gfs_error (-1, 
 	     "gerris: file `%s' is not a valid simulation file\n"
 	     "%s:%d:%d: %s\n",
 	     argv[optind], argv[optind],

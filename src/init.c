@@ -54,7 +54,7 @@ static void gfs_log (const gchar * log_domain,
 		     const gchar * message)
 {
   int rank = -1, type = 0;
-  gchar pe[10];
+  gchar * pe;
   const gchar stype[][10] = {
     "ERROR", "CRITICAL", "WARNING", "MESSAGE", "INFO", "DEBUG"
   };
@@ -65,11 +65,15 @@ static void gfs_log (const gchar * log_domain,
     MPI_Comm_rank (MPI_COMM_WORLD, &rank);
   else
     rank = -1;
-#endif /* HAVE_MPI */
-  if (rank >= 0)
-    snprintf (pe, 10, "PE %d: ", rank);
+  if (rank >= 0) {
+    char name[MPI_MAX_PROCESSOR_NAME];
+    int length;
+    MPI_Get_processor_name (name, &length);
+    pe = g_strdup_printf ("PE %d (%s): ", rank, name);
+  }
   else
-    pe[0] = '\0';
+#endif /* HAVE_MPI */
+    pe = g_strdup ("");
 
   switch (log_level & G_LOG_LEVEL_MASK) {
   case G_LOG_LEVEL_ERROR:    type = 0; break;
@@ -82,7 +86,8 @@ static void gfs_log (const gchar * log_domain,
     g_assert_not_reached ();
   }
   fprintf (stderr, "\n%s-%s **: %s%s\n\n", 
-	   log_domain, stype[type], pe, message); 
+	   log_domain, stype[type], pe, message);
+  g_free (pe);
 }
 
 /**

@@ -31,17 +31,37 @@ extern "C" {
 #  include "config.h"
 #  ifdef HAVE_MPI
 #    include <mpi.h>
-#    define gfs_all_reduce(domain, p, type, op) {				\
-      if ((domain)->pid >= 0) {						\
-        union { int a; float b; double c;} global;			\
-        MPI_Allreduce (&(p), &global, 1, type, op, MPI_COMM_WORLD);	\
-        memcpy (&(p), &global, sizeof (p));				\
-      }									\
-    }
-#else
+
+# define gfs_all_reduce(domain, p, type, op) {			        \
+    if ((domain)->pid >= 0) {						\
+      union { int a; float b; double c;} global;			\
+      MPI_Allreduce (&(p), &global, 1, type, op, MPI_COMM_WORLD);	\
+      memcpy (&(p), &global, sizeof (p));				\
+    }									\
+  }
+
+# define gfs_error(pid, ...) {	                                        \
+    int rank;                                                           \
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);                              \
+    if (rank == (pid))		             				\
+      fprintf (stderr, __VA_ARGS__);                                    \
+    else if ((pid) < 0) {						\
+      int size;                                                         \
+      MPI_Comm_size (MPI_COMM_WORLD, &size);                            \
+      if (size > 1) {			                                \
+        char name[MPI_MAX_PROCESSOR_NAME];                              \
+        MPI_Get_processor_name (name, &size);                           \
+        fprintf (stderr, "PE %d (%s): ", rank, name);			\
+      }                                                                 \
+      fprintf (stderr, __VA_ARGS__);                                    \
+    }                                                                   \
+  }
+
+#  else /* doesn't HAVE_MPI */
     /* gfs_all_reduce() defaults to nothing without MPI */
 #    define gfs_all_reduce(domain, p, type, op)
-#  endif /* HAVE_MPI */
+#    define gfs_error(pid, ...) fprintf(stderr, __VA_ARGS__)
+#  endif /* doesn't HAVE_MPI */
 #endif /* HAVE_CONFIG_H */
 
 #define GFS_DOUBLE_TO_POINTER(d)     (*((gpointer *) &(d)))
