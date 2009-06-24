@@ -683,6 +683,32 @@ static void swap_fractions (FttCell * cell, GfsVariable * old_solid_v) {
     OLD_SOLID (cell) = GFS_STATE(cell)->solid;
     GFS_STATE(cell)->solid = NULL;
   }
+
+
+  /* Check for negative fractions and fix*/
+  if (GFS_STATE(cell)->solid)
+    for (c = 0; c < 2*FTT_DIMENSION; c++)
+      if (GFS_STATE(cell)->solid->s[c] < 0.) {
+	if (OLD_SOLID (cell)) 
+	  if (OLD_SOLID (cell)->s[c] >= 0.)
+	    GFS_STATE(cell)->solid->s[c] = OLD_SOLID (cell)->s[c];
+	  else
+	    GFS_STATE(cell)->solid->s[c] = 1.;
+	else
+	  GFS_STATE(cell)->solid->s[c] = 0.;
+      }
+
+  if (OLD_SOLID (cell)) 
+    for (c = 0; c < 2*FTT_DIMENSION; c++)
+      if (OLD_SOLID (cell)->s[c] < 0.){
+	if (GFS_STATE(cell)->solid)
+	  if (GFS_STATE(cell)->solid->s[c] >= 0.)
+	    OLD_SOLID (cell)->s[c] = GFS_STATE(cell)->solid->s[c];
+	  else
+	    OLD_SOLID (cell)->s[c] = 1.;
+	else
+	  OLD_SOLID (cell)->s[c] = 0.;
+      }
 }
 
 static void old_solid_fractions_from_children (FttCell * cell)
