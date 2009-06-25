@@ -1137,6 +1137,7 @@ static void boundary_tree (FttCell * cell, GfsBoundaryPeriodic * boundary)
 
     n = ftt_cell_children_direction (cell, GFS_BOUNDARY (boundary)->d, &child);
     for (i = 0; i < n; i++) {
+      /* fixme: using a gdouble to store (and MPI transfer) a boolean is wasteful... */
       gdouble is_destroyed = (child.c[i] == NULL);
       
       if (boundary->sndcount == boundary->sndbuf->len)
@@ -1145,6 +1146,9 @@ static void boundary_tree (FttCell * cell, GfsBoundaryPeriodic * boundary)
 	g_array_index (boundary->sndbuf, gdouble, boundary->sndcount) = is_destroyed;
       boundary->sndcount++;
     }
+    for (i = 0; i < n; i++)
+      if (child.c[i])
+	boundary_tree (child.c[i], boundary);
   }
 }
 
@@ -1153,9 +1157,7 @@ static void periodic_match (GfsBoundary * boundary)
   (* gfs_boundary_class ()->match) (boundary);
 
   g_assert (GFS_BOUNDARY_PERIODIC (boundary)->sndcount == 0);
-  ftt_cell_traverse (boundary->root,
-		     FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-		     (FttCellTraverseFunc) boundary_tree, boundary);
+  boundary_tree (boundary->root, GFS_BOUNDARY_PERIODIC (boundary));
 }
 
 static void send (GfsBoundary * bb)
