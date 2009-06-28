@@ -29,6 +29,7 @@
 #include "source.h"
 #include "solid.h"
 #include "adaptive.h"
+#include "version.h"
 
 #include "config.h"
 #ifdef HAVE_MPI
@@ -60,6 +61,7 @@ static void domain_write (GtsObject * o, FILE * fp)
     fprintf (fp, "ly = %g ", domain->lambda.y);
   if (domain->lambda.z != 1.)
     fprintf (fp, "lz = %g ", domain->lambda.z);
+  fprintf (fp, "version = %d ", atoi (GFS_BUILD_VERSION));
   if (domain->max_depth_write > -2) {
     GSList * i = domain->variables_io;
 
@@ -91,6 +93,7 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
     {GTS_DOUBLE, "lz",        TRUE},
     {GTS_STRING, "variables", TRUE},
     {GTS_INT,    "binary",    TRUE},
+    {GTS_INT,    "version",   TRUE},
     {GTS_NONE}
   };
   gchar * variables = NULL;
@@ -100,6 +103,7 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
+  domain->version = -1;
   var[0].data = &domain->rootlevel;
   var[1].data = &domain->refpos.x;
   var[2].data = &domain->refpos.y;
@@ -109,6 +113,7 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
   var[6].data = &domain->lambda.z;
   var[7].data = &variables;
   var[8].data = &domain->binary;
+  var[9].data = &domain->version;
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR) {
     g_free (variables);
@@ -295,9 +300,11 @@ static void domain_post_read (GfsDomain * domain, GtsFile * fp)
     g_ptr_array_free (ids, TRUE);
 
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) set_ref_pos, &domain->refpos);
-  }    
+  }
 
   gfs_domain_match (domain);
+
+  domain->version = atoi (GFS_BUILD_VERSION);
 }
 
 static void free_pair (gpointer key, gpointer value)
@@ -420,6 +427,8 @@ static void domain_init (GfsDomain * domain)
 
   domain->cell_init = (FttCellInitFunc) gfs_cell_fine_init;
   domain->cell_init_data = domain;
+
+  domain->version = atoi (GFS_BUILD_VERSION);
 }
 
 GfsDomainClass * gfs_domain_class (void)
@@ -2656,7 +2665,8 @@ void gfs_cell_read_binary (FttCell * cell, GtsFile * fp, GfsDomain * domain)
       gts_file_error (fp, "expecting numbers (solid->cm[0..%d])", FTT_DIMENSION - 1);
       return;
     }
-    if (gts_file_read (fp, &s->solid->ca.x, sizeof (gdouble), FTT_DIMENSION) != FTT_DIMENSION) {
+    if (domain->version >= 90628 &&
+	gts_file_read (fp, &s->solid->ca.x, sizeof (gdouble), FTT_DIMENSION) != FTT_DIMENSION) {
       gts_file_error (fp, "expecting numbers (solid->ca[0..%d])", FTT_DIMENSION - 1);
       return;
     }

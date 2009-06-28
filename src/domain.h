@@ -67,6 +67,8 @@ struct _GfsDomain {
 
   FttCellInitFunc cell_init;
   gpointer cell_init_data;
+
+  gint version;
 };
 
 struct _GfsDomainClass {
