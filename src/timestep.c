@@ -271,42 +271,37 @@ void gfs_update_gradients (GfsDomain * domain,
   gfs_scale_gradients (domain, FTT_DIMENSION, g);
 }
 
-static void mac_projection (GfsDomain * domain,
-			    GfsMultilevelParams * par,
-			    GfsAdvectionParams * apar,
-			    GfsVariable * p,
-			    GfsFunction * alpha,
-			    GfsVariable * div,
-			    GfsVariable * res,
-			    GfsVariable ** g)
+
+/**
+ * gfs_mac_projection_divergence:
+ * @domain: a #GfsDomain.
+ * @apar: the advection parameters.
+ * @p: the pressure.
+ * @alpha: the Poisson equation gradient weight.
+ * @div: an initial divergence field.
+ * @g: where to store the pressure gradient.
+ *
+ * Computes the contibution to the divergence of
+ * the mac velocities. Initialises @alpha.
+ *
+ */
+void gfs_mac_projection_divergence (GfsDomain * domain, GfsAdvectionParams * apar,
+		      GfsVariable * p, GfsFunction * alpha,
+		      GfsVariable * div, GfsVariable ** g)
 {
-  /* Add face sources */
+   /* Add face sources */
   reset_gradients (domain, FTT_DIMENSION, g);
-  velocity_face_sources (domain, gfs_domain_velocity (domain), apar->dt, alpha, g);
-
-  GfsVariable * dia = gfs_temporary_variable (domain);
-  GfsVariable * div1 = div;
-  GfsVariable * res1 = res ? res : gfs_temporary_variable (domain);
-
-  /* Initialize divergence */
-  if (!div1) {
-    div1 = gfs_temporary_variable (domain);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_reset, div1);
-  }
+  velocity_face_sources (domain, gfs_domain_velocity (domain), apar->dt, alpha, g); 
 
   /* Initialize face coefficients */
   gfs_poisson_coefficients (domain, alpha);
 
-  /* Initialize diagonal coefficient */
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, dia);
-
+  
   /* compute MAC divergence */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_normal_divergence, div1);
+			    (FttCellTraverseFunc) gfs_normal_divergence, div);
   gpointer data[2];
-  data[0] = div1;
+  data[0] = div;
   data[1] = &apar->dt;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
   			    (FttCellTraverseFunc) scale_divergence, data);
@@ -318,18 +313,56 @@ static void mac_projection (GfsDomain * domain,
 
     gfs_write_mac_velocity (domain, 0.9, FTT_TRAVERSE_LEAFS, -1, NULL, fp);
     fclose (fp);
-    norm = gfs_domain_norm_variable (domain, div1, FTT_TRAVERSE_LEAFS, -1);
+    norm = gfs_domain_norm_variable (domain, div, FTT_TRAVERSE_LEAFS, -1);
     fprintf (stderr, "mac div before: %g %g %g\n",
 	     norm.first, norm.second, norm.infty);
   }
 #endif
-  
+} 
+
+/**
+ * gfs_mac_projection_projection:
+ * @domain: a #GfsDomain.
+ * @par: the projection control parameters.
+ * @apar: the advection parameters.
+ * @p: the pressure.
+ * @alpha: the Poisson equation gradient weight.
+ * @res: an initial divergence field.
+ * @div: an initial residual field.
+ * @g: where to store the pressure gradient.
+ * @dia: a variable used to store the diagonal coefficients.
+ *
+ * Corrects the face-centered velocity field (MAC field) on the leaf
+ * level of @domain using an exact (MAC) projection. The resulting
+ * face-centered velocity field is (almost) exactly divergence
+ * free. The (potential) pressure field is also obtained as a
+ * by-product as well as its gradient at the center of the leaf cells
+ * of the domain. The gradient is stored in newly-allocated @g[]
+ * variables and is obtained by simple averaging from the face values
+ * to the center. The newly-allocated @g[] variables should be freed
+ * when not needed anymore.
+ *
+ * The @residual field of the @par projection parameters is set to the
+ * norm of the residual after the projection. The @niter field of the
+ * @par projection parameters is set to the number of iterations
+ * performed to solve the Poisson equation. The other projection
+ * parameters are not modified.
+ */
+void gfs_mac_projection_projection (GfsDomain * domain, GfsMultilevelParams * par,
+		      GfsAdvectionParams * apar, GfsVariable * p,
+		      GfsVariable * div, GfsVariable * res,
+		      GfsVariable ** g, GfsVariable * dia)
+{
+  /* Initialize diagonal coefficient */
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, dia);
+
   /* compute residual */
   par->depth = gfs_domain_depth (domain);
-  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div1, dia, res1);
+  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res);
   /* solve for pressure */
   par->residual_before = par->residual = 
-    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
+    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res);
   gdouble res_max_before = par->residual.infty;
   guint minlevel = par->minlevel;
   par->niter = 0;
@@ -343,8 +376,8 @@ static void mac_projection (GfsDomain * domain,
 	     par->residual.second, 
 	     par->residual.infty);
 #endif
-    gfs_poisson_cycle (domain, par, p, div1, dia, res1);
-    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
+    gfs_poisson_cycle (domain, par, p, div, dia, res);
+    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res);
     if (par->residual.infty == res_max_before) /* convergence has stopped!! */
       break;
     if (par->residual.infty > res_max_before/1.1 && par->minlevel < par->depth)
@@ -353,12 +386,6 @@ static void mac_projection (GfsDomain * domain,
     par->niter++;
   }
   par->minlevel = minlevel;
-
-  gts_object_destroy (GTS_OBJECT (dia));
-  if (!div)
-    gts_object_destroy (GTS_OBJECT (div1));
-  if (!res)
-    gts_object_destroy (GTS_OBJECT (res1));
 
   gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
   gfs_scale_gradients (domain, FTT_DIMENSION, g);
@@ -398,6 +425,9 @@ void gfs_mac_projection (GfsDomain * domain,
 			 GfsVariable * div,
 			 GfsVariable ** g)
 {
+  GfsVariable * dia = gfs_temporary_variable (domain);
+  GfsVariable * div1 = div;
+  GfsVariable * res = gfs_temporary_variable (domain);
   gdouble dt;
 
   g_return_if_fail (domain != NULL);
@@ -410,8 +440,16 @@ void gfs_mac_projection (GfsDomain * domain,
 
   dt = apar->dt;
   apar->dt /= 2.;
+  
+   /* Initialize divergence */
+  if (!div) {
+    div1 = gfs_temporary_variable (domain);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, div1);
+  }
 
-  mac_projection (domain, par, apar, p, alpha, div, NULL, g);
+  gfs_mac_projection_divergence (domain, apar, p, alpha, div1, g);
+  gfs_mac_projection_projection (domain, par, apar, p, div1, res, g, dia);
 
 #if 0
   {
@@ -428,6 +466,11 @@ void gfs_mac_projection (GfsDomain * domain,
 
   if (par->residual.infty > par->tolerance)
     g_warning ("MAC projection: max residual %g > %g", par->residual.infty, par->tolerance);
+
+  gts_object_destroy (GTS_OBJECT (dia));
+  if (!div)
+    gts_object_destroy (GTS_OBJECT (div1));
+  gts_object_destroy (GTS_OBJECT (res));
 }
 
 static void correct (FttCell * cell, gpointer * data)
@@ -513,6 +556,10 @@ void gfs_approximate_projection (GfsDomain * domain,
 				 GfsVariable * res,
 				 GfsVariable ** g)
 {
+  GfsVariable * dia = gfs_temporary_variable (domain);
+  GfsVariable * div1 = div;
+  GfsVariable * res1 = res ? res : gfs_temporary_variable (domain);
+  
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
   g_return_if_fail (apar != NULL);
@@ -530,7 +577,15 @@ void gfs_approximate_projection (GfsDomain * domain,
 			    (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
 			    gfs_domain_velocity (domain));
   
-  mac_projection (domain, par, apar, p, alpha, div, res, g);
+   /* Initialize divergence */
+  if (!div) {
+    div1 = gfs_temporary_variable (domain);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, div1);
+  }
+  
+  gfs_mac_projection_divergence (domain, apar, p, alpha, div1, g);
+  gfs_mac_projection_projection (domain, par, apar, p, div1, res1, g, dia);
 
   gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
 
@@ -538,6 +593,12 @@ void gfs_approximate_projection (GfsDomain * domain,
 
   if (par->residual.infty > par->tolerance)
     g_warning ("approx projection: max residual %g > %g", par->residual.infty, par->tolerance);
+
+  gts_object_destroy (GTS_OBJECT (dia));
+  if (!div)
+    gts_object_destroy (GTS_OBJECT (div1));
+  if (!res)
+    gts_object_destroy (GTS_OBJECT (res1));
 }
 
 /**

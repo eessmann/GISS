@@ -31,7 +31,7 @@ if cat <<EOF | python ; then :
 from check import *
 from sys import *
 if Curve('tracersum-1',1,2).normi() > 1e-6 or \
-   Curve('tracersum-2',1,2).normi() > 3e-6 or \
+   Curve('tracersum-2',1,2).normi() > 5e-6 or \
    Curve('momentumerror-1',1,3).max() > 11e-3 or \
    Curve('momentumerror-2',1,3).max() > 2e-3:
     exit(1)

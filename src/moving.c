@@ -707,19 +707,50 @@ static void move_solids (GfsSimulation * sim)
   gfs_domain_timer_stop (domain, "move_solids");
 }
 
-typedef struct {
-  GfsDomain * domain;
-  gdouble dt;
-  FttComponent c;
-  GfsVariable * div;
-  GfsVariable * v;
-} DivergenceData;
-
 static void moving_divergence_approx (FttCell * cell, DivergenceData * p)
 {
   GFS_VALUE (cell, p->div) += 
     GFS_STATE (cell)->solid->fv*(GFS_STATE (cell)->solid->s[2*p->c + 1] -
 				 GFS_STATE (cell)->solid->s[2*p->c])*ftt_cell_size (cell);
+}
+
+static void moving_divergence_distribution (GSList * merged, DivergenceData * p)
+{
+  GSList * i;
+  gdouble total_volume = 0.;
+  gdouble total_div = 0.;
+
+  
+  if ((merged->next != NULL) && (merged->next->data != merged->data )) {
+    i = merged;
+    while (i) {
+      FttCell * cell = i->data;
+      g_assert(cell);
+      if (GFS_STATE(cell)->solid) {
+	total_volume += GFS_STATE(cell)->solid->a*ftt_cell_volume(cell);
+	total_div += GFS_VALUE(cell, p->div);
+      }
+      else {
+	total_volume += ftt_cell_volume(cell);
+	total_div += GFS_VALUE(cell, p->div);
+      }
+      i = i->next;
+    }
+    
+    total_div /= total_volume;
+    
+    i = merged;
+    while (i) {
+      FttCell * cell = i->data;
+      if (GFS_STATE(cell)->solid) {
+	GFS_VALUE(cell, p->div) = total_div * GFS_STATE(cell)->solid->a*ftt_cell_volume(cell);
+      }
+      else{
+	GFS_VALUE(cell, p->div) =  total_div  * ftt_cell_volume(cell);	
+      }
+      i = i->next;
+    }
+  }
 }
 
 static void moving_approximate_projection (GfsDomain * domain,
@@ -732,17 +763,57 @@ static void moving_approximate_projection (GfsDomain * domain,
 {
   DivergenceData q;
   GfsVariable ** v = gfs_domain_velocity (domain);
+  GfsVariable * dia = gfs_temporary_variable (domain);
+  GfsVariable * div = gfs_temporary_variable (domain);
+  GfsVariable * res1 = res ? res : gfs_temporary_variable (domain);
+
+  g_return_if_fail (par != NULL);
+  g_return_if_fail (apar != NULL);
+  g_return_if_fail (p != NULL);
+  g_return_if_fail (g != NULL);
   
-  q.div = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, q.div);
+			    (FttCellTraverseFunc) gfs_cell_reset, div);
+
+  q.div = div;
+  q.dt = apar->dt;
   for (q.c = 0; q.c < FTT_DIMENSION; q.c++) {
     gfs_domain_surface_bc (domain, v[q.c]);
     gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			       (FttCellTraverseFunc) moving_divergence_approx, &q);
   }
-  gfs_approximate_projection (domain, par, apar, p, alpha, q.div, res, g);
-  gts_object_destroy (GTS_OBJECT (q.div));
+ 
+
+
+  gfs_domain_timer_start (domain, "approximate_projection");
+  
+  /* compute MAC velocities from centered velocities */
+  gfs_domain_face_traverse (domain, FTT_XYZ,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
+  gfs_domain_face_traverse (domain, FTT_XYZ,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
+			    gfs_domain_velocity (domain));
+  
+  gfs_mac_projection_divergence (domain, apar, p, alpha, div, g);
+  
+  q.domain=domain;
+  gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) moving_divergence_distribution, &q);
+
+  gfs_mac_projection_projection (domain, par, apar, p, div, res1, g, dia);
+
+  gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
+
+  gfs_domain_timer_stop (domain, "approximate_projection");
+
+  if (par->residual.infty > par->tolerance)
+    g_warning ("approx projection: max residual %g > %g", par->residual.infty, par->tolerance);
+
+  gts_object_destroy (GTS_OBJECT (dia));
+  gts_object_destroy (GTS_OBJECT (div));
+  if (!res)
+    gts_object_destroy (GTS_OBJECT (res1));
 }
 
 static void moving_divergence_mac (FttCell * cell, DivergenceData * p)
@@ -763,7 +834,16 @@ static void moving_mac_projection (GfsSimulation * sim,
 				   GfsVariable ** g)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
+  GfsVariable * dia = gfs_temporary_variable (domain);
+  GfsVariable * div =  gfs_temporary_variable (domain);
+  GfsVariable * res1 = gfs_temporary_variable (domain);
+  gdouble dt;
   DivergenceData q;
+
+  g_return_if_fail (par != NULL);
+  g_return_if_fail (apar != NULL);
+  g_return_if_fail (p != NULL);
+  g_return_if_fail (g != NULL);
 
   if (apar->moving_order == 2) {
     q.dt = apar->dt;
@@ -771,16 +851,54 @@ static void moving_mac_projection (GfsSimulation * sim,
   }
   else /* first order */
     q.dt = - apar->dt;
-
-  q.div = gfs_temporary_variable (domain);
+ 
+  /* Computes solid fluxes */
+  q.div = div;
   q.domain = domain;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) moving_divergence_mac, &q);
-  gfs_mac_projection (domain, par, apar, p, alpha, q.div, g);
-  gts_object_destroy (GTS_OBJECT (q.div));
+ 
+  /* Computes fluid fluxes */
+  gfs_domain_timer_start (domain, "mac_projection");
 
+  dt = apar->dt;
+  apar->dt /= 2.;
+  
+  gfs_mac_projection_divergence (domain, apar, p, alpha, div, g); 
+  
+
+  /* Redistributes the divergence for the merged cells */
+  q.dt =  apar->dt;
+  if (GFS_SIMULATION (domain)->advection_params.moving_order == 1)
+    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) moving_divergence_distribution, &q);
+  else
+    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) moving_divergence_distribution_second_order, &q);
+
+  /* Projects the velocities */
+  gfs_mac_projection_projection (domain, par, apar, p, div,res1, g, dia);
+
+#if 0
+  {
+    FILE * fp = fopen ("/tmp/macafter", "wt");
+
+    gfs_write_mac_velocity (domain, 0.9, FTT_TRAVERSE_LEAFS, -1, NULL, fp);
+    fclose (fp);
+  }
+#endif
+  
+  apar->dt = dt;
+
+  gfs_domain_timer_stop (domain, "mac_projection");
+
+  if (par->residual.infty > par->tolerance)
+    g_warning ("MAC projection: max residual %g > %g", par->residual.infty, par->tolerance);
+ 
   if (apar->moving_order == 2)
     swap_face_fractions_back (sim);
+
+  gts_object_destroy (GTS_OBJECT (dia));
+  gts_object_destroy (GTS_OBJECT (div));
+  gts_object_destroy (GTS_OBJECT (res1));
 }
 
 static void simulation_moving_run (GfsSimulation * sim)

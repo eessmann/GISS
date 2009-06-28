@@ -766,3 +766,51 @@ static void swap_face_fractions_back (GfsSimulation * sim)
 			    (FttCellTraverseFunc) swap_fractions_back,
 			    GFS_SIMULATION_MOVING (sim)->old_solid);
 }
+
+typedef struct {
+  GfsDomain * domain;
+  gdouble dt;
+  FttComponent c;
+  GfsVariable * div;
+  GfsVariable * v;
+} DivergenceData;
+
+static void moving_divergence_distribution_second_order (GSList * merged, DivergenceData * p)
+{
+  GSList * i;
+  gdouble total_volume = 0.;
+  gdouble total_div = 0.;
+  GfsVariable * old_solid_v = GFS_SIMULATION_MOVING (p->domain)->old_solid;
+
+   
+  if ((merged->next != NULL) && (merged->next->data != merged->data )) {
+    i = merged;
+    while (i) {
+      FttCell * cell = i->data;
+      g_assert(cell);
+      if (OLD_SOLID(cell)) {
+	total_volume += OLD_SOLID(cell)->a*ftt_cell_volume(cell);
+	total_div += GFS_VALUE(cell, p->div);
+      }
+      else {
+	total_volume += ftt_cell_volume(cell);
+	total_div += GFS_VALUE(cell, p->div);
+      }
+      i = i->next;
+    }
+    
+    total_div /= total_volume;
+    
+    i = merged;
+    while (i) {
+      FttCell * cell = i->data;
+      if (OLD_SOLID(cell)) {
+	GFS_VALUE(cell, p->div) = total_div * OLD_SOLID(cell)->a*ftt_cell_volume(cell);
+      }
+      else{
+	GFS_VALUE(cell, p->div) =  total_div  * ftt_cell_volume(cell);	
+      }
+      i = i->next;
+    }
+  } 
+}
