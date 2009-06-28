@@ -1426,8 +1426,9 @@ GfsGEdgeClass * gfs_gedge_class (void)
  * @edge: a #GfsGEdge.
  *
  * Links the two boxes connected by @edge. The boxes are set as their
- * respective neighbors in the direction defined by @edge and their
- * relative positions are set accordingly.
+ * respective neighbors in the direction defined by @edge (note that
+ * their relative positions are not set, call
+ * gfs_box_set_relative_pos() if necessary).
  */
 void gfs_gedge_link_boxes (GfsGEdge * edge)
 {
@@ -1458,7 +1459,6 @@ void gfs_gedge_link_boxes (GfsGEdge * edge)
 			   (FttCellInitFunc) gfs_cell_init, gfs_box_domain (b1));
     b1->neighbor[edge->d] = GTS_OBJECT (b2);
     b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] = GTS_OBJECT (b1);
-    gfs_box_set_relative_pos (b2, b1, edge->d);
   }
 }
 
@@ -1484,7 +1484,7 @@ GfsGEdge * gfs_gedge_new (GfsGEdgeClass * klass,
   g_return_val_if_fail (d >= 0 && d < FTT_NEIGHBORS, NULL);
 
   edge = GFS_GEDGE (gts_gedge_new (GTS_GEDGE_CLASS (klass),
-				  GTS_GNODE (b1), GTS_GNODE (b2)));
+				   GTS_GNODE (b1), GTS_GNODE (b2)));
   edge->d = d;
   
   gfs_gedge_link_boxes (edge);
@@ -1525,14 +1525,16 @@ static void box_size (FttCell * cell, guint * size)
 static void gfs_box_write (GtsObject * object, FILE * fp)
 {
   GfsBox * box = GFS_BOX (object);
+  FttVector pos;
   FttDirection d;
   guint size = 0;
   GfsDomain * domain = gfs_box_domain (box);
 
   ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 		     (FttCellTraverseFunc) box_size, &size);
-  fprintf (fp, "%s { id = %u pid = %d size = %u", 
-	   object->klass->info.name, box->id, box->pid, size);
+  ftt_cell_pos (box->root, &pos);
+  fprintf (fp, "%s { id = %u pid = %d size = %u x = %g y = %g z = %g",
+	   object->klass->info.name, box->id, box->pid, size, pos.x, pos.y, pos.z);
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOUNDARY (box->neighbor[d])) {
       fprintf (fp, " %s = %s",
@@ -1559,27 +1561,35 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
   GfsBox * b = GFS_BOX (*o);
   GtsObjectClass * klass;
   gboolean class_changed = FALSE;
+  FttVector pos = {0., 0., 0.};
   GtsFileVariable var[] = {
-    {GTS_UINT, "id",     TRUE},
-    {GTS_INT,  "pid",    TRUE},
-    {GTS_UINT, "size",   TRUE},
-    {GTS_FILE, "right",  TRUE},
-    {GTS_FILE, "left",   TRUE},
-    {GTS_FILE, "top",    TRUE},
-    {GTS_FILE, "bottom", TRUE},
+    {GTS_UINT,   "id",     TRUE},
+    {GTS_INT,    "pid",    TRUE},
+    {GTS_UINT,   "size",   TRUE},
+    {GTS_DOUBLE, "x",      TRUE},
+    {GTS_DOUBLE, "y",      TRUE},
+    {GTS_DOUBLE, "z",      TRUE},
+    {GTS_FILE,   "right",  TRUE},
+    {GTS_FILE,   "left",   TRUE},
+    {GTS_FILE,   "top",    TRUE},
+    {GTS_FILE,   "bottom", TRUE},
 #if (!FTT_2D)
-    {GTS_FILE, "front",  TRUE},
-    {GTS_FILE, "back",   TRUE},
+    {GTS_FILE,   "front",  TRUE},
+    {GTS_FILE,   "back",   TRUE},
 #endif /* 3D */
     {GTS_NONE}
   };
   GtsFileVariable * v;
   gfloat weight;
-  GfsDomain * domain;
+  GfsDomain * domain = GTS_OBJECT (*o)->reserved;
 
-  g_assert (GTS_SLIST_CONTAINEE (b)->containers &&
-	    !GTS_SLIST_CONTAINEE (b)->containers->next);
-  domain = GFS_DOMAIN (GTS_SLIST_CONTAINEE (b)->containers->data);
+  if (domain == NULL) {
+    g_assert (GTS_SLIST_CONTAINEE (b)->containers &&
+	      !GTS_SLIST_CONTAINEE (b)->containers->next);
+    domain = GFS_DOMAIN (GTS_SLIST_CONTAINEE (b)->containers->data);
+  }
+  else
+    gts_container_add (GTS_CONTAINER (domain), GTS_CONTAINEE (b));
 
   if (fp->type != GTS_STRING) {
     gts_file_error (fp, "expecting a string (GfsBoxClass)");
@@ -1610,9 +1620,13 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
   var[0].data = &b->id;
   var[1].data = &b->pid;
   var[2].data = &b->size;
+  var[3].data = &pos.x;
+  var[4].data = &pos.y;
+  var[5].data = &pos.z;
   gts_file_assign_start (fp, var);
   if (fp->type == GTS_ERROR)
     return;
+
   while ((v = gts_file_assign_next (fp, var)))
     if (v->type == GTS_FILE) {
       GtsObjectClass * boundary_class = gfs_object_class_from_name (fp->token->str);
@@ -1679,6 +1693,21 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
       if (GFS_IS_BOUNDARY (b->neighbor[d]))
 	ftt_cell_set_level (GFS_BOUNDARY (b->neighbor[d])->root, domain->rootlevel);
   }
+
+  if (var[3].set || var[4].set || var[5].set) {
+    gdouble size = ftt_cell_size (b->root);
+    FttDirection d;
+    ftt_cell_set_pos (b->root, &pos);
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      if (GFS_IS_BOUNDARY (b->neighbor[d])) {
+	FttVector bpos = pos;
+	bpos.x += rpos[d].x*size;
+	bpos.y += rpos[d].y*size;
+	bpos.z += rpos[d].z*size;
+	ftt_cell_set_pos (GFS_BOUNDARY (b->neighbor[d])->root, &bpos);
+      }
+  }
+
   /* updates weight of domain */
   GTS_WGRAPH (domain)->weight += gts_gnode_weight (GTS_GNODE (b)) - weight;
 

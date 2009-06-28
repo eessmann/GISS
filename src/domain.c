@@ -21,11 +21,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 #include "domain.h"
 
 #include "advection.h"
 #include "source.h"
 #include "solid.h"
+#include "adaptive.h"
 
 #include "config.h"
 #ifdef HAVE_MPI
@@ -201,6 +204,7 @@ static void mpi_links (GfsBox * box, GfsDomain * domain)
 			    FTT_OPPOSITE_DIRECTION (d), 
 			    pid, id);
 }
+#endif /* HAVE_MPI */
 
 static void add_id (GfsBox * box, GPtrArray * ids)
 {
@@ -209,46 +213,62 @@ static void add_id (GfsBox * box, GPtrArray * ids)
   g_ptr_array_index (ids, box->id - 1) = box;
 }
 
+static GPtrArray * box_ids (GfsDomain * domain)
+{
+  GPtrArray * ids = g_ptr_array_new ();
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) add_id, ids);
+  return ids;
+}
+
+
 static void convert_boundary_mpi_into_edges (GfsBox * box, GPtrArray * ids)
 {
+#ifdef HAVE_MPI
+  gint pid = gfs_box_domain (box)->pid;
   FttDirection d;
 
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
       GfsBoundaryMpi * b = GFS_BOUNDARY_MPI (box->neighbor[d]);
       GfsBox * nbox;
-      if (b->id >= 0 && (nbox = g_ptr_array_index (ids, b->id - 1))) {
+      if ((pid < 0 || b->process == pid) /* This is an "internal" boundary */ && 
+	  b->id >= 0 && (nbox = g_ptr_array_index (ids, b->id - 1))) {
+	FttDirection od = FTT_OPPOSITE_DIRECTION (d);
 	if (nbox->pid != b->process)
 	  g_warning ("nbox->pid != b->process");
-	else if (!GFS_IS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)]))
+	else if (!GFS_IS_BOUNDARY_MPI (nbox->neighbor[od]))
 	  g_warning ("!GFS_IS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)])");
 	else {
-	  GfsBoundaryMpi * nb = GFS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)]);
+	  GfsBoundaryMpi * nb = GFS_BOUNDARY_MPI (nbox->neighbor[od]);
 	  if (box->pid != nb->process || box->id != nb->id)
 	    g_warning ("box->pid != nb->process || box->id != nb->id");
 	  else {
 	    gts_object_destroy (GTS_OBJECT (b));
 	    gts_object_destroy (GTS_OBJECT (nb));
-	    gfs_gedge_new (gfs_gedge_class (), box, nbox, d);
+	    gfs_gedge_new (gfs_gedge_class (), nbox, box, od);
 	  }
 	}
       }
     }
+  if (pid >= 0)
+    box->pid = pid;
+#else /* not HAVE_MPI */
+  g_assert_not_reached ();
+#endif /* not HAVE_MPI */
 }
-#endif /* HAVE_MPI */
 
 static void domain_post_read (GfsDomain * domain, GtsFile * fp)
 {
   gts_graph_foreach_edge (GTS_GRAPH (domain), (GtsFunc) gfs_gedge_link_boxes, NULL);
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) set_ref_pos, &domain->refpos);
 
-#ifdef HAVE_MPI
   if (domain->pid >= 0) { /* Multiple PEs */
+#ifdef HAVE_MPI
     GSList * removed = NULL;
     guint np = 0;
     gpointer data[3];
     int comm_size;
     
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) set_ref_pos, &domain->refpos);
     data[0] = domain;
     data[1] = &removed;
     data[2] = &np;
@@ -261,18 +281,21 @@ static void domain_post_read (GfsDomain * domain, GtsFile * fp)
     }
     g_slist_foreach (removed, (GFunc) mpi_links, domain);
     g_slist_free (removed);
+#else /* not HAVE_MPI */
+    g_assert_not_reached ();
+#endif /* not HAVE_MPI */
   }
   else { /* Single PE */
     /* Create array for fast linking of ids to GfsBox pointers */
-    GPtrArray * ids = g_ptr_array_new ();
-    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) add_id, ids);
+    GPtrArray * ids = box_ids (domain);
     
     /* Convert GfsBoundaryMpi into graph edges */
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) convert_boundary_mpi_into_edges, ids);
 
     g_ptr_array_free (ids, TRUE);
+
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) set_ref_pos, &domain->refpos);
   }    
-#endif /* HAVE_MPI */
 
   gfs_domain_match (domain);
 }
@@ -2571,6 +2594,7 @@ void gfs_cell_write_binary (const FttCell * cell, FILE * fp,
     fwrite (s->solid->s, sizeof (gdouble), FTT_NEIGHBORS, fp);
     fwrite (&s->solid->a, sizeof (gdouble), 1, fp);
     fwrite (&s->solid->cm.x, sizeof (gdouble), FTT_DIMENSION, fp);
+    fwrite (&s->solid->ca.x, sizeof (gdouble), FTT_DIMENSION, fp);
   }
   else {
     gdouble a = -1.;
@@ -2619,7 +2643,8 @@ void gfs_cell_read_binary (FttCell * cell, GtsFile * fp, GfsDomain * domain)
     s->solid = g_malloc0 (sizeof (GfsSolidVector));
     s->solid->s[0] = s0;
     
-    if (gts_file_read (fp, &s->solid->s[1], sizeof (gdouble), FTT_NEIGHBORS - 1) != FTT_NEIGHBORS - 1) {
+    if (gts_file_read (fp, &s->solid->s[1], sizeof (gdouble), FTT_NEIGHBORS - 1) 
+	!= FTT_NEIGHBORS - 1) {
       gts_file_error (fp, "expecting numbers (solid->s[1..%d])", FTT_NEIGHBORS - 1);
       return;
     }
@@ -2629,6 +2654,10 @@ void gfs_cell_read_binary (FttCell * cell, GtsFile * fp, GfsDomain * domain)
     }
     if (gts_file_read (fp, &s->solid->cm.x, sizeof (gdouble), FTT_DIMENSION) != FTT_DIMENSION) {
       gts_file_error (fp, "expecting numbers (solid->cm[0..%d])", FTT_DIMENSION - 1);
+      return;
+    }
+    if (gts_file_read (fp, &s->solid->ca.x, sizeof (gdouble), FTT_DIMENSION) != FTT_DIMENSION) {
+      gts_file_error (fp, "expecting numbers (solid->ca[0..%d])", FTT_DIMENSION - 1);
       return;
     }
   }
@@ -3630,4 +3659,159 @@ void gfs_domain_filter (GfsDomain * domain, GfsVariable * v, GfsVariable * fv)
   }
   else
     gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, v, fv);
+}
+
+/**
+ * gfs_send_objects:
+ * @list: a list of #GtsObject.
+ * @dest: the rank of the destination PE.
+ *
+ * Sends the objects in @list to PE @dest of a parallel simulation.
+ *
+ * Note that this functions assumes that the write() method of the
+ * #GtsObject sent begins by writing the object class name.
+ */
+void gfs_send_objects (GSList * list, int dest)
+{
+#ifdef HAVE_MPI
+  FILE * fp = tmpfile ();
+  int fd = fileno (fp);
+  struct stat sb;
+  while (list) {
+    GtsObject * object = list->data;
+    g_assert (object->klass->write != NULL);
+    (* object->klass->write) (object, fp);
+    fputc ('\n', fp);
+    list = list->next;
+  }
+  fflush (fp);
+  g_assert (fstat (fd, &sb) != -1);
+  long length = sb.st_size;
+  MPI_Send (&length, 1, MPI_LONG, dest, 0, MPI_COMM_WORLD);
+  /*  g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, "sending %ld bytes to PE %d", length, dest); */
+  if (length > 0) {
+    char * buf = mmap (NULL, length, PROT_READ, MAP_PRIVATE, fd, 0);
+    g_assert (buf != MAP_FAILED);
+    MPI_Send (buf, length, MPI_BYTE, dest, 1, MPI_COMM_WORLD);
+    munmap (buf, length);
+  }
+  fclose (fp);
+#endif /* HAVE_MPI */
+}
+
+/**
+ * gfs_receive_objects:
+ * @domain: a #GfsDomain.
+ * @src: the rank of the source PE.
+ *
+ * Receives a list of #GtsObject from PE @src of a parallel simulation.
+ *
+ * Returns: a list of newly-allocated objects.
+ */
+GSList * gfs_receive_objects (GfsDomain * domain, int src)
+{
+  g_return_val_if_fail (domain != NULL, NULL);
+
+#ifdef HAVE_MPI
+  MPI_Status status;
+  long length;
+  MPI_Recv (&length, 1, MPI_LONG, src, 0, MPI_COMM_WORLD, &status);
+  /*  g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, "receiving %ld bytes from PE %d", length, src); */
+  if (length > 0) {
+    char * buf = g_malloc (length);
+    MPI_Recv (buf, length, MPI_BYTE, src, 1, MPI_COMM_WORLD, &status);
+    FILE * f = tmpfile ();
+    fwrite (buf, 1, length, f);
+    rewind (f);
+    GtsFile * fp = gts_file_new (f);
+    GSList * list = NULL;
+    while (fp->type == GTS_STRING) {
+      GtsObjectClass * klass = gfs_object_class_from_name (fp->token->str);
+      if (klass == NULL)
+	g_error ("gfs_receive_object():%d:%d: unknown class '%s'", 
+		 fp->line, fp->pos, fp->token->str);
+      GtsObject * object = gts_object_new (klass);
+      gfs_object_simulation_set (object, domain);
+      g_assert (klass->read);
+      (* klass->read) (&object, fp);
+      if (fp->type == GTS_ERROR)
+	g_error ("gfs_receive_object():%d:%d: %s", fp->line, fp->pos, fp->error);
+      list = g_slist_prepend (list, object);
+    }
+    gts_file_destroy (fp);
+    fclose (f);
+    g_free (buf);
+    return list;
+  }
+#endif /* HAVE_MPI */
+  return NULL;
+}
+
+static void unlink_box (GfsBox * box, gint * dest)
+{
+#ifdef HAVE_MPI
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOX (box->neighbor[d])) {
+      GfsBox * nbox = GFS_BOX (box->neighbor[d]);
+      FttDirection od = FTT_OPPOSITE_DIRECTION (d);
+      nbox->neighbor[od] = NULL;
+      gfs_boundary_mpi_new (gfs_boundary_mpi_class (), nbox, od, *dest, box->id);
+      box->neighbor[d] = NULL;
+      gfs_boundary_mpi_new (gfs_boundary_mpi_class (), box, d, nbox->pid, nbox->id);
+    }
+#else /* doesn't HAVE_MPI */
+  g_assert_not_reached ();
+#endif
+}
+
+static void setup_binary_IO (GfsDomain * domain)
+{
+  /* make sure that all the variables are sent */
+  g_slist_free (domain->variables_io);
+  domain->variables_io = NULL;
+  GSList * i = domain->variables;
+  while (i) {
+    if (GFS_VARIABLE1 (i->data)->name)
+      domain->variables_io = g_slist_append (domain->variables_io, i->data);
+    i = i->next;
+  }
+  domain->binary = TRUE;	
+}
+
+void gfs_send_boxes (GfsDomain * domain, GSList * boxes, int dest)
+{
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (dest != domain->pid);
+
+  g_slist_foreach (boxes, (GFunc) unlink_box, &dest);
+  setup_binary_IO (domain);
+  gfs_send_objects (boxes, dest);
+  g_slist_foreach (boxes, (GFunc) gts_object_destroy, NULL);
+  if (boxes)
+    gfs_domain_reshape (domain, gfs_domain_depth (domain));
+}
+
+/**
+ * gfs_receive_boxes:
+ * @domain: 
+ */
+GSList * gfs_receive_boxes (GfsDomain * domain, int src)
+{
+  g_return_val_if_fail (domain != NULL, NULL);
+  g_return_val_if_fail (src != domain->pid, NULL);
+
+  setup_binary_IO (domain);
+  GSList * boxes = gfs_receive_objects (domain, src);
+  if (boxes) {
+    /* Create array for fast linking of ids to GfsBox pointers */
+    GPtrArray * ids = box_ids (domain);
+	  
+    /* Convert internal GfsBoundaryMpi into graph edges */
+    g_slist_foreach (boxes, (GFunc) convert_boundary_mpi_into_edges, ids);
+    g_ptr_array_free (ids, TRUE);
+
+    gfs_domain_reshape (domain, gfs_domain_depth (domain));
+  }
+  return boxes;
 }

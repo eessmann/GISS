@@ -608,8 +608,6 @@ static void update_neighbor_match (FttCell * cell,
       FttCellChildren children;
       guint i, n;
 
-      g_assert (oct->neighbors.c[d] == NULL ||
-		oct->neighbors.c[d] == neighbor);
       oct->neighbors.c[d] = neighbor;
       
       if (ftt_cell_level (neighbor) < oct->level) {
@@ -682,12 +680,10 @@ void ftt_cell_set_neighbor_match (FttCell * root,
 
   g_return_if_fail (ftt_cell_level (root) == ftt_cell_level (neighbor));
 
-  g_return_if_fail (FTT_ROOT_CELL (root)->neighbors.c[d] == NULL);
   FTT_ROOT_CELL (root)->neighbors.c[d] = neighbor;
   update_neighbor_match (root, d, init, init_data);
 
   od = FTT_OPPOSITE_DIRECTION (d);
-  g_return_if_fail (FTT_ROOT_CELL (neighbor)->neighbors.c[od] == NULL);
   FTT_ROOT_CELL (neighbor)->neighbors.c[od] = root;
   update_neighbor_match (neighbor, od, init, init_data);
 }
