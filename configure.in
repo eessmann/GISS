@@ -90,7 +90,6 @@ if test "x$with_mpicc" != "xno" ; then
      AC_MSG_WARN([MPI not found. No MPI support will be compiled in.])
   fi
 fi
-AM_CONDITIONAL(HAVE_MPI, test "x$use_mpicc" = "xyes")
 
 AC_PROG_CC
 

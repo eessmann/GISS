@@ -26,14 +26,6 @@ BUILT_SOURCES= \
 	gerris2D3.pc \
 	gerris3D.pc
 
-if HAVE_MPI
-MPI_SRC = mpi_boundary.c
-MPI_HDS = mpi_boundary.h
-else
-MPI_SRC = 
-MPI_HDS = 
-endif
-
 GFS_HDS = \
 	ftt.h \
 	fluid.h \
@@ -43,6 +35,7 @@ GFS_HDS = \
 	poisson.h \
 	advection.h \
 	boundary.h \
+	mpi_boundary.h \
 	timestep.h \
 	domain.h \
 	init.h \
@@ -65,8 +58,7 @@ GFS_HDS = \
 	map.h \
 	river.h \
 	moving.h \
-	version.h \
-	$(MPI_HDS)
+	version.h
 
 pkginclude_HEADERS = \
 	$(GFS_HDS) \
@@ -86,9 +78,9 @@ SRC = \
 	poisson.c \
 	advection.c \
 	boundary.c \
+	mpi_boundary.c \
 	timestep.c \
 	domain.c \
-	$(MPI_SRC) \
 	init.c \
 	refine.c \
 	event.c \
@@ -134,8 +126,6 @@ libgfs2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 CLEANFILES = $(BUILT_SOURCES)
 
 EXTRA_DIST = \
-	mpi_boundary.c \
-	mpi_boundary.h \
 	ftt_internal.c \
 	moving2.c \
 	m4.awk

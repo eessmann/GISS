@@ -23,11 +23,6 @@
 #include "source.h"
 #include "tension.h"
 
-#include "config.h"
-#ifdef HAVE_MPI
-#  include "mpi_boundary.h"
-#endif
-
 /**
  * gfs_multilevel_params_write:
  * @par: the multilevel parameters.

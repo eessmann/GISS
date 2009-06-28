@@ -14,6 +14,7 @@ int main (int argc, char * argv[])
 {
   GtsObjectClass ** klass;
 
+  gfs_init (&argc, &argv);
   klass = gfs_classes ();
 
   printf ("# Language file for source-highlight\n"

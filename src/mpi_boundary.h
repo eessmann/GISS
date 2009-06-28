@@ -20,7 +20,6 @@
 #ifndef __MPI_BOUNDARY_H__
 #define __MPI_BOUNDARY_H__
 
-#include <mpi.h>
 #include "boundary.h"
 
 #ifdef __cplusplus
@@ -29,16 +28,25 @@ extern "C" {
 
 typedef struct _GfsBoundaryMpi         GfsBoundaryMpi;
 
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#  ifdef HAVE_MPI
+#    include <mpi.h>
+#  endif
+
 struct _GfsBoundaryMpi {
   /*< private >*/
   GfsBoundaryPeriodic parent;
-
-  MPI_Comm comm;
   gint process, id;
 
+#ifdef HAVE_MPI
+  MPI_Comm comm;
   MPI_Request request[2];
   guint nrequest;
+#endif /* HAVE_MPI */
 };
+
+#endif /* HAVE_CONFIG_H */
 
 #define GFS_BOUNDARY_MPI(obj)            GTS_OBJECT_CAST (obj,\
 					           GfsBoundaryMpi,\

@@ -28,6 +28,7 @@
 #include <locale.h>
 
 #include "boundary.h"
+#include "mpi_boundary.h"
 #include "init.h"
 #include "refine.h"
 #include "output.h"
@@ -46,20 +47,20 @@
 
 #ifdef HAVE_MPI
 # include <mpi.h>
-# include "mpi_boundary.h"
 #endif /* HAVE_MPI */
 
 static void gfs_log (const gchar * log_domain,
 		     GLogLevelFlags log_level,
 		     const gchar * message)
 {
-  int rank = -1, type = 0;
+  int type = 0;
   gchar * pe;
   const gchar stype[][10] = {
     "ERROR", "CRITICAL", "WARNING", "MESSAGE", "INFO", "DEBUG"
   };
 
 #ifdef HAVE_MPI
+  int rank = -1;
   MPI_Comm_size (MPI_COMM_WORLD, &rank);
   if (rank > 1)
     MPI_Comm_rank (MPI_COMM_WORLD, &rank);
@@ -128,6 +129,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_boundary_outflow_class (),
     gfs_boundary_gradient_class (),
     gfs_boundary_periodic_class (),
+      gfs_boundary_mpi_class (),
 
   gfs_refine_class (),
     gfs_refine_solid_class (),
@@ -292,9 +294,6 @@ void gfs_init (int * argc, char *** argv)
 
   /* Instantiates classes before reading any domain or simulation file */
   gfs_classes ();
-#ifdef HAVE_MPI
-  gfs_boundary_mpi_class ();
-#endif /* HAVE_MPI */
 
   /* If modules are not supported, calls modules init functions */
 #include "modules.c"

@@ -29,13 +29,10 @@
 #include "source.h"
 #include "solid.h"
 #include "adaptive.h"
+#include "mpi_boundary.h"
 #include "version.h"
 
 #include "config.h"
-#ifdef HAVE_MPI
-#  include "mpi_boundary.h"
-#  include "init.h"
-#endif /* HAVE_MPI */
 
 /* GfsDomain: Object */
 
@@ -213,7 +210,6 @@ static void set_ref_pos (GfsBox * box, FttVector * pos)
     box_set_pos (box, pos, FTT_RIGHT);
 }
 
-#ifdef HAVE_MPI
 static void removed_list (GfsBox * box, gpointer * data)
 {
   GfsDomain * domain = data[0];
@@ -257,7 +253,6 @@ static void mpi_links (GfsBox * box, GfsDomain * domain)
 			    FTT_OPPOSITE_DIRECTION (d), 
 			    pid, id);
 }
-#endif /* HAVE_MPI */
 
 static void add_id (GfsBox * box, GPtrArray * ids)
 {
@@ -276,7 +271,6 @@ static GPtrArray * box_ids (GfsDomain * domain)
 
 static void convert_boundary_mpi_into_edges (GfsBox * box, GPtrArray * ids)
 {
-#ifdef HAVE_MPI
   gint pid = gfs_box_domain (box)->pid;
   FttDirection d;
 
@@ -305,9 +299,6 @@ static void convert_boundary_mpi_into_edges (GfsBox * box, GPtrArray * ids)
     }
   if (pid >= 0)
     box->pid = pid;
-#else /* not HAVE_MPI */
-  g_assert_not_reached ();
-#endif /* not HAVE_MPI */
 }
 
 static void domain_post_read (GfsDomain * domain, GtsFile * fp)
@@ -315,28 +306,26 @@ static void domain_post_read (GfsDomain * domain, GtsFile * fp)
   gts_graph_foreach_edge (GTS_GRAPH (domain), (GtsFunc) gfs_gedge_link_boxes, NULL);
 
   if (domain->pid >= 0) { /* Multiple PEs */
-#ifdef HAVE_MPI
     GSList * removed = NULL;
     guint np = 0;
     gpointer data[3];
-    int comm_size;
     
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) set_ref_pos, &domain->refpos);
     data[0] = domain;
     data[1] = &removed;
     data[2] = &np;
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) removed_list, data);
+#ifdef HAVE_MPI
+    int comm_size;
     MPI_Comm_size (MPI_COMM_WORLD, &comm_size);
     if (np + 1 != comm_size) {
       g_slist_free (removed);
       gts_file_error (fp, "it would be valid if one or %d PE were used", np + 1);
       return;
     }
+#endif /* HAVE_MPI */
     g_slist_foreach (removed, (GFunc) mpi_links, domain);
     g_slist_free (removed);
-#else /* not HAVE_MPI */
-    g_assert_not_reached ();
-#endif /* not HAVE_MPI */
   }
   else { /* Single PE */
     /* Create array for fast linking of ids to GfsBox pointers */
@@ -1406,6 +1395,10 @@ static void domain_range_reduce (GfsDomain * domain, GtsRange * s)
     s->n = out[4];
   }
 }
+#else /* not HAVE_MPI */
+static void domain_range_reduce (GfsDomain * domain, GtsRange * s)
+{
+}
 #endif /* HAVE_MPI */
 
 /**
@@ -1436,9 +1429,7 @@ GtsRange gfs_domain_stats_variable (GfsDomain * domain,
   data[1] = v;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
 			   (FttCellTraverseFunc) add_stats, data);
-#ifdef HAVE_MPI
   domain_range_reduce (domain, &s);
-#endif /* HAVE_MPI */
   gts_range_update (&s);
 
   return s;
@@ -1467,9 +1458,7 @@ GtsRange gfs_domain_stats_solid (GfsDomain * domain)
   gts_range_init (&s);
   gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			    (FttCellTraverseFunc) add_stats_solid, &s);
-#ifdef HAVE_MPI
   domain_range_reduce (domain, &s);
-#endif /* HAVE_MPI */
   gts_range_update (&s);
 
   return s;
@@ -1524,10 +1513,8 @@ void gfs_domain_stats_merged (GfsDomain * domain,
   data[1] = number;
   gfs_domain_traverse_merged (domain,
 			     (GfsMergedTraverseFunc) add_stats_merged, data);
-#ifdef HAVE_MPI
   domain_range_reduce (domain, solid);
   domain_range_reduce (domain, number);
-#endif /* HAVE_MPI */
   gts_range_update (solid);
   gts_range_update (number);
 }
@@ -1555,12 +1542,8 @@ static void boundary_size (GfsBox * box, GArray * a)
   guint count = 0;
 
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (
-#ifdef HAVE_MPI
-	GFS_IS_BOUNDARY_MPI (box->neighbor[d]) ||
-#endif
-	(GFS_IS_BOX (box->neighbor[d]) && GFS_BOX (box->neighbor[d])->pid != box->pid)
-       )
+    if (GFS_IS_BOUNDARY_MPI (box->neighbor[d]) ||
+	(GFS_IS_BOX (box->neighbor[d]) && GFS_BOX (box->neighbor[d])->pid != box->pid))
       ftt_cell_traverse_boundary (box->root, d, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				  (FttCellTraverseFunc) cell_count, &count);
   g_array_index (a, guint, BPID (box)) += count;
@@ -1611,11 +1594,9 @@ void gfs_domain_stats_balance (GfsDomain * domain,
     if (v > 0)
       gts_range_add_value (boundary, v);
   }
-#ifdef HAVE_MPI
   domain_range_reduce (domain, size);
   domain_range_reduce (domain, boundary);
   domain_range_reduce (domain, mpiwait);
-#endif /* HAVE_MPI */
   g_array_free (a, TRUE);
   gts_range_update (size);
   gts_range_update (boundary);
@@ -1672,7 +1653,11 @@ static void domain_norm_reduce (GfsDomain * domain, GfsNorm * n)
     n->w = out[4];
   }
 }
-#endif /* HAVE_MPI */
+#else /* not HAVE_MPI */
+static void domain_norm_reduce (GfsDomain * domain, GfsNorm * n)
+{
+}
+#endif /* not HAVE_MPI */
 
 /**
  * gfs_domain_norm_variable:
@@ -1712,9 +1697,7 @@ GfsNorm gfs_domain_norm_variable (GfsDomain * domain,
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
 			      (FttCellTraverseFunc) add_norm, data);
-#ifdef HAVE_MPI
   domain_norm_reduce (domain, &n);
-#endif /* HAVE_MPI */
   gfs_norm_update (&n);
 
   return n;
@@ -1762,9 +1745,7 @@ GfsNorm gfs_domain_norm_residual (GfsDomain * domain,
   data[1] = &n;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
 			   (FttCellTraverseFunc) add_norm_residual, data);
-#ifdef HAVE_MPI
   domain_norm_reduce (domain, &n);
-#endif /* HAVE_MPI */
   gfs_norm_update (&n);
 
   dt *= dt;
@@ -1829,9 +1810,7 @@ GfsNorm gfs_domain_norm_velocity (GfsDomain * domain,
   data[1] = &n;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
 			   (FttCellTraverseFunc) add_norm_velocity, data);
-#ifdef HAVE_MPI
   domain_norm_reduce (domain, &n);
-#endif /* HAVE_MPI */
   gfs_norm_update (&n);
 
   return n;
@@ -3958,7 +3937,6 @@ GSList * gfs_receive_objects (GfsDomain * domain, int src)
 
 static void unlink_box (GfsBox * box, gint * dest)
 {
-#ifdef HAVE_MPI
   FttDirection d;
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOX (box->neighbor[d])) {
@@ -3969,9 +3947,6 @@ static void unlink_box (GfsBox * box, gint * dest)
       box->neighbor[d] = NULL;
       gfs_boundary_mpi_new (gfs_boundary_mpi_class (), box, d, nbox->pid, nbox->id);
     }
-#else /* doesn't HAVE_MPI */
-  g_assert_not_reached ();
-#endif
 }
 
 static void setup_binary_IO (GfsDomain * domain)

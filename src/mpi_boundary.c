@@ -22,8 +22,6 @@
 #include "mpi_boundary.h"
 #include "adaptive.h"
 
-/* #define DEBUG mpi_debug */
-
 static void boundary_mpi_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_boundary_mpi_class ())->parent_class->write) (o, fp);
@@ -46,15 +44,19 @@ static void boundary_mpi_read (GtsObject ** o, GtsFile * fp)
     GFS_BOUNDARY_MPI (*o)->process = GFS_BOUNDARY_MPI (*o)->id = -1;
 }
 
-#ifdef DEBUG
-FILE * mpi_debug = NULL;
-#endif
+#ifdef HAVE_MPI
+
+/* #define DEBUG mpi_debug */
 
 static guint tag_shift = 32767/FTT_NEIGHBORS;
 
 #define TAG(boundary)           (tag_shift*(boundary)->d + (boundary)->box->id)
 #define MATCHING_TAG(boundary)  (tag_shift*FTT_OPPOSITE_DIRECTION ((boundary)->d) +\
                                  GFS_BOUNDARY_MPI (boundary)->id)
+
+#ifdef DEBUG
+FILE * mpi_debug = NULL;
+#endif
 
 static void send (GfsBoundary * bb)
 {
@@ -209,22 +211,26 @@ static void synchronize (GfsBoundary * bb)
   (* gfs_boundary_periodic_class ()->synchronize) (bb);
 }
 
+#endif /* HAVE_MPI */
+
 static void gfs_boundary_mpi_class_init (GfsBoundaryClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = boundary_mpi_read;
   GTS_OBJECT_CLASS (klass)->write = boundary_mpi_write;
+#ifdef HAVE_MPI
   klass->send        = send;
   klass->receive     = receive;
   klass->synchronize = synchronize;
+#endif /* HAVE_MPI */
 }
 
 static void gfs_boundary_mpi_init (GfsBoundaryMpi * boundary)
 {
-  boundary->comm = MPI_COMM_WORLD;
   boundary->process = -1; 
   boundary->id = -1;
-
+#ifdef HAVE_MPI
   boundary->nrequest = 0;
+  boundary->comm = MPI_COMM_WORLD;
 #ifdef DEBUG
   if (mpi_debug == NULL) {
     int rank;
@@ -234,6 +240,7 @@ static void gfs_boundary_mpi_init (GfsBoundaryMpi * boundary)
     g_free (fname);
   }
 #endif
+#endif /* HAVE_MPI */
 }
 
 GfsBoundaryClass * gfs_boundary_mpi_class (void)
@@ -250,16 +257,17 @@ GfsBoundaryClass * gfs_boundary_mpi_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    int * tagub, flag, maxtag;
-
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_boundary_periodic_class ()),
 				  &gfs_boundary_mpi_info);
+#ifdef HAVE_MPI
+    int * tagub, flag, maxtag;
     MPI_Attr_get (MPI_COMM_WORLD, MPI_TAG_UB, &tagub, &flag);
     if (flag)
       maxtag = *tagub;
     else
       maxtag = 32767; /* minimum value from MPI standard specification */
     tag_shift = maxtag/FTT_NEIGHBORS;
+#endif /* HAVE_MPI */
   }
 
   return klass;
@@ -272,19 +280,18 @@ GfsBoundaryMpi * gfs_boundary_mpi_new (GfsBoundaryClass * klass,
 				       gint id)
 {
   GfsBoundaryMpi * boundary;
+#ifdef HAVE_MPI
   int comm_size;
-
   MPI_Comm_size (MPI_COMM_WORLD, &comm_size);
-
   g_return_val_if_fail (process >= 0 && process < comm_size, NULL);
-
-  boundary = GFS_BOUNDARY_MPI (gfs_boundary_periodic_new (klass, box, d, NULL));
-  boundary->process = process;
-  boundary->id = id;
 
   if (id >= tag_shift)
     g_warning ("GfsBoundaryMpi id (%d) is larger than the maximum MPI tag value\n"
 	       "allowed on this system (%d)", id, tag_shift);
+#endif /* HAVE_MPI */
+  boundary = GFS_BOUNDARY_MPI (gfs_boundary_periodic_new (klass, box, d, NULL));
+  boundary->process = process;
+  boundary->id = id;
 
   return boundary;
 }
