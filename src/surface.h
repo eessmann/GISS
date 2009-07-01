@@ -52,6 +52,8 @@ struct _GfsGenericSurfaceClass {
 						FttCell * cell,
 						GfsSegment * I,
 						GtsVector n);
+  gint                (* point_is_inside)      (GfsGenericSurface * s,
+						FttVector * p);
 };
 
 #define GFS_GENERIC_SURFACE(obj)            GTS_OBJECT_CAST (obj,\
@@ -71,6 +73,8 @@ void               gfs_surface_segment_normal       (GfsGenericSurface * s,
 						     FttCell * cell,
 						     GfsSegment * I,
 						     GtsVector n);
+gint               gfs_surface_point_is_inside      (GfsGenericSurface * s,
+						     FttVector * p);
 GfsGenericSurface *      gfs_cell_is_cut (FttCell * cell,
 					  GfsGenericSurface * s,
 					  gboolean flatten,

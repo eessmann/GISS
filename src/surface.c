@@ -240,6 +240,24 @@ void gfs_surface_segment_normal (GfsGenericSurface * s,
   (* GFS_GENERIC_SURFACE_CLASS (GTS_OBJECT (s)->klass)->segment_normal) (s, cell, I, n);
 }
 
+/**
+ * gfs_surface_point_is_inside:
+ * @s: a #GfsGenericSurface.
+ * @p: a #FttVector.
+ *
+ * Returns: 1 if @p is inside @s, 0 if @p lies on the boundary of @s,
+ * -1 otherwise.
+ */
+gint gfs_surface_point_is_inside (GfsGenericSurface * s,
+				  FttVector * p)
+{
+  g_return_val_if_fail (s != NULL, 0);
+  g_return_val_if_fail (p != NULL, 0);
+
+  g_assert (GFS_GENERIC_SURFACE_CLASS (GTS_OBJECT (s)->klass)->point_is_inside);
+  return (* GFS_GENERIC_SURFACE_CLASS (GTS_OBJECT (s)->klass)->point_is_inside) (s, p);
+}
+
 /* GfsSurface: Object */
 
 static void check_solid_surface (GtsSurface * s, 
@@ -744,6 +762,37 @@ static void surface_segment_normal (GfsGenericSurface * s1,
   }
 }
 
+static void add_tetrahedron_volume (GtsTriangle * t, gpointer * data)
+{
+  GtsPoint * p = data[0];
+  GtsVertex * v1, * v2, * v3;
+  gdouble * vol = data[1];
+  gts_triangle_vertices (t, &v1, &v2, &v3);
+  *vol += gts_point_orientation_3d (GTS_POINT (v1), GTS_POINT (v2), GTS_POINT (v3), p);
+}
+
+static gint point_is_inside_surface (GfsGenericSurface * s1, FttVector * p)
+{
+  GfsSurface * s = GFS_SURFACE (s1);
+  GtsPoint q;
+  q.x = p->x; q.y = p->y; q.z = p->z;
+
+  if (s->s) {
+    gdouble vol = 0.;
+    gpointer data[2];
+    data[0] = &q;
+    data[1] = &vol;
+    gts_surface_foreach_face (s->s, (GtsFunc) add_tetrahedron_volume, data);
+    fprintf (stderr, "vol: %g\n", vol);
+    return vol > 0. ? -1 : 1;
+  }
+  else {
+    gdouble v = gfs_surface_implicit_value (s, q);
+    return v == 0. ? 0 : v < 0. ? -1 : 1;
+  }
+  return 0;
+}
+
 static void gfs_surface_class_init (GtsObjectClass * klass)
 {
   klass->read = surface_read;
@@ -753,6 +802,7 @@ static void gfs_surface_class_init (GtsObjectClass * klass)
   GFS_GENERIC_SURFACE_CLASS (klass)->cell_is_cut = cell_is_cut;
   GFS_GENERIC_SURFACE_CLASS (klass)->segment_intersection = surface_segment_intersection;
   GFS_GENERIC_SURFACE_CLASS (klass)->segment_normal = surface_segment_normal;
+  GFS_GENERIC_SURFACE_CLASS (klass)->point_is_inside = point_is_inside_surface;
 }
 
 static void gfs_surface_init (GfsSurface * s)

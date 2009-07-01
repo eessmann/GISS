@@ -814,14 +814,16 @@ static void solid_fractions_from_children (FttCell * cell, InitSolidParams * p)
       GFS_VALUE (cell, p->status) = GFS_STATUS_SOLID;
     else {
       gfs_cell_init_solid_fractions_from_children (cell);
-      if (p->destroy_solid)
-	GFS_VALUE (cell, p->status) = GFS_STATUS_UNDEFINED;
-      else if (!GFS_IS_MIXED (cell)) {
+      GFS_VALUE (cell, p->status) = GFS_STATUS_UNDEFINED;
+      if (!p->destroy_solid && !GFS_IS_MIXED (cell)) {
 	ftt_cell_children (cell, &child);
-	GFS_VALUE (cell, p->status) = GFS_STATUS_SOLID;
 	for (i = 0; i < FTT_CELLS; i++)
-	  if (child.c[i] && GFS_VALUE (child.c[i], p->status) == GFS_STATUS_FLUID)
-	    GFS_VALUE (cell, p->status) = GFS_STATUS_FLUID;
+	  if (child.c[i]) {
+	    if (GFS_VALUE (cell, p->status) == GFS_STATUS_UNDEFINED)
+	      GFS_VALUE (cell, p->status) = GFS_VALUE (child.c[i], p->status);
+	    else
+	      g_assert (GFS_VALUE (cell, p->status) == GFS_VALUE (child.c[i], p->status));
+	  }
       }
     }
   }
@@ -1169,26 +1171,41 @@ static void save_solid (FttCell * cell, GfsVariable * c)
 
 static void restore_solid (FttCell * cell, gpointer * data)
 {
-  GfsVariable * c = data[0];
-  gboolean * not_cut = data[1];
-  GfsVariable * status = data[2];
+  GfsVariable * status = data[0];
+  GfsVariable * c = data[1];
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
 
   GFS_STATE (cell)->solid = GFS_DOUBLE_TO_POINTER (GFS_VALUE (cell, c));
   if (solid) {
     GFS_VALUE (cell, c) = solid->a;
     g_free (solid);
-    *not_cut = FALSE;
-  }
-  else if (GFS_VALUE (cell, status) == GFS_STATUS_UNDEFINED) {
-    /* fixme: this can fail for non-contiguous domains (e.g. non-connected GfsBoxes) */
-    g_assert (*not_cut);
-    GFS_VALUE (cell, c) = 0.;
   }
   else {
     g_assert (GFS_VALUE (cell, status) == GFS_STATUS_SOLID || 
 	      GFS_VALUE (cell, status) == GFS_STATUS_FLUID);
     GFS_VALUE (cell, c) = GFS_VALUE (cell, status) - 1.;
+  }
+}
+
+static void set_status (FttCell * cell, gpointer * data)
+{
+  GfsVariable * status = data[0];
+  gdouble * val = data[2];
+  GFS_VALUE (cell, status) = *val;
+}
+
+static void check_status (GfsBox * box, gpointer * data)
+{
+  GfsVariable * status = data[0];
+  if (!GFS_IS_MIXED (box->root) && GFS_VALUE (box->root, status) == GFS_STATUS_UNDEFINED) {
+    GfsGenericSurface * s = data[1];
+    FttVector pos;
+    ftt_cell_pos (box->root, &pos);
+    gdouble val = gfs_surface_point_is_inside (s, &pos) > 0 ?
+      GFS_STATUS_FLUID : GFS_STATUS_SOLID;
+    data[2] = &val;
+    ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+		       (FttCellTraverseFunc) set_status, data);
   }
 }
 
@@ -1205,7 +1222,6 @@ void gfs_domain_init_fraction (GfsDomain * domain,
 			       GfsGenericSurface * s,
 			       GfsVariable * c)
 {
-  gboolean not_cut = TRUE;
   gpointer data[3];
   GfsVariable * status;
 
@@ -1222,9 +1238,10 @@ void gfs_domain_init_fraction (GfsDomain * domain,
   GSList * l = g_slist_prepend (NULL, &tmp);
   gfs_domain_init_solid_fractions (domain, l, FALSE, NULL, NULL, status);
   g_slist_free (l);
-  data[0] = c;
-  data[1] = &not_cut;
-  data[2] = status;
+  data[0] = status;
+  data[1] = s;
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) check_status, data);
+  data[1] = c;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) restore_solid, data);
   gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, c);
