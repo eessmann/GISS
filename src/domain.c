@@ -3042,7 +3042,8 @@ static void tag_cell_fraction (GtsFifo * fifo,
 
 typedef struct {
   GfsVariable * v, * c;
-  guint tag;
+  FttDirection d;
+  guint * touch, * tags, tag, tagshift;
 } TagPar;
 
 static void tag_new_fraction_region (FttCell * cell, TagPar * p)
@@ -3056,6 +3057,101 @@ static void tag_new_fraction_region (FttCell * cell, TagPar * p)
       tag_cell_fraction (fifo, cell, p->c, p->v, p->tag);
     gts_fifo_destroy (fifo);
   }
+}
+
+/* @touch defines the touching connectivity. This function updates
+   @touch with the info that region tagged with @tag1 touches the
+   region tagged with @tag2  */
+static void touching_regions (guint tag1, guint tag2, guint * touch)
+{
+  if (tag2 < tag1) {
+    guint tmp = tag1;
+    tag1 = tag2;
+    tag2 = tmp;
+  }
+  else if (tag2 == tag1)
+    return;
+  guint ntag = touch[tag2];
+  if (ntag == tag1)
+    return;
+  if (ntag == 0)
+    touch[tag2] = tag1;
+  else {
+    if (tag1 < ntag)
+      touch[tag2] = tag1;
+    touching_regions (tag1, ntag, touch);
+  }
+}
+
+#ifdef HAVE_MPI
+static void reduce_touching_regions (void * in, void * inout, int * len, MPI_Datatype * type)
+{
+  guint * ltouch = (guint *) in;
+  guint * gtouch = (guint *) inout;
+  guint i;
+
+  for (i = 1; i < *len; i++)
+    if (ltouch[i] > 0)
+      touching_regions (i, ltouch[i], gtouch);
+}
+
+static void shift_tags (FttCell * cell, TagPar * p)
+{
+  if (GFS_VALUE (cell, p->v) > 0.)
+    GFS_VALUE (cell, p->v) += p->tagshift;
+}
+#endif /* HAVE_MPI */
+
+static void unify_tag_range (GfsDomain * domain, TagPar * p)
+{
+#ifdef HAVE_MPI
+  if (domain->pid >= 0) {
+    int gsize;
+    guint * tags;
+    MPI_Comm_size (MPI_COMM_WORLD, &gsize);
+    tags = g_malloc (sizeof (guint)*gsize);
+    tags[domain->pid] = p->tag;
+    MPI_Allgather (&tags[domain->pid], 1, MPI_UNSIGNED, tags, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
+    /* tags[] now contains the p->tag value on each PE */
+    guint i;
+    p->tag = 0;
+    for (i = 0; i < gsize; i++)
+      p->tag += tags[i];
+    /* shift tag values to get a single tag space across all PEs */
+    if (domain->pid > 0) {
+      p->tagshift = 0;
+      for (i = 0; i < domain->pid; i++)
+	p->tagshift += tags[i];
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) shift_tags, p);
+    }
+    g_free (tags);
+  }
+#endif /* HAVE_MPI */
+}
+
+static void match_periodic_bc (FttCell * cell, TagPar * p)
+{
+  guint tag = GFS_VALUE (cell, p->v);
+  if (tag > 0) {
+    FttCell * neighbor = ftt_cell_neighbor (cell, p->d);
+    guint ntag = GFS_VALUE (neighbor, p->v);
+    if (ntag > 0)
+      touching_regions (tag, ntag, p->touch);
+  }
+}
+
+static void match_box_bc (GfsBox * box, TagPar * p)
+{
+  for (p->d = 0; p->d < FTT_NEIGHBORS; p->d++)
+    if (GFS_IS_BOUNDARY_PERIODIC (box->neighbor[p->d]))
+      ftt_cell_traverse_boundary (box->root, p->d, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				  (FttCellTraverseFunc) match_periodic_bc, p);
+}
+
+static void fix_touching (FttCell * cell, TagPar * p)
+{
+  GFS_VALUE (cell, p->v) = p->tags[p->touch[(guint) GFS_VALUE (cell, p->v)]];
 }
 
 /**
@@ -3076,15 +3172,12 @@ guint gfs_domain_tag_droplets (GfsDomain * domain,
 			       GfsVariable * c,
 			       GfsVariable * tag)
 {
-  /* fixme: this function may not work as expected for parallel domain
-     and/or periodic boundaries: droplets sitting on PE boundaries
-     will be seen as two independent droplets... */
-
   g_return_val_if_fail (domain != NULL, 0);
   g_return_val_if_fail (c != NULL, 0);
   g_return_val_if_fail (tag != NULL, 0);
 
   TagPar p;
+  gboolean touching = FALSE;
   p.c = c;
   p.v = tag;
   p.tag = 0;
@@ -3092,7 +3185,57 @@ guint gfs_domain_tag_droplets (GfsDomain * domain,
 			    (FttCellTraverseFunc) gfs_cell_reset, tag);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) tag_new_fraction_region, &p);
-  return p.tag;
+
+  /* the rest of the algorithm deals with periodic and parallel BCs */
+  unify_tag_range (domain, &p);
+  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, tag);
+  p.touch = g_malloc0 ((p.tag + 1)*sizeof (guint));
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) match_box_bc, &p);
+
+#ifdef HAVE_MPI
+  if (domain->pid >= 0) {
+    guint * gtouch = g_malloc0 ((p.tag + 1)*sizeof (guint));
+    MPI_Op op;    
+    MPI_Op_create (reduce_touching_regions, TRUE, &op);
+    MPI_Allreduce (p.touch, gtouch, p.tag + 1, MPI_UNSIGNED, op, MPI_COMM_WORLD);
+    MPI_Op_free (&op);
+    g_free (p.touch);
+    p.touch = gtouch;
+  }
+#endif /* HAVE_MPI */
+  
+  /* find region with smallest tag touching each region i.e. reduces
+     the chain of touching tags */
+  guint i, maxtag = 0;
+  for (i = 1; i <= p.tag; i++) {
+    guint touch = p.touch[i];
+    while (touch > 0) {
+      p.touch[i] = touch;
+      touch = p.touch[touch];
+      touching = TRUE;
+    }
+    if (p.touch[i] == 0 && i > maxtag)
+      maxtag = i;
+  }
+  
+  /* fix touching regions */
+  if (touching) {
+    guint ntag = 0; /* fresh tag index */
+    p.tags = g_malloc ((maxtag + 1)*sizeof (guint));
+    p.tags[0] = 0;
+    for (i = 1; i <= maxtag; i++)
+      if (p.touch[i] == 0) { /* this region is not touching any other */
+	p.touch[i] = i;
+	p.tags[i] = ++ntag;
+      }
+    maxtag = ntag;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) fix_touching, &p);
+    g_free (p.tags);
+  }
+
+  g_free (p.touch);
+  return maxtag;
 }
 
 typedef struct {
@@ -3149,13 +3292,21 @@ void gfs_domain_remove_droplets (GfsDomain * domain,
     p.sizes = g_malloc0 (p.n*sizeof (guint));
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) compute_droplet_size, &p);
+#ifdef HAVE_MPI
+    if (domain->pid >= 0) {
+      guint * sizes = g_malloc0 (p.n*sizeof (guint));
+      MPI_Allreduce (p.sizes, sizes, p.n, MPI_UNSIGNED, MPI_SUM, MPI_COMM_WORLD);
+      g_free (p.sizes);
+      p.sizes = sizes;
+    }
+#endif
     if (min >= 0)
       p.min = min;
     else {
       guint * tmp = g_malloc (p.n*sizeof (guint));
       memcpy (tmp, p.sizes, p.n*sizeof (guint));
       qsort (tmp, p.n, sizeof (guint), greater);
-      /* fixme: this won't work for parallel jobs */
+      g_assert (-1 - min < p.n);
       p.min = tmp[-1 - min];
       g_free (tmp);
     }

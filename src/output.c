@@ -2410,7 +2410,8 @@ static int volume_sort (const void * p1, const void * p2)
 
 static gboolean gfs_output_droplet_sums_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_droplet_sums_class ())->parent_class)->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_droplet_sums_class ())->parent_class)->event)
+      (event, sim)) {
     GfsOutputDropletSums * d = GFS_OUTPUT_DROPLET_SUMS (event);
     GfsDomain * domain = GFS_DOMAIN (sim);
     DropSumsPar p;
@@ -2428,6 +2429,14 @@ static gboolean gfs_output_droplet_sums_event (GfsEvent * event, GfsSimulation *
       p.v = g_malloc0 (p.n*sizeof (VolumePair));
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) droplet_sums, &p);
+#ifdef HAVE_MPI
+      if (domain->pid >= 0) {
+	VolumePair * gv = g_malloc0 (p.n*sizeof (VolumePair));
+	MPI_Allreduce (p.v, gv, p.n*2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	g_free (p.v);
+	p.v = gv;
+      }
+#endif /* HAVE_MPI */      
       qsort (p.v, p.n, sizeof (VolumePair), volume_sort);
       guint i;
       for (i = 0; i < p.n; i++)
