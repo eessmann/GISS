@@ -318,11 +318,6 @@ struct _GfsBoxClass {
      
 GfsBoxClass *    gfs_box_class                (void);
 GfsBox *         gfs_box_new                  (GfsBoxClass * klass);
-void             gfs_box_set_pos              (GfsBox * box, 
-					       FttVector * pos);
-void             gfs_box_set_relative_pos     (GfsBox * box, 
-					       GfsBox * reference, 
-					       FttDirection d);
 
 static inline
 GfsDomain * gfs_box_domain (GfsBox * box)

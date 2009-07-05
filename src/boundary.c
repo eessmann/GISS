@@ -1427,8 +1427,7 @@ GfsGEdgeClass * gfs_gedge_class (void)
  *
  * Links the two boxes connected by @edge. The boxes are set as their
  * respective neighbors in the direction defined by @edge (note that
- * their relative positions are not set, call
- * gfs_box_set_relative_pos() if necessary).
+ * their relative positions are not set).
  */
 void gfs_gedge_link_boxes (GfsGEdge * edge)
 {
@@ -1707,6 +1706,8 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
 	ftt_cell_set_pos (GFS_BOUNDARY (b->neighbor[d])->root, &bpos);
       }
   }
+  else /* position is not set */
+    FTT_ROOT_CELL (b->root)->pos.x = G_MAXDOUBLE;
 
   /* updates weight of domain */
   GTS_WGRAPH (domain)->weight += gts_gnode_weight (GTS_GNODE (b)) - weight;
@@ -1779,93 +1780,3 @@ GfsBox * gfs_box_new (GfsBoxClass * klass)
   return object;
 }
 
-static void box_set_pos (GfsBox * box, FttVector * pos, 
-			 GHashTable * set,
-			 FttDirection dold)
-{
-  FttVector p;
-  static FttDirection id[FTT_NEIGHBORS][FTT_NEIGHBORS] = 
-#if FTT_2D
-  {
-    {0,1,2,3},
-    {1,0,3,2},
-    {2,3,1,0},
-    {3,2,0,1},
-  };
-#else  /* 3D */
-  {
-    {0,1,2,3,5,4},
-    {1,0,3,2,4,5},
-    {2,3,1,0,5,4},
-    {3,2,0,1,4,5},
-    {4,5,2,3,0,1},
-    {5,4,3,2,1,0}
-  };
-#endif /* 3D */
-  FttDirection i;
-  gdouble size;
-
-  if (g_hash_table_lookup (set, box))
-    return;
-  g_hash_table_insert (set, box, box);
-
-  size = ftt_cell_size (box->root);
-  ftt_cell_set_pos (box->root, pos);
-  for (i = 0; i < FTT_NEIGHBORS; i++) {
-    FttDirection d = id[dold][i];
-    
-    p.x = pos->x + rpos[d].x*size;
-    p.y = pos->y + rpos[d].y*size;
-    p.z = pos->z + rpos[d].z*size;
-    if (GFS_IS_BOX (box->neighbor[d]))
-      box_set_pos (GFS_BOX (box->neighbor[d]), &p, set, d);
-    else if (GFS_IS_BOUNDARY (box->neighbor[d]))
-      ftt_cell_set_pos (GFS_BOUNDARY (box->neighbor[d])->root, &p);
-  }
-}
-
-/**
- * gfs_box_set_pos:
- * @box: a #GfsBox.
- * @pos: the new position of the center of the box.
- *
- * Recursively sets the position of the center of @box and of its
- * neighbors.  
- */
-void gfs_box_set_pos (GfsBox * box, FttVector * pos)
-{
-  GHashTable * set;
-
-  g_return_if_fail (box != NULL);
-  g_return_if_fail (pos != NULL);
-
-  set = g_hash_table_new (NULL, NULL);
-  box_set_pos (box, pos, set, FTT_RIGHT);
-  g_hash_table_destroy (set);
-}
-
-/**
- * gfs_box_set_relative_pos:
- * @box: a #GfsBox.
- * @reference: a reference #GfsBox.
- * @d: the direction in which @box is found relative to @reference.
- *
- * Recursively sets the position of the center of @box and of its
- * neighbors relative to the position of @reference in direction @d.
- */
-void gfs_box_set_relative_pos (GfsBox * box, GfsBox * reference, FttDirection d)
-{
-  FttVector pos;
-  gdouble size;
-
-  g_return_if_fail (box != NULL);
-  g_return_if_fail (reference != NULL);
-  g_return_if_fail (d >= 0 && d < FTT_NEIGHBORS);
-
-  ftt_cell_pos (reference->root, &pos);
-  size = ftt_cell_size (reference->root);
-  pos.x += rpos[d].x*size;
-  pos.y += rpos[d].y*size;
-  pos.z += rpos[d].z*size;
-  gfs_box_set_pos (box, &pos);
-}

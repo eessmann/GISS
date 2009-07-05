@@ -159,10 +159,58 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
   }
 }
 
+static void box_set_pos (GfsBox * box, FttVector * pos, 
+			 FttDirection dold)
+{
+  FttVector p;
+  static FttVector rpos[FTT_NEIGHBORS] = {
+#if FTT_2D
+    {1.,0.,0.}, {-1.,0.,0.}, {0.,1.,0.}, {0.,-1.,0.}
+#else  /* FTT_3D */
+    {1.,0.,0.}, {-1.,0.,0.}, {0.,1.,0.}, {0.,-1.,0.}, {0.,0.,1.}, {0.,0.,-1.}
+#endif /* FTT_3D */
+  };  
+  static FttDirection id[FTT_NEIGHBORS][FTT_NEIGHBORS] = {
+#if FTT_2D
+    {0,1,2,3},
+    {1,0,3,2},
+    {2,3,1,0},
+    {3,2,0,1},
+#else  /* 3D */
+    {0,1,2,3,5,4},
+    {1,0,3,2,4,5},
+    {2,3,1,0,5,4},
+    {3,2,0,1,4,5},
+    {4,5,2,3,0,1},
+    {5,4,3,2,1,0}
+#endif /* 3D */
+  };
+
+  ftt_cell_pos (box->root, &p);
+  if (p.x != G_MAXDOUBLE) /* position already set */
+    return;
+
+  FttDirection i;
+  gdouble size;
+  size = ftt_cell_size (box->root);
+  ftt_cell_set_pos (box->root, pos);
+  for (i = 0; i < FTT_NEIGHBORS; i++) {
+    FttDirection d = id[dold][i];
+    
+    p.x = pos->x + rpos[d].x*size;
+    p.y = pos->y + rpos[d].y*size;
+    p.z = pos->z + rpos[d].z*size;
+    if (GFS_IS_BOX (box->neighbor[d]))
+      box_set_pos (GFS_BOX (box->neighbor[d]), &p, d);
+    else if (GFS_IS_BOUNDARY (box->neighbor[d]))
+      ftt_cell_set_pos (GFS_BOUNDARY (box->neighbor[d])->root, &p);
+  }
+}
+
 static void set_ref_pos (GfsBox * box, FttVector * pos)
 {
   if (box->id == 1)
-    gfs_box_set_pos (box, pos);
+    box_set_pos (box, pos, FTT_RIGHT);
 }
 
 #ifdef HAVE_MPI
