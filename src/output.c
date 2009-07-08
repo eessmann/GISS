@@ -491,11 +491,21 @@ static gboolean time_event (GfsEvent * event, GfsSimulation * sim)
       gfs_clock_start (t->clock);
       g_timer_start (t->timer);
     }
+    gdouble cpu = gfs_clock_elapsed (t->clock);
+#ifdef HAVE_MPI
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    if (domain->pid >= 0) {
+      gfs_all_reduce (domain, cpu, MPI_DOUBLE, MPI_SUM);
+      int size;
+      MPI_Comm_size (MPI_COMM_WORLD, &size);
+      cpu /= size;
+    }
+#endif
     fprintf (GFS_OUTPUT (event)->file->fp,
 	     "step: %7u t: %15.8f dt: %13.6e cpu: %15.8f real: %15.8f\n",
 	     sim->time.i, sim->time.t, 
 	     sim->advection_params.dt,
-	     gfs_clock_elapsed (t->clock),
+	     cpu,
 	     g_timer_elapsed (t->timer, NULL));
     return TRUE;
   }
