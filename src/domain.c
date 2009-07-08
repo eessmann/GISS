@@ -1537,7 +1537,7 @@ static void cell_count (FttCell * cell, guint * count)
   (*count)++;
 }
 
-#define BPID(b) ((b)->pid > 0 ? (b)->pid : 0)
+#define BPID(b) (gfs_box_domain (b)->pid >= 0 && (b)->pid > 0 ? (b)->pid : 0)
 
 static void box_count (GfsBox * b, GArray * a)
 {
