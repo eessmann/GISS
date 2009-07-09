@@ -27,6 +27,7 @@
 #include "event.h"
 #include "solid.h"
 #include "output.h"
+#include "mpi_boundary.h"
 
 /**
  * gfs_event_next:
@@ -1717,6 +1718,42 @@ static void gfs_event_balance_read (GtsObject ** o, GtsFile * fp)
   s->max = gfs_read_constant (fp, domain);
 }
 
+static void count (FttCell * cell, int * n)
+{
+  (*n)++;
+}
+
+typedef struct {
+  GfsBox * box;
+  gint dest, n, min, neighboring;
+} BoxData;
+
+#define LAMBDA 0.3
+
+static void select_neighbouring_box (GfsBox * box, BoxData * b)
+{
+  gint neighboring = 0;
+  FttDirection d;
+
+  for (d = 0; d < FTT_NEIGHBORS && !neighboring; d++)
+    if (GFS_IS_BOUNDARY_MPI (box->neighbor[d]) &&
+	GFS_BOUNDARY_MPI (box->neighbor[d])->process == b->dest)
+      neighboring++;
+
+  if (neighboring) {
+    box->size = 0;
+    ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		       (FttCellTraverseFunc) count, &(box->size));
+    if (!b->box ||
+	(fabs (box->size - b->n) < (1. - LAMBDA)*fabs (b->box->size - b->n)) ||
+	(fabs (box->size - b->n) < (1. + LAMBDA)*fabs (b->box->size - b->n) &&
+	 neighboring > b->neighboring)) {
+      b->box = box;
+      b->neighboring = neighboring;
+    }
+  }
+}
+
 static gboolean gfs_event_balance_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_balance_class ())->parent_class)->event) 
@@ -1727,22 +1764,41 @@ static gboolean gfs_event_balance_event (GfsEvent * event, GfsSimulation * sim)
 
     gfs_domain_stats_balance (domain, &size, &boundary, &mpiwait);
     if (size.max/size.min > s->max) {
-      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, 
-	     "EventBalance: unbalance limit reached (exiting)");
-       g_slist_free (domain->variables_io);
-       domain->variables_io = NULL;
-       GSList * i = domain->variables;
-       while (i) {
-	 if (GFS_VARIABLE1 (i->data)->name)
-	   domain->variables_io = g_slist_append (domain->variables_io, i->data);
-	 i = i->next;
-       }
-       FILE * fp = fopen ("unbalanced.gfs", "w");
-       if (fp) {
-	 gfs_simulation_write (GFS_SIMULATION (domain), -1, fp);
-	 fclose (fp);
-       }
-       exit (2);
+#ifdef HAVE_MPI
+      int n, other;
+      MPI_Comm_size (MPI_COMM_WORLD, &n);
+      if (n != 2)
+	g_assert_not_implemented ();
+      
+      n = 0;
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) count, &n);
+      other = (domain->pid + 1) % 2;
+      if (n > size.mean) { /* largest subdomain */
+	if (gts_container_size (GTS_CONTAINER (domain)) < 2)
+	  gfs_send_boxes (domain, NULL, other);
+	else {
+	  n -= size.mean;
+	  
+	  BoxData b;
+	  b.box = NULL; b.n = n;
+	  b.dest = other;
+	  /* we need to find the list of boxes which minimizes 
+	     |\sum n_i - n| where n_i is the size of box i. This is known in
+	     combinatorial optimisation as a "knapsack problem". */
+	  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) select_neighbouring_box, &b);
+	  if (b.box && b.box->size <= size.max - size.min) {
+	    GSList * l = g_slist_prepend (NULL, b.box);
+	    gfs_send_boxes (domain, l, other);
+	    g_slist_free (l);
+	  }
+	  else
+	    gfs_send_boxes (domain, NULL, other);
+	}
+      }
+      else /* smallest subdomain */
+	g_slist_free (gfs_receive_boxes (domain, other));
+#endif     
     }
     return TRUE;
   }
