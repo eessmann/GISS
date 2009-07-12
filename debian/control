@@ -12,6 +12,7 @@ Homepage: http://gfs.sourceforge.net/
 Package: gerris-snapshot
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
+	 openmpi-bin [i386 amd64],
 	 libgts-snapshot-dev,
 	 pkg-config, gcc, sed, gawk, m4
 Replaces: gerris
