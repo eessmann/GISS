@@ -200,9 +200,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	   gts_snapshot=true
 	   if $gts_changed ; then
 	       if ( darcs2dist gts $darcs_gts/$gts $gtsweb && \
-                    cd $wdir/$gts && make ChangeLog debian-snapshot && \
-		    cd debian/repo && debian_release && \
-		    rsync -rz --delete --rsh=ssh $wdir/$gts/debian/repo/ $gtsweb/debian/ ) \
+                    cd $wdir/$gts && make ChangeLog launchpad-snapshot ) \
                > $wdir/snapshot 2>&1 ; then :
 	       else
 		   echo
@@ -226,9 +224,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	   fi
 	   gerris_debian=true
            if $gts_snapshot && ( $gts_changed || $gerris_changed ) ; then
-	       if ( cd $wdir/$gerris && make ChangeLog debian-snapshot && \
-	 	    rm -f $HOME/local/debian/gerris-snapshot_*.deb && \
-		    mv -f $wdir/$gerris/debian/repo/*.deb $HOME/local/debian ) \
+	       if ( cd $wdir/$gerris && make ChangeLog launchpad-snapshot ) \
 		   > $wdir/debian 2>&1 ; then :
 	       else
 		   echo
@@ -251,9 +247,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	   gfsview_debian=true
 	   if $gts_snapshot && $gerris_debian && \
               ( $gts_changed || $gerris_changed || $gfsview_changed ) ; then
-	       if ( cd $wdir/$gfsview && make ChangeLog debian-snapshot && \
-		    rm -f $HOME/local/debian/gfsview-snapshot_*.deb && \
-		    mv -f $wdir/$gfsview/debian/repo/*.deb $HOME/local/debian ) \
+	       if ( cd $wdir/$gfsview && make ChangeLog launchpad-snapshot ) \
                > $wdir/debian 2>&1 ; then :
 	       else
 		   echo
@@ -263,19 +257,6 @@ if ( $build_gerris || $build_gfsview ) ; then
 		   gfsview_debian=false
 	       fi
 	   fi
-           if $gts_snapshot && $gerris_debian && $gfsview_debian && \
-	       ( $gts_changed || $gerris_changed || $gfsview_changed ) ; then
-	       if ( cd $HOME/local/debian && \
-                    debian_release && \
-		    rsync -az --delete --rsh=ssh $HOME/local/debian/ $gerrisweb/debian/ ) \
-               > $wdir/debian 2>&1 ; then :
-	       else
-		   echo
-		   echo ============ $wdir: Gerris/GfsView debian failed ============
-		   echo
-		   cat $wdir/debian
-	       fi
-           fi
        else
 	   echo
 	   echo ============ $wdir: darcs push failed ============

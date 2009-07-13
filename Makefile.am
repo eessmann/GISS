@@ -32,7 +32,6 @@ changelog:
 
 debian-snapshot: $(DARCS_CHANGELOG) config.h src/version.h
 	sh debian/changelog.sh
-	sh debian/control.sh
 	dpkg-buildpackage -rfakeroot -b
 	rm -f debian/repo/*
 	mv -f ../*.changes ../*.deb debian/repo
