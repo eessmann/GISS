@@ -104,7 +104,7 @@ SRC = \
 	moving.c \
 	$(GFS_HDS)
 
-simulation.c: version.h
+domain.c: version.h
 
 libgfs3D_la_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
