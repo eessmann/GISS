@@ -821,23 +821,55 @@ GfsOutputClass * gfs_output_adapt_stats_class (void)
 
 /* GfsOutputTiming: Object */
 
-static void timing_print (GtsRange * r, gdouble total, FILE * fp)
+typedef struct {
+  gdouble min, max, mean, stddev, sum;
+  gchar * name;
+} Timer;
+
+static int compare_timer (const void * a, const void * b)
 {
-  fprintf (fp, 
-	   "      min: %9.3f avg: %9.3f (%4.1f%%) | %7.3f max: %9.3f\n",
-	   r->min,
-	   r->mean, total > 0. ? 100.*r->sum/total : 0.,
-	   r->stddev, 
-	   r->max);	   
+  Timer t1 = *(Timer *)a;
+  Timer t2 = *(Timer *)b;
+  return (t1.mean > t2.mean) ? 0 : 1 ;
 }
 
-static void timer_print (gchar * name, GfsTimer * t, gpointer * data)
+static void get_timer (gchar * name, GfsTimer * t, gpointer * data)
 {
-  FILE * fp = data[0];
-  GfsDomain * domain = data[1];
+  GtsRange * r = &t->r;
+  Timer * timing = data[0];
+  guint * count = data[1];
+  
+  timing[*count].min = r->min;
+  timing[*count].max = r->max;
+  timing[*count].mean = r->mean;
+  timing[*count].stddev = r->stddev;
+  timing[*count].sum = r->sum;
+  timing[*count].name = name;
+  
+  *count = *count + 1;
+}
 
-  fprintf (fp, "  %s:\n", name);
-  timing_print (&t->r, domain->timestep.sum, fp);
+static void print_timing (GHashTable * timers, GfsDomain * domain,  FILE * fp)
+{
+  Timer timing[g_hash_table_size (timers)];
+  guint count = 0;
+  gpointer data[2];
+  
+  data[0] = &timing;
+  data[1] = &count;
+  
+  g_hash_table_foreach (domain->timers, (GHFunc) get_timer, data);
+  qsort(timing, g_hash_table_size (timers), sizeof(Timer), compare_timer);
+  
+  for (count = 0; count < g_hash_table_size (timers);count++) {
+    fprintf (fp, "  %s:\n", timing[count].name);
+    fprintf (fp, 
+	     "      min: %9.3f avg: %9.3f (%4.1f%%) | %7.3f max: %9.3f\n",
+	     timing[count].min,
+	     timing[count].mean, domain->timestep.sum > 0. ? 100.*timing[count].sum/domain->timestep.sum : 0.,
+	     timing[count].stddev, 
+	     timing[count].max);	 
+  }
 }
 
 static gboolean timing_event (GfsEvent * event, GfsSimulation * sim)
@@ -845,7 +877,7 @@ static gboolean timing_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
     FILE * fp = GFS_OUTPUT (event)->file->fp;
-
+    
     if (domain->timestep.mean > 0.) {
       gpointer data[2];
 
@@ -869,7 +901,8 @@ static gboolean timing_event (GfsEvent * event, GfsSimulation * sim)
 	       gfs_domain_variables_number (domain));
       data[0] = fp;
       data[1] = domain;
-      g_hash_table_foreach (domain->timers, (GHFunc) timer_print, data);
+      
+      print_timing (domain->timers ,domain ,fp);
       if (domain->mpi_messages.n > 0)
 	fprintf (fp,
 		 "Message passing summary\n"

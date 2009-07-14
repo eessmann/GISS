@@ -436,13 +436,11 @@ static void reinit_solid_fractions (GfsSimulation * sim)
   GfsDomain * domain = GFS_DOMAIN (sim);;
   GSList * solids = gfs_simulation_get_solids (sim);
   if (solids) {
-    gfs_domain_timer_start (domain, "solid_fractions");
     sim->thin = domain_reinit_solid_fractions (sim, solids);
     g_slist_free (solids);
     gfs_domain_match (domain);
     gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			       (FttCellTraverseFunc) set_permanent, NULL);
-    gfs_domain_timer_stop (domain, "solid_fractions");
   }
   gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) check_solid_fractions, &nf);
   if (nf > 0) {
@@ -671,6 +669,8 @@ static void move_solids (GfsSimulation * sim)
   GfsVariable * old_solid = GFS_SIMULATION_MOVING (sim)->old_solid;
   GfsVariable * sold2[FTT_NEIGHBORS];
 
+  gfs_domain_timer_start (domain, "Move_solids");
+
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) set_old_solid, old_solid);
 
@@ -703,6 +703,7 @@ static void move_solids (GfsSimulation * sim)
       gts_object_destroy (GTS_OBJECT (sold2[d]));    
     GFS_SIMULATION_MOVING (sim)->sold2 = NULL;
   }
+  gfs_domain_timer_stop (domain, "Move_solids");
 }
 
 typedef struct {
