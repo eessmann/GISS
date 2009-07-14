@@ -264,6 +264,7 @@ typedef struct {
   gpointer data;
   GfsVariable * status;
   guint thin;
+  GSList * solid_boxes;
 } InitSolidParams;
 
 static gboolean thin_cell_is_solid (FttCell * cell)
@@ -827,19 +828,17 @@ static void solid_fractions_from_children (FttCell * cell, InitSolidParams * p)
       }
     }
   }
-  if (p->destroy_solid && GFS_VALUE (cell, p->status) == GFS_STATUS_SOLID) {
-    if (FTT_CELL_IS_ROOT (cell))
-      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
-	     "root cell is entirely outside of the fluid domain\n"
-	     "the solid surface orientation may be incorrect");
-    else
-      ftt_cell_destroy (cell, p->cleanup, p->data);
-  }
+  if (p->destroy_solid && 
+      GFS_VALUE (cell, p->status) == GFS_STATUS_SOLID && 
+      !FTT_CELL_IS_ROOT (cell))
+    ftt_cell_destroy (cell, p->cleanup, p->data);
 }
 
 static void foreach_box (GfsBox * box, InitSolidParams * p)
 {
   solid_fractions_from_children (box->root, p);
+  if (p->destroy_solid && GFS_VALUE (box->root, p->status) == GFS_STATUS_SOLID)
+    p->solid_boxes = g_slist_prepend (p->solid_boxes, box);
 }
 
 static void match_fractions (FttCell * cell, GfsVariable * status)
@@ -943,7 +942,10 @@ void gfs_init_solid_fractions_from_children (GfsDomain * domain,
   p.cleanup = cleanup;
   p.data = data;
   p.status = status;
+  p.solid_boxes = NULL;
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) foreach_box, &p);
+  g_slist_foreach (p.solid_boxes, (GFunc) gts_object_destroy, NULL);
+  g_slist_free (p.solid_boxes);
 }
 
 /**
