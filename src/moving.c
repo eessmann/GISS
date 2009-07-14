@@ -669,7 +669,7 @@ static void move_solids (GfsSimulation * sim)
   GfsVariable * old_solid = GFS_SIMULATION_MOVING (sim)->old_solid;
   GfsVariable * sold2[FTT_NEIGHBORS];
 
-  gfs_domain_timer_start (domain, "Move_solids");
+  gfs_domain_timer_start (domain, "move_solids");
 
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) set_old_solid, old_solid);
@@ -703,7 +703,8 @@ static void move_solids (GfsSimulation * sim)
       gts_object_destroy (GTS_OBJECT (sold2[d]));    
     GFS_SIMULATION_MOVING (sim)->sold2 = NULL;
   }
-  gfs_domain_timer_stop (domain, "Move_solids");
+
+  gfs_domain_timer_stop (domain, "move_solids");
 }
 
 typedef struct {
