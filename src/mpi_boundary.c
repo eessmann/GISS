@@ -74,6 +74,7 @@ fprintf (DEBUG, "%d send to %d with tag %d match variable size\n",
 	 domain->pid, 
 	 mpi->process,
 	 TAG (GFS_BOUNDARY (boundary)));
+fflush (DEBUG);
 #endif
     MPI_Isend (&boundary->sndcount, 1, MPI_UNSIGNED,
 	       mpi->process,
@@ -88,6 +89,7 @@ fprintf (DEBUG, "%d send to %d with tag %d, size %d\n",
 	 mpi->process,
 	 TAG (GFS_BOUNDARY (boundary)),
 	 boundary->sndcount);
+fflush (DEBUG);
 #endif
   MPI_Isend (boundary->sndbuf->data, boundary->sndcount, MPI_DOUBLE,
 	     mpi->process,
@@ -124,6 +126,7 @@ fprintf (DEBUG, "%d wait on %d with tag %d for match variable size\n",
 	 gfs_box_domain (bb->box)->pid,
 	 mpi->process,
 	 MATCHING_TAG (GFS_BOUNDARY (boundary)));
+fflush (DEBUG);
 #endif
     MPI_Recv (&boundary->rcvcount, 1, MPI_UNSIGNED,
 	      mpi->process,
@@ -145,6 +148,7 @@ fprintf (DEBUG, "%d wait on %d with tag %d for match variable size\n",
 	   gfs_box_domain (bb->box)->pid,
 	   mpi->process,
 	   MATCHING_TAG (GFS_BOUNDARY (boundary)));
+fflush (DEBUG);
 #endif
   g_assert (boundary->rcvcount <= boundary->rcvbuf->len);
   MPI_Recv (boundary->rcvbuf->data,
@@ -207,6 +211,7 @@ static void synchronize (GfsBoundary * bb)
   /*  rewind (DEBUG); */
   fprintf (DEBUG, "==== %d synchronised ====\n",
 	   gfs_box_domain (bb->box)->pid);
+  fflush (DEBUG);
 #endif
   (* gfs_boundary_periodic_class ()->synchronize) (bb);
 }

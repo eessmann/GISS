@@ -251,24 +251,6 @@ struct _GfsEventScript {
 
 GfsEventClass * gfs_event_script_class  (void);
 
-/* GfsEventBalance: Header */
-
-typedef struct _GfsEventBalance         GfsEventBalance;
-
-struct _GfsEventBalance {
-  GfsEvent parent;
-
-  gdouble max;
-};
-
-#define GFS_EVENT_BALANCE(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsEventBalance,\
-					         gfs_event_balance_class ())
-#define GFS_IS_EVENT_BALANCE(obj)         (gts_object_is_from_class (obj,\
-						 gfs_event_balance_class ()))
-
-GfsEventClass * gfs_event_balance_class  (void);
-
 /* GfsInitFraction: Header */
 
 typedef struct _GfsInitFraction         GfsInitFraction;

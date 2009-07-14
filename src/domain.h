@@ -298,11 +298,13 @@ void         gfs_domain_sum                     (GfsDomain * domain,
 void         gfs_domain_filter                  (GfsDomain * domain, 
 						 GfsVariable * v,
 						 GfsVariable * fv);
-void         gfs_send_objects                   (GSList * list,
+typedef struct _GfsRequest GfsRequest;
+GfsRequest * gfs_send_objects                   (GSList * list,
 						 int dest);
+void         gfs_wait                           (GfsRequest * r);
 GSList *     gfs_receive_objects                (GfsDomain * domain, 
 						 int src);
-void         gfs_send_boxes                     (GfsDomain * domain, 
+GfsRequest * gfs_send_boxes                     (GfsDomain * domain, 
 						 GSList * boxes, 
 						 int dest);
 GSList *     gfs_receive_boxes                  (GfsDomain * domain, 

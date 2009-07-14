@@ -3849,41 +3849,78 @@ void gfs_domain_filter (GfsDomain * domain, GfsVariable * v, GfsVariable * fv)
     gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, v, fv);
 }
 
+struct _GfsRequest {  
+  FILE * fp;
+  long length;
+#ifdef HAVE_MPI
+  MPI_Request request[2];
+  void * buf;
+#endif
+};
+
 /**
  * gfs_send_objects:
  * @list: a list of #GtsObject.
  * @dest: the rank of the destination PE.
  *
  * Sends the objects in @list to PE @dest of a parallel simulation.
+ * This is a non-blocking operation which returns a handler which must
+ * be cleared by calling gfs_wait().
  *
  * Note that this functions assumes that the write() method of the
  * #GtsObject sent begins by writing the object class name.
+ *
+ * Returns: a #GfsRequest.
  */
-void gfs_send_objects (GSList * list, int dest)
+GfsRequest * gfs_send_objects (GSList * list, int dest)
 {
 #ifdef HAVE_MPI
-  FILE * fp = tmpfile ();
-  int fd = fileno (fp);
+  GfsRequest * r = g_malloc (sizeof (GfsRequest));
+  r->fp = tmpfile ();
+  int fd = fileno (r->fp);
   struct stat sb;
   while (list) {
     GtsObject * object = list->data;
     g_assert (object->klass->write != NULL);
-    (* object->klass->write) (object, fp);
-    fputc ('\n', fp);
+    (* object->klass->write) (object, r->fp);
+    fputc ('\n', r->fp);
     list = list->next;
   }
-  fflush (fp);
+  fflush (r->fp);
   g_assert (fstat (fd, &sb) != -1);
-  long length = sb.st_size;
-  MPI_Send (&length, 1, MPI_LONG, dest, 0, MPI_COMM_WORLD);
+  r->length = sb.st_size;
+  MPI_Isend (&r->length, 1, MPI_LONG, dest, 0, MPI_COMM_WORLD, &r->request[0]);
   /*  g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, "sending %ld bytes to PE %d", length, dest); */
-  if (length > 0) {
-    char * buf = mmap (NULL, length, PROT_READ, MAP_PRIVATE, fd, 0);
-    g_assert (buf != MAP_FAILED);
-    MPI_Send (buf, length, MPI_BYTE, dest, 1, MPI_COMM_WORLD);
-    munmap (buf, length);
+  if (r->length > 0) {
+    r->buf = mmap (NULL, r->length, PROT_READ, MAP_PRIVATE, fd, 0);
+    g_assert (r->buf != MAP_FAILED);
+    MPI_Isend (r->buf, r->length, MPI_BYTE, dest, 1, MPI_COMM_WORLD, &r->request[1]);
   }
-  fclose (fp);
+  return r;
+#else  /* not HAVE_MPI */
+  return NULL;
+#endif /* HAVE_MPI */
+}
+
+/**
+ * gfs_wait:
+ * @r: a #GfsRequest.
+ *
+ * Waits for completion of and deallocates @r.
+ */
+void gfs_wait (GfsRequest * r)
+{
+#ifdef HAVE_MPI
+  g_return_if_fail (r != NULL);
+
+  MPI_Status status;
+  MPI_Wait (&r->request[0], &status);
+  if (r->length > 0) {
+    MPI_Wait (&r->request[1], &status);
+    munmap (r->buf, r->length);
+  }
+  fclose (r->fp);
+  g_free (r);
 #endif /* HAVE_MPI */
 }
 
@@ -3963,22 +4000,37 @@ static void setup_binary_IO (GfsDomain * domain)
   domain->binary = TRUE;	
 }
 
-void gfs_send_boxes (GfsDomain * domain, GSList * boxes, int dest)
+/**
+ * gfs_send_boxes:
+ * @domain: a #GfsDomain.
+ * @boxes: a list of #GfsBox belonging to @domain.
+ * @dest: the destination processor id.
+ *
+ * Send boxes to @dest and removes them from @domain.
+ * This is a non-blocking operation.
+ *
+ * Returns: a #GfsRequest which must be cleared using gfs_wait().
+ */
+GfsRequest * gfs_send_boxes (GfsDomain * domain, GSList * boxes, int dest)
 {
-  g_return_if_fail (domain != NULL);
-  g_return_if_fail (dest != domain->pid);
+  g_return_val_if_fail (domain != NULL, NULL);
+  g_return_val_if_fail (dest != domain->pid, NULL);
 
   g_slist_foreach (boxes, (GFunc) unlink_box, &dest);
   setup_binary_IO (domain);
-  gfs_send_objects (boxes, dest);
+  GfsRequest * r = gfs_send_objects (boxes, dest);
   g_slist_foreach (boxes, (GFunc) gts_object_destroy, NULL);
-  if (boxes)
-    gfs_domain_reshape (domain, gfs_domain_depth (domain));
+  return r;
 }
 
 /**
  * gfs_receive_boxes:
- * @domain: 
+ * @domain: a #GfsDomain.
+ * @src: the source processor id.
+ *
+ * Receive boxes from @src and adds them to @domain.
+ *
+ * Returns: the list of boxes received.
  */
 GSList * gfs_receive_boxes (GfsDomain * domain, int src)
 {
@@ -3994,8 +4046,6 @@ GSList * gfs_receive_boxes (GfsDomain * domain, int src)
     /* Convert internal GfsBoundaryMpi into graph edges */
     g_slist_foreach (boxes, (GFunc) convert_boundary_mpi_into_edges, ids);
     g_ptr_array_free (ids, TRUE);
-
-    gfs_domain_reshape (domain, gfs_domain_depth (domain));
   }
   return boxes;
 }

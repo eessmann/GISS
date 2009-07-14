@@ -42,6 +42,7 @@
 #include "solid.h"
 #include "moving.h"
 #include "river.h"
+#include "balance.h"
 
 #include "modules.h"
 
