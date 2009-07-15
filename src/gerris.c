@@ -33,11 +33,26 @@
 #include "refine.h"
 #include "output.h"
 #include "adaptive.h"
+#include "solid.h"
 #include "version.h"
 
 static void set_box_pid (GfsBox * box, gint * pid)
 {
   box->pid = *pid;
+}
+
+static void setup_binary_IO (GfsDomain * domain)
+{
+  /* make sure that all the variables are sent */
+  g_slist_free (domain->variables_io);
+  domain->variables_io = NULL;
+  GSList * i = domain->variables;
+  while (i) {
+    if (GFS_VARIABLE1 (i->data)->name)
+      domain->variables_io = g_slist_append (domain->variables_io, i->data);
+    i = i->next;
+  }
+  domain->binary = TRUE;	
 }
 
 int main (int argc, char * argv[])
@@ -51,6 +66,7 @@ int main (int argc, char * argv[])
   guint npart = 0;
   gboolean profile = FALSE, macros = FALSE, one_box_per_pe = TRUE;
   gchar * m4_options = g_strdup ("-P");
+  GPtrArray * events = g_ptr_array_new ();
   gint maxlevel = -2;
 
   gfs_init (&argc, &argv);
@@ -66,15 +82,16 @@ int main (int argc, char * argv[])
       {"define", required_argument, NULL, 'D'},
       {"macros", no_argument, NULL, 'm'},
       {"data", no_argument, NULL, 'd'},
+      {"event", required_argument, NULL, 'e'},
       {"help", no_argument, NULL, 'h'},
       {"version", no_argument, NULL, 'V'},
       { NULL }
     };
     int option_index = 0;
-    switch ((c = getopt_long (argc, argv, "hVs:ip:PD:md",
+    switch ((c = getopt_long (argc, argv, "hVs:ip:PD:mde:",
 			      long_options, &option_index))) {
 #else /* not HAVE_GETOPT_LONG */
-    switch ((c = getopt (argc, argv, "hVs:ip:PD:md"))) {
+    switch ((c = getopt (argc, argv, "hVs:ip:PD:mde:"))) {
 #endif /* not HAVE_GETOPT_LONG */
     case 'P': /* profile */
       profile = TRUE;
@@ -100,6 +117,9 @@ int main (int argc, char * argv[])
     case 'd': /* data */
       maxlevel = -1;
       break;
+    case 'e': /* event */
+      g_ptr_array_add (events, g_strdup (optarg));
+      break;
     case 'h': /* help */
       gfs_error (0,
              "Usage: gerris [OPTION] FILE\n"
@@ -119,8 +139,9 @@ int main (int argc, char * argv[])
 	     "         --define=NAME\n"
              "         --define=NAME=VALUE\n"
 #endif /* have m4 */
-	     "  -h    --help        display this help and exit\n"
-	     "  -V    --version     output version information and exit\n"
+	     "  -eEV   --event=EV    Evaluates GfsEvent EV and returns the simulation\n"
+	     "  -h     --help        display this help and exit\n"
+	     "  -V     --version     output version information and exit\n"
 	     "\n"
 	     "Reports bugs to %s\n",
 	     FTT_MAINTAINER);
@@ -255,6 +276,55 @@ int main (int argc, char * argv[])
       split--;
     }
     gfs_simulation_write (simulation, maxlevel, stdout);
+    return 0;
+  }
+
+  if (events->len > 0) {
+    GSList * l = NULL;
+    guint i;
+    for (i = 0; i < events->len; i++) {
+      GtsFile * fp = gts_file_new_from_string (g_ptr_array_index (events, i));
+      if (fp->type != GTS_STRING) {
+	gfs_error (-1, 
+		   "gerris: invalid event: '%s'\n"
+		   "expecting a GfsEvent name\n",
+		   (char *) g_ptr_array_index (events, i));
+	return 1;
+      }
+      GtsObjectClass * klass = gfs_object_class_from_name (fp->token->str);
+      if (klass == NULL) {
+	gfs_error (-1, "gerris: unknown event class `%s'\n", fp->token->str);
+	return 1;
+      }
+      if (!gts_object_class_is_from_class (klass, gfs_event_class ())) {
+	gfs_error (-1, "gerris: class `%s' is not a GfsEvent\n", fp->token->str);
+	return 1;
+      }
+      GtsObject * object = gts_object_new (klass);
+      gfs_object_simulation_set (object, simulation);
+      g_assert (klass->read);
+      (* klass->read) (&object, fp);
+      if (fp->type == GTS_ERROR) {
+	gfs_error (-1,
+		   "gerris: invalid event: '%s'\n"
+		   "%d:%d: %s\n",
+		   (char *) g_ptr_array_index (events, i),
+		   fp->line, fp->pos, fp->error);
+	return 1;
+      }
+      if (GFS_IS_ADAPT (object))
+	gts_container_add (GTS_CONTAINER (simulation->adapts), GTS_CONTAINEE (object));
+      else if (GFS_IS_SOLID (object))
+	gts_container_add (GTS_CONTAINER (simulation->solids), GTS_CONTAINEE (object));
+      gts_container_add (GTS_CONTAINER (simulation->events), GTS_CONTAINEE (object));
+      l = g_slist_append (l, object);
+      gts_file_destroy (fp);
+    }
+    gfs_clock_start (domain->timer);
+    g_slist_foreach (l, (GFunc) gfs_event_do, simulation);    
+    gfs_clock_stop (domain->timer);
+    setup_binary_IO (domain);
+    gfs_simulation_write (simulation, -1, stdout);
     return 0;
   }
 
