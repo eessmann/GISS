@@ -49,7 +49,7 @@ int main (int argc, char * argv[])
   int c = 0;
   guint split = 0;
   guint npart = 0;
-  gboolean profile = FALSE, macros = FALSE;
+  gboolean profile = FALSE, macros = FALSE, one_box_per_pe = TRUE;
   gchar * m4_options = g_strdup ("-P");
   gint maxlevel = -2;
 
@@ -60,6 +60,7 @@ int main (int argc, char * argv[])
 #ifdef HAVE_GETOPT_LONG
     static struct option long_options[] = {
       {"split", required_argument, NULL, 's'},
+      {"pid", no_argument, NULL, 'i'},
       {"partition", required_argument, NULL, 'p'},
       {"profile", no_argument, NULL, 'P'},
       {"define", required_argument, NULL, 'D'},
@@ -70,10 +71,10 @@ int main (int argc, char * argv[])
       { NULL }
     };
     int option_index = 0;
-    switch ((c = getopt_long (argc, argv, "hVs:p:PD:md",
+    switch ((c = getopt_long (argc, argv, "hVs:ip:PD:md",
 			      long_options, &option_index))) {
 #else /* not HAVE_GETOPT_LONG */
-    switch ((c = getopt (argc, argv, "hVs:p:PD:md"))) {
+    switch ((c = getopt (argc, argv, "hVs:ip:PD:md"))) {
 #endif /* not HAVE_GETOPT_LONG */
     case 'P': /* profile */
       profile = TRUE;
@@ -83,6 +84,9 @@ int main (int argc, char * argv[])
       break;
     case 's': /* split */
       split = atoi (optarg);
+      break;
+    case 'i': /* pid */
+      one_box_per_pe = FALSE;
       break;
     case 'D': { /* define */
       gchar * tmp = g_strjoin (" ", m4_options, "-D", optarg, NULL);
@@ -103,6 +107,7 @@ int main (int argc, char * argv[])
 	     "\n"
 	     "  -s N   --split=N     splits the domain N times and returns\n"
              "                       the corresponding simulation\n"
+	     "  -i     --pid         keep box pids when splitting\n"
              "  -p N   --partition=N partition the domain in 2^N subdomains and returns\n" 
              "                       the corresponding simulation\n"
 	     "  -d     --data        when splitting or partitioning, output all data\n"
@@ -246,7 +251,7 @@ int main (int argc, char * argv[])
     gfs_simulation_refine (simulation);
     gfs_clock_stop (domain->timer);
     while (split) {
-      gfs_domain_split (domain, TRUE);
+      gfs_domain_split (domain, one_box_per_pe);
       split--;
     }
     gfs_simulation_write (simulation, maxlevel, stdout);
