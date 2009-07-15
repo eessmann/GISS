@@ -581,8 +581,6 @@ static void variable_curvature_from_fraction (GfsEvent * event, GfsSimulation * 
   GfsDomain * domain = GFS_DOMAIN (sim);
   GfsVariable * kmax = GFS_VARIABLE_CURVATURE (event)->kmax;
 
-  gfs_domain_timer_start (domain, "variable_curvature");
-
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) height_curvature, event);
   gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
@@ -607,8 +605,6 @@ static void variable_curvature_from_fraction (GfsEvent * event, GfsSimulation * 
     variable_curvature_diffuse (kmax, GFS_VARIABLE_CURVATURE (event)->f, sim, 1);
   }
   variable_curvature_diffuse (GFS_VARIABLE1 (event), NULL, sim, 1);
-
-  gfs_domain_timer_stop (domain, "variable_curvature");
 }
 
 static void normal (FttCell * cell, gpointer * data)
@@ -671,8 +667,6 @@ static void variable_curvature_from_distance (GfsEvent * event, GfsSimulation * 
   gpointer data[2];
   FttComponent c;
 
-  gfs_domain_timer_start (domain, "variable_curvature");
-
   if (GFS_IS_AXI (sim))
     g_assert_not_implemented ();
 
@@ -699,8 +693,6 @@ static void variable_curvature_from_distance (GfsEvent * event, GfsSimulation * 
     gts_object_destroy (GTS_OBJECT (n[c]));
 
   variable_curvature_diffuse (GFS_VARIABLE1 (event), NULL, sim, 2);
-
-  gfs_domain_timer_stop (domain, "variable_curvature");
 }
 
 static gboolean variable_curvature_event (GfsEvent * event, GfsSimulation * sim)
