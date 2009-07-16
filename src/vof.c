@@ -782,14 +782,6 @@ gdouble gfs_vof_interpolate (FttCell * cell,
 
 /* GfsVariableTracerVOF: object */
 
-static FttCell * domain_and_boundary_locate (GfsDomain * domain, FttVector p, guint level)
-{
-  FttCell * cell = gfs_domain_locate (domain, p, level);
-  if (cell)
-    return cell;
-  return gfs_domain_boundary_locate (domain, p, level);
-}
-
 #if FTT_2D
 # define F(x,y,z) f[x][y]
 #else
@@ -813,7 +805,7 @@ static void stencil (FttCell * cell, GfsVariable * v, gdouble F(3,3,3))
 	if (x != 0 || y != 0 || z != 0) {
 	  FttVector o;
 	  o.x = p.x + h*x; o.y = p.y + h*y; o.z = p.z + h*z;
-	  FttCell * neighbor = domain_and_boundary_locate (v->domain, o, level);
+	  FttCell * neighbor = gfs_domain_boundary_locate (v->domain, o, level);
 	  if (neighbor)
 	    F(x + 1, y + 1, z + 1) =
 	      gfs_vof_interpolate (neighbor, &o, level, GFS_VARIABLE_TRACER_VOF (v));
@@ -1755,7 +1747,7 @@ static gdouble fraction (FttVector * p,
 			 guint level,
 			 GfsVariable * v)
 {
-  FttCell * cell = domain_and_boundary_locate (v->domain, *p, level);
+  FttCell * cell = gfs_domain_boundary_locate (v->domain, *p, level);
   if (cell)
     return gfs_vof_interpolate (cell, p, level, GFS_VARIABLE_TRACER_VOF (v));
   else /* fixme: boundary conditions? */
@@ -2179,7 +2171,7 @@ static void fit_from_fractions (FttCell * cell, GfsVariable * v, ParabolaFit * f
 	if (x != 0 || y != 0 || z != 0) {
 	  FttVector o;
 	  o.x = p.x + h*x; o.y = p.y + h*y; o.z = p.z + h*z;
-	  FttCell * neighbor = domain_and_boundary_locate (v->domain, o, level);
+	  FttCell * neighbor = gfs_domain_boundary_locate (v->domain, o, level);
 	  if (neighbor)
 	    add_vof_center (neighbor, &o, level, &p, GFS_VARIABLE_TRACER_VOF (v),
 			    fit, 1.);

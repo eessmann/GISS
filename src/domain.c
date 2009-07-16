@@ -34,6 +34,110 @@
 
 #include "config.h"
 
+/* LocateArray */
+
+typedef struct {
+  GtsObject ** root;
+  gdouble h, min[FTT_DIMENSION], max[FTT_DIMENSION];
+  gint n[FTT_DIMENSION];
+} LocateArray;
+
+static void locate_index (FttVector * p, LocateArray * a, gint i[FTT_DIMENSION])
+{
+  gint c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    i[c] = floor (((&p->x)[c] - a->min[c])/a->h);
+}
+
+static void root_bounds (FttCell * root, LocateArray * a)
+{
+  FttVector p;
+  ftt_cell_pos (root, &p);
+  gint i;
+  for (i = 0; i < FTT_DIMENSION; i++) {
+    if ((&p.x)[i] + a->h/2. > a->max[i]) a->max[i] = (&p.x)[i] + a->h/2.;
+    if ((&p.x)[i] - a->h/2. < a->min[i]) a->min[i] = (&p.x)[i] - a->h/2.;
+  }
+}
+
+static void box_bounds (GfsBox * box, LocateArray * a)
+{
+  root_bounds (box->root, a);
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d]))
+      root_bounds (GFS_BOUNDARY (box->neighbor[d])->root, a);
+}
+
+static gint locate_linear_index (FttVector * p, LocateArray * a)
+{
+  gint i[FTT_DIMENSION], index = 0, c;
+  locate_index (p, a, i);
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    if (i[c] < 0 || i[c] >= a->n[c])
+      return -1;
+    index = index*a->n[c] + i[c];
+  }
+  return index;
+}
+
+static void box_index (GfsBox * b, LocateArray * a)
+{
+  FttVector p;
+  ftt_cell_pos (b->root, &p);
+  gint i = locate_linear_index (&p, a);
+  g_assert (i >= 0);
+  a->root[i] = GTS_OBJECT (b);
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (b->neighbor[d])) {
+      GfsBoundary * boundary = GFS_BOUNDARY (b->neighbor[d]);
+      ftt_cell_pos (boundary->root, &p);
+      gint i = locate_linear_index (&p, a);
+      g_assert (i >= 0);
+      a->root[i] = GTS_OBJECT (boundary);
+    }
+}
+
+/*
+ * Creates a rectangular array for fast location of which GfsBox
+ * contains a given point.
+ */
+static LocateArray * locate_array_new (GfsDomain * domain)
+{
+  LocateArray * a = g_malloc (sizeof (LocateArray));
+  guint i;
+  a->h = ftt_level_size (domain->rootlevel);
+  for (i = 0; i < FTT_DIMENSION; i++) {
+    a->min[i] = G_MAXDOUBLE;
+    a->max[i] = - G_MAXDOUBLE;
+  }
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_bounds, a);
+  guint size = 1;
+  for (i = 0; i < FTT_DIMENSION; i++) {
+    g_assert (a->max[i] > a->min[i]);
+    a->n[i] = ceil ((a->max[i] - a->min[i])/a->h - 0.5);
+    size *= a->n[i];
+  }
+  a->root = g_malloc0 (size*sizeof (GtsObject *));
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_index, a);
+  return a;
+}
+
+static GtsObject * locate_array_locate (LocateArray * a, FttVector * p)
+{
+  gint i = locate_linear_index (p, a);
+  return i < 0 ? NULL : a->root[i];
+}
+
+static void locate_array_destroy (LocateArray * a)
+{
+  if (a) {
+    g_free (a->root);
+    g_free (a);
+  }
+}
+
 /* GfsDomain: Object */
 
 static void domain_write (GtsObject * o, FILE * fp)
@@ -341,6 +445,9 @@ static void domain_post_read (GfsDomain * domain, GtsFile * fp)
 
   gfs_domain_match (domain);
 
+  locate_array_destroy (domain->array);
+  domain->array = locate_array_new (domain);
+
   domain->version = atoi (GFS_BUILD_VERSION);
 }
 
@@ -389,6 +496,8 @@ static void domain_destroy (GtsObject * o)
   g_hash_table_destroy (domain->timers);
 
   g_slist_free (domain->variables_io);
+
+  locate_array_destroy (domain->array);
 
   (* GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class->destroy) (o);
 }
@@ -2077,18 +2186,6 @@ void gfs_domain_split (GfsDomain * domain, gboolean one_box_per_pe)
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) get_ref_pos, &domain->refpos);
 }
 
-typedef struct {
-  FttVector target;
-  gint max_depth;
-  FttCell * cell;
-} LocateArgs;
-
-static void box_locate (GfsBox * box, LocateArgs * a)
-{
-  if (a->cell == NULL)
-    a->cell = ftt_cell_locate (box->root, a->target, a->max_depth);
-}
-
 /**
  * gfs_domain_locate:
  * @domain: a #GfsDomain.
@@ -2111,29 +2208,8 @@ FttCell * gfs_domain_locate (GfsDomain * domain,
 			     FttVector target,
 			     gint max_depth)
 {
-  LocateArgs a;
-
-  g_return_val_if_fail (domain != NULL, NULL);
-
-  a.target = target;
-  a.max_depth = max_depth;
-  a.cell = NULL;
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_locate, &a);
-
-  return a.cell;
-}
-
-static void box_boundary_locate (GfsBox * box, LocateArgs * a)
-{
-  FttDirection d;
-
-  for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (a->cell == NULL && box->neighbor[d] && GFS_IS_BOUNDARY (box->neighbor[d])) {
-      FttCell * cell = ftt_cell_locate (GFS_BOUNDARY (box->neighbor[d])->root, a->target, 
-					a->max_depth);
-      if (cell && GFS_CELL_IS_BOUNDARY (cell))
-	a->cell = cell;
-    }
+  GtsObject * b = locate_array_locate (domain->array, &target);
+  return GFS_IS_BOX (b) ? ftt_cell_locate (GFS_BOX (b)->root, target, max_depth) : NULL;
 }
 
 /**
@@ -2142,26 +2218,24 @@ static void box_boundary_locate (GfsBox * box, LocateArgs * a)
  * @target: position of the point to look for.
  * @max_depth: maximum depth to consider (-1 means no restriction).
  *
- * Locates the cell of the boundary of @domain containing @target.
+ * Locates the cell of @domain or of its boundary containing @target.
  *
- * Returns: a #FttCell of the boundary of @domain containing the
+ * Returns: a #FttCell of @domain or of its boundary containing the
  * point defined by @target or %NULL if @target is not contained in
- * any cell of the boundary of @domain.  
+ * any cell of @domain or of its boundary.
  */
 FttCell * gfs_domain_boundary_locate (GfsDomain * domain,
 				      FttVector target,
 				      gint max_depth)
 {
-  LocateArgs a;
-
-  g_return_val_if_fail (domain != NULL, NULL);
-
-  a.target = target;
-  a.max_depth = max_depth;
-  a.cell = NULL;
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_boundary_locate, &a);
-
-  return a.cell;
+  GtsObject * b = locate_array_locate (domain->array, &target);
+  if (GFS_IS_BOX (b))
+    return ftt_cell_locate (GFS_BOX (b)->root, target, max_depth);
+  else if (GFS_IS_BOUNDARY (b)) {
+    FttCell * cell = ftt_cell_locate (GFS_BOUNDARY (b)->root, target, max_depth);
+    return cell && GFS_CELL_IS_BOUNDARY (cell) ? cell : NULL;
+  }
+  return NULL;
 }
 
 static void box_distance2 (GfsBox * box, GPtrArray * a)
@@ -4020,6 +4094,8 @@ GfsRequest * gfs_send_boxes (GfsDomain * domain, GSList * boxes, int dest)
   setup_binary_IO (domain);
   GfsRequest * r = gfs_send_objects (boxes, dest);
   g_slist_foreach (boxes, (GFunc) gts_object_destroy, NULL);
+  locate_array_destroy (domain->array);
+  domain->array = locate_array_new (domain);
   return r;
 }
 
@@ -4046,6 +4122,10 @@ GSList * gfs_receive_boxes (GfsDomain * domain, int src)
     /* Convert internal GfsBoundaryMpi into graph edges */
     g_slist_foreach (boxes, (GFunc) convert_boundary_mpi_into_edges, ids);
     g_ptr_array_free (ids, TRUE);
+
+    /* Update LocateArray */
+    locate_array_destroy (domain->array);
+    domain->array = locate_array_new (domain);
   }
   return boxes;
 }
