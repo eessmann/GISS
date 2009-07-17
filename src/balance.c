@@ -136,45 +136,57 @@ static void balancing_flow_destroy (BalancingFlow * b)
   g_free (b);
 }
 
+static void reset_box_size (GfsBox * box)
+{
+  box->size = 0;
+}
+
 typedef struct {
   GfsBox * box;
-  gint dest, n, min, neighboring;
+  gint dest, flow, min, neighboring;
 } BoxData;
 
 static void select_neighbouring_box (GfsBox * box, BoxData * b)
 {
-  gint neighboring = 0;
-  FttDirection d;
+  if (box->pid != b->dest) {
+    gint neighboring = 0;
+    FttDirection d;
+    
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      if ((GFS_IS_BOUNDARY_MPI (box->neighbor[d]) &&
+	   GFS_BOUNDARY_MPI (box->neighbor[d])->process == b->dest) ||
+	  (GFS_IS_BOX (box->neighbor[d]) &&
+	   GFS_BOX (box->neighbor[d])->pid == b->dest))
+	neighboring++;
 
-  for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (GFS_IS_BOUNDARY_MPI (box->neighbor[d]) &&
-	GFS_BOUNDARY_MPI (box->neighbor[d])->process == b->dest)
-      neighboring++;
-
-  if (neighboring && neighboring >= b->neighboring) {
-    box->size = 0;
-    ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-		       (FttCellTraverseFunc) count, &(box->size));
-    if (neighboring > b->neighboring ||
-	fabs (box->size - b->n) < fabs (b->box->size - b->n)) {
-      b->box = box;
-      b->neighboring = neighboring;
+    if (neighboring && neighboring >= b->neighboring) {
+      if (box->size == 0)
+	ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			   (FttCellTraverseFunc) count, &box->size);
+      if (neighboring > b->neighboring ||
+	  fabs (box->size - b->flow) < fabs (b->box->size - b->flow)) {
+	b->box = box;
+	b->neighboring = neighboring;
+      }
     }
   }
 }
 
-static void get_pid (GfsBox * box, guint * pid)
+static void get_pid (GfsBox * box, GArray * pid)
 {
-  pid[box->id - 1] = gfs_box_domain (box)->pid;
+  g_assert (box->id > 0 && box->id <= pid->len);
+  g_array_index (pid, guint, box->id - 1) = gfs_box_domain (box)->pid;
 }
 
-static void update_box_pid (GfsBox * box, guint * pid)
+static void update_box_pid (GfsBox * box, GArray * pid)
 {
   FttDirection d;
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (GFS_IS_BOUNDARY_MPI (box->neighbor[d]))
-      GFS_BOUNDARY_MPI (box->neighbor[d])->process = 
-	pid[GFS_BOUNDARY_MPI (box->neighbor[d])->id - 1];
+    if (GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
+      guint id = GFS_BOUNDARY_MPI (box->neighbor[d])->id;
+      g_assert (id > 0 && id <= pid->len);
+      GFS_BOUNDARY_MPI (box->neighbor[d])->process = g_array_index (pid, guint, id - 1);
+    }
 }
 
 #endif /* HAVE_MPI */
@@ -220,29 +232,39 @@ static gboolean gfs_event_balance_event (GfsEvent * event, GfsSimulation * sim)
       int modified = FALSE;
       int i;
       /* Send boxes */
+      gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) reset_box_size, NULL);
+      guint nb = gts_container_size (GTS_CONTAINER (domain));
       for (i = 0; i < balance->n; i++)
 	if (balance->flow[i] > 0.) { /* largest subdomain */
+	  /* we need to find the list of boxes which minimizes 
+	     |\sum n_i - n| where n_i is the size of box i. This is known in
+	     combinatorial optimisation as a "knapsack problem". */
 	  GSList * l = NULL;
-	  if (gts_container_size (GTS_CONTAINER (domain)) > 1) {
-	    BoxData b;
-	    b.box = NULL; b.neighboring = 0; b.n = balance->flow[i];
-	    b.dest = balance->pid[i];
-	    /* we need to find the list of boxes which minimizes 
-	       |\sum n_i - n| where n_i is the size of box i. This is known in
-	       combinatorial optimisation as a "knapsack problem". */
+	  BoxData b;
+	  b.flow = balance->flow[i];
+	  b.dest = balance->pid[i];
+	  while (b.flow > 0 && nb > 1) {
+	    b.box = NULL; b.neighboring = 0;
 	    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) select_neighbouring_box, &b);
-	    if (b.box && b.box->size <= 2*b.n) {
+	    if (b.box && b.box->size <= 2*b.flow) {
 	      l = g_slist_prepend (l, b.box);
+	      b.box->pid = b.dest;
+	      b.flow -= b.box->size;
+	      nb--;
 	      modified = TRUE;
 	    }
+	    else
+	      b.flow = 0;
 	  }
 	  g_ptr_array_add (request, gfs_send_boxes (domain, l, balance->pid[i]));
 	  g_slist_free (l);
 	}
       /* Receive boxes */
       for (i = 0; i < balance->n; i++)
-	if (balance->flow[i] < 0.) /* smallest subdomain */
-	  g_slist_free (gfs_receive_boxes (domain, balance->pid[i]));
+	if (balance->flow[i] < 0.) { /* smallest subdomain */
+	  GSList * l = gfs_receive_boxes (domain, balance->pid[i]);
+	  g_slist_free (l);
+	}
       /* Synchronize */
       for (i = 0; i < request->len; i++)
 	gfs_wait (g_ptr_array_index (request, i));
@@ -254,12 +276,13 @@ static gboolean gfs_event_balance_event (GfsEvent * event, GfsSimulation * sim)
 	/* Updates the pid associated with each box */
 	guint nb = gts_container_size (GTS_CONTAINER (domain));
 	gfs_all_reduce (domain, nb, MPI_UNSIGNED, MPI_SUM);
-	guint * pid = g_malloc0 (sizeof (guint)*nb);
+	GArray * pid = g_array_sized_new (FALSE, TRUE, sizeof (guint), nb);
+	g_array_set_size (pid, nb);
 	gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) get_pid, pid);
-	MPI_Allreduce (pid, pid, nb, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD);
+	MPI_Allreduce (MPI_IN_PLACE, pid->data, nb, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD);
 	/* pid[id] now contains the current pid of box with index id */
 	gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) update_box_pid, pid);
-	g_free (pid);
+	g_array_free (pid, TRUE);
 	gfs_domain_reshape (domain, gfs_domain_depth (domain));
       }
 #else /* not HAVE_MPI */

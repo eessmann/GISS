@@ -382,17 +382,14 @@ static void convert_boundary_mpi_into_edges (GfsBox * box, GPtrArray * ids)
     if (GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
       GfsBoundaryMpi * b = GFS_BOUNDARY_MPI (box->neighbor[d]);
       GfsBox * nbox;
-      if ((pid < 0 || b->process == pid) /* This is an "internal" boundary */ && 
-	  b->id >= 0 && (nbox = g_ptr_array_index (ids, b->id - 1))) {
+      if (b->id >= 0 && b->id <= ids->len && (nbox = g_ptr_array_index (ids, b->id - 1))) {
 	FttDirection od = FTT_OPPOSITE_DIRECTION (d);
-	if (nbox->pid != b->process)
-	  g_warning ("nbox->pid != b->process");
-	else if (!GFS_IS_BOUNDARY_MPI (nbox->neighbor[od]))
+	if (!GFS_IS_BOUNDARY_MPI (nbox->neighbor[od]))
 	  g_warning ("!GFS_IS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)])");
 	else {
 	  GfsBoundaryMpi * nb = GFS_BOUNDARY_MPI (nbox->neighbor[od]);
-	  if (box->pid != nb->process || box->id != nb->id)
-	    g_warning ("box->pid != nb->process || box->id != nb->id");
+	  if (box->id != nb->id)
+	    g_warning ("box->id != nb->id");
 	  else {
 	    gts_object_destroy (GTS_OBJECT (b));
 	    gts_object_destroy (GTS_OBJECT (nb));
@@ -4034,6 +4031,8 @@ GSList * gfs_receive_objects (GfsDomain * domain, int src)
       if (fp->type == GTS_ERROR)
 	g_error ("gfs_receive_object():%d:%d: %s", fp->line, fp->pos, fp->error);
       list = g_slist_prepend (list, object);
+      while (fp->type == '\n')
+	gts_file_next_token (fp);
     }
     gts_file_destroy (fp);
     fclose (f);
