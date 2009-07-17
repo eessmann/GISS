@@ -1,6 +1,12 @@
 #!/bin/sh
 # Run this to generate all the initial makefiles, etc.
 
+# a fix for older automake/autoconf versions
+if test -e m4; then :
+else
+    mkdir m4
+fi
+
 srcdir=`dirname $0`
 test -z "$srcdir" && srcdir=.
 

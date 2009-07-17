@@ -539,17 +539,15 @@ static void domain_class_init (GfsDomainClass * klass)
 
 static void domain_init (GfsDomain * domain)
 {
+  domain->pid = -1;
+
 #ifdef HAVE_MPI
   int size;
 
   MPI_Comm_size (MPI_COMM_WORLD, &size);
   if (size > 1)
     MPI_Comm_rank (MPI_COMM_WORLD, &domain->pid);
-  else
-    domain->pid = -1;
-#else /* not HAVE_MPI */
-  domain->pid = -1;
-#endif /* not HAVE_MPI */
+#endif /* HAVE_MPI */
 
   domain->timer = gfs_clock_new ();
   domain->timers = g_hash_table_new (g_str_hash, g_str_equal);

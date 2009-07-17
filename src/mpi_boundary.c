@@ -245,6 +245,17 @@ static void gfs_boundary_mpi_init (GfsBoundaryMpi * boundary)
     g_free (fname);
   }
 #endif
+  static gboolean initialized = FALSE;
+  if (!initialized) {
+    int * tagub, flag, maxtag;
+    MPI_Attr_get (MPI_COMM_WORLD, MPI_TAG_UB, &tagub, &flag);
+    if (flag)
+      maxtag = *tagub;
+    else
+      maxtag = 32767; /* minimum value from MPI standard specification */
+    tag_shift = maxtag/FTT_NEIGHBORS;
+    initialized = TRUE;
+  }
 #endif /* HAVE_MPI */
 }
 
@@ -264,15 +275,6 @@ GfsBoundaryClass * gfs_boundary_mpi_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_boundary_periodic_class ()),
 				  &gfs_boundary_mpi_info);
-#ifdef HAVE_MPI
-    int * tagub, flag, maxtag;
-    MPI_Attr_get (MPI_COMM_WORLD, MPI_TAG_UB, &tagub, &flag);
-    if (flag)
-      maxtag = *tagub;
-    else
-      maxtag = 32767; /* minimum value from MPI standard specification */
-    tag_shift = maxtag/FTT_NEIGHBORS;
-#endif /* HAVE_MPI */
   }
 
   return klass;

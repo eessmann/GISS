@@ -28,7 +28,7 @@ url=$3
 
 wrkdir=`mktemp -d /tmp/darcs2dist.XXXXXX`
 cd $wrkdir
-if ( darcs get $repo $package && \
+if ( darcs get --partial $repo $package && \
      cd $package && \
      version=`darcsversion` && \
      login=`echo $url | awk 'BEGIN{FS=":"}{print $1}'` && \

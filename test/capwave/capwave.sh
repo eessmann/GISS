@@ -53,7 +53,8 @@ if test -f clsvof.tex ; then
       set output 'convergence.eps'
       set xlabel 'Number of grid points'
       set ylabel 'Relative RMS error'
-      set logscale
+      set logscale y
+      set logscale x 2
       set grid
       plot [5:200][1e-4:1]'gerris.tex' u (2**(\$0 + 2)):1 t "Gerris" w lp, 'prost.tex' u (2**(\$0 + 2)):1 t "PROST" w lp, 'markers.tex' u (2**(\$0 + 2)):1 t "Markers" w lp, 'clsvof.tex' u (2**(\$0 + 2)):1 t "CLSVOF" w lp, 'surfer.tex' u (2**(\$0 + 2)):1 t "Surfer" w lp, 2./x**2 t "Second order"
 EOF
