@@ -456,14 +456,16 @@ static void free_pair (gpointer key, gpointer value)
 
 static void cleanup_each_box (GfsBox * box, GfsDomain * domain)
 {
-  ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-		     (FttCellTraverseFunc) gfs_cell_cleanup, domain);
-  FttDirection d;
-  for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (GFS_IS_BOUNDARY (box->neighbor[d]))
-      ftt_cell_traverse (GFS_BOUNDARY (box->neighbor[d])->root, 
-			 FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			 (FttCellTraverseFunc) gfs_cell_cleanup, domain);
+  if (GFS_IS_BOX (box)) { /* this is a necessary check when using graph partitioning */
+    ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+		       (FttCellTraverseFunc) gfs_cell_cleanup, domain);
+    FttDirection d;
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      if (GFS_IS_BOUNDARY (box->neighbor[d]))
+	ftt_cell_traverse (GFS_BOUNDARY (box->neighbor[d])->root, 
+			   FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			   (FttCellTraverseFunc) gfs_cell_cleanup, domain);
+  }
 }
 
 static void domain_destroy (GtsObject * o)
@@ -504,9 +506,15 @@ static void add_item (gpointer item, GPtrArray * a)
   g_ptr_array_add (a, item);
 }
 
-static int compare_boxes (const void * b1, const void * b2)
+static int compare_boxes (const void * p1, const void * p2)
 {
-  return (*(GfsBox **)b1)->id < (*(GfsBox **)b2)->id ? -1 : 1;
+  GfsBox * b1 = *(GfsBox **)p1;
+  GfsBox * b2 = *(GfsBox **)p2;
+  /* the check below is necessary when using graph partitioning */  
+  if (GFS_IS_BOX (b1) && GFS_IS_BOX (b2))
+    return b1->id < b2->id ? -1 : 1;
+  else
+    return 0;
 }
 
 static void domain_foreach (GtsContainer * c, 
