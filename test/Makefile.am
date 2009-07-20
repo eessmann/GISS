@@ -20,6 +20,7 @@ TESTDIRS = \
 	channel \
 	plate \
 	hexagon \
+	strouhal \
 	spurious \
 	capwave \
 	oscillation \
