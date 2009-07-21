@@ -632,9 +632,9 @@ static void moving_face_velocity_advection_flux (const FttCellFace * face,
 
 static void swap_fractions (FttCell * cell, GfsVariable * old_solid_v) {
   FttDirection c;
-
+  
   g_assert (cell);
-
+  
   if (FTT_CELL_IS_LEAF(cell)) {
     if (OLD_SOLID (cell)) {
       GfsSolidVector * solid_old = OLD_SOLID (cell);
@@ -642,24 +642,31 @@ static void swap_fractions (FttCell * cell, GfsVariable * old_solid_v) {
       if (GFS_STATE (cell)->solid) {
 	GfsSolidVector * solid = GFS_STATE (cell)->solid;
 	
+	OLD_SOLID (cell)->merged = GFS_STATE (cell)->solid->merged;
+	
 	for (c = 0; c < 2*FTT_DIMENSION; c++) 
 	  if (solid->s[c] == 0.)
 	    solid_old->s[c] = 0;
 	  else
 	    solid_old->s[c] = (solid_old->s[c]+solid->s[c])/2. ;	
       }
-      else
+      else {
+	OLD_SOLID (cell)->merged = NULL;
+	
 	for (c = 0; c < 2*FTT_DIMENSION; c++)
 	  solid_old->s[c] = (solid_old->s[c]+1.)/2. ;
+	
+      }
     }
     else if (GFS_STATE (cell)->solid) {
       GfsSolidVector * solid = GFS_STATE (cell)->solid;
       GfsSolidVector * solid_old = OLD_SOLID (cell) = g_malloc0 (sizeof (GfsSolidVector));
       OLD_SOLID (cell)->a= 1.;
-
+      OLD_SOLID (cell)->merged = GFS_STATE (cell)->solid->merged;
+      
       for (c = 0; c < 2*FTT_DIMENSION; c++) 
 	solid_old->s[c] = 1.;	
-
+      
       for (c = 0; c < 2*FTT_DIMENSION; c++) 
 	if (solid->s[c] == 0.)
 	  solid_old->s[c] = 0;
@@ -671,11 +678,13 @@ static void swap_fractions (FttCell * cell, GfsVariable * old_solid_v) {
   if (OLD_SOLID (cell)) {
     if (GFS_STATE(cell)->solid) {
       GfsSolidVector * tmp = OLD_SOLID (cell);
+      OLD_SOLID (cell)->merged = GFS_STATE (cell)->solid->merged;
       OLD_SOLID (cell) = GFS_STATE(cell)->solid;
       GFS_STATE(cell)->solid = tmp;
       tmp = NULL;
     }
     else {
+      OLD_SOLID (cell)->merged = NULL;
       GFS_STATE(cell)->solid = OLD_SOLID (cell);
       OLD_SOLID (cell) = NULL;
     }
@@ -684,8 +693,8 @@ static void swap_fractions (FttCell * cell, GfsVariable * old_solid_v) {
     OLD_SOLID (cell) = GFS_STATE(cell)->solid;
     GFS_STATE(cell)->solid = NULL;
   }
-
-
+  
+  
   /* Check for negative fractions and fix */
   if (GFS_STATE(cell)->solid)
     for (c = 0; c < 2*FTT_DIMENSION; c++)
@@ -698,7 +707,7 @@ static void swap_fractions (FttCell * cell, GfsVariable * old_solid_v) {
 	else
 	  GFS_STATE(cell)->solid->s[c] = 0.;
       }
-
+  
   if (OLD_SOLID (cell)) 
     for (c = 0; c < 2*FTT_DIMENSION; c++)
       if (OLD_SOLID (cell)->s[c] < 0.){
