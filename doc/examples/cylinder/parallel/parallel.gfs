@@ -17,9 +17,8 @@
 # \end{figure}
 #
 # \begin{figure}[htbp]
-# \caption{\label{balance}Imbalance in mesh size as a function of time
-# expressed as the percent difference in number of elements between
-# the largest and smallest subdomain.}
+# \caption{\label{balance}Number of elements per processor as a
+# function of time.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{balance.eps}
 # \end{center}
@@ -99,16 +98,15 @@
         if ($1 == "step:")
           t = $4;
         else if ($1 == "domain")
-          print t, 100.*($9/$3 - 1.);
+          print t, 100.*($9/$3 - 1.), $3, $5, $9;
       }' < balance > balance1
       cat <<EOF | gnuplot
       set term postscript eps lw 3 solid 20 colour
       set output 'balance.eps'
       set xlabel 'Time'
-      set ylabel 'Imbalance (%)'
-      set grid
-      unset key
-      plot [][0:100]'balance1' w l, 10
+      set ylabel 'Number of elements per processor'
+      set key bottom right
+      plot 'balance1' u 1:3 w l t 'minimum', '' u 1:4 w l t 'average', '' u 1:5 w l t 'maximum'
 EOF
   }
 }
