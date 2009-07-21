@@ -132,7 +132,7 @@ else
     build_gerris=true
 fi
 if $build_gerris ; then
-    if ( cd $wdir/$gerris && sh autogen.sh --prefix=$wdir/local --disable-mpi && make -k && make -k install ) \
+    if ( cd $wdir/$gerris && sh autogen.sh --prefix=$wdir/local && make -k && make -k install ) \
        > $wdir/build 2>&1 ; then :
     else
 	echo
