@@ -63,8 +63,8 @@ static int cell_is_corner (FttCell * cell)
     FttVector pos;
     ftt_cell_pos (cell,&pos);
     
-    printf("REA: %f, %f \n", pos.x, pos.y);
-    printf("d1: %i d2: %i  \n", d1,d2);
+    g_warning ("REA: %f, %f \n", pos.x, pos.y);
+    g_warning ("d1: %i d2: %i  \n", d1,d2);
     
     g_assert_not_reached ();
   }
@@ -73,14 +73,14 @@ static int cell_is_corner (FttCell * cell)
 
 
   gfs_solid_normal (neighbors.c[d1], &n1);
-  norm= sqrt(n1.x*n1.x+n1.y*n1.y);
-  if ( norm != 0.) {
+  norm = sqrt (n1.x*n1.x + n1.y*n1.y);
+  if (norm != 0.) {
     n1.x /= norm;
     n1.y /= norm;
   }
   gfs_solid_normal (neighbors.c[d2], &n2);
-  norm= sqrt(n2.x*n2.x+n2.y*n2.y);
-  if ( norm != 0.) {
+  norm = sqrt (n2.x*n2.x + n2.y*n2.y);
+  if (norm != 0.) {
     n2.x /= norm;
     n2.y /= norm;
   }
@@ -124,39 +124,35 @@ static int cell_was_corner (FttCell * cell, GfsVariable * old_solid_v, GfsVariab
     return 0;
   else {
     FttCellNeighbors neighbors;
-    FttVector n1,n2;
-    FttComponent c;
-    gdouble norm;
 
-    ftt_cell_neighbors (cell,&neighbors);
+    ftt_cell_neighbors (cell, &neighbors);
 
-    if (neighbors.c[d1])
-      for (c = 0; c < FTT_DIMENSION; c++)
+    if (neighbors.c[d1] && neighbors.c[d2]) {
+      FttVector n1, n2;
+      FttComponent c;
+      gdouble norm;
+
+      for (c = 0; c < FTT_DIMENSION; c++) {
 	(&n1.x)[c] = (SOLD2 (neighbors.c[d1], 2*c + 1) - SOLD2 (neighbors.c[d1], 2*c));
-    
-    if (neighbors.c[d2])
-      for (c = 0; c < FTT_DIMENSION; c++)
 	(&n2.x)[c] = (SOLD2 (neighbors.c[d2], 2*c + 1) - SOLD2 (neighbors.c[d2], 2*c));
-  
-    norm= sqrt(n1.x*n1.x+n1.y*n1.y);
-    if ( norm != 0.) {
-      n1.x /= norm;
-      n1.y /= norm;
-    }
-    norm= sqrt(n2.x*n2.x+n2.y*n2.y);
-    if ( norm != 0.) {
-      n2.x /= norm;
-      n2.y /= norm;
-    }
-    
-    
-    if (neighbors.c[d1] && neighbors.c[d2])
+      }
+      norm = sqrt (n1.x*n1.x + n1.y*n1.y);
+      if (norm != 0.) {
+	n1.x /= norm;
+	n1.y /= norm;
+      }
+      norm = sqrt (n2.x*n2.x + n2.y*n2.y);
+      if (norm != 0.) {
+	n2.x /= norm;
+	n2.y /= norm;
+      }    
       if (fabs(n1.x*n2.x+n1.y*n2.y) < 0.70) {
 	if (SOLD2 (neighbors.c[d1], d1) > 0 && SOLD2 (neighbors.c[d1], d1) < 1)
 	  return 1.;
 	else if (SOLD2 (neighbors.c[d2], d2) > 0 && SOLD2 (neighbors.c[d2], d2) < 1)
 	  return 1;
       }
+    }
     return 0;
   }
 }
@@ -234,7 +230,8 @@ static double new_solid_old_solid (FttCell * cell, FttDirection d1,
       if (neighbors.c[d] &&
 	  !cell_is_corner(neighbors.c[d]) && 
 	  !cell_was_corner(neighbors.c[d], old_solid, sold2)) {
-	if ((GFS_IS_MIXED(neighbors.c[d]) && GFS_STATE(neighbors.c[d])->solid->s[d1] == 1.) || !GFS_IS_MIXED(neighbors.c[d])) {
+	if ((GFS_IS_MIXED(neighbors.c[d]) && GFS_STATE(neighbors.c[d])->solid->s[d1] == 1.) ||
+	    !GFS_IS_MIXED(neighbors.c[d])) {
 	  if (SOLD2 (neighbors.c[d], d1) != 1.){
 	    s2 = 1.-SOLD2 (neighbors.c[d], d1);
 	    return s1/(s1+s2);
@@ -284,7 +281,8 @@ static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * s
   /* Find directions of intersection */
   if (GFS_IS_MIXED(cell))
     for (d = 0; d < FTT_NEIGHBORS; d ++) {
-      if (GFS_STATE(cell)->solid->s[d] != 1. && GFS_STATE(cell)->solid->s[d] != 0. && d1 == -1 && d2 == -1)
+      if (GFS_STATE(cell)->solid->s[d] != 1. && GFS_STATE(cell)->solid->s[d] != 0. &&
+	  d1 == -1 && d2 == -1)
 	d1 = d;
       else if (GFS_STATE(cell)->solid->s[d] != 1. && GFS_STATE(cell)->solid->s[d] != 0 && d2 == -1)
 	d2 = d;
@@ -423,7 +421,8 @@ static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * s
 	    for (c = 0; c < FTT_NEIGHBORS; c++)
 	      OLD_SOLID (neighbors.c[do1])->s[c] = 1.;
 	  }	  
-	  OLD_SOLID (neighbors.c[do1])->s[ftt_opposite_direction[do1]] = SOLD2 (cell, do1)*(1-dto1)+dto1;
+	  OLD_SOLID (neighbors.c[do1])->s[ftt_opposite_direction[do1]] = 
+	    SOLD2 (cell, do1)*(1-dto1)+dto1;
 	}
     }
 
@@ -439,7 +438,8 @@ static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * s
 	    for (c = 0; c < FTT_NEIGHBORS; c++)
 	      OLD_SOLID (neighbors.c[do2])->s[c] = 1.;
 	  }	  
-	  OLD_SOLID (neighbors.c[do2])->s[ftt_opposite_direction[do2]] = SOLD2 (cell, do2)*(1-dto2)+dto2;
+	  OLD_SOLID (neighbors.c[do2])->s[ftt_opposite_direction[do2]] = 
+	    SOLD2 (cell, do2)*(1-dto2)+dto2;
 	}
     }
 
@@ -458,7 +458,8 @@ static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * s
       OLD_SOLID (cell)->s[d2] = (dt2-1.)*GFS_STATE(cell)->solid->s[d2]+2.-dt2;
   }
 
-  if (d1/2 == d2/2 && do1 == -1 && do2 == -1)  /* third face has to be treated for the timescale determined on the other faces */  
+  if (d1/2 == d2/2 && do1 == -1 && do2 == -1)  /* third face has to be treated for 
+						  the timescale determined on the other faces */  
     for (d = 0; d < FTT_NEIGHBORS; d ++)
       if (d/2 != d1/2 && SOLD2 (cell, d) == 0.)
 	OLD_SOLID (cell)->s[d] = -1.+dt1+dt2;
@@ -685,7 +686,7 @@ static void swap_fractions (FttCell * cell, GfsVariable * old_solid_v) {
   }
 
 
-  /* Check for negative fractions and fix*/
+  /* Check for negative fractions and fix */
   if (GFS_STATE(cell)->solid)
     for (c = 0; c < 2*FTT_DIMENSION; c++)
       if (GFS_STATE(cell)->solid->s[c] < 0.) {
@@ -767,50 +768,29 @@ static void swap_face_fractions_back (GfsSimulation * sim)
 			    GFS_SIMULATION_MOVING (sim)->old_solid);
 }
 
-typedef struct {
-  GfsDomain * domain;
-  gdouble dt;
-  FttComponent c;
-  GfsVariable * div;
-  GfsVariable * v;
-} DivergenceData;
-
 static void moving_divergence_distribution_second_order (GSList * merged, DivergenceData * p)
 {
-  GSList * i;
-  gdouble total_volume = 0.;
-  gdouble total_div = 0.;
-  GfsVariable * old_solid_v = GFS_SIMULATION_MOVING (p->domain)->old_solid;
+  if (merged->next != NULL && merged->next->data != merged->data) {
+    gdouble total_volume = 0., total_div = 0.;
+    GfsVariable * old_solid_v = GFS_SIMULATION_MOVING (p->domain)->old_solid;
+    GSList * i = merged;
 
-   
-  if ((merged->next != NULL) && (merged->next->data != merged->data )) {
-    i = merged;
     while (i) {
       FttCell * cell = i->data;
-      g_assert(cell);
-      if (OLD_SOLID(cell)) {
-	total_volume += OLD_SOLID(cell)->a*ftt_cell_volume(cell);
-	total_div += GFS_VALUE(cell, p->div);
-      }
-      else {
-	total_volume += ftt_cell_volume(cell);
-	total_div += GFS_VALUE(cell, p->div);
-      }
+      g_assert (FTT_CELL_IS_LEAF (cell));
+      gdouble a = OLD_SOLID (cell) ? OLD_SOLID (cell)->a : 1.;
+      total_volume += a*ftt_cell_volume (cell);
+      total_div += GFS_VALUE (cell, p->div);
       i = i->next;
     }
-    
     total_div /= total_volume;
-    
+
     i = merged;
     while (i) {
       FttCell * cell = i->data;
-      if (OLD_SOLID(cell)) {
-	GFS_VALUE(cell, p->div) = total_div * OLD_SOLID(cell)->a*ftt_cell_volume(cell);
-      }
-      else{
-	GFS_VALUE(cell, p->div) =  total_div  * ftt_cell_volume(cell);	
-      }
+      gdouble a = OLD_SOLID (cell) ? OLD_SOLID (cell)->a : 1.;
+      GFS_VALUE (cell, p->div) = total_div*a*ftt_cell_volume (cell);
       i = i->next;
     }
-  } 
+  }
 }

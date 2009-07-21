@@ -1942,7 +1942,7 @@ void gfs_normal_divergence (FttCell * cell,
   for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++)
     div += (FTT_FACE_DIRECT (&face) ? 1. : -1.)*
       GFS_STATE (cell)->f[face.d].un*gfs_domain_face_fraction (v->domain, &face);
-  GFS_VALUE (cell, v) += div*ftt_cell_size (cell);
+  GFS_VALUE (cell, v) = div*ftt_cell_size (cell);
 }
 
 /**

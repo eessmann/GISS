@@ -40,27 +40,16 @@ void          gfs_update_gradients            (GfsDomain * domain,
 					       GfsVariable * p,  
 					       GfsFunction * alpha, 
 					       GfsVariable ** g);
-void          gfs_mac_projection_divergence   (GfsDomain * domain,
-					       GfsAdvectionParams * apar,
-					       GfsVariable * p,
-					       GfsFunction * alpha,
-					       GfsVariable * div,
-					       GfsVariable ** g);
-void          gfs_mac_projection_projection   (GfsDomain * domain,
-					       GfsMultilevelParams * par,
-					       GfsAdvectionParams * apar,
-					       GfsVariable * p,
-					       GfsVariable * div,
-					       GfsVariable * res,
-					       GfsVariable ** g,
-					       GfsVariable * dia);
 void          gfs_mac_projection              (GfsDomain * domain,
 					       GfsMultilevelParams * par,
 					       GfsAdvectionParams * apar,
 					       GfsVariable * p,
 					       GfsFunction * alpha,
-					       GfsVariable * div,
-					       GfsVariable ** g);
+					       GfsVariable ** g,
+					       void (* divergence_hook) (GfsDomain * domain, 
+									 GfsAdvectionParams * apar, 
+									 GfsVariable * div)
+					       );
 void          gfs_correct_centered_velocities (GfsDomain * domain,
 					       guint dimension,
 					       GfsVariable ** g,
@@ -70,9 +59,12 @@ void          gfs_approximate_projection      (GfsDomain * domain,
 					       GfsAdvectionParams * apar,
 					       GfsVariable * p,
 					       GfsFunction * alpha,
-					       GfsVariable * div,
 					       GfsVariable * res,
-					       GfsVariable ** g);
+					       GfsVariable ** g,
+					       void (* divergence_hook) (GfsDomain * domain, 
+									 GfsAdvectionParams * apar, 
+									 GfsVariable * div)
+					       );
 void          gfs_predicted_face_velocities   (GfsDomain * domain,
 					       guint d,
 					       GfsAdvectionParams * par);

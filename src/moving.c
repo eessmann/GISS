@@ -35,6 +35,14 @@
 
 #define OLD_SOLID(c) (*((GfsSolidVector **) &(GFS_VALUE (c, old_solid_v))))
 
+typedef struct {
+  GfsDomain * domain;
+  gdouble dt;
+  FttComponent c;
+  GfsVariable * div;
+  GfsVariable * v;
+} DivergenceData;
+
 #include "moving2.c"
 
 typedef struct {
@@ -716,24 +724,16 @@ static void moving_divergence_approx (FttCell * cell, DivergenceData * p)
 
 static void moving_divergence_distribution (GSList * merged, DivergenceData * p)
 {
-  GSList * i;
-  gdouble total_volume = 0.;
-  gdouble total_div = 0.;
+  if (merged->next != NULL && merged->next->data != merged->data) {
+    gdouble total_volume = 0., total_div = 0.;
+    GSList * i = merged;
 
-  
-  if ((merged->next != NULL) && (merged->next->data != merged->data )) {
-    i = merged;
     while (i) {
       FttCell * cell = i->data;
-      g_assert(cell);
-      if (GFS_STATE(cell)->solid) {
-	total_volume += GFS_STATE(cell)->solid->a*ftt_cell_volume(cell);
-	total_div += GFS_VALUE(cell, p->div);
-      }
-      else {
-	total_volume += ftt_cell_volume(cell);
-	total_div += GFS_VALUE(cell, p->div);
-      }
+      g_assert (FTT_CELL_IS_LEAF (cell));
+      gdouble a = GFS_STATE (cell)->solid ? GFS_STATE (cell)->solid->a : 1.;
+      total_volume += a*ftt_cell_volume (cell);
+      total_div += GFS_VALUE (cell, p->div);
       i = i->next;
     }
     
@@ -742,78 +742,27 @@ static void moving_divergence_distribution (GSList * merged, DivergenceData * p)
     i = merged;
     while (i) {
       FttCell * cell = i->data;
-      if (GFS_STATE(cell)->solid) {
-	GFS_VALUE(cell, p->div) = total_div * GFS_STATE(cell)->solid->a*ftt_cell_volume(cell);
-      }
-      else{
-	GFS_VALUE(cell, p->div) =  total_div  * ftt_cell_volume(cell);	
-      }
+      gdouble a = GFS_STATE (cell)->solid ? GFS_STATE (cell)->solid->a : 1.;
+      GFS_VALUE (cell, p->div) = total_div*a*ftt_cell_volume (cell);
       i = i->next;
     }
   }
 }
 
-static void moving_approximate_projection (GfsDomain * domain,
-					   GfsMultilevelParams * par,
-					   GfsAdvectionParams * apar,
-					   GfsVariable * p,
-					   GfsFunction * alpha,
-					   GfsVariable * res,
-					   GfsVariable ** g)
+static void divergence_approx_hook (GfsDomain * domain, 
+				    GfsAdvectionParams * apar, 
+				    GfsVariable * div)
 {
   DivergenceData q;
   GfsVariable ** v = gfs_domain_velocity (domain);
-  GfsVariable * dia = gfs_temporary_variable (domain);
-  GfsVariable * div = gfs_temporary_variable (domain);
-  GfsVariable * res1 = res ? res : gfs_temporary_variable (domain);
-
-  g_return_if_fail (par != NULL);
-  g_return_if_fail (apar != NULL);
-  g_return_if_fail (p != NULL);
-  g_return_if_fail (g != NULL);
   
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, div);
-
   q.div = div;
-  q.dt = apar->dt;
   for (q.c = 0; q.c < FTT_DIMENSION; q.c++) {
     gfs_domain_surface_bc (domain, v[q.c]);
     gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			       (FttCellTraverseFunc) moving_divergence_approx, &q);
   }
- 
-
-
-  gfs_domain_timer_start (domain, "approximate_projection");
-  
-  /* compute MAC velocities from centered velocities */
-  gfs_domain_face_traverse (domain, FTT_XYZ,
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
-  gfs_domain_face_traverse (domain, FTT_XYZ,
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
-			    gfs_domain_velocity (domain));
-  
-  gfs_mac_projection_divergence (domain, apar, p, alpha, div, g);
-  
-  q.domain=domain;
   gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) moving_divergence_distribution, &q);
-
-  gfs_mac_projection_projection (domain, par, apar, p, div, res1, g, dia);
-
-  gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
-
-  gfs_domain_timer_stop (domain, "approximate_projection");
-
-  if (par->residual.infty > par->tolerance)
-    g_warning ("approx projection: max residual %g > %g", par->residual.infty, par->tolerance);
-
-  gts_object_destroy (GTS_OBJECT (dia));
-  gts_object_destroy (GTS_OBJECT (div));
-  if (!res)
-    gts_object_destroy (GTS_OBJECT (res1));
 }
 
 static void moving_divergence_mac (FttCell * cell, DivergenceData * p)
@@ -823,7 +772,24 @@ static void moving_divergence_mac (FttCell * cell, DivergenceData * p)
   gdouble a = GFS_STATE (cell)->solid ? GFS_STATE (cell)->solid->a : 1.;
   gdouble olda = OLD_SOLID (cell) ? OLD_SOLID (cell)->a : 1.;
   
-  GFS_VALUE (cell, p->div) = (olda - a)*size*size/p->dt;
+  GFS_VALUE (cell, p->div) += (olda - a)*size*size/p->dt;
+}
+
+static void divergence_mac_hook (GfsDomain * domain, GfsAdvectionParams * apar, GfsVariable * div)
+{
+  DivergenceData q;
+
+  q.dt = apar->moving_order == 2 ? 2.*apar->dt : - 2.*apar->dt;
+  q.div = div;
+  q.domain = domain;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) moving_divergence_mac, &q);
+  gfs_domain_traverse_merged (domain,
+			      (GfsMergedTraverseFunc) 
+			      (apar->moving_order == 1 ?
+			       moving_divergence_distribution :
+			       moving_divergence_distribution_second_order), 
+			      &q);
 }
 
 static void moving_mac_projection (GfsSimulation * sim,
@@ -833,72 +799,11 @@ static void moving_mac_projection (GfsSimulation * sim,
 				   GfsFunction * alpha,
 				   GfsVariable ** g)
 {
-  GfsDomain * domain = GFS_DOMAIN (sim);
-  GfsVariable * dia = gfs_temporary_variable (domain);
-  GfsVariable * div =  gfs_temporary_variable (domain);
-  GfsVariable * res1 = gfs_temporary_variable (domain);
-  gdouble dt;
-  DivergenceData q;
-
-  g_return_if_fail (par != NULL);
-  g_return_if_fail (apar != NULL);
-  g_return_if_fail (p != NULL);
-  g_return_if_fail (g != NULL);
-
-  if (apar->moving_order == 2) {
-    q.dt = apar->dt;
+  if (apar->moving_order == 2)
     swap_face_fractions (sim);
-  }
-  else /* first order */
-    q.dt = - apar->dt;
- 
-  /* Computes solid fluxes */
-  q.div = div;
-  q.domain = domain;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) moving_divergence_mac, &q);
- 
-  /* Computes fluid fluxes */
-  gfs_domain_timer_start (domain, "mac_projection");
-
-  dt = apar->dt;
-  apar->dt /= 2.;
-  
-  gfs_mac_projection_divergence (domain, apar, p, alpha, div, g); 
-  
-
-  /* Redistributes the divergence for the merged cells */
-  q.dt =  apar->dt;
-  if (GFS_SIMULATION (domain)->advection_params.moving_order == 1)
-    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) moving_divergence_distribution, &q);
-  else
-    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) moving_divergence_distribution_second_order, &q);
-
-  /* Projects the velocities */
-  gfs_mac_projection_projection (domain, par, apar, p, div,res1, g, dia);
-
-#if 0
-  {
-    FILE * fp = fopen ("/tmp/macafter", "wt");
-
-    gfs_write_mac_velocity (domain, 0.9, FTT_TRAVERSE_LEAFS, -1, NULL, fp);
-    fclose (fp);
-  }
-#endif
-  
-  apar->dt = dt;
-
-  gfs_domain_timer_stop (domain, "mac_projection");
-
-  if (par->residual.infty > par->tolerance)
-    g_warning ("MAC projection: max residual %g > %g", par->residual.infty, par->tolerance);
- 
+  gfs_mac_projection (GFS_DOMAIN (sim), par, apar, p, alpha, g, divergence_mac_hook);
   if (apar->moving_order == 2)
     swap_face_fractions_back (sim);
-
-  gts_object_destroy (GTS_OBJECT (dia));
-  gts_object_destroy (GTS_OBJECT (div));
-  gts_object_destroy (GTS_OBJECT (res1));
 }
 
 static void simulation_moving_run (GfsSimulation * sim)
@@ -940,10 +845,11 @@ static void simulation_moving_run (GfsSimulation * sim)
 
   simulation_moving_set_timestep (sim);
   if (sim->time.i == 0)
-    moving_approximate_projection (domain,
-				   &sim->approx_projection_params,
-				   &sim->advection_params,
-				   p, sim->physical_params.alpha, res, g);
+    gfs_approximate_projection (domain,
+				&sim->approx_projection_params,
+				&sim->advection_params,
+				p, sim->physical_params.alpha, res, g,
+				divergence_approx_hook);
   else if (sim->advection_params.gc)
     gfs_update_gradients (domain, p, sim->physical_params.alpha, g);
 
@@ -993,9 +899,10 @@ static void simulation_moving_run (GfsSimulation * sim)
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gfs_simulation_adapt (sim);
 
-    moving_approximate_projection (domain,
-				   &sim->approx_projection_params, 
-				   &sim->advection_params, p, sim->physical_params.alpha, res, g);
+    gfs_approximate_projection (domain,
+				&sim->approx_projection_params, 
+				&sim->advection_params, p, sim->physical_params.alpha, res, g,
+				divergence_approx_hook);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
