@@ -655,7 +655,7 @@ static void interface_curvature (FttCell * cell, gpointer * data)
 	target = NULL;
     }
     if (!target)
-      target = gfs_domain_locate (v->domain, p, -1);
+      target = gfs_domain_locate (v->domain, p, -1, NULL);
     GFS_VARIABLE (cell, v->i) = gfs_interpolate (target, p, nv[FTT_DIMENSION]);
   }
 }

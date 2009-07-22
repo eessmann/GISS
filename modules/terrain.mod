@@ -648,7 +648,7 @@ static gdouble corner_value (GfsRefineTerrain * t, FttVector * p, gdouble eps, g
     for (j = -1; j <= 1; j += 2) {
       FttVector q;
       q.x = p->x + eps*i; q.y = p->y + eps*j; q.z = p->z;
-      FttCell * cell = gfs_domain_locate (domain, q, level);
+      FttCell * cell = gfs_domain_locate (domain, q, level, NULL);
       if (cell) {
 	if (ftt_cell_level (cell) < level)
 	    return 0.;
@@ -805,7 +805,7 @@ static gboolean refine_terrain_from_boundary (FttCell * cell, GfsRefineTerrain *
   gdouble h = ftt_cell_size (cell)/2., zmin = p.z - h, zmax = p.z + h;
   p.z = t->front;
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (t));
-  FttCell * boundary = gfs_domain_locate (domain, p, ftt_cell_level (cell));
+  FttCell * boundary = gfs_domain_locate (domain, p, ftt_cell_level (cell), NULL);
   g_assert (boundary);
   if (GFS_VALUE (boundary, t->min) > zmax || GFS_VALUE (boundary, t->max) < zmin)
     return FALSE;
@@ -827,7 +827,7 @@ static void init_terrain_from_boundary (FttCell * cell, GfsRefineTerrain * t)
     ftt_cell_pos (cell, &p);
     p.z = t->front;
     GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (t));
-    FttCell * boundary = gfs_domain_locate (domain, p, -1);
+    FttCell * boundary = gfs_domain_locate (domain, p, -1, NULL);
     g_assert (boundary);
     g_assert (ftt_cell_level (cell) == ftt_cell_level (boundary));
     guint i;

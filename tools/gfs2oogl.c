@@ -68,14 +68,14 @@ static gdouble local_size_ratio (GtsSegment * s, GfsDomain * domain)
   p.x = p1->x;
   p.y = p1->y;
   p.z = p1->z;
-  cell = gfs_domain_locate (domain, p, -1);
+  cell = gfs_domain_locate (domain, p, -1, NULL);
   if (cell)
     size = ftt_cell_size (cell);
 
   p.x = p2->x;  
   p.y = p2->y;
   p.z = p2->z;
-  cell = gfs_domain_locate (domain, p, -1);
+  cell = gfs_domain_locate (domain, p, -1, NULL);
   if (cell) {
     gdouble s = ftt_cell_size (cell);
     
@@ -392,7 +392,7 @@ static gboolean advect (GfsDomain * domain,
       ph = *p;
       for (c = 0; c < 2/*FTT_DIMENSION*/; c++)
 	((gdouble *) &ph)[c] += h*((gdouble *) &u)[c]/(2.*nu);
-      cell = gfs_domain_locate (domain, ph, -1);
+      cell = gfs_domain_locate (domain, ph, -1, NULL);
       if (cell != NULL) {
 	nu = 0.;
 	for (c = 0; c < 2/*FTT_DIMENSION*/; c++) {
@@ -424,7 +424,7 @@ static InsertStatus grow_streamline (GfsDomain * domain,
 				     gint direction,
 				     GSList ** stream)
 {
-  FttCell * cell = gfs_domain_locate (domain, p, -1);
+  FttCell * cell = gfs_domain_locate (domain, p, -1, NULL);
   GtsVertex * v, * vstart = NULL;
   gdouble s = 0.;
   InsertStatus status = cell ? INSERTED : OFFSIDE;
@@ -444,7 +444,7 @@ static InsertStatus grow_streamline (GfsDomain * domain,
     case ALREADY_THERE:
       if (advect (domain, cell, &p, ds, direction)) {
 	s += ds;
-	cell = gfs_domain_locate (domain, p, -1);
+	cell = gfs_domain_locate (domain, p, -1, NULL);
 	if (cell == NULL)
 	  status = OFFSIDE;
       }
@@ -533,7 +533,7 @@ static gboolean seed (GSList * i,
       if (d > 1e-6) {
 	v->x = p.x = (p1->x + p2->x)/2. - (p2->y - p1->y)*dsep/d;
 	v->y = p.y = (p1->y + p2->y)/2. + (p2->x - p1->x)*dsep/d;
-	if (gfs_domain_locate (domain, p, -1) &&
+	if (gfs_domain_locate (domain, p, -1, NULL) &&
 	    closest_grid_is_insertable (grid, v, dsep, 0.) == INSERTED) {
 	  GSList * s = streamline (domain, grid, p, dmin, 0.25, closed);
 
@@ -545,7 +545,7 @@ static gboolean seed (GSList * i,
 	}
 	v->x = p.x = (p1->x + p2->x)/2. + (p2->y - p1->y)*dsep/d;
 	v->y = p.y = (p1->y + p2->y)/2. - (p2->x - p1->x)*dsep/d;
-	if (gfs_domain_locate (domain, p, -1) &&
+	if (gfs_domain_locate (domain, p, -1, NULL) &&
 	    closest_grid_is_insertable (grid, v, dsep, 0.) == INSERTED) {
 	  GSList * s = streamline (domain, grid, p, dmin, 0.25, closed);
 
@@ -575,7 +575,7 @@ static void cell_center (FttCell * cell, gpointer * data)
     ftt_cell_pos (cell, &pos);
     pos.z = 0.;
     v = gts_point_new (gts_point_class (), pos.x, pos.y, pos.z);
-    if (gfs_domain_locate (domain, pos, -1) && 
+    if (gfs_domain_locate (domain, pos, -1, NULL) && 
 	closest_grid_is_insertable (grid, v, 0., 0.) == INSERTED)
       *p = pos;
     gts_object_destroy (GTS_OBJECT (v));
@@ -1087,7 +1087,7 @@ int main (int argc, char * argv[])
 
       if (var)
 	while (fscanf (profile, "%lf %lf %lf", &p.x, &p.y, &p.z) == 3) {
-	  FttCell * cell = gfs_domain_locate (domain, p, -1);
+	  FttCell * cell = gfs_domain_locate (domain, p, -1, NULL);
 	  if (cell)
 	    printf ("%g %g %g %g\n", p.x, p.y, p.z, gfs_interpolate (cell, p, var));
 	}
@@ -1104,7 +1104,7 @@ int main (int argc, char * argv[])
 	}
 	printf ("\n");
 	while (fscanf (profile, "%lf %lf %lf", &p.x, &p.y, &p.z) == 3) {
-	  FttCell * cell = gfs_domain_locate (domain, p, -1);
+	  FttCell * cell = gfs_domain_locate (domain, p, -1, NULL);
 	  if (cell) {
 	    printf ("%g %g %g ", p.x, p.y, p.z);
 	    j = domain->variables;

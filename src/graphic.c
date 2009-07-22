@@ -366,7 +366,7 @@ static void iso_func (gdouble ** a, GtsCartesianGrid g, guint k,
   p.z = g.z;
   for (i = 0, p.x = g.x; i < g.nx; i++, p.x += g.dx)
     for (j = 0, p.y = g.y; j < g.ny; j++, p.y += g.dy) {
-      FttCell * cell = gfs_domain_locate (domain, p, *level);
+      FttCell * cell = gfs_domain_locate (domain, p, *level, NULL);
 
       if (cell == NULL)
 	a[i][j] = 0.;
@@ -1130,7 +1130,7 @@ static GtsColor variable_color (GtsObject * o)
   pos.y = p->y;
   pos.z = p->z;
 
-  cell = gfs_domain_locate (domain, pos, -1);
+  cell = gfs_domain_locate (domain, pos, -1, NULL);
   if (cell) {
     val = gfs_interpolate (cell, pos, v);
     c = colormap_color (colormap, (val - *min)/(*max - *min));
@@ -1736,7 +1736,7 @@ static GList * grow_curve (GfsDomain * domain,
 #endif /* 2D */  
 
   p1 = p2 = p;
-  while ((cell = gfs_domain_locate (domain, p, -1)) != NULL &&
+  while ((cell = gfs_domain_locate (domain, p, -1, NULL)) != NULL &&
 	 circumcircle_radius (p1, p2, p) > ftt_cell_size (cell) &&
 	 nmax--) {
     gdouble h = delta*ftt_cell_size (cell);
@@ -1771,7 +1771,7 @@ static GList * grow_curve (GfsDomain * domain,
       nu = 2.*sqrt (nu);
       for (c = 0; c < FTT_DIMENSION; c++)
 	(&p1.x)[c] += h*(&u.x)[c]/nu;
-      cell1 = gfs_domain_locate (domain, p1, -1);
+      cell1 = gfs_domain_locate (domain, p1, -1, NULL);
       if (!cell1)
 	break;
       nu = interpolated_velocity (cell1, p1, U, direction, &u);
@@ -1801,7 +1801,7 @@ static GList * grow_curve (GfsDomain * domain,
       break;
   }
   if (oldp && (p2.x != oldp->x || p2.y != oldp->y || p2.z != oldp->z)) {
-    cell = gfs_domain_locate (domain, p2, -1);
+    cell = gfs_domain_locate (domain, p2, -1, NULL);
     if (cell) {
       oldp = gts_point_new (path_class, p2.x, p2.y, p2.z);
       if (var)

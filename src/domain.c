@@ -2247,6 +2247,7 @@ void gfs_domain_split (GfsDomain * domain, gboolean one_box_per_pe)
  * @domain: a #GfsDomain.
  * @target: position of the point to look for.
  * @max_depth: maximum depth to consider (-1 means no restriction, see below for -2).
+ * @where: a pointer to a #GfsBox or %NULL.
  *
  * Locates the cell of @domain containing @target. This is done
  * efficiently in log(n) operations by using the topology of the cell
@@ -2256,16 +2257,25 @@ void gfs_domain_split (GfsDomain * domain, gboolean one_box_per_pe)
  * returned. This cell is not necessarily a leaf-cell in contrast to
  * the case where @max_depth is set to -1.
  *
+ * If @where is not %NULL it is filled with the #GfsBox containing the
+ * cell.
+ *
  * Returns: a #FttCell of @domain containing (boundary included) the
  * point defined by @target or %NULL if @target is not contained in
  * any cell of @domain.  
  */
 FttCell * gfs_domain_locate (GfsDomain * domain,
 			     FttVector target,
-			     gint max_depth)
+			     gint max_depth,
+			     GfsBox ** where)
 {
   GtsObject * b = locate_array_locate (domain->array, &target);
-  return GFS_IS_BOX (b) ? ftt_cell_locate (GFS_BOX (b)->root, target, max_depth) : NULL;
+  if (GFS_IS_BOX (b)) {
+    if (where)
+      *where = GFS_BOX (b);
+    return ftt_cell_locate (GFS_BOX (b)->root, target, max_depth);
+  }
+  return NULL;
 }
 
 /**
@@ -2273,8 +2283,12 @@ FttCell * gfs_domain_locate (GfsDomain * domain,
  * @domain: a #GfsDomain.
  * @target: position of the point to look for.
  * @max_depth: maximum depth to consider (-1 means no restriction).
+ * @where: a pointer to a #GtsObject.
  *
  * Locates the cell of @domain or of its boundary containing @target.
+ *
+ * If @where is not %NULL it is filled with the #GtsObject (either a
+ * #GfsBox or a #GfsBoundary) containing the cell.
  *
  * Returns: a #FttCell of @domain or of its boundary containing the
  * point defined by @target or %NULL if @target is not contained in
@@ -2282,9 +2296,12 @@ FttCell * gfs_domain_locate (GfsDomain * domain,
  */
 FttCell * gfs_domain_boundary_locate (GfsDomain * domain,
 				      FttVector target,
-				      gint max_depth)
+				      gint max_depth,
+				      GtsObject ** where)
 {
   GtsObject * b = locate_array_locate (domain->array, &target);
+  if (where)
+    *where = b;
   if (GFS_IS_BOX (b))
     return ftt_cell_locate (GFS_BOX (b)->root, target, max_depth);
   else if (GFS_IS_BOUNDARY (b)) {
@@ -2385,13 +2402,13 @@ void gfs_domain_advect_point (GfsDomain * domain,
   g_return_if_fail (p != NULL);
 
   p0 = p1 = *p;
-  cell = gfs_domain_locate (domain, p0, -1);
+  cell = gfs_domain_locate (domain, p0, -1, NULL);
   if (cell == NULL)
     return;
   u = gfs_domain_velocity (domain);
   for (c = 0; c < FTT_DIMENSION; c++)
     (&p1.x)[c] += dt*gfs_interpolate (cell, p0, u[c])/2.;
-  cell = gfs_domain_locate (domain, p1, -1);
+  cell = gfs_domain_locate (domain, p1, -1, NULL);
   if (cell == NULL)
     return;
   for (c = 0; c < FTT_DIMENSION; c++)
@@ -3758,7 +3775,7 @@ static void box_combine_traverse (GfsBox * box, gpointer * data)
   FttCell * locate;
 
   ftt_cell_pos (box->root, &p);
-  locate = gfs_domain_locate (data[0], p, ftt_cell_level (box->root));
+  locate = gfs_domain_locate (data[0], p, ftt_cell_level (box->root), NULL);
   if (locate == NULL) {
     if (data[3])
       ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, data[3], data[4]);

@@ -101,7 +101,7 @@ static void allocate_vertices (FttCell * cell, AllocParams * par)
 	  FttComponent c;
 	  for (c = 0; c < FTT_DIMENSION; c++)
 	    (&q.x)[c] = (&p.x)[c] - dx[j][c]*h;
-	  FttCell * n = gfs_domain_locate (par->domain, q, par->max_depth);
+	  FttCell * n = gfs_domain_locate (par->domain, q, par->max_depth, NULL);
 	  if (n) {
 	    guint k;
 	    for (k = 0; k < j && n; k++)

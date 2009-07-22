@@ -1177,7 +1177,7 @@ static gboolean gfs_output_location_event (GfsEvent * event,
     for (i = 0; i < location->p->len; i++) {
       FttVector p = g_array_index (location->p, FttVector, i), pm = p;
       gfs_simulation_map (sim, &pm);
-      FttCell * cell = gfs_domain_locate (domain, pm, -1);
+      FttCell * cell = gfs_domain_locate (domain, pm, -1, NULL);
       
       if (cell != NULL) {
 	GSList * i = domain->variables;

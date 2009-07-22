@@ -179,10 +179,10 @@ static gboolean difference_tree (FttCell * cell,
   
   ftt_cell_pos (cell, &pos);
   pos.x += period;
-  locate = gfs_domain_locate (ref, pos, level);
+  locate = gfs_domain_locate (ref, pos, level, NULL);
   if (locate == NULL) {
     pos.x -= 2.*period;
-    locate = gfs_domain_locate (ref, pos, level);
+    locate = gfs_domain_locate (ref, pos, level, NULL);
   }
   if (locate == NULL) {
     fprintf (stderr, "gfscompare: the files are not comparable\n");
@@ -291,7 +291,7 @@ static void difference_centered (FttCell * cell, gpointer * data)
   FttCell * locate;
 
   gfs_cell_cm (cell, &p);
-  locate = gfs_domain_locate (ref, p, -1);
+  locate = gfs_domain_locate (ref, p, -1, NULL);
   if (locate == NULL || ftt_cell_level (locate) < ftt_cell_level (cell)) {
     fprintf (stderr, "gfscompare: the files are not comparable\n");
     exit (1);

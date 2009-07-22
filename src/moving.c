@@ -644,7 +644,7 @@ static void simulation_moving_set_timestep (GfsSimulation * sim)
 static void move_vertex (GtsPoint * p, SolidInfo * par)
 { 
   FttVector pos = *((FttVector *) &p->x);
-  FttCell * cell = gfs_domain_locate (GFS_DOMAIN (par->sim), pos, -2);
+  FttCell * cell = gfs_domain_locate (GFS_DOMAIN (par->sim), pos, -2, NULL);
   if (cell) {
     gdouble dt = par->sim->advection_params.dt;
     FttComponent c;
