@@ -601,27 +601,30 @@ GfsDomainClass * gfs_domain_class (void)
   return klass;
 }
 
-static void box_bc (GfsBox * box, gpointer * datum)
+typedef struct {
+  FttTraverseFlags flags;
+  gint max_depth;
+  GfsVariable * v, * v1;
+  FttComponent c;
+} BcData;
+
+static void box_bc (GfsBox * box, BcData * p)
 {
-  FttTraverseFlags * flags = datum[0];
-  gint * max_depth = datum[1];
-  GfsVariable * v = datum[2];
-  GfsVariable * v1 = datum[4];
   FttDirection d;
 
   for (d = 0; d < FTT_NEIGHBORS; d++) 
     if (GFS_IS_BOUNDARY (box->neighbor[d])) {
       GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
-      GfsBc * bc = gfs_boundary_lookup_bc (b, v1);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, p->v);
 
       if (bc) {
-	b->v = v;
-	bc->v = v;
+	b->v = p->v1;
+	bc->v = p->v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
 	ftt_face_traverse_boundary (b->root, b->d,
-				    FTT_PRE_ORDER, *flags, *max_depth,
+				    FTT_PRE_ORDER, p->flags, p->max_depth,
 				    bc->bc, bc);
-	bc->v = v1;
+	bc->v = p->v;
 	gfs_boundary_send (b);
       }
     }
@@ -646,44 +649,37 @@ static void direction_face_bc (GtsObject * neighbor,
   }
 }
 
-static void box_face_bc (GfsBox * box, gpointer * datum)
+static void box_face_bc (GfsBox * box, BcData * p)
 {
-  GfsVariable * v = datum[2];
-  FttComponent * c = datum[3];
-
-  if (*c == FTT_XYZ) {
+  if (p->c == FTT_XYZ) {
     FttDirection d;
     
     for (d = 0; d < FTT_NEIGHBORS; d++)
-      direction_face_bc (box->neighbor[d], v);
+      direction_face_bc (box->neighbor[d], p->v);
   }
   else {
-    direction_face_bc (box->neighbor[2*(*c)], v);
-    direction_face_bc (box->neighbor[2*(*c) + 1], v);
+    direction_face_bc (box->neighbor[2*p->c], p->v);
+    direction_face_bc (box->neighbor[2*p->c + 1], p->v);
   }
 }
 
-static void box_receive_bc (GfsBox * box, gpointer * datum)
+static void box_receive_bc (GfsBox * box, BcData * r)
 {
-  FttTraverseFlags * flags = datum[0];
-  gint * max_depth = datum[1];
-  FttComponent * c = datum[3];
-
-  if (*c == FTT_XYZ) {
+  if (r->c == FTT_XYZ) {
     FttDirection d;
     
     for (d = 0; d < FTT_NEIGHBORS; d++) {
       FttDirection od = FTT_OPPOSITE_DIRECTION (d);
 
       if (GFS_IS_BOUNDARY (box->neighbor[od]))
-	gfs_boundary_receive (GFS_BOUNDARY (box->neighbor[od]), *flags, *max_depth);
+	gfs_boundary_receive (GFS_BOUNDARY (box->neighbor[od]), r->flags, r->max_depth);
     }
   }
   else {
-    if (GFS_IS_BOUNDARY (box->neighbor[2*(*c) + 1]))
-      gfs_boundary_receive (GFS_BOUNDARY (box->neighbor[2*(*c) + 1]), *flags, *max_depth);
-    if (GFS_IS_BOUNDARY (box->neighbor[2*(*c)]))
-      gfs_boundary_receive (GFS_BOUNDARY (box->neighbor[2*(*c)]), *flags, *max_depth);
+    if (GFS_IS_BOUNDARY (box->neighbor[2*r->c + 1]))
+      gfs_boundary_receive (GFS_BOUNDARY (box->neighbor[2*r->c + 1]), r->flags, r->max_depth);
+    if (GFS_IS_BOUNDARY (box->neighbor[2*r->c]))
+      gfs_boundary_receive (GFS_BOUNDARY (box->neighbor[2*r->c]), r->flags, r->max_depth);
   }
 }
 
@@ -735,8 +731,7 @@ void gfs_domain_copy_bc (GfsDomain * domain,
 			 GfsVariable * v,
 			 GfsVariable * v1)
 {
-  FttComponent c = FTT_XYZ;
-  gpointer datum[5];
+  BcData b = { flags, max_depth, v, v1, FTT_XYZ };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (v != NULL);
@@ -745,15 +740,9 @@ void gfs_domain_copy_bc (GfsDomain * domain,
   if (domain->profile_bc)
     gfs_domain_timer_start (domain, "bc");
 
-  datum[0] = &flags;
-  datum[1] = &max_depth;
-  datum[2] = v1;
-  datum[3] = &c;
-  datum[4] = v;
-
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_bc, datum);
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, datum);
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_synchronize, &c);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_bc, &b);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, &b);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_synchronize, &b.c);
 
   if (domain->profile_bc)
     gfs_domain_timer_stop (domain, "bc");
@@ -779,27 +768,23 @@ void gfs_domain_bc (GfsDomain * domain,
   gfs_domain_copy_bc (domain, flags, max_depth, v, v);
 }
 
-static void box_homogeneous_bc (GfsBox * box, gpointer * datum)
+static void box_homogeneous_bc (GfsBox * box, BcData * p)
 {
-  FttTraverseFlags * flags = datum[0];
-  gint * max_depth = datum[1];
-  GfsVariable * ov = datum[2];
-  GfsVariable * v = datum[4];
   FttDirection d;
 
   for (d = 0; d < FTT_NEIGHBORS; d++) 
     if (GFS_IS_BOUNDARY (box->neighbor[d])) {
       GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
-      GfsBc * bc = gfs_boundary_lookup_bc (b, v);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, p->v);
 
       if (bc) {
-	b->v = ov;
-	bc->v = ov;
+	b->v = p->v1;
+	bc->v = p->v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
 	ftt_face_traverse_boundary (b->root, b->d,
-				    FTT_PRE_ORDER, *flags, *max_depth,
+				    FTT_PRE_ORDER, p->flags, p->max_depth,
 				    bc->homogeneous_bc, bc);
-	bc->v = v;
+	bc->v = p->v;
 	gfs_boundary_send (b);
       }
     }
@@ -822,8 +807,7 @@ void gfs_domain_homogeneous_bc (GfsDomain * domain,
 				GfsVariable * ov,
 				GfsVariable * v)
 {
-  FttComponent c = FTT_XYZ;
-  gpointer datum[5];
+  BcData b = { flags, max_depth, v, ov, FTT_XYZ };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (ov != NULL);
@@ -832,20 +816,141 @@ void gfs_domain_homogeneous_bc (GfsDomain * domain,
   if (domain->profile_bc)
     gfs_domain_timer_start (domain, "bc");
 
-  datum[0] = &flags;
-  datum[1] = &max_depth;
-  datum[2] = ov;
-  datum[3] = &c;
-  datum[4] = v;
-  gts_container_foreach (GTS_CONTAINER (domain),
-			 (GtsFunc) box_homogeneous_bc, datum);
-  gts_container_foreach (GTS_CONTAINER (domain),
-			 (GtsFunc) box_receive_bc, datum);
-  gts_container_foreach (GTS_CONTAINER (domain),
-			 (GtsFunc) box_synchronize, &c);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_homogeneous_bc, &b);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, &b);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_synchronize, &b.c);
 
   if (domain->profile_bc)
     gfs_domain_timer_stop (domain, "bc");
+}
+
+typedef struct {
+  FttCellTraverseFunc func;
+  gpointer data;
+  FttTraverseType order;
+  FttTraverseFlags flags;
+  gint max_depth;
+} TraverseData;
+
+typedef struct {
+  TraverseData t;
+  BcData b;
+} TraverseBcData;
+
+static void update_mpi_cell (FttCell * cell, TraverseData * p)
+{
+  (* p->func) (cell, p->data);
+  cell->flags |= GFS_FLAG_USED;
+}
+
+static void update_other_cell (FttCell * cell, TraverseData * p)
+{
+  if ((cell->flags & GFS_FLAG_USED) != 0)
+    cell->flags &= ~GFS_FLAG_USED;
+  else
+    (* p->func) (cell, p->data);
+}
+
+static void update_mpi_boundaries (GfsBox * box, TraverseBcData * p)
+{
+  FttDirection d;
+
+  for (d = 0; d < FTT_NEIGHBORS; d++) 
+    if (GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, p->b.v);
+
+      if (bc) {
+	ftt_cell_traverse_boundary (box->root, d, p->t.order, p->t.flags, p->t.max_depth,
+				    (FttCellTraverseFunc) update_mpi_cell, p);
+	b->v = p->b.v1;
+	bc->v = p->b.v1;
+	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+	ftt_face_traverse_boundary (b->root, b->d,
+				    FTT_PRE_ORDER, p->b.flags, p->b.max_depth,
+				    bc->homogeneous_bc, bc);
+	bc->v = p->b.v;
+	gfs_boundary_send (b);
+      }
+    }
+}
+
+static void update_other_boundaries (GfsBox * box, BcData * p)
+{
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d]) &&
+	!GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, p->v);
+
+      if (bc) {
+	b->v = p->v1;
+	bc->v = p->v1;
+	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+	ftt_face_traverse_boundary (b->root, b->d,
+				    FTT_PRE_ORDER, p->flags, p->max_depth,
+				    bc->homogeneous_bc, bc);
+	bc->v = p->v;
+	gfs_boundary_send (b);
+      }
+    }
+}
+
+/**
+ * gfs_traverse_and_homogeneous_bc:
+ * @domain: a #GfsDomain.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @max_depth: the maximum depth of the traversal. Cells below this
+ * depth will not be traversed. If @max_depth is -1 all cells in the
+ * tree are visited.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ * @ov: a #GfsVariable.
+ * @v: a #GfsVariable of which @ov is an homogeneous version.
+ *
+ * For serial runs, this is identical to calling:
+ *
+ * gfs_domain_cell_traverse (domain, order, flags, max_depth, func, data);
+ * gfs_domain_homogeneous_bc (domain, flags, max_depth, ov, v);
+ *
+ * For parallel runs, the communications needed to apply the boundary
+ * conditions are overlapped with the calls to @func in the bulk of
+ * the domain.
+ */
+void gfs_traverse_and_homogeneous_bc (GfsDomain * domain,
+				      FttTraverseType order,
+				      FttTraverseFlags flags,
+				      gint max_depth,
+				      FttCellTraverseFunc func,
+				      gpointer data,
+				      GfsVariable * ov,
+				      GfsVariable * v)
+{
+  g_return_if_fail (domain != NULL);
+
+  if (domain->pid < 0) {
+    gfs_domain_cell_traverse (domain, order, flags, max_depth, func, data);
+    gfs_domain_homogeneous_bc (domain, flags, max_depth, ov, v);
+  }
+  else {
+    TraverseBcData d = {
+      { func, data, order, flags, max_depth }, 
+      { flags, max_depth, v, ov, FTT_XYZ }
+    };
+    /* Update and send MPI boundary values */
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) update_mpi_boundaries, &d);
+    /* Update bulk of domain and other boundaries */
+    gfs_domain_cell_traverse (domain, order, flags, max_depth, 
+			      (FttCellTraverseFunc) update_other_cell, &d);
+    /* Apply homogeneous BC on other boundaries */
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) update_other_boundaries, &d.b);
+    /* Receive and synchronize */
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, &d.b);
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_synchronize, &d.b.c);
+  }
 }
 
 /**
@@ -860,9 +965,7 @@ void gfs_domain_face_bc (GfsDomain * domain,
 			 FttComponent c,
 			 GfsVariable * v)
 {
-  FttTraverseFlags flags = FTT_TRAVERSE_LEAFS;
-  gint max_depth = -1;
-  gpointer datum[4];
+  BcData b = { FTT_TRAVERSE_LEAFS, -1, v, v, c };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (c == FTT_XYZ || (c >= 0 && c < FTT_DIMENSION));
@@ -871,16 +974,9 @@ void gfs_domain_face_bc (GfsDomain * domain,
   if (domain->profile_bc)
     gfs_domain_timer_start (domain, "face_bc");
 
-  datum[0] = &flags;
-  datum[1] = &max_depth;
-  datum[2] = v;
-  datum[3] = &c;
-  gts_container_foreach (GTS_CONTAINER (domain), 
-			 (GtsFunc) box_face_bc, datum);
-  gts_container_foreach (GTS_CONTAINER (domain), 
-			 (GtsFunc) box_receive_bc, datum);
-  gts_container_foreach (GTS_CONTAINER (domain),
-			 (GtsFunc) box_synchronize, &c);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_face_bc, &b);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, &b);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_synchronize, &b.c);
 
   if (domain->profile_bc)
     gfs_domain_timer_stop (domain, "face_bc");
@@ -911,19 +1007,11 @@ static void box_depth (GfsBox * box, guint * depth)
 
 static gboolean domain_match (GfsDomain * domain)
 {
-  FttComponent c = FTT_XYZ;
-  FttTraverseFlags flags = FTT_TRAVERSE_LEAFS;
-  gint max_depth = -1;
+  BcData b = { FTT_TRAVERSE_LEAFS, -1, NULL, NULL, FTT_XYZ };
   gboolean changed = FALSE;
-  gpointer datum[4];
-
-  datum[0] = &flags;
-  datum[1] = &max_depth;
-  datum[2] = NULL;
-  datum[3] = &c;
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_match, NULL);
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, datum);
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_synchronize, &c);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, &b);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_synchronize, &b.c);
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_changed, &changed);
   if (changed) {
     gint l;
@@ -1005,15 +1093,9 @@ void gfs_domain_surface_bc (GfsDomain * domain,
 			       (FttCellTraverseFunc) neumann_bc, NULL);
 }
 
-static void box_traverse (GfsBox * box, gpointer * datum)
+static void box_traverse (GfsBox * box, TraverseData * d)
 {
-  FttTraverseType * order = datum[0];
-  FttTraverseFlags * flags = datum[1];
-  gint * max_depth = datum[2];
-  FttCellTraverseFunc func = (FttCellTraverseFunc) datum[3];
-  gpointer data = datum[4];
-
-  ftt_cell_traverse (box->root, *order, *flags, *max_depth, func, data);
+  ftt_cell_traverse (box->root, d->order, d->flags, d->max_depth, d->func, d->data);
 }
 
 /**
@@ -1038,19 +1120,12 @@ void gfs_domain_cell_traverse (GfsDomain * domain,
 			       FttCellTraverseFunc func,
 			       gpointer data)
 {
-  gpointer datum[5];
-
-  datum[0] = &order;
-  datum[1] = &flags;
-  datum[2] = &max_depth;
-  datum[3] = func;
-  datum[4] = data;
+  TraverseData d = { func, data, order, flags, max_depth };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (func != NULL);
 
-  gts_container_foreach (GTS_CONTAINER (domain), 
-			 (GtsFunc) box_traverse, datum);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_traverse, &d);
 }
 
 static void box_traverse_box (GfsBox * box, gpointer * datum)
@@ -1167,14 +1242,9 @@ void gfs_domain_cell_traverse_condition (GfsDomain * domain,
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_traverse_condition, datum);
 }
 
-static void traverse_mixed (GfsBox * box, gpointer * datum)
+static void traverse_mixed (GfsBox * box, TraverseData * d)
 {
-  FttCellTraverseFunc func = (FttCellTraverseFunc) datum[0];
-  gpointer data = datum[1];
-  FttTraverseType * order = datum[2];
-  FttTraverseFlags * flags = datum[3];
-
-  gfs_cell_traverse_mixed (box->root, *order, *flags, func, data);
+  gfs_cell_traverse_mixed (box->root, d->order, d->flags, d->func, d->data);
 }
 
 /**
@@ -1194,17 +1264,12 @@ void gfs_domain_traverse_mixed (GfsDomain * domain,
 				FttCellTraverseFunc func,
 				gpointer data)
 {
-  gpointer datum[4];
-
-  datum[0] = func;
-  datum[1] = data;
-  datum[2] = &order;
-  datum[3] = &flags;
+  TraverseData d = { func, data, order, flags, -1 };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (func != NULL);
 
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) traverse_mixed, datum);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) traverse_mixed, &d);
 }
 
 typedef struct {
@@ -1239,13 +1304,7 @@ void gfs_domain_traverse_cut (GfsDomain * domain,
 			      FttCellTraverseCutFunc func,
 			      gpointer data)
 {
-  TraverseCut p;
-
-  p.func = func;
-  p.data= data;
-  p.order = order;
-  p.flags = flags;
-  p.s = s;
+  TraverseCut p = { func, data, order, flags, s };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (s != NULL);
@@ -1280,13 +1339,7 @@ void gfs_domain_traverse_cut_2D (GfsDomain * domain,
 				 FttCellTraverseCutFunc func,
 				 gpointer data)
 {
-  TraverseCut p;
-
-  p.func = func;
-  p.data = data;
-  p.order = order;
-  p.flags = flags;
-  p.s = s;
+  TraverseCut p = { func, data, order, flags, s };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (s != NULL);

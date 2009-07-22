@@ -650,6 +650,25 @@ static void update_sv (FttCell * cell, MRSData * data)
   GFS_VALUE (cell, data->u) = GFS_VALUE (cell, data->v);
 }
 
+static void relax_loop (GfsDomain * domain, 
+			GfsVariable * dp, GfsVariable * u, 
+			RelaxParams * q, guint nrelax,
+			guint dimension)
+{
+  guint n;
+  gfs_domain_homogeneous_bc (domain,
+			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel, 
+			     dp, u);
+  for (n = 0; n < nrelax - 1; n++)
+    gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
+				     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
+				     (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q,
+				     dp, u);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
+			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
+			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q);
+}
+
 /**
  * gfs_poisson_cycle:
  * @domain: the domain on which to solve the Poisson equation.
@@ -677,7 +696,7 @@ void gfs_poisson_cycle (GfsDomain * domain,
 			GfsVariable * dia,
 			GfsVariable * res)
 {
-  guint n, l, nrelax, minlevel;
+  guint l, nrelax, minlevel;
   GfsVariable * dp;
   gpointer data[2];
   
@@ -700,32 +719,31 @@ void gfs_poisson_cycle (GfsDomain * domain,
 			    res);
 
   /* relax top level */
-  gfs_domain_cell_traverse (domain,
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, minlevel,
-			    (FttCellTraverseFunc) gfs_cell_reset, dp);
   nrelax = p->nrelax;
   for (l = minlevel; l < p->depth; l++)
     nrelax *= p->erelax;
-  for (n = 0; n < nrelax; n++) {
-    gfs_domain_homogeneous_bc (domain,
-			       FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-			       minlevel, dp, u);
-    gfs_relax (domain, p->dimension, minlevel, p->omega, dp, res, dia);
-  }
+
+  RelaxParams q;
+  q.u = dp->i;
+  q.rhs = res->i;
+  q.dia = dia->i;
+  q.maxlevel = minlevel;
+  q.omega = p->omega;
+  
+  gfs_domain_cell_traverse (domain,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q.maxlevel,
+			    (FttCellTraverseFunc) gfs_cell_reset, dp);
+  relax_loop (domain, dp, u, &q, nrelax, p->dimension);
   nrelax /= p->erelax;
 
   /* relax from top to bottom */
-  for (l = minlevel + 1; l <= p->depth; l++, nrelax /= p->erelax) {
+  for (q.maxlevel = minlevel + 1; q.maxlevel <= p->depth; q.maxlevel++, nrelax /= p->erelax) {
     /* get initial guess from coarser grid */ 
     gfs_domain_cell_traverse (domain,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_NON_LEAFS, l - 1,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_NON_LEAFS, 
+			      q.maxlevel - 1,
 			      (FttCellTraverseFunc) get_from_above, dp);
-    for (n = 0; n < nrelax; n++) {
-      gfs_domain_homogeneous_bc (domain, 
-				 FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-				 l, dp, u);
-      gfs_relax (domain, p->dimension, l, p->omega, dp, res, dia);
-    }
+    relax_loop (domain, dp, u, &q, nrelax, p->dimension);
   }
   /* correct on leaf cells */
   data[0] = u;
@@ -1036,6 +1054,24 @@ void gfs_diffusion_residual (GfsDomain * domain,
 			    (FttCellTraverseFunc) diffusion_residual, &p);
 }
 
+static void diffusion_relax_loop (GfsDomain * domain, 
+				  GfsVariable * dp, GfsVariable * u,
+				  RelaxParams * p, guint nrelax)
+{
+  guint n;
+  gfs_domain_homogeneous_bc (domain, 
+			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
+			     dp, u);
+  for (n = 0; n < nrelax - 1; n++)
+    gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
+				     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
+				     (FttCellTraverseFunc) diffusion_relax, p,
+				     dp, u);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
+			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
+			    (FttCellTraverseFunc) diffusion_relax, p);
+}
+
 /**
  * gfs_diffusion_cycle:
  * @domain: the domain on which to solve the diffusion equation.
@@ -1068,7 +1104,6 @@ void gfs_diffusion_cycle (GfsDomain * domain,
 			  GfsVariable * axi,
 			  GfsVariable * res)
 {
-  guint n;
   GfsVariable * dp;
   RelaxParams p;
   gpointer data[2];
@@ -1088,25 +1123,17 @@ void gfs_diffusion_cycle (GfsDomain * domain,
 			    (FttCellTraverseFunc) gfs_get_from_below_intensive, res);
 
   /* relax top level */
-  gfs_domain_cell_traverse (domain, 
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, levelmin,
-			    (FttCellTraverseFunc) gfs_cell_reset, dp);
   p.maxlevel = levelmin;
   p.u = dp->i;
   p.res = res->i;
   p.dia = rhoc->i;
   p.component = GFS_IS_AXI (domain) ? u->component : FTT_DIMENSION;
   p.axi = axi ? axi->i : FALSE;
-  for (n = 0; n < 10*nrelax; n++) {
-    gfs_domain_homogeneous_bc (domain, 
-			       FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-			       levelmin, dp, u);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
-			      FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, 
-			      levelmin,
-			      (FttCellTraverseFunc) diffusion_relax, &p);
-  }
 
+  gfs_domain_cell_traverse (domain, 
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, levelmin,
+			    (FttCellTraverseFunc) gfs_cell_reset, dp);
+  diffusion_relax_loop (domain, dp, u, &p, 10*nrelax);
   /* relax from top to bottom */
   for (p.maxlevel = levelmin + 1; p.maxlevel <= depth; p.maxlevel++) {
     /* get initial guess from coarser grid */ 
@@ -1114,14 +1141,7 @@ void gfs_diffusion_cycle (GfsDomain * domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_NON_LEAFS,
 			      p.maxlevel - 1,
 			      (FttCellTraverseFunc) get_from_above, dp);
-    for (n = 0; n < nrelax; n++) {
-      gfs_domain_homogeneous_bc (domain, 
-				 FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-				 p.maxlevel, dp, u);
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
-				FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p.maxlevel,
-				(FttCellTraverseFunc) diffusion_relax, &p);
-    }
+    diffusion_relax_loop (domain, dp, u, &p, nrelax);
   }
   /* correct on leaf cells */
   data[0] = u;

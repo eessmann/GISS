@@ -164,6 +164,14 @@ void         gfs_domain_homogeneous_bc        (GfsDomain * domain,
 					       gint max_depth,
 					       GfsVariable * ov,
 					       GfsVariable * v);
+void         gfs_traverse_and_homogeneous_bc  (GfsDomain * domain,
+					       FttTraverseType order,
+					       FttTraverseFlags flags,
+					       gint max_depth,
+					       FttCellTraverseFunc func,
+					       gpointer data,
+					       GfsVariable * ov,
+					       GfsVariable * v);
 void         gfs_domain_face_bc               (GfsDomain * domain,
 					       FttComponent c,
 					       GfsVariable * v);
