@@ -12,7 +12,9 @@ if test -z $1; then
 
 EOF
 else
-    if html2text < $1 | grep -v "^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\} " >> debian/changelog; then :
+    if html2text < $1 | \
+       grep -v "^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\} " | \
+       sed 's/^\([^ ]\{1,\}\)/  \1/g'>> debian/changelog; then :
     else
 	exit 1
     fi
