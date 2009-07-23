@@ -562,7 +562,7 @@ static void correct (FttCell * cell, gpointer * data)
 {
   GfsVariable * u = data[0];
   GfsVariable * dp = data[1];
-  GFS_VARIABLE (cell, u->i) += GFS_VARIABLE (cell, dp->i);
+  GFS_VALUE (cell, u) += GFS_VALUE (cell, dp);
 }
 
 static void get_from_above (FttCell * parent, GfsVariable * v)
@@ -748,9 +748,9 @@ void gfs_poisson_cycle (GfsDomain * domain,
   /* correct on leaf cells */
   data[0] = u;
   data[1] = dp;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) correct, data);
-  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, u);
+  gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		       (FttCellTraverseFunc) correct, data,
+		       u, u);
   /* compute new residual on leaf cells */
   gfs_residual (domain, p->dimension, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
 
@@ -1146,9 +1146,9 @@ void gfs_diffusion_cycle (GfsDomain * domain,
   /* correct on leaf cells */
   data[0] = u;
   data[1] = dp;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) correct, data);
-  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, u);
+  gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		       (FttCellTraverseFunc) correct, data,
+		       u, u);
   /* compute new residual on leaf cells */
   gfs_diffusion_residual (domain, u, rhs, rhoc, axi, res);
 

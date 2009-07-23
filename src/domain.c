@@ -163,6 +163,8 @@ static void domain_write (GtsObject * o, FILE * fp)
   if (domain->lambda.z != 1.)
     fprintf (fp, "lz = %g ", domain->lambda.z);
   fprintf (fp, "version = %d ", atoi (GFS_BUILD_VERSION));
+  if (!domain->overlap)
+    fputs ("overlap = 0 ", fp);
   if (domain->max_depth_write > -2) {
     GSList * i = domain->variables_io;
 
@@ -195,6 +197,7 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
     {GTS_STRING, "variables", TRUE},
     {GTS_INT,    "binary",    TRUE},
     {GTS_INT,    "version",   TRUE},
+    {GTS_INT,    "overlap",   TRUE},
     {GTS_NONE}
   };
   gchar * variables = NULL;
@@ -215,6 +218,7 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
   var[7].data = &variables;
   var[8].data = &domain->binary;
   var[9].data = &domain->version;
+  var[10].data = &domain->overlap;
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR) {
     g_free (variables);
@@ -578,6 +582,8 @@ static void domain_init (GfsDomain * domain)
   domain->cell_init_data = domain;
 
   domain->version = atoi (GFS_BUILD_VERSION);
+
+  domain->overlap = TRUE;
 }
 
 GfsDomainClass * gfs_domain_class (void)
@@ -839,8 +845,10 @@ typedef struct {
 
 static void update_mpi_cell (FttCell * cell, TraverseData * p)
 {
-  (* p->func) (cell, p->data);
-  cell->flags |= GFS_FLAG_USED;
+  if ((cell->flags & GFS_FLAG_USED) == 0) {
+    (* p->func) (cell, p->data);
+    cell->flags |= GFS_FLAG_USED;
+  }
 }
 
 static void update_other_cell (FttCell * cell, TraverseData * p)
@@ -868,14 +876,14 @@ static void update_mpi_boundaries (GfsBox * box, TraverseBcData * p)
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
 	ftt_face_traverse_boundary (b->root, b->d,
 				    FTT_PRE_ORDER, p->b.flags, p->b.max_depth,
-				    bc->homogeneous_bc, bc);
+				    bc->bc, bc);
 	bc->v = p->b.v;
 	gfs_boundary_send (b);
       }
     }
 }
 
-static void update_other_boundaries (GfsBox * box, BcData * p)
+static void update_other_homogeneous_boundaries (GfsBox * box, BcData * p)
 {
   FttDirection d;
   for (d = 0; d < FTT_NEIGHBORS; d++)
@@ -931,7 +939,7 @@ void gfs_traverse_and_homogeneous_bc (GfsDomain * domain,
 {
   g_return_if_fail (domain != NULL);
 
-  if (domain->pid < 0) {
+  if (domain->pid < 0 || !domain->overlap) {
     gfs_domain_cell_traverse (domain, order, flags, max_depth, func, data);
     gfs_domain_homogeneous_bc (domain, flags, max_depth, ov, v);
   }
@@ -946,6 +954,85 @@ void gfs_traverse_and_homogeneous_bc (GfsDomain * domain,
     gfs_domain_cell_traverse (domain, order, flags, max_depth, 
 			      (FttCellTraverseFunc) update_other_cell, &d);
     /* Apply homogeneous BC on other boundaries */
+    gts_container_foreach (GTS_CONTAINER (domain), 
+			   (GtsFunc) update_other_homogeneous_boundaries, &d.b);
+    /* Receive and synchronize */
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, &d.b);
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_synchronize, &d.b.c);
+  }
+}
+
+static void update_other_boundaries (GfsBox * box, BcData * p)
+{
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d]) &&
+	!GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, p->v);
+
+      if (bc) {
+	b->v = p->v1;
+	bc->v = p->v1;
+	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+	ftt_face_traverse_boundary (b->root, b->d,
+				    FTT_PRE_ORDER, p->flags, p->max_depth,
+				    bc->bc, bc);
+	bc->v = p->v;
+	gfs_boundary_send (b);
+      }
+    }
+}
+
+/**
+ * gfs_traverse_and_bc:
+ * @domain: a #GfsDomain.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @max_depth: the maximum depth of the traversal. Cells below this
+ * depth will not be traversed. If @max_depth is -1 all cells in the
+ * tree are visited.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ * @v: a #GfsVariable.
+ * @v1: another #GfsVariable.
+ *
+ * For serial runs, this is identical to calling:
+ *
+ * gfs_domain_cell_traverse (domain, order, flags, max_depth, func, data);
+ * gfs_domain_copy_bc (domain, flags, max_depth, v, v1);
+ *
+ * For parallel runs, the communications needed to apply the boundary
+ * conditions are overlapped with the calls to @func in the bulk of
+ * the domain.
+ */
+void gfs_traverse_and_bc (GfsDomain * domain,
+			  FttTraverseType order,
+			  FttTraverseFlags flags,
+			  gint max_depth,
+			  FttCellTraverseFunc func,
+			  gpointer data,
+			  GfsVariable * v,
+			  GfsVariable * v1)
+{
+  g_return_if_fail (domain != NULL);
+
+  if (domain->pid < 0 || !domain->overlap) {
+    gfs_domain_cell_traverse (domain, order, flags, max_depth, func, data);
+    gfs_domain_copy_bc (domain, flags, max_depth, v, v1);
+  }
+  else {
+    TraverseBcData d = {
+      { func, data, order, flags, max_depth },
+      { flags, max_depth, v, v1, FTT_XYZ }
+    };
+    /* Update and send MPI boundary values */
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) update_mpi_boundaries, &d);
+    /* Update bulk of domain and other boundaries */
+    gfs_domain_cell_traverse (domain, order, flags, max_depth, 
+    			      (FttCellTraverseFunc) update_other_cell, &d);
+    /* Apply BC on other boundaries */
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) update_other_boundaries, &d.b);
     /* Receive and synchronize */
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, &d.b);

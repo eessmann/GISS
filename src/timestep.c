@@ -338,12 +338,13 @@ static void mac_projection (GfsDomain * domain,
   while (par->niter < par->nitermin ||
 	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
 #if 0
-    fprintf (stderr, "%d bias: %g first: %g second: %g infty: %g\n",
-	     par->niter, 
-	     par->residual.bias, 
-	     par->residual.first, 
-	     par->residual.second, 
-	     par->residual.infty);
+    if (domain->pid <= 0)
+      fprintf (stderr, "%d bias: %g first: %g second: %g infty: %g\n",
+	       par->niter, 
+	       par->residual.bias, 
+	       par->residual.first, 
+	       par->residual.second, 
+	       par->residual.infty);
 #endif
     gfs_poisson_cycle (domain, par, p, div, dia, res1);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);

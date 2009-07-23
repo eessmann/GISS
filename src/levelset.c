@@ -157,15 +157,16 @@ static void variable_distance_event_half (GfsEvent * event, GfsSimulation * sim)
 
     gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) v->v->fine_coarse, v->v);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) distance_for_stencil, data);
+    gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			 (FttCellTraverseFunc) distance_for_stencil, data,
+			 GFS_VARIABLE1 (event),GFS_VARIABLE1 (event));
     gts_object_destroy (data[1]);
     gts_object_destroy (data[2]);
   }
   else
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) distance, v);
-  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+    gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			 (FttCellTraverseFunc) distance, v,
+			 GFS_VARIABLE1 (event),GFS_VARIABLE1 (event));
 
   gfs_domain_timer_stop (domain, "distance");
 }

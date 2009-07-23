@@ -624,9 +624,9 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
 
     while (i) {
       VarFunc * vf = i->data;
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) init_vf, vf);
-      gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v);
+      gfs_traverse_and_bc (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			   (FttCellTraverseFunc) init_vf, vf,
+			   vf->v, vf->v);
       i = i->next;
     }
     return TRUE;
@@ -1983,8 +1983,8 @@ static void filter (FttCell * cell, GfsEventFilter * f)
 static void filtered (FttCell * cell, GfsEventFilter * f)
 {
   gdouble dt = gfs_object_simulation (f)->advection_params.dt/f->scale;
-  GFS_VARIABLE (cell, f->v->i) = ((1. - dt)*GFS_VARIABLE (cell, f->v->i) +
-				  dt*GFS_VARIABLE (cell, f->tmp->i));
+  GFS_VALUE (cell, f->v) = ((1. - dt)*GFS_VALUE (cell, f->v) +
+			    dt*GFS_VALUE (cell, f->tmp));
 }
 
 static gboolean gfs_event_filter_event (GfsEvent * event, GfsSimulation * sim)
@@ -1996,10 +1996,10 @@ static gboolean gfs_event_filter_event (GfsEvent * event, GfsSimulation * sim)
     f->tmp = gfs_temporary_variable (GFS_DOMAIN (sim));
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) filter, f);
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) filtered, f);
+    gfs_traverse_and_bc (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			 (FttCellTraverseFunc) filtered, f,
+			 f->v, f->v);
     gts_object_destroy (GTS_OBJECT (f->tmp));
-    gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, f->v);
     return TRUE;
   }
   return FALSE;

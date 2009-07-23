@@ -71,6 +71,8 @@ struct _GfsDomain {
   gint version;
 
   gpointer array;
+
+  gboolean overlap; /* whether to overlap MPI communications with computation */
 };
 
 struct _GfsDomainClass {
@@ -172,6 +174,14 @@ void         gfs_traverse_and_homogeneous_bc  (GfsDomain * domain,
 					       gpointer data,
 					       GfsVariable * ov,
 					       GfsVariable * v);
+void         gfs_traverse_and_bc              (GfsDomain * domain,
+					       FttTraverseType order,
+					       FttTraverseFlags flags,
+					       gint max_depth,
+					       FttCellTraverseFunc func,
+					       gpointer data,
+					       GfsVariable * v,
+					       GfsVariable * v1);
 void         gfs_domain_face_bc               (GfsDomain * domain,
 					       FttComponent c,
 					       GfsVariable * v);

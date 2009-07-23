@@ -948,8 +948,9 @@ static void source_viscosity_transverse_flux (GfsSourceGeneric * s,
   p.sv = sv;
   p.dt = dt;
   p.tv = gfs_temporary_variable (domain);
-  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) compute_transverse, &p);
-  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.tv);
+  gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		       (FttCellTraverseFunc) compute_transverse, &p,
+		       p.tv, p.tv);
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_viscosity_transverse_flux, &p);
   gts_object_destroy (GTS_OBJECT (p.tv));
 }
@@ -1163,8 +1164,9 @@ static void source_viscosity_explicit_flux (GfsSourceGeneric * s,
   p.sv = sv;
   p.dt = dt;
   p.tv = gfs_temporary_variable (domain);
-  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) compute_transverse, &p);
-  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.tv);
+  gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		       (FttCellTraverseFunc) compute_transverse, &p,
+		       p.tv, p.tv);
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_viscosity_explicit_flux, &p);
   if (GFS_IS_AXI (domain) && v->component == FTT_Y)
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_axisymmetric_term, &p);
