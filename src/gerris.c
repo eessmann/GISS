@@ -64,7 +64,7 @@ int main (int argc, char * argv[])
   int c = 0;
   guint split = 0;
   guint npart = 0;
-  gboolean profile = FALSE, macros = FALSE, one_box_per_pe = TRUE;
+  gboolean profile = FALSE, macros = FALSE, one_box_per_pe = TRUE, bubble = FALSE, verbose = FALSE;
   gchar * m4_options = g_strdup ("-P");
   GPtrArray * events = g_ptr_array_new ();
   gint maxlevel = -2;
@@ -83,21 +83,27 @@ int main (int argc, char * argv[])
       {"macros", no_argument, NULL, 'm'},
       {"data", no_argument, NULL, 'd'},
       {"event", required_argument, NULL, 'e'},
+      {"bubble", required_argument, NULL, 'b'},
+      {"verbose", no_argument, NULL, 'v'},
       {"help", no_argument, NULL, 'h'},
       {"version", no_argument, NULL, 'V'},
       { NULL }
     };
     int option_index = 0;
-    switch ((c = getopt_long (argc, argv, "hVs:ip:PD:mde:",
+    switch ((c = getopt_long (argc, argv, "hVs:ip:PD:mde:b:v",
 			      long_options, &option_index))) {
 #else /* not HAVE_GETOPT_LONG */
-    switch ((c = getopt (argc, argv, "hVs:ip:PD:mde:"))) {
+    switch ((c = getopt (argc, argv, "hVs:ip:PD:mde:b:v"))) {
 #endif /* not HAVE_GETOPT_LONG */
     case 'P': /* profile */
       profile = TRUE;
       break;
     case 'p': /* partition */
       npart = atoi (optarg);
+      break;
+    case 'b': /* "bubble" partition */
+      npart = atoi (optarg);
+      bubble = TRUE;
       break;
     case 's': /* split */
       split = atoi (optarg);
@@ -120,6 +126,9 @@ int main (int argc, char * argv[])
     case 'e': /* event */
       g_ptr_array_add (events, g_strdup (optarg));
       break;
+    case 'v': /* verbose */
+      verbose = TRUE;
+      break;
     case 'h': /* help */
       gfs_error (0,
              "Usage: gerris [OPTION] FILE\n"
@@ -129,6 +138,8 @@ int main (int argc, char * argv[])
              "                       the corresponding simulation\n"
 	     "  -i     --pid         keep box pids when splitting\n"
              "  -p N   --partition=N partition the domain in 2^N subdomains and returns\n" 
+             "                       the corresponding simulation\n"
+             "  -b N   --bubble=N    partition the domain in N subdomains and returns\n" 
              "                       the corresponding simulation\n"
 	     "  -d     --data        when splitting or partitioning, output all data\n"
 	     "  -P     --profile     profiles calls to boundary conditions\n"
@@ -140,6 +151,7 @@ int main (int argc, char * argv[])
              "         --define=NAME=VALUE\n"
 #endif /* have m4 */
 	     "  -eEV   --event=EV    Evaluates GfsEvent EV and returns the simulation\n"
+	     "  -v     --verbose     Display more messages\n"
 	     "  -h     --help        display this help and exit\n"
 	     "  -V     --version     output version information and exit\n"
 	     "\n"
@@ -237,21 +249,30 @@ int main (int argc, char * argv[])
     guint nmin = 1000;
     guint mmax = 10000;
     guint ntry = 10000;
+    guint np = bubble ? npart : pow (2., npart);
     gfloat imbalance = 0.0;
     GSList * partition, * i;
     gint pid = 0;
 
-    gts_graph_print_stats (GTS_GRAPH (simulation), stderr);
-    if (gts_container_size (GTS_CONTAINER (simulation)) < pow (2., npart)) {
+    if (verbose)
+      gts_graph_print_stats (GTS_GRAPH (simulation), stderr);
+    if (gts_container_size (GTS_CONTAINER (simulation)) < np) {
       fprintf (stderr,
-	       "gerris: the number of boxes in the domain to partition should be >= 2^N\n"
+	       "gerris: the number of boxes in the domain to partition should be >= %d\n"
 	       "Use option '-s' to split the domain first\n"
-	       "Try `gerris --help' for more information.\n");
+	       "Try `gerris --help' for more information.\n",
+	       np);
       return 1;
     }
-    partition = gts_graph_recursive_bisection (GTS_WGRAPH (simulation),
-					       npart, 
-					       ntry, mmax, nmin, imbalance);
+    if (bubble)
+      partition = gts_graph_bubble_partition (GTS_GRAPH (simulation), npart, 100, 
+					      verbose ? 
+					      (GtsFunc) gts_graph_partition_print_stats : NULL, 
+					      stderr);
+    else
+      partition = gts_graph_recursive_bisection (GTS_WGRAPH (simulation),
+						 npart, 
+						 ntry, mmax, nmin, imbalance);
 
     i = partition;
     while (i) {
@@ -260,7 +281,8 @@ int main (int argc, char * argv[])
       pid++;
       i = i->next;
     }
-    gts_graph_partition_print_stats (partition, stderr);
+    if (verbose)
+      gts_graph_partition_print_stats (partition, stderr);
     gts_graph_partition_destroy (partition);
     gfs_simulation_write (simulation, maxlevel, stdout);
     return 0;
