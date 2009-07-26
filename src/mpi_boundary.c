@@ -114,7 +114,6 @@ static void receive (GfsBoundary * bb,
     return;
 
 #ifdef PROFILE_MPI
-  GfsDomain * domain = gfs_box_domain (bb->box);
   gdouble start, end;
 
   start = MPI_Wtime ();
@@ -287,6 +286,8 @@ GfsBoundaryMpi * gfs_boundary_mpi_new (GfsBoundaryClass * klass,
 				       gint id)
 {
   GfsBoundaryMpi * boundary;
+  boundary = GFS_BOUNDARY_MPI (gfs_boundary_periodic_new (klass, box, d, NULL));
+  boundary->process = process;
 #ifdef HAVE_MPI
   int comm_size;
   MPI_Comm_size (MPI_COMM_WORLD, &comm_size);
@@ -296,8 +297,6 @@ GfsBoundaryMpi * gfs_boundary_mpi_new (GfsBoundaryClass * klass,
     g_warning ("GfsBoundaryMpi id (%d) is larger than the maximum MPI tag value\n"
 	       "allowed on this system (%d)", id, tag_shift);
 #endif /* HAVE_MPI */
-  boundary = GFS_BOUNDARY_MPI (gfs_boundary_periodic_new (klass, box, d, NULL));
-  boundary->process = process;
   boundary->id = id;
 
   return boundary;
