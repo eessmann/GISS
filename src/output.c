@@ -989,6 +989,37 @@ GfsOutputClass * gfs_output_balance_class (void)
 
 /* GfsOutputSolidForce: Object */
 
+static void gfs_output_solid_force_destroy (GtsObject * object)
+{
+  if (GFS_OUTPUT_SOLID_FORCE (object)->weight)
+    gts_object_destroy (GTS_OBJECT (GFS_OUTPUT_SOLID_FORCE (object)->weight));
+
+  (* GTS_OBJECT_CLASS (gfs_output_solid_force_class ())->parent_class->destroy) (object);
+}
+
+static void gfs_output_solid_force_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsOutputSolidForce * l = GFS_OUTPUT_SOLID_FORCE (*o);
+
+  (* GTS_OBJECT_CLASS (gfs_output_solid_force_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != '\n') {
+    if (!l->weight)
+      l->weight = gfs_function_new (gfs_function_class (), 0.);
+    gfs_function_read (l->weight, gfs_object_simulation (l), fp);
+  }
+}
+
+static void gfs_output_solid_force_write (GtsObject * o, FILE * fp)
+{
+  GfsOutputSolidForce * l = GFS_OUTPUT_SOLID_FORCE (o);
+  (* GTS_OBJECT_CLASS (gfs_output_solid_force_class ())->parent_class->write) (o, fp);
+  if (l->weight)
+    gfs_function_write (l->weight, fp);
+}
+
 static gboolean gfs_output_solid_force_event (GfsEvent * event, 
 					      GfsSimulation * sim)
 {
@@ -1004,7 +1035,7 @@ static gboolean gfs_output_solid_force_event (GfsEvent * event,
       fputs ("# 1: T (2,3,4): Pressure force (5,6,7): Viscous force "
 	     "(8,9,10): Pressure moment (11,12,13): Viscous moment\n", fp);
     
-    gfs_domain_solid_force (domain, &pf, &vf, &pm, &vm);
+    gfs_domain_solid_force (domain, &pf, &vf, &pm, &vm, GFS_OUTPUT_SOLID_FORCE (event)->weight);
     fprintf (fp, "%g %g %g %g %g %g %g %g %g %g %g %g %g\n",
 	     sim->time.t,
 	     pf.x*Ln, pf.y*Ln, pf.z*Ln,
@@ -1018,6 +1049,9 @@ static gboolean gfs_output_solid_force_event (GfsEvent * event,
 
 static void gfs_output_solid_force_class_init (GfsOutputClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->read = gfs_output_solid_force_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_output_solid_force_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_output_solid_force_destroy;
   GFS_EVENT_CLASS (klass)->event = gfs_output_solid_force_event;
 }
 
@@ -1028,7 +1062,7 @@ GfsOutputClass * gfs_output_solid_force_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo gfs_output_solid_force_info = {
       "GfsOutputSolidForce",
-      sizeof (GfsOutput),
+      sizeof (GfsOutputSolidForce),
       sizeof (GfsOutputClass),
       (GtsObjectClassInitFunc) gfs_output_solid_force_class_init,
       (GtsObjectInitFunc) NULL,

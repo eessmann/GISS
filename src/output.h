@@ -120,6 +120,20 @@ GfsOutputClass * gfs_output_balance_class  (void);
 
 /* GfsOutputSolidForce: Header */
 
+typedef struct _GfsOutputSolidForce         GfsOutputSolidForce;
+
+struct _GfsOutputSolidForce {
+  /*< private >*/
+  GfsOutput parent;
+
+  /*< public >*/
+  GfsFunction * weight;
+};
+
+#define GFS_OUTPUT_SOLID_FORCE(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsOutputSolidForce,\
+					         gfs_output_solid_force_class ())
+
 GfsOutputClass * gfs_output_solid_force_class (void);
 
 /* GfsOutputLocation: Header */

@@ -276,7 +276,8 @@ void         gfs_domain_solid_force           (GfsDomain * domain,
 					       FttVector * pf,
 					       FttVector * vf,
 					       FttVector * pm,
-					       FttVector * vm);
+					       FttVector * vm,
+					       GfsFunction * weight);
 guint        gfs_domain_tag_droplets          (GfsDomain * domain,
 					       GfsVariable * c,
 					       GfsVariable * tag);
