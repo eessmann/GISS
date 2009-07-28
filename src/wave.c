@@ -23,13 +23,10 @@
 
 /* GfsWave: Object */
 
-#define F0 0.04
-#define GAMMA 1.1
-
 static double frequency (int ik)
 {
-  double gamma = GAMMA;
-  double f0 = F0;
+  double gamma = GFS_WAVE_GAMMA;
+  double f0 = GFS_WAVE_F0;
   return f0*pow(gamma, ik);
 }
       
@@ -51,14 +48,14 @@ static gdouble cell_E (FttCell * cell, FttCellFace * face, GfsDomain * domain)
   GfsWave * wave = GFS_WAVE (domain);
   GfsVariable *** F = wave->F;
   guint ik, ith;
-  gdouble E = 0., sigma = 2.*M_PI*F0, sgamma = (GAMMA - 1./GAMMA)/2.;
+  gdouble E = 0., sigma = 2.*M_PI*GFS_WAVE_F0, sgamma = (GFS_WAVE_GAMMA - 1./GFS_WAVE_GAMMA)/2.;
   for (ik = 0; ik < wave->nk; ik++) {
     gdouble df = sigma*sgamma;
     gdouble dE = 0.;
     for (ith = 0; ith < wave->ntheta; ith++)
       dE += GFS_VALUE (cell, F[ik][ith]);
     E += dE*df;
-    sigma *= GAMMA;
+    sigma *= GFS_WAVE_GAMMA;
   }
   return E*2.*M_PI/wave->ntheta;
 }

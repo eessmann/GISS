@@ -25,13 +25,9 @@
 
 #define DEBUG 0
 
-/* fixme: needs to be identical to the same function in wave.c */
-#define GAMMA 1.1
-#define F0 0.04
-
 static double frequency (int ik)
 {
-  return F0*pow(GAMMA, ik);
+  return GFS_WAVE_F0*pow(GFS_WAVE_GAMMA, ik);
 }
 
 #if DEBUG      
@@ -53,19 +49,25 @@ typedef struct {
 static void energy_to_action (FttCell * cell, SourceParams * p)
 {
   guint i, j;
+  REAL * A = p->A;
   for (i = 0; i < p->wave->nk; i++)
-    for (j = 0; j < p->wave->ntheta; j++)
-      p->A[j + i*p->wave->ntheta] =
-	GFS_VALUE (cell, p->wave->F[i][j])*p->CG[i]/(2.*M_PI*frequency (i));
+    for (j = 0; j < p->wave->ntheta; j++) {
+      *A = GFS_VALUE (cell, p->wave->F[i][j])*p->CG[i]/(2.*M_PI*frequency (i));
+      if (*A < 0.)
+        *A = 0.;
+      A++;
+    }
 }
 
 static void action_to_energy (FttCell * cell, SourceParams * p)
 {
   guint i, j;
+  REAL * A = p->A;
   for (i = 0; i < p->wave->nk; i++)
-    for (j = 0; j < p->wave->ntheta; j++)
-      GFS_VALUE (cell, p->wave->F[i][j]) = 
-	p->A[j + i*p->wave->ntheta]*(2.*M_PI*frequency (i))/p->CG[i];
+    for (j = 0; j < p->wave->ntheta; j++) {
+      GFS_VALUE (cell, p->wave->F[i][j]) = *A*(2.*M_PI*frequency (i))/p->CG[i];
+      A++;
+    }
 }
 
 static void source (FttCell * cell, SourceParams * p)
@@ -150,7 +152,7 @@ static void initialize (GfsWave * wave)
 	     "   F F F F F T\n"
 	     "    900. 950. 900. 300.\n"
 	     "END OF NAMELISTS\n",
-	     GAMMA, F0, wave->nk, wave->ntheta);
+	     GFS_WAVE_GAMMA, GFS_WAVE_F0, wave->nk, wave->ntheta);
 
     /* Dummy wavewatch parameters */
     static gchar constant_parameters[] =
@@ -203,6 +205,8 @@ static void wavewatch_source (GfsWave * wave)
   GfsDomain * domain = GFS_DOMAIN (wave);
   SourceParams p;
 
+  gfs_domain_timer_start (domain, "wavewatch_source");
+
   initialize (wave);
 
   p.wave = wave;
@@ -228,6 +232,8 @@ static void wavewatch_source (GfsWave * wave)
   g_free (p.CG);
   g_free (p.WN);
   g_free (p.ALPHA);
+
+  gfs_domain_timer_stop (domain, "wavewatch_source");
 }
 
 /* Initialize module */

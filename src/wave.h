@@ -28,6 +28,9 @@ extern "C" {
 
 /* GfsWave: Header */
 
+#define GFS_WAVE_GAMMA 1.1
+#define GFS_WAVE_F0 0.04
+
 typedef struct _GfsWave    GfsWave;
 
 struct _GfsWave {
