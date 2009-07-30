@@ -137,8 +137,6 @@ struct _GfsAdaptError {
   /*< private >*/
   GfsAdaptGradient parent;
   GfsVariable * dv;
-  FttComponent i;
-  GfsNorm norm;
 
   /*< public >*/
   GfsVariable * v;

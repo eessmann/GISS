@@ -542,7 +542,8 @@ GfsEventClass * gfs_adapt_gradient_class (void)
 
 static void gfs_adapt_error_destroy (GtsObject * o)
 {
-  gts_object_destroy (GTS_OBJECT (GFS_ADAPT_ERROR (o)->v));
+  if (GFS_ADAPT_ERROR (o)->v)
+    gts_object_destroy (GTS_OBJECT (GFS_ADAPT_ERROR (o)->v));
 
   (* GTS_OBJECT_CLASS (gfs_adapt_error_class ())->parent_class->destroy) (o);
 }
@@ -554,29 +555,73 @@ static void gfs_adapt_error_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GFS_ADAPT_ERROR (*o)->v = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
+  GFS_ADAPT_ERROR (*o)->v->coarse_fine = none;
+  GFS_ADAPT_ERROR (*o)->v->fine_coarse = none;
+}
+
+static gdouble center_regular_gradient (FttCell * cell, FttComponent c, GfsVariable * v)
+{
+  FttCell * n1 = ftt_cell_neighbor (cell, 2*c);
+  guint level = ftt_cell_level (cell);
+  if (n1) {
+    if (ftt_cell_level (n1) < level)
+      return center_regular_gradient (ftt_cell_parent (cell), c, v)/2.;
+    FttCell * n2 = ftt_cell_neighbor (cell, 2*c + 1);
+    if (n2) {
+      if (ftt_cell_level (n2) < level)
+	return center_regular_gradient (ftt_cell_parent (cell), c, v)/2.;
+      /* two neighbors: second-order differencing (parabola) */
+      return (GFS_VALUE (n1, v) - GFS_VALUE (n2, v))/2.;
+    }
+    else
+      /* one neighbor: first-order differencing */
+      return GFS_VALUE (n1, v) - GFS_VALUE (cell, v);
+  }
+  else {
+    FttCell * n2 = ftt_cell_neighbor (cell, 2*c + 1);
+    if (n2) {
+      if (ftt_cell_level (n2) < level)
+	return center_regular_gradient (ftt_cell_parent (cell), c, v)/2.;
+      /* one neighbor: first-order differencing */
+      return GFS_VALUE (cell, v) - GFS_VALUE (n2, v);
+    }
+  }
+  /* no neighbors */
+  return 0.;
+}
+
+static gdouble center_regular_2nd_derivative (FttCell * cell, FttComponent c, GfsVariable * v)
+{
+  FttCell * n1 = ftt_cell_neighbor (cell, 2*c);
+  FttCell * n2 = ftt_cell_neighbor (cell, 2*c + 1);
+  if (n1 && n2) {
+    guint level = ftt_cell_level (cell);
+    if (ftt_cell_level (n1) < level || ftt_cell_level (n2) < level)
+      return center_regular_2nd_derivative (ftt_cell_parent (cell), c, v)/4.;
+    return GFS_VALUE (n1, v) - 2.*GFS_VALUE (cell, v) + GFS_VALUE (n2, v);
+  }
+  /* one or no neighbors */
+  return 0.;
 }
 
 static void compute_gradient (FttCell * cell, GfsAdaptError * a)
 {
-  GFS_VALUE (cell, a->dv) = gfs_center_gradient (cell, a->i, GFS_ADAPT_GRADIENT (a)->v->i);
+  GFS_VALUE (cell, a->dv) = center_regular_gradient (cell, a->dv->component, 
+						     GFS_ADAPT_GRADIENT (a)->v);
 }
 
-static void add_hessian (FttCell * cell, GfsAdaptError * a)
+static void add_hessian_norm (FttCell * cell, GfsAdaptError * a)
 {
+  /* off-diagonal */
   FttComponent j;
-  for (j = 0; j < a->i; j++) {
-    gdouble ddv = gfs_center_gradient (cell, j, a->dv->i);
-    GFS_VALUE (cell, a->v) += ddv*ddv;
-  }
-  gdouble ddv = gfs_center_gradient (cell, a->i, a->dv->i);
-  GFS_VALUE (cell, a->v) += ddv*ddv;
-}
-
-static void normalize (FttCell * cell, GfsAdaptError * a)
-{
-  gdouble h = ftt_cell_size (cell);
-  GFS_VALUE (cell, a->v) = sqrt (GFS_VALUE (cell, a->v)/(FTT_DIMENSION*FTT_DIMENSION))
-    /(h*h*a->norm.infty);
+  for (j = 0; j < FTT_DIMENSION; j++)
+    if (j != a->dv->component) {
+      gdouble g = center_regular_gradient (cell, j, a->dv);
+      GFS_VALUE (cell, a->v) += g*g;
+    }
+  /* diagonal */
+  gdouble g = center_regular_2nd_derivative (cell, a->dv->component, GFS_ADAPT_GRADIENT (a)->v);
+  GFS_VALUE (cell, a->v) += g*g;
 }
 
 static gboolean gfs_adapt_error_event (GfsEvent * event, 
@@ -587,19 +632,20 @@ static gboolean gfs_adapt_error_event (GfsEvent * event,
     GfsAdaptError * a = GFS_ADAPT_ERROR (event);
     GfsDomain * domain = GFS_DOMAIN (sim);
 
-    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) gfs_cell_reset, a->v);
-    a->norm = gfs_domain_norm_variable (domain, GFS_ADAPT_GRADIENT (event)->v, NULL,
-					FTT_TRAVERSE_LEAFS, -1);
-    if (a->norm.infty > 0.) {
-      a->dv = gfs_temporary_variable (domain);
-      for (a->i = 0; a->i < FTT_DIMENSION; a->i++) {
-	gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) compute_gradient, a);
-	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, a->dv);
-	gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_hessian, a);
-      }
-      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) normalize, a);
-      gts_object_destroy (GTS_OBJECT (a->dv));
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, a->v);
+    a->dv = gfs_temporary_variable (domain);
+    for (a->dv->component = 0; a->dv->component < FTT_DIMENSION; a->dv->component++) {
+      gfs_domain_cell_traverse (domain,
+				FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+				(FttCellTraverseFunc) compute_gradient, a);
+      gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, a->dv);
+      gfs_domain_cell_traverse (domain,
+				FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+				(FttCellTraverseFunc) add_hessian_norm, a);
     }
+    gts_object_destroy (GTS_OBJECT (a->dv));
     return TRUE;
   }
   return FALSE;
@@ -614,13 +660,13 @@ static void gfs_adapt_error_class_init (GfsEventClass * klass)
 
 static gdouble cost_error (FttCell * cell, GfsAdaptError * a)
 {
-  gdouble h = ftt_cell_size (cell);
-  return GFS_VALUE (cell, a->v)*h*h;
+  return sqrt (GFS_VALUE (cell, a->v))/8.*GFS_ADAPT_GRADIENT (a)->dimension;
 }
 
-static void gfs_adapt_error_init (GfsAdaptError * object)
+static void gfs_adapt_error_init (GfsAdapt * object)
 {
-  GFS_ADAPT (object)->cost = (GtsKeyFunc) cost_error;
+  object->cost = (GtsKeyFunc) cost_error;
+  object->cfactor = 2.;
 }
 
 GfsEventClass * gfs_adapt_error_class (void)
