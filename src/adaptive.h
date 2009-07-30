@@ -150,13 +150,6 @@ struct _GfsAdaptError {
 
 GfsEventClass * gfs_adapt_error_class  (void);
 
-/* GfsAdaptCurvature: Header */
-
-#define GFS_IS_ADAPT_CURVATURE(obj)         (gts_object_is_from_class (obj,\
-						 gfs_adapt_curvature_class ()))
-
-GfsEventClass * gfs_adapt_curvature_class  (void);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -690,49 +690,6 @@ GfsEventClass * gfs_adapt_error_class (void)
   return klass;
 }
 
-/* GfsAdaptCurvature: Object */
-
-static gdouble curvature_cost (FttCell * cell, GfsAdaptGradient * a)
-{
-  FttComponent c;
-  gdouble sum2 = 0;
-  gdouble * lambda;
-
-  lambda = (gdouble *) &GFS_DOMAIN (gfs_object_simulation (a))->lambda;
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    gdouble g = lambda[c]*lambda[c]*gfs_center_curvature (cell, c, a->v->i);
-
-    sum2 += g*g;
-  }
-  return sqrt (sum2);
-}
-
-static void gfs_adapt_curvature_init (GfsAdapt * object)
-{
-  object->cost = (GtsKeyFunc) curvature_cost;
-}
-
-GfsEventClass * gfs_adapt_curvature_class (void)
-{
-  static GfsEventClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_adapt_curvature_info = {
-      "GfsAdaptCurvature",
-      sizeof (GfsAdaptGradient),
-      sizeof (GfsEventClass),
-      (GtsObjectClassInitFunc) NULL,
-      (GtsObjectInitFunc) gfs_adapt_curvature_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_adapt_gradient_class ()),
-				  &gfs_adapt_curvature_info);
-  }
-
-  return klass;
-}
-
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {
   if (ftt_refine_corner (cell))
