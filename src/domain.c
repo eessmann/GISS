@@ -3061,19 +3061,22 @@ GfsVariable * gfs_domain_get_or_add_variable (GfsDomain * domain,
 
 static void add_pressure_force (FttCell * cell, gpointer * data)
 {
-  gdouble * f = data[0];
-  gdouble * m = data[1];
-  gdouble * r = &GFS_STATE (cell)->solid->ca.x;
-  GfsVariable * p = data[2];
   gdouble weight = data[3] ? gfs_function_value (data[3], cell) : 1.;
-  FttVector ff, mm;
-  FttComponent c;
 
-  gfs_pressure_force (cell, p, &ff);
-  gts_vector_cross (&mm.x, r, &ff.x);
-  for (c = 0; c < 3; c++) {
-    f[c] += weight*(&ff.x)[c];
-    m[c] += weight*(&mm.x)[c];
+  if (weight != 0.) {
+    gdouble * f = data[0];
+    gdouble * m = data[1];
+    gdouble * r = &GFS_STATE (cell)->solid->ca.x;
+    GfsVariable * p = data[2];
+    FttVector ff, mm;
+    FttComponent c;
+    
+    gfs_pressure_force (cell, p, &ff);
+    gts_vector_cross (&mm.x, r, &ff.x);
+    for (c = 0; c < 3; c++) {
+      f[c] += weight*(&ff.x)[c];
+      m[c] += weight*(&mm.x)[c];
+    }
   }
 }
 
@@ -3095,64 +3098,67 @@ static GfsSourceDiffusion * source_diffusion (GfsVariable * v)
 
 static void add_viscous_force (FttCell * cell, gpointer * data)
 {
-  gdouble * f = data[0];
-  gdouble * m = data[1];
-  GfsVariable * v = data[2];
-  GfsSourceDiffusion * d = data[3];
   gdouble weight = data[4] ? gfs_function_value (data[4], cell) : 1.;
-  gdouble D;
-  GfsSolidVector * s = GFS_STATE (cell)->solid;
-  gdouble * r = &s->ca.x;
-  FttVector ff, mm, n, g;
-  FttComponent c;
 
-  g_assert (((cell)->flags & GFS_FLAG_DIRICHLET) != 0);
-  gfs_cell_dirichlet_gradient (cell, v->i, -1, s->fv, &g);
-
-  D = - gfs_source_diffusion_cell (d, cell);
-  n.x = s->s[1] - s->s[0];
-  n.y = s->s[3] - s->s[2];
+  if (weight != 0.) {
+    gdouble * f = data[0];
+    gdouble * m = data[1];
+    GfsVariable * v = data[2];
+    GfsSourceDiffusion * d = data[3];
+    gdouble D;
+    GfsSolidVector * s = GFS_STATE (cell)->solid;
+    gdouble * r = &s->ca.x;
+    FttVector ff, mm, n, g;
+    FttComponent c;
+    
+    g_assert (((cell)->flags & GFS_FLAG_DIRICHLET) != 0);
+    gfs_cell_dirichlet_gradient (cell, v->i, -1, s->fv, &g);
+    
+    D = - gfs_source_diffusion_cell (d, cell);
+    n.x = s->s[1] - s->s[0];
+    n.y = s->s[3] - s->s[2];
 #if FTT_2D
-  ff.z = 0.;
-  switch (v->component) {
-  case FTT_X:
-    ff.x = D*(2.*g.x*n.x + g.y*n.y);
-    ff.y = D*g.y*n.x;
-    break;
-  case FTT_Y:
-    ff.x = D*g.x*n.y;
-    ff.y = D*(2.*g.y*n.y + g.x*n.x);
-    break;
-  default:
-    g_assert_not_reached ();
-  }
+    ff.z = 0.;
+    switch (v->component) {
+    case FTT_X:
+      ff.x = D*(2.*g.x*n.x + g.y*n.y);
+      ff.y = D*g.y*n.x;
+      break;
+    case FTT_Y:
+      ff.x = D*g.x*n.y;
+      ff.y = D*(2.*g.y*n.y + g.x*n.x);
+      break;
+    default:
+      g_assert_not_reached ();
+    }
 #else /* 3D */
-  n.z = s->s[5] - s->s[4];
-  D *= ftt_cell_size (cell);
-  switch (v->component) {
-  case FTT_X:
-    ff.x = D*(2.*g.x*n.x + g.y*n.y + g.z*n.z);
-    ff.y = D*g.y*n.x;
-    ff.z = D*g.z*n.x;
-    break;
-  case FTT_Y:
-    ff.y = D*(2.*g.y*n.y + g.x*n.x + g.z*n.z);
-    ff.x = D*g.x*n.y;
-    ff.z = D*g.z*n.y;
-    break;
-  case FTT_Z:
-    ff.z = D*(2.*g.z*n.z + g.x*n.x + g.y*n.y);
-    ff.x = D*g.x*n.z;
-    ff.y = D*g.y*n.z;
-    break;
-  default:
-    g_assert_not_reached ();
-  }
+    n.z = s->s[5] - s->s[4];
+    D *= ftt_cell_size (cell);
+    switch (v->component) {
+    case FTT_X:
+      ff.x = D*(2.*g.x*n.x + g.y*n.y + g.z*n.z);
+      ff.y = D*g.y*n.x;
+      ff.z = D*g.z*n.x;
+      break;
+    case FTT_Y:
+      ff.y = D*(2.*g.y*n.y + g.x*n.x + g.z*n.z);
+      ff.x = D*g.x*n.y;
+      ff.z = D*g.z*n.y;
+      break;
+    case FTT_Z:
+      ff.z = D*(2.*g.z*n.z + g.x*n.x + g.y*n.y);
+      ff.x = D*g.x*n.z;
+      ff.y = D*g.y*n.z;
+      break;
+    default:
+      g_assert_not_reached ();
+    }
 #endif /* 3D */
-  gts_vector_cross (&mm.x, r, &ff.x);
-  for (c = 0; c < 3; c++) {
-    f[c] += weight*(&ff.x)[c];
-    m[c] += weight*(&mm.x)[c];
+    gts_vector_cross (&mm.x, r, &ff.x);
+    for (c = 0; c < 3; c++) {
+      f[c] += weight*(&ff.x)[c];
+      m[c] += weight*(&mm.x)[c];
+    }
   }
 }
 
