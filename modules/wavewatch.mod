@@ -39,7 +39,7 @@ static double theta (guint ith, guint ntheta)
 
 typedef struct {
   GfsWave * wave;
-  GfsVariable * ustar, * fpi, * u10, * v10;
+  GfsVariable * ustar, * fpi, * u10, * v10, * as;
   REAL * A;     /* Actions (NK*NTHETA) */
   REAL * CG;    /* Group velocities (NK) */
   REAL * WN;    /* Wavenumbers (NK) */
@@ -70,17 +70,39 @@ static void action_to_energy (FttCell * cell, SourceParams * p)
     }
 }
 
+static void stability_correction (FttCell * cell, SourceParams * p, REAL * U10ABS, REAL * U10DIR)
+{
+  double u10 = p->u10 ? GFS_VALUE (cell, p->u10) : 0.;
+  double v10 = p->v10 ? GFS_VALUE (cell, p->v10) : 0.;
+  *U10ABS = sqrt (u10*u10 + v10*v10);
+  *U10DIR = atan2 (v10, u10);
+  if (p->as) {
+    /* see p.24 of wavewatch manual version 3.12 */
+    double shstab = 1.4, ofstab = -0.01, ccng = -0.1, ccps = 0.1, ffng = -150., ffps = 150.;
+    double zwind = 10.;  /* height at which the wind is defined */
+    double grav = 9.81; /* acceleration of gravity */
+    double stab0 = zwind*grav/273.;
+    double max = MAX (5., *U10ABS);
+    double stab = stab0*GFS_VALUE (cell, p->as)/(max*max);
+    stab = MAX (-1., MIN (1., stab));
+    double tharg1 = MAX (0., ffng*(stab - ofstab));
+    double tharg2 = MAX (0., ffps*(stab - ofstab));
+    double cor1 = ccng*tanh (tharg1);
+    double cor2 = ccps*tanh (tharg2);
+    double cor = sqrt ((1. + cor1 + cor2)/shstab);
+    *U10ABS /= cor;
+  }
+}
+
 static void source (FttCell * cell, SourceParams * p)
 {
   energy_to_action (cell, p);
 
   INTEGER IX, IY, IMOD = 1;
   REAL DEPTH = 1000.; /* fixme: depth is fixed at 1000 m for now */
+  REAL U10ABS, U10DIR;
 
-  double u10 = p->u10 ? GFS_VALUE (cell, p->u10) : 0.;
-  double v10 = p->v10 ? GFS_VALUE (cell, p->v10) : 0.;
-  REAL U10ABS = sqrt (u10*u10 + v10*v10);
-  REAL U10DIR = atan2 (v10, u10);
+  stability_correction (cell, p, &U10ABS, &U10DIR);
 
   REAL USTAR = GFS_VALUE (cell, p->ustar);
   REAL FPI = GFS_VALUE (cell, p->fpi);
@@ -218,6 +240,7 @@ static void wavewatch_source (GfsWave * wave)
   p.fpi = gfs_variable_from_name (domain->variables, "Fpi");
   p.u10 = gfs_variable_from_name (domain->variables, "U10");
   p.v10 = gfs_variable_from_name (domain->variables, "V10");
+  p.as = gfs_variable_from_name (domain->variables, "AS");
 
   guint i;
   for (i = 0; i < wave->nk; i++) {
