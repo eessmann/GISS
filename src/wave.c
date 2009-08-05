@@ -35,7 +35,7 @@ static double theta (guint ith, guint ntheta)
   return 2.*M_PI*ith/ntheta;
 }
 
-static void cg (int ik, int ith, FttVector * u, guint ntheta, gdouble g)
+static void group_velocity (int ik, int ith, FttVector * u, guint ntheta, gdouble g)
 {
   double cg = g/(4.*M_PI*frequency (ik));
   u->x = cg*cos (theta (ith, ntheta));
@@ -83,6 +83,76 @@ static void solid_flux (FttCell * cell, SolidFluxParams * par)
     GFS_VALUE (cell, par->fv) = 0.;
 }
 
+typedef struct {
+  GfsVariable * F, * Fn, * dF;
+  gdouble D[2][2];
+} GSEData;
+
+static void compute_gradient (FttCell * cell, GSEData * p)
+{
+  GFS_VALUE (cell, p->dF) = gfs_center_regular_gradient (cell, p->dF->component, p->Fn);
+}
+
+static void diffusion (FttCell * cell, GSEData * p)
+{
+  gdouble h2 = ftt_cell_size (cell);
+  h2 *= h2;
+  /* off-diagonal */
+  FttComponent j;
+  for (j = 0; j < 2; j++)
+    if (j != p->dF->component)
+      GFS_VALUE (cell, p->F) += 
+	p->D[j][p->dF->component]*gfs_center_regular_gradient (cell, j, p->dF)/h2;
+  /* diagonal */
+  GFS_VALUE (cell, p->F) += 
+    p->D[p->dF->component][p->dF->component]*
+    gfs_center_regular_2nd_derivative (cell, p->dF->component, p->Fn)/h2;
+}
+
+static void copy_F (FttCell * cell, GSEData * p)
+{
+  GFS_VALUE (cell, p->Fn) = GFS_VALUE (cell, p->F);
+}
+
+static void gse_alleviation_diffusion (GfsDomain * domain, GfsVariable * F,
+				       FttVector * cg, gdouble dt)
+{
+  gfs_domain_timer_start (domain, "gse_alleviation");
+
+  gdouble ncg = sqrt (cg->x*cg->x + cg->y*cg->y);
+  gdouble dcg = (GFS_WAVE_GAMMA - 1./GFS_WAVE_GAMMA)*ncg/2.;
+  gdouble Ts = 4.*GFS_WAVE (domain)->alpha_s*GFS_WAVE (domain)->alpha_s*dt;
+  gdouble Dss = dt*dcg*dcg*Ts/12.;
+  gdouble dtheta = 2.*M_PI/GFS_WAVE (domain)->ntheta;
+  gdouble Dnn = dt*(ncg*dtheta)*(ncg*dtheta)*Ts/12.;
+  GSEData p;
+  gdouble cost = cg->x/ncg, sint = cg->y/ncg;
+  p.D[0][0] = Dss*cost*cost + Dnn*sint*sint;
+  p.D[1][1] = Dss*sint*sint + Dnn*cost*cost;
+  p.D[0][1] = p.D[1][0] = (Dss - Dnn)*cost*sint;
+  p.F = F;
+  p.Fn = gfs_temporary_variable (domain);
+  p.dF = gfs_temporary_variable (domain);
+  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) copy_F, &p);
+  gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			    (FttCellTraverseFunc) p.Fn->fine_coarse, p.Fn);
+  for (p.dF->component = 0; p.dF->component < 2; p.dF->component++) {
+    gfs_domain_cell_traverse (domain,  FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) compute_gradient, &p);
+    gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, p.dF);
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) diffusion, &p);
+  }
+  gts_object_destroy (GTS_OBJECT (p.Fn));
+  gts_object_destroy (GTS_OBJECT (p.dF));
+  gfs_domain_timer_stop (domain, "gse_alleviation");
+}
+
+static void redo_some_events (GfsEvent * event, GfsSimulation * sim)
+{
+  if (GFS_IS_ADAPT (event) || GFS_IS_INIT (event))
+    gfs_event_redo (event, sim);
+}
+
 static void wave_run (GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
@@ -115,36 +185,45 @@ static void wave_run (GfsSimulation * sim)
     /* spatial advection */
     guint ik, ith;
     for (ik = 0; ik < wave->nk; ik++) {
-      FttVector u;
-      cg (ik, 0, &u, wave->ntheta, g);
+      FttVector cg;
+      group_velocity (ik, 0, &cg, wave->ntheta, g);
       gfs_domain_face_traverse (domain, FTT_XYZ,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttFaceTraverseFunc) set_group_velocity, &u);
-      gfs_simulation_set_timestep (sim);
+				(FttFaceTraverseFunc) set_group_velocity, &cg);
+      if (wave->alpha_s > 0.) {
+	/* stability criterion for GSE diffusion */
+	gdouble cfl = sim->advection_params.cfl;
+	sim->advection_params.cfl = MIN (cfl, 2./(4.*wave->alpha_s*M_PI/wave->ntheta));
+	gfs_simulation_set_timestep (sim);
+	sim->advection_params.cfl = cfl;
+      }
+      else
+	gfs_simulation_set_timestep (sim);
       /* subcycling */
       guint n = rint (dt/sim->advection_params.dt);
       g_assert (fabs (sim->time.t + sim->advection_params.dt*n - tnext) < 1e-12);
       while (n--) {
 	for (ith = 0; ith < wave->ntheta; ith++) {
-	  FttVector u;
-	  cg (ik, ith, &u, wave->ntheta, g);
+	  FttVector cg;
+	  group_velocity (ik, ith, &cg, wave->ntheta, g);
 	  gfs_domain_face_traverse (domain, FTT_XYZ,
 				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				    (FttFaceTraverseFunc) set_group_velocity, &u);
+				    (FttFaceTraverseFunc) set_group_velocity, &cg);
 	  GfsVariable * t = GFS_WAVE (sim)->F[ik][ith];
 	  sim->advection_params.v = t;
-	  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				    (FttCellTraverseFunc) solid_flux, &par);
+	  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) solid_flux, &par);
 	  gfs_tracer_advection_diffusion (domain, &sim->advection_params);
 	  sim->advection_params.fv = par.fv;
 	  gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, 
 	  			      &sim->advection_params);
+	  if (wave->alpha_s > 0.)
+	    gse_alleviation_diffusion (domain, t, &cg, sim->advection_params.dt);
 	  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, t);
 	  gfs_domain_cell_traverse (domain,
 				    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 				    (FttCellTraverseFunc) t->fine_coarse, t);
 	}
-	gts_container_foreach (GTS_CONTAINER (sim->adapts), (GtsFunc) gfs_event_redo, sim);
+	gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) redo_some_events, sim);
 	gfs_simulation_adapt (sim);
       }
     }
@@ -184,12 +263,11 @@ static void wave_read (GtsObject ** o, GtsFile * fp)
   GfsWave * wave = GFS_WAVE (*o);
   if (fp->type == '{') {
     GtsFileVariable var[] = {
-      {GTS_UINT, "nk",     TRUE},
-      {GTS_UINT, "ntheta", TRUE},
+      {GTS_UINT,   "nk",      TRUE, &wave->nk},
+      {GTS_UINT,   "ntheta",  TRUE, &wave->ntheta},
+      {GTS_DOUBLE, "alpha_s", TRUE, &wave->alpha_s},
       {GTS_NONE}
     };
-    var[0].data = &wave->nk;
-    var[1].data = &wave->ntheta;
     gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR)
       return;
@@ -218,8 +296,9 @@ static void wave_write (GtsObject * o, FILE * fp)
   fprintf (fp, " {\n"
 	   "  nk = %d\n"
 	   "  ntheta = %d\n"
+	   "  alpha_s = %g\n"
 	   "}",
-	   wave->nk, wave->ntheta);
+	   wave->nk, wave->ntheta, wave->alpha_s);
 }
 
 static void gfs_wave_class_init (GfsSimulationClass * klass)
@@ -250,6 +329,7 @@ static void wave_init (GfsWave * wave)
 {
   wave->nk = 25;
   wave->ntheta = 24;
+  wave->alpha_s = 0.;
   /* default for g is acceleration of gravity on Earth with kilometres as
      spatial units, hours as time units and Hz as frequency units */
   GFS_SIMULATION (wave)->physical_params.g = 9.81/1000.*3600.;

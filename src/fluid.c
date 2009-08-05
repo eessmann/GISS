@@ -592,6 +592,87 @@ gdouble gfs_center_minmod_gradient (FttCell * cell,
 }
 
 /**
+ * gfs_center_regular_gradient:
+ * @cell: a #FttCell.
+ * @c: a component.
+ * @v: a #GfsVariable.
+ *
+ * The gradient is normalized by the size of the cell. Only regular
+ * Cartesian stencils are used to compute the gradient.
+ *
+ * Returns: the value of the @c component of the gradient of variable @v
+ * at the center of the cell. 
+ */
+gdouble gfs_center_regular_gradient (FttCell * cell,
+				     FttComponent c,
+				     GfsVariable * v)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (c < FTT_DIMENSION, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
+
+  FttCell * n1 = ftt_cell_neighbor (cell, 2*c);
+  guint level = ftt_cell_level (cell);
+  if (n1) {
+    if (ftt_cell_level (n1) < level)
+      return gfs_center_regular_gradient (ftt_cell_parent (cell), c, v)/2.;
+    FttCell * n2 = ftt_cell_neighbor (cell, 2*c + 1);
+    if (n2) {
+      if (ftt_cell_level (n2) < level)
+	return gfs_center_regular_gradient (ftt_cell_parent (cell), c, v)/2.;
+      /* two neighbors: second-order differencing (parabola) */
+      return (GFS_VALUE (n1, v) - GFS_VALUE (n2, v))/2.;
+    }
+    else
+      /* one neighbor: first-order differencing */
+      return GFS_VALUE (n1, v) - GFS_VALUE (cell, v);
+  }
+  else {
+    FttCell * n2 = ftt_cell_neighbor (cell, 2*c + 1);
+    if (n2) {
+      if (ftt_cell_level (n2) < level)
+	return gfs_center_regular_gradient (ftt_cell_parent (cell), c, v)/2.;
+      /* one neighbor: first-order differencing */
+      return GFS_VALUE (cell, v) - GFS_VALUE (n2, v);
+    }
+  }
+  /* no neighbors */
+  return 0.;
+}
+
+/**
+ * gfs_center_regular_2nd_derivative:
+ * @cell: a #FttCell.
+ * @c: a component.
+ * @v: a #GfsVariable.
+ *
+ * The derivative is normalized by the size of the cell squared. Only
+ * regular Cartesian stencils are used to compute the derivative.
+ *
+ * Returns: the value of the @c component of the 2nd derivative of
+ * variable @v at the center of the cell.
+ */
+gdouble gfs_center_regular_2nd_derivative (FttCell * cell, 
+					   FttComponent c, 
+					   GfsVariable * v)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (c < FTT_DIMENSION, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
+
+  FttCell * n1 = ftt_cell_neighbor (cell, 2*c);
+  FttCell * n2 = ftt_cell_neighbor (cell, 2*c + 1);
+  if (n1 && n2) {
+    guint level = ftt_cell_level (cell);
+    if (ftt_cell_level (n1) < level || ftt_cell_level (n2) < level)
+      return gfs_center_regular_2nd_derivative (ftt_cell_parent (cell), c, v)/4.;
+    return GFS_VALUE (n1, v) - 2.*GFS_VALUE (cell, v) + GFS_VALUE (n2, v);
+  }
+  /* one or no neighbors */
+  return 0.;
+}
+
+/**
  * gfs_face_gradient:
  * @face: a #FttCellFace.
  * @g: the #GfsGradient.

@@ -41,6 +41,7 @@ struct _GfsWave {
 
   /*< public >*/
   guint nk, ntheta;
+  gdouble alpha_s;
   GfsVariable *** F;
 };
 
