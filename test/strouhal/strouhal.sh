@@ -33,11 +33,14 @@ if cat <<EOF | gnuplot ;then :
    set out 'strouhal.eps'
    set xl "Reynolds number"
    set yl "St"
-   set yr [0.2:0.24]
+   set yr [0.19:0.24]
    set xr [180:520]
-   plot 'static.ref' u 1:(0.125/\$2) w l t "Gerris Static",\
-        'moving.ref' u 1:(0.125/\$2) pt 5 t "Gerris Moving",\
-        'strouhal.res' pt 5 lc 2 t " "
+   set key bottom
+   plot 'static.ref' u 1:3 w lp t "Gerris Static Low Resolution",\
+        'moving.ref' u 1:3 pt 5 t "Gerris Moving Low Resolution",\
+        'static.ref' u 1:2 w lp t "Gerris Static High Resolution",\
+        'moving.ref' u 1:2 w lp t "Gerris Moving High Resolution",\
+        'strouhal.res' pt 5 lc 2 t ""
 EOF
 else
    exit 1
