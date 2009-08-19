@@ -482,6 +482,99 @@ GfsSourceGenericClass * gfs_source_control_class (void)
   return klass;
 }
 
+/* GfsSourceFlux: Object */
+
+static void source_flux_destroy (GtsObject * o)
+{
+  if (GFS_SOURCE_FLUX (o)->intensity)
+    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_FLUX (o)->intensity));
+  if (GFS_SOURCE_FLUX (o)->fraction)
+    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_FLUX (o)->fraction));
+
+  (* GTS_OBJECT_CLASS (gfs_source_flux_class ())->parent_class->destroy) (o);
+}
+
+static void source_flux_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_flux_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsSourceFlux * f = GFS_SOURCE_FLUX (*o);
+  f->intensity = gfs_function_new (gfs_function_class (), 0.);
+  gfs_function_set_units (f->intensity, GFS_SOURCE_SCALAR (f)->v->units + FTT_DIMENSION);
+  gfs_function_read (f->intensity, gfs_object_simulation (f), fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  f->fraction = gfs_function_new (gfs_function_class (), 0.);
+  gfs_function_read (f->fraction, gfs_object_simulation (f), fp);
+}
+
+static void source_flux_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_flux_class ())->parent_class->write) (o, fp);
+  gfs_function_write (GFS_SOURCE_FLUX (o)->intensity, fp);
+  gfs_function_write (GFS_SOURCE_FLUX (o)->fraction, fp);
+}
+
+static void add (FttCell * cell, GfsSourceFlux * s)
+{
+  s->s += gfs_cell_volume (cell)*gfs_function_value (s->fraction, cell);
+}
+
+static gboolean source_flux_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* gfs_event_class ()->event) (event, sim)) {
+    GfsSourceFlux * s = GFS_SOURCE_FLUX (event);
+    s->s = 0.;
+    gfs_domain_traverse_leaves (GFS_DOMAIN (sim), (FttCellTraverseFunc) add, s);
+    s->s = s->s > 0. ? gfs_function_value (s->intensity, NULL)/s->s : 0.;
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void source_flux_class_init (GfsSourceGenericClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = source_flux_read;
+  GTS_OBJECT_CLASS (klass)->write = source_flux_write;
+  GTS_OBJECT_CLASS (klass)->destroy = source_flux_destroy;
+  GFS_EVENT_CLASS (klass)->event = source_flux_event;
+}
+
+static gdouble source_flux_value (GfsSourceGeneric * s, 
+				  FttCell * cell, 
+				  GfsVariable * v)
+{
+  return GFS_SOURCE_FLUX (s)->s*gfs_function_value (GFS_SOURCE_FLUX (s)->fraction, cell);
+}
+
+static void source_flux_init (GfsSourceGeneric * s)
+{
+  s->mac_value = s->centered_value = source_flux_value;
+}
+
+GfsSourceGenericClass * gfs_source_flux_class (void)
+{
+  static GfsSourceGenericClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo source_flux_info = {
+      "GfsSourceFlux",
+      sizeof (GfsSourceFlux),
+      sizeof (GfsSourceGenericClass),
+      (GtsObjectClassInitFunc) source_flux_class_init,
+      (GtsObjectInitFunc) source_flux_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_scalar_class ()),
+				  &source_flux_info);
+  }
+
+  return klass;
+}
+
 /* GfsDiffusion: Object */
 
 static void diffusion_destroy (GtsObject * o)

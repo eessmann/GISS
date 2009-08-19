@@ -158,6 +158,27 @@ struct _GfsSourceControl {
 
 GfsSourceGenericClass * gfs_source_control_class  (void);
 
+/* GfsSourceFlux: Header */
+
+typedef struct _GfsSourceFlux         GfsSourceFlux;
+
+struct _GfsSourceFlux {
+  /*< private >*/
+  GfsSourceScalar parent;
+  gdouble s;
+
+  /*< public >*/
+  GfsFunction * intensity, * fraction;
+};
+
+#define GFS_SOURCE_FLUX(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourceFlux,\
+					         gfs_source_flux_class ())
+#define GFS_IS_SOURCE_FLUX(obj)         (gts_object_is_from_class (obj,\
+						 gfs_source_flux_class ()))
+
+GfsSourceGenericClass * gfs_source_flux_class  (void);
+
 /* GfsDiffusion: Header */
 
 typedef struct _GfsDiffusion         GfsDiffusion;
