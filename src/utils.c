@@ -361,6 +361,7 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
   else {
     static gchar spaces[] = " \t\f\r";
     static gchar operators[] = "+-*/%<>=&^|?:!";
+    gboolean is_constant = (fp->type == GTS_INT || fp->type == GTS_FLOAT);
     gint c, scope = 0;
     gchar * s;
     gchar empty[] = "", * comments = fp->comments;
@@ -405,6 +406,10 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
 	  c = gts_file_getc (fp);
 	}
 	if (c == '(') {
+	  if (is_constant) {
+	    fp->next_token = c;
+	    break;
+	  }
 	  scope++;
 	  g_string_append_c (expr, c);
 	  c = gts_file_getc (fp);
@@ -414,6 +419,7 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
 	    fp->next_token = c;
 	    break;
 	  }
+	  is_constant = FALSE;
 	  g_string_append_c (expr, c);
 	  c = gts_file_getc (fp);
 	  while (c != EOF && gfs_char_in_string (c, spaces)) {
@@ -423,6 +429,7 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
 	}
       }
       else if (gfs_char_in_string (c, operators)) {
+	is_constant = FALSE;
 	g_string_append_c (expr, c);
 	c = gts_file_getc (fp);
 	while (c != EOF && gfs_char_in_string (c, spaces)) {
@@ -431,6 +438,7 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
 	}
       }
       else {
+	is_constant = FALSE;
 	if (c == '(') scope++;
 	else if (c == ')') scope--;
 	if (scope < 0) {
