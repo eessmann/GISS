@@ -1436,17 +1436,29 @@ static void variable_terrain_read (GtsObject ** o, GtsFile * fp)
 
   GfsVariableTerrain * v = GFS_VARIABLE_TERRAIN (*o);
   rsurfaces_read (&v->rs, fp);
+  if (fp->type == GTS_ERROR)
+    return;
 
   GfsSimulation * sim = gfs_object_simulation (*o);
-  if (GFS_IS_RIVER (sim)) {
-    v->p = GFS_RIVER (sim)->v[0];
-    v->H = GFS_RIVER (sim)->H;
-    /* the coarse -> fine and fine -> coarse interpolations of p and H
-       are taken over by variable_terrain_coarse_fine (below )*/
-    v->p->coarse_fine = none;
-    v->H->coarse_fine = none;
-    v->p->fine_coarse = none;
-    v->H->fine_coarse = none;
+  if (GFS_IS_RIVER (sim) && fp->type == '{') {
+    gboolean reconstruct = FALSE;
+    GtsFileVariable var[] = {
+      {GTS_INT, "reconstruct", TRUE, &reconstruct},
+      {GTS_NONE}
+    };
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;
+    if (reconstruct) {
+      v->p = GFS_RIVER (sim)->v[0];
+      v->H = GFS_RIVER (sim)->H;
+      /* the coarse -> fine and fine -> coarse interpolations of p and H
+	 are taken over by variable_terrain_coarse_fine (below )*/
+      v->p->coarse_fine = none;
+      v->H->coarse_fine = none;
+      v->p->fine_coarse = none;
+      v->H->fine_coarse = none;
+    }
   }
 }
 
@@ -1455,6 +1467,8 @@ static void variable_terrain_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->write) (o, fp);
 
   rsurfaces_write (&GFS_VARIABLE_TERRAIN (o)->rs, fp);
+  if (GFS_VARIABLE_TERRAIN (o)->H)
+    fputs (" { reconstruct = 1 }", fp);
 }
 
 static void variable_terrain_class_init (GtsObjectClass * klass)
