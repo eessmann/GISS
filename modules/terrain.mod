@@ -162,7 +162,7 @@ struct _GfsRefineTerrain {
 
   /*< public >*/
   gchar * name;
-  GfsVariable * h[NM], * he, * hn;
+  GfsVariable * h[NM], * he, * hn, * hdmin, * hdmax;
   GfsFunction * criterion;
 };
 
@@ -610,6 +610,8 @@ static void update_terrain (FttCell * cell, GfsRefineTerrain * t)
     GFS_VALUE (cell, t->h[i]) = rms.h[i];
   GFS_VALUE (cell, t->he) = rms.he;
   GFS_VALUE (cell, t->hn) = rms.m[0][0];
+  GFS_VALUE (cell, t->hdmin) = rms.min;
+  GFS_VALUE (cell, t->hdmax) = rms.max;
   GFS_VALUE (cell, t->type) = RAW;
 }
 
@@ -635,6 +637,8 @@ static void cell_fine_init (FttCell * parent, GfsRefineTerrain * t)
 	GFS_VALUE (child.c[i], t->h[j]) = h[j];
       GFS_VALUE (child.c[i], t->he) = GFS_VALUE (parent, t->he);
       GFS_VALUE (child.c[i], t->hn) = GFS_VALUE (parent, t->hn)/FTT_CELLS;
+      GFS_VALUE (child.c[i], t->hdmin) = GFS_VALUE (parent, t->hdmin);
+      GFS_VALUE (child.c[i], t->hdmax) = GFS_VALUE (parent, t->hdmax);
       GFS_VALUE (child.c[i], t->type) = NEW_CHILD;
     }
 }
@@ -1100,6 +1104,12 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
   g_free (name);
   name = g_strjoin (NULL, t->name, "n", NULL);
   t->hn = gfs_domain_get_or_add_variable (domain, name, "Terrain samples #");
+  g_free (name);
+  name = g_strjoin (NULL, t->name, "dmin", NULL);
+  t->hdmin = gfs_domain_get_or_add_variable (domain, name, "Minimum data height");
+  g_free (name);
+  name = g_strjoin (NULL, t->name, "dmax", NULL);
+  t->hdmax = gfs_domain_get_or_add_variable (domain, name, "Maximum data height");
   g_free (name);
 
   GfsDerivedVariableInfo v;
