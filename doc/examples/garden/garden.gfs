@@ -76,7 +76,7 @@
     Global {
         /* gaussian distribution */
         static double gaussian (double f, double fmean, double fsigma) {
-            return exp (-((f - fmean)*(f - fmean))/(fsigma*fsigma));
+            return exp (-((f - fmean)*(f - fmean))/(2.*fsigma*fsigma));
         }
         /* cos(theta)^n distribution */
         static double costheta (double theta, double thetam, double thetapower) {
@@ -90,22 +90,18 @@
         /* This function defines the spectral distribution:
          * a gaussian in frequency space and 
          * a cos(theta)^2 distribution in direction space 
-         *
-         * Note: for some reason Tolman (2002) uses a factor of 0.125 
-         * for the Gaussian distribution "spread" */
-        return gaussian (Frequency, 0.1, 0.01/sqrt(0.125))*
+	 */
+        return gaussian (Frequency, 0.1, 0.02)*
                costheta (Direction, 30.*M_PI/180., 2.);
     } {
         /* This function defines the significant wave height:
          * the energy is a gaussian bump in (x,y) space,
          * the maximum significant wave height is 2.5 
-         *
-         * Note: for some reason Tolman (2002) uses a factor of 0.5
-         * for the Gaussian distribution "spread" */
+	 */
         x -= -2000.;
         y -= -2000.;
         double Hsmax = 2.5;
-        double E = (Hsmax*Hsmax/16.)*gaussian (sqrt (x*x + y*y), 0., 150./sqrt(0.5));
+        double E = (Hsmax*Hsmax/16.)*gaussian (sqrt (x*x + y*y), 0., 150.);
         return 4.*sqrt (E);
     }
 

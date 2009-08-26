@@ -121,15 +121,22 @@ static void gse_alleviation_diffusion (GfsDomain * domain, GfsVariable * F,
 
   gdouble ncg = sqrt (cg->x*cg->x + cg->y*cg->y);
   gdouble dcg = (GFS_WAVE_GAMMA - 1./GFS_WAVE_GAMMA)*ncg/2.;
-  gdouble Ts = 4.*GFS_WAVE (domain)->alpha_s*GFS_WAVE (domain)->alpha_s*dt;
-  gdouble Dss = dt*dcg*dcg*Ts/12.;
   gdouble dtheta = 2.*M_PI/GFS_WAVE (domain)->ntheta;
-  gdouble Dnn = dt*(ncg*dtheta)*(ncg*dtheta)*Ts/12.;
+#if 0
+  gdouble Ts = 4.*GFS_WAVE (domain)->alpha_s*GFS_WAVE (domain)->alpha_s*dt;
+  gdouble dtDss = dt*dcg*dcg*Ts/12.;
+  gdouble dtDnn = dt*(ncg*dtheta)*(ncg*dtheta)*Ts/12.;
+#else
+  gdouble alpha = GFS_WAVE (domain)->alpha_s*dcg*dt;
+  gdouble beta = GFS_WAVE (domain)->alpha_s*ncg*dtheta*dt;
+  gdouble dtDss = alpha*alpha/3.;
+  gdouble dtDnn = beta*beta/3.;
+#endif
   GSEData p;
   gdouble cost = cg->x/ncg, sint = cg->y/ncg;
-  p.D[0][0] = Dss*cost*cost + Dnn*sint*sint;
-  p.D[1][1] = Dss*sint*sint + Dnn*cost*cost;
-  p.D[0][1] = p.D[1][0] = (Dss - Dnn)*cost*sint;
+  p.D[0][0] = dtDss*cost*cost + dtDnn*sint*sint;
+  p.D[1][1] = dtDss*sint*sint + dtDnn*cost*cost;
+  p.D[0][1] = p.D[1][0] = (dtDss - dtDnn)*cost*sint;
   p.F = F;
   p.Fn = gfs_temporary_variable (domain);
   p.dF = gfs_temporary_variable (domain);
@@ -194,6 +201,9 @@ static void wave_run (GfsSimulation * sim)
 	/* stability criterion for GSE diffusion */
 	gdouble cfl = sim->advection_params.cfl;
 	sim->advection_params.cfl = MIN (cfl, 2./(4.*wave->alpha_s*M_PI/wave->ntheta));
+	/* fixme: this should be:
+	   sim->advection_params.cfl = MIN (cfl, sqrt(3.)/(wave->alpha_s*2.*M_PI/wave->ntheta));
+	*/
 	gfs_simulation_set_timestep (sim);
 	sim->advection_params.cfl = cfl;
       }
@@ -417,12 +427,14 @@ static void init_energy (FttCell * cell, GfsInitWave * event)
       GFS_VALUE (cell, wave->F[wave->ik][wave->ith]) = gfs_function_value (event->d, cell);
 
   gdouble E = cell_E (cell, NULL, GFS_DOMAIN (wave));
-  gdouble Hs = gfs_function_value (event->hs, cell);
-  gdouble scaling = Hs*Hs/(16.*E);
-  guint ik, ith;
-  for (ik = 0; ik < wave->nk; ik++)
-    for (ith = 0; ith < wave->ntheta; ith++)
-      GFS_VALUE (cell, wave->F[ik][ith]) *= scaling;
+  if (E > 0.) {
+    gdouble Hs = gfs_function_value (event->hs, cell);
+    gdouble scaling = Hs*Hs/(16.*E);
+    guint ik, ith;
+    for (ik = 0; ik < wave->nk; ik++)
+      for (ith = 0; ith < wave->ntheta; ith++)
+	GFS_VALUE (cell, wave->F[ik][ith]) *= scaling;
+  }
 }
 
 static gboolean gfs_init_wave_event (GfsEvent * event, GfsSimulation * sim)
