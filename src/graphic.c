@@ -1844,7 +1844,8 @@ GList * gfs_streamline_new (GfsDomain * domain,
 
   i = grow_curve (domain, U, p, var, min, max, twist, NULL, 1., stop, data);
   path = g_list_remove_link (i, i);
-  gts_object_destroy (i->data);
+  if (i != NULL)
+    gts_object_destroy (i->data);
   g_list_free_1 (i);
   path = grow_curve (domain, U, p, var, min, max, twist, path, -1., stop, data);
   return path;
