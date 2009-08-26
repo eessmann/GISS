@@ -521,8 +521,9 @@ static void subcritical (FttCellFace * f, GfsBc * b)
   GfsRiver * river = GFS_RIVER (b->v->domain);
   gdouble hi = GFS_VALUE (f->neighbor, river->v[0]);
 
+  g_assert (hi >= 0.);
   GFS_VALUE (f->cell, b->v) = GFS_VALUE (f->neighbor, b->v) + 
-    (FTT_FACE_DIRECT (f) ? -1. : 1.)*2.*hi*(sqrt (river->g*hi) - sqrt (river->g*hb));
+    (FTT_FACE_DIRECT (f) ? -1. : 1.)*2.*hi*(sqrt (river->g*hi) - sqrt (river->g*MAX (hb, 0.)));
 }
 
 static void bc_subcritical_read (GtsObject ** o, GtsFile * fp)
