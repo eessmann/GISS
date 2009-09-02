@@ -178,6 +178,7 @@ GtsObjectClass ** gfs_classes (void)
       gfs_source_scalar_class (),
         gfs_source_class (),
           gfs_source_control_class (),
+            gfs_source_control_field_class (),
           gfs_source_flux_class (),
         gfs_source_diffusion_class (),
           gfs_source_diffusion_explicit_class (),

@@ -158,6 +158,27 @@ struct _GfsSourceControl {
 
 GfsSourceGenericClass * gfs_source_control_class  (void);
 
+/* GfsSourceControlField: Header */
+
+typedef struct _GfsSourceControlField         GfsSourceControlField;
+
+struct _GfsSourceControlField {
+  /*< private >*/
+  GfsSourceControl parent;
+  GfsVariable * s;
+
+  /*< public >*/
+  gint level;
+};
+
+#define GFS_SOURCE_CONTROL_FIELD(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourceControlField,\
+					         gfs_source_control_field_class ())
+#define GFS_IS_SOURCE_CONTROL_FIELD(obj)         (gts_object_is_from_class (obj,\
+						 gfs_source_control_field_class ()))
+
+GfsSourceGenericClass * gfs_source_control_field_class  (void);
+
 /* GfsSourceFlux: Header */
 
 typedef struct _GfsSourceFlux         GfsSourceFlux;

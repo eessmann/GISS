@@ -428,14 +428,29 @@ static void source_control_write (GtsObject * o, FILE * fp)
   gfs_function_write (GFS_SOURCE_CONTROL (o)->intensity, fp);
 }
 
+typedef struct {
+  GfsVariable * v;
+  gdouble s, sv;
+} Sum;
+
+static void sum (FttCell * cell, Sum * s)
+{
+  gdouble vol = gfs_cell_volume (cell);
+  s->s += vol*GFS_VALUE (cell, s->v);
+  s->sv += vol;
+}
+
 static gboolean source_control_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* gfs_event_class ()->event) (event, sim)) {
     GfsSourceControl * s = GFS_SOURCE_CONTROL (event);
-    GtsRange r = gfs_domain_stats_variable (GFS_DOMAIN (sim), GFS_SOURCE_SCALAR (event)->v,
-					    FTT_TRAVERSE_LEAFS, -1);
-    s->s = sim->advection_params.dt > 0. ? 
-      (gfs_function_value (s->intensity, NULL) - r.mean)/sim->advection_params.dt: 0.;
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    Sum su = { GFS_SOURCE_SCALAR (event)->v, 0., 0. };
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) sum, &su);
+    gfs_all_reduce (domain, su.s, MPI_DOUBLE, MPI_SUM);
+    gfs_all_reduce (domain, su.sv, MPI_DOUBLE, MPI_SUM);
+    s->s = sim->advection_params.dt > 0. && su.sv > 0. ? 
+      (gfs_function_value (s->intensity, NULL) - su.s/su.sv)/sim->advection_params.dt: 0.;
     return TRUE;
   }
   return FALSE;
@@ -477,6 +492,109 @@ GfsSourceGenericClass * gfs_source_control_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_scalar_class ()),
 				  &source_control_info);
+  }
+
+  return klass;
+}
+
+/* GfsSourceControlField: Object */
+
+static void source_control_field_destroy (GtsObject * o)
+{
+  if (GFS_SOURCE_CONTROL_FIELD (o)->s)
+    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CONTROL_FIELD (o)->s));
+
+  (* GTS_OBJECT_CLASS (gfs_source_control_field_class ())->parent_class->destroy) (o);
+}
+
+static void source_control_field_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_control_field_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_INT) {
+    gts_file_error (fp, "expecting an integer (level)");
+    return;
+  }
+  GFS_SOURCE_CONTROL_FIELD (*o)->level = atoi (fp->token->str);
+  gts_file_next_token (fp);
+
+  GFS_SOURCE_CONTROL_FIELD (*o)->s = 
+    gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
+}
+
+static void source_control_field_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_control_field_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %d", GFS_SOURCE_CONTROL_FIELD (o)->level);
+}
+
+static void set_s (FttCell * cell, GfsSourceControlField * f)
+{
+  GFS_VALUE (cell, f->s) = GFS_SOURCE_CONTROL (f)->s;
+}
+
+static void source_control_field_root (FttCell * root, GfsSourceControlField * f)
+{
+  Sum su = { GFS_SOURCE_SCALAR (f)->v, 0., 0. };
+  ftt_cell_traverse (root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		     (FttCellTraverseFunc) sum, &su);
+  gdouble dt = gfs_object_simulation (f)->advection_params.dt;
+  GFS_SOURCE_CONTROL (f)->s = dt > 0. && su.sv > 0. ? 
+    (gfs_function_value (GFS_SOURCE_CONTROL (f)->intensity, root) - su.s/su.sv)/dt: 0.;
+  ftt_cell_traverse (root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		     (FttCellTraverseFunc) set_s, f);
+}
+
+static gboolean source_control_field_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* gfs_event_class ()->event) (event, sim)) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
+			      FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, 
+			      GFS_SOURCE_CONTROL_FIELD (event)->level,
+			      (FttCellTraverseFunc) source_control_field_root, event);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void source_control_field_class_init (GfsSourceGenericClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->destroy = source_control_field_destroy;
+  GTS_OBJECT_CLASS (klass)->read = source_control_field_read;
+  GTS_OBJECT_CLASS (klass)->write = source_control_field_write;
+  GFS_EVENT_CLASS (klass)->event = source_control_field_event;
+}
+
+static gdouble source_control_field_value (GfsSourceGeneric * s, 
+					   FttCell * cell, 
+					   GfsVariable * v)
+{
+  return GFS_VALUE (cell, GFS_SOURCE_CONTROL_FIELD (s)->s);
+}
+
+static void source_control_field_init (GfsSourceGeneric * s)
+{
+  s->mac_value = s->centered_value = source_control_field_value;
+}
+
+GfsSourceGenericClass * gfs_source_control_field_class (void)
+{
+  static GfsSourceGenericClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo source_control_field_info = {
+      "GfsSourceControlField",
+      sizeof (GfsSourceControlField),
+      sizeof (GfsSourceGenericClass),
+      (GtsObjectClassInitFunc) source_control_field_class_init,
+      (GtsObjectInitFunc) source_control_field_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_control_class ()),
+				  &source_control_field_info);
   }
 
   return klass;
