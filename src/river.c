@@ -438,7 +438,7 @@ static void river_init (GfsRiver * r)
   r->v[0] = gfs_variable_from_name (domain->variables, "P");
   r->v[0]->units = 1.;
   g_free (r->v[0]->description);
-  r->v[0]->description = g_strdup ("Fluid thickness");
+  r->v[0]->description = g_strdup ("Fluid depth");
 
   r->v[1] = gfs_variable_from_name (domain->variables, "U");
   r->v[1]->units = 2.;

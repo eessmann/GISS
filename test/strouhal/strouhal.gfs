@@ -71,7 +71,7 @@
            b = 110.49
            c = 0.611
            fit [0.5:] f(x) 'forces.dat' u 1:6 via a,b,c
-           print "400 ", b/(2*3.14159)*0.0125       
+           print "400 ", b/(2*pi)*0.0125       
 EOF
   }
 }
