@@ -68,12 +68,14 @@ if [ -x ./configure ]; then
     CFLAGS="$RPM_OPT_FLAGS" ./configure \
 	--prefix=%{_prefix} \
 	--libdir=%{_prefix}/%_lib \
+	--mandir=%{_mandir} \
 	--disable-mpi \
 	--disable-static
 else
     CFLAGS="$RPM_OPT_FLAGS" sh autogen.sh \
 	--prefix=%{_prefix} \
 	--libdir=%{_prefix}/%_lib \
+	--mandir=%{_mandir} \
 	--disable-mpi \
 	--disable-static
 fi
@@ -84,6 +86,7 @@ if [ -x ./configure ]; then
     CPPFLAGS="-I%{_includedir}/netcdf-3" ./configure \
 	--prefix=%{_prefix} \
 	--libdir=%{_prefix}/%_lib \
+	--mandir=%{_mandir} \
 	--disable-mpi \
 	--disable-static
 else
@@ -91,6 +94,7 @@ else
     CPPFLAGS="-I%{_includedir}/netcdf-3" sh autogen.sh \
 	--prefix=%{_prefix} \
 	--libdir=%{_prefix}/%_lib \
+	--mandir=%{_mandir} \
 	--disable-mpi \
 	--disable-static
 fi
@@ -150,6 +154,7 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 %{_datadir}/gerris/gfs.lang
 %{_datadir}/mime/packages/*.xml
 %{_datadir}/icons/hicolor/48x48/mimetypes/*.png
+%{_mandir}/man1/*.gz
 
 
 %changelog
