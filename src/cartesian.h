@@ -33,7 +33,7 @@ typedef struct _GfsCartesianGrid      GfsCartesianGrid;
 struct _GfsCartesianGrid {
   /*< private >*/
   GtsObject parent;
-  guint N;       /* Number of dimension */
+  guint N;       /* Number of dimensions */
   guint * n;     /* Size of each dimension */
   gdouble ** x;  /* Position of each point in the grid */
   gdouble * v;   /* Data */

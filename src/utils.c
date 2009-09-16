@@ -259,15 +259,15 @@ static GfsCartesianGrid * read_cartesian_grid (gchar * name, GtsFile * fp)
 static gboolean fit_index_dimension (GfsCartesianGrid * grid, guint * val, GtsFile * fp)
 {
   guint i, j;
-  gchar liste[] = {'x','y','z','t'};
+  gchar list[] = {'x','y','z','t'};
 
   if (grid->N > 4) {
     gts_file_error (fp, "Cartesian grids can only use four dimensions or less");
     return FALSE;
   }
 
-  for(i = 0; i < grid->N; i++) {
-    for (j = 0; j < 4 && *grid->name[i] != liste[j]; j++);
+  for (i = 0; i < grid->N; i++) {
+    for (j = 0; j < 4 && *grid->name[i] != list[j]; j++);
     if (j == 4) {
       gts_file_error (fp, "unknown Cartesian grid index `%s'", grid->name[i]);
       return FALSE;
@@ -277,23 +277,32 @@ static gboolean fit_index_dimension (GfsCartesianGrid * grid, guint * val, GtsFi
   return TRUE;
 }
 
+static gboolean cgd_is_spatial (GfsFunction * f)
+{
+  guint i;
+  for (i = 0; i < f->g->N; i++)
+    if (f->index[i] < 3)
+      return TRUE;
+  return FALSE;
+}
+
 static gdouble interpolated_cgd (GfsFunction * f, FttVector * p)
 {
-  gdouble vecteur[4];
+  gdouble vector[4];
   gdouble val;
   guint i;
 
   gfs_simulation_map_inverse (gfs_object_simulation (f), p);
   for (i = 0; i < f->g->N; i++)
     switch (f->index[i]) {
-    case 0: vecteur[i] = p->x; break;
-    case 1: vecteur[i] = p->y; break;
-    case 2: vecteur[i] = p->z; break;
-    case 3: vecteur[i] = gfs_object_simulation (f)->time.t; break;
+    case 0: vector[i] = p->x; break;
+    case 1: vector[i] = p->y; break;
+    case 2: vector[i] = p->z; break;
+    case 3: vector[i] = gfs_object_simulation (f)->time.t; break;
     default: g_assert_not_reached ();
     }
 
-  if (!gfs_cartesian_grid_interpolate (f->g, vecteur, &val))
+  if (!gfs_cartesian_grid_interpolate (f->g, vector, &val))
     return 0.;
   return val;
 }
@@ -718,6 +727,25 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
+  if (fp->type == GTS_STRING && !f->spatial && !f->constant && strlen (fp->token->str) > 3) {
+    if (!strcmp (&(fp->token->str[strlen (fp->token->str) - 4]), ".gts")) {
+      if ((f->s = read_surface (fp->token->str, fp)) == NULL)
+	return;
+      f->sname = g_strdup (fp->token->str);
+      gts_file_next_token (fp);
+      return;
+    }
+    else if (!strcmp (&(fp->token->str[strlen (fp->token->str) - 4]), ".cgd")) {
+      if ((f->g = read_cartesian_grid (fp->token->str, fp)) == NULL)
+	return;
+      if (!fit_index_dimension (f->g, f->index, fp))
+	return;
+      f->sname = g_strdup (fp->token->str);
+      gts_file_next_token (fp);
+      return;
+    }   
+  }
+
   if ((f->expr = gfs_function_expression (fp, &f->isexpr)) == NULL)
     return;
 
@@ -730,29 +758,8 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       }
     }
     else if (fp->type == GTS_STRING && !f->spatial && !f->constant) {
-      if (strlen (f->expr->str) > 3 &&
-	  !strcmp (&(f->expr->str[strlen (f->expr->str) - 4]), ".gts")) {
-	if ((f->s = read_surface (f->expr->str, fp)) == NULL)
-	  return;
-	f->sname = g_strdup (f->expr->str);
-	gts_file_next_token (fp);
-	return;
-      }
-      else if (strlen (f->expr->str) > 3 &&
-	       !strcmp (&(f->expr->str[strlen (f->expr->str) - 4]), ".cgd")) {
-	if ((f->g = read_cartesian_grid (f->expr->str, fp)) == NULL)
-	  return;
-	if (!fit_index_dimension (f->g, f->index, fp))
-	  return;
-	f->sname = g_strdup (f->expr->str);
-	gts_file_next_token (fp);
-	return;
-      }
-      else if ((f->v = gfs_variable_from_name (domain->variables, f->expr->str))) {
-	gts_file_next_token (fp);
-	return;
-      }
-      else if ((f->dv = lookup_derived_variable (f->expr->str, domain->derived_variables))) {
+      if ((f->v = gfs_variable_from_name (domain->variables, f->expr->str)) ||
+	  (f->dv = lookup_derived_variable (f->expr->str, domain->derived_variables))) {
 	gts_file_next_token (fp);
 	return;
       }
@@ -961,8 +968,9 @@ gdouble gfs_function_value (GfsFunction * f, FttCell * cell)
     dimensional = interpolated_value (f, &p);
   }
   else if (f->g) {
-    FttVector p;
-    gfs_cell_cm (cell, &p);
+    FttVector p = {0.,0.,0.};
+    if (cgd_is_spatial (f))
+      gfs_cell_cm (cell, &p);
     dimensional = interpolated_cgd (f, &p);
   }
   else if (f->v)
@@ -999,8 +1007,9 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa)
     dimensional = interpolated_value (f, &p);
   }
   else if (f->g) {
-    FttVector p;
-    ftt_face_pos (fa, &p);
+    FttVector p = {0.,0.,0.};
+    if (cgd_is_spatial (f))
+      ftt_face_pos (fa, &p);
     dimensional = interpolated_cgd (f, &p);
   }
   else if (f->v)
