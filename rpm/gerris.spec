@@ -29,7 +29,7 @@ BuildRequires: netcdf-devel proj-devel gcc-gfortran
 %endif
 %if 0%{?suse_version}
 Requires: libproj0 gsl libnetcdf-4
-BuildRequires: libnetcdf-devel libproj-devel gcc-gfortran
+BuildRequires: libnetcdf-devel libproj-devel gcc-fortran
 %endif
 # For both distros
 Requires: gts-snapshot-devel >= %{gts_version} pkgconfig gcc sed gawk m4
@@ -146,12 +146,16 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 %doc NEWS README TODO COPYING
 %{_bindir}/*
 %{_includedir}/*.h
+%dir %{_includedir}/gerris
 %{_includedir}/gerris/*.h
 %{_libdir}/*.so.*
 %{_libdir}/*.so
+%dir %{_libdir}/gerris
 %{_libdir}/gerris/*
 %{_libdir}/pkgconfig/*.pc
+%dir %{_datadir}/gerris
 %{_datadir}/gerris/gfs.lang
+%{_datadir}/gerris/gerris.dic
 %{_datadir}/mime/packages/*.xml
 %{_datadir}/icons/hicolor/48x48/mimetypes/*.png
 %{_mandir}/man1/*.gz

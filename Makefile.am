@@ -17,7 +17,7 @@ LOG = /var/www/gerris/version/gerris_changes
 
 SUBDIRS = modules src tools test doc desktop debian
 
-EXTRA_DIST = ChangeLog
+EXTRA_DIST = ChangeLog m4
 
 if DARCS_CONTROLLED
 DARCS_CHANGELOG = changelog
