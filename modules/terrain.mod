@@ -1428,56 +1428,6 @@ static void none (FttCell * parent, GfsVariable * v)
 {
 }
 
-static void variable_terrain_read (GtsObject ** o, GtsFile * fp)
-{
-  (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->read) (o, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-
-  GfsVariableTerrain * v = GFS_VARIABLE_TERRAIN (*o);
-  rsurfaces_read (&v->rs, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-
-  GfsSimulation * sim = gfs_object_simulation (*o);
-  if (GFS_IS_RIVER (sim) && fp->type == '{') {
-    gboolean reconstruct = FALSE;
-    GtsFileVariable var[] = {
-      {GTS_INT, "reconstruct", TRUE, &reconstruct},
-      {GTS_NONE}
-    };
-    gts_file_assign_variables (fp, var);
-    if (fp->type == GTS_ERROR)
-      return;
-    if (reconstruct) {
-      v->p = GFS_RIVER (sim)->v[0];
-      v->H = GFS_RIVER (sim)->H;
-      /* the coarse -> fine and fine -> coarse interpolations of p and H
-	 are taken over by variable_terrain_coarse_fine (below )*/
-      v->p->coarse_fine = none;
-      v->H->coarse_fine = none;
-      v->p->fine_coarse = none;
-      v->H->fine_coarse = none;
-    }
-  }
-}
-
-static void variable_terrain_write (GtsObject * o, FILE * fp)
-{
-  (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->write) (o, fp);
-
-  rsurfaces_write (&GFS_VARIABLE_TERRAIN (o)->rs, fp);
-  if (GFS_VARIABLE_TERRAIN (o)->H)
-    fputs (" { reconstruct = 1 }", fp);
-}
-
-static void variable_terrain_class_init (GtsObjectClass * klass)
-{
-  klass->destroy = variable_terrain_destroy;
-  klass->read = variable_terrain_read;
-  klass->write = variable_terrain_write;
-}
-
 static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 {
   GfsVariableTerrain * t = GFS_VARIABLE_TERRAIN (v);
@@ -1622,12 +1572,65 @@ static void variable_terrain_fine_coarse (FttCell * parent, GfsVariable * v)
   }
 }
 
+static void variable_terrain_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsVariableTerrain * v = GFS_VARIABLE_TERRAIN (*o);
+  rsurfaces_read (&v->rs, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsVariable * v1 = GFS_VARIABLE1 (*o);
+  v1->units = 1.;
+  g_free (v1->description);
+  v1->description = g_strdup ("Terrain");
+  v1->coarse_fine = variable_terrain_coarse_fine;
+  v1->fine_coarse = variable_terrain_fine_coarse;
+
+  GfsSimulation * sim = gfs_object_simulation (*o);
+  if (GFS_IS_RIVER (sim) && fp->type == '{') {
+    gboolean reconstruct = FALSE;
+    GtsFileVariable var[] = {
+      {GTS_INT, "reconstruct", TRUE, &reconstruct},
+      {GTS_NONE}
+    };
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;
+    if (reconstruct) {
+      v->p = GFS_RIVER (sim)->v[0];
+      v->H = GFS_RIVER (sim)->H;
+      /* the coarse -> fine and fine -> coarse interpolations of p and H
+	 are taken over by variable_terrain_coarse_fine (below )*/
+      v->p->coarse_fine = none;
+      v->H->coarse_fine = none;
+      v->p->fine_coarse = none;
+      v->H->fine_coarse = none;
+    }
+  }
+}
+
+static void variable_terrain_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->write) (o, fp);
+
+  rsurfaces_write (&GFS_VARIABLE_TERRAIN (o)->rs, fp);
+  if (GFS_VARIABLE_TERRAIN (o)->H)
+    fputs (" { reconstruct = 1 }", fp);
+}
+
+static void variable_terrain_class_init (GtsObjectClass * klass)
+{
+  klass->destroy = variable_terrain_destroy;
+  klass->read = variable_terrain_read;
+  klass->write = variable_terrain_write;
+}
+
 static void variable_terrain_init (GfsVariableTerrain * v)
 {
-  GFS_VARIABLE1 (v)->units = 1.;
-  GFS_VARIABLE1 (v)->description = g_strdup ("Terrain");
-  GFS_VARIABLE1 (v)->coarse_fine = variable_terrain_coarse_fine;
-  GFS_VARIABLE1 (v)->fine_coarse = variable_terrain_fine_coarse;
   v->rs.basename = g_strdup ("*");
 }
 
