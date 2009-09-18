@@ -55,6 +55,8 @@ static void simulation_destroy (GtsObject * object)
   g_slist_free (sim->modules);
   g_slist_foreach (sim->globals, (GFunc) gts_object_destroy, NULL);
   g_slist_free (sim->globals);
+  g_slist_foreach (sim->preloaded_modules, (GFunc) g_module_close, NULL);
+  g_slist_free (sim->preloaded_modules);
 
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->destroy) (object);
 }
@@ -169,6 +171,54 @@ static gboolean strmatch (const gchar * s, const gchar * s1)
   return m;
 }
 
+static GModule * load_module (GtsFile * fp, GfsSimulation * sim)
+{
+  gts_file_next_token (fp);
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (module name)");
+    return NULL;
+  }
+  if (!g_module_supported ()) {
+    g_warning ("modules are not supported on this system");
+    gts_file_next_token (fp);
+    return NULL;
+  }
+  else {
+    GModule * module;
+
+    module = g_module_open (fp->token->str, 0);
+    if (module == NULL) {
+      gchar * name = g_strconcat (fp->token->str, 
+#if FTT_2D
+				  "2D"
+#elif FTT_2D3
+				  "2D3"
+#else
+				  "3D"
+#endif
+				  , NULL);
+      gchar * path = g_module_build_path (GFS_MODULES_DIR, name);
+      g_free (name);
+      module = g_module_open (path, 0);
+      g_free (path);
+    }
+    if (module == NULL) {
+      gts_file_error (fp, "cannot load module: %s", g_module_error ());
+      return NULL;
+    }
+    g_module_make_resident (module);
+    gts_file_next_token (fp);
+
+    void (* module_read) (GtsFile *, GfsSimulation * sim);
+    if (g_module_symbol (module, "gfs_module_read", (gpointer) &module_read)) {
+      (* module_read) (fp, sim);
+      if (fp->type == GTS_ERROR)
+	return NULL;
+    }
+    return module;
+  }
+}
+
 static void simulation_read (GtsObject ** object, GtsFile * fp)
 {
   GfsSimulation * sim = GFS_SIMULATION (*object);
@@ -202,49 +252,10 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 
     /* ------------ GModule ------------ */
     else if (!strcmp (fp->token->str, "GModule")) {
-      gts_file_next_token (fp);
-      if (fp->type != GTS_STRING) {
-	gts_file_error (fp, "expecting a string (module name)");
+      GModule * module = load_module (fp, sim);
+      if (module == NULL)
 	return;
-      }
-      if (!g_module_supported ()) {
-	g_warning ("modules are not supported on this system");
-	gts_file_next_token (fp);      
-      }
-      else {
-	GModule * module;
-
-	module = g_module_open (fp->token->str, 0);
-	if (module == NULL) {
-	  gchar * name = g_strconcat (fp->token->str, 
-#if FTT_2D
-				      "2D"
-#elif FTT_2D3
-				      "2D3"
-#else
-				      "3D"
-#endif
-				      , NULL);
-	  gchar * path = g_module_build_path (GFS_MODULES_DIR, name);
-	  g_free (name);
-	  module = g_module_open (path, 0);
-	  g_free (path);
-	}
-	if (module == NULL) {
-	  gts_file_error (fp, "cannot load module: %s", g_module_error ());
-	  return;
-	}
-	g_module_make_resident (module);
-	sim->modules = g_slist_prepend (sim->modules, module);
-	gts_file_next_token (fp);
-
-	void (* module_read) (GtsFile *, GfsSimulation * sim);
-	if (g_module_symbol (module, "gfs_module_read", (gpointer) &module_read)) {
-	  (* module_read) (fp, sim);
-	  if (fp->type == GTS_ERROR)
-	    return;
-	}
-      }
+      sim->modules = g_slist_prepend (sim->modules, module);
     }
 
     /* ------------ GfsTime ------------ */
@@ -898,7 +909,7 @@ static void simulation_init (GfsSimulation * object)
   object->events = GTS_SLIST_CONTAINER (gts_container_new
 					(GTS_CONTAINER_CLASS
 					 (gts_slist_container_class ())));
-  object->modules = NULL;
+  object->modules = object->preloaded_modules = NULL;
 
   object->deferred_compilation = FALSE;
   
@@ -1105,18 +1116,39 @@ void gfs_simulation_refine (GfsSimulation * sim)
 GfsSimulation * gfs_simulation_read (GtsFile * fp)
 {
   GfsDomain * d;
+  GSList * ml = NULL; /* list of preloaded modules */
 
   g_return_val_if_fail (fp != NULL, NULL);
 
   while (fp->type == '\n')
      gts_file_next_token (fp);
 
+  while (fp->type == GTS_STRING)
+    if (!strcmp (fp->token->str, "GModule")) { /* preloaded module */
+      GModule * module = load_module (fp, NULL);
+      if (module == NULL)
+	return NULL;
+      ml = g_slist_prepend (ml, module);
+    }
+    else {
+      gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
+      return NULL;
+    }
+
+  while (fp->type == '\n')
+     gts_file_next_token (fp);
+      
   d = gfs_domain_read (fp);
   if (d != NULL && !GFS_IS_SIMULATION (d)) {
     gts_file_error (fp, "parent graph is not a GfsSimulation");
     gts_object_destroy (GTS_OBJECT (d));
+    g_slist_free (ml);
     return NULL;
   }
+  if (d)
+    GFS_SIMULATION (d)->preloaded_modules = g_slist_reverse (ml);
+  else
+    g_slist_free (ml);
   return GFS_SIMULATION (d);
 }
 
@@ -1142,6 +1174,18 @@ void gfs_simulation_write (GfsSimulation * sim,
 
   fprintf (fp, "# Gerris Flow Solver %dD version %s (%s)\n",
 	   FTT_DIMENSION, GFS_VERSION, GFS_BUILD_VERSION);
+  GSList * i = sim->preloaded_modules;
+  while (i) {
+    void (* module_write) (FILE *);
+    const gchar * name = NULL;
+    fprintf (fp, "GModule %s", 
+	     g_module_symbol (i->data, "gfs_module_name", (gpointer) &name) ? name : 
+	     g_module_name (i->data));
+    if (g_module_symbol (i->data, "gfs_module_write", (gpointer) &module_write))
+      (* module_write) (fp);
+    fputc ('\n', fp);
+    i = i->next;
+  }
   domain = GFS_DOMAIN (sim);
   depth = domain->max_depth_write;
   domain->max_depth_write = max_depth;
