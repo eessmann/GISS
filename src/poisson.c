@@ -793,7 +793,7 @@ static void diffusion_mixed_coef (FttCell * cell, DiffusionCoeff * c)
   reset_coeff (cell);
   if (GFS_IS_MIXED (cell))
     GFS_STATE (cell)->solid->v = 
-      c->dt*gfs_domain_solid_map (c->domain, cell)*gfs_source_diffusion_cell (c->d, cell);
+      c->dt*gfs_domain_solid_metric (c->domain, cell)*gfs_source_diffusion_cell (c->d, cell);
   if (c->rhoc) {
     gdouble rho = c->alpha ? 1./gfs_function_value (c->alpha, cell) : 1.;
     if (rho <= 0.) {

@@ -164,6 +164,8 @@ GtsObjectClass ** gfs_classes (void)
 #endif /* FTT_2D */
     gfs_init_wave_class (),
 
+    gfs_metric_lon_lat_class (),
+
     gfs_adapt_class (),
       gfs_adapt_vorticity_class (),
       gfs_adapt_streamline_curvature_class (),

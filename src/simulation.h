@@ -147,6 +147,26 @@ GfsSimulationClass * gfs_poisson_class            (void);
 
 GfsSimulationClass * gfs_axi_class                (void);
 
+/* GfsMetricLonLat: Header */
+
+typedef struct _GfsMetricLonLat GfsMetricLonLat;
+
+struct _GfsMetricLonLat {
+  /*< private >*/
+  GfsEvent parent;
+
+  /*< public >*/
+  gdouble r;
+};
+
+#define GFS_METRIC_LON_LAT(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsMetricLonLat,\
+					           gfs_metric_lon_lat_class ())
+#define GFS_IS_METRIC_LON_LAT(obj)         (gts_object_is_from_class (obj,\
+						   gfs_metric_lon_lat_class ()))
+
+GfsEventClass * gfs_metric_lon_lat_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

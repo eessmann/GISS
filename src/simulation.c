@@ -1968,21 +1968,24 @@ static void axi_read (GtsObject ** object, GtsFile * fp)
   GFS_DOMAIN (*object)->refpos.y = 0.5;
 }
 
-static gdouble axi_face_map (const GfsDomain * domain, const FttCellFace * face)
+static gdouble axi_face_metric (const GfsDomain * domain, const FttCellFace * face, 
+				const gpointer data)
 {
   FttVector p;
   ftt_face_pos (face, &p);
   return p.y;
 }
 
-static gdouble axi_cell_map (const GfsDomain * domain, const FttCell * cell)
+static gdouble axi_cell_metric (const GfsDomain * domain, const FttCell * cell, 
+				const gpointer data)
 {
   FttVector p;
   gfs_cell_cm (cell, &p);
   return p.y;
 }
 
-static gdouble axi_solid_map (const GfsDomain * domain, const FttCell * cell)
+static gdouble axi_solid_metric (const GfsDomain * domain, const FttCell * cell, 
+				 const gpointer data)
 {
   g_assert (GFS_IS_MIXED (cell));
   return GFS_STATE (cell)->solid->ca.y;
@@ -1991,9 +1994,13 @@ static gdouble axi_solid_map (const GfsDomain * domain, const FttCell * cell)
 static void axi_class_init (GfsSimulationClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = axi_read;
-  GFS_DOMAIN_CLASS (klass)->face_map  = axi_face_map;
-  GFS_DOMAIN_CLASS (klass)->cell_map  = axi_cell_map;
-  GFS_DOMAIN_CLASS (klass)->solid_map = axi_solid_map;
+}
+
+static void axi_init (GfsDomain * domain)
+{
+  domain->face_metric  = axi_face_metric;
+  domain->cell_metric  = axi_cell_metric;
+  domain->solid_metric = axi_solid_metric;
 }
 
 GfsSimulationClass * gfs_axi_class (void)
@@ -2006,11 +2013,104 @@ GfsSimulationClass * gfs_axi_class (void)
       sizeof (GfsSimulation),
       sizeof (GfsSimulationClass),
       (GtsObjectClassInitFunc) axi_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) axi_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_simulation_class ()), &gfs_axi_info);
+  }
+
+  return klass;
+}
+
+/* GfsMetricLonLat: Object */
+
+static void metric_lon_lat_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_metric_lon_lat_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %g", GFS_METRIC_LON_LAT (o)->r);
+}
+
+static gdouble metric_lon_lat_face_metric (const GfsDomain * domain, const FttCellFace * face, 
+					   const gpointer data)
+{
+  if (face->d/2 != FTT_Y)
+    return 1.;
+  FttVector p;
+  ftt_face_pos (face, &p);
+  return cos (p.y*GFS_SIMULATION (domain)->physical_params.L/GFS_METRIC_LON_LAT (data)->r);
+}
+
+static gdouble metric_lon_lat_cell_metric (const GfsDomain * domain, const FttCell * cell, 
+					   const gpointer data)
+{
+  FttVector p;
+  gfs_cell_cm (cell, &p);
+  return cos (p.y*GFS_SIMULATION (domain)->physical_params.L/GFS_METRIC_LON_LAT (data)->r);
+}
+
+static gdouble metric_lon_lat_solid_metric (const GfsDomain * domain, const FttCell * cell, 
+					    const gpointer data)
+{
+  g_assert (GFS_IS_MIXED (cell));
+  g_assert_not_implemented ();
+  return 1.;
+}
+
+static void metric_lon_lat_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_metric_lon_lat_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  if (domain->metric_data || domain->face_metric || domain->cell_metric || domain->solid_metric) {
+    gts_file_error (fp, "cannot use multiple metrics (yet)");
+    return;
+  }
+
+  GFS_METRIC_LON_LAT (*o)->r = gfs_read_constant (fp, gfs_object_simulation (*o));
+  if (fp->type == GTS_ERROR)
+    return;
+  if (GFS_METRIC_LON_LAT (*o)->r <= 0.) {
+    gts_file_error (fp, "radius must be strictly positive");
+    return;
+  }
+
+  domain->metric_data = *o;
+  domain->face_metric  = metric_lon_lat_face_metric;
+  domain->cell_metric  = metric_lon_lat_cell_metric;
+  domain->solid_metric = metric_lon_lat_solid_metric;
+}
+
+static void metric_lon_lat_class_init (GtsObjectClass * klass)
+{
+  klass->read = metric_lon_lat_read;
+  klass->write = metric_lon_lat_write;
+}
+
+static void metric_lon_lat_init (GfsMetricLonLat * m)
+{
+  GFS_EVENT (m)->istep = G_MAXINT/2;
+  m->r = 1.;
+}
+
+GfsEventClass * gfs_metric_lon_lat_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_metric_lon_lat_info = {
+      "GfsMetricLonLat",
+      sizeof (GfsMetricLonLat),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) metric_lon_lat_class_init,
+      (GtsObjectInitFunc) metric_lon_lat_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()), 
+				  &gfs_metric_lon_lat_info);
   }
 
   return klass;

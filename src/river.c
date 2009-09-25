@@ -193,6 +193,24 @@ static void sources (FttCell * cell, GfsRiver * r)
   zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[1][3]);
 
   GFS_VALUE (cell, r->v[2]) += r->dt*r->g/2.*(etaL + etaR)*(zbL - zbR)/delta;
+
+  /* longitude-latitude geometric source terms */
+#if 0
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  gdouble radius = 3./(2.*M_PI), g = 1.;
+  gdouble theta = p.y/radius, tantheta = tan (theta);
+  gdouble 
+    phiu = GFS_VALUE (cell, r->v[1]), 
+    phiv = GFS_VALUE (cell, r->v[2]), 
+    phi = GFS_VALUE (cell, r->v[0]); 
+#if 1
+  GFS_VALUE (cell, r->v[1]) += r->dt*tantheta/radius*phiu*phiv/phi;
+  GFS_VALUE (cell, r->v[2]) += r->dt*tantheta/radius*(- phiu*phiu/phi - g*phi*phi/2.);
+#else
+  GFS_VALUE (cell, r->v[2]) += r->dt*tantheta/radius*(- g*phi*phi/2.);
+#endif
+#endif
 }
 
 static void advance (GfsRiver * r, gdouble dt)

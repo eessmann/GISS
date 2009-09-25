@@ -73,15 +73,18 @@ struct _GfsDomain {
   gpointer array;
 
   gboolean overlap; /* whether to overlap MPI communications with computation */
+
+  /* coordinate metrics */
+  gpointer metric_data;
+  gdouble (* face_metric)  (const GfsDomain *, const FttCellFace *, const gpointer);
+  gdouble (* cell_metric)  (const GfsDomain *, const FttCell *,     const gpointer);
+  gdouble (* solid_metric) (const GfsDomain *, const FttCell *,     const gpointer);
 };
 
 struct _GfsDomainClass {
   GtsWGraphClass parent_class;
 
   void    (* post_read) (GfsDomain *, GtsFile * fp);
-  gdouble (* face_map)  (const GfsDomain *, const FttCellFace *);
-  gdouble (* cell_map)  (const GfsDomain *, const FttCell *);
-  gdouble (* solid_map) (const GfsDomain *, const FttCell *);
 };
 
 #define GFS_DOMAIN(obj)            GTS_OBJECT_CAST (obj,\
@@ -339,14 +342,14 @@ GSList *     gfs_receive_boxes                  (GfsDomain * domain,
  * @face: a #FttCellFace.
  *
  * Returns: the surface fraction of @face taking into account any
- * orthogonal mapping of @domain.
+ * orthogonal metric of @domain.
  */
 static inline
 gdouble gfs_domain_face_fraction (const GfsDomain * domain, const FttCellFace * face)
 {
   gdouble f = GFS_FACE_FRACTION (face);
-  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_map)
-    f *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_map) (domain, face);
+  if (domain->face_metric)
+    f *= (* domain->face_metric) (domain, face, domain->metric_data);
   return f;
 }
 
@@ -356,17 +359,17 @@ gdouble gfs_domain_face_fraction (const GfsDomain * domain, const FttCellFace * 
  * @face: a #FttCellFace.
  *
  * Returns: the surface fraction "to the right" of @face taking into account any
- * orthogonal mapping of @domain.
+ * orthogonal metric of @domain.
  */
 static inline
 gdouble gfs_domain_face_fraction_right (const GfsDomain * domain, const FttCellFace * face)
 {
   gdouble f = GFS_FACE_FRACTION_RIGHT (face);
-  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_map) {
+  if (domain->face_metric) {
     FttCellFace face1;
     face1.cell = face->neighbor;
     face1.d = FTT_OPPOSITE_DIRECTION (face->d);
-    f *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->face_map) (domain, &face1);
+    f *= (* domain->face_metric) (domain, &face1, domain->metric_data);
   }
   return f;
 }
@@ -377,30 +380,30 @@ gdouble gfs_domain_face_fraction_right (const GfsDomain * domain, const FttCellF
  * @cell: a #FttCell.
  *
  * Returns: the volume fraction of @cell taking into account any
- * orthogonal mapping of @domain.
+ * orthogonal metric of @domain.
  */
 static inline
 gdouble gfs_domain_cell_fraction (const GfsDomain * domain, const FttCell * cell)
 {
   gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
-  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->cell_map)
-    a *= (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->cell_map) (domain, cell);
+  if (domain->cell_metric)
+    a *= (* domain->cell_metric) (domain, cell, domain->metric_data);
   return a;
 }
 
 /**
- * gfs_domain_solid_map:
+ * gfs_domain_solid_metric:
  * @domain; a #GfsDomain.
  * @cell: a mixed #FttCell.
  *
- * Returns: the coordinate mapping at the center of area of the solid
+ * Returns: the coordinate metric at the center of area of the solid
  * surface contained within @cell.
  */
 static inline
-gdouble gfs_domain_solid_map (const GfsDomain * domain, const FttCell * cell)
+gdouble gfs_domain_solid_metric (const GfsDomain * domain, const FttCell * cell)
 {
-  if (GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->solid_map)
-    return (* GFS_DOMAIN_CLASS (GTS_OBJECT (domain)->klass)->solid_map) (domain, cell);
+  if (domain->solid_metric)
+    return (* domain->solid_metric) (domain, cell, domain->metric_data);
   return 1.;
 }
 
