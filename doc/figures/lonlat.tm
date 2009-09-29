@@ -232,21 +232,21 @@
   \;
 
   <\equation*>
-    m<rsub|x>*m<rsub|y>*d*x*d*y*\<partial\><rsub|t>\<b-U\>+<big|sum><rsub|f<rsub|x>>m<rsub|y>*d*y*\<b-F\><rsub|x>(\<b-U\>)+<big|sum><rsub|f<rsub|y>>m<rsub|x>*d*x*\<b-F\><rsub|y>(\<b-U\>)=0
+    h<rsub|\<lambda\>>*h<rsub|\<theta\>>*d\<lambda\>*d\<theta\>*\<partial\><rsub|t>\<b-U\>+<big|sum><rsub|f<rsub|\<lambda\>>>h<rsub|\<theta\>>*d\<theta\>*\<b-F\><rsub|\<lambda\>>(\<b-U\>)+<big|sum><rsub|f<rsub|\<theta\>>>h<rsub|\<lambda\>>*d\<lambda\>*\<b-F\><rsub|\<theta\>>(\<b-U\>)=0
   </equation*>
 
   can be rewritten
 
   <\equation*>
-    m<rsub|x>*m<rsub|y>*\<partial\><rsub|t>\<b-U\>+<frac|1|d*x>*<big|sum><rsub|f<rsub|x>>m<rsub|y>*\<b-F\><rsub|x>(\<b-U\>)+<frac|1|d*y>*<big|sum><rsub|f<rsub|y>>m<rsub|x>*\<b-F\><rsub|y>(\<b-U\>)=0.
+    h<rsub|\<lambda\>>*h<rsub|\<theta\>>*\<partial\><rsub|t>\<b-U\>+<frac|1|d\<lambda\>>*<big|sum><rsub|f<rsub|\<lambda\>>>h<rsub|\<theta\>>*\<b-F\><rsub|\<lambda\>>(\<b-U\>)+<frac|1|d\<theta\>>*<big|sum><rsub|f<rsub|\<theta\>>>h<rsub|\<lambda\>>*\<b-F\><rsub|\<theta\>>(\<b-U\>)=0.
   </equation*>
 
-  The differential form can be recovered by making <math|d*x> and <math|d*y>
-  tend to zero
+  The differential form can be recovered by making <math|d\<lambda\>> and
+  <math|d\<theta\>> tend to zero
 
   <\with|mode|math>
     <\eqnarray*>
-      <tformat|<table|<row|<cell|>|<cell|m<rsub|x>*m<rsub|y>*\<partial\><rsub|t>\<phi\>+\<partial\><rsub|x>(m<rsub|y>*\<phi\>*u)+\<partial\><rsub|y>(m<rsub|x>*\<phi\>*v)=0,>|<cell|>>|<row|<cell|>|<cell|m<rsub|x>*m<rsub|y>*\<partial\><rsub|t>(\<phi\>*u)+\<partial\><rsub|x><left|[>m<rsub|y>*<left|(>\<phi\>*u<rsup|2>+g*<frac|\<phi\><rsup|2>|2><right|)><right|]>+\<partial\><rsub|y><left|(>m<rsub|x>*\<phi\>*u*v<right|)>=0,>|<cell|>>|<row|<cell|>|<cell|m<rsub|x>*m<rsub|y>*\<partial\><rsub|t>(\<phi\>*v)+\<partial\><rsub|x>(m<rsub|y>*\<phi\>*u*v)+\<partial\><rsub|y><left|[>m<rsub|x>*<left|(>\<phi\>*v<rsup|2>+g*<frac|\<phi\><rsup|2>|2><right|)><right|]>=0.>|<cell|>>>>
+      <tformat|<table|<row|<cell|>|<cell|h<rsub|\<lambda\>>*h<rsub|\<theta\>>*\<partial\><rsub|t>\<phi\>+\<partial\><rsub|\<lambda\>>(h<rsub|\<theta\>>*\<phi\>*u)+\<partial\><rsub|\<theta\>>(h<rsub|\<lambda\>>*\<phi\>*v)=0,>|<cell|>>|<row|<cell|>|<cell|h<rsub|\<lambda\>>*h<rsub|\<theta\>>*\<partial\><rsub|t>(\<phi\>*u)+\<partial\><rsub|\<lambda\>><left|[>h<rsub|\<theta\>>*<left|(>\<phi\>*u<rsup|2>+g*<frac|\<phi\><rsup|2>|2><right|)><right|]>+\<partial\><rsub|\<theta\>><left|(>h<rsub|\<lambda\>>*\<phi\>*u*v<right|)>=0,>|<cell|>>|<row|<cell|>|<cell|h<rsub|\<lambda\>>*h<rsub|\<theta\>>*\<partial\><rsub|t>(\<phi\>*v)+\<partial\><rsub|\<lambda\>>(h<rsub|\<theta\>>*\<phi\>*u*v)+\<partial\><rsub|\<theta\>><left|[>h<rsub|\<lambda\>>*<left|(>\<phi\>*v<rsup|2>+g*<frac|\<phi\><rsup|2>|2><right|)><right|]>=0.>|<cell|>>>>
     </eqnarray*>
   </with>
 
@@ -254,21 +254,21 @@
 
   <\with|mode|math>
     <\eqnarray*>
-      <tformat|<table|<row|<cell|>|<cell|\<partial\><rsub|t>\<phi\>+<frac|u*|m<rsub|x>>*\<partial\><rsub|x>\<phi\>*+<frac|v*|m<rsub|y>>*\<partial\><rsub|y>\<phi\>+<frac|\<phi\>*|m<rsub|x>*m<rsub|y>>*<left|[>\<partial\><rsub|x>(m<rsub|y>*u)+\<partial\><rsub|y>(m<rsub|x>*v)<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|\<partial\><rsub|t>u*+<frac|u*|m<rsub|x>>*\<partial\><rsub|x>u+<frac|v*|m<rsub|y>>*\<partial\><rsub|y>u*+<frac|g|m<rsub|x>>*\<partial\><rsub|x>\<phi\>+g*<frac|\<phi\>|2*m<rsub|x>*m<rsub|y>>*\<partial\><rsub|x>m<rsub|y>=0,>|<cell|>>|<row|<cell|>|<cell|\<partial\><rsub|t>v+<frac|u|m<rsub|x>>*\<partial\><rsub|x>v+<frac|v|m<rsub|y>>*\<partial\><rsub|y>v+<frac|g|m<rsub|y>>*\<partial\><rsub|y>\<phi\>+g*<frac|\<phi\>|2*m<rsub|x>*m<rsub|y>>*\<partial\><rsub|y>m<rsub|x>=0.>|<cell|>>>>
+      <tformat|<table|<row|<cell|>|<cell|\<partial\><rsub|t>\<phi\>+<frac|u*|h<rsub|\<lambda\>>>*\<partial\><rsub|\<lambda\>>\<phi\>*+<frac|v*|h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>\<phi\>+<frac|\<phi\>*|h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*<left|[>\<partial\><rsub|\<lambda\>>(h<rsub|\<theta\>>*u)+\<partial\><rsub|\<theta\>>(h<rsub|\<lambda\>>*v)<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|\<partial\><rsub|t>u*+<frac|u*|h<rsub|\<lambda\>>>*\<partial\><rsub|\<lambda\>>u+<frac|v*|h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>u*+<frac|g|h<rsub|\<lambda\>>>*\<partial\><rsub|\<lambda\>>\<phi\>+g*<frac|\<phi\>|2*h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*\<partial\><rsub|\<lambda\>>h<rsub|\<theta\>>=0,>|<cell|>>|<row|<cell|>|<cell|\<partial\><rsub|t>v+<frac|u|h<rsub|\<lambda\>>>*\<partial\><rsub|\<lambda\>>v+<frac|v|h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>v+<frac|g|h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>\<phi\>+g*<frac|\<phi\>|2*h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>h<rsub|\<lambda\>>=0.>|<cell|>>>>
     </eqnarray*>
   </with>
 
   Introducing the notation
 
   <\equation*>
-    d<rsub|t>=\<partial\><rsub|t>+<frac|u*|m<rsub|x>>*\<partial\><rsub|x>+<frac|v*|m<rsub|y>>*\<partial\><rsub|y>,
+    d<rsub|t>=\<partial\><rsub|t>+<frac|u*|h<rsub|\<lambda\>>>*\<partial\><rsub|\<lambda\>>+<frac|v*|h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>,
   </equation*>
 
   this can be rewritten
 
   <\with|mode|math>
     <\eqnarray*>
-      <tformat|<table|<row|<cell|>|<cell|d<rsub|t>\<phi\>+<frac|\<phi\>*|m<rsub|x>*m<rsub|y>>*<left|[>\<partial\><rsub|x>(m<rsub|y>*u)+\<partial\><rsub|y>(m<rsub|x>*v)<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>u*<with|color|blue|<with|color|green|<with|color|green|-f<rsub|G>*v>>>+<frac|g|m<rsub|x>>*\<partial\><rsub|x>\<phi\><with|color|red|+<frac|g*\<phi\>|2*m<rsub|x>*m<rsub|y>>*\<partial\><rsub|x>m<rsub|y>>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>v<with|color|green|<with|color|blue|<with|color|green|+f<rsub|G>*u>>>+<frac|g|m<rsub|y>>*\<partial\><rsub|y>\<phi\><with|color|red|+*<frac|g*\<phi\>|2*m<rsub|x>*m<rsub|y>>*\<partial\><rsub|y>m<rsub|x>>=0.>|<cell|>>>>
+      <tformat|<table|<row|<cell|>|<cell|d<rsub|t>\<phi\>+<frac|\<phi\>*|h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*<left|[>\<partial\><rsub|\<lambda\>>(h<rsub|\<theta\>>*u)+\<partial\><rsub|\<theta\>>(h<rsub|\<lambda\>>*v)<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>u*<with|color|blue|<with|color|green|<with|color|green|-f<rsub|G>*v>>>+<frac|g|h<rsub|\<lambda\>>>*\<partial\><rsub|\<lambda\>>\<phi\><with|color|red|+<frac|g*\<phi\>|2*h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*\<partial\><rsub|\<lambda\>>h<rsub|\<theta\>>>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>v<with|color|green|<with|color|blue|<with|color|green|+f<rsub|G>*u>>>+<frac|g|h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>\<phi\><with|color|red|+*<frac|g*\<phi\>|2*h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>h<rsub|\<lambda\>>>=0.>|<cell|>>>>
     </eqnarray*>
   </with>
 
@@ -276,7 +276,7 @@
   of Williamson et al, 1991) are indicated in red and green respectively and
 
   <\equation*>
-    f<rsub|G>\<equiv\><frac|v*\<partial\><rsub|x>m<rsub|y>-u*\<partial\><rsub|y>m<rsub|x>|m<rsub|x>*m<rsub|y>>*.*
+    f<rsub|G>\<equiv\><frac|v*\<partial\><rsub|\<lambda\>>h<rsub|\<theta\>>-u*\<partial\><rsub|\<theta\>>h<rsub|\<lambda\>>|h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*.*
   </equation*>
 
   <subsubsection|Application to spherical coordinates>
@@ -284,8 +284,8 @@
   For spherical coordinates
 
   <\equation*>
-    m<rsub|x>=r*cos y,<hspace|10pt>m<rsub|y>=r,<hspace|10pt>\<partial\><rsub|x>m<rsub|y>=0,<hspace|10pt>\<partial\><rsub|y>m<rsub|x>=-r*sin
-    y,
+    h<rsub|\<lambda\>>=r*cos \<theta\>,<hspace|10pt>h<rsub|\<theta\>>=r,<hspace|10pt>\<partial\><rsub|\<lambda\>>h<rsub|\<theta\>>=0,<hspace|10pt>\<partial\><rsub|\<theta\>>h<rsub|\<lambda\>>=-r*sin
+    \<theta\>,
   </equation*>
 
   which gives
@@ -293,11 +293,11 @@
   <\with|mode|math>
     <\eqnarray*>
       <tformat|<table|<row|<cell|>|<cell|d<rsub|t>\<phi\>+<frac|\<phi\>*|r*cos
-      y>*<left|[>\<partial\><rsub|x>u+\<partial\><rsub|y>(v*cos
-      y)<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>u*<with|color|blue|<with|color|green|<with|color|green|-<frac|u*v|r>*tan
-      y>>>+<frac|g|r*cos y>*\<partial\><rsub|x>\<phi\>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>v<with|color|green|<with|color|blue|<with|color|green|<with|color|green|+<frac|u<rsup|2>|r>*tan
-      y>>>>+<frac|g|m<rsub|y>>*\<partial\><rsub|y>\<phi\><with|color|red|-<frac|g*\<phi\>|2*r>*tan
-      y>=0.>|<cell|>>>>
+      \<theta\>>*<left|[>\<partial\><rsub|\<lambda\>>u+\<partial\><rsub|\<theta\>>(v*cos
+      \<theta\>)<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>u*<with|color|blue|<with|color|green|<with|color|green|-<frac|u*v|r>*tan
+      \<theta\>>>>+<frac|g|r*cos \<theta\>>*\<partial\><rsub|\<lambda\>>\<phi\>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>v<with|color|green|<with|color|blue|<with|color|green|<with|color|green|+<frac|u<rsup|2>|r>*tan
+      \<theta\>>>>>+<frac|g|r>*\<partial\><rsub|\<theta\>>\<phi\><with|color|red|-<frac|g*\<phi\>|2*r>*tan
+      \<theta\>>=0.>|<cell|>>>>
     </eqnarray*>
   </with>
 
@@ -306,14 +306,14 @@
   For polar coordinates
 
   <\equation*>
-    m<rsub|x>=1,<hspace|10pt>m<rsub|y>=x,<hspace|10pt>\<partial\><rsub|x>m<rsub|y>=1,<hspace|10pt>\<partial\><rsub|y>m<rsub|x>=0,
+    h<rsub|\<lambda\>>=1,<hspace|10pt>h<rsub|\<theta\>>=\<lambda\>,<hspace|10pt>\<partial\><rsub|\<lambda\>>h<rsub|\<theta\>>=1,<hspace|10pt>\<partial\><rsub|\<theta\>>h<rsub|\<lambda\>>=0,
   </equation*>
 
   which gives
 
   <\with|mode|math>
     <\eqnarray*>
-      <tformat|<table|<row|<cell|>|<cell|d<rsub|t>\<phi\>+<frac|\<phi\>*|x>*<left|[>\<partial\><rsub|x>(x*u)+\<partial\><rsub|y>v<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>u*<with|color|blue|<with|color|green|<with|color|green|-<frac|v<rsup|2>|x>>>>+g*\<partial\><rsub|x>\<phi\><with|color|red|+g*<frac|\<phi\>|2*x>>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>v<with|color|green|<with|color|blue|<with|color|green|<with|color|green|+<frac|u*v|x>>>>>+<frac|g|x>*\<partial\><rsub|y>\<phi\>=0.>|<cell|>>>>
+      <tformat|<table|<row|<cell|>|<cell|d<rsub|t>\<phi\>+<frac|\<phi\>*|\<lambda\>>*<left|[>\<partial\><rsub|\<lambda\>>(\<lambda\>*u)+\<partial\><rsub|\<theta\>>v<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>u*<with|color|blue|<with|color|green|<with|color|green|-<frac|v<rsup|2>|\<lambda\>>>>>+g*\<partial\><rsub|\<lambda\>>\<phi\><with|color|red|+g*<frac|\<phi\>|2*\<lambda\>>>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>v<with|color|green|<with|color|blue|<with|color|green|<with|color|green|+<frac|u*v|\<lambda\>>>>>>+<frac|g|\<lambda\>>*\<partial\><rsub|\<theta\>>\<phi\>=0.>|<cell|>>>>
     </eqnarray*>
   </with>
 </body>
@@ -350,12 +350,16 @@
       <no-break><pageref|auto-3>>
 
       <with|par-left|<quote|1.5fn>|3<space|2spc>The Saint-Venant equations in
-      orthogonal curvilinear coordinates <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      general orthogonal coordinates <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-4>>
 
       <with|par-left|<quote|3fn>|3.1<space|2spc>Application to spherical
       coordinates <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-5>>
+
+      <with|par-left|<quote|3fn>|3.2<space|2spc>Application to polar
+      coordinates <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-6>>
     </associate>
   </collection>
 </auxiliary>

@@ -27,7 +27,8 @@ TESTDIRS = \
 	geo \
 	waves \
 	nz \
-	parabola
+	parabola \
+	lonlat
 
 EXTRA_DIST = \
 	template.tex \

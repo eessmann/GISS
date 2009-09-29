@@ -194,23 +194,26 @@ static void sources (FttCell * cell, GfsRiver * r)
 
   GFS_VALUE (cell, r->v[2]) += r->dt*r->g/2.*(etaL + etaR)*(zbL - zbR)/delta;
 
-  /* longitude-latitude geometric source terms */
-#if 0
-  FttVector p;
-  ftt_cell_pos (cell, &p);
-  gdouble radius = 3./(2.*M_PI), g = 1.;
-  gdouble theta = p.y/radius, tantheta = tan (theta);
-  gdouble 
-    phiu = GFS_VALUE (cell, r->v[1]), 
-    phiv = GFS_VALUE (cell, r->v[2]), 
-    phi = GFS_VALUE (cell, r->v[0]); 
-#if 1
-  GFS_VALUE (cell, r->v[1]) += r->dt*tantheta/radius*phiu*phiv/phi;
-  GFS_VALUE (cell, r->v[2]) += r->dt*tantheta/radius*(- phiu*phiu/phi - g*phi*phi/2.);
-#else
-  GFS_VALUE (cell, r->v[2]) += r->dt*tantheta/radius*(- g*phi*phi/2.);
-#endif
-#endif
+  /* Geometric source terms (see doc/figures/lonlat.tm) */
+  if (GFS_DOMAIN (r)->cell_metric) {
+    GfsDomain * domain = GFS_DOMAIN (r);
+    FttCellFace face = { cell };
+    gdouble f[FTT_NEIGHBORS];
+    for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++)
+      f[face.d] = (* domain->face_metric) (domain, &face, domain->metric_data);
+    gdouble dh_dl = f[FTT_RIGHT] - f[FTT_LEFT];
+    gdouble dh_dt = f[FTT_TOP]   - f[FTT_BOTTOM];
+    gdouble dldh = (* domain->cell_metric) (domain, cell, domain->metric_data)*
+      delta*GFS_SIMULATION (r)->physical_params.L;
+    gdouble 
+      phi = GFS_VALUE (cell, r->v1[0]),
+      phiu = GFS_VALUE (cell, r->v1[1]), 
+      phiv = GFS_VALUE (cell, r->v1[2]);
+    gdouble fG = phiv*dh_dl - phiu*dh_dt;
+    gdouble g = GFS_SIMULATION (r)->physical_params.g;
+    GFS_VALUE (cell, r->v[1]) += r->dt*(g*phi*phi/2.*dh_dl + fG*phiv)/dldh;
+    GFS_VALUE (cell, r->v[2]) += r->dt*(g*phi*phi/2.*dh_dt - fG*phiu)/dldh;
+  }
 }
 
 static void advance (GfsRiver * r, gdouble dt)
@@ -483,8 +486,8 @@ static void river_init (GfsRiver * r)
   r->v1[2] = gfs_domain_add_variable (domain, NULL, NULL);
   gfs_variable_set_vector (&r->v1[1], 2);
 
-  r->dv[0][0] = gfs_domain_add_variable (domain, "Px", "x-component of the thickness gradient");
-  r->dv[1][0] = gfs_domain_add_variable (domain, "Py", "y-component of the thickness gradien");
+  r->dv[0][0] = gfs_domain_add_variable (domain, "Px", "x-component of the depth gradient");
+  r->dv[1][0] = gfs_domain_add_variable (domain, "Py", "y-component of the depth gradien");
   r->dv[0][1] = gfs_domain_add_variable (domain, "Ux", "x-component of the flux gradient");
   r->dv[1][1] = gfs_domain_add_variable (domain, "Uy", "y-component of the flux gradient");
   r->dv[0][2] = gfs_domain_add_variable (domain, "Vx", "x-component of the flux gradient");
