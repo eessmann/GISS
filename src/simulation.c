@@ -1651,8 +1651,7 @@ void gfs_simulation_map (GfsSimulation * sim, FttVector * p)
   
   GSList * i = sim->maps->items;
   while (i) {
-    GtsObject * o = i->data;
-    (* GFS_MAP_CLASS (o->klass)->transform) (i->data, p, p);
+    (* GFS_MAP (i->data)->transform) (i->data, p, p);
     i = i->next;
   }
   FttComponent c;
@@ -1678,8 +1677,7 @@ void gfs_simulation_map_inverse (GfsSimulation * sim, FttVector * p)
     (&p->x)[c] *= sim->physical_params.L/(&GFS_DOMAIN (sim)->lambda.x)[c];
   GSList * i = sim->maps->items;
   while (i) {
-    GtsObject * o = i->data;
-    (* GFS_MAP_CLASS (o->klass)->inverse) (i->data, p, p);
+    (* GFS_MAP (i->data)->inverse) (i->data, p, p);
     i = i->next;
   }
 }

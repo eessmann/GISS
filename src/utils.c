@@ -198,7 +198,7 @@ struct _GfsFunction {
   GfsVariable * v;
   GfsDerivedVariable * dv;
   gdouble val;
-  gboolean spatial, constant;
+  gboolean spatial, constant, nomap;
   GtsFile fpd;
   gdouble units;
 };
@@ -1144,7 +1144,7 @@ GfsFunctionClass * gfs_function_spatial_class (void)
  *
  * Returns: the value of function @f at location @p.
  */
-gdouble gfs_function_spatial_value (GfsFunction * f, FttVector * p)
+gdouble gfs_function_spatial_value (GfsFunction * f, const FttVector * p)
 {
   g_return_val_if_fail (f != NULL, 0.);
   g_return_val_if_fail (GFS_IS_FUNCTION_SPATIAL (f), 0.);
@@ -1155,7 +1155,8 @@ gdouble gfs_function_spatial_value (GfsFunction * f, FttVector * p)
     GfsSimulation * sim = gfs_object_simulation (f);
     FttVector q = *p;
     check_for_deferred_compilation (f);
-    gfs_simulation_map_inverse (sim, &q);
+    if (!f->nomap)
+      gfs_simulation_map_inverse (sim, &q);
     dimensional = (* (GfsFunctionSpatialFunc) f->f) (q.x, q.y, q.z, sim->time.t);
   }
   else
@@ -1174,6 +1175,34 @@ GfsFunction * gfs_function_spatial_new (GfsFunctionClass * klass,
   object->f = (GfsFunctionFunc) func;
 
   return object;
+}
+
+/* GfsFunctionMap: object */
+
+static void gfs_function_map_init (GfsFunction * f)
+{
+  f->nomap = TRUE;
+}
+
+GfsFunctionClass * gfs_function_map_class (void)
+{
+  static GfsFunctionClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_function_info = {
+      "GfsFunctionMap",
+      sizeof (GfsFunction),
+      sizeof (GfsFunctionClass),
+      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_function_map_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_function_spatial_class ()),
+				  &gfs_function_info);
+  }
+
+  return klass;
 }
 
 /* GfsFunctionConstant: object */

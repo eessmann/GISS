@@ -24,7 +24,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include "ftt.h"
+#include "variable.h"
+#include "utils.h"
 
 /* GfsMap: Header */
 
@@ -34,6 +35,8 @@ struct _GfsMap {
   /*< private >*/
   GtsSListContainee parent;
 
+  void (* transform) (GfsMap * map, const FttVector * src, FttVector * dest);
+  void (* inverse)   (GfsMap * map, const FttVector * src, FttVector * dest);
   /*< public >*/
 };
 
@@ -44,8 +47,6 @@ struct _GfsMapClass {
   GtsSListContaineeClass parent_class;
 
   /*< public >*/
-  void (* transform) (GfsMap * map, const FttVector * src, FttVector * dest);
-  void (* inverse)   (GfsMap * map, const FttVector * src, FttVector * dest);
 };
 
 #define GFS_MAP(obj)            GTS_OBJECT_CAST (obj,\
@@ -58,6 +59,26 @@ struct _GfsMapClass {
 						 gfs_map_class ()))
 
 GfsMapClass * gfs_map_class      (void);
+
+/* GfsMapFunction: Header */
+
+typedef struct _GfsMapFunction         GfsMapFunction;
+
+struct _GfsMapFunction {
+  /*< private >*/
+  GfsMap parent;
+
+  /*< public >*/
+  GfsFunction * transform[FTT_DIMENSION], * inverse[FTT_DIMENSION];
+};
+
+#define GFS_MAP_FUNCTION(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsMapFunction,\
+					         gfs_map_function_class ())
+#define GFS_IS_MAP_FUNCTION(obj)         (gts_object_is_from_class (obj,\
+						 gfs_map_function_class ()))
+
+GfsMapClass * gfs_map_function_class      (void);
 
 #ifdef __cplusplus
 }

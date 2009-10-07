@@ -135,7 +135,14 @@ typedef gdouble (* GfsFunctionSpatialFunc)    (double x, double y, double z, dou
 GfsFunctionClass * gfs_function_spatial_class (void);
 GfsFunction *      gfs_function_spatial_new   (GfsFunctionClass * klass, 
 					       GfsFunctionSpatialFunc func);
-gdouble            gfs_function_spatial_value (GfsFunction * f, FttVector * p);
+gdouble            gfs_function_spatial_value (GfsFunction * f, const FttVector * p);
+
+/* GfsFunctionMap: Header */
+
+#define GFS_IS_FUNCTION_MAP(obj)         (gts_object_is_from_class (obj,\
+					      gfs_function_map_class ()))
+
+GfsFunctionClass * gfs_function_map_class (void);
 
 /* GfsFunctionConstant: Header */
 

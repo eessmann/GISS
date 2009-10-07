@@ -132,8 +132,6 @@ static void gfs_map_projection_class_init (GfsMapClass * klass)
   GTS_OBJECT_CLASS (klass)->read = gfs_map_projection_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_map_projection_write;
   GTS_OBJECT_CLASS (klass)->destroy = gfs_map_projection_destroy;
-  GFS_MAP_CLASS (klass)->transform = projection_transform;
-  GFS_MAP_CLASS (klass)->inverse = projection_inverse;
 }
 
 static void gfs_map_projection_init (GfsMapProjection * object)
@@ -143,6 +141,8 @@ static void gfs_map_projection_init (GfsMapProjection * object)
   object->lat = -41.288889;
   object->angle = 0.; object->cosa = 1.; object->sina = 0.;
   object->pj = NULL;
+  GFS_MAP (object)->transform = projection_transform;
+  GFS_MAP (object)->inverse = projection_inverse;
 }
 
 GfsMapClass * gfs_map_projection_class (void)
