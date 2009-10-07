@@ -382,21 +382,37 @@ static void river_run (GfsSimulation * sim)
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gts_object_destroy, NULL);
 }
 
+static gdouble maximum_face_metric (FttCell * cell, GfsDomain * domain, FttComponent c)
+{
+  if (domain->face_metric) {
+    FttCellFace f;
+    f.cell = cell; f.d = 2*c;
+    gdouble fm1 = (* domain->face_metric) (domain, &f, domain->metric_data);
+    f.d = 2*c + 1;
+    gdouble fm2 = (* domain->face_metric) (domain, &f, domain->metric_data);
+    return MAX (fm1, fm2);
+  }
+  else
+    return 1.;
+}
+
 static void minimum_cfl (FttCell * cell, GfsRiver * r)
 {
-  gdouble size = ftt_cell_size (cell);
   gdouble h = GFS_VALUE (cell, r->v[0]);
   if (h > GFS_RIVER_DRY) {
-    gdouble uh = fabs (GFS_VALUE (cell, r->v[1]));
-    gdouble c = sqrt (r->g*h);
-    gdouble cfl = size/(uh/h + c);
-    if (cfl < r->cfl)
-      r->cfl = cfl;
-
-    gdouble vh = fabs (GFS_VALUE (cell, r->v[2]));
-    cfl = size/(vh/h + c);
-    if (cfl < r->cfl)
-      r->cfl = cfl;
+    GfsDomain * domain = GFS_DOMAIN (r);
+    gdouble vol = ftt_cell_size (cell);
+    if (domain->cell_metric)
+      vol *= (* domain->cell_metric) (domain, cell, domain->metric_data);
+    gdouble cg = sqrt (r->g*h);
+    FttComponent c;
+    for (c = FTT_X; c <= FTT_Y; c++) {
+      gdouble uh = fabs (GFS_VALUE (cell, r->v[c + 1]));
+      gdouble fm = maximum_face_metric (cell, domain, c);
+      gdouble cfl = vol/(fm*(uh/h + cg));
+      if (cfl < r->cfl)
+	r->cfl = cfl;
+    }
   }
 }
 
