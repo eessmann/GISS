@@ -155,6 +155,7 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   f[0] *= dt;
   f[2] = s->dv*dt*f[2];
   GFS_VALUE (face->cell, r->flux[0])    -= f[0];
+  /* see equation 2.16 of Audusse et al, 2004 */
   GFS_VALUE (face->cell, r->flux[s->u]) -= s->du*dt*(f[1] - r->g/2.*(uL[0]*uL[0] - etaL*etaL));
   GFS_VALUE (face->cell, r->flux[s->v]) -= f[2];
 
@@ -178,42 +179,57 @@ static void reset_fluxes (FttCell * cell, const GfsRiver * r)
 
 static void sources (FttCell * cell, GfsRiver * r)
 {
-  gdouble delta = ftt_cell_size (cell);
+  /* metric coefficients */
+  gdouble fm[FTT_NEIGHBORS], cm;
 
+  /* Geometric source terms (see doc/figures/lonlat.tm) */
+  if (GFS_DOMAIN (r)->cell_metric) {
+    GfsDomain * domain = GFS_DOMAIN (r);
+    FttCellFace face = { cell };
+    for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++)
+      fm[face.d] = (* domain->face_metric) (domain, &face, domain->metric_data);
+    gdouble dh_dl = fm[FTT_RIGHT] - fm[FTT_LEFT];
+    gdouble dh_dt = fm[FTT_TOP]   - fm[FTT_BOTTOM];
+    cm = (* domain->cell_metric) (domain, cell, domain->metric_data)*ftt_cell_size (cell);
+    gdouble dldh = cm*GFS_SIMULATION (r)->physical_params.L;
+    gdouble 
+      phiu = GFS_VALUE (cell, r->v1[1]), 
+      phiv = GFS_VALUE (cell, r->v1[2]);
+    gdouble fG = phiv*dh_dl - phiu*dh_dt;
+    gdouble g = GFS_SIMULATION (r)->physical_params.g;
+
+    gdouble etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[0][0]);
+    gdouble etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[0][0]);
+    GFS_VALUE (cell, r->v[1]) += r->dt*(g*(etaL*etaL + etaR*etaR)/4.*dh_dl + fG*phiv)/dldh;
+
+    etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[1][0]);
+    etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[1][0]);
+    GFS_VALUE (cell, r->v[2]) += r->dt*(g*(etaL*etaL + etaR*etaR)/4.*dh_dt - fG*phiu)/dldh;
+  }
+  else { /* metric unity */
+    FttDirection d;
+    for (d = 0; d < FTT_NEIGHBORS; d++)
+      fm[d] = 1.;
+    cm = ftt_cell_size (cell);
+  }
+
+  /* Second-order correction for slope source term ("Sci" of Audusse
+     et al, 2004, SIAM, 25(6):2050-2065, equation 3.8) */
   gdouble etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[0][0]);
   gdouble zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[0][3]);
   gdouble etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[0][0]);
   gdouble zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[0][3]);
 
-  GFS_VALUE (cell, r->v[1]) += r->dt*r->g/2.*(etaL + etaR)*(zbL - zbR)/delta;
+  GFS_VALUE (cell, r->v[1]) += 
+    r->dt*r->g/4.*(fm[FTT_RIGHT] + fm[FTT_LEFT])*(etaL + etaR)*(zbL - zbR)/cm;
 
   etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[1][0]);
   zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[1][3]);
   etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[1][0]);
   zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[1][3]);
 
-  GFS_VALUE (cell, r->v[2]) += r->dt*r->g/2.*(etaL + etaR)*(zbL - zbR)/delta;
-
-  /* Geometric source terms (see doc/figures/lonlat.tm) */
-  if (GFS_DOMAIN (r)->cell_metric) {
-    GfsDomain * domain = GFS_DOMAIN (r);
-    FttCellFace face = { cell };
-    gdouble f[FTT_NEIGHBORS];
-    for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++)
-      f[face.d] = (* domain->face_metric) (domain, &face, domain->metric_data);
-    gdouble dh_dl = f[FTT_RIGHT] - f[FTT_LEFT];
-    gdouble dh_dt = f[FTT_TOP]   - f[FTT_BOTTOM];
-    gdouble dldh = (* domain->cell_metric) (domain, cell, domain->metric_data)*
-      delta*GFS_SIMULATION (r)->physical_params.L;
-    gdouble 
-      phi = GFS_VALUE (cell, r->v1[0]),
-      phiu = GFS_VALUE (cell, r->v1[1]), 
-      phiv = GFS_VALUE (cell, r->v1[2]);
-    gdouble fG = phiv*dh_dl - phiu*dh_dt;
-    gdouble g = GFS_SIMULATION (r)->physical_params.g;
-    GFS_VALUE (cell, r->v[1]) += r->dt*(g*phi*phi/2.*dh_dl + fG*phiv)/dldh;
-    GFS_VALUE (cell, r->v[2]) += r->dt*(g*phi*phi/2.*dh_dt - fG*phiu)/dldh;
-  }
+  GFS_VALUE (cell, r->v[2]) += 
+    r->dt*r->g/4.*(fm[FTT_TOP] + fm[FTT_BOTTOM])*(etaL + etaR)*(zbL - zbR)/cm;
 }
 
 static void advance (GfsRiver * r, gdouble dt)

@@ -3,8 +3,8 @@
 <style|article>
 
 <\body>
-  <doc-data|<doc-title|Derivation of metric coefficients for a
-  <next-line>longitude-latitude coordinate
+  <doc-data|<doc-title|Derivation of metric coefficients for
+  a<next-line>longitude-latitude coordinate
   system>|<doc-author-data|<author-name|Stéphane
   Popinet>>|<doc-date|<date>>|>
 
@@ -268,7 +268,7 @@
 
   <\with|mode|math>
     <\eqnarray*>
-      <tformat|<table|<row|<cell|>|<cell|d<rsub|t>\<phi\>+<frac|\<phi\>*|h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*<left|[>\<partial\><rsub|\<lambda\>>(h<rsub|\<theta\>>*u)+\<partial\><rsub|\<theta\>>(h<rsub|\<lambda\>>*v)<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>u*<with|color|blue|<with|color|green|<with|color|green|-f<rsub|G>*v>>>+<frac|g|h<rsub|\<lambda\>>>*\<partial\><rsub|\<lambda\>>\<phi\><with|color|red|+<frac|g*\<phi\>|2*h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*\<partial\><rsub|\<lambda\>>h<rsub|\<theta\>>>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>v<with|color|green|<with|color|blue|<with|color|green|+f<rsub|G>*u>>>+<frac|g|h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>\<phi\><with|color|red|+*<frac|g*\<phi\>|2*h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>h<rsub|\<lambda\>>>=0.>|<cell|>>>>
+      <tformat|<table|<row|<cell|>|<cell|d<rsub|t>\<phi\>+<frac|\<phi\>*|h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*<left|[>\<partial\><rsub|\<lambda\>>(h<rsub|\<theta\>>*u)+\<partial\><rsub|\<theta\>>(h<rsub|\<lambda\>>*v)<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>u*<with|color|blue|<with|color|green|<with|color|green|-f<rsub|G>*v>>>+<frac|g|h<rsub|\<lambda\>>>*\<partial\><rsub|\<lambda\>>\<phi\><with|color|red|+<frac|g*\<phi\>|2*h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*\<partial\><rsub|\<lambda\>>h<rsub|\<theta\>>>=0,>|<cell|<eq-number><label|general-u>>>|<row|<cell|>|<cell|d<rsub|t>v<with|color|green|<with|color|blue|<with|color|green|+f<rsub|G>*u>>>+<frac|g|h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>\<phi\><with|color|red|+*<frac|g*\<phi\>|2*h<rsub|\<lambda\>>*h<rsub|\<theta\>>>*\<partial\><rsub|\<theta\>>h<rsub|\<lambda\>>>=0.>|<cell|>>>>
     </eqnarray*>
   </with>
 
@@ -316,19 +316,97 @@
       <tformat|<table|<row|<cell|>|<cell|d<rsub|t>\<phi\>+<frac|\<phi\>*|\<lambda\>>*<left|[>\<partial\><rsub|\<lambda\>>(\<lambda\>*u)+\<partial\><rsub|\<theta\>>v<right|]>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>u*<with|color|blue|<with|color|green|<with|color|green|-<frac|v<rsup|2>|\<lambda\>>>>>+g*\<partial\><rsub|\<lambda\>>\<phi\><with|color|red|+g*<frac|\<phi\>|2*\<lambda\>>>=0,>|<cell|>>|<row|<cell|>|<cell|d<rsub|t>v<with|color|green|<with|color|blue|<with|color|green|<with|color|green|+<frac|u*v|\<lambda\>>>>>>+<frac|g|\<lambda\>>*\<partial\><rsub|\<theta\>>\<phi\>=0.>|<cell|>>>>
     </eqnarray*>
   </with>
+
+  <subsection|``Well-balanced'' scheme in general orthogonal coordinates>
+
+  From Audusse et al, 2004, the one-dimensional scheme in Cartesian
+  coordinates can be written
+
+  <\equation>
+    \<Delta\>x<rsub|i>*d<rsub|t>U<rsub|i>+\<cal-F\><rsub|l>-\<cal-F\><rsub|r>=S<rsub|ci>,<label|audusse>
+  </equation>
+
+  with left and right numerical fluxes
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|\<cal-F\><rsub|l>>|<cell|=>|<cell|\<cal-F\>(U<rsub|i+1/2->,U<rsub|i+1/2+>)+<frac|g|2>*<matrix|<tformat|<table|<row|<cell|0>>|<row|<cell|\<phi\><rsup|2><rsub|i,r>-\<phi\><rsup|2><rsub|i+1/2->>>>>>,>>|<row|<cell|\<cal-F\><rsub|r>>|<cell|=>|<cell|\<cal-F\>(U<rsub|i-1/2->,U<rsub|i-1/2+>)+<frac|g|2>*<matrix|<tformat|<table|<row|<cell|0>>|<row|<cell|\<phi\><rsup|2><rsub|i,l>-\<phi\><rsup|2><rsub|i-1/2+>>>>>>,>>>>
+  </eqnarray*>
+
+  and centered source term (necessary to correct second-order imbalances)
+
+  <\equation*>
+    S<rsub|ci>=<frac|g|2>*<matrix|<tformat|<table|<row|<cell|0>>|<row|<cell|(\<phi\><rsub|i,l>+\<phi\><rsub|i,r>)*(z<rsub|i,l>-z<rsub|i,r>)>>>>>.
+  </equation*>
+
+  The lake-at-rest steady state is defined by <math|u<rsub|i>=0> and
+  <math|\<phi\><rsub|i,l>+z<rsub|i,l>=\<phi\><rsub|i,r>+z<rsub|i,r>=\<phi\><rsub|i>+z<rsub|i>=H>
+  for all <math|i>. In this case
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|\<cal-F\><rsub|l>>|<cell|=>|<cell|<frac|g|2>*<matrix|<tformat|<table|<row|<cell|0>>|<row|<cell|*\<phi\><rsup|2><rsub|i+1/2->>>>>>+<frac|g|2>*<matrix|<tformat|<table|<row|<cell|0>>|<row|<cell|\<phi\><rsup|2><rsub|i,r>-\<phi\><rsup|2><rsub|i+1/2->>>>>>,>>|<row|<cell|\<cal-F\><rsub|r>>|<cell|=>|<cell|<frac|g|2>*<matrix|<tformat|<table|<row|<cell|0>>|<row|<cell|\<phi\><rsup|2><rsub|i-1/2+>>>>>>+<frac|g|2>*<matrix|<tformat|<table|<row|<cell|0>>|<row|<cell|*\<phi\><rsup|2><rsub|i,l>-\<phi\><rsup|2><rsub|i-1/2+>>>>>>.>>>>
+  </eqnarray*>
+
+  The centered source term becomes
+
+  <\equation*>
+    S<rsub|ci>=<frac|g|2>**<matrix|<tformat|<table|<row|<cell|0>>|<row|<cell|(\<phi\><rsub|i,l>+\<phi\><rsub|i,r>)*(H-\<phi\><rsub|i,l>-H+\<phi\><rsub|i,r>)>>>>>=<frac|g|2>*<matrix|<tformat|<table|<row|<cell|0>>|<row|<cell|\<phi\><rsup|2><rsub|i,r>-\<phi\><rsup|2><rsub|i,l>>>>>>,
+  </equation*>
+
+  and restores hydrostatic balance.
+
+  For general orthogonal coordinates (<reference|audusse>) can be rewritten
+
+  <\equation*>
+    \<Delta\>x<rsub|i>*c<rsub|i>*d<rsub|t>U<rsub|i>+s<rsub|l>*\<cal-F\><rsub|l>-s<rsub|r>*\<cal-F\><rsub|r>=S<rsub|ci>+S<rsub|g>.
+  </equation*>
+
+  For the lake-at-rest steady state, this gives for the velocity component
+  <math|u>
+
+  <\equation*>
+    \<Delta\>x<rsub|i>*c<rsub|i>*d<rsub|t>u+<frac|g|2>*(s<rsub|l>*\<phi\><rsup|2><rsub|i,r>-s<rsub|r>*\<phi\><rsup|2><rsub|i,l>)=S<rsub|ci>+S<rsub|g>,
+  </equation*>
+
+  with the geometric source term (red term in (<reference|general-u>))
+  discretised as
+
+  <\equation*>
+    S<rsub|g>\<equiv\><frac|g|4>*(\<phi\><rsup|2><rsub|i,r>+\<phi\><rsup|2><rsub|i,l>)*(s<rsub|l>-s<rsub|r>).
+  </equation*>
+
+  The definition of <math|S<rsub|ci>> thus needs to be modified to maintain
+  balance, a simple choice is
+
+  <\equation*>
+    S<rsub|ci>=<frac|g|4>*<matrix|<tformat|<table|<row|<cell|0>>|<row|<cell|(s<rsub|l>+s<rsub|r>)*(\<phi\><rsub|i,l>+\<phi\><rsub|i,r>)*(z<rsub|i,l>-z<rsub|i,r>)>>>>>,
+  </equation*>
+
+  which for the lake-at-rest steady-state gives
+
+  <\eqnarray*>
+    <tformat|<table|<row|<cell|<frac|2|g>*\<Delta\>x<rsub|i>*c<rsub|i>*d<rsub|t>u>|<cell|=>|<cell|<frac|1|2>*(s<rsub|l>+s<rsub|r>)*(\<phi\><rsup|2><rsub|i,r>-\<phi\><rsup|2><rsub|i,l>)*+<frac|\<phi\><rsup|2><rsub|i,r>+\<phi\><rsup|2><rsub|i,l>|2>*(s<rsub|l>-s<rsub|r>)-s<rsub|l>*\<phi\><rsup|2><rsub|i,r>+s<rsub|r>*\<phi\><rsup|2><rsub|i,l>>>|<row|<cell|>|<cell|=>|<cell|0.>>>>
+  </eqnarray*>
+
+  This scheme also reduces to the Cartesian scheme for
+  <math|s<rsub|l>=s<rsub|r>=c<rsub|i>=1> and to the first-order scheme for
+  <math|z<rsub|i,l>=z<rsub|i,r>=z<rsub|i>> and
+  <math|<rsub|>\<phi\><rsub|i,r>=\<phi\><rsub|i,l>=\<phi\><rsub|i>>.
 </body>
 
 <\references>
   <\collection>
+    <associate|audusse|<tuple|7|4>>
     <associate|auto-1|<tuple|1|1>>
-    <associate|auto-2|<tuple|1|2>>
+    <associate|auto-2|<tuple|1|1>>
     <associate|auto-3|<tuple|2|2>>
-    <associate|auto-4|<tuple|3|?>>
-    <associate|auto-5|<tuple|3.1|?>>
-    <associate|auto-6|<tuple|3.2|?>>
+    <associate|auto-4|<tuple|3|3>>
+    <associate|auto-5|<tuple|3.1|4>>
+    <associate|auto-6|<tuple|3.2|4>>
+    <associate|auto-7|<tuple|4|4>>
     <associate|conservation|<tuple|1|1>>
+    <associate|general-u|<tuple|6|4>>
     <associate|gerris|<tuple|2|1>>
-    <associate|lonlat|<tuple|4|1>>
+    <associate|lonlat|<tuple|4|2>>
     <associate|manifold|<tuple|5|2>>
   </collection>
 </references>
@@ -360,6 +438,10 @@
       <with|par-left|<quote|3fn>|3.2<space|2spc>Application to polar
       coordinates <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-6>>
+
+      <with|par-left|<quote|1.5fn>|4<space|2spc>``Well-balanced'' scheme in
+      general orthogonal coordinates <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-7>>
     </associate>
   </collection>
 </auxiliary>
