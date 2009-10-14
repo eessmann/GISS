@@ -44,6 +44,7 @@
 #include "river.h"
 #include "balance.h"
 #include "map.h"
+#include "cubed.h"
 
 #include "modules.h"
 
@@ -166,6 +167,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_init_wave_class (),
 
     gfs_metric_lon_lat_class (),
+    gfs_metric_cubed_class (),
 
     gfs_adapt_class (),
       gfs_adapt_vorticity_class (),

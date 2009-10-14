@@ -20,6 +20,10 @@
 #ifndef __SURFACE_H__
 #define __SURFACE_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include <gts.h>
 #include "ftt.h"
 
