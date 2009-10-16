@@ -44,7 +44,7 @@
 #include "river.h"
 #include "balance.h"
 #include "map.h"
-#include "cubed.h"
+#include "metric.h"
 
 #include "modules.h"
 

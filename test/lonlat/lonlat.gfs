@@ -53,7 +53,7 @@ Define LENGTH (150./180.*M_PI)
     PhysicalParams { L = LENGTH }
     MetricLonLat 1.
     Refine 8
-    InitFraction P (0.2 - acos(cos(x)*cos(y)))
+    InitFraction P (0.2 - acos(cos(x*M_PI/180.)*cos(y*M_PI/180.)))
     Init {} { P = 0.2 + 1.8*P/LENGTH }
     Time { end = 0.9 }
     OutputTime { istep = 10 } stderr
@@ -62,9 +62,9 @@ Define LENGTH (150./180.*M_PI)
 #    OutputSimulation { istep = 10 } stdout
     EventScript { start = end } {
 	for i in 0.3 0.6 0.9; do
-	    if awk 'BEGIN { n1 = 0 }{
-              c = cos($1)*cos($2);
-              d = atan2(sqrt(1. - c*c),c)*180./3.14159265359
+	    if awk 'BEGIN { n1 = 0; pi = 3.14159265359 }{
+              c = cos($1*pi/180.)*cos($2*pi/180.);
+              d = atan2(sqrt(1. - c*c),c)*180./pi
               i = int(d*2.)
               x[i] += d
               y[i] += $6
@@ -92,8 +92,8 @@ Define LENGTH (150./180.*M_PI)
 	    fi
 
 	    cat <<EOF | gnuplot
-rdist(x,y)=acos(cos(x)*cos(y))*180./pi
-cdist(x,y)=sqrt(x*x+y*y)*180./pi
+rdist(x,y)=acos(cos(x*pi/180.)*cos(y*pi/180.))*180./pi
+cdist(x,y)=sqrt(x*x+y*y)
 set xlabel 'Angular distance (degree)'
 set ylabel 'Surface height'
 set xtics 0,22.5,90

@@ -59,7 +59,7 @@ GFS_HDS = \
 	river.h \
 	moving.h \
 	balance.h \
-	cubed.h \
+	metric.h \
 	version.h
 
 pkginclude_HEADERS = \
@@ -105,7 +105,7 @@ SRC = \
 	river.c \
 	moving.c \
 	balance.c \
-	cubed.c \
+	metric.c \
 	$(GFS_HDS)
 
 domain.c: version.h

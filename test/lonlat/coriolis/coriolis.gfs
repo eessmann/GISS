@@ -33,10 +33,10 @@ Define LENGTH (150./180.*M_PI)
     PhysicalParams { L = LENGTH }
     MetricLonLat 1.
     Refine 8
-    InitFraction P (0.2 - acos(cos(x)*cos(y)))
+    InitFraction P (0.2 - acos(cos(x*M_PI/180.)*cos(y*M_PI/180.)))
     Init {} { P = 0.2 + 1.8*P/LENGTH }
     Time { end = 1.4 }
-    SourceCoriolis 10.*sin(y)
+    SourceCoriolis 10.*sin(y*M_PI/180.)
     OutputTime { istep = 10 } stderr
     OutputSimulation { step = 0.4 } sim-%g.gfs
     OutputSimulation { step = 0.4 } sim-%g.txt { variables = U,V,P format = text }

@@ -17,8 +17,8 @@
  * 02111-1307, USA.  
  */
 
-#ifndef __CUBED_H__
-#define __CUBED_H__
+#ifndef __METRIC_H__
+#define __METRIC_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,13 +28,47 @@ extern "C" {
 
 /* GfsMetricCubed: Header */
 
+typedef struct _GfsMetricCubed GfsMetricCubed;
+
+struct _GfsMetricCubed {
+  /*< private >*/
+  GfsEvent parent;
+
+  /*< public >*/
+  GfsVariable * h[FTT_NEIGHBORS], * a;
+};
+
+#define GFS_METRIC_CUBED(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsMetricCubed,\
+					           gfs_metric_cubed_class ())
 #define GFS_IS_METRIC_CUBED(obj)         (gts_object_is_from_class (obj,\
 						   gfs_metric_cubed_class ()))
 
 GfsEventClass * gfs_metric_cubed_class  (void);
 
+/* GfsMetricLonLat: Header */
+
+typedef struct _GfsMetricLonLat GfsMetricLonLat;
+
+struct _GfsMetricLonLat {
+  /*< private >*/
+  GfsEvent parent;
+
+  /*< public >*/
+  GfsVariable * a, * h2, * h3;
+  gdouble r;
+};
+
+#define GFS_METRIC_LON_LAT(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsMetricLonLat,\
+					           gfs_metric_lon_lat_class ())
+#define GFS_IS_METRIC_LON_LAT(obj)         (gts_object_is_from_class (obj,\
+						   gfs_metric_lon_lat_class ()))
+
+GfsEventClass * gfs_metric_lon_lat_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* __CUBED_H__ */
+#endif /* __METRIC_H__ */
