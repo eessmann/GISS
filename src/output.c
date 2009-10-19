@@ -1340,7 +1340,7 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
       break;
 
     case GFS_TEXT: {
-      if (GFS_OUTPUT (output)->parallel || domain->pid == 0) {
+      if (GFS_OUTPUT (output)->parallel || domain->pid <= 0) {
 	FILE * fp = GFS_OUTPUT (event)->file->fp;
 	GSList * i = domain->variables_io;
 	guint nv = 4;
