@@ -303,7 +303,7 @@ struct _GfsOutputErrorNorm {
   
   /*< public >*/
   GfsFunction * s;
-  gboolean unbiased;
+  gboolean unbiased, relative;
   GfsFunction * w;
 };
 

@@ -2591,6 +2591,20 @@ static void output_error_norm_read (GtsObject ** o, GtsFile * fp)
       n->unbiased = atoi (fp->token->str);
       gts_file_next_token (fp);
     }
+    else if (!strcmp (fp->token->str, "relative")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting `='");
+	return;
+      }
+      gts_file_next_token (fp);
+      if (fp->type != GTS_INT) {
+	gts_file_error (fp, "expecting an integer");
+	return;
+      }
+      n->relative = atoi (fp->token->str);
+      gts_file_next_token (fp);
+    }
     else if (!strcmp (fp->token->str, "s")) {
       gts_file_next_token (fp);
       if (fp->type != '=') {
@@ -2656,16 +2670,28 @@ static void output_error_norm_write (GtsObject * o, FILE * fp)
   gfs_function_write (n->s, fp);
   fputs (" w = ", fp);
   gfs_function_write (n->w, fp);
-  fprintf (fp, " unbiased = %d", n->unbiased);
+  fprintf (fp, " unbiased = %d relative = %d", n->unbiased, n->relative);
   if (n->v)
     fprintf (fp, " v = %s }", n->v->name);
   else
     fputs (" }", fp);
 }
 
+static void reference_solution (FttCell * cell, GfsOutputScalar * o)
+{
+  GFS_VALUE (cell, GFS_OUTPUT_ERROR_NORM (o)->v) = 
+    gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, cell);
+}
+
+static void substract (FttCell * cell, GfsOutputScalar * o)
+{
+  GFS_VALUE (cell, GFS_OUTPUT_ERROR_NORM (o)->v) = GFS_VALUE (cell, o->v) -
+    GFS_VALUE (cell, GFS_OUTPUT_ERROR_NORM (o)->v);
+}
+
 static void compute_error (FttCell * cell, GfsOutputScalar * o)
 {
-  GFS_VARIABLE (cell, GFS_OUTPUT_ERROR_NORM (o)->v->i) = GFS_VARIABLE (cell, o->v->i) -
+  GFS_VALUE (cell, GFS_OUTPUT_ERROR_NORM (o)->v) = GFS_VALUE (cell, o->v) -
     gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, cell);
 }
 
@@ -2673,7 +2699,7 @@ static void remove_bias (FttCell * cell, gpointer * data)
 {
   GfsVariable * v = data[0];
   GfsNorm * norm = data[1];
-  GFS_VARIABLE (cell, v->i) -= norm->bias;
+  GFS_VALUE (cell, v) -= norm->bias;
 }
 
 static gboolean gfs_output_error_norm_event (GfsEvent * event, 
@@ -2681,18 +2707,33 @@ static gboolean gfs_output_error_norm_event (GfsEvent * event,
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_error_norm_class ())->parent_class)->event)
       (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
     GfsOutputErrorNorm * enorm = GFS_OUTPUT_ERROR_NORM (event);
     GfsVariable * v = enorm->v;
-    GfsNorm norm;
+    GfsNorm norm, snorm;
 
     if (v == NULL)
-      enorm->v = gfs_temporary_variable (GFS_DOMAIN (sim));
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
-			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
-			      output->maxlevel,
-			      (FttCellTraverseFunc) compute_error, output);
-    norm = gfs_domain_norm_variable (GFS_DOMAIN (sim), enorm->v, enorm->w,
+      enorm->v = gfs_temporary_variable (domain);
+    if (enorm->relative) {
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
+				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
+				output->maxlevel,
+				(FttCellTraverseFunc) reference_solution, output);
+      snorm = gfs_domain_norm_variable (domain, enorm->v, enorm->w,
+					FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
+					output->maxlevel);
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
+				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
+				output->maxlevel,
+				(FttCellTraverseFunc) substract, output);
+    }
+    else
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
+				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
+				output->maxlevel,
+				(FttCellTraverseFunc) compute_error, output);
+    norm = gfs_domain_norm_variable (domain, enorm->v, enorm->w,
 				     FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
 				     output->maxlevel);
     if (GFS_OUTPUT_ERROR_NORM (event)->unbiased) {
@@ -2700,17 +2741,22 @@ static gboolean gfs_output_error_norm_event (GfsEvent * event,
 
       data[0] = enorm->v;
       data[1] = &norm;
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
 				output->maxlevel,
 				(FttCellTraverseFunc) remove_bias, data);
-      norm = gfs_domain_norm_variable (GFS_DOMAIN (sim), enorm->v, enorm->w,
+      norm = gfs_domain_norm_variable (domain, enorm->v, enorm->w,
 				       FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
 				       output->maxlevel);
     }
     if (v == NULL) {
       gts_object_destroy (GTS_OBJECT (enorm->v));
       enorm->v = NULL;
+    }
+    if (enorm->relative) {
+      if (snorm.first > 0.)  norm.first  /= snorm.first;
+      if (snorm.second > 0.) norm.second /= snorm.second;
+      if (snorm.infty > 0.)  norm.infty  /= snorm.infty;
     }
     fprintf (GFS_OUTPUT (event)->file->fp,
 	     "%s time: %g first: % 10.3e second: % 10.3e infty: % 10.3e bias: %10.3e\n",
