@@ -462,9 +462,8 @@ static void river_init (GfsRiver * r)
 
   r->v1[0] = gfs_domain_add_variable (domain, NULL, NULL);
   r->v1[1] = gfs_domain_add_variable (domain, NULL, NULL);
-  r->v1[1]->component = FTT_X;
   r->v1[2] = gfs_domain_add_variable (domain, NULL, NULL);
-  r->v1[2]->component = FTT_Y;
+  gfs_variable_set_vector (&r->v1[1], 2);
 
   r->dv[0][0] = gfs_domain_add_variable (domain, "Px", "x-component of the thickness gradient");
   r->dv[1][0] = gfs_domain_add_variable (domain, "Py", "y-component of the thickness gradien");

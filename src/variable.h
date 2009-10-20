@@ -40,6 +40,7 @@ struct _GfsVariable {
   /*< public >*/
   guint i;
   FttComponent component;
+  GfsVariable * vector[FTT_DIMENSION];
   gchar * name, * description;
   gboolean centered;
   GfsVariableFineCoarseFunc fine_coarse, coarse_fine;
@@ -84,7 +85,8 @@ GSList *              gfs_variables_from_list       (GSList * i,
 						     gchar ** error);
 void                  gfs_variables_swap            (GfsVariable * v1, 
 						     GfsVariable * v2);
-#define gfs_variable_set_vector(v, c)  ((v)->component = (c))
+void                  gfs_variable_set_vector       (GfsVariable ** v,
+						     guint n);
 
 /* GfsVariableTracer: header */
 

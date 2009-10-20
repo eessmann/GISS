@@ -670,10 +670,9 @@ static void variable_curvature_from_distance (GfsEvent * event, GfsSimulation * 
   if (GFS_IS_AXI (sim))
     g_assert_not_implemented ();
 
-  for (c = 0; c < FTT_DIMENSION + 1; c++) {
+  for (c = 0; c < FTT_DIMENSION + 1; c++)
     n[c] = gfs_temporary_variable (domain);
-    gfs_variable_set_vector (n[c], c);
-  }
+  gfs_variable_set_vector (n, FTT_DIMENSION);
   data[0] = n;
   data[1] = event;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,

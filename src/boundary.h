@@ -247,8 +247,11 @@ struct _GfsBoundaryPeriodic {
   GfsBoundary parent;
 
   GfsBox * matching;
+  FttDirection d;
   GArray * sndbuf, * rcvbuf;
   guint sndcount, rcvcount;
+
+  gdouble rotate;
 };
 
 #define GFS_BOUNDARY_PERIODIC(obj)            GTS_OBJECT_CAST (obj,\
@@ -262,6 +265,12 @@ GfsBoundaryPeriodic * gfs_boundary_periodic_new      (GfsBoundaryClass * klass,
 						      GfsBox * box,
 						      FttDirection d,
 						      GfsBox * matching);
+GfsBoundaryPeriodic * gfs_boundary_periodic_rotate_new (GfsBoundaryClass * klass,
+							GfsBox * box,
+							FttDirection d,
+							GfsBox * matching,
+							FttDirection rotate,
+							gdouble orientation);
 
 /* GfsGEdge: Header */
   
@@ -271,7 +280,7 @@ typedef struct _GfsGEdgeClass    GfsGEdgeClass;
 struct _GfsGEdge {
   GtsGEdge parent;
 
-  FttDirection d;
+  FttDirection d, rotate;
 };
 
 struct _GfsGEdgeClass {

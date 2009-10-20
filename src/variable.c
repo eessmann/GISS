@@ -233,6 +233,28 @@ void gfs_variables_swap (GfsVariable * v1, GfsVariable * v2)
   i = v1->i; v1->i = v2->i; v2->i = i;
 }
 
+/**
+ * gfs_variable_set_vector:
+ * @v: the components of the vector.
+ * @n: the vector dimension.
+ *
+ * Sets @v[0],...,@v[n-1] as components of a vector quantity.
+ */
+void gfs_variable_set_vector (GfsVariable ** v, guint n)
+{
+  guint i, j;
+
+  g_return_if_fail (v != NULL);
+  g_return_if_fail (n <= FTT_DIMENSION);
+
+  for (i = 0; i < n; i++) {
+    g_return_if_fail (v[i] != NULL);
+    v[i]->component = i;
+    for (j = 0; j < n; j++)
+      v[i]->vector[j] = v[j];
+  }    
+}
+
 /* GfsVariableTracer: object */
 
 static void variable_tracer_read (GtsObject ** o, GtsFile * fp)

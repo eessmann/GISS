@@ -1718,10 +1718,9 @@ static GList * grow_curve (GfsDomain * domain,
     gpointer data[2];
 
     path_class = GTS_POINT_CLASS (gfs_twisted_vertex_class ());
-    for (c = 0; c < FTT_DIMENSION; c++) {
+    for (c = 0; c < FTT_DIMENSION; c++)
       vort[c] = gfs_temporary_variable (domain);
-      gfs_variable_set_vector (vort[c], c);
-    }
+    gfs_variable_set_vector (vort, FTT_DIMENSION);
     data[0] = vort;
     data[1] = U;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,

@@ -822,14 +822,13 @@ static void simulation_moving_run (GfsSimulation * sim)
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++) {
     gmac[c] = gfs_temporary_variable (domain);
-    gfs_variable_set_vector (gmac[c], c);
-    if (sim->advection_params.gc) {
+    if (sim->advection_params.gc)
       g[c] = gfs_temporary_variable (domain);
-      gfs_variable_set_vector (g[c], c);
-    }
     else
       g[c] = gmac[c];
   }
+  gfs_variable_set_vector (gmac, FTT_DIMENSION);
+  gfs_variable_set_vector (g, FTT_DIMENSION);
 
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);

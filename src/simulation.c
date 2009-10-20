@@ -407,14 +407,13 @@ static void simulation_run (GfsSimulation * sim)
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++) {
     gmac[c] = gfs_temporary_variable (domain);
-    gfs_variable_set_vector (gmac[c], c);
-    if (sim->advection_params.gc) {
+    if (sim->advection_params.gc)
       g[c] = gfs_temporary_variable (domain);
-      gfs_variable_set_vector (g[c], c);
-    }
     else
       g[c] = gmac[c];
   }
+  gfs_variable_set_vector (gmac, FTT_DIMENSION);
+  gfs_variable_set_vector (g, FTT_DIMENSION);
 
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);
@@ -862,17 +861,16 @@ static void simulation_init (GfsSimulation * object)
   v = gfs_domain_add_variable (domain, "Pmac", "MAC projection pressure");
   v->centered = TRUE;  
   v->units = 2.;
-  v = gfs_domain_add_variable (domain, "U",    "x-component of the velocity");
-  gfs_variable_set_vector (v, FTT_X);
-  v->units = 1.;
-  v = gfs_domain_add_variable (domain, "V",    "y-component of the velocity");
-  gfs_variable_set_vector (v, FTT_Y);
-  v->units = 1.;
+  GfsVariable * u[FTT_DIMENSION];
+  u[0] = gfs_domain_add_variable (domain, "U",    "x-component of the velocity");
+  u[0]->units = 1.;
+  u[1] = gfs_domain_add_variable (domain, "V",    "y-component of the velocity");
+  u[1]->units = 1.;
 #if (!FTT_2D)
-  v = gfs_domain_add_variable (domain, "W",    "z-component of the velocity");
-  gfs_variable_set_vector (v, FTT_Z);
-  v->units = 1.;
+  u[2] = gfs_domain_add_variable (domain, "W",    "z-component of the velocity");
+  u[2]->units = 1.;
 #endif /* FTT_3D */
+  gfs_variable_set_vector (u, FTT_DIMENSION);
 
   GfsDerivedVariableInfo * dv = derived_variable;
   while (dv->name) {

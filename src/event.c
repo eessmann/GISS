@@ -624,9 +624,16 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
 
     while (i) {
       VarFunc * vf = i->data;
-      gfs_traverse_and_bc (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			   (FttCellTraverseFunc) init_vf, vf,
-			   vf->v, vf->v);
+      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) init_vf, vf);
+      i = i->next;
+    }
+    /* boundary conditions need to be called in a separate loop so
+       that they are correctly applied for vector quantities */
+    i = GFS_INIT (event)->f;
+    while (i) {
+      VarFunc * vf = i->data;
+      gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v);
       i = i->next;
     }
     return TRUE;

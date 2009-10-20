@@ -113,10 +113,9 @@ static void gfs_correct_normal_velocities_weighted (GfsDomain * domain,
   g_return_if_fail (p != NULL);
   g_return_if_fail (g != NULL);
     
-  for (c = 0; c < dimension; c++) {
+  for (c = 0; c < dimension; c++)
     g[c] = gfs_temporary_variable (domain);
-    gfs_variable_set_vector (g[c], c);
-  }
+  gfs_variable_set_vector (g, dimension);
   data[0] = g;
   data[1] = &dimension;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,

@@ -1164,7 +1164,8 @@ static void send (GfsBoundary * bb)
 {
   GfsBoundaryPeriodic * boundary = GFS_BOUNDARY_PERIODIC (bb);
   g_assert (boundary->matching);
-  GfsBoundaryPeriodic * matching = GFS_BOUNDARY_PERIODIC (boundary->matching->neighbor[bb->d]);
+  GfsBoundaryPeriodic * matching = 
+    GFS_BOUNDARY_PERIODIC (boundary->matching->neighbor[boundary->d]);
 
   g_assert (GFS_IS_BOUNDARY_PERIODIC (matching));
   g_assert (boundary->sndcount <= boundary->sndbuf->len);
@@ -1328,6 +1329,8 @@ static void gfs_boundary_periodic_init (GfsBoundaryPeriodic * boundary)
   boundary->sndbuf = g_array_new (FALSE, FALSE, sizeof (gdouble));
   boundary->rcvbuf = g_array_new (FALSE, FALSE, sizeof (gdouble));
   boundary->sndcount = boundary->rcvcount = 0;
+
+  boundary->rotate = 0.;
 }
 
 GfsBoundaryClass * gfs_boundary_periodic_class (void)
@@ -1351,6 +1354,15 @@ GfsBoundaryClass * gfs_boundary_periodic_class (void)
   return klass;
 }
 
+/**
+ * gfs_boundary_periodic_new:
+ * @klass: a #GfsBoundaryClass.
+ * @box: a #GfsBox.
+ * @d: a #FttDirection.
+ * @matching: a #GfsBox.
+ *
+ * Returns: a new #GfsBoundaryPeriodic connecting @box with @matching in direction @d.
+ */
 GfsBoundaryPeriodic * gfs_boundary_periodic_new (GfsBoundaryClass * klass,
 						 GfsBox * box,
 						 FttDirection d,
@@ -1361,6 +1373,58 @@ GfsBoundaryPeriodic * gfs_boundary_periodic_new (GfsBoundaryClass * klass,
   boundary = GFS_BOUNDARY_PERIODIC (gfs_boundary_new (klass, box, d));
   set_buffers_size (boundary);
   boundary->matching = matching;
+  boundary->d = FTT_OPPOSITE_DIRECTION (d);
+
+  return boundary;
+}
+
+static void center_periodic_rotate (FttCellFace * face, GfsBc * b)
+{
+  GfsBoundaryPeriodic * boundary_periodic = GFS_BOUNDARY_PERIODIC (b->b);
+
+  g_assert (boundary_periodic->sndcount < boundary_periodic->sndbuf->len);
+  g_assert (ftt_face_type (face) == FTT_FINE_FINE);
+  g_assert (!FTT_CELL_IS_LEAF (face->cell) || FTT_CELL_IS_LEAF (face->neighbor));
+
+  if (b->v->component < 2) { /* 2D-vector-rotation only */
+    FttComponent c = FTT_ORTHOGONAL_COMPONENT (b->v->component);
+    g_assert (b->v->vector[c]);
+    g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =
+      (2.*c - 1.)*boundary_periodic->rotate*GFS_VALUE (face->neighbor, b->v->vector[c]);
+  }
+  else
+    g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =
+      GFS_VALUE (face->neighbor, b->v);
+}
+
+/**
+ * gfs_boundary_periodic_rotate_new:
+ * @klass: a #GfsBoundaryClass.
+ * @box: a #GfsBox.
+ * @d: a #FttDirection.
+ * @matching: a #GfsBox.
+ * @rotate: a #FttDirection.
+ * @orientation: the orientation (+1 or -1).
+ *
+ * Returns: a new "rotated" #GfsBoundaryPeriodic connecting @box in
+ * direction @d with @matching in direction @rotate, oriented using
+ * @orientation.
+ */
+GfsBoundaryPeriodic * gfs_boundary_periodic_rotate_new (GfsBoundaryClass * klass,
+							GfsBox * box,
+							FttDirection d,
+							GfsBox * matching,
+							FttDirection rotate,
+							gdouble orientation)
+{
+  GfsBoundaryPeriodic * boundary;
+
+  boundary = gfs_boundary_periodic_new (klass, box, d, matching);
+  boundary->d = rotate;
+  boundary->rotate = orientation;
+
+  GfsBc * b = GFS_BOUNDARY (boundary)->default_bc;
+  b->bc = b->homogeneous_bc = (FttFaceTraverseFunc) center_periodic_rotate;
 
   return boundary;
 }
@@ -1370,6 +1434,8 @@ GfsBoundaryPeriodic * gfs_boundary_periodic_new (GfsBoundaryClass * klass,
 static void gfs_gedge_write (GtsObject * object, FILE * fp)
 {
   fprintf (fp, " %s", ftt_direction_name [GFS_GEDGE (object)->d]);
+  if (GFS_GEDGE (object)->rotate < FTT_NEIGHBORS)
+    fprintf (fp, " %s", ftt_direction_name [GFS_GEDGE (object)->rotate]);
 }
 
 static void gfs_gedge_read (GtsObject ** o, GtsFile * fp)
@@ -1387,6 +1453,15 @@ static void gfs_gedge_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   gts_file_next_token (fp);
+  if (fp->type == GTS_STRING) {
+    e->rotate = ftt_direction_from_name (fp->token->str);
+    if (e->rotate >= FTT_NEIGHBORS) {
+      gts_file_error (fp, "unknown direction `%s'", fp->token->str);
+      e->rotate = -1;
+      return;
+    }
+    gts_file_next_token (fp);
+  }
 }
 
 static void gfs_gedge_class_init (GtsObjectClass * klass)
@@ -1397,7 +1472,7 @@ static void gfs_gedge_class_init (GtsObjectClass * klass)
 
 static void gfs_gedge_init (GfsGEdge * object)
 {
-  object->d = -1;
+  object->d = object->rotate = FTT_NEIGHBORS;
 }
 
 GfsGEdgeClass * gfs_gedge_class (void)
@@ -1442,22 +1517,32 @@ void gfs_gedge_link_boxes (GfsGEdge * edge)
   b2 = GFS_BOX (GTS_GEDGE (edge)->n2);
 
   g_return_if_fail (b1->neighbor[edge->d] == NULL);
-  g_return_if_fail (b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] == NULL);
-
-  GtsObject * periodic = GTS_OBJECT (b1);
-  while (periodic && GFS_IS_BOX (periodic) && GFS_BOX (periodic) != b2)
-    periodic = GFS_BOX (periodic)->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)];
-
-  if (GFS_BOX (periodic) == b2) {
-    gfs_boundary_periodic_new (gfs_boundary_periodic_class (), b1, edge->d, b2);
-    gfs_boundary_periodic_new (gfs_boundary_periodic_class (), b2, 
-			       FTT_OPPOSITE_DIRECTION (edge->d), b1);
+  
+  if (edge->rotate < FTT_NEIGHBORS) {
+    g_return_if_fail (b2->neighbor[edge->rotate] == NULL);
+    gfs_boundary_periodic_rotate_new (gfs_boundary_periodic_class (),
+				      b1, edge->d, b2, edge->rotate,  1.);
+    gfs_boundary_periodic_rotate_new (gfs_boundary_periodic_class (),
+				      b2, edge->rotate, b1, edge->d, -1.);
   }
   else {
-    ftt_cell_set_neighbor (b1->root, b2->root, edge->d, 
-			   (FttCellInitFunc) gfs_cell_init, gfs_box_domain (b1));
-    b1->neighbor[edge->d] = GTS_OBJECT (b2);
-    b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] = GTS_OBJECT (b1);
+    g_return_if_fail (b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] == NULL);
+    
+    GtsObject * periodic = GTS_OBJECT (b1);
+    while (periodic && GFS_IS_BOX (periodic) && GFS_BOX (periodic) != b2)
+      periodic = GFS_BOX (periodic)->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)];
+    
+    if (GFS_BOX (periodic) == b2) {
+      gfs_boundary_periodic_new (gfs_boundary_periodic_class (), b1, edge->d, b2);
+      gfs_boundary_periodic_new (gfs_boundary_periodic_class (), b2, 
+				 FTT_OPPOSITE_DIRECTION (edge->d), b1);
+    }
+    else {
+      ftt_cell_set_neighbor (b1->root, b2->root, edge->d, 
+			     (FttCellInitFunc) gfs_cell_init, gfs_box_domain (b1));
+      b1->neighbor[edge->d] = GTS_OBJECT (b2);
+      b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] = GTS_OBJECT (b1);
+    }
   }
 }
 
