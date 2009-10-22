@@ -1306,14 +1306,29 @@ static void vof_cell_fine_init (FttCell * parent, VofParms * p)
 #endif /* 3D */
 }
 
+/* Same as vof_cell_fine_init() but initialisation of MAC velocities
+   is done through a GfsVariableStreamFunction */
+static void vof_cell_fine_init_with_streamfunction (FttCell * parent, VofParms * p)
+{
+  gfs_cell_fine_init (parent, p->domain);
+
+  FttCellChildren child;
+  guint n;
+  ftt_cell_children (parent, &child);
+  for (n = 0; n < FTT_CELLS; n++) {
+    g_assert (child.c[n]);
+    GFS_VALUE (child.c[n], p->vpar.v) = GFS_VALUE (parent, p->vpar.v);
+  }
+}
+
 static void refine_too_coarse (FttCell * cell, VofParms * p)
 {
   if (TOO_COARSE (cell)) {
     guint level = ftt_cell_level (cell);
 
     TOO_COARSE (cell) = FALSE;
-    ftt_cell_refine_corners (cell, (FttCellInitFunc) vof_cell_fine_init, p);
-    ftt_cell_refine_single (cell, (FttCellInitFunc) vof_cell_fine_init, p);
+    ftt_cell_refine_corners (cell, (FttCellInitFunc) p->domain->cell_init, p);
+    ftt_cell_refine_single (cell, (FttCellInitFunc) p->domain->cell_init, p);
     if (level + 1 > p->depth)
       p->depth = level + 1;
   }
@@ -1408,7 +1423,17 @@ static void fix_too_coarse (GfsDomain * domain, VofParms * p)
   gfs_domain_face_traverse (domain, p->c,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) face_too_coarse, p);
-  domain->cell_init = (FttCellInitFunc) vof_cell_fine_init;
+  gboolean streamfunction = FALSE;
+#if FTT_2D
+  GSList * i = domain->variables;
+  while (i && !streamfunction) {
+    streamfunction = (GFS_IS_VARIABLE_STREAM_FUNCTION (i->data) != NULL);
+    i = i->next;
+  }
+#endif /* 2D */ 
+  domain->cell_init = (FttCellInitFunc) (streamfunction ? 
+					 vof_cell_fine_init_with_streamfunction : 
+					 vof_cell_fine_init);
   domain->cell_init_data = p;
   if (p->too_coarse > 0)
     gfs_domain_cell_traverse (domain,

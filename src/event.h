@@ -128,23 +128,13 @@ struct _GfsInitVorticity {
   GfsFunction * f;
 };
 
-typedef struct _GfsInitVorticityClass    GfsInitVorticityClass;
-
-struct _GfsInitVorticityClass {
-  /*< private >*/
-  GfsGenericInitClass parent_class;
-};
-
 #define GFS_INIT_VORTICITY(obj)            GTS_OBJECT_CAST (obj,\
 					         GfsInitVorticity,\
 					         gfs_init_vorticity_class ())
-#define GFS_INIT_VORTICITY_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
-						 GfsInitVorticityClass,\
-						 gfs_init_vorticity_class())
 #define GFS_IS_INIT_VORTICITY(obj)         (gts_object_is_from_class (obj,\
 						 gfs_init_vorticity_class ()))
 
-GfsInitVorticityClass * gfs_init_vorticity_class  (void);
+GfsGenericInitClass * gfs_init_vorticity_class  (void);
 
 #endif /* FTT_2D */
 

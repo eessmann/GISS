@@ -1722,6 +1722,15 @@ gboolean gfs_variable_is_dimensional (GfsVariable * v)
 static void advection_run (GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
+  gboolean streamfunction = FALSE;
+
+#if FTT_2D
+  GSList * i = domain->variables;
+  while (i && !streamfunction) {
+    streamfunction = (GFS_IS_VARIABLE_STREAM_FUNCTION (i->data) != NULL);
+    i = i->next;
+  }  
+#endif /* 2D */
 
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);
@@ -1731,15 +1740,15 @@ static void advection_run (GfsSimulation * sim)
     gdouble tstart = gfs_clock_elapsed (domain->timer);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
-
-    gfs_domain_face_traverse (domain, FTT_XYZ,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
-    gfs_domain_face_traverse (domain, FTT_XYZ,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity,
-			      gfs_domain_velocity (domain));
-
+    if (!streamfunction) {
+      gfs_domain_face_traverse (domain, FTT_XYZ,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
+      gfs_domain_face_traverse (domain, FTT_XYZ,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity,
+				gfs_domain_velocity (domain));
+    }
     gfs_simulation_set_timestep (sim);
 
     gfs_advance_tracers (domain, sim->advection_params.dt);

@@ -19,6 +19,8 @@ if (Curve('norms',3,5) - Curve('norms.ref',3,5)).max() > 0. or\
    (Curve('norms',3,9) - Curve('norms.ref',3,9)).max() > 0. or\
    (Curve('norms',3,11) - Curve('norms.ref',3,11)).max() > 0.:
     exit(1)
+if Curve('t',1,2).max() > 2e-5:
+    exit(1)
 EOF
 else
    exit 1

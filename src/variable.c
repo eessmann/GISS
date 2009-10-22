@@ -630,6 +630,163 @@ GfsVariableClass * gfs_variable_function_class (void)
   return klass;
 }
 
+#if FTT_2D
+
+/* GfsVariableStreamFunction: Object */
+
+static gdouble face_metric (FttCell * cell, FttDirection d, GfsDomain * domain)
+{
+  if (domain->face_metric) {
+    FttCellFace f;
+    f.cell = cell;
+    f.d = d;
+    return (* domain->face_metric) (domain, &f, domain->metric_data);
+  }
+  else
+    return 1.;
+}
+
+static void init_mac_from_stream_function (FttCell * cell,
+					   gdouble psi0, gdouble psi1, gdouble psi2, gdouble psi3,
+					   gdouble h,
+					   GfsDomain * domain,
+					   GfsVariable ** u)
+{
+  GFS_STATE (cell)->f[0].un = (psi2 - psi1)/(h*face_metric (cell, 0, domain));
+  GFS_STATE (cell)->f[1].un = (psi3 - psi0)/(h*face_metric (cell, 1, domain));
+  GFS_STATE (cell)->f[2].un = (psi3 - psi2)/(h*face_metric (cell, 2, domain));
+  GFS_STATE (cell)->f[3].un = (psi0 - psi1)/(h*face_metric (cell, 3, domain));
+
+  GFS_VALUE (cell, u[0]) = (GFS_STATE (cell)->f[0].un + GFS_STATE (cell)->f[1].un)/2.;
+  GFS_VALUE (cell, u[1]) = (GFS_STATE (cell)->f[2].un + GFS_STATE (cell)->f[3].un)/2.;
+}
+
+static void variable_stream_function_coarse_fine (FttCell * parent, GfsVariable * v)
+{
+  GfsFunction * f = GFS_VARIABLE_FUNCTION (v)->f;
+  FttCellChildren child;
+  ftt_cell_children (parent, &child);
+  FttVector o, p;
+  ftt_cell_pos (parent, &o);
+  gdouble h = ftt_cell_size (parent)/2.;
+  p.x = o.x - h; p.y = o.y - h;
+  gdouble psi0 = gfs_function_spatial_value (f, &p);
+  p.x = o.x + h; p.y = o.y - h;
+  gdouble psi1 = gfs_function_spatial_value (f, &p);
+  p.x = o.x + h; p.y = o.y + h;
+  gdouble psi2 = gfs_function_spatial_value (f, &p);
+  p.x = o.x - h; p.y = o.y + h;
+  gdouble psi3 = gfs_function_spatial_value (f, &p);
+  p.x = o.x; p.y = o.y - h;
+  gdouble psi4 = gfs_function_spatial_value (f, &p);
+  p.x = o.x + h; p.y = o.y;
+  gdouble psi5 = gfs_function_spatial_value (f, &p);
+  p.x = o.x; p.y = o.y + h;
+  gdouble psi6 = gfs_function_spatial_value (f, &p);
+  p.x = o.x - h; p.y = o.y;
+  gdouble psi7 = gfs_function_spatial_value (f, &p);
+  gdouble psi8 = gfs_function_spatial_value (f, &o);
+  GfsVariable ** u = gfs_domain_velocity (v->domain);
+  init_mac_from_stream_function (child.c[0], psi7, psi8, psi6, psi3, h, v->domain, u);
+  init_mac_from_stream_function (child.c[1], psi8, psi5, psi2, psi6, h, v->domain, u);
+  init_mac_from_stream_function (child.c[2], psi0, psi4, psi8, psi7, h, v->domain, u);
+  init_mac_from_stream_function (child.c[3], psi4, psi1, psi5, psi8, h, v->domain, u);
+  guint n;
+  for (n = 0; n < FTT_CELLS; n++) {
+    ftt_cell_pos (child.c[n], &o);
+    GFS_VALUE (child.c[n], v) = gfs_function_spatial_value (f, &o);
+  }
+}
+
+static void variable_stream_function_fine_coarse (FttCell * cell, GfsVariable * v)
+{
+  FttCellChildren child;
+  ftt_cell_children (cell, &child);
+  double s = 2.*face_metric (cell, 0, v->domain);
+  GFS_STATE (cell)->f[0].un = 
+    (face_metric (child.c[1], 0, v->domain)*GFS_STATE (child.c[1])->f[0].un +
+     face_metric (child.c[3], 0, v->domain)*GFS_STATE (child.c[3])->f[0].un)/s;
+  s = 2.*face_metric (cell, 1, v->domain);
+  GFS_STATE (cell)->f[1].un = 
+    (face_metric (child.c[0], 1, v->domain)*GFS_STATE (child.c[0])->f[1].un +
+     face_metric (child.c[2], 1, v->domain)*GFS_STATE (child.c[2])->f[1].un)/s;
+  s = 2.*face_metric (cell, 2, v->domain);
+  GFS_STATE (cell)->f[2].un = 
+    (face_metric (child.c[0], 2, v->domain)*GFS_STATE (child.c[0])->f[2].un +
+     face_metric (child.c[1], 2, v->domain)*GFS_STATE (child.c[1])->f[2].un)/s;
+  s = 2.*face_metric (cell, 3, v->domain);
+  GFS_STATE (cell)->f[3].un = 
+    (face_metric (child.c[3], 3, v->domain)*GFS_STATE (child.c[3])->f[3].un +
+     face_metric (child.c[2], 3, v->domain)*GFS_STATE (child.c[2])->f[3].un)/s;
+  GFS_VALUE (cell, v) = (GFS_VALUE (child.c[0], v) + GFS_VALUE (child.c[1], v) + 
+			 GFS_VALUE (child.c[2], v) + GFS_VALUE (child.c[3], v))/4.;
+}
+
+static void init_streamfunction (FttCell * cell, GfsVariable * v)
+{
+  GfsFunction * f = GFS_VARIABLE_FUNCTION (v)->f;
+  FttVector o, p;
+  ftt_cell_pos (cell, &o);
+  gdouble h = ftt_cell_size (cell)/2.;
+  p.x = o.x - h; p.y = o.y - h;
+  gdouble psi0 = gfs_function_spatial_value (f, &p);
+  p.x = o.x + h; p.y = o.y - h;
+  gdouble psi1 = gfs_function_spatial_value (f, &p);
+  p.x = o.x + h; p.y = o.y + h;
+  gdouble psi2 = gfs_function_spatial_value (f, &p);
+  p.x = o.x - h; p.y = o.y + h;
+  gdouble psi3 = gfs_function_spatial_value (f, &p);
+  init_mac_from_stream_function (cell, psi0, psi1, psi2, psi3, 2.*h, 
+				 v->domain, gfs_domain_velocity (v->domain));
+}
+
+static gboolean variable_stream_function_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (gfs_variable_function_class ())->event) (event, sim)) {
+    gfs_domain_traverse_leaves (GFS_DOMAIN (sim), (FttCellTraverseFunc) init_streamfunction, event);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void variable_stream_function_class_init (GfsEventClass * klass)
+{
+  klass->event = variable_stream_function_event;
+}
+
+static void variable_stream_function_init (GfsVariable * v)
+{
+  v->units = 2.;
+  v->coarse_fine = variable_stream_function_coarse_fine;
+  v->fine_coarse = variable_stream_function_fine_coarse;
+  gts_object_destroy (GTS_OBJECT (GFS_VARIABLE_FUNCTION (v)->f));
+  GFS_VARIABLE_FUNCTION (v)->f = gfs_function_new (gfs_function_spatial_class (), 0.);
+  GFS_EVENT (v)->istep = G_MAXINT/2;
+}
+
+GfsVariableClass * gfs_variable_stream_function_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_stream_function_info = {
+      "GfsVariableStreamFunction",
+      sizeof (GfsVariableFunction),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_stream_function_class_init,
+      (GtsObjectInitFunc) variable_stream_function_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_function_class ()), 
+				  &gfs_variable_stream_function_info);
+  }
+
+  return klass;
+}
+
+#endif /* FTT_2D */
+
 /* GfsDerivedVariable: object */
 
 static void gfs_derived_variable_destroy (GtsObject * object)

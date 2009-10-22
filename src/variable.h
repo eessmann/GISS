@@ -160,6 +160,17 @@ struct _GfsVariableFunction {
 
 GfsVariableClass * gfs_variable_function_class  (void);
 
+#if FTT_2D
+
+/* GfsVariableStreamFunction: header */
+
+#define GFS_IS_VARIABLE_STREAM_FUNCTION(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_stream_function_class ()))
+
+GfsVariableClass * gfs_variable_stream_function_class  (void);
+
+#endif /* FTT_2D */
+
 /* GfsDerivedVariable: Header */
 
 struct _GfsDerivedVariable {

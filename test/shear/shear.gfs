@@ -47,7 +47,7 @@
 #
 # Author: St\'ephane Popinet
 # Command: sh shear.sh shear.gfs
-# Version: 1.1.0
+# Version: 091022
 # Required files: shear.sh norms.ref
 # Running time: 2 minutes
 # Generated files: t-0.eps t-2.5.eps t-5.eps dt-5.eps norms norms.tex
@@ -64,18 +64,16 @@
 
     InitFraction T (ellipse (0, -.236338, 0.2, 0.2))
 
-    # Initialize U and V with the vortical shear flow field
-    Init {} {
-        U = sin((x + 0.5)*M_PI)*cos((y + 0.5)*M_PI)
-        V = -cos((x + 0.5)*M_PI)*sin((y + 0.5)*M_PI)
-    }
-
-    # At t = 2.5 re-initialize U and V with the reversed flow field
-    Init { start = 2.5 } { U = -U V = -V }
+    # Maintain U and V with the vortical shear flow field defined by
+    # its streamfunction
+    VariableStreamFunction {
+	# make sure that the entire field is reinitialised at t = 2.5
+	step = 2.5 
+    } Psi (t < 2.5 ? 1. : -1.)*sin((x + 0.5)*M_PI)*sin((y + 0.5)*M_PI)/M_PI
     
     # Adapt the mesh dynamically so that at any time the maximum of the gradient
     # of T is less than 1e-2 per cell length
-    AdaptGradient { istep = 1 } { cmax = 1e-2 maxlevel = 8 minlevel = 6 } T
+    AdaptGradient { istep = 1 } { cmax = 1e-2 maxlevel = 8 } T
     
     OutputPPM { start = 0 } { convert ppm:- t-0.eps } { v = T }
     OutputPPM { start = 2.5 } { convert ppm:- t-2.5.eps } { v = T }
@@ -94,5 +92,7 @@
     }
 
     OutputPPM { start = end } { convert ppm:- dt-5.eps } { v = DT }
+
+    OutputScalarSum { istep = 1 } { awk '{ print $3,$5-8.743441e-01 }' > t } { v = T }
 }
 GfsBox {}

@@ -241,6 +241,8 @@ static void gfs_event_read (GtsObject ** o, GtsFile * fp)
 			       "step and istep cannot be set simultaneously");
       return;
     }
+    if (var[2].set)
+      event->istep = G_MAXINT;
 
     if (var[2].set && event->step <= 0.) {
       gts_file_variable_error (fp, var, "step",
@@ -851,11 +853,11 @@ static gboolean gfs_init_vorticity_event (GfsEvent * event,
   return FALSE;
 }
 
-static void gfs_init_vorticity_class_init (GfsInitVorticityClass * klass)
+static void gfs_init_vorticity_class_init (GtsObjectClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->read = gfs_init_vorticity_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_init_vorticity_write;
-  GTS_OBJECT_CLASS (klass)->destroy = gfs_init_vorticity_destroy;
+  klass->read = gfs_init_vorticity_read;
+  klass->write = gfs_init_vorticity_write;
+  klass->destroy = gfs_init_vorticity_destroy;
   GFS_EVENT_CLASS (klass)->event = gfs_init_vorticity_event;
 }
 
@@ -864,15 +866,15 @@ static void gfs_init_vorticity_init (GfsInitVorticity * init)
   init->f = gfs_function_new (gfs_function_class (), 0.);
 }
 
-GfsInitVorticityClass * gfs_init_vorticity_class (void)
+GfsGenericInitClass * gfs_init_vorticity_class (void)
 {
-  static GfsInitVorticityClass * klass = NULL;
+  static GfsGenericInitClass * klass = NULL;
 
   if (klass == NULL) {
     GtsObjectClassInfo gfs_init_vorticity_info = {
       "GfsInitVorticity",
       sizeof (GfsInitVorticity),
-      sizeof (GfsInitVorticityClass),
+      sizeof (GfsGenericInitClass),
       (GtsObjectClassInitFunc) gfs_init_vorticity_class_init,
       (GtsObjectInitFunc) gfs_init_vorticity_init,
       (GtsArgSetFunc) NULL,

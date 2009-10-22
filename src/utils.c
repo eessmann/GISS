@@ -1150,15 +1150,17 @@ gdouble gfs_function_spatial_value (GfsFunction * f, FttVector * p)
   g_return_val_if_fail (GFS_IS_FUNCTION_SPATIAL (f), 0.);
   g_return_val_if_fail (p != NULL, 0.);
 
+  gdouble dimensional;  
   if (f->f) {
     GfsSimulation * sim = gfs_object_simulation (f);
     FttVector q = *p;
     check_for_deferred_compilation (f);
     gfs_simulation_map_inverse (sim, &q);
-    return (* (GfsFunctionSpatialFunc) f->f) (q.x, q.y, q.z, sim->time.t);
+    dimensional = (* (GfsFunctionSpatialFunc) f->f) (q.x, q.y, q.z, sim->time.t);
   }
   else
-    return f->val;
+    dimensional = f->val;
+  return adimensional_value (f, dimensional);
 }
 
 GfsFunction * gfs_function_spatial_new (GfsFunctionClass * klass, 
