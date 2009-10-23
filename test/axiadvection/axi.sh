@@ -24,7 +24,7 @@ BEGIN { min = 1000.; max = -1000.; }{
 END {
   e = 2.*(max - min)/(max + min);
   print "VOF:", e;
-  if (e > 5e-4)
+  if (e > 4e-4)
     exit (1);
 }' < srt; then :
 else
@@ -39,7 +39,7 @@ BEGIN { min = 1000.; max = -1000.; }{
 END {
   e = 2.*(max - min)/(max + min);
   print "Standard:", e;
-  if (e > 2e-6)
+  if (e > 2.5e-6)
     exit (1);
 }' < srt1; then :
 else

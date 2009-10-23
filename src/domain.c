@@ -2533,13 +2533,21 @@ guint gfs_domain_size (GfsDomain * domain,
 typedef struct {
   gdouble cfl;
   GfsVariable ** v;
+  GfsDomain * domain;
 } CflData;
 
 static void minimum_mac_cfl (FttCellFace * face, CflData * p)
 {
   gdouble un = GFS_STATE (face->cell)->f[face->d].un;
+  gdouble length = ftt_cell_size (face->cell);
+  if (p->domain->cell_metric) {
+    gdouble fm = (* p->domain->face_metric) (p->domain, face, p->domain->metric_data);
+    if (fm <= 0.) /* e.g. Axi metric on the axis */
+      return;
+    length *= (* p->domain->cell_metric) (p->domain, face->cell, p->domain->metric_data)/fm;
+  }
   if (un != 0.) {
-    gdouble cflu = ftt_cell_size (face->cell)/fabs (un);
+    gdouble cflu = length/fabs (un);
     if (cflu*cflu < p->cfl)
       p->cfl = cflu*cflu;
   }
@@ -2554,7 +2562,7 @@ static void minimum_mac_cfl (FttCellFace * face, CflData * p)
       i = i->next;
     }
     if (g != 0.) {
-      gdouble cflg = 2.*ftt_cell_size (face->cell)/fabs (g);
+      gdouble cflg = 2.*length/fabs (g);
       if (cflg < p->cfl)
 	p->cfl = cflg;
     }
@@ -2563,12 +2571,25 @@ static void minimum_mac_cfl (FttCellFace * face, CflData * p)
 
 static void minimum_cfl (FttCell * cell, CflData * p)
 {
-  gdouble size = ftt_cell_size (cell);
-  FttComponent c;
+  gdouble length = ftt_cell_size (cell);
+  if (p->domain->cell_metric)
+    length *= (* p->domain->cell_metric) (p->domain, cell, p->domain->metric_data);
 
+  FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++) {
-    if (GFS_VARIABLE (cell, p->v[c]->i) != 0.) {
-      gdouble cflu = size/fabs (GFS_VARIABLE (cell, p->v[c]->i));
+    gdouble fm;
+    if (p->domain->face_metric) {
+      FttCellFace f;
+      f.cell = cell; f.d = 2*c;
+      gdouble fm1 = (* p->domain->face_metric) (p->domain, &f, p->domain->metric_data);
+      f.d = 2*c + 1;
+      gdouble fm2 = (* p->domain->face_metric) (p->domain, &f, p->domain->metric_data);
+      fm = MAX (fm1, fm2);
+    }
+    else
+      fm = 1.;
+    if (GFS_VALUE (cell, p->v[c]) != 0.) {
+      gdouble cflu = length/fabs (fm*GFS_VALUE (cell, p->v[c]));
 
       if (cflu*cflu < p->cfl)
 	p->cfl = cflu*cflu;
@@ -2577,7 +2598,7 @@ static void minimum_cfl (FttCell * cell, CflData * p)
       gdouble g = gfs_variable_mac_source (p->v[c], cell);
 
       if (g != 0.) {
-	gdouble cflg = 2.*size/fabs (g);
+	gdouble cflg = 2.*length/fabs (fm*g);
 
 	if (cflg < p->cfl)
 	  p->cfl = cflg;
@@ -2607,6 +2628,7 @@ gdouble gfs_domain_cfl (GfsDomain * domain,
 
   p.cfl = G_MAXDOUBLE;
   p.v = gfs_domain_velocity (domain);
+  p.domain = domain;
   gfs_domain_face_traverse (domain, FTT_XYZ, FTT_PRE_ORDER, flags, max_depth, 
 			    (FttFaceTraverseFunc) minimum_mac_cfl, &p);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
