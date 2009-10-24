@@ -10,7 +10,7 @@ BEGIN { min = 1000.; max = -1000.; }{
 END {
   e = 2.*(max - min)/(max + min);
   print "VOF:", e;
-  if (e > 2e-2)
+  if (e > 2.5e-2)
     exit (1);
 }' < srt; then :
 else

@@ -61,16 +61,19 @@ Define LENGTH (150./180.*M_PI)
     OutputSimulation { step = 0.3 } sim-%g.txt { variables = U,V,P format = text }
 #    OutputSimulation { istep = 10 } stdout
     EventScript { start = end } {
+	status=0
 	for i in 0.3 0.6 0.9; do
 	    if awk 'BEGIN { n1 = 0; pi = 3.14159265359 }{
-              c = cos($1*pi/180.)*cos($2*pi/180.);
-              d = atan2(sqrt(1. - c*c),c)*180./pi
-              i = int(d*2.)
-              x[i] += d
-              y[i] += $6
-              n[i]++
-              x1[n1] = d;
-              y1[n1++] = $6;
+              if ($1 != "#") {
+                c = cos($1*pi/180.)*cos($2*pi/180.);
+                d = atan2(sqrt(1. - c*c),c)*180./pi
+                i = int(d*2.)
+                x[i] += d
+                y[i] += $6
+                n[i]++
+                x1[n1] = d;
+                y1[n1++] = $6;
+              }
             }END {
               for (i = 0; i <= 180; i++)
                 if (n[i] > 0)
@@ -88,7 +91,7 @@ Define LENGTH (150./180.*M_PI)
               }
             }' < sim-$i.txt > prof-$i.txt ; then :
 	    else
-		exit $GFS_STOP;
+		status=$GFS_STOP;
 	    fi
 
 	    cat <<EOF | gnuplot
@@ -106,6 +109,7 @@ EOF
 	    echo "Save stdout { format = EPS line_width = 0.5 }" | \
 		gfsview-batch2D sim-$i.gfs isolines.gfv > isolines-$i.eps
 	done
+	exit $status
     }
 }
 GfsBox {
