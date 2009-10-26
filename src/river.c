@@ -519,7 +519,7 @@ static void river_init (GfsRiver * r)
   gfs_variable_set_vector (&r->v1[1], 2);
 
   r->dv[0][0] = gfs_domain_add_variable (domain, "Px", "x-component of the depth gradient");
-  r->dv[1][0] = gfs_domain_add_variable (domain, "Py", "y-component of the depth gradien");
+  r->dv[1][0] = gfs_domain_add_variable (domain, "Py", "y-component of the depth gradient");
   r->dv[0][1] = gfs_domain_add_variable (domain, "Ux", "x-component of the flux gradient");
   r->dv[1][1] = gfs_domain_add_variable (domain, "Uy", "y-component of the flux gradient");
   r->dv[0][2] = gfs_domain_add_variable (domain, "Vx", "x-component of the flux gradient");

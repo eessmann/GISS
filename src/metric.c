@@ -90,17 +90,15 @@ static complex ZofW (complex W)
 /* sqrt (3.) - 1. */
 #define RA 0.73205080756888
 
-/* Conformal mapping of a cube onto a sphere. Maps (x,y) on the
+/* Conformal mapping of a cube face onto a sphere. Maps (x,y) on the
  * north-pole face of a cube to (X,Y,Z) coordinates in physical space.
  *
  * Based on f77 code from Jim Purser & Misha Rancic.
  *
  * Face is oriented normal to Z-axis with X and Y increasing with x
  * and y.
- *
- * valid ranges:  -1 < x < 1   -1 < y < 1.
  */
-static void cmap_xy2XYZ (double x, double y, double * X, double * Y, double * Z)
+static void fmap_xy2XYZ (double x, double y, double * X, double * Y, double * Z)
 {
   int kx = x < 0., ky = y < 0.;
   x = fabs (x); y = fabs (y);
@@ -146,12 +144,63 @@ static void cmap_xy2XYZ (double x, double y, double * X, double * Y, double * Z)
     *Y = - *Y;
 }
 
-/* Conformal mapping of a sphere onto a cube. Maps (X,Y,Z) coordinates
+/* Conformal mapping of a cube onto a sphere. Maps (x,y) on the
+ * 6 faces of the cube to (X,Y,Z) coordinates in physical space.
+ *
+ * Based on f77 code from Jim Purser & Misha Rancic.
+ *
+ * Face 1 is oriented normal to Z-axis with X and Y increasing with x
+ * and y (see doc/figures/cubed.fig).
+ *
+ * returns: FALSE if the input coordinates are invalid, TRUE otherwise.
+ */
+static void cmap_xy2XYZ (double x, double y, double * X, double * Y, double * Z)
+{
+  x *= 2.; y *= 2.;
+
+  /* symmetries: see doc/figures/cubed.fig */
+  double tmp;
+  if (y <= 1. && x <= 3.) {
+    if (x <= 1.) /* face 1 */
+      fmap_xy2XYZ (x, y, X, Y, Z);
+    else { /* face 2 */
+      fmap_xy2XYZ (x - 2., y, X, Y, Z);
+      tmp = *X;
+      *X = *Z; *Z = - tmp;
+    }
+  }
+  else if (y <= 3. && x <= 5.) {
+    if (x <= 3.) { /* face 3 */
+      fmap_xy2XYZ (x - 2., y - 2., X, Y, Z);
+      tmp = *X;
+      *X = -*Y; *Y = *Z; *Z = - tmp;
+    }
+    else { /* face 4 */
+      fmap_xy2XYZ (x - 4., y - 2., X, Y, Z);
+      tmp = *Y;
+      *Z = - *Z; *Y = - *X; *X = - tmp;
+    }
+  }
+  else {
+    if (x <= 5.) { /* face 5 */
+      fmap_xy2XYZ (x - 4., y - 4., X, Y, Z);
+      tmp = *Z;
+      *Z = *Y; *Y = - *X; *X = - tmp;
+    }
+    else { /* face 6 */
+      fmap_xy2XYZ (x - 6., y - 4., X, Y, Z);
+      tmp = *Y;
+      *Y = - *Z; *Z = tmp;
+    }
+  }
+}
+
+/* Conformal mapping of a sphere onto a cube face. Maps (X,Y,Z) coordinates
  * in physical space to (x,y) on the north-pole face of a cube.
  *
- * This is the inverse transform of cmap_xy2XYZ().
+ * This is the inverse transform of fmap_xy2XYZ().
  */
-static void cmap_XYZ2xy (double X, double Y, double Z, double * x, double * y)
+static void fmap_XYZ2xy (double X, double Y, double Z, double * x, double * y)
 {
   int kx = X < 0., ky = Y < 0.;
   X = fabs (X); Y = fabs (Y);
@@ -249,7 +298,8 @@ static void map_cubed_transform (GfsMap * map, const FttVector * src, FttVector 
   double lon = src->x*M_PI/180., lat = src->y*M_PI/180.;
   double X = cos (lat)*sin (lon), Y = sin (lat), Z = sqrt (1. - X*X - Y*Y);
   double x, y;
-  cmap_XYZ2xy (X, Y, Z, &x, &y);
+  /* fixme: only works for face 1 */
+  fmap_XYZ2xy (X, Y, Z, &x, &y);
   dest->x = x/2.*sim->physical_params.L;
   dest->y = y/2.*sim->physical_params.L;
   dest->z = src->z;
@@ -259,11 +309,9 @@ static void map_cubed_inverse (GfsMap * map, const FttVector * src, FttVector * 
 {
   GfsSimulation * sim = gfs_object_simulation (map);
   double X, Y, Z;
-  cmap_xy2XYZ (2.*src->x/sim->physical_params.L, 2.*src->y/sim->physical_params.L, &X, &Y, &Z);
-  double lat = asin (Y);
-  double lon = asin (X/cos (lat));
-  dest->x = lon*180./M_PI;
-  dest->y = lat*180./M_PI;
+  cmap_xy2XYZ (src->x/sim->physical_params.L, src->y/sim->physical_params.L, &X, &Y, &Z);
+  dest->x = atan2 (X, Z)*180./M_PI;
+  dest->y = asin (Y)*180./M_PI;
   dest->z = src->z;
 }
 
@@ -328,8 +376,7 @@ static void cubed_coarse_fine (FttCell * parent, GfsVariable * a)
   ftt_cell_children (parent, &child);
   FttVector p;
   ftt_cell_pos (parent, &p);
-  p.x *= 2.; p.y *= 2.;
-  double h = ftt_cell_size (parent);
+  double h = ftt_cell_size (parent)/2.;
   double v0[3];
   v0[0] = p.x;     v0[1] = p.y;
   cmap_xy2XYZ (v0[0], v0[1], &v0[0], &v0[1], &v0[2]);
@@ -352,28 +399,28 @@ static void cubed_coarse_fine (FttCell * parent, GfsVariable * a)
   v8[0] = p.x + h; v8[1] = p.y;
   cmap_xy2XYZ (v8[0], v8[1], &v8[0], &v8[1], &v8[2]);
 
-  GFS_VALUE (child.c[0], a) = 16.*excess_of_quad (v6, v0, v7, v2)/(M_PI*M_PI*h*h);
-  GFS_VALUE (child.c[1], a) = 16.*excess_of_quad (v0, v8, v3, v7)/(M_PI*M_PI*h*h);
-  GFS_VALUE (child.c[2], a) = 16.*excess_of_quad (v1, v5, v0, v6)/(M_PI*M_PI*h*h);
-  GFS_VALUE (child.c[3], a) = 16.*excess_of_quad (v5, v4, v8, v0)/(M_PI*M_PI*h*h);
+  GFS_VALUE (child.c[0], a) = 4.*excess_of_quad (v6, v0, v7, v2)/(M_PI*M_PI*h*h);
+  GFS_VALUE (child.c[1], a) = 4.*excess_of_quad (v0, v8, v3, v7)/(M_PI*M_PI*h*h);
+  GFS_VALUE (child.c[2], a) = 4.*excess_of_quad (v1, v5, v0, v6)/(M_PI*M_PI*h*h);
+  GFS_VALUE (child.c[3], a) = 4.*excess_of_quad (v5, v4, v8, v0)/(M_PI*M_PI*h*h);
 
   GFS_VALUE (child.c[0], cubed->h[0]) = GFS_VALUE (child.c[1], cubed->h[1]) = 
-    4.*angle_between_vectors (v0, v7)/(M_PI*h);
+    2.*angle_between_vectors (v0, v7)/(M_PI*h);
   GFS_VALUE (child.c[0], cubed->h[3]) = GFS_VALUE (child.c[2], cubed->h[2]) = 
-    4.*angle_between_vectors (v0, v6)/(M_PI*h);
+    2.*angle_between_vectors (v0, v6)/(M_PI*h);
   GFS_VALUE (child.c[2], cubed->h[0]) = GFS_VALUE (child.c[3], cubed->h[1]) = 
-    4.*angle_between_vectors (v0, v5)/(M_PI*h);
+    2.*angle_between_vectors (v0, v5)/(M_PI*h);
   GFS_VALUE (child.c[1], cubed->h[3]) = GFS_VALUE (child.c[3], cubed->h[2]) = 
-    4.*angle_between_vectors (v0, v8)/(M_PI*h);
+    2.*angle_between_vectors (v0, v8)/(M_PI*h);
 
-  GFS_VALUE (child.c[0], cubed->h[2]) = 4.*angle_between_vectors (v2, v7)/(M_PI*h);
-  GFS_VALUE (child.c[0], cubed->h[1]) = 4.*angle_between_vectors (v2, v6)/(M_PI*h);
-  GFS_VALUE (child.c[1], cubed->h[2]) = 4.*angle_between_vectors (v3, v7)/(M_PI*h);
-  GFS_VALUE (child.c[1], cubed->h[0]) = 4.*angle_between_vectors (v3, v8)/(M_PI*h);
-  GFS_VALUE (child.c[2], cubed->h[3]) = 4.*angle_between_vectors (v1, v5)/(M_PI*h);
-  GFS_VALUE (child.c[2], cubed->h[1]) = 4.*angle_between_vectors (v1, v6)/(M_PI*h);
-  GFS_VALUE (child.c[3], cubed->h[0]) = 4.*angle_between_vectors (v4, v8)/(M_PI*h);
-  GFS_VALUE (child.c[3], cubed->h[3]) = 4.*angle_between_vectors (v4, v5)/(M_PI*h);
+  GFS_VALUE (child.c[0], cubed->h[2]) = 2.*angle_between_vectors (v2, v7)/(M_PI*h);
+  GFS_VALUE (child.c[0], cubed->h[1]) = 2.*angle_between_vectors (v2, v6)/(M_PI*h);
+  GFS_VALUE (child.c[1], cubed->h[2]) = 2.*angle_between_vectors (v3, v7)/(M_PI*h);
+  GFS_VALUE (child.c[1], cubed->h[0]) = 2.*angle_between_vectors (v3, v8)/(M_PI*h);
+  GFS_VALUE (child.c[2], cubed->h[3]) = 2.*angle_between_vectors (v1, v5)/(M_PI*h);
+  GFS_VALUE (child.c[2], cubed->h[1]) = 2.*angle_between_vectors (v1, v6)/(M_PI*h);
+  GFS_VALUE (child.c[3], cubed->h[0]) = 2.*angle_between_vectors (v4, v8)/(M_PI*h);
+  GFS_VALUE (child.c[3], cubed->h[3]) = 2.*angle_between_vectors (v4, v5)/(M_PI*h);
 }
 
 static void cubed_fine_coarse (FttCell * parent, GfsVariable * a)

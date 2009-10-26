@@ -1733,6 +1733,8 @@ static void advection_run (GfsSimulation * sim)
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);
 
+  /* ignore default advection scheme (use per tracer parameters only) */
+  sim->advection_params.scheme = GFS_NONE;
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
     gdouble tstart = gfs_clock_elapsed (domain->timer);
