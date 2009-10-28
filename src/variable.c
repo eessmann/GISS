@@ -663,6 +663,9 @@ static void init_mac_from_stream_function (FttCell * cell,
 
 static void variable_stream_function_coarse_fine (FttCell * parent, GfsVariable * v)
 {
+  if (GFS_CELL_IS_BOUNDARY (parent))
+    return;
+
   GfsFunction * f = GFS_VARIABLE_FUNCTION (v)->f;
   FttCellChildren child;
   ftt_cell_children (parent, &child);

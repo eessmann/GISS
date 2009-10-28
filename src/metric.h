@@ -36,6 +36,7 @@ struct _GfsMetricCubed {
 
   /*< public >*/
   GfsVariable * h[FTT_NEIGHBORS], * a;
+  gint level;
 };
 
 #define GFS_METRIC_CUBED(obj)            GTS_OBJECT_CAST (obj,\

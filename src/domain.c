@@ -2662,6 +2662,9 @@ void gfs_cell_init (FttCell * cell, GfsDomain * domain)
       g_return_if_fail (child.c[n]->data == NULL);
       child.c[n]->data = g_malloc0 (gfs_domain_variables_size (domain));
     }
+    if (GFS_CELL_IS_BOUNDARY (cell))
+      for (n = 0; n < FTT_CELLS; n++)
+	child.c[n]->flags |= GFS_FLAG_BOUNDARY;
   }
 }
 

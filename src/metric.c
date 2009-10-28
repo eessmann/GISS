@@ -17,6 +17,7 @@
  * 02111-1307, USA.  
  */
 
+#include <stdlib.h>
 #include "metric.h"
 #include <complex.h>
 #include "map.h"
@@ -369,63 +370,139 @@ static void none (FttCell * parent, GfsVariable * v)
 {
 }
 
+typedef struct {
+  double x, y, x1, y1, z1;
+  double a;
+} Point;
+
+typedef struct {
+  Point * v[4];
+  double a, h[4];
+} Square;
+
+static void point_new (Point * p, double x, double y)
+{
+  p->x = x; p->y = y;
+  cmap_xy2XYZ (x, y, &p->x1, &p->y1, &p->z1);
+}
+
+static Point ** matrix_refine (Point ** m, int n)
+{
+  int n1 = 2*n - 1, i, j;
+  Point ** r = gfs_matrix_new (n1, n1, sizeof (Point));
+  for (i = 0; i < n; i++)
+    for (j = 0; j < n; j++)
+      r[2*i][2*j] = m[i][j];
+  for (i = 0; i < n - 1; i++)
+    for (j = 0; j < n - 1; j++) {
+      point_new (&r[2*i+1][2*j], (m[i][j].x + m[i+1][j].x)/2., m[i][j].y);
+      point_new (&r[2*i][2*j+1], m[i][j].x, (m[i][j].y + m[i][j+1].y)/2.);
+      point_new (&r[2*i+1][2*j+1], (m[i][j].x + m[i+1][j].x)/2., (m[i][j].y + m[i][j+1].y)/2.);
+    }
+  i = n - 1;
+  for (j = 0; j < n - 1; j++)
+    point_new (&r[2*i][2*j+1], m[i][j].x, (m[i][j].y + m[i][j+1].y)/2.);
+  j = n - 1;
+  for (i = 0; i < n - 1; i++)
+    point_new (&r[2*i+1][2*j], (m[i][j].x + m[i+1][j].x)/2., m[i][j].y);
+  gfs_matrix_free (m);
+  return r;
+}
+
+static Point ** matrix_from_cell (FttCell * cell)
+{
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  double h = ftt_cell_size (cell)/2.;
+  Point ** r = gfs_matrix_new (2, 2, sizeof (Point));
+  point_new (&r[0][0], p.x - h, p.y - h);
+  point_new (&r[1][0], p.x + h, p.y - h);
+  point_new (&r[1][1], p.x + h, p.y + h);
+  point_new (&r[0][1], p.x - h, p.y + h);
+  return r;
+}
+
+static double matrix_a (Point ** r, int m, int i0, int j0)
+{
+  int i, j;
+  double a = 0.;
+  double h = r[m][0].x - r[0][0].x;
+  for (i = 0; i < m; i++)
+    for (j = 0; j < m; j++)
+      a += excess_of_quad (&r[i0+i][j0+j].x1, &r[i0+i+1][j0+j].x1,
+			   &r[i0+i+1][j0+j+1].x1, &r[i0+i][j0+j+1].x1);
+  return 4.*a/(M_PI*M_PI*h*h);
+}
+
+static double matrix_hx (Point ** r, int m, int i0, int j0)
+{
+  int i;
+  double hx = 0.;
+  double h = r[m][0].x - r[0][0].x;
+  for (i = 0; i < m; i++)
+    hx += angle_between_vectors (&r[i0+i][j0].x1, &r[i0+i+1][j0].x1);
+  return 2.*hx/(M_PI*h);
+}
+
+static double matrix_hy (Point ** r, int m, int i0, int j0)
+{
+  int j;
+  double hy = 0.;
+  double h = r[m][0].x - r[0][0].x;
+  for (j = 0; j < m; j++)
+    hy += angle_between_vectors (&r[i0][j0+j].x1, &r[i0][j0+j+1].x1);
+  return 2.*hy/(M_PI*h);
+}
+
 static void cubed_coarse_fine (FttCell * parent, GfsVariable * a)
 {
+  if (GFS_CELL_IS_BOUNDARY (parent))
+    return;
+
   GfsMetricCubed * cubed = GTS_OBJECT (a)->reserved;
+  g_assert (GFS_IS_METRIC_CUBED (cubed));
+  Point ** r = matrix_from_cell (parent);
+  r = matrix_refine (r, 2);
+  int n = 3, level = cubed->level - (ftt_cell_level (parent) + 1);
+  while (level-- > 0) {
+    r = matrix_refine (r, n);
+    n = 2*n - 1;
+  }
+
   FttCellChildren child;
   ftt_cell_children (parent, &child);
-  FttVector p;
-  ftt_cell_pos (parent, &p);
-  double h = ftt_cell_size (parent)/2.;
-  double v0[3];
-  v0[0] = p.x;     v0[1] = p.y;
-  cmap_xy2XYZ (v0[0], v0[1], &v0[0], &v0[1], &v0[2]);
-  double v1[3], v2[3], v3[3], v4[3];
-  v1[0] = p.x - h; v1[1] = p.y - h;
-  cmap_xy2XYZ (v1[0], v1[1], &v1[0], &v1[1], &v1[2]);
-  v2[0] = p.x - h; v2[1] = p.y + h;
-  cmap_xy2XYZ (v2[0], v2[1], &v2[0], &v2[1], &v2[2]);
-  v3[0] = p.x + h; v3[1] = p.y + h;
-  cmap_xy2XYZ (v3[0], v3[1], &v3[0], &v3[1], &v3[2]);
-  v4[0] = p.x + h; v4[1] = p.y - h;
-  cmap_xy2XYZ (v4[0], v4[1], &v4[0], &v4[1], &v4[2]);
-  double v5[3], v6[3], v7[3], v8[3];
-  v5[0] = p.x; v5[1] = p.y - h;
-  cmap_xy2XYZ (v5[0], v5[1], &v5[0], &v5[1], &v5[2]);
-  v6[0] = p.x - h; v6[1] = p.y;
-  cmap_xy2XYZ (v6[0], v6[1], &v6[0], &v6[1], &v6[2]);
-  v7[0] = p.x; v7[1] = p.y + h;
-  cmap_xy2XYZ (v7[0], v7[1], &v7[0], &v7[1], &v7[2]);
-  v8[0] = p.x + h; v8[1] = p.y;
-  cmap_xy2XYZ (v8[0], v8[1], &v8[0], &v8[1], &v8[2]);
+  int m = n/2;
 
-  GFS_VALUE (child.c[0], a) = 4.*excess_of_quad (v6, v0, v7, v2)/(M_PI*M_PI*h*h);
-  GFS_VALUE (child.c[1], a) = 4.*excess_of_quad (v0, v8, v3, v7)/(M_PI*M_PI*h*h);
-  GFS_VALUE (child.c[2], a) = 4.*excess_of_quad (v1, v5, v0, v6)/(M_PI*M_PI*h*h);
-  GFS_VALUE (child.c[3], a) = 4.*excess_of_quad (v5, v4, v8, v0)/(M_PI*M_PI*h*h);
+  GFS_VALUE (child.c[0], a) = matrix_a (r, m, 0, m);
+  GFS_VALUE (child.c[1], a) = matrix_a (r, m, m, m);
+  GFS_VALUE (child.c[2], a) = matrix_a (r, m, 0, 0);
+  GFS_VALUE (child.c[3], a) = matrix_a (r, m, m, 0);
 
   GFS_VALUE (child.c[0], cubed->h[0]) = GFS_VALUE (child.c[1], cubed->h[1]) = 
-    2.*angle_between_vectors (v0, v7)/(M_PI*h);
+    matrix_hy (r, m, m, m);
   GFS_VALUE (child.c[0], cubed->h[3]) = GFS_VALUE (child.c[2], cubed->h[2]) = 
-    2.*angle_between_vectors (v0, v6)/(M_PI*h);
+    matrix_hx (r, m, 0, m);
   GFS_VALUE (child.c[2], cubed->h[0]) = GFS_VALUE (child.c[3], cubed->h[1]) = 
-    2.*angle_between_vectors (v0, v5)/(M_PI*h);
+    matrix_hy (r, m, m, 0);
   GFS_VALUE (child.c[1], cubed->h[3]) = GFS_VALUE (child.c[3], cubed->h[2]) = 
-    2.*angle_between_vectors (v0, v8)/(M_PI*h);
+    matrix_hx (r, m, m, m);
 
-  GFS_VALUE (child.c[0], cubed->h[2]) = 2.*angle_between_vectors (v2, v7)/(M_PI*h);
-  GFS_VALUE (child.c[0], cubed->h[1]) = 2.*angle_between_vectors (v2, v6)/(M_PI*h);
-  GFS_VALUE (child.c[1], cubed->h[2]) = 2.*angle_between_vectors (v3, v7)/(M_PI*h);
-  GFS_VALUE (child.c[1], cubed->h[0]) = 2.*angle_between_vectors (v3, v8)/(M_PI*h);
-  GFS_VALUE (child.c[2], cubed->h[3]) = 2.*angle_between_vectors (v1, v5)/(M_PI*h);
-  GFS_VALUE (child.c[2], cubed->h[1]) = 2.*angle_between_vectors (v1, v6)/(M_PI*h);
-  GFS_VALUE (child.c[3], cubed->h[0]) = 2.*angle_between_vectors (v4, v8)/(M_PI*h);
-  GFS_VALUE (child.c[3], cubed->h[3]) = 2.*angle_between_vectors (v4, v5)/(M_PI*h);
+  GFS_VALUE (child.c[0], cubed->h[2]) = matrix_hx (r, m, 0, n - 1);
+  GFS_VALUE (child.c[0], cubed->h[1]) = matrix_hy (r, m, 0, m);
+  GFS_VALUE (child.c[1], cubed->h[2]) = matrix_hx (r, m, m, n - 1);
+  GFS_VALUE (child.c[1], cubed->h[0]) = matrix_hy (r, m, n - 1, m);
+  GFS_VALUE (child.c[2], cubed->h[3]) = matrix_hx (r, m, 0, 0);
+  GFS_VALUE (child.c[2], cubed->h[1]) = matrix_hy (r, m, 0, 0);
+  GFS_VALUE (child.c[3], cubed->h[0]) = matrix_hy (r, m, n - 1, 0);
+  GFS_VALUE (child.c[3], cubed->h[3]) = matrix_hx (r, m, m, 0);
+
+  gfs_matrix_free (r);
 }
 
 static void cubed_fine_coarse (FttCell * parent, GfsVariable * a)
 {
   GfsMetricCubed * cubed = GTS_OBJECT (a)->reserved;
+  g_assert (GFS_IS_METRIC_CUBED (cubed));
   FttCellChildren child;
   guint n;
 
@@ -445,6 +522,13 @@ static void cubed_fine_coarse (FttCell * parent, GfsVariable * a)
 				     GFS_VALUE (child.c[3], cubed->h[3]))/2.;
 }
 
+static void metric_cubed_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_metric_cubed_class ())->parent_class->write) (o, fp);
+  if (GFS_METRIC_CUBED (o)->level != 0)
+    fprintf (fp, " %d", GFS_METRIC_CUBED (o)->level);
+}
+
 static void metric_cubed_read (GtsObject ** o, GtsFile * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_metric_cubed_class ())->parent_class->read) (o, fp);
@@ -458,6 +542,11 @@ static void metric_cubed_read (GtsObject ** o, GtsFile * fp)
   }
 
   GfsMetricCubed * cubed = GFS_METRIC_CUBED (*o);
+  if (fp->type == GTS_INT) {
+    cubed->level = atoi (fp->token->str);
+    gts_file_next_token (fp);
+  }
+
   FttDirection d;
   for (d = 0; d < FTT_NEIGHBORS; d++) {
     gchar * name = g_strdup_printf ("Ch%d", d);
@@ -483,6 +572,7 @@ static void metric_cubed_read (GtsObject ** o, GtsFile * fp)
 static void metric_cubed_class_init (GtsObjectClass * klass)
 {
   klass->read = metric_cubed_read;
+  klass->write = metric_cubed_write;
 }
 
 static void metric_cubed_init (GfsEvent * m)
@@ -624,7 +714,11 @@ static gdouble metric_lon_lat_solid_metric (const GfsDomain * domain, const FttC
 
 static void lonlat_coarse_fine (FttCell * parent, GfsVariable * a)
 {
+  if (GFS_CELL_IS_BOUNDARY (parent))
+    return;
+
   GfsMetricLonLat * lonlat = GTS_OBJECT (a)->reserved;
+  g_assert (GFS_IS_METRIC_LON_LAT (lonlat));
   FttCellChildren child;
   ftt_cell_children (parent, &child);
   FttVector p;
@@ -650,6 +744,7 @@ static void lonlat_coarse_fine (FttCell * parent, GfsVariable * a)
 static void lonlat_fine_coarse (FttCell * parent, GfsVariable * a)
 {
   GfsMetricLonLat * lonlat = GTS_OBJECT (a)->reserved;
+  g_assert (GFS_IS_METRIC_LON_LAT (lonlat));
   FttCellChildren child;
   guint n;
 
