@@ -1657,9 +1657,7 @@ void gfs_get_from_below_intensive (FttCell * cell, const GfsVariable * v)
   ftt_cell_children (cell, &child);
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i]) {
-      gdouble a = GFS_IS_MIXED (child.c[i]) ? 
-	GFS_STATE (child.c[i])->solid->a : 1.;
-
+      gdouble a = gfs_domain_cell_fraction (v->domain, child.c[i]);
       val += GFS_VARIABLE (child.c[i], v->i)*a;
       sa += a;
     }
@@ -1698,14 +1696,33 @@ void gfs_cell_coarse_fine (FttCell * parent, GfsVariable * v)
     for (c = 0; c < FTT_DIMENSION; c++)
       (&g.x)[c] = gfs_center_van_leer_gradient (parent, c, v->i);
 
-    for (n = 0; n < FTT_CELLS; n++) 
-      if (child.c[n]) {
-	FttVector p;
-	
-	ftt_cell_relative_pos (child.c[n], &p);
-	for (c = 0; c < FTT_DIMENSION; c++)
-	  GFS_VALUE (child.c[n], v) += (&p.x)[c]*(&g.x)[c];
+    if (v->domain->cell_metric) {
+      gdouble a[FTT_CELLS], sa = 0.;
+      for (n = 0; n < FTT_CELLS; n++) {
+	a[n] = (* v->domain->cell_metric) (v->domain, child.c[n], v->domain->metric_data);
+	sa += a[n];
       }
+      sa *= 2.;
+#if FTT_2D
+      double gx1 = g.x*(a[0] + a[2])/sa, gx2 = - g.x*(a[1] + a[3])/sa;
+      double gy1 = g.y*(a[2] + a[3])/sa, gy2 = - g.y*(a[0] + a[1])/sa;
+      GFS_VALUE (child.c[0], v) += gx2 + gy1;
+      GFS_VALUE (child.c[1], v) += gx1 + gy1;
+      GFS_VALUE (child.c[2], v) += gx2 + gy2;
+      GFS_VALUE (child.c[3], v) += gx1 + gy2;
+#else /* 3D */
+      g_assert_not_implemented ();
+#endif /* 3D */
+    }
+    else
+      for (n = 0; n < FTT_CELLS; n++) 
+	if (child.c[n]) {
+	  FttVector p;
+	  
+	  ftt_cell_relative_pos (child.c[n], &p);
+	  for (c = 0; c < FTT_DIMENSION; c++)
+	    GFS_VALUE (child.c[n], v) += (&p.x)[c]*(&g.x)[c];
+	}
   }
 }
 
