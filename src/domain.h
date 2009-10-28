@@ -76,9 +76,10 @@ struct _GfsDomain {
 
   /* coordinate metrics */
   gpointer metric_data;
-  gdouble (* face_metric)  (const GfsDomain *, const FttCellFace *, const gpointer);
-  gdouble (* cell_metric)  (const GfsDomain *, const FttCell *,     const gpointer);
-  gdouble (* solid_metric) (const GfsDomain *, const FttCell *,     const gpointer);
+  gdouble (* face_metric)  (const GfsDomain *, const FttCellFace *);
+  gdouble (* cell_metric)  (const GfsDomain *, const FttCell *);
+  gdouble (* solid_metric) (const GfsDomain *, const FttCell *);
+  gdouble (* scale_metric) (const GfsDomain *, const FttCell *, FttComponent);
 };
 
 struct _GfsDomainClass {
@@ -349,7 +350,7 @@ gdouble gfs_domain_face_fraction (const GfsDomain * domain, const FttCellFace * 
 {
   gdouble f = GFS_FACE_FRACTION (face);
   if (domain->face_metric)
-    f *= (* domain->face_metric) (domain, face, domain->metric_data);
+    f *= (* domain->face_metric) (domain, face);
   return f;
 }
 
@@ -369,7 +370,7 @@ gdouble gfs_domain_face_fraction_right (const GfsDomain * domain, const FttCellF
     FttCellFace face1;
     face1.cell = face->neighbor;
     face1.d = FTT_OPPOSITE_DIRECTION (face->d);
-    f *= (* domain->face_metric) (domain, &face1, domain->metric_data);
+    f *= (* domain->face_metric) (domain, &face1);
   }
   return f;
 }
@@ -387,7 +388,7 @@ gdouble gfs_domain_cell_fraction (const GfsDomain * domain, const FttCell * cell
 {
   gdouble a = GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
   if (domain->cell_metric)
-    a *= (* domain->cell_metric) (domain, cell, domain->metric_data);
+    a *= (* domain->cell_metric) (domain, cell);
   return a;
 }
 
@@ -403,7 +404,7 @@ static inline
 gdouble gfs_domain_solid_metric (const GfsDomain * domain, const FttCell * cell)
 {
   if (domain->solid_metric)
-    return (* domain->solid_metric) (domain, cell, domain->metric_data);
+    return (* domain->solid_metric) (domain, cell);
   return 1.;
 }
 

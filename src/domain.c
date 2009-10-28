@@ -2541,10 +2541,10 @@ static void minimum_mac_cfl (FttCellFace * face, CflData * p)
   gdouble un = GFS_STATE (face->cell)->f[face->d].un;
   gdouble length = ftt_cell_size (face->cell);
   if (p->domain->cell_metric) {
-    gdouble fm = (* p->domain->face_metric) (p->domain, face, p->domain->metric_data);
+    gdouble fm = (* p->domain->face_metric) (p->domain, face);
     if (fm <= 0.) /* e.g. Axi metric on the axis */
       return;
-    length *= (* p->domain->cell_metric) (p->domain, face->cell, p->domain->metric_data)/fm;
+    length *= (* p->domain->cell_metric) (p->domain, face->cell)/fm;
   }
   if (un != 0.) {
     gdouble cflu = length/fabs (un);
@@ -2573,7 +2573,7 @@ static void minimum_cfl (FttCell * cell, CflData * p)
 {
   gdouble length = ftt_cell_size (cell);
   if (p->domain->cell_metric)
-    length *= (* p->domain->cell_metric) (p->domain, cell, p->domain->metric_data);
+    length *= (* p->domain->cell_metric) (p->domain, cell);
 
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++) {
@@ -2581,9 +2581,9 @@ static void minimum_cfl (FttCell * cell, CflData * p)
     if (p->domain->face_metric) {
       FttCellFace f;
       f.cell = cell; f.d = 2*c;
-      gdouble fm1 = (* p->domain->face_metric) (p->domain, &f, p->domain->metric_data);
+      gdouble fm1 = (* p->domain->face_metric) (p->domain, &f);
       f.d = 2*c + 1;
-      gdouble fm2 = (* p->domain->face_metric) (p->domain, &f, p->domain->metric_data);
+      gdouble fm2 = (* p->domain->face_metric) (p->domain, &f);
       fm = MAX (fm1, fm2);
     }
     else

@@ -1699,7 +1699,7 @@ void gfs_cell_coarse_fine (FttCell * parent, GfsVariable * v)
     if (v->domain->cell_metric) {
       gdouble a[FTT_CELLS], sa = 0.;
       for (n = 0; n < FTT_CELLS; n++) {
-	a[n] = (* v->domain->cell_metric) (v->domain, child.c[n], v->domain->metric_data);
+	a[n] = (* v->domain->cell_metric) (v->domain, child.c[n]);
 	sa += a[n];
       }
       sa *= 2.;

@@ -640,7 +640,7 @@ static gdouble face_metric (FttCell * cell, FttDirection d, GfsDomain * domain)
     FttCellFace f;
     f.cell = cell;
     f.d = d;
-    return (* domain->face_metric) (domain, &f, domain->metric_data);
+    return (* domain->face_metric) (domain, &f);
   }
   else
     return 1.;

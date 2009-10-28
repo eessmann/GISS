@@ -344,26 +344,32 @@ static GfsMapClass * gfs_map_cubed_class (void)
 
 /* GfsMetricCubed: Object */
 
-static gdouble metric_cubed_face_metric (const GfsDomain * domain, const FttCellFace * face, 
-					 const gpointer data)
+static gdouble cubed_face_metric (const GfsDomain * domain, const FttCellFace * face)
 {
   if (face->d/2 > 1)
     return 1.;
-  return GFS_VALUE (face->cell, GFS_METRIC_CUBED (data)->h[face->d]);
+  return GFS_VALUE (face->cell, GFS_METRIC_CUBED (domain->metric_data)->h[face->d]);
 }
 
-static gdouble metric_cubed_cell_metric (const GfsDomain * domain, const FttCell * cell, 
-					 const gpointer data)
+static gdouble cubed_cell_metric (const GfsDomain * domain, const FttCell * cell)
 {
-  return GFS_VALUE (cell, GFS_METRIC_CUBED (data)->a);
+  return GFS_VALUE (cell, GFS_METRIC_CUBED (domain->metric_data)->a);
 }
 
-static gdouble metric_cubed_solid_metric (const GfsDomain * domain, const FttCell * cell, 
-					  const gpointer data)
+static gdouble cubed_solid_metric (const GfsDomain * domain, const FttCell * cell)
 {
   g_assert (GFS_IS_MIXED (cell));
   g_assert_not_implemented ();
   return 1.;
+}
+
+static gdouble cubed_scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
+{
+  if (c > FTT_Y)
+    return 1.;
+  FttComponent d = FTT_ORTHOGONAL_COMPONENT (c);
+  return (GFS_VALUE (cell, GFS_METRIC_CUBED (domain->metric_data)->h[2*d]) +
+	  GFS_VALUE (cell, GFS_METRIC_CUBED (domain->metric_data)->h[2*d + 1]))/2.;
 }
 
 static void none (FttCell * parent, GfsVariable * v)
@@ -564,9 +570,10 @@ static void metric_cubed_read (GtsObject ** o, GtsFile * fp)
   gts_container_add (GTS_CONTAINER (GFS_SIMULATION (domain)->maps), GTS_CONTAINEE (map));
 
   domain->metric_data  = cubed;
-  domain->face_metric  = metric_cubed_face_metric;
-  domain->cell_metric  = metric_cubed_cell_metric;
-  domain->solid_metric = metric_cubed_solid_metric;
+  domain->face_metric  = cubed_face_metric;
+  domain->cell_metric  = cubed_cell_metric;
+  domain->solid_metric = cubed_solid_metric;
+  domain->scale_metric = cubed_scale_metric;
 }
 
 static void metric_cubed_class_init (GtsObjectClass * klass)
@@ -688,28 +695,32 @@ static void metric_lon_lat_write (GtsObject * o, FILE * fp)
   fprintf (fp, " %g", GFS_METRIC_LON_LAT (o)->r);
 }
 
-static gdouble metric_lon_lat_face_metric (const GfsDomain * domain, const FttCellFace * face, 
-					   const gpointer data)
+static gdouble lon_lat_face_metric (const GfsDomain * domain, const FttCellFace * face)
 {
   if (face->d/2 != FTT_Y)
     return 1.;
   return face->d == 2 ? 
-    GFS_VALUE (face->cell, GFS_METRIC_LON_LAT (data)->h2) :
-    GFS_VALUE (face->cell, GFS_METRIC_LON_LAT (data)->h3);
+    GFS_VALUE (face->cell, GFS_METRIC_LON_LAT (domain->metric_data)->h2) :
+    GFS_VALUE (face->cell, GFS_METRIC_LON_LAT (domain->metric_data)->h3);
 }
 
-static gdouble metric_lon_lat_cell_metric (const GfsDomain * domain, const FttCell * cell, 
-					   const gpointer data)
+static gdouble lon_lat_cell_metric (const GfsDomain * domain, const FttCell * cell)
 {
-  return GFS_VALUE (cell, GFS_METRIC_LON_LAT (data)->a);
+  return GFS_VALUE (cell, GFS_METRIC_LON_LAT (domain->metric_data)->a);
 }
 
-static gdouble metric_lon_lat_solid_metric (const GfsDomain * domain, const FttCell * cell, 
-					    const gpointer data)
+static gdouble lon_lat_solid_metric (const GfsDomain * domain, const FttCell * cell)
 {
   g_assert (GFS_IS_MIXED (cell));
   g_assert_not_implemented ();
   return 1.;
+}
+
+static gdouble lon_lat_scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
+{
+  if (c != FTT_X)
+    return 1.;
+  return GFS_VALUE (cell, GFS_METRIC_LON_LAT (domain->metric_data)->a);
 }
 
 static void lonlat_coarse_fine (FttCell * parent, GfsVariable * a)
@@ -796,9 +807,10 @@ static void metric_lon_lat_read (GtsObject ** o, GtsFile * fp)
   GFS_MAP_LONLAT (map)->r = GFS_METRIC_LON_LAT (*o)->r;
 
   domain->metric_data = *o;
-  domain->face_metric  = metric_lon_lat_face_metric;
-  domain->cell_metric  = metric_lon_lat_cell_metric;
-  domain->solid_metric = metric_lon_lat_solid_metric;
+  domain->face_metric  = lon_lat_face_metric;
+  domain->cell_metric  = lon_lat_cell_metric;
+  domain->solid_metric = lon_lat_solid_metric;
+  domain->scale_metric = lon_lat_scale_metric;
 }
 
 static void metric_lon_lat_class_init (GtsObjectClass * klass)

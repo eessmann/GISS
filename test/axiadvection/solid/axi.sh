@@ -25,7 +25,7 @@ BEGIN { min = 1000.; max = -1000.; }{
 END {
   e = 2.*(max - min)/(max + min);
   print "Standard:", e;
-  if (e > 3e-5)
+  if (e > 0.)
     exit (1);
 }' < srt1; then :
 else

@@ -1968,24 +1968,21 @@ static void axi_read (GtsObject ** object, GtsFile * fp)
   GFS_DOMAIN (*object)->refpos.y = 0.5;
 }
 
-static gdouble axi_face_metric (const GfsDomain * domain, const FttCellFace * face, 
-				const gpointer data)
+static gdouble axi_face_metric (const GfsDomain * domain, const FttCellFace * face)
 {
   FttVector p;
   ftt_face_pos (face, &p);
   return p.y;
 }
 
-static gdouble axi_cell_metric (const GfsDomain * domain, const FttCell * cell, 
-				const gpointer data)
+static gdouble axi_cell_metric (const GfsDomain * domain, const FttCell * cell)
 {
   FttVector p;
   gfs_cell_cm (cell, &p);
   return p.y;
 }
 
-static gdouble axi_solid_metric (const GfsDomain * domain, const FttCell * cell, 
-				 const gpointer data)
+static gdouble axi_solid_metric (const GfsDomain * domain, const FttCell * cell)
 {
   g_assert (GFS_IS_MIXED (cell));
   return GFS_STATE (cell)->solid->ca.y;

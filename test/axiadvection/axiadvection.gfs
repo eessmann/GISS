@@ -7,7 +7,7 @@
 # flow illustrated in Figure \ref{vof}. As the torus is flattened
 # against the right-hand-side wall, its cross-sectional surface area
 # decreases but the volume should remain constant. This is indeed the
-# case to within 0.05\% for the VOF tracer and $2\times 10^{-4}$\% for
+# case to within 0.04\% for the VOF tracer and $1.5\times 10^{-5}$\% for
 # the standard tracer.
 #
 # \begin{figure}[htbp]

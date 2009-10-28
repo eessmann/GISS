@@ -187,10 +187,10 @@ static void sources (FttCell * cell, GfsRiver * r)
     GfsDomain * domain = GFS_DOMAIN (r);
     FttCellFace face = { cell };
     for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++)
-      fm[face.d] = (* domain->face_metric) (domain, &face, domain->metric_data);
+      fm[face.d] = (* domain->face_metric) (domain, &face);
     gdouble dh_dl = fm[FTT_RIGHT] - fm[FTT_LEFT];
     gdouble dh_dt = fm[FTT_TOP]   - fm[FTT_BOTTOM];
-    cm = (* domain->cell_metric) (domain, cell, domain->metric_data)*ftt_cell_size (cell);
+    cm = (* domain->cell_metric) (domain, cell)*ftt_cell_size (cell);
     gdouble dldh = cm*GFS_SIMULATION (r)->physical_params.L;
     gdouble 
       phiu = GFS_VALUE (cell, r->v1[1]), 
@@ -387,9 +387,9 @@ static gdouble maximum_face_metric (FttCell * cell, GfsDomain * domain, FttCompo
   if (domain->face_metric) {
     FttCellFace f;
     f.cell = cell; f.d = 2*c;
-    gdouble fm1 = (* domain->face_metric) (domain, &f, domain->metric_data);
+    gdouble fm1 = (* domain->face_metric) (domain, &f);
     f.d = 2*c + 1;
-    gdouble fm2 = (* domain->face_metric) (domain, &f, domain->metric_data);
+    gdouble fm2 = (* domain->face_metric) (domain, &f);
     return MAX (fm1, fm2);
   }
   else
@@ -403,7 +403,7 @@ static void minimum_cfl (FttCell * cell, GfsRiver * r)
     GfsDomain * domain = GFS_DOMAIN (r);
     gdouble vol = ftt_cell_size (cell);
     if (domain->cell_metric)
-      vol *= (* domain->cell_metric) (domain, cell, domain->metric_data);
+      vol *= (* domain->cell_metric) (domain, cell);
     gdouble cg = sqrt (r->g*h);
     FttComponent c;
     for (c = FTT_X; c <= FTT_Y; c++) {

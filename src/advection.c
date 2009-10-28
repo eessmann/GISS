@@ -22,13 +22,13 @@
 #include "source.h"
 
 static gdouble transverse_term (FttCell * cell,
-				gdouble size,
+				gdouble * msize,
 				FttComponent c,
 				const GfsAdvectionParams * par)
 {
   GfsStateVector * s = GFS_STATE (cell);
   gdouble vtan = par->use_centered_velocity ? 
-    GFS_VARIABLE (cell, par->u[c]->i) :
+    GFS_VALUE (cell, par->u[c]) :
     (s->f[2*c].un + s->f[2*c + 1].un)/2.;
   FttCellFace f;
   GfsGradient gf;
@@ -38,9 +38,9 @@ static gdouble transverse_term (FttCell * cell,
   f.cell = cell;
   f.neighbor = ftt_cell_neighbor (cell, f.d);
   gfs_face_gradient (&f, &gf, par->v->i, -1);
-  g = gf.b - gf.a*GFS_VARIABLE (cell, par->v->i);
+  g = gf.b - gf.a*GFS_VALUE (cell, par->v);
   if (vtan > 0.) g = - g;
-  return par->dt*vtan*g/(2.*size);
+  return par->dt*vtan*g/(2.*msize[c]);
 }
 
 /**
@@ -55,34 +55,39 @@ static gdouble transverse_term (FttCell * cell,
 void gfs_cell_advected_face_values (FttCell * cell,
 				    const GfsAdvectionParams * par)
 {
-  FttComponent c;
-  gdouble size;
-  GfsStateVector * s;
-
   g_return_if_fail (cell != NULL);
   g_return_if_fail (par != NULL);
 
-  s = GFS_STATE (cell);
-  size = ftt_cell_size (cell);
+  GfsStateVector * s = GFS_STATE (cell);
+  gdouble size = ftt_cell_size (cell), msize[FTT_DIMENSION];
+
+  FttComponent c;
+  if (par->v->domain->scale_metric)
+    for (c = 0; c < FTT_DIMENSION; c++)
+      msize[c] = size*(* par->v->domain->scale_metric) (par->v->domain, cell, c);
+  else
+    for (c = 0; c < FTT_DIMENSION; c++)
+      msize[c] = size;
+
   for (c = 0; c < FTT_DIMENSION; c++) {
     gdouble unorm = par->use_centered_velocity ?
-      par->dt*GFS_VARIABLE (cell, par->u[c]->i)/size :
-      par->dt*(s->f[2*c].un + s->f[2*c + 1].un)/(2.*size);
+      par->dt*GFS_VALUE (cell, par->u[c])/msize[c] :
+       par->dt*(s->f[2*c].un + s->f[2*c + 1].un)/(2.*msize[c]);
     gdouble g = (* par->gradient) (cell, c, par->v->i);
-    gdouble vl = GFS_VARIABLE (cell, par->v->i) + MIN ((1. - unorm)/2., 0.5)*g;
-    gdouble vr = GFS_VARIABLE (cell, par->v->i) + MAX ((- 1. - unorm)/2., -0.5)*g;
+    gdouble vl = GFS_VALUE (cell, par->v) + MIN ((1. - unorm)/2., 0.5)*g;
+    gdouble vr = GFS_VALUE (cell, par->v) + MAX ((- 1. - unorm)/2., -0.5)*g;
     gdouble src = par->dt*gfs_variable_mac_source (par->v, cell)/2.;
     gdouble dv;
 
 #if FTT_2D
-    dv = transverse_term (cell, size, FTT_ORTHOGONAL_COMPONENT (c), par);
+    dv = transverse_term (cell, msize, FTT_ORTHOGONAL_COMPONENT (c), par);
 #else  /* FTT_3D */
     static FttComponent orthogonal[FTT_DIMENSION][2] = {
       {FTT_Y, FTT_Z}, {FTT_X, FTT_Z}, {FTT_X, FTT_Y}
     };
 
-    dv =  transverse_term (cell, size, orthogonal[c][0], par);
-    dv += transverse_term (cell, size, orthogonal[c][1], par);
+    dv =  transverse_term (cell, msize, orthogonal[c][0], par);
+    dv += transverse_term (cell, msize, orthogonal[c][1], par);
 #endif /* FTT_3D */
 
     s->f[2*c].v     = vl + src - dv;
@@ -111,8 +116,8 @@ void gfs_cell_non_advected_face_values (FttCell * cell,
   s = GFS_STATE (cell);
   for (c = 0; c < FTT_DIMENSION; c++) {
     gdouble g = (* par->gradient) (cell, c, par->v->i);
-    gdouble vl = GFS_VARIABLE (cell, par->v->i) + g/2.;
-    gdouble vr = GFS_VARIABLE (cell, par->v->i) - g/2.;
+    gdouble vl = GFS_VALUE (cell, par->v) + g/2.;
+    gdouble vr = GFS_VALUE (cell, par->v) - g/2.;
     gdouble src = par->dt*gfs_variable_mac_source (par->v, cell)/2.;
 
     s->f[2*c].v     = vl + src;
@@ -394,16 +399,17 @@ void gfs_face_advection_flux (const FttCellFace * face,
 
   flux = gfs_domain_face_fraction (par->v->domain, face)*GFS_FACE_NORMAL_VELOCITY (face)*par->dt*
     gfs_face_upwinded_value (face, GFS_FACE_UPWINDING, NULL)/ftt_cell_size (face->cell);
+
   if (!FTT_FACE_DIRECT (face))
     flux = - flux;
-  GFS_VARIABLE (face->cell, par->fv->i) -= flux;
+  GFS_VALUE (face->cell, par->fv) -= flux;
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += flux;
+    GFS_VALUE (face->neighbor, par->fv) += flux;
     break;
   case FTT_FINE_COARSE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += flux/FTT_CELLS;
+    GFS_VALUE (face->neighbor, par->fv) += flux/FTT_CELLS;
     break;
   default:
     g_assert_not_reached ();
@@ -450,14 +456,14 @@ void gfs_face_velocity_advection_flux (const FttCellFace * face,
 #endif
   if (!FTT_FACE_DIRECT (face))
     flux = - flux;
-  GFS_VARIABLE (face->cell, par->fv->i) -= flux;
+  GFS_VALUE (face->cell, par->fv) -= flux;
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += flux;
+    GFS_VALUE (face->neighbor, par->fv) += flux;
     break;
   case FTT_FINE_COARSE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += flux/FTT_CELLS;
+    GFS_VALUE (face->neighbor, par->fv) += flux/FTT_CELLS;
     break;
   default:
     g_assert_not_reached ();
@@ -507,18 +513,18 @@ void gfs_face_velocity_convective_flux (const FttCellFace * face,
   u *= par->dt/(2.*ftt_cell_size (face->cell));
   if (!FTT_FACE_DIRECT (face))
     u = - u;
-  GFS_VARIABLE (face->cell, par->fv->i) -= 
+  GFS_VALUE (face->cell, par->fv) -= 
     u*(GFS_STATE (face->cell)->f[face->d].un + 
        GFS_STATE (face->cell)->f[FTT_OPPOSITE_DIRECTION (face->d)].un);
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += 
+    GFS_VALUE (face->neighbor, par->fv) += 
       u*(GFS_STATE (face->neighbor)->f[face->d].un + 
 	 GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].un);
     break;
   case FTT_FINE_COARSE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += 
+    GFS_VALUE (face->neighbor, par->fv) += 
       u*(GFS_STATE (face->neighbor)->f[face->d].un + 
 	 GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].un)
       /FTT_CELLS;
@@ -992,9 +998,8 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
 
   gts_file_assign_variables (fp, var);
 
-  if (fp->type != GTS_ERROR && (par->cfl <= 0. || par->cfl > 1.))
-    gts_file_variable_error (fp, var, "cfl", 
-			     "cfl `%g' is out of range `]0,1]'", par->cfl);
+  if (fp->type != GTS_ERROR && par->cfl <= 0.)
+    gts_file_variable_error (fp, var, "cfl", "cfl must be strictly positive");
 
   if (gradient) {
     if (!strcmp (gradient, "gfs_center_gradient"))
