@@ -435,7 +435,7 @@ typedef struct {
 
 static void sum (FttCell * cell, Sum * s)
 {
-  gdouble vol = gfs_cell_volume (cell);
+  gdouble vol = gfs_cell_volume (cell, s->v->domain);
   s->s += vol*GFS_VALUE (cell, s->v);
   s->sv += vol;
 }
@@ -637,7 +637,8 @@ static void source_flux_write (GtsObject * o, FILE * fp)
 
 static void add (FttCell * cell, GfsSourceFlux * s)
 {
-  s->s += gfs_cell_volume (cell)*gfs_function_value (s->fraction, cell);
+  s->s += gfs_cell_volume (cell, GFS_DOMAIN (gfs_object_simulation (s)))*
+    gfs_function_value (s->fraction, cell);
 }
 
 static gboolean source_flux_event (GfsEvent * event, GfsSimulation * sim)

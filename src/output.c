@@ -1996,11 +1996,11 @@ GfsOutputClass * gfs_output_scalar_stats_class (void)
 
 static void add (FttCell * cell, gpointer * data)
 {
-  gdouble vol = gfs_cell_volume (cell);
   GfsVariable * v = data[0];
+  gdouble vol = gfs_cell_volume (cell, v->domain);
   gdouble * sum = data[1];
 
-  *sum += vol*GFS_VARIABLE (cell, v->i);
+  *sum += vol*GFS_VALUE (cell, v);
 }
 
 static gboolean gfs_output_scalar_sum_event (GfsEvent * event, 
@@ -2291,7 +2291,7 @@ static void gfs_output_scalar_histogram_write (GtsObject * o, FILE * fp)
 static void update_histogram (FttCell * cell, GfsOutputScalar * h)
 {
   GfsOutputScalarHistogram * hi = GFS_OUTPUT_SCALAR_HISTOGRAM (h);
-  gdouble v = GFS_VARIABLE (cell, h->v->i);
+  gdouble v = GFS_VALUE (cell, h->v);
   gint i = (v - h->min)/(h->max - h->min)*hi->n;
 
   if (i >= 0 && i < hi->n) {
@@ -2300,7 +2300,7 @@ static void update_histogram (FttCell * cell, GfsOutputScalar * h)
     if (hi->wf)
       w *= gfs_function_value (hi->wf, cell);
     else
-      w *= gfs_cell_volume (cell);
+      w *= gfs_cell_volume (cell, h->v->domain);
 
     hi->W += w;
     hi->w[i] += w;
@@ -2813,8 +2813,8 @@ static void compute_correlation (FttCell * cell, gpointer * data)
   gdouble v, ref, w;
 
   ref = gfs_function_value (GFS_OUTPUT_ERROR_NORM (o)->s, cell);
-  v = GFS_VARIABLE (cell, o->v->i) - *bias;
-  w = gfs_cell_volume (cell);
+  v = GFS_VALUE (cell, o->v) - *bias;
+  w = gfs_cell_volume (cell, o->v->domain);
   *sumref += ref*ref*w;
   *sum += v*ref*w;
 }

@@ -1860,7 +1860,7 @@ static void add_norm (const FttCell * cell, gpointer * data)
   GfsNorm * n = data[0];
   GfsVariable * v = data[1];
 
-  gfs_norm_add (n, GFS_VARIABLE (cell, v->i), gfs_cell_volume (cell));
+  gfs_norm_add (n, GFS_VALUE (cell, v), gfs_cell_volume (cell, v->domain));
 }
 
 static void add_norm_weighted (FttCell * cell, gpointer * data)
@@ -1869,7 +1869,8 @@ static void add_norm_weighted (FttCell * cell, gpointer * data)
   GfsVariable * v = data[1];
   GfsFunction * w = data[2];
 
-  gfs_norm_add (n, GFS_VARIABLE (cell, v->i), gfs_cell_volume (cell)*gfs_function_value (w, cell));
+  gfs_norm_add (n, GFS_VALUE (cell, v), gfs_cell_volume (cell, v->domain)*
+		gfs_function_value (w, cell));
 }
 
 #ifdef HAVE_MPI
@@ -2034,7 +2035,7 @@ static void add_norm_velocity (FttCell * cell, gpointer * data)
   GfsVariable ** u = data[0];
   GfsNorm * n = data[1];
   
-  gfs_norm_add (n, gfs_vector_norm (cell, u), gfs_cell_volume (cell));
+  gfs_norm_add (n, gfs_vector_norm (cell, u), gfs_cell_volume (cell, u[0]->domain));
 }
 
 /**

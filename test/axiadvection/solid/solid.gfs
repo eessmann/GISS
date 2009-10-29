@@ -21,8 +21,8 @@
     InitFraction T (- ellipse (-0.2, 0., 0.05, 0.05))
     InitFraction T1 (- ellipse (-0.2, 0., 0.05, 0.05))
     AdaptGradient { istep = 1 } { cmax = 1e-3 minlevel = 4 maxlevel = (x < 0. ? 7 : 8) } T1
-    OutputScalarSum { istep = 1 } srt { v = y*T }
-    OutputScalarSum { istep = 1 } srt1 { v = y*T1 }
+    OutputScalarSum { istep = 1 } srt { v = T }
+    OutputScalarSum { istep = 1 } srt1 { v = T1 }
 }
 GfsBox {
     left = Boundary {

@@ -32,8 +32,8 @@
     InitFraction T (- ellipse (0, 0.3, 0.1, 0.1))
     InitFraction T1 (- ellipse (0, 0.3, 0.1, 0.1))
     AdaptGradient { istep = 1 } { cmax = 1e-3 minlevel = 4 maxlevel = (x < 0.25 ? 6 : 7) } T1
-    OutputScalarSum { istep = 1 end = 0.8 } srt { v = y*T }
-    OutputScalarSum { istep = 1 end = 0.8 } srt1 { v = y*T1 }
+    OutputScalarSum { istep = 1 end = 0.8 } srt { v = T }
+    OutputScalarSum { istep = 1 end = 0.8 } srt1 { v = T1 }
     OutputSimulation { step = 0.2 } stdout
     EventScript { step = 0.2 } {
 	echo "Save stdout { format = Gnuplot }"

@@ -408,6 +408,20 @@ gdouble gfs_domain_solid_metric (const GfsDomain * domain, const FttCell * cell)
   return 1.;
 }
 
+/**
+ * gfs_cell_volume:
+ * @cell: a #FttCell.
+ * @domain: a #GfsDomain.
+ *
+ * Returns: the volume of @cell.
+ */
+static inline
+gdouble gfs_cell_volume (const FttCell * cell, const GfsDomain * domain)
+{
+  double v = ftt_cell_volume (cell)*(GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.);
+  return domain->cell_metric ? (* domain->cell_metric) (domain, cell)*v : v;
+}
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

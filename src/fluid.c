@@ -1820,7 +1820,7 @@ static void add_norm (const FttCell * cell, gpointer * data)
   GfsNorm * n = data[0];
   GfsVariable * v = data[1];
 
-  gfs_norm_add (n, GFS_VARIABLE (cell, v->i), gfs_cell_volume (cell));
+  gfs_norm_add (n, GFS_VALUE (cell, v), gfs_cell_volume (cell, v->domain));
 }
 
 /**

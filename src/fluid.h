@@ -191,9 +191,6 @@ GtsRange              gfs_stats_variable             (FttCell * root,
 						      FttTraverseFlags flags,
 						      gint max_depth);
 
-#define               gfs_cell_volume(cell)   (ftt_cell_volume (cell)*(GFS_IS_MIXED (cell) ?\
-					       GFS_STATE (cell)->solid->a : 1.))
-
 typedef struct _GfsNorm GfsNorm;
 
 struct _GfsNorm {
