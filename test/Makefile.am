@@ -28,7 +28,8 @@ TESTDIRS = \
 	waves \
 	nz \
 	parabola \
-	lonlat
+	lonlat \
+	cosine
 
 EXTRA_DIST = \
 	template.tex \
