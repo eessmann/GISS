@@ -95,7 +95,7 @@ Define U0 (2.*M_PI)
 
 6 12 GfsAdvection GfsBox GfsGEdge {} {
   PhysicalParams { L = 2.*M_PI/4. }
-  MetricCubed LEVEL
+  MetricCubed M LEVEL
   Time { end = 1 }
   Refine LEVEL
   VariableTracer T { 

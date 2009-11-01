@@ -24,7 +24,14 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include "event.h"
+#include "variable.h"
+
+/* GfsVariableMetric: Header */
+
+#define GFS_IS_VARIABLE_METRIC(obj)         (gts_object_is_from_class (obj,\
+						   gfs_variable_metric_class ()))
+
+GfsVariableClass * gfs_variable_metric_class  (void);
 
 /* GfsMetricCubed: Header */
 
@@ -32,10 +39,10 @@ typedef struct _GfsMetricCubed GfsMetricCubed;
 
 struct _GfsMetricCubed {
   /*< private >*/
-  GfsEvent parent;
+  GfsVariable parent;
 
   /*< public >*/
-  GfsVariable * h[FTT_NEIGHBORS], * a;
+  GfsVariable * h[FTT_NEIGHBORS];
   gint level;
 };
 
@@ -45,7 +52,7 @@ struct _GfsMetricCubed {
 #define GFS_IS_METRIC_CUBED(obj)         (gts_object_is_from_class (obj,\
 						   gfs_metric_cubed_class ()))
 
-GfsEventClass * gfs_metric_cubed_class  (void);
+GfsVariableClass * gfs_metric_cubed_class  (void);
 
 /* GfsMetricLonLat: Header */
 
@@ -53,10 +60,10 @@ typedef struct _GfsMetricLonLat GfsMetricLonLat;
 
 struct _GfsMetricLonLat {
   /*< private >*/
-  GfsEvent parent;
+  GfsVariable parent;
 
   /*< public >*/
-  GfsVariable * a, * h2, * h3;
+  GfsVariable * h2, * h3;
   gdouble r;
 };
 
@@ -66,7 +73,7 @@ struct _GfsMetricLonLat {
 #define GFS_IS_METRIC_LON_LAT(obj)         (gts_object_is_from_class (obj,\
 						   gfs_metric_lon_lat_class ()))
 
-GfsEventClass * gfs_metric_lon_lat_class  (void);
+GfsVariableClass * gfs_metric_lon_lat_class  (void);
 
 #ifdef __cplusplus
 }

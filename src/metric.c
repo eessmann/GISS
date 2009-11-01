@@ -23,6 +23,31 @@
 #include "map.h"
 #include "solid.h"
 
+/* GfsVariableMetric */
+
+GfsVariableClass * gfs_variable_metric_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_metric_info = {
+      "GfsVariableMetric",
+      sizeof (GfsVariable),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
+				  &gfs_variable_metric_info);
+  }
+
+  return klass;
+}
+
+/* "Expanded spherical cube" metric */
+
 #define N 30
 
 #if 0
@@ -353,7 +378,7 @@ static gdouble cubed_face_metric (const GfsDomain * domain, const FttCellFace * 
 
 static gdouble cubed_cell_metric (const GfsDomain * domain, const FttCell * cell)
 {
-  return GFS_VALUE (cell, GFS_METRIC_CUBED (domain->metric_data)->a);
+  return GFS_VALUE (cell, GFS_VARIABLE1 (domain->metric_data));
 }
 
 static gdouble cubed_solid_metric (const GfsDomain * domain, const FttCell * cell)
@@ -465,8 +490,7 @@ static void cubed_coarse_fine (FttCell * parent, GfsVariable * a)
   if (GFS_CELL_IS_BOUNDARY (parent))
     return;
 
-  GfsMetricCubed * cubed = GTS_OBJECT (a)->reserved;
-  g_assert (GFS_IS_METRIC_CUBED (cubed));
+  GfsMetricCubed * cubed = GFS_METRIC_CUBED (a);
   Point ** r = matrix_from_cell (parent);
   r = matrix_refine (r, 2);
   int n = 3, level = cubed->level - (ftt_cell_level (parent) + 1);
@@ -507,8 +531,7 @@ static void cubed_coarse_fine (FttCell * parent, GfsVariable * a)
 
 static void cubed_fine_coarse (FttCell * parent, GfsVariable * a)
 {
-  GfsMetricCubed * cubed = GTS_OBJECT (a)->reserved;
-  g_assert (GFS_IS_METRIC_CUBED (cubed));
+  GfsMetricCubed * cubed = GFS_METRIC_CUBED (a);
   FttCellChildren child;
   guint n;
 
@@ -547,7 +570,8 @@ static void metric_cubed_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
-  GfsMetricCubed * cubed = GFS_METRIC_CUBED (*o);
+  GfsVariable * a = GFS_VARIABLE1 (*o);
+  GfsMetricCubed * cubed = GFS_METRIC_CUBED (a);
   if (fp->type == GTS_INT) {
     cubed->level = atoi (fp->token->str);
     gts_file_next_token (fp);
@@ -555,15 +579,15 @@ static void metric_cubed_read (GtsObject ** o, GtsFile * fp)
 
   FttDirection d;
   for (d = 0; d < FTT_NEIGHBORS; d++) {
-    gchar * name = g_strdup_printf ("Ch%d", d);
+    gchar * name = g_strdup_printf ("%sh%d", a->name, d);
     cubed->h[d] = gfs_domain_get_or_add_variable (domain, name, "Cubed face metric");
     cubed->h[d]->fine_coarse = cubed->h[d]->coarse_fine = none;
     g_free (name);
   }
-  cubed->a = gfs_domain_get_or_add_variable (domain, "Ca", "Cubed cell metric");
-  GTS_OBJECT (cubed->a)->reserved = cubed;
-  cubed->a->coarse_fine = cubed_coarse_fine;
-  cubed->a->fine_coarse = cubed_fine_coarse;
+  g_free (a->description);
+  a->description = g_strdup ("Cubed cell metric");
+  a->coarse_fine = cubed_coarse_fine;
+  a->fine_coarse = cubed_fine_coarse;
 
   GtsObject * map = gts_object_new (GTS_OBJECT_CLASS (gfs_map_cubed_class ()));
   gfs_object_simulation_set (map, domain);
@@ -582,26 +606,21 @@ static void metric_cubed_class_init (GtsObjectClass * klass)
   klass->write = metric_cubed_write;
 }
 
-static void metric_cubed_init (GfsEvent * m)
+GfsVariableClass * gfs_metric_cubed_class (void)
 {
-  m->istep = G_MAXINT/2;
-}
-
-GfsEventClass * gfs_metric_cubed_class (void)
-{
-  static GfsEventClass * klass = NULL;
+  static GfsVariableClass * klass = NULL;
 
   if (klass == NULL) {
     GtsObjectClassInfo gfs_metric_cubed_info = {
       "GfsMetricCubed",
       sizeof (GfsMetricCubed),
-      sizeof (GfsEventClass),
+      sizeof (GfsVariableClass),
       (GtsObjectClassInitFunc) metric_cubed_class_init,
-      (GtsObjectInitFunc) metric_cubed_init,
+      (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()), 
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_metric_class ()), 
 				  &gfs_metric_cubed_info);
   }
 
@@ -706,7 +725,7 @@ static gdouble lon_lat_face_metric (const GfsDomain * domain, const FttCellFace 
 
 static gdouble lon_lat_cell_metric (const GfsDomain * domain, const FttCell * cell)
 {
-  return GFS_VALUE (cell, GFS_METRIC_LON_LAT (domain->metric_data)->a);
+  return GFS_VALUE (cell, GFS_VARIABLE1 (domain->metric_data));
 }
 
 static gdouble lon_lat_solid_metric (const GfsDomain * domain, const FttCell * cell)
@@ -720,7 +739,7 @@ static gdouble lon_lat_scale_metric (const GfsDomain * domain, const FttCell * c
 {
   if (c != FTT_X)
     return 1.;
-  return GFS_VALUE (cell, GFS_METRIC_LON_LAT (domain->metric_data)->a);
+  return GFS_VALUE (cell, GFS_VARIABLE1 (domain->metric_data));
 }
 
 static void lonlat_coarse_fine (FttCell * parent, GfsVariable * a)
@@ -728,8 +747,7 @@ static void lonlat_coarse_fine (FttCell * parent, GfsVariable * a)
   if (GFS_CELL_IS_BOUNDARY (parent))
     return;
 
-  GfsMetricLonLat * lonlat = GTS_OBJECT (a)->reserved;
-  g_assert (GFS_IS_METRIC_LON_LAT (lonlat));
+  GfsMetricLonLat * lonlat = GFS_METRIC_LON_LAT (a);
   FttCellChildren child;
   ftt_cell_children (parent, &child);
   FttVector p;
@@ -754,8 +772,7 @@ static void lonlat_coarse_fine (FttCell * parent, GfsVariable * a)
 
 static void lonlat_fine_coarse (FttCell * parent, GfsVariable * a)
 {
-  GfsMetricLonLat * lonlat = GTS_OBJECT (a)->reserved;
-  g_assert (GFS_IS_METRIC_LON_LAT (lonlat));
+  GfsMetricLonLat * lonlat = GFS_METRIC_LON_LAT (a);
   FttCellChildren child;
   guint n;
 
@@ -791,15 +808,20 @@ static void metric_lon_lat_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
-  GfsMetricLonLat * lonlat = GFS_METRIC_LON_LAT (*o);
-  lonlat->h2 = gfs_domain_get_or_add_variable (domain, "Lh2", "LonLat face metric");
+  GfsVariable * a = GFS_VARIABLE1 (*o);
+  GfsMetricLonLat * lonlat = GFS_METRIC_LON_LAT (a);
+  gchar * name = g_strdup_printf ("%sh2", a->name);
+  lonlat->h2 = gfs_domain_get_or_add_variable (domain, name, "LonLat face metric");
   lonlat->h2->coarse_fine = lonlat->h2->fine_coarse = none;
-  lonlat->h3 = gfs_domain_get_or_add_variable (domain, "Lh3", "LonLat face metric");
+  g_free (name);
+  name = g_strdup_printf ("%sh3", a->name);
+  lonlat->h3 = gfs_domain_get_or_add_variable (domain, name, "LonLat face metric");
   lonlat->h3->coarse_fine = lonlat->h3->fine_coarse = none;
-  lonlat->a =  gfs_domain_get_or_add_variable (domain, "La",  "LonLat cell metric");
-  GTS_OBJECT (lonlat->a)->reserved = lonlat;
-  lonlat->a->coarse_fine = lonlat_coarse_fine;
-  lonlat->a->fine_coarse = lonlat_fine_coarse;
+  g_free (name);
+  g_free (a->description);
+  a->description = g_strdup ("LonLat cell metric");
+  a->coarse_fine = lonlat_coarse_fine;
+  a->fine_coarse = lonlat_fine_coarse;
 
   GtsObject * map = gts_object_new (GTS_OBJECT_CLASS (gfs_map_lonlat_class ()));
   gfs_object_simulation_set (map, domain);
@@ -821,25 +843,24 @@ static void metric_lon_lat_class_init (GtsObjectClass * klass)
 
 static void metric_lon_lat_init (GfsMetricLonLat * m)
 {
-  GFS_EVENT (m)->istep = G_MAXINT/2;
   m->r = 1.;
 }
 
-GfsEventClass * gfs_metric_lon_lat_class (void)
+GfsVariableClass * gfs_metric_lon_lat_class (void)
 {
-  static GfsEventClass * klass = NULL;
+  static GfsVariableClass * klass = NULL;
 
   if (klass == NULL) {
     GtsObjectClassInfo gfs_metric_lon_lat_info = {
       "GfsMetricLonLat",
       sizeof (GfsMetricLonLat),
-      sizeof (GfsEventClass),
+      sizeof (GfsVariableClass),
       (GtsObjectClassInitFunc) metric_lon_lat_class_init,
       (GtsObjectInitFunc) metric_lon_lat_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()), 
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_metric_class ()), 
 				  &gfs_metric_lon_lat_info);
   }
 

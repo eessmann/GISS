@@ -51,7 +51,7 @@ Define LENGTH (150./180.*M_PI)
 
 1 0 GfsRiver GfsBox GfsGEdge {} {
     PhysicalParams { L = LENGTH }
-    MetricLonLat 1.
+    MetricLonLat M 1.
     Refine 8
     InitFraction P (0.2 - acos(cos(x*M_PI/180.)*cos(y*M_PI/180.)))
     Init {} { P = 0.2 + 1.8*P/LENGTH }
@@ -59,6 +59,7 @@ Define LENGTH (150./180.*M_PI)
     OutputTime { istep = 10 } stderr
     OutputSimulation { step = 0.3 } sim-%g.gfs
     OutputSimulation { step = 0.3 } sim-%g.txt { variables = U,V,P format = text }
+    OutputScalarSum { istep = 1 } sp { v = P }
 #    OutputSimulation { istep = 10 } stdout
     EventScript { start = end } {
 	status=0

@@ -1702,6 +1702,7 @@ void gfs_cell_coarse_fine (FttCell * parent, GfsVariable * v)
 	a[n] = (* v->domain->cell_metric) (v->domain, child.c[n]);
 	sa += a[n];
       }
+      g_assert (sa > 0.);
       sa *= 2.;
 #if FTT_2D
       double gx1 = g.x*(a[0] + a[2])/sa, gx2 = - g.x*(a[1] + a[3])/sa;

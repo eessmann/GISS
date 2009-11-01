@@ -30,6 +30,7 @@
 #include "solid.h"
 #include "adaptive.h"
 #include "mpi_boundary.h"
+#include "metric.h"
 #include "version.h"
 
 #include "config.h"
@@ -2705,11 +2706,22 @@ void gfs_cell_fine_init (FttCell * parent, GfsDomain * domain)
   if (!GFS_CELL_IS_BOUNDARY (parent) && GFS_IS_MIXED (parent))
     gfs_solid_coarse_fine (parent, domain);
 
+  /* metric is used by gfs_cell_coarse_fine(), make sure it is
+     initialised first */
   i = domain->variables;
   while (i) {
     GfsVariable * v = i->data;
-  
-    (* v->coarse_fine) (parent, v);
+    if (GFS_IS_VARIABLE_METRIC (v))
+      (* v->coarse_fine) (parent, v);
+    i = i->next;
+  }
+
+  /* initialise remaining variables */
+  i = domain->variables;
+  while (i) {
+    GfsVariable * v = i->data;
+    if (!GFS_IS_VARIABLE_METRIC (v))
+      (* v->coarse_fine) (parent, v);
     i = i->next;
   }
 }
