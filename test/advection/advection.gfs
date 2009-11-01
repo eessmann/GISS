@@ -34,8 +34,7 @@
 1 0 GfsAdvection GfsBox GfsGEdge {} {
   Time { end = 0.785398 }
   Refine LEVEL
-  VariableTracer {} T { gradient = gfs_center_gradient }
-  AdvectionParams { cfl = 0.5 }
+  VariableTracer T { gradient = gfs_center_gradient }
   Init {} {
     T = {
       double r2 = x*x + y*y; 
