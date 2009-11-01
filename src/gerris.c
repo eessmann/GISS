@@ -118,6 +118,10 @@ int main (int argc, char * argv[])
       /* fall through */
     }
     case 'm': /* macros */
+#ifndef HAVE_M4
+      gfs_error (0, "gerris: macros are not supported on this system\n");
+      return 1;
+#endif /* not HAVE_M4 */
       macros = TRUE;
       break;
     case 'd': /* data */
@@ -149,7 +153,7 @@ int main (int argc, char * argv[])
 	     "  -DNAME=VALUE         (macro support is implicitly turned on)\n"
 	     "         --define=NAME\n"
              "         --define=NAME=VALUE\n"
-#endif /* have m4 */
+#endif /* HAVE_M4 */
 	     "  -eEV   --event=EV    Evaluates GfsEvent EV and returns the simulation\n"
 	     "  -v     --verbose     Display more messages\n"
 	     "  -h     --help        display this help and exit\n"
@@ -165,7 +169,7 @@ int main (int argc, char * argv[])
 	       "  compiled with flags: %s\n"
 	       "  MPI:          %s\n"
 	       "  pkg-config:   %s\n"
-	       "  m4 and awk:   %s\n"
+	       "  m4 and gawk:  %s\n"
 	       "Copyright (C) 2001-2009 NIWA.\n"
 	       "This is free software; see the source for copying conditions.  There is NO\n"
 	       "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
@@ -205,7 +209,7 @@ int main (int argc, char * argv[])
   }
 
   if (macros) {
-    const gchar awk[] = "awk -f " GFS_MODULES_DIR "/m4.awk ";
+    const gchar awk[] = "gawk -f " GFS_MODULES_DIR "/m4.awk ";
     gchar * command;
     
     if (!strcmp (argv[optind], "-"))

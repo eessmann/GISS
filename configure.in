@@ -261,12 +261,12 @@ else
   AC_DEFINE(HAVE_PKG_CONFIG, 0)
 fi
 
-# checks for awk and m4
-AC_CHECK_PROG(have_awk, awk, yes, no)
+# checks for gawk and m4
+AC_CHECK_PROG(have_awk, gawk, yes, no)
 if test "$have_awk" = "yes"; then
    AC_CHECK_PROG(have_m4, m4, yes, no)
    if test "$have_m4" = "yes"; then
-      AC_DEFINE(HAVE_M4, 1, [Define to 1 if awk and m4 are available.])
+      AC_DEFINE(HAVE_M4, 1, [Define to 1 if gawk and m4 are available.])
    else
       AC_DEFINE(HAVE_M4, 0)
    fi
