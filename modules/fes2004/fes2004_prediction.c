@@ -56,5 +56,6 @@ int fes2004_prediction (char *netcdf_filename,int time_reference,int nb_position
 
 
    printf("\n------------- prediction completed -------------\n");
-  
+
+   return 0;
 }/*end*/		  

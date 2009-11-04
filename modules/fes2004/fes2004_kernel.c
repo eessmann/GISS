@@ -105,7 +105,7 @@ void multi_t_extraction(int nocycle, int CPU, mega_struct *P)
 
 void * pred_coeur(void *input)
 {
-  int i,j,cnt;
+  int i,cnt;
   mega_struct *P;
   double lat,lon,decal_lat,decal_lon;
 
@@ -147,7 +147,7 @@ void * pred_coeur(void *input)
   if(rstatus==-99)
     {
       P->Otide[cnt]=MASK;
-      return;
+      return input;
     }
 
   //initialisation of the prediction output
@@ -162,6 +162,7 @@ void * pred_coeur(void *input)
 	  P->Otide[cnt]+=P->weight[i]*prediction;
 	} 
     }
+  return input;
 }/*fin de pred_coeur*/
 
 
@@ -187,8 +188,6 @@ void * extract_coeur(void *input)
   size_t start[3],count[3];
   int indice_y,indice_x,rstatus;
   double pi;
-  
-  double prediction;
  
   //THE FAMOUS PI
   pi=acos(-1.0);
@@ -226,7 +225,7 @@ void * extract_coeur(void *input)
 	  P->amplitude[cnt][i]=MASK;
 	  P->phase[cnt][i]=MASK;
 	}
-      return;
+      return input;
     }
 
   //extraction
@@ -253,7 +252,7 @@ void * extract_coeur(void *input)
 	}
 
     }
-
+  return input;
 }/*fin de extract_coeur*/
 
 
@@ -611,9 +610,7 @@ double Tide_prediction(double time,tidal_wave wave,fcomplex Z,int verbose,int CT
 /*XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX*/
 
 {
-  int i,N;
-
-  double scale=36525*24.0;
+  int N;
 
   date_t t_schureman={1,1,1900,0.0};    /* LR: 21/07/2003, -43200 -> 0 */
   date_t date58=     { 1, 1, 1958, 0.0};/* LR: 21/07/2003, -43200 -> 0 */ 
@@ -827,7 +824,7 @@ int julian_day(int mm,int id,int iyyy)
   {
    int igreg=15+31*(10+12*1582);
    int jy,jm,ja, tmp_iyyy;
-   double temp_tides_juliandays;
+   double temp_tides_juliandays = 0.;
    
    tmp_iyyy=iyyy;
    
@@ -863,7 +860,7 @@ double nodal_factort(int formula, astro_ang_struct *astro_ang)
 
 /*XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX*/
 {
-  double s,f;
+  double s,f=0.;
 
   switch (formula)
     {
@@ -1071,7 +1068,7 @@ double nodal_factort(int formula, astro_ang_struct *astro_ang)
 
  
     default:
-      exit;
+      exit (1);
     }
   return(f);
 }
@@ -1110,7 +1107,6 @@ void calendary(int njd,date_t *actual)
 
   if (j < 0) goto a5000;
 
-  a4000: 
   if (60-nj < 0)  goto  a4500;
   if (60-nj == 0) goto  a7000;
   goto a5000;
@@ -1133,7 +1129,6 @@ void calendary(int njd,date_t *actual)
 
   if (nj3 <= 0) goto a8000;
 
-  a6500: 
   m=m+1;
 
   nm1=ndj;
@@ -1165,7 +1160,7 @@ void getcnesdate(double t,date_t *actual)
 
 /*-------------------------------------------*/
 {
-  int N,nday;
+  int nday;
   float second;
 
 /* t is time elapsed from 1/1/1950 in hours */
@@ -1186,7 +1181,6 @@ double pulsation( tidal_wave wave)
 /* redundant with tide_wavearray_initC */
 
 {
-  int verbose,dummy=0;
   double scale=36525*24.0;
   double omega;
 
@@ -1195,7 +1189,6 @@ double omega_T=  13149000.0;
 double omega_s=    481267.892;
 double omega_h=     36000.76892; 
 double omega_p=      4069.0322056;
-double omega_n=      1934.1423972;
 double omega_p1=        1.719175;
 
   omega = omega_T * wave.nT

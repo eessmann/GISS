@@ -55,5 +55,6 @@ int fes2004_extraction (char *netcdf_filename,int nb_position,double *lat,double
   /*####################################################*/
    free_threads(P,nb_CPU);
    free(P);
-  
+
+   return 0;
 }/*end*/		  
