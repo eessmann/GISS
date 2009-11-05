@@ -10,7 +10,8 @@ EXAMPLES = \
 	ship \
 	garden \
 	dam \
-	hump
+	hump \
+	cyclone
 
 EXTRA_DIST = \
 	template.tex \
