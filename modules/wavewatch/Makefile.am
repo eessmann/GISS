@@ -8,7 +8,7 @@ endif
 noinst_LIBRARIES = $(WAVEWATCH)
 noinst_PROGRAMS = $(CHECKTYPES)
 
-EXTRA_DIST = gfsad3 gfsw3initmd.ftn wavewatch.h fchecktypes.ftn
+EXTRA_DIST = gfsad3 w3init222.ftn w3init314.ftn wavewatch.h fchecktypes.ftn
 
 checktypes_SOURCES = cchecktypes.c
 checktypes_LDADD = fchecktypes.o
@@ -17,13 +17,14 @@ libwavewatch_a_SOURCES =
 
 CLEANFILES = cfortrantypes.h
 
-libwavewatch.a: gfsw3initmd.o
+libwavewatch.a: w3initmd.o
 	rm -f libwavewatch.a
-	$(AR) cru libwavewatch.a `grep WWATCH3_DIR $(HOME)/.wwatch3.env | awk '{print $$2 "/obj/w3*.o"}'` gfsw3initmd.o
+	$(AR) cru libwavewatch.a `grep WWATCH3_DIR $(HOME)/.wwatch3.env | awk '{print $$2 "/obj/w3*.o"}'` w3initmd.o
 	$(RANLIB) libwavewatch.a
 
-gfsw3initmd.o: gfsw3initmd.ftn $(HOME)/.wwatch3.env gfsad3 cfortrantypes.h
-	sh gfsad3 gfsw3initmd.ftn
+w3initmd.o: $(W3INIT).ftn $(HOME)/.wwatch3.env gfsad3 cfortrantypes.h
+	sh gfsad3 $(W3INIT).ftn
+	mv -f $(W3INIT).o w3initmd.o
 
 fchecktypes.o: fchecktypes.ftn $(HOME)/.wwatch3.env gfsad3
 	sh gfsad3 fchecktypes.ftn

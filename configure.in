@@ -313,6 +313,15 @@ AM_CONDITIONAL(BUILD_STOKES, test x$F77 != x)
 
 # Build wavewatch module if wavewatch is installed
 AM_CONDITIONAL(BUILD_WAVEWATCH, test -r $HOME/.wwatch3.env)
+if test -r $HOME/.wwatch3.env; then
+   ww3_dir=`grep WWATCH3_DIR $HOME/.wwatch3.env | awk '{print $2}'`
+   ww3_version=`grep "WWVER  = " $ww3_dir/ftn/*.ftn | \
+                awk '{print substr($(NF-1),2)}' | \
+                sed 's/\.//'`
+   W3INIT="w3init$ww3_version"
+   AC_SUBST(W3INIT)
+   AC_DEFINE_UNQUOTED(WW3_VERSION, $ww3_version, [WaveWatch III version number])
+fi
 
 dnl header file checks
 AC_CHECK_HEADERS(fenv.h, AC_DEFINE(HAVE_FENV_H))

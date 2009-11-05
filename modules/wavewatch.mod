@@ -21,7 +21,12 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include "wave.h"
-#include "wavewatch/wavewatch.h"
+#include "config.h"
+#if WW3_VERSION == 222
+#  include "wavewatch/wavewatch_222.h"
+#else /* 3.14 */
+#  include "wavewatch/wavewatch_314.h"
+#endif
 
 #define DEBUG 0
 
@@ -98,7 +103,6 @@ static void source (FttCell * cell, SourceParams * p)
 {
   energy_to_action (cell, p);
 
-  INTEGER IX, IY, IMOD = 1;
   REAL DEPTH = 1000.; /* fixme: depth is fixed at 1000 m for now */
   REAL U10ABS, U10DIR;
 
@@ -108,16 +112,29 @@ static void source (FttCell * cell, SourceParams * p)
   REAL FPI = GFS_VALUE (cell, p->fpi);
   REAL DTG = GFS_SIMULATION (p->wave)->advection_params.dt*3600.;
 
-  REAL USTDIR;
   REAL EMEAN, FMEAN, WMEAN, AMAX;
   REAL CD, Z0;
   REAL DTDYN, FCUT;
   
-  __w3srcemd__w3srce (&IX, &IY, &IMOD, p->A, p->ALPHA, p->WN, p->CG, &DEPTH, 
-		      &U10ABS, &U10DIR, &USTAR, &USTDIR,
-		      &EMEAN, &FMEAN, &WMEAN, &AMAX, 
-		      &FPI, &CD, &Z0, 
-		      &DTDYN, &FCUT, &DTG);
+#if WW3_VERSION == 222
+  REAL DTMIN = DTG/10., DTMAX = DTG;
+  W3SRCE (p->A, p->A, p->ALPHA, p->WN, p->CG, &DEPTH, 
+	  &U10ABS, &U10DIR, &USTAR,
+	  &EMEAN, &FMEAN, &WMEAN, &AMAX, 
+	  &FPI, &CD, &Z0, 
+	  &DTDYN, &FCUT, &DTG, &DTMIN, &DTMAX);
+#else /* 3.14 */
+  INTEGER IX, IY, IMOD = 1;
+  REAL AS = p->as ? GFS_VALUE (cell, p->as) : 0.;
+  REAL USTDIR;
+  REAL CX = 0., CY = 0.;
+  W3SRCE (&IX, &IY, &IMOD, p->A, p->ALPHA, p->WN, p->CG, &DEPTH, 
+	  &U10ABS, &U10DIR, &AS, &USTAR, &USTDIR,
+	  &CX, &CY,
+	  &EMEAN, &FMEAN, &WMEAN, &AMAX, 
+	  &FPI, &CD, &Z0, 
+	  &DTDYN, &FCUT, &DTG);
+#endif /* 3.14 */
 
 #if DEBUG
   guint i, j;
@@ -137,7 +154,9 @@ static void source (FttCell * cell, SourceParams * p)
 static void deletedir (const char * name)
 {
   gchar * command = g_strconcat ("rm -r -f ", name, NULL);
-  system (command);
+  int status = system (command);
+  if (status)
+    g_warning ("could not cleanup wavewatch setup");
   g_free (command);
 }
 
@@ -185,11 +204,15 @@ static void initialize (GfsWave * wave)
       "  1 1 1\n"
       "  1 1 1\n"
       "  1 1 1\n"
+#if WW3_VERSION == 222
+      "      0   0   F\n"
+#else /* version 3.14 */
       "   10 3 1 '(....)' 'PART' 'mapsta.inp'\n"
       "      0   0   F\n"
       "      0   0   F\n"
       "      0   0\n"
-      "     0.    0.    0.    0.       0\n";  
+#endif /* version 3.14 */
+      "     0.    0.    0.    0.       0\n";
     fputs (constant_parameters, input);
     fclose (input);
 
@@ -214,7 +237,7 @@ static void initialize (GfsWave * wave)
     }
 
     /* Initialize wavewatch */
-    __gfsw3init__gfsw3_init ();
+    GFSW3INIT ();
 
     /* cleanup */
     remove ("mod_def.ww3");

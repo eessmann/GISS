@@ -1,9 +1,28 @@
+/* Gerris - The GNU Flow Solver
+ * Copyright (C) 2009 National Institute of Water and Atmospheric Research
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ * 02111-1307, USA.  
+ */
+
 #include "cfortrantypes.h"
 
 /**
  * Initialisation of wavewatch
  */
-extern void __gfsw3init__gfsw3_init (void);
+extern void GFSW3INIT (void);
 
 /**
  * imported from w3srcemd.f90:W3SRCE
@@ -29,23 +48,26 @@ extern void __gfsw3init__gfsw3_init (void);
  * @FCUT: Cut-off frequency for tail                       OUTPUT
  * @DTG: Global time step                                  INPUT
  */
-extern void __w3srcemd__w3srce (INTEGER * IX, INTEGER * IY, INTEGER * IMOD,
-				REAL * SPEC,
-				REAL * ALPHA,
-				REAL * WN1, 
-				REAL * CG1, 
-				REAL * DEPTH, 
-				REAL * U10ABS, 
-				REAL * U10DIR, 
-				REAL * USTAR,
-				REAL * USTDIR,
-				REAL * EMEAN,
-				REAL * FMEAN,
-				REAL * WMEAN,
-				REAL * AMAX,
-				REAL * FPI,
-				REAL * CD,
-				REAL * Z0,
-				REAL * DTDYN,
-				REAL * FCUT,
-				REAL * DTG);
+extern void W3SRCE (INTEGER * IX, INTEGER * IY, INTEGER * IMOD,
+		    REAL * SPEC,
+		    REAL * ALPHA,
+		    REAL * WN1, 
+		    REAL * CG1, 
+		    REAL * DEPTH, 
+		    REAL * U10ABS, 
+		    REAL * U10DIR, 
+		    REAL * AS,
+		    REAL * USTAR,
+		    REAL * USTDIR,
+		    REAL * CX,
+		    REAL * CY,
+		    REAL * EMEAN,
+		    REAL * FMEAN,
+		    REAL * WMEAN,
+		    REAL * AMAX,
+		    REAL * FPI,
+		    REAL * CD,
+		    REAL * Z0,
+		    REAL * DTDYN,
+		    REAL * FCUT,
+		    REAL * DTG);
