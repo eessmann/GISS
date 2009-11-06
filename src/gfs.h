@@ -42,5 +42,6 @@
 #include <gerris/unstructured.h>
 #include <gerris/map.h>
 #include <gerris/version.h>
+#include <gerris/particle.h>
 
 #endif /* GFS_H */
