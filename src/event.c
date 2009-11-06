@@ -353,7 +353,6 @@ void gfs_event_set (GfsEvent * e,
 		    gint istart, gint iend, gint istep)
 {
   g_return_if_fail (e != NULL);
-  g_return_if_fail (step < 0. || istep < 0.);
   g_return_if_fail (end < 0. || start < 0. || start <= end);
   g_return_if_fail (istep >= 0 || step >= 0. || iend < 0);
   g_return_if_fail (istart < 0 || iend < 0 || istart <= iend);
@@ -2076,6 +2075,147 @@ GfsEventClass * gfs_event_filter_class (void)
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
 				  &gfs_event_filter_info);
+  }
+
+  return klass;
+}
+
+/* GfsEventList: Object */
+
+static gboolean gfs_event_list_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_list_class ())->parent_class)->event) 
+      (event, sim)) {
+    gts_container_foreach (GTS_CONTAINER (GFS_EVENT_LIST (event)->list), 
+			   (GtsFunc) gfs_event_do, sim);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void copy_event (GfsEvent * event, GfsEvent * list)
+{
+  gfs_event_set (event, list->start, list->end, list->step, list->istart, list->iend, list->istep);
+}
+
+static void gfs_event_list_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_event_list_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsEventList * l = GFS_EVENT_LIST (*o);
+  if (fp->type == GTS_STRING) {
+    l->klass = gfs_object_class_from_name (fp->token->str);
+    if (l->klass == NULL) {
+      gts_file_error (fp, "unknown class `%s'", fp->token->str);
+      return;
+    }
+    gts_file_next_token (fp);
+  }
+
+  if (fp->type != '{') {
+    gts_file_error (fp, "expecting an opening brace");
+    return;
+  }
+  fp->scope_max++;
+  gts_file_next_token (fp);
+  while (fp->type == '\n') gts_file_next_token (fp);
+
+  GtsObjectClass * default_class = l->klass;
+  GfsSimulation * sim = gfs_object_simulation (*o);
+  while (fp->type != '}') {
+    GtsObjectClass * klass = default_class;
+    if (klass == NULL) {
+      if (fp->type != GTS_STRING) {
+	gts_file_error (fp, "expecting a keyword");
+	return;
+      }
+      klass = gfs_object_class_from_name (fp->token->str);
+      if (klass == NULL) {
+	gts_file_error (fp, "unknown class `%s'", fp->token->str);
+	return;
+      }
+      if (!gts_object_class_is_from_class (klass, gfs_event_class ())) {
+	gts_file_error (fp, "'%s' is not a GfsEvent", fp->token->str);
+	return;
+      }
+    }
+    
+    GtsObject * object = gts_object_new (klass);
+    gfs_object_simulation_set (object, sim);
+    (* klass->read) (&object, fp);
+    if (fp->type == GTS_ERROR) {
+      gts_object_destroy (object);
+      return;
+    }
+    while (fp->type == '\n') gts_file_next_token (fp);
+
+    gts_container_add (GTS_CONTAINER (l->list), GTS_CONTAINEE (object));
+  }
+  fp->scope_max--;
+  gts_file_next_token (fp);
+  
+  l->list->items = g_slist_reverse (l->list->items);
+  gts_container_foreach (GTS_CONTAINER (l->list), (GtsFunc) copy_event, l);
+}
+
+static void gfs_event_list_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_event_list_class ())->parent_class->write) (o, fp);
+  GfsEventList * l = GFS_EVENT_LIST (o);
+  if (l->klass)
+    fprintf (fp, " %s", l->klass->info.name);
+  fputs (" {\n", fp);
+  GSList * i = l->list->items;
+  while (i) {
+    fputs ("    ", fp);
+    (* GTS_OBJECT (i->data)->klass->write) (i->data, fp);
+    fputc ('\n', fp);
+    i = i->next;
+  }
+  fputc ('}', fp);
+}
+
+static void gfs_event_list_destroy (GtsObject * o)
+{
+  GfsEventList * l = GFS_EVENT_LIST (o);
+  gts_container_foreach (GTS_CONTAINER (l->list), (GtsFunc) gts_object_destroy, NULL);
+  gts_object_destroy (GTS_OBJECT (l->list));
+
+  (* GTS_OBJECT_CLASS (gfs_event_list_class ())->parent_class->destroy) (o);
+}
+
+static void gfs_event_list_class_init (GfsEventClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = gfs_event_list_event;
+  GTS_OBJECT_CLASS (klass)->read = gfs_event_list_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_event_list_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_event_list_destroy;
+}
+
+static void gfs_event_list_init (GfsEventList * l)
+{
+  l->list = 
+    GTS_SLIST_CONTAINER (gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ())));
+}
+
+GfsEventClass * gfs_event_list_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_event_list_info = {
+      "GfsEventList",
+      sizeof (GfsEventList),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_event_list_class_init,
+      (GtsObjectInitFunc) gfs_event_list_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
+				  &gfs_event_list_info);
   }
 
   return klass;

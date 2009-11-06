@@ -338,6 +338,27 @@ struct _GfsEventFilter {
 
 GfsEventClass * gfs_event_filter_class  (void);
 
+/* GfsEventList: Header */
+
+typedef struct _GfsEventList         GfsEventList;
+
+struct _GfsEventList {
+  /*< private >*/
+  GfsEvent parent;
+
+  /*< public >*/
+  GtsObjectClass * klass;
+  GtsSListContainer * list;
+};
+
+#define GFS_EVENT_LIST(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsEventList,\
+					         gfs_event_list_class ())
+#define GFS_IS_EVENT_LIST(obj)         (gts_object_is_from_class (obj,\
+						 gfs_event_list_class ()))
+
+GfsEventClass * gfs_event_list_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
