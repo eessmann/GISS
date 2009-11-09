@@ -24,6 +24,8 @@
 #include "config.h"
 #if WW3_VERSION == 222
 #  include "wavewatch/wavewatch_222.h"
+#elif WW3_VERSION == 312
+#  include "wavewatch/wavewatch_312.h"
 #else /* 3.14 */
 #  include "wavewatch/wavewatch_314.h"
 #endif
@@ -123,6 +125,14 @@ static void source (FttCell * cell, SourceParams * p)
 	  &EMEAN, &FMEAN, &WMEAN, &AMAX, 
 	  &FPI, &CD, &Z0, 
 	  &DTDYN, &FCUT, &DTG, &DTMIN, &DTMAX);
+#elif WW3_VERSION == 312
+  INTEGER IX, IY, IMOD = 1;
+  REAL USTDIR;
+  W3SRCE (&IX, &IY, &IMOD, p->A, p->ALPHA, p->WN, p->CG, &DEPTH, 
+	  &U10ABS, &U10DIR, &USTAR, &USTDIR,
+	  &EMEAN, &FMEAN, &WMEAN, &AMAX, 
+	  &FPI, &CD, &Z0, 
+	  &DTDYN, &FCUT, &DTG);
 #else /* 3.14 */
   INTEGER IX, IY, IMOD = 1;
   REAL AS = p->as ? GFS_VALUE (cell, p->as) : 0.;
@@ -206,12 +216,12 @@ static void initialize (GfsWave * wave)
       "  1 1 1\n"
 #if WW3_VERSION == 222
       "      0   0   F\n"
-#else /* version 3.14 */
+#else /* version 3.12 and 3.14 */
       "   10 3 1 '(....)' 'PART' 'mapsta.inp'\n"
       "      0   0   F\n"
       "      0   0   F\n"
       "      0   0\n"
-#endif /* version 3.14 */
+#endif /* version 3.12 and 3.14 */
       "     0.    0.    0.    0.       0\n";
     fputs (constant_parameters, input);
     fclose (input);

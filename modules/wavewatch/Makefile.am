@@ -8,7 +8,11 @@ endif
 noinst_LIBRARIES = $(WAVEWATCH)
 noinst_PROGRAMS = $(CHECKTYPES)
 
-EXTRA_DIST = gfsad3 w3init222.ftn w3init314.ftn wavewatch.h fchecktypes.ftn
+EXTRA_DIST = gfsad3 \
+	w3init222.ftn wavewatch_222.h \
+	wavewatch_312.h \
+	w3init314.ftn wavewatch_314.h \
+	fchecktypes.ftn
 
 checktypes_SOURCES = cchecktypes.c
 checktypes_LDADD = fchecktypes.o
@@ -31,3 +35,6 @@ fchecktypes.o: fchecktypes.ftn $(HOME)/.wwatch3.env gfsad3
 
 cfortrantypes.h: checktypes
 	./checktypes > cfortrantypes.h
+
+w3init312.ftn: w3init314.ftn
+	cp -f w3init314.ftn w3init312.ftn
