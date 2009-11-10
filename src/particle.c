@@ -41,13 +41,7 @@ static gboolean gfs_particle_event (GfsEvent * event,
 
 static void gfs_particle_read (GtsObject ** o, GtsFile * fp)
 {
-
-  if (GTS_OBJECT_CLASS (gfs_particle_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_particle_class ())->parent_class->read) 
-      (o, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-  
+ 
   GfsParticle * p = GFS_PARTICLE(*o);
 
   if (fp->type != GTS_INT) {
@@ -87,10 +81,6 @@ static void gfs_particle_read (GtsObject ** o, GtsFile * fp)
 
 static void gfs_particle_write (GtsObject * o, FILE * fp)
 {
-  /* call write method of parent */
-  if (GTS_OBJECT_CLASS (gfs_particle_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_particle_class ())->parent_class->write) 
-      (o, fp);
   GfsParticle * p = GFS_PARTICLE(o);
   fprintf(fp," %d %g %g %g", p->id, p->pos.x, p->pos.y, p->pos.z);
 }
