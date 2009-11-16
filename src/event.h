@@ -37,6 +37,7 @@ struct _GfsEvent {
   
   guint n;
   gboolean end_event, realised, redo;
+  gchar * name;
 };
 
 typedef struct _GfsSimulation           GfsSimulation;

@@ -121,7 +121,10 @@ static void gfs_event_write (GtsObject * object, FILE * fp)
 {
   GfsEvent * event = GFS_EVENT (object);
 
-  fprintf (fp, "%s { ", object->klass->info.name);
+  fprintf (fp, "%s", object->klass->info.name);
+  if(event->name)
+    fprintf (fp, " *%s", event->name);
+  fprintf (fp, " { ");
   if (event->end_event)
     fputs ("start = end ", fp);
   else {
@@ -183,6 +186,14 @@ static void gfs_event_read (GtsObject ** o, GtsFile * fp)
     class_changed = TRUE;
   }
   gts_file_next_token (fp);
+
+  /* Name the GfsEvent Object */
+  if (fp->type == GTS_STRING)
+    if(fp->token->str[0] == '*'){    
+      event->name = g_strdup ((g_strsplit_set (fp->token->str,"*",2))[1]);
+      g_hash_table_insert (GFS_DOMAIN(gfs_object_simulation(*o))->objects,event->name, *o);
+      gts_file_next_token (fp);  
+    }
 
   if (fp->type == '{') {
     GtsFileVariable var[] = {
@@ -292,12 +303,21 @@ static void gfs_event_read (GtsObject ** o, GtsFile * fp)
     (* klass->read) (o, fp);
 }
 
+static void gfs_event_destroy (GtsObject * o)
+{
+  GfsEvent *event = GFS_EVENT(o);
+
+  if(event->name) 
+    g_free(event->name);
+}
+
 static void gfs_event_class_init (GfsEventClass * klass)
 {
   klass->event = gfs_event_event;
 
   GTS_OBJECT_CLASS (klass)->write = gfs_event_write;
   GTS_OBJECT_CLASS (klass)->read  = gfs_event_read;
+  GTS_OBJECT_CLASS (klass)->destroy  = gfs_event_destroy;
 }
 
 GfsEventClass * gfs_event_class (void)
