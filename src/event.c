@@ -191,10 +191,10 @@ static void gfs_event_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_STRING)
     if(fp->token->str[0] == '*'){    
       event->name = g_strdup ((g_strsplit_set (fp->token->str,"*",2))[1]);
-      g_hash_table_insert (GFS_DOMAIN(gfs_object_simulation(*o))->objects,event->name, *o);
+      g_hash_table_insert (GFS_DOMAIN(gfs_object_simulation(*o))->objects, event->name, *o);
       gts_file_next_token (fp);  
     }
-
+  
   if (fp->type == '{') {
     GtsFileVariable var[] = {
       {GTS_STRING, "start",  TRUE},
@@ -306,10 +306,14 @@ static void gfs_event_read (GtsObject ** o, GtsFile * fp)
 static void gfs_event_destroy (GtsObject * o)
 {
   GfsEvent *event = GFS_EVENT(o);
-
-  if(event->name) 
+  
+  if(event->name){
+    g_hash_table_remove(GFS_DOMAIN(gfs_object_simulation(o))->objects, event->name);
     g_free(event->name);
-}
+  }
+  (* GTS_OBJECT_CLASS (gfs_event_class ())->parent_class->destroy) 
+    (o);
+}  
 
 static void gfs_event_class_init (GfsEventClass * klass)
 {
