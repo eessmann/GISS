@@ -25,6 +25,9 @@ pkglib_LTLIBRARIES = \
 	libterrain2D.la \
 	libterrain3D.la \
 	libterrain2D3.la \
+	libparticulates2D.la \
+	libparticulates3D.la \
+	libparticulates2D3.la \
 	$(TIDE) \
 	$(STOKES) \
 	$(WAVEWATCH)
@@ -39,14 +42,16 @@ EXTRA_DIST = \
 	tide.mod \
 	terrain.mod \
 	stokes.mod \
-	wavewatch.mod
+	wavewatch.mod \
+	particulates.mod
 
 BUILT_SOURCES = \
 	map.c \
 	tide.c \
 	terrain.c \
 	stokes.c \
-	wavewatch.c
+	wavewatch.c \
+	particulates.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -111,6 +116,13 @@ rsurfacedraw_SOURCES = rsurfacedraw.c rsurface.c rsurface.h
 rsurfacedraw_LDADD = -LRStarTree -lcSmRST
 rsurfacedraw_CFLAGS = $(AM_CFLAGS)
 rsurfacedraw_DEPENDENCIES = RStarTree/libcSmRST.la
+
+libparticulates3D_la_SOURCES = particulates.c
+libparticulates3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
+libparticulates2D_la_SOURCES = particulates.c
+libparticulates2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
+libparticulates2D3_la_SOURCES = particulates.c
+libparticulates2D3_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D3=1
 
 if HAVE_MODULES
 %.c : %.mod
