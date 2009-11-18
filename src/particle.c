@@ -51,11 +51,6 @@ static void gfs_particle_read (GtsObject ** o, GtsFile * fp)
 
   p->id = atoi (fp->token->str);
   gts_file_next_token (fp);
-  
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting an integer (Id)");
-    return;
-  }
 
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
     gts_file_error (fp, "expecting a number (p.x)");
@@ -85,7 +80,7 @@ static void gfs_particle_write (GtsObject * o, FILE * fp)
   fprintf(fp," %d %g %g %g", p->id, p->pos.x, p->pos.y, p->pos.z);
 }
 
-static void gfs_particle_class_init (GfsParticleClass * klass)
+static void gfs_particle_class_init (GfsEventClass * klass)
 {
   /* define new methods and overload inherited methods here */
   GFS_EVENT_CLASS (klass)->event = gfs_particle_event;
@@ -93,15 +88,15 @@ static void gfs_particle_class_init (GfsParticleClass * klass)
   GTS_OBJECT_CLASS (klass)->write = gfs_particle_write;
 }
 
-GfsParticleClass * gfs_particle_class (void)
+GfsEventClass * gfs_particle_class (void)
 {
-  static GfsParticleClass * klass = NULL;
+  static GfsEventClass * klass = NULL;
 
   if (klass == NULL) {
     GtsObjectClassInfo gfs_particle_info = {
       "GfsParticle",
       sizeof (GfsParticle),
-      sizeof (GfsParticleClass),
+      sizeof (GfsEventClass),
       (GtsObjectClassInitFunc) gfs_particle_class_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
