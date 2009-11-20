@@ -28,6 +28,9 @@ pkglib_LTLIBRARIES = \
 	libparticulates2D.la \
 	libparticulates3D.la \
 	libparticulates2D3.la \
+	libdroplet2particle2D.la \
+	libdroplet2particle3D.la \
+	libdroplet2particle2D3.la \
 	$(TIDE) \
 	$(STOKES) \
 	$(WAVEWATCH)
@@ -43,7 +46,8 @@ EXTRA_DIST = \
 	terrain.mod \
 	stokes.mod \
 	wavewatch.mod \
-	particulates.mod
+	particulates.mod \
+	droplet2particle.mod
 
 BUILT_SOURCES = \
 	map.c \
@@ -51,7 +55,8 @@ BUILT_SOURCES = \
 	terrain.c \
 	stokes.c \
 	wavewatch.c \
-	particulates.c
+	particulates.c \
+	droplet2particle.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -123,6 +128,13 @@ libparticulates2D_la_SOURCES = particulates.c
 libparticulates2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
 libparticulates2D3_la_SOURCES = particulates.c
 libparticulates2D3_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D3=1
+
+libdroplet2particle3D_la_SOURCES = droplet2particle.c
+libdroplet2particle3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
+libdroplet2particle2D_la_SOURCES = droplet2particle.c
+libdroplet2particle2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
+libdroplet2particle2D3_la_SOURCES = droplet2particle.c
+libdroplet2particle2D3_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D3=1
 
 if HAVE_MODULES
 %.c : %.mod
