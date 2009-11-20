@@ -123,16 +123,13 @@ static void convert_droplets (GfsDomain * domain,
   }    
   
   for(i = 0; i < pars->n; i++){    
-    printf("1)size: %d, pos.x: %g, min:%d, index: %d\n", pars->sizes[i],(&pars->drops[i].pos.x)[1]/pars->sizes[i],pars->min, i);
     if(pars->sizes[i] < pars->min){
-      printf("2)size: %d, min:%d, index: %d\n", pars->sizes[i],pars->min, i);
       for(c = 0; c < FTT_DIMENSION; c++){
       	(&pars->drops[i].pos.x)[c] = (&pars->drops[i].pos.x)[c]/pars->sizes[i];
 	(&pars->drops[i].vel.x)[c] = (&pars->drops[i].vel.x)[c]/pars->sizes[i];
       }
       FttCell * cell = gfs_domain_locate(domain, pars->drops[i].pos, -1, NULL);    
       if(cell){
-
 	/* Construct an Object */
 	GtsObjectClass * klass = l->klass;
 	if (klass == NULL) {
