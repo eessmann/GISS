@@ -482,8 +482,7 @@ GtsSListContaineeClass * gfs_force_buoy_class (void)
 /* Particle Force */
 static void gfs_particle_force_read (GtsObject ** o, GtsFile * fp)
 {
-
-  printf("Here\n");
+ 
   GtsObjectClass *klass;
 
   if (fp->type != GTS_STRING) {
@@ -551,7 +550,6 @@ static gboolean gfs_particulate_event (GfsEvent * event,
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_particulate_class ())->parent_class)->event)
       (event, sim)) {
-
     GfsParticle * p = GFS_PARTICLE(event);
     GfsParticulate * particulate = GFS_PARTICULATE(event);
     FttVector pos = p->pos;
@@ -581,7 +579,6 @@ static gboolean gfs_particulate_event (GfsEvent * event,
     
     gfs_simulation_map_inverse (sim, &pos);
     p->pos = pos;   
-    
     return TRUE;
   }
   return FALSE;
@@ -648,7 +645,6 @@ static void gfs_particulate_read (GtsObject ** o, GtsFile * fp)
   }
 
 }
-
 
 static void gfs_particulate_write (GtsObject * o, FILE * fp)
 {
@@ -762,9 +758,14 @@ static void gfs_particle_list_read (GtsObject ** o, GtsFile * fp)
   p->forces->items = g_slist_reverse (p->forces->items);
  
   gts_container_foreach (GTS_CONTAINER (l->list), (GtsFunc) assign_forces, p->forces);
+
+  if(fp->type == GTS_INT){
+    p->idlast = atoi (fp->token->str);
+    gts_file_next_token (fp);
+  }
+
+    
 }
-
-
 
 static void gfs_particle_list_write (GtsObject * o, FILE * fp)
 {
@@ -782,7 +783,8 @@ static void gfs_particle_list_write (GtsObject * o, FILE * fp)
     i = i->next; 
   }
   fputc ('}', fp);
- 
+
+  fprintf(fp," %d", p->idlast);
 }
 
 static void gfs_particle_list_init (GtsObject *o){

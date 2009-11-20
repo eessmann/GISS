@@ -40,6 +40,7 @@ GfsEventClass * gfs_particulate_class  (void);
 typedef struct _GfsParticleList GfsParticleList;
 struct _GfsParticleList{
   GfsEventList parent;
+  gint idlast;
   GtsSListContainer * forces;
 };
 
