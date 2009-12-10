@@ -81,7 +81,7 @@ struct _GfsDomain {
   gdouble (* solid_metric) (const GfsDomain *, const FttCell *);
   gdouble (* scale_metric) (const GfsDomain *, const FttCell *, FttComponent);
 
-  /*Object HashTable*/
+  /* Object hash table for (optional) object IDs */
   GHashTable * objects;
 };
 

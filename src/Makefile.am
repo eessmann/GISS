@@ -60,8 +60,8 @@ GFS_HDS = \
 	moving.h \
 	balance.h \
 	metric.h \
-	version.h \
-	particle.h
+	particle.h \
+	version.h
 
 pkginclude_HEADERS = \
 	$(GFS_HDS) \
@@ -107,7 +107,7 @@ SRC = \
 	moving.c \
 	balance.c \
 	metric.c \
-        particle.c
+        particle.c \
 	$(GFS_HDS)
 
 domain.c: version.h

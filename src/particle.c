@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver			(-*-C-*-)
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2009 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -14,26 +14,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.  
- * Author of the object: Gaurav Tomar
+ * 02111-1307, USA.
  */
 
+#include <stdlib.h>
 #include "particle.h"
 
-/*GfsParticle: Object*/
+/* GfsParticle: Object */
+
 static gboolean gfs_particle_event (GfsEvent * event, 
-					 GfsSimulation * sim)
+				    GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_particle_class ())->parent_class)->event)
       (event, sim)) {
-
-    GfsParticle * p = GFS_PARTICLE(event);
+    GfsParticle * p = GFS_PARTICLE (event);
     FttVector pos = p->pos;
     gfs_simulation_map (sim, &pos);
     gfs_domain_advect_point (GFS_DOMAIN (sim), &pos, sim->advection_params.dt);
     gfs_simulation_map_inverse (sim, &pos);
     p->pos = pos;
-    
     return TRUE;
   }
   return FALSE;
@@ -41,14 +40,12 @@ static gboolean gfs_particle_event (GfsEvent * event,
 
 static void gfs_particle_read (GtsObject ** o, GtsFile * fp)
 {
- 
   GfsParticle * p = GFS_PARTICLE(*o);
 
   if (fp->type != GTS_INT) {
     gts_file_error (fp, "expecting an integer (Id)");
     return;
   }
-
   p->id = atoi (fp->token->str);
   gts_file_next_token (fp);
 
@@ -77,14 +74,13 @@ static void gfs_particle_read (GtsObject ** o, GtsFile * fp)
 static void gfs_particle_write (GtsObject * o, FILE * fp)
 {
   GfsParticle * p = GFS_PARTICLE(o);
-  fprintf(fp," %d %g %g %g", p->id, p->pos.x, p->pos.y, p->pos.z);
+  fprintf (fp, " %d %g %g %g", p->id, p->pos.x, p->pos.y, p->pos.z);
 }
 
 static void gfs_particle_class_init (GfsEventClass * klass)
 {
-  /* define new methods and overload inherited methods here */
-  GFS_EVENT_CLASS (klass)->event = gfs_particle_event;
-  GTS_OBJECT_CLASS (klass)->read = gfs_particle_read;
+  GFS_EVENT_CLASS (klass)->event =  gfs_particle_event;
+  GTS_OBJECT_CLASS (klass)->read =  gfs_particle_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_particle_write;
 }
 

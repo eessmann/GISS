@@ -262,8 +262,7 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
     g_free (variables1);
     domain->variables_io = gfs_variables_from_list (domain->variables, variables, &s);
     g_free (variables);
-  }
- 
+  } 
 }
 
 static void box_set_pos (GfsBox * box, FttVector * pos, 
@@ -504,7 +503,6 @@ static void domain_destroy (GtsObject * o)
 
   locate_array_destroy (domain->array);
 
-  g_hash_table_foreach (domain->objects, (GHFunc) free_pair, NULL);
   g_hash_table_destroy (domain->objects);
 
   (* GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class->destroy) (o);
@@ -590,7 +588,7 @@ static void domain_init (GfsDomain * domain)
 
   domain->overlap = TRUE;
 
-  domain->objects = g_hash_table_new(g_str_hash, g_str_equal);
+  domain->objects = g_hash_table_new (g_str_hash, g_str_equal);
 }
 
 GfsDomainClass * gfs_domain_class (void)
