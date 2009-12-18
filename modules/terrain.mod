@@ -1476,11 +1476,27 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
       ftt_cell_neighbors (parent, &neighbor);
       FttDirection d;
       gdouble H = 0., s = 0.;
+
       for (d = 0; d < FTT_NEIGHBORS; d++)
-	if (neighbor.c[d] && GFS_VALUE (neighbor.c[d], t->p) >= GFS_RIVER_DRY) {
-	  H += GFS_VALUE (neighbor.c[d], t->H);
-	  s += 1.;
+	if (neighbor.c[d]) {
+	  if (FTT_CELL_IS_LEAF (neighbor.c[d])) {
+	    if (GFS_VALUE (neighbor.c[d], t->p) >= GFS_RIVER_DRY) {
+	       H += GFS_VALUE (neighbor.c[d], t->p)*GFS_VALUE (neighbor.c[d], t->H);
+	       s += GFS_VALUE (neighbor.c[d], t->p);
+	    }
+	  }
+	  else {
+	    FttCellChildren child;
+	    guint i, n = ftt_cell_children_direction (neighbor.c[d],
+						      FTT_OPPOSITE_DIRECTION (d), &child);
+	    for (i = 0; i < n; i++)
+	      if (child.c[i] && GFS_VALUE (child.c[i], t->p) >= GFS_RIVER_DRY) {
+		H += GFS_VALUE (child.c[i], t->p)*GFS_VALUE (child.c[i], t->H);
+		s += GFS_VALUE (child.c[i], t->p);
+	      }
+	  }
 	}
+      
       if (s > 0.) {
 	H /= s; /* average H of neighbouring wet cells */
 	for (n = 0; n < FTT_CELLS; n++)
