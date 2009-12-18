@@ -952,6 +952,12 @@ static void init_non_variable (GfsEvent * event, GfsSimulation * sim)
     gfs_event_init (event, sim);
 }
 
+static void redo_non_variable (GfsEvent * event, GfsSimulation * sim)
+{
+  if (!GFS_IS_VARIABLE (event))
+    gfs_event_redo (event, sim);
+}
+
 /**
  * gfs_simulation_init:
  * @sim: a #GfsSimulation.
@@ -977,6 +983,23 @@ void gfs_simulation_init (GfsSimulation * sim)
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
+
+  /* Iterate mesh adaptation and initialisation */
+  if (domain->timer->start >= 0.) /* only if timing is on (i.e. within gfs_simulation_run()) */
+    while (gfs_simulation_adapt (sim)) {
+      gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) redo_non_variable, sim);
+      i = domain->variables;
+      while (i) {
+	gfs_event_redo (GFS_EVENT (i->data), sim);
+	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
+	i = i->next;
+      }
+      gfs_domain_cell_traverse (domain,
+				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				(FttCellTraverseFunc) gfs_cell_coarse_init, domain);
+      if (sim->adapts_stats.depth_increase <= 0)
+	break;
+    }
 }
 
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)

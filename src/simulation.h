@@ -50,6 +50,7 @@ struct _GfsAdaptStats {
   guint removed, created;
   GtsRange cmax;
   GtsRange ncells;
+  gint depth_increase;
 };
 
 struct _GfsSimulation {

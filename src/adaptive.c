@@ -211,6 +211,10 @@ static void gfs_adapt_read (GtsObject ** o, GtsFile * fp)
   }
   fp->scope_max--;
   gts_file_next_token (fp);
+
+  /* make sure that adaptivity is applied in gfs_simulation_init() if required */
+  if (GFS_EVENT (a)->start == 0. || GFS_EVENT (a)->istart == 0)
+    GFS_EVENT (a)->start = -1;
 }
 
 static void gfs_adapt_write (GtsObject * o, FILE * fp)
@@ -1075,8 +1079,10 @@ static gboolean adapt_local (GfsSimulation * sim, guint * depth, GfsAdaptStats *
  * If any one or several criteria are defined as "not" refinements,
  * the mesh will be refined only if all of this criteria AND any other
  * regular criterion is verified.  
+ *
+ * Returns: %TRUE if the mesh changed, %FALSE otherwise.
  */
-void gfs_simulation_adapt (GfsSimulation * simulation)
+gboolean gfs_simulation_adapt (GfsSimulation * simulation)
 {
   gboolean active = FALSE;
   guint mincells = 0, maxcells = G_MAXINT;
@@ -1084,7 +1090,7 @@ void gfs_simulation_adapt (GfsSimulation * simulation)
   gdouble cmax = 0.;
   GfsVariable * c = NULL;
 
-  g_return_if_fail (simulation != NULL);
+  g_return_val_if_fail (simulation != NULL, FALSE);
 
   domain = GFS_DOMAIN (simulation);
 
@@ -1104,9 +1110,10 @@ void gfs_simulation_adapt (GfsSimulation * simulation)
     }
     i = i->next;
   }
+
+  gboolean changed = FALSE;
   if (active) {
-    guint depth = gfs_domain_depth (domain);
-    gboolean changed;
+    guint depth = gfs_domain_depth (domain), depth_before = depth;
 
     if (maxcells < G_MAXINT)
       changed = adapt_global (simulation, &depth, &simulation->adapts_stats, 
@@ -1115,11 +1122,15 @@ void gfs_simulation_adapt (GfsSimulation * simulation)
       changed = adapt_local (simulation, &depth, &simulation->adapts_stats);
 
     gfs_all_reduce (domain, changed, MPI_INT, MPI_MAX);
-    if (changed)
+    if (changed) {
       gfs_domain_reshape (domain, depth);
+      simulation->adapts_stats.depth_increase = depth - depth_before;
+    }
   }
 
   gfs_domain_timer_stop (domain, "adapt");
+
+  return changed;
 }
 
 /**
@@ -1136,6 +1147,7 @@ void gfs_adapt_stats_init (GfsAdaptStats * s)
   s->created = 0;
   gts_range_init (&s->cmax);
   gts_range_init (&s->ncells);
+  s->depth_increase = 0;
 }
 
 /**
