@@ -19,6 +19,9 @@ endif
 if BUILD_WAVEWATCH
 WAVEWATCH = libwavewatch2D.la
 endif
+if BUILD_ODE
+ODE = libode2D.la libode3D.la
+endif
 
 pkglib_LTLIBRARIES = \
 	$(MAP) \
@@ -32,7 +35,8 @@ pkglib_LTLIBRARIES = \
 	libokada3D.la \
 	$(TIDE) \
 	$(STOKES) \
-	$(WAVEWATCH)
+	$(WAVEWATCH) \
+	$(ODE)
 
 bin_PROGRAMS = \
 	xyz2rsurface \
@@ -47,7 +51,8 @@ EXTRA_DIST = \
 	stokes.mod \
 	wavewatch.mod \
 	particulates.mod \
-	okada.mod
+	okada.mod \
+	ode.mod
 
 BUILT_SOURCES = \
 	map.c \
@@ -56,7 +61,8 @@ BUILT_SOURCES = \
 	stokes.c \
 	wavewatch.c \
 	particulates.c \
-	okada.c
+	okada.c \
+	ode.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -106,6 +112,13 @@ libwavewatch2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1 \
   -DW3SRCE=`nm wavewatch/libwavewatch.a | grep w3srce | awk '{ if ($$2 == "T") print $$3; }'` \
   -DGFSW3INIT=`nm wavewatch/libwavewatch.a | grep gfsw3_init | awk '{ if ($$2 == "T") print $$3; }'`
 libwavewatch2D_la_DEPENDENCIES = wavewatch/libwavewatch.a
+
+libode3D_la_SOURCES = ode.c
+libode3D_la_CFLAGS = $(AM_CFLAGS) $(ODE_CFLAGS)
+libode3D_la_LIBADD = $(ODE_LIBS)
+libode2D_la_SOURCES = ode.c
+libode2D_la_CFLAGS = $(AM_CFLAGS) $(ODE_CFLAGS) -DFTT_2D=1
+libode2D_la_LIBADD = $(ODE_LIBS)
 
 xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c rsurface.h
 xyz2rsurface_LDADD = -LRStarTree -lcSmRST

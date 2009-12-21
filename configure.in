@@ -323,6 +323,18 @@ if test -r $HOME/.wwatch3.env; then
    AC_DEFINE_UNQUOTED(WW3_VERSION, $ww3_version, [WaveWatch III version number])
 fi
 
+# Build ode module if ODE is installed
+AC_CHECK_PROG(ode, ode-config, true, false)
+if test x$ode = xtrue; then
+  ODE_CFLAGS=`ode-config --cflags`
+  ODE_LIBS="`ode-config --libs` -lstdc++"
+  AC_SUBST(ODE_CFLAGS)
+  AC_SUBST(ODE_LIBS)
+else
+  AC_MSG_WARN([ODE not found. ode module will not be available.])
+fi
+AM_CONDITIONAL(BUILD_ODE, test x$ode = xtrue)
+
 dnl header file checks
 AC_CHECK_HEADERS(fenv.h, AC_DEFINE(HAVE_FENV_H))
 AC_CHECK_HEADERS(unistd.h, AC_DEFINE(HAVE_UNISTD_H))
