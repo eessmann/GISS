@@ -28,6 +28,8 @@ pkglib_LTLIBRARIES = \
 	libparticulates2D.la \
 	libparticulates3D.la \
 	libparticulates2D3.la \
+	libokada2D.la \
+	libokada3D.la \
 	$(TIDE) \
 	$(STOKES) \
 	$(WAVEWATCH)
@@ -43,7 +45,8 @@ EXTRA_DIST = \
 	terrain.mod \
 	stokes.mod \
 	wavewatch.mod \
-	particulates.mod
+	particulates.mod \
+	okada.mod
 
 BUILT_SOURCES = \
 	map.c \
@@ -51,7 +54,8 @@ BUILT_SOURCES = \
 	terrain.c \
 	stokes.c \
 	wavewatch.c \
-	particulates.c
+	particulates.c \
+	okada.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -123,6 +127,11 @@ libparticulates2D_la_SOURCES = particulates.c
 libparticulates2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
 libparticulates2D3_la_SOURCES = particulates.c
 libparticulates2D3_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D3=1
+
+libokada3D_la_SOURCES = okada.c
+libokada3D_la_CFLAGS = $(AM_CFLAGS)
+libokada2D_la_SOURCES = okada.c
+libokada2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
 if HAVE_MODULES
 %.c : %.mod
