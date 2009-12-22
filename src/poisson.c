@@ -168,14 +168,6 @@ void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 		 par->niter));
 }
 
-typedef struct {
-  guint u, rhs, dia, res;
-  gint maxlevel;
-  gdouble beta, omega;
-  FttComponent component;
-  guint axi;
-} RelaxParams;
-
 static void relax (FttCell * cell, RelaxParams * p)
 {
   GfsGradient g;

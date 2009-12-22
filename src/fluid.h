@@ -36,6 +36,11 @@ typedef struct _GfsStateVector     GfsStateVector;
 typedef struct _GfsSolidVector     GfsSolidVector;
 typedef struct _GfsFaceStateVector GfsFaceStateVector;
 
+typedef struct _RelaxParams RelaxParams;
+typedef struct _CoeffParams CoeffParams;
+typedef struct GfsStencilElement GfsStencilElement;
+typedef struct GfsDiagElement GfsDiagElement;
+
 struct _GfsFaceStateVector {
   gdouble un;
   gdouble v;
@@ -56,6 +61,44 @@ struct _GfsSolidVector {
   gdouble a, v, fv;
   FttCell * merged;
   FttVector cm, ca;
+};
+
+struct GfsStencilElement {
+  gint cell_id;
+  gdouble cell_coeff;
+  struct GfsStencilElement * next;
+};
+
+struct  GfsDiagElement{
+  gint cell_id;
+  gdouble cell_coeff;
+  gdouble rhs;
+  gdouble u;
+  GfsStencilElement * stencil;
+  GfsDiagElement * next;
+};
+
+struct _RelaxParams{
+  guint u, rhs, dia, res;
+  gint maxlevel;
+  gdouble beta, omega;
+  FttComponent component;
+  guint axi;
+};
+
+struct _CoeffParams {
+  GfsDomain * domain;
+  RelaxParams * p;
+  GfsVariable * u, * id;
+  FttCell * diag_cell;
+  gint maxlength, length, poisson_problem_size;
+  gdouble w;
+  gdouble wx[FTT_DIMENSION];
+  GfsDiagElement * poisson_problem;
+  GfsDiagElement * poisson_problem_end;
+/*   gint BC_num; */
+/*   GfsDiagElement * BC_problem; */
+/*   GfsDiagElement * BC_problem_end; */
 };
 
 typedef enum {
