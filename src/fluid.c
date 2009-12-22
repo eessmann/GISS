@@ -55,6 +55,38 @@ struct _Gradient {
   gdouble a, b, c;
 };
 
+static void add_stencil_element (FttCell * cell, CoeffParams * cp, gdouble coeff)
+{
+  GfsStencilElement * search;
+  gint done = 0;
+
+  if (cp->poisson_problem_end->stencil/* list  */== NULL)
+    cp->length=1;
+  
+  search = cp->poisson_problem_end->stencil;
+  while (search) {
+    if (search->cell_id == GFS_VALUE(cell, cp->id) && !done) {
+      search->cell_coeff += coeff;
+      done = 1;
+      break;
+    }
+    search = search->next;
+  }
+
+  if (!done) {
+    GfsStencilElement * new = g_malloc (sizeof (GfsStencilElement));
+
+    new->cell_id = GFS_VALUE(cell, cp->id);
+    new->cell_coeff = coeff;
+    new->next = cp->poisson_problem_end->stencil/* list */;
+    cp->poisson_problem_end->stencil = new;
+    new=NULL;
+    cp->length++;
+    if (cp->length > cp->maxlength)
+      cp->maxlength = cp->length;
+  }
+}
+
 static gdouble average_neighbor_value (const FttCellFace * face,
 				       guint v,
 				       gdouble * x)

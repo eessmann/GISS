@@ -23,6 +23,54 @@
 #include "source.h"
 #include "tension.h"
 
+static void  add_diagonal_element_structure (CoeffParams * cp)
+{
+  GfsDiagElement * new =g_malloc (sizeof (GfsDiagElement));
+
+
+  new->cell_id = GFS_VALUE(cp->diag_cell, cp->id);
+  new->rhs = GFS_VARIABLE (cp->diag_cell, cp->p->rhs);
+  new->u =  GFS_VARIABLE (cp->diag_cell, cp->p->u);
+  new->stencil = NULL;
+  new->next = NULL;
+  
+  if (!cp->poisson_problem)
+    cp->poisson_problem = new;
+  else
+    cp->poisson_problem_end->next = new;
+  
+  cp->poisson_problem_end = new;
+  new = NULL;
+}
+
+static void  fill_diagonal_element (CoeffParams * cp, gdouble coeff)
+{
+  cp->poisson_problem_end->cell_coeff = coeff;
+}
+
+static void destroy_stencil_element_list (GfsStencilElement * list, gint id)
+{
+  GfsStencilElement * to_destroy;
+
+  while (list) {
+    to_destroy = list;
+    list = list->next;
+    g_free(to_destroy);
+  }
+}
+
+static void destroy_diagonal_element_list (GfsDiagElement * list)
+{
+  GfsDiagElement * to_destroy;
+  
+  while (list) {
+    to_destroy = list;
+    list = list->next;
+    destroy_stencil_element_list (to_destroy->stencil, to_destroy->cell_id);
+    g_free(to_destroy);
+  }
+}
+
 /**
  * gfs_multilevel_params_write:
  * @par: the multilevel parameters.
