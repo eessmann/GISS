@@ -709,6 +709,57 @@ static void relax_loop (GfsDomain * domain,
 			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q);
 }
 
+typedef struct {
+  GfsVariable * id;
+  gint nleafs;
+} nleafs_data;
+
+static void leafs_numbering (FttCell * cell, nleafs_data * data) {
+ 
+  GFS_VALUE(cell,  data->id) = (gdouble) data->nleafs;
+  data->nleafs++;
+}
+
+void gfs_get_poisson_problem (GfsDomain * domain, 
+			  GfsVariable * dp, GfsVariable * u, 
+			  CoeffParams * cp, guint dimension)
+{
+  GfsVariable * id = gfs_temporary_variable (domain);
+  gint nleafs=0;
+  nleafs_data leafs_data;
+
+  gfs_domain_homogeneous_bc (domain,
+			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, 
+			     dp, u);
+
+  gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
+				   FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,-1,
+				   (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), cp,
+				   dp, u);
+ 
+ 
+  leafs_data.id = id;
+  leafs_data.nleafs = nleafs;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) leafs_numbering, &leafs_data);
+  
+  cp->domain = domain;
+  cp->u = dp;
+  cp->id = id;
+  cp->poisson_problem = NULL;
+  cp->maxlength = 0;
+  cp->poisson_problem_size = leafs_data.nleafs;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax) , cp);
+
+  gts_object_destroy (GTS_OBJECT (id));
+ }
+
+void gfs_destroy_poisson_problem (GfsDiagElement * problem)
+{
+  destroy_diagonal_element_list (problem);
+}
+
 /**
  * gfs_poisson_cycle:
  * @domain: the domain on which to solve the Poisson equation.

@@ -51,6 +51,10 @@ void                  gfs_multilevel_params_read     (GfsMultilevelParams * par,
 						      GtsFile * fp);
 void                  gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 							 FILE * fp);
+void                  gfs_get_poisson_problem        (GfsDomain * domain, 
+			                              GfsVariable * dp, GfsVariable * u, 
+					              CoeffParams * cp, guint dimension);
+void                  gfs_destroy_poisson_problem    (GfsDiagElement * problem);
 void                  gfs_relax                      (GfsDomain * domain,
 						      guint d,
 						      gint max_depth,
