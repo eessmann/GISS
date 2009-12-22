@@ -48,7 +48,7 @@ static void  fill_diagonal_element (CoeffParams * cp, gdouble coeff)
   cp->poisson_problem_end->cell_coeff = coeff;
 }
 
-static void destroy_stencil_element_list (GfsStencilElement * list, gint id)
+static void destroy_stencil_element_list (GfsStencilElement * list)
 {
   GfsStencilElement * to_destroy;
 
@@ -66,7 +66,7 @@ static void destroy_diagonal_element_list (GfsDiagElement * list)
   while (list) {
     to_destroy = list;
     list = list->next;
-    destroy_stencil_element_list (to_destroy->stencil, to_destroy->cell_id);
+    destroy_stencil_element_list (to_destroy->stencil);
     g_free(to_destroy);
   }
 }
@@ -216,13 +216,19 @@ void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 		 par->niter));
 }
 
-static void relax (FttCell * cell, RelaxParams * p)
+static void relax (FttCell * cell, CoeffParams * cp)
 {
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
 
+  RelaxParams * p = cp->p;
+
+  if (cp->id  && FTT_CELL_IS_LEAF (cell)) {
+    cp->diag_cell = cell;
+    add_diagonal_element_structure (cp);
+  }
   g.a = GFS_VARIABLE (cell, p->dia);
   g.b = 0.;
   f.cell = cell;
@@ -235,18 +241,37 @@ static void relax (FttCell * cell, RelaxParams * p)
       g.b += ng.b;
     }
   }
-  if (g.a > 0.)
-    GFS_VARIABLE (cell, p->u) = (g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
-  else
-    GFS_VARIABLE (cell, p->u) = 0.;
+    
+  if (cp->id && FTT_CELL_IS_LEAF (cell)) {
+    if (g.a > 0.) {
+      fill_diagonal_element (cp, -g.a);
+    }
+    else {
+      destroy_stencil_element_list (cp->poisson_problem_end->stencil);
+      fill_diagonal_element (cp, -1);
+    }
+  }
+  else {
+    if (g.a > 0.)
+      GFS_VARIABLE (cell, p->u) = (g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
+    else
+      GFS_VARIABLE (cell, p->u) = 0.;
+  }
 }
 
-static void relax2D (FttCell * cell, RelaxParams * p)
+static void relax2D (FttCell * cell, CoeffParams * cp)
 {
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
+
+  RelaxParams * p = cp->p;
+
+  if (cp->id && FTT_CELL_IS_LEAF (cell)) {
+    cp->diag_cell = cell;
+    add_diagonal_element_structure (cp);
+  }
 
   g.a = GFS_VARIABLE (cell, p->dia);
   g.b = 0.;
@@ -260,12 +285,24 @@ static void relax2D (FttCell * cell, RelaxParams * p)
       g.b += ng.b;
     }
   }
-  if (g.a > 0.)
-    GFS_VARIABLE (cell, p->u) = 
-      (1. - p->omega)*GFS_VARIABLE (cell, p->u) 
-      + p->omega*(g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
-  else
-    GFS_VARIABLE (cell, p->u) = 0.;
+  
+  if (cp->id && FTT_CELL_IS_LEAF (cell)) {
+    if (g.a > 0.) {
+      fill_diagonal_element (cp, -g.a);
+    }
+    else {
+      destroy_stencil_element_list (cp->poisson_problem_end->stencil);
+      fill_diagonal_element (cp, -1);
+    }
+  }
+  else {
+    if (g.a > 0.)
+      GFS_VARIABLE (cell, p->u) =
+	(1. - p->omega)*GFS_VARIABLE (cell, p->u)
+	+ p->omega*(g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
+    else
+      GFS_VARIABLE (cell, p->u) = 0.;
+  }
 }
 
 /**
