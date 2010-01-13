@@ -276,7 +276,7 @@ static gboolean gfs_event_balance_event (GfsEvent * event, GfsSimulation * sim)
 	/* Updates the pid associated with each box */
 	guint nb = gts_container_size (GTS_CONTAINER (domain));
 	gfs_all_reduce (domain, nb, MPI_UNSIGNED, MPI_SUM);
-	GArray * pid = g_array_sized_new (FALSE, TRUE, sizeof (guint), nb);
+	GArray * pid = g_array_new (FALSE, TRUE, sizeof (guint));
 	g_array_set_size (pid, nb);
 	gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) get_pid, pid);
 	MPI_Allreduce (MPI_IN_PLACE, pid->data, nb, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD);
