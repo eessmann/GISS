@@ -52,67 +52,43 @@ for level in $levels; do
     fi
 done > error-u
 
-if awk '
-BEGIN { n = 0 }
-{
-  l[n] = $1; n1[n] = $2; n2[n] = $3; ni[n++] = $4;
-}
-END {
-  for (i = 1; i < n; i++)
-    print l[i] " " log(n1[i-1]/n1[i])/log(2.) " " log(n2[i-1]/n2[i])/log(2.) " " log(ni[i-1]/ni[i])/log(2.);
-}' < error > order; then :
-else
-    exit 1
-fi
-
-if awk '
-BEGIN { n = 0 }
-{
-  l[n] = $1; n2[n++] = $2;
-}
-END {
-  for (i = 1; i < n; i++)
-    print l[i] " " log(n2[i-1]/n2[i])/log(2.);
-}' < error-u > order-u; then :
-else
-    exit 1
-fi
-
 if cat <<EOF | gnuplot ; then :
-    set term postscript eps color lw 3 solid 20
+    set term postscript eps color lw 3 solid 20 enhanced
 
-    set output 'error.eps'
+    set output 'convergence.eps'
     set xlabel 'Level'
     set ylabel 'Relative error norms'
-    set key
+    set key bottom left
     set logscale y
     set xtics 0,1
     set grid
-    plot 'error.ref' u 1:2 t '1 (ref)' w lp, \
-         'error.ref' u 1:3 t '2 (ref)' w lp, \
-         'error.ref' u 1:4 t 'max (ref)' w lp, \
-         'error' u 1:2 t '1' w lp, \
-         'error' u 1:3 t '2' w lp, \
-         'error' u 1:4 t 'max' w lp
-   
-    set output 'error-u.eps'
-    set ylabel 'u0 relative error L2 norm'
-    plot 'error-u' u 1:(\$2/4.) t '' w lp
-   
-    set output 'order.eps'
-    set xlabel 'Level'
-    set ylabel 'Order'
-    unset logscale
-    set ytics 0,1
-    plot [][-1:2] 'order.ref' u 1:2 t '1 (ref)' w lp, \
-                  'order.ref' u 1:3 t '2 (ref)' w lp, \
-                  'order.ref' u 1:4 t 'max (ref)' w lp, \
-                  'order' u 1:2 t '1' w lp, \
-                  'order' u 1:3 t '2' w lp, \
-                  'order' u 1:4 t 'max' w lp
+    ftitle(a,b) = sprintf("order %4.2f", -b/log(2.))
+    f1(x)=a1+b1*x
+    fit f1(x) 'error' u 1:(log(\$2)) via a1,b1
+    f2(x)=a2+b2*x
+    fit f2(x) 'error' u 1:(log(\$3)) via a2,b2
+    fm(x)=am+bm*x
+    fit fm(x) 'error' u 1:(log(\$4)) via am,bm
+    plot 'error.ref' u 1:2 t '|h|_1 (ref)' ps 1.5, \
+         'error.ref' u 1:3 t '|h|_2 (ref)' ps 1.5, \
+         'error.ref' u 1:4 t '|h|_{max} (ref)' ps 1.5, \
+         exp (f1(x)) t ftitle(a1,b1), \
+         exp (f2(x)) t ftitle(a2,b2), \
+         exp (fm(x)) t ftitle(am,bm),  \
+         'error' u 1:2 t '|h|_1' ps 1.5, \
+         'error' u 1:3 t '|h|_2' ps 1.5, \
+         'error' u 1:4 t '|h|_{max}' ps 1.5
 
-    set output 'order-u.eps'
-    plot [][-1:2]'order-u' u 1:2 t '' w lp
+    set output 'convergence-u.eps'
+    set xlabel 'Level'
+    set ylabel '|u_0|_2'
+    set key top right
+    set logscale y
+    set xtics 0,1
+    set grid
+    fit f2(x) 'error-u' u 1:(log(\$2)) via a2,b2
+    plot exp (f2(x)) t ftitle(a2,b2), \
+         'error-u' u 1:2 t '' ps 1.5
 
     set output 'u0.eps'
 
@@ -128,9 +104,11 @@ if cat <<EOF | gnuplot ; then :
     set xtics auto
     set ytics auto
     unset grid
+    unset logscale
+    set key top right
     set ylabel 'u0'
     set xlabel 'Time'
-    plot u0(x) t 'Analytical', '< paste U-7 vol-7' u 3:(\$5/\$10) every 2 w p t 'Gerris'
+    plot u0(x) t 'Analytical', '< paste U-7 vol-7' u 3:(\$5/\$10) every 2 w p t 'Numerical'
 
     set output 'elevation.eps'
     set xlabel 'x (m)'

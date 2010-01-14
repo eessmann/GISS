@@ -1470,7 +1470,8 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
   /* If we are part of GfsRiver, reconstruct H and P */
   if (t->H) {
     /* Reconstruct H */
-    if (GFS_VALUE (parent, t->p) < GFS_RIVER_DRY) {
+    double dry = GFS_RIVER (sim)->dry;
+    if (GFS_VALUE (parent, t->p) < dry) {
       /* Dry cell */
       FttCellNeighbors neighbor;
       ftt_cell_neighbors (parent, &neighbor);
@@ -1480,7 +1481,7 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
       for (d = 0; d < FTT_NEIGHBORS; d++)
 	if (neighbor.c[d]) {
 	  if (FTT_CELL_IS_LEAF (neighbor.c[d])) {
-	    if (GFS_VALUE (neighbor.c[d], t->p) >= GFS_RIVER_DRY) {
+	    if (GFS_VALUE (neighbor.c[d], t->p) >= dry) {
 	       H += GFS_VALUE (neighbor.c[d], t->p)*GFS_VALUE (neighbor.c[d], t->H);
 	       s += GFS_VALUE (neighbor.c[d], t->p);
 	    }
@@ -1490,7 +1491,7 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 	    guint i, n = ftt_cell_children_direction (neighbor.c[d],
 						      FTT_OPPOSITE_DIRECTION (d), &child);
 	    for (i = 0; i < n; i++)
-	      if (child.c[i] && GFS_VALUE (child.c[i], t->p) >= GFS_RIVER_DRY) {
+	      if (child.c[i] && GFS_VALUE (child.c[i], t->p) >= dry) {
 		H += GFS_VALUE (child.c[i], t->p)*GFS_VALUE (child.c[i], t->H);
 		s += GFS_VALUE (child.c[i], t->p);
 	      }
@@ -1523,8 +1524,8 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 	ftt_cell_neighbors (parent, &neighbor);
 
 	for (c = 0; c < FTT_DIMENSION; c++)
-	  if (neighbor.c[2*c] && GFS_VALUE (neighbor.c[2*c], t->p) >= GFS_RIVER_DRY &&
-	      neighbor.c[2*c + 1] && GFS_VALUE (neighbor.c[2*c + 1], t->p) >= GFS_RIVER_DRY)
+	  if (neighbor.c[2*c] && GFS_VALUE (neighbor.c[2*c], t->p) >= dry &&
+	      neighbor.c[2*c + 1] && GFS_VALUE (neighbor.c[2*c + 1], t->p) >= dry)
 	    (&g.x)[c] = gfs_center_minmod_gradient (parent, c, v->i);
 	  else
 	    (&g.x)[c] = 0.;
@@ -1572,7 +1573,7 @@ static void variable_terrain_fine_coarse (FttCell * parent, GfsVariable * v)
     /* Reconstruct H */
     gdouble H = 0., sa = 0.;
     for (n = 0; n < FTT_CELLS; n++) 
-      if (child.c[n] && GFS_VALUE (child.c[n], t->p) >= GFS_RIVER_DRY) {
+      if (child.c[n] && GFS_VALUE (child.c[n], t->p) >= GFS_RIVER (v->domain)->dry) {
 	gdouble a = GFS_IS_MIXED (child.c[n]) ? GFS_STATE (child.c[n])->solid->a : 1.;
 	H += GFS_VALUE (child.c[n], t->H)*a;
 	sa += a;

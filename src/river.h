@@ -29,7 +29,6 @@ extern "C" {
 /* GfsRiver: Header */
 
 #define GFS_RIVER_NVAR 3
-#define GFS_RIVER_DRY 1e-6
 
 typedef struct _GfsRiver GfsRiver;
 
@@ -45,6 +44,7 @@ struct _GfsRiver {
   gdouble g, dt;
   GfsCenterGradient gradient;
   guint time_order;
+  gdouble dry;
 };
 
 #define GFS_RIVER(obj)            GTS_OBJECT_CAST (obj,\

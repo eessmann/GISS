@@ -97,8 +97,8 @@ typedef struct {
 
 static void face_fluxes (FttCellFace * face, GfsRiver * r)
 {
-  if (GFS_VALUE (face->cell, r->v1[0]) <= GFS_RIVER_DRY &&
-      GFS_VALUE (face->neighbor, r->v1[0]) <= GFS_RIVER_DRY)
+  if (GFS_VALUE (face->cell, r->v1[0]) <= r->dry &&
+      GFS_VALUE (face->neighbor, r->v1[0]) <= r->dry)
     return;
 
   static Sym sym[4] = {
@@ -117,7 +117,7 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   gdouble zbLR = MAX (zbL, zbR);
   gdouble uL[4], uR[4], f[3];
 
-  if (etaL > GFS_RIVER_DRY) {
+  if (etaL > r->dry) {
     uL[1] = s->du*(GFS_VALUE (face->cell, r->v1[s->u]) +
 		   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->u]))/etaL; /* u = uh/h */
     uL[2] = s->dv*(GFS_VALUE (face->cell, r->v1[s->v]) +
@@ -133,7 +133,7 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE: case FTT_FINE_COARSE:
     /* fixme: this is only first-order accurate for fine/coarse */
-    if (etaR > GFS_RIVER_DRY) {
+    if (etaR > r->dry) {
       uR[1] = s->du*(GFS_VALUE (face->neighbor, r->v1[s->u]) -
 		     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->u]))/etaR; /* u = uh/h */
       uR[2] = s->dv*(GFS_VALUE (face->neighbor, r->v1[s->v]) -
@@ -399,7 +399,7 @@ static gdouble maximum_face_metric (FttCell * cell, GfsDomain * domain, FttCompo
 static void minimum_cfl (FttCell * cell, GfsRiver * r)
 {
   gdouble h = GFS_VALUE (cell, r->v[0]);
-  if (h > GFS_RIVER_DRY) {
+  if (h > r->dry) {
     GfsDomain * domain = GFS_DOMAIN (r);
     gdouble vol = ftt_cell_size (cell);
     if (domain->cell_metric)
@@ -434,10 +434,10 @@ static void river_read (GtsObject ** o, GtsFile * fp)
   GfsRiver * river = GFS_RIVER (*o);
   if (fp->type == '{') {
     GtsFileVariable var[] = {
-      {GTS_UINT, "time_order", TRUE},
+      {GTS_UINT,   "time_order", TRUE, &river->time_order},
+      {GTS_DOUBLE, "dry",        TRUE, &river->dry},
       {GTS_NONE}
     };
-    var[0].data = &river->time_order;
     gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR)
       return;
@@ -451,8 +451,10 @@ static void river_write (GtsObject * o, FILE * fp)
   GfsRiver * river = GFS_RIVER (o);
   fprintf (fp, " {\n"
 	   "  time_order = %d\n"
+	   "  dry = %g\n"
 	   "}",
-	   river->time_order);
+	   river->time_order,
+	   river->dry);
 }
 
 static void river_class_init (GfsSimulationClass * klass)
@@ -469,7 +471,7 @@ static gdouble cell_velocity (FttCell * cell, FttCellFace * face, GfsRiver * r)
 
   gdouble D = GFS_VALUE (cell, r->v[0]);
   gdouble L = GFS_SIMULATION (r)->physical_params.L;
-  return D > GFS_RIVER_DRY ? L*gfs_vector_norm (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/D : 0.;
+  return D > r->dry ? L*gfs_vector_norm (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/D : 0.;
 }
 
 static gdouble cell_velocity2 (FttCell * cell, FttCellFace * face, GfsRiver * r)
@@ -478,7 +480,7 @@ static gdouble cell_velocity2 (FttCell * cell, FttCellFace * face, GfsRiver * r)
 
   gdouble D = GFS_VALUE (cell, r->v[0]);
   gdouble L = GFS_SIMULATION (r)->physical_params.L;
-  return D > GFS_RIVER_DRY ? 
+  return D > r->dry ? 
     L*L*gfs_vector_norm2 (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/(D*D) : 0.;
 }
 
@@ -542,6 +544,7 @@ static void river_init (GfsRiver * r)
   gfs_domain_remove_derived_variable (domain, "D2");
 
   r->time_order = 2;
+  r->dry = 1e-6;
 }
 
 GfsSimulationClass * gfs_river_class (void)
