@@ -55,6 +55,15 @@ done > error-u
 if cat <<EOF | gnuplot ; then :
     set term postscript eps color lw 3 solid 20 enhanced
 
+    h0 = 10.
+    a = 3000.
+    tau = 1e-3
+    B = 5.
+    G = 9.81
+    p = sqrt (8.*G*h0)/a
+    s = sqrt (p*p - tau*tau)/2.
+    u0(t) = B*exp (-tau*t/2.)*sin (s*t)
+
     set output 'convergence.eps'
     set xlabel 'Level'
     set ylabel 'Relative error norms'
@@ -86,20 +95,11 @@ if cat <<EOF | gnuplot ; then :
     set logscale y
     set xtics 0,1
     set grid
-    fit f2(x) 'error-u' u 1:(log(\$2)) via a2,b2
+    fit f2(x) 'error-u' u 1:(log(\$2/B)) via a2,b2
     plot exp (f2(x)) t ftitle(a2,b2), \
-         'error-u' u 1:2 t '' ps 1.5
+         'error-u' u 1:(\$2/B) t '' ps 1.5
 
     set output 'u0.eps'
-
-    h0 = 10.
-    a = 3000.
-    tau = 1e-3
-    B = 5.
-    G = 9.81
-    p = sqrt (8.*G*h0)/a
-    s = sqrt (p*p - tau*tau)/2.
-    u0(t) = B*exp (-tau*t/2.)*sin (s*t)
 
     set xtics auto
     set ytics auto

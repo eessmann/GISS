@@ -433,14 +433,17 @@ static void river_read (GtsObject ** o, GtsFile * fp)
 
   GfsRiver * river = GFS_RIVER (*o);
   if (fp->type == '{') {
+    double dry;
     GtsFileVariable var[] = {
       {GTS_UINT,   "time_order", TRUE, &river->time_order},
-      {GTS_DOUBLE, "dry",        TRUE, &river->dry},
+      {GTS_DOUBLE, "dry",        TRUE, &dry},
       {GTS_NONE}
     };
     gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR)
       return;
+    if (var[1].set)
+      river->dry = dry/GFS_SIMULATION (river)->physical_params.L;
   }
 }
 
@@ -454,7 +457,7 @@ static void river_write (GtsObject * o, FILE * fp)
 	   "  dry = %g\n"
 	   "}",
 	   river->time_order,
-	   river->dry);
+	   river->dry*GFS_SIMULATION (river)->physical_params.L);
 }
 
 static void river_class_init (GfsSimulationClass * klass)

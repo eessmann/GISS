@@ -99,7 +99,7 @@ Define G 9.81
 } {
     # this is necessary to obtain good convergence rates at high
     # resolutions
-    dry = 1e-8
+    dry = 1e-4
 }
 GfsBox {
     left = Boundary
