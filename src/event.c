@@ -1666,6 +1666,8 @@ FILE * gfs_popen (GfsSimulation * sim, const char * command, const char * type)
     fputs (command, f);
     fclose (f);
   }
+  else
+    g_warning ("popen() command failed: %s", strerror (errno));
   remove (sname);
   return fp;
 }
