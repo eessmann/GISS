@@ -21,6 +21,8 @@ BEGIN {
 	    printf (" %s", replace_params($i, b));
 	printf ("')\n");
     }
+    else if ($1 == "GfsInclude" || $1 == "Include")
+	printf ("m4_include(%s)\n", $2);
     else
 	print $0;
 }

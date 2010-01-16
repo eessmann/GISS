@@ -55,6 +55,15 @@ static void setup_binary_IO (GfsDomain * domain)
   domain->binary = TRUE;	
 }
 
+static gboolean set_macros ()
+{
+#ifndef HAVE_M4
+  gfs_error (0, "gerris: macros are not supported on this system\n");
+  return 1;
+#endif /* not HAVE_M4 */
+  return 0;
+}
+
 int main (int argc, char * argv[])
 {
   GfsSimulation * simulation;
@@ -80,6 +89,7 @@ int main (int argc, char * argv[])
       {"partition", required_argument, NULL, 'p'},
       {"profile", no_argument, NULL, 'P'},
       {"define", required_argument, NULL, 'D'},
+      {"include", required_argument, NULL, 'I'},
       {"macros", no_argument, NULL, 'm'},
       {"data", no_argument, NULL, 'd'},
       {"event", required_argument, NULL, 'e'},
@@ -90,10 +100,10 @@ int main (int argc, char * argv[])
       { NULL }
     };
     int option_index = 0;
-    switch ((c = getopt_long (argc, argv, "hVs:ip:PD:mde:b:v",
+    switch ((c = getopt_long (argc, argv, "hVs:ip:PD:I:mde:b:v",
 			      long_options, &option_index))) {
 #else /* not HAVE_GETOPT_LONG */
-    switch ((c = getopt (argc, argv, "hVs:ip:PD:mde:b:v"))) {
+    switch ((c = getopt (argc, argv, "hVs:ip:PD:I:mde:b:v"))) {
 #endif /* not HAVE_GETOPT_LONG */
     case 'P': /* profile */
       profile = TRUE;
@@ -111,17 +121,27 @@ int main (int argc, char * argv[])
     case 'i': /* pid */
       one_box_per_pe = FALSE;
       break;
+    case 'I': { /* include */
+      gchar * tmp = g_strjoin (" ", m4_options, "-I", optarg, NULL);
+      g_free (m4_options);
+      m4_options = tmp;
+      if (set_macros ())
+	return 1;
+      macros = TRUE;
+      break;
+    }
     case 'D': { /* define */
       gchar * tmp = g_strjoin (" ", m4_options, "-D", optarg, NULL);
       g_free (m4_options);
       m4_options = tmp;
-      /* fall through */
+      if (set_macros ())
+	return 1;
+      macros = TRUE;
+      break;
     }
     case 'm': /* macros */
-#ifndef HAVE_M4
-      gfs_error (0, "gerris: macros are not supported on this system\n");
-      return 1;
-#endif /* not HAVE_M4 */
+      if (set_macros ())
+	return 1;
       macros = TRUE;
       break;
     case 'd': /* data */
@@ -153,6 +173,7 @@ int main (int argc, char * argv[])
 	     "  -DNAME=VALUE         (macro support is implicitly turned on)\n"
 	     "         --define=NAME\n"
              "         --define=NAME=VALUE\n"
+	     "  -IDIR --include=DIR  Append DIR to macro include path\n"
 #endif /* HAVE_M4 */
 	     "  -eEV   --event=EV    Evaluates GfsEvent EV and returns the simulation\n"
 	     "  -v     --verbose     Display more messages\n"
