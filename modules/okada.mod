@@ -20,15 +20,16 @@
 #include "event.h"
 #include "solid.h"
 
-/* Implementation of the formulae of Okada, 1985 */
+/* Implementation of the formulae of Okada, 1985, "Surface deformation
+   due to shear and tensile faults in a half-space", Bulletin of the
+   Seismological Society of America, 75:4, 1135-1154, */
 
 /* formulae (25)-(30) */
-static void rectangular_source (const double U[3], double delta, double mulambda, double d,
-				double psi, double eta, double y,
+static void rectangular_source (const double U[3], double cosd, double sind,
+				double mulambda, double d,
+				double psi, double eta, double q,
 				double u[3])
 {
-  double sind = sin (delta), cosd = cos (delta);
-  double q = y*sind - d*cosd;
   double R = sqrt (psi*psi + eta*eta + q*q);
   double X = sqrt (psi*psi + q*q);
   double dtilde = eta*sind - q*cosd;
@@ -89,22 +90,24 @@ static void okada_rectangular_source (const double U[3],
 				      double x, double y,
 				      double u[3])
 {
-  double p = y*cos (delta) + d*sin (delta);
+  double cosd = cos (delta), sind = sin (delta);
+  double p = y*cosd + d*sind;
+  double q = y*sind - d*cosd;
 
   u[0] = u[1] = u[2] = 0.;
-  rectangular_source (U, delta, mulambda, d,
-		      x, p, y,
+  rectangular_source (U, cosd, sind, mulambda, d,
+		      x, p, q,
 		      u);
-  rectangular_source (U, delta, mulambda, d,
-		      x - L, p - W, y,
+  rectangular_source (U, cosd, sind, mulambda, d,
+		      x - L, p - W, q,
 		      u);
 
   double u1[3] = {0., 0., 0.};
-  rectangular_source (U, delta, mulambda, d,
-		      x, p - W, y,
+  rectangular_source (U, cosd, sind, mulambda, d,
+		      x, p - W, q,
 		      u1);
-  rectangular_source (U, delta, mulambda, d,
-		      x - L, p, y,
+  rectangular_source (U, cosd, sind, mulambda, d,
+		      x - L, p, q,
 		      u1);
   u[0] -= u1[0];
   u[1] -= u1[1];
@@ -156,24 +159,36 @@ static void gfs_init_okada_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);
 
+  gdouble U = 0., rake = 90.;
   GtsFileVariable var[] = {
-    {GTS_DOUBLE, "x",      TRUE, &okada->x},
-    {GTS_DOUBLE, "y",      TRUE, &okada->y},
-    {GTS_DOUBLE, "depth",  TRUE, &okada->depth},
-    {GTS_DOUBLE, "strike", TRUE, &okada->strike},
-    {GTS_DOUBLE, "dip",    TRUE, &okada->dip},
-    {GTS_DOUBLE, "mu",     TRUE, &okada->mu},
-    {GTS_DOUBLE, "lambda", TRUE, &okada->lambda},
-    {GTS_DOUBLE, "length", TRUE, &okada->length},
-    {GTS_DOUBLE, "width",  TRUE, &okada->width},
-    {GTS_DOUBLE, "U1",     TRUE, &okada->U[0]},
-    {GTS_DOUBLE, "U2",     TRUE, &okada->U[1]},
-    {GTS_DOUBLE, "U3",     TRUE, &okada->U[2]},
+    {GTS_DOUBLE, "x",      TRUE, &okada->x},      /* 0 */
+    {GTS_DOUBLE, "y",      TRUE, &okada->y},      /* 1 */
+    {GTS_DOUBLE, "depth",  TRUE, &okada->depth},  /* 2 */
+    {GTS_DOUBLE, "strike", TRUE, &okada->strike}, /* 3 */
+    {GTS_DOUBLE, "dip",    TRUE, &okada->dip},    /* 4 */
+    {GTS_DOUBLE, "rake",   TRUE, &rake},          /* 5 */
+    {GTS_DOUBLE, "mu",     TRUE, &okada->mu},     /* 6 */
+    {GTS_DOUBLE, "lambda", TRUE, &okada->lambda}, /* 7 */
+    {GTS_DOUBLE, "length", TRUE, &okada->length}, /* 8 */
+    {GTS_DOUBLE, "width",  TRUE, &okada->width},  /* 9 */
+    {GTS_DOUBLE, "U1",     TRUE, &okada->U[0]},   /* 10 */
+    {GTS_DOUBLE, "U2",     TRUE, &okada->U[1]},   /* 11 */
+    {GTS_DOUBLE, "U3",     TRUE, &okada->U[2]},   /* 12 */ 
+    {GTS_DOUBLE, "U",      TRUE, &U},             /* 13 */ 
     {GTS_NONE}
   };
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR)
     return;
+
+  if (var[5].set) {
+    if (var[10].set || var[11].set) {
+      gts_file_error (fp, "set rake and U or U1 and U2 (not both)");
+      return;
+    }
+    okada->U[0] = U*cos (rake*M_PI/180.);
+    okada->U[1] = U*sin (rake*M_PI/180.);
+  }
 
   okada->sina = sin ((90. - okada->strike)*M_PI/180.);
   okada->cosa = cos ((90. - okada->strike)*M_PI/180.);
@@ -200,19 +215,29 @@ static void gfs_init_okada_write (GtsObject * o, FILE * fp)
 
 static void init_okada (FttCell * cell, GfsInitOkada * okada)
 {
-  FttVector p;
+  FttVector p, o;
   gfs_cell_cm (cell, &p);
-  gfs_simulation_map_inverse (gfs_object_simulation (okada), &p);
+  GfsSimulation * sim = gfs_object_simulation (okada);
+  o.x = okada->x; o.y = okada->y;
+  gfs_simulation_map (sim, &o);
+  gdouble L = sim->physical_params.L;
+  p.x = (p.x - o.x)*L; p.y = (p.y - o.y)*L;
   FttVector q;
   q.x =   okada->cosa*p.x + okada->sina*p.y;
   q.y = - okada->sina*p.x + okada->cosa*p.y;
   double u[3];
-  okada_rectangular_source (okada->U, okada->length, okada->width, okada->depth, 
+  double sind = sin (okada->dip*M_PI/180.);
+  /* depth of the bottom edge */
+  double depth = sind > 0. ? okada->depth + okada->width*sind : okada->depth;
+  /* shift origin to the centroid */
+  q.x += okada->length/2.;
+  q.y += okada->width/2.*cos (okada->dip*M_PI/180.);
+  okada_rectangular_source (okada->U, okada->length, okada->width, depth, 
 			    okada->dip*M_PI/180.,
 			    okada->mu/okada->lambda,
 			    q.x, q.y,
 			    u);
-  GFS_VALUE (cell, okada->v) = u[2];
+  GFS_VALUE (cell, okada->v) += u[2];
 }
 
 static gboolean gfs_init_okada_event (GfsEvent * event, 
