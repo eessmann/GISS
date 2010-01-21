@@ -316,6 +316,68 @@ static void solve_poisson_problem_using_hypre (CoeffParams * cp, GfsMultilevelPa
   gfs_domain_timer_stop (cp->domain, "Solving the problem");
 }
 
+static void correct (FttCell * cell, gpointer * data)
+{
+  GfsVariable * u = data[0];
+  GfsVariable * dp = data[1];
+  GFS_VALUE (cell, u) += GFS_VALUE (cell, dp);
+}
+
+static void gfs_hypre_poisson_cycle (GfsDomain * domain,
+				     GfsMultilevelParams * p,
+				     GfsVariable * u,
+				     GfsVariable * rhs,
+				     GfsVariable * dia,
+				     GfsVariable * axi,
+				     GfsVariable * res)
+{
+  RelaxParams q;
+  CoeffParams cp;
+  GfsVariable * dp;
+  gpointer data[2];
+
+  dp = gfs_temporary_variable (domain);
+  
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, dp);
+
+  q.u = dp->i;
+  q.rhs = res->i;
+  q.dia = dia->i;
+  q.maxlevel = -1;
+  q.omega = p->omega;
+
+  cp.p = &q;
+  cp.id = NULL;
+
+  gfs_domain_timer_start (domain, "Putting problem together");
+  gfs_get_poisson_problem (domain, dp, u, &cp, p->dimension);
+  gfs_domain_timer_stop (domain, "Putting problem together");
+ 
+  solve_poisson_problem_using_hypre (&cp, p);
+
+
+  gfs_domain_timer_start (domain, "Copy problem");
+  copy_poisson_problem_solution_to_simulation_tree (&cp);
+  gfs_domain_timer_stop (domain, "Copy problem");
+
+  gfs_domain_timer_start (domain, "Destroy problem");
+  gfs_destroy_poisson_problem (cp.poisson_problem);
+  gfs_domain_timer_stop (domain, "Destroy problem");
+
+  gfs_domain_timer_start (domain, "Correct field");
+  /* correct on leaf cells */
+  data[0] = u;
+  data[1] = dp;
+  gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+		       (FttCellTraverseFunc) correct, data,
+		       u, u);
+  /* compute new residual on leaf cells */
+  gfs_residual (domain, p->dimension, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
+  
+  gts_object_destroy (GTS_OBJECT (dp));
+  gfs_domain_timer_stop (domain, "Correct field");
+}
 
 static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
 {
@@ -557,10 +619,14 @@ static void hypre_projection_params_write (GfsMultilevelParams * par, FILE * fp)
 
 static void hypre_approx_params_read (GfsMultilevelParams * par, GtsFile * fp)
 {
+  HypreSolverParams dummy;
+
   printf("No distinction is made between approx and mac projection\n");
   printf(" in the hyprepoissonsolvers module \n");
   printf("ApproxProjectionParams won't get read \n");
   printf("Use ProjectionParams to specify parameters");
+
+  hypre_solver_read (&dummy, fp);
 }
 
 /* Initialize module */
@@ -583,4 +649,16 @@ void gfs_module_read (GtsFile * fp, GfsSimulation * sim)
 
   sim->projection_params.read = hypre_projection_params_read;
   sim->projection_params.write = hypre_projection_params_write;
+  
+  sim->approx_projection_params.poisson_cycle = gfs_hypre_poisson_cycle;
+  sim->projection_params.poisson_cycle = gfs_hypre_poisson_cycle;
+  
+  sim->projection_params.tolerance = proj_hp.tolerance;
+  sim->approx_projection_params.tolerance = proj_hp.tolerance;
+  
+  sim->projection_params.nitermax = 1;
+  sim->projection_params.nitermin = 0;
+  
+  sim->approx_projection_params.nitermax = 1;
+  sim->approx_projection_params.nitermin = 0;
 }
