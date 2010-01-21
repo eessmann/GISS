@@ -122,6 +122,11 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
   par->weighted = FALSE;
   par->beta = 0.5;
   par->omega = 1.;
+
+  par->non_gerris_par = NULL;
+  par->read = gfs_multilevel_params_read;
+  par->write = gfs_multilevel_params_write;
+  par->poisson_cycle = gfs_poisson_cycle;
 }
 
 void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
@@ -789,6 +794,7 @@ void gfs_get_poisson_problem (GfsDomain * domain,
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax) , cp);
 
+  cp->id = NULL;
   gts_object_destroy (GTS_OBJECT (id));
  }
 

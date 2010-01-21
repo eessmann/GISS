@@ -142,9 +142,9 @@ static void simulation_write (GtsObject * object, FILE * fp)
   fputs ("\n  GfsAdvectionParams ", fp);
   gfs_advection_params_write (&sim->advection_params, fp);
   fputs ("\n  GfsApproxProjectionParams ", fp);
-  gfs_multilevel_params_write (&sim->approx_projection_params, fp);
+  sim->approx_projection_params.write (&sim->approx_projection_params, fp);
   fputs ("\n  GfsProjectionParams ", fp);
-  gfs_multilevel_params_write (&sim->projection_params, fp);
+  sim->projection_params.write (&sim->projection_params, fp);
   fputc ('\n', fp);
 
   i = sim->maps->items;
@@ -275,7 +275,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
     /* ------------ GfsProjectionParams ------------ */
     else if (strmatch (fp->token->str, "GfsProjectionParams")) {
       gts_file_next_token (fp);
-      gfs_multilevel_params_read (&sim->projection_params, fp);
+      sim->projection_params.read (&sim->projection_params, fp);
       if (fp->type == GTS_ERROR)
 	return;
     }
@@ -283,7 +283,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
     /* ------------ GfsApproxProjectionParams ------------ */
     else if (strmatch (fp->token->str, "GfsApproxProjectionParams")) {
       gts_file_next_token (fp);
-      gfs_multilevel_params_read (&sim->approx_projection_params, fp);
+      sim->approx_projection_params.read (&sim->approx_projection_params, fp);
       if (fp->type == GTS_ERROR)
 	return;
     }
@@ -1950,7 +1950,7 @@ static void poisson_run (GfsSimulation * sim)
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
     gfs_domain_timer_start (domain, "poisson_cycle");
-    gfs_poisson_cycle (domain, par, p, div, dia, res1);
+    par->poisson_cycle (domain, par, p, div, dia, res1);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
     gfs_domain_timer_stop (domain, "poisson_cycle");
 
