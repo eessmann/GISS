@@ -117,7 +117,37 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
 /******************************************/
 static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par, HypreProblem * hp)
 {
-   
+  HYPRE_Solver solver;
+
+  /* Create solver */
+  HYPRE_ParCSRPCGCreate(MPI_COMM_WORLD, &solver);
+  
+  /* Set some parameters (See Reference Manual for more parameters) */
+  if (proj_hp.verbose)
+    HYPRE_BoomerAMGSetPrintLevel(solver, 3);  /* print solve info + parameters */
+  HYPRE_PCGSetMaxIter(solver, par->nitermax); /* max iterations */
+  HYPRE_PCGSetTol(solver, par->tolerance); /* conv. tolerance */
+  HYPRE_PCGSetTwoNorm(solver, 1); /* use the two norm as the stopping criteria */
+  HYPRE_PCGSetLogging(solver, 1); /* needed to get run info later */
+
+  HYPRE_ParCSRPCGSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+  HYPRE_ParCSRPCGSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);   
+
+  /*  Run info - needed logging turned on */
+  if (proj_hp.verbose) {
+    int num_iterations;
+    double final_res_norm;
+    HYPRE_PCGGetNumIterations(solver, &num_iterations);
+    HYPRE_PCGGetFinalRelativeResidualNorm(solver, &final_res_norm);
+    
+    printf("\n");
+  	  printf("Iterations = %d\n", num_iterations);
+  	  printf("Final Relative Residual Norm = %e\n", final_res_norm);
+  	  printf("\n");
+  }
+  
+  /* Destroy solver */
+  HYPRE_ParCSRPCGDestroy(solver);  
 }
 
 static void create_hypre_problem_structure (HypreProblem * hp, gdouble size)
