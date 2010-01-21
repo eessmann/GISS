@@ -71,7 +71,45 @@ struct _HypreProblem {
 /***********************************************/
 static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * par, HypreProblem * hp)
 {
- 
+ HYPRE_Solver solver;
+  
+  /* Create solver */
+  HYPRE_BoomerAMGCreate(&solver);
+
+
+  if (proj_hp.verbose)
+    HYPRE_BoomerAMGSetPrintLevel(solver, 3);  /* print solve info + parameters */
+  HYPRE_BoomerAMGSetCoarsenType(solver, proj_hp.coarsening_type); 
+  HYPRE_BoomerAMGSetRelaxType(solver, proj_hp.relax_type);
+  HYPRE_BoomerAMGSetCycleType(solver, proj_hp.cycle_type);
+  HYPRE_BoomerAMGSetNumSweeps(solver, proj_hp.nrelax);     /* Sweeps on each level */
+  HYPRE_BoomerAMGSetMaxLevels(solver, proj_hp.nlevel);  /* maximum number of levels */
+  HYPRE_BoomerAMGSetTol(solver, proj_hp.tolerance);        /* conv. tolerance */
+  HYPRE_BoomerAMGSetMaxIter(solver, proj_hp.ncyclemax); /* maximum number of iterations */
+  HYPRE_BoomerAMGSetMinIter(solver, proj_hp.ncyclemin); /* minimum number of iterations */
+
+
+  /* Now setup and solve! */
+  HYPRE_BoomerAMGSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+  HYPRE_BoomerAMGSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+
+  /* Prints informations on the residual */  
+  if (proj_hp.verbose) {
+    int num_iterations;
+    double final_res_norm;
+    HYPRE_BoomerAMGGetNumIterations(solver, &num_iterations);
+    HYPRE_BoomerAMGGetFinalRelativeResidualNorm(solver, &final_res_norm);
+
+    par->niter = num_iterations;
+
+    printf("\n");
+    printf("Iterations = %d\n", num_iterations);
+    printf("Final Relative Residual Norm = %e\n", final_res_norm);
+    printf("\n");
+  }
+  
+  /* Destroy solver */
+  HYPRE_BoomerAMGDestroy(solver);
 }
 
 /******************************************/
