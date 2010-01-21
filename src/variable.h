@@ -88,6 +88,13 @@ void                  gfs_variables_swap            (GfsVariable * v1,
 void                  gfs_variable_set_vector       (GfsVariable ** v,
 						     guint n);
 
+/* GfsVariableBoolean: header */
+
+#define GFS_IS_VARIABLE_BOOLEAN(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_boolean_class ()))
+
+GfsVariableClass * gfs_variable_boolean_class  (void);
+
 /* GfsVariableTracer: header */
 
 typedef struct _GfsVariableTracer                GfsVariableTracer;

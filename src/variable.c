@@ -255,6 +255,63 @@ void gfs_variable_set_vector (GfsVariable ** v, guint n)
   }    
 }
 
+/* GfsVariableBoolean: object */
+
+static void boolean_fine_coarse (FttCell * parent, GfsVariable * v)
+{
+  FttCellChildren child;
+  gint i;
+
+  ftt_cell_children (parent, &child);
+  for (i = 0; i < FTT_CELLS; i++)
+    if (child.c[i] && GFS_VALUE (child.c[i], v) < 0.) {
+      GFS_VALUE (parent, v) = -1.;
+      return;
+    }
+
+  gfs_get_from_below_intensive (parent, v);
+}
+
+static void boolean_coarse_fine (FttCell * parent, GfsVariable * v)
+{
+  FttCellChildren child;
+  gdouble val = GFS_VALUE (parent, v);
+  gint i;
+
+  ftt_cell_children (parent, &child);
+  for (i = 0; i < FTT_CELLS; i++)
+    if (child.c[i])
+      GFS_VALUE (child.c[i], v) = val;
+}
+
+static void variable_boolean_init (GfsVariable * v)
+{
+  v->fine_coarse = boolean_fine_coarse;
+  v->coarse_fine = boolean_coarse_fine;
+  v->description = g_strdup ("Boolean");
+}
+
+GfsVariableClass * gfs_variable_boolean_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_boolean_info = {
+      "GfsVariableBoolean",
+      sizeof (GfsVariable),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectInitFunc) variable_boolean_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
+				  &gfs_variable_boolean_info);
+  }
+
+  return klass;
+}
+
 /* GfsVariableTracer: object */
 
 static void variable_tracer_read (GtsObject ** o, GtsFile * fp)
