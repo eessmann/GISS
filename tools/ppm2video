@@ -5,7 +5,7 @@ if test -z "`which ffmpeg`"; then
     exit 1
 fi
 
-command="ffmpeg -f image2pipe -vcodec ppm -i -"
+command="ffmpeg -f image2pipe -vcodec ppm -i - -y"
 while test $# -gt 0; do
     command="$command $1"
     shift
