@@ -66,6 +66,142 @@ struct _HypreProblem {
   HYPRE_ParVector par_x;
 };
 
+static void create_hypre_problem_structure (HypreProblem * hp, gdouble size)
+{
+  /* Create the matrix.*/
+  HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, size-1, 0, size-1, &hp->A);
+
+  /* Create the vectors rhs and solution.*/
+  HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, size-1, &hp->b);
+  HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, size-1, &hp->x);
+  
+  /* Choose a parallel csr format storage */
+  HYPRE_IJMatrixSetObjectType(hp->A, HYPRE_PARCSR);
+  HYPRE_IJVectorSetObjectType(hp->b, HYPRE_PARCSR);
+  HYPRE_IJVectorSetObjectType(hp->x, HYPRE_PARCSR);
+
+  /* Initialize before setting coefficients */
+  HYPRE_IJMatrixInitialize(hp->A);
+  HYPRE_IJVectorInitialize(hp->b);
+  HYPRE_IJVectorInitialize(hp->x);
+}
+
+static void destroy_hypre_problem_structure (HypreProblem * hp)
+{
+  g_assert (hp->A);
+
+  HYPRE_IJMatrixDestroy(hp->A);
+  HYPRE_IJVectorDestroy(hp->b);
+  HYPRE_IJVectorDestroy(hp->x);
+}
+
+static void init_hypre_problem (HypreProblem * hp, CoeffParams * cp)
+{
+  GfsDiagElement * pproblem = cp->poisson_problem;
+  double *rhs_values, *x_values;
+  int    *rows;
+  double values[cp->maxlength+1];
+  int cols[cp->maxlength+1];
+  gint i, n;
+
+  /* Now go through my local rows and set the matrix entries.*/
+  rhs_values = calloc(cp->poisson_problem_size, sizeof(double));
+  x_values = calloc(cp->poisson_problem_size, sizeof(double));
+  rows = calloc(cp->poisson_problem_size, sizeof(int));
+    
+  i = n = 0; 
+  while (pproblem) {
+    GfsStencilElement * stencil = pproblem->stencil;
+    n = 0;
+
+    cols[n] = i;
+    values[n] = pproblem->cell_coeff;
+      
+    rhs_values[i] =  pproblem->rhs;
+    x_values[i] =  pproblem->u;
+    rows[i] = i;
+      
+    n++;
+   
+    while (stencil) {
+      cols[n] = stencil->cell_id;
+      values[n] = stencil->cell_coeff;
+     
+      stencil=stencil->next;
+      n++;
+    }
+     
+    /* Set the values for row i */
+    HYPRE_IJMatrixSetValues(hp->A, 1, &n, &i, cols, values);
+
+    i++; 
+    pproblem = pproblem->next;
+  }
+  
+  HYPRE_IJVectorSetValues(hp->b, cp->poisson_problem_size, rows, rhs_values);
+  HYPRE_IJVectorSetValues(hp->x, cp->poisson_problem_size, rows, x_values);
+
+  /* Assemble after setting the coefficients */
+  HYPRE_IJMatrixAssemble(hp->A);
+  HYPRE_IJVectorAssemble(hp->b);
+  HYPRE_IJVectorAssemble(hp->x);
+
+  /* Get the parcsr matrix object to use */
+  HYPRE_IJMatrixGetObject(hp->A, (void**) &hp->parcsr_A);
+  HYPRE_IJVectorGetObject(hp->b, (void **) &hp->par_b);
+  HYPRE_IJVectorGetObject(hp->x, (void **) &hp->par_x);    
+
+  free(x_values);
+  free(rhs_values);
+  free(rows);
+}
+
+static void print_hypre_solution (HypreProblem * hp, CoeffParams * cp)
+{
+  GfsDiagElement * pproblem = cp->poisson_problem;
+  double *x_values;
+  int    *rows;
+  gint i;
+
+  /* Copy the solution in the poisson problem structure */
+  x_values = calloc( cp->poisson_problem_size, sizeof(double));
+  rows = calloc( cp->poisson_problem_size, sizeof(int));
+    
+  for (i=0; i< cp->poisson_problem_size; i++) {
+    x_values[i] =  0.;
+    rows[i] = i;
+  }
+    
+  HYPRE_IJVectorGetValues(hp->x, cp->poisson_problem_size, rows, x_values);
+    
+  for (i = 0; i < cp->poisson_problem_size; i++) {
+    pproblem->u =x_values[i];
+    pproblem = pproblem->next;
+  }  
+  free(x_values);
+  free(rows);
+}
+
+static void copy_poisson_solution (FttCell * cell, CoeffParams * cp)
+{
+  g_assert (cp->poisson_problem_end);
+
+  GFS_VALUE (cell, cp->u) = cp->poisson_problem_end->u;
+
+  if (cp->poisson_problem_end->next)
+    cp->poisson_problem_end = cp->poisson_problem_end->next;
+}
+
+static void copy_poisson_problem_solution_to_simulation_tree (CoeffParams * cp)
+{
+  cp->poisson_problem_end=cp->poisson_problem;
+
+  gfs_domain_cell_traverse (cp->domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) copy_poisson_solution, cp);
+
+  g_assert(cp->poisson_problem_end->next == NULL);
+}
+
 static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
 {
  
