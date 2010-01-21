@@ -19,9 +19,6 @@ endif
 if BUILD_WAVEWATCH
 WAVEWATCH = libwavewatch2D.la
 endif
-if BUILD_ODE
-ODE = libode2D.la libode3D.la
-endif
 
 pkglib_LTLIBRARIES = \
 	$(MAP) \
@@ -34,8 +31,7 @@ pkglib_LTLIBRARIES = \
 	libdf33D.la \
 	$(TIDE) \
 	$(STOKES) \
-	$(WAVEWATCH) \
-	$(ODE)
+	$(WAVEWATCH)
 
 bin_PROGRAMS = \
 	xyz2rsurface \
@@ -49,10 +45,7 @@ EXTRA_DIST = \
 	terrain.mod \
 	stokes.mod \
 	wavewatch.mod \
-	particulates.mod \
-	df3.mod \
-	okada.mod \
-	ode.mod
+	particulates.mod
 
 BUILT_SOURCES = \
 	map.c \
@@ -134,14 +127,6 @@ libparticulates3D_la_SOURCES = particulates.c
 libparticulates3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
 libparticulates2D_la_SOURCES = particulates.c
 libparticulates2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
-
-libokada3D_la_SOURCES = okada.c
-libokada3D_la_CFLAGS = $(AM_CFLAGS)
-libokada2D_la_SOURCES = okada.c
-libokada2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
-
-libdf33D_la_SOURCES = df3.c
-libdf33D_la_CFLAGS = $(AM_CFLAGS)
 
 if HAVE_MODULES
 %.c : %.mod

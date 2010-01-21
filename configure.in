@@ -336,6 +336,17 @@ else
 fi
 AM_CONDITIONAL(BUILD_ODE, test x$ode = xtrue)
 
+# Build hyrepoissonsolver module if HYPRE is installed
+AC_CHECK_LIB(HYPRE, HYPRE_IJMatrixCreate, hypre="true", hypre="false", [-lm])
+AC_CHECK_HEADERS(HYPRE.h, hypre="true", hypre="false")
+AM_CONDITIONAL(HAS_HYPRE, test x$hypre = xtrue)
+
+# HyprePoissonSolver module requires HYPRE
+if test x$hypre = xfalse; then
+   AC_MSG_WARN([HYPRE not found. HyprePoissonSolver Module won't be available.])
+fi
+AM_CONDITIONAL(BUILD_HYPREPOISSONSOLVERS, test x$hypre = xtrue)
+
 dnl header file checks
 AC_CHECK_HEADERS(fenv.h, AC_DEFINE(HAVE_FENV_H))
 AC_CHECK_HEADERS(unistd.h, AC_DEFINE(HAVE_UNISTD_H))
