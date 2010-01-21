@@ -66,6 +66,22 @@ struct _HypreProblem {
   HYPRE_ParVector par_x;
 };
 
+/***********************************************/
+/*     Boomer Algebraic Multigrid Solver       */
+/***********************************************/
+static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * par, HypreProblem * hp)
+{
+ 
+}
+
+/******************************************/
+/*       PreConjugateGradient Solver      */
+/******************************************/
+static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par, HypreProblem * hp)
+{
+   
+}
+
 static void create_hypre_problem_structure (HypreProblem * hp, gdouble size)
 {
   /* Create the matrix.*/
@@ -201,6 +217,37 @@ static void copy_poisson_problem_solution_to_simulation_tree (CoeffParams * cp)
 
   g_assert(cp->poisson_problem_end->next == NULL);
 }
+
+
+static void solve_poisson_problem_using_hypre (CoeffParams * cp, GfsMultilevelParams * par)
+{ 
+  HypreProblem hp;
+  gint size = cp->poisson_problem_size;
+
+  gfs_domain_timer_start (cp->domain, "Solver setup");
+     
+  create_hypre_problem_structure (&hp, size);
+
+  init_hypre_problem (&hp, cp);
+
+  gfs_domain_timer_stop (cp->domain, "Solver setup");
+  gfs_domain_timer_start (cp->domain, "Solving the problem");
+
+  /* Choose a solver and solve the system */
+  if (proj_hp.solver_type == HYPRE_BOOMER_AMG) 
+    call_AMG_Boomer_solver (cp->domain, par, &hp);
+  else if (proj_hp.solver_type == HYPRE_PCG) 
+    call_PCG_solver (cp->domain, par, &hp);
+  else
+      g_assert_not_reached();
+
+  print_hypre_solution (&hp, cp);
+   
+  destroy_hypre_problem_structure (&hp);
+
+  gfs_domain_timer_stop (cp->domain, "Solving the problem");
+}
+
 
 static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
 {
