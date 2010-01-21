@@ -123,10 +123,8 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
   par->beta = 0.5;
   par->omega = 1.;
 
-  par->non_gerris_par = NULL;
   par->read = gfs_multilevel_params_read;
   par->write = gfs_multilevel_params_write;
-  par->poisson_cycle = gfs_poisson_cycle;
 }
 
 void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)

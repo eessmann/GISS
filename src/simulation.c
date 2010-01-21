@@ -885,7 +885,9 @@ static void simulation_init (GfsSimulation * object)
   object->advection_params.average = TRUE;
 
   gfs_multilevel_params_init (&object->projection_params);
+  object->projection_params.poisson_cycle = (GfsPoissonSolverFunc) gfs_poisson_cycle;
   gfs_multilevel_params_init (&object->approx_projection_params);
+  object->approx_projection_params.poisson_cycle = (GfsPoissonSolverFunc) gfs_poisson_cycle;
 
   object->solids = GTS_SLIST_CONTAINER (gts_container_new
 					(GTS_CONTAINER_CLASS
