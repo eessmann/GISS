@@ -1,0 +1,74 @@
+# Title: Convergence with a refined circle
+#
+# Description:
+#
+# Same as the previous test but in order to test the performance
+# of the hypre solvers with adaptive meshes, two levels of
+# refinement are added in a circle centered on the origin and of
+# radius 0.25.
+#
+# The solver still shows second-order accuracy in all norms (Figure \ref{order}).
+#
+# \begin{figure}[htbp]
+# \caption{\label{residual}Evolution of the residual.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{residual.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{rate}Average reduction factor.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{rate.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: S'ebastien Delaux
+# Command: sh ../poissonhypre.sh circle.gfs
+# Version: 1.3.2
+# Required files: res-7.ref error.ref order.ref res-7-hypre.ref
+# Generated files: residual.eps rate.eps error.eps order.eps
+#
+1 0 GfsPoisson GfsBox GfsGEdge {} {
+  Time { iend = 1 }
+  Refine (x*x + y*y <= 0.25*0.25 ? LEVEL + 2 : LEVEL)
+
+  GModule hyprepoissonsolvers
+  ProjectionParams { tolerance = 1e-30 ncyclemax = CYCLE ncyclemin = CYCLE }
+  Init {} {
+    Div = {
+      int k = 3, l = 3;
+      return -M_PI*M_PI*(k*k + l*l)*sin (M_PI*k*x)*sin (M_PI*l*y);
+    }
+  }
+ OutputTime { istep = 1 } {
+    awk '{if ($2 == 1) {print "CYCLE " $8}}' >> time
+  }
+  OutputProjectionStats { start = end } {
+    awk '{
+      
+      if ($1 == "residual.infty:") print "CYCLE "$3 " " $4;
+    }' >> proj
+  }
+  OutputErrorNorm { start = end } {
+    awk '{print LEVEL " " $5 " " $7 " " $9}' >> error 
+  } { v = P } {
+    s = (sin (M_PI*3.*x)*sin (M_PI*3.*y))
+    unbiased = 1
+  }
+}
+GfsBox {}

@@ -1,0 +1,85 @@
+# Title: Convergence of the Poisson solver
+#
+# Description:
+#
+# This is one of the test cases presented in Popinet
+# \cite{popinet2003}.  We solve the Poisson equation in a square
+# domain with Neumann boundary conditions on all sides and the
+# right-hand-side:
+# $$
+# \nabla\cdot{\bf U}^{\star\star}(x,y) = -\pi^2(k^2+l^2)\sin(\pi kx)\sin(\pi ly)
+# $$
+# with $k = l = 3$. The exact solution of the Poisson equation with this source term is
+# $$
+# \phi(x,y)=\sin(\pi kx)\sin(\pi ly).
+# $$
+# Figure \ref{residual} illustrates the evolution of the maximum
+# residual as a function of CPU time. Figure \ref{rate}
+# illustrates the average residual reduction factor (per V-cycle). The
+# evolution of the norms of the error of the final solution as a
+# function of resolution is illustrated on Figure \ref{error}. The
+# corresponding order of convergence is given on Figure \ref{order}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{residual}Evolution of the residual.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{residual.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{rate}Average reduction factor.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{rate.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: S\'ebastien Delaux
+# Command: sh poissonhypre.sh poissonhypre.gfs
+# Version: 1.3.2
+# Required files: poissonhypre.sh res-7.ref res-7-hypre.ref error.ref order.ref
+# Generated files: residual.eps rate.eps error.eps order.eps
+#
+1 0 GfsPoisson GfsBox GfsGEdge {} {
+  Time { iend = 1 }
+  Refine LEVEL
+
+  GModule hyprepoissonsolvers
+  ProjectionParams { tolerance = 1e-30 solver_type = boomer_amg  ncyclemax = CYCLE ncyclemin = CYCLE }
+  Init {} {
+    Div = {
+      int k = 3, l = 3;
+      return -M_PI*M_PI*(k*k + l*l)*sin (M_PI*k*x)*sin (M_PI*l*y);
+    }
+  }
+  OutputTime { istep = 1 } {
+    awk '{if ($2 == 1) {print "CYCLE " $8}}' >> time
+  }
+  OutputProjectionStats { start = end } {
+    awk '{
+      
+      if ($1 == "residual.infty:") print "CYCLE "$3 " " $4;
+    }' >> proj
+  }
+  OutputErrorNorm { start = end } {
+    awk '{print LEVEL " " $5 " " $7 " " $9}' >> error 
+  } { v = P } {
+    s = (sin (M_PI*3.*x)*sin (M_PI*3.*y))
+    unbiased = 1
+  }
+}
+GfsBox {}
