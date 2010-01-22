@@ -191,9 +191,17 @@ void                  gfs_face_weighted_gradient     (const FttCellFace * face,
 						      GfsGradient * g,
 						      guint v,
 						      gint max_level);
+void                  gfs_coeff_face_weighted_gradient (const FttCellFace * face,
+						       GfsGradient * g,
+						       CoeffParams * cp,
+						       gint max_level);
 void                  gfs_face_weighted_gradient_2D  (const FttCellFace * face,
 						      GfsGradient * g,
 						      guint v,
+						      gint max_level);
+void                  gfs_coeff_face_weighted_gradient_2D  (const FttCellFace * face,
+						      GfsGradient * g,
+						      CoeffParams * cp,
 						      gint max_level);
 void                  gfs_face_gradient_flux         (const FttCellFace * face,
 						      GfsGradient * g,

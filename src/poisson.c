@@ -239,7 +239,12 @@ static void relax (FttCell * cell, CoeffParams * cp)
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_face_weighted_gradient (&f, &ng, p->u, p->maxlevel);
+      if (cp->id  && FTT_CELL_IS_LEAF (cell)) {
+	  cp->diag_cell=cell;
+	  gfs_coeff_face_weighted_gradient (&f, &ng, cp, -1);
+      }
+      else
+	gfs_face_weighted_gradient (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
@@ -283,7 +288,12 @@ static void relax2D (FttCell * cell, CoeffParams * cp)
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_face_weighted_gradient_2D (&f, &ng, p->u, p->maxlevel);
+      if (cp->id && FTT_CELL_IS_LEAF (cell)) {
+	cp->diag_cell=cell;
+	gfs_coeff_face_weighted_gradient_2D  (&f, &ng, cp, -1);
+      }
+      else
+	gfs_face_weighted_gradient_2D (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
@@ -332,6 +342,7 @@ void gfs_relax (GfsDomain * domain,
 		GfsVariable * dia)
 {
   RelaxParams p;
+  CoeffParams cp;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (d > 1 && d <= 3);
@@ -339,15 +350,18 @@ void gfs_relax (GfsDomain * domain,
   g_return_if_fail (rhs != NULL);
   g_return_if_fail (dia != NULL);
 
+  
   p.u = u->i;
   p.rhs = rhs->i;
   p.dia = dia->i;
   p.maxlevel = max_depth;
   p.omega = omega;
+  cp.p = &p;
+  cp.id = NULL;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 			    max_depth,
-			    (FttCellTraverseFunc) (d == 2 ? relax2D : relax), &p);
+			    (FttCellTraverseFunc) (d == 2 ? relax2D : relax), &cp);
 }
 
 static void residual_set (FttCell * cell, RelaxParams * p)
@@ -736,17 +750,21 @@ static void relax_loop (GfsDomain * domain,
 			guint dimension)
 {
   guint n;
+  CoeffParams cp;
+  cp.p = q;
+  cp.id = NULL;
+
   gfs_domain_homogeneous_bc (domain,
 			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel, 
 			     dp, u);
   for (n = 0; n < nrelax - 1; n++)
     gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
 				     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
-				     (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q,
+				     (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), &cp,
 				     dp, u);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
-			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q);
+			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), &cp);
 }
 
 typedef struct {
@@ -768,20 +786,14 @@ void gfs_get_poisson_problem (GfsDomain * domain,
   gint nleafs=0;
   nleafs_data leafs_data;
 
-  gfs_domain_homogeneous_bc (domain,
-			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, 
-			     dp, u);
-
-  gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
-				   FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,-1,
-				   (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), cp,
-				   dp, u);
- 
- 
   leafs_data.id = id;
   leafs_data.nleafs = nleafs;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) leafs_numbering, &leafs_data);
+
+  gfs_domain_homogeneous_bc (domain,
+			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, 
+			     dp, u);
   
   cp->domain = domain;
   cp->u = dp;
@@ -789,8 +801,11 @@ void gfs_get_poisson_problem (GfsDomain * domain,
   cp->poisson_problem = NULL;
   cp->maxlength = 0;
   cp->poisson_problem_size = leafs_data.nleafs;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax) , cp);
+
+  gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
+				   FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,-1,
+				   (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), cp,
+				   dp, u);
 
   cp->id = NULL;
   gts_object_destroy (GTS_OBJECT (id));
