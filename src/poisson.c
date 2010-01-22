@@ -778,6 +778,29 @@ static void leafs_numbering (FttCell * cell, nleafs_data * data) {
   data->nleafs++;
 }
 
+static void number_bc (FttCellFace * f, nleafs_data * data)
+{
+  GFS_VALUE(f->cell,  data->id) = (gdouble) data->nleafs;
+  data->nleafs++;
+}
+
+static void bc_leafs_numbering (GfsBox * box, nleafs_data * data) {
+ 
+  FttDirection d;
+  
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      
+      
+      b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+      ftt_face_traverse_boundary (b->root, b->d,
+				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				  (FttFaceTraverseFunc) number_bc, data);
+      
+    }
+}
+
 void gfs_get_poisson_problem (GfsDomain * domain, 
 			  GfsVariable * dp, GfsVariable * u, 
 			  CoeffParams * cp, guint dimension)
@@ -785,11 +808,17 @@ void gfs_get_poisson_problem (GfsDomain * domain,
   GfsVariable * id = gfs_temporary_variable (domain);
   gint nleafs=0;
   nleafs_data leafs_data;
+  nleafs_data bc_leafs_data;
 
   leafs_data.id = id;
   leafs_data.nleafs = nleafs;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) leafs_numbering, &leafs_data);
+
+  
+  bc_leafs_data.id = id;
+  bc_leafs_data.nleafs = leafs_data.nleafs;
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leafs_numbering, &bc_leafs_data);
 
   gfs_domain_homogeneous_bc (domain,
 			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, 
