@@ -2346,6 +2346,8 @@ gboolean ftt_cell_coarsen (FttCell * root,
 	  if (!empty && !ftt_cell_coarsen (neighbor, coarsen, coarsen_data, 
 					   cleanup, cleanup_data))
 	    return FALSE;
+	  if (!FTT_CELL_IS_LEAF (neighbor))
+	    neighbor->children->neighbors.c[FTT_OPPOSITE_DIRECTION (d)] = NULL;
 	}
       }
     }
