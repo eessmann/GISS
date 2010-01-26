@@ -49,4 +49,5 @@ void       r_surface_query_region_sum (RSurface * rt,
 				       void * data,
 				       RSurfaceRect rect,
 				       RSurfaceSum * sum);
-const char * r_surface_name (RSurface * rt);
+const char * r_surface_name  (RSurface * rt);
+int          r_surface_depth (RSurface * rt);

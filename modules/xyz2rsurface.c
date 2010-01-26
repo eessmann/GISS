@@ -28,6 +28,30 @@
 #include "ftt.h"
 #include "rsurface.h"
 
+typedef struct {
+  int maxdepth;
+  double * ratio;
+  int * size;
+} Params;
+
+static int includes (RSurfaceRect RSTrect, Params * p, int depth)
+{
+  if (RSTrect[0].l == RSTrect[0].h && RSTrect[1].l == RSTrect[1].h)
+    p->size[depth]++;
+  return 0;
+}
+
+static int intersects (RSurfaceRect RSTrect, Params * p, int depth)
+{
+  double w = RSTrect[0].h - RSTrect[0].l, h = RSTrect[1].h - RSTrect[1].l;
+  double ratio = 1e10;
+  if (w > 0. && h > 0.)
+    ratio = w > h ? w/h : h/w;
+  p->ratio[depth] += ratio;
+  p->size[depth]++;
+  return (depth < p->maxdepth);
+}
+
 int main (int argc, char** argv)
 {
   int c = 0, pagesize = 2048;
@@ -105,6 +129,31 @@ int main (int argc, char** argv)
     fprintf (stderr, "xyz2rsurface: updating...\n");
   }
   r_surface_update (rs);
+
+  if (verbose) {
+    RSurfaceRect rect = {{-0.5,-0.5},{0.5,0.5}};
+    RSurfaceSum s;
+    Params p;
+    p.maxdepth = r_surface_depth (rs);
+    p.size = calloc (p.maxdepth + 1, sizeof (int));
+    p.ratio = calloc (p.maxdepth + 1, sizeof (double));
+    r_surface_sum_init (&s);
+    r_surface_query_region_sum (rs, (RSurfaceCheck) includes, (RSurfaceCheck) intersects, &p,
+				rect, &s);
+
+    int i;
+    for (i = 1; i <= p.maxdepth; i++)
+      if (p.size[i] > 0) {
+	fprintf (stderr, "level %d: %d\n", i, p.size[i]);
+	if (i < p.maxdepth && p.size[i + 1] > 0)
+	  fprintf (stderr, "\taverage ratio: %g average # of entries: %g\n",
+		   p.ratio[i]/p.size[i],
+		   p.size[i + 1]/(double) p.size[i]);
+	else
+	  fputc ('\n', stderr);
+      }
+  }
+
   r_surface_close (rs);
 
   return 0.;

@@ -140,3 +140,10 @@ void r_surface_update (RSurface * rt)
 {
   Update (rt->t);
 }
+
+int r_surface_depth (RSurface * rt)
+{
+  int height = -1;
+  GetHeight (rt->t, &height);
+  return height;
+}
