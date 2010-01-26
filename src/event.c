@@ -694,6 +694,110 @@ GfsGenericInitClass * gfs_init_class (void)
   return klass;
 }
 
+/* GfsInitMask: Object */
+
+static void gfs_init_mask_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_init_mask_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  gfs_function_read (GFS_INIT_MASK (*o)->mask, GFS_DOMAIN (gfs_object_simulation (*o)), fp);
+}
+
+static void gfs_init_mask_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_init_mask_class ())->parent_class->write) (o, fp);
+
+  gfs_function_write (GFS_INIT_MASK (o)->mask, fp);
+}
+
+static void gfs_init_mask_destroy (GtsObject * object)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_INIT_MASK (object)->mask));
+
+  (* GTS_OBJECT_CLASS (gfs_init_mask_class ())->parent_class->destroy) (object);
+}
+
+#define MASKED (1 << GFS_FLAG_USER)
+
+static void mask_cells (FttCell * cell, GfsInitMask * m)
+{
+  if (!FTT_CELL_IS_LEAF (cell)) {
+    FttCellChildren child;
+    guint i;
+    
+    ftt_cell_children (cell, &child);
+    for (i = 0; i < FTT_CELLS; i++)
+      if (child.c[i])
+	mask_cells (child.c[i], m);
+    if (FTT_CELL_IS_LEAF (cell))
+      /* all the children have been destroyed i.e. the cell is masked */
+      cell->flags |= MASKED;
+  }
+  else if (gfs_function_value (m->mask, cell) > 0.)
+    cell->flags |= MASKED;
+  
+  if ((cell->flags & MASKED) && !FTT_CELL_IS_ROOT (cell))
+    ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup, gfs_object_simulation (m));
+}
+
+static void foreach_box (GfsBox * box, GfsInitMask * m)
+{
+  mask_cells (box->root, m);
+  if (box->root->flags & MASKED)
+    m->masked_boxes = g_slist_prepend (m->masked_boxes, box);
+}
+
+static gboolean gfs_init_mask_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_mask_class ())->parent_class)->event) 
+      (event, sim)) {
+    GfsInitMask * m = GFS_INIT_MASK (event);
+    m->masked_boxes = NULL;
+    gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) foreach_box, m);
+    g_slist_foreach (m->masked_boxes, (GFunc) gts_object_destroy, NULL);
+    g_slist_free (m->masked_boxes);
+    gfs_domain_match (GFS_DOMAIN (sim));
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_init_mask_class_init (GfsGenericInitClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = gfs_init_mask_event;
+  GTS_OBJECT_CLASS (klass)->read = gfs_init_mask_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_init_mask_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_init_mask_destroy;
+}
+
+static void gfs_init_mask (GfsInitMask * m)
+{
+  m->mask = gfs_function_new (gfs_function_class (), 0.);
+}
+
+GfsGenericInitClass * gfs_init_mask_class (void)
+{
+  static GfsGenericInitClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_init_mask_info = {
+      "GfsInitMask",
+      sizeof (GfsInitMask),
+      sizeof (GfsGenericInitClass),
+      (GtsObjectClassInitFunc) gfs_init_mask_class_init,
+      (GtsObjectInitFunc) gfs_init_mask,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_init_class ()),
+				  &gfs_init_mask_info);
+  }
+
+  return klass;
+}
+
 /* GfsInitFlowConstant: Object: fixme: deprecated */
 
 static void gfs_init_flow_constant_read (GtsObject ** o, GtsFile * fp)

@@ -110,6 +110,27 @@ struct _GfsInit {
 
 GfsGenericInitClass * gfs_init_class  (void);
 
+/* GfsInitMask: Header */
+
+typedef struct _GfsInitMask         GfsInitMask;
+
+struct _GfsInitMask {
+  /*< private >*/
+  GfsGenericInit parent;
+  GSList * masked_boxes;
+
+  /*< public >*/
+  GfsFunction * mask;
+};
+
+#define GFS_INIT_MASK(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsInitMask,\
+					         gfs_init_mask_class ())
+#define GFS_IS_INIT_MASK(obj)         (gts_object_is_from_class (obj,\
+						 gfs_init_mask_class ()))
+
+GfsGenericInitClass * gfs_init_mask_class  (void);
+
 /* GfsInitFlowConstant: Header */
 
 GfsEventClass * gfs_init_flow_constant_class  (void);

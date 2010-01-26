@@ -161,6 +161,7 @@ GtsObjectClass ** gfs_classes (void)
       gfs_solid_moving_class(),
 
     gfs_init_class (),
+    gfs_init_mask_class (),
     gfs_init_flow_constant_class (),
     gfs_init_fraction_class (),
 #if FTT_2D
