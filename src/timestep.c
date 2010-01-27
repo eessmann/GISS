@@ -335,8 +335,9 @@ static void mac_projection (GfsDomain * domain,
   gdouble res_max_before = par->residual.infty;
   guint minlevel = par->minlevel;
   par->niter = 0;
-  while (par->niter < par->nitermin ||
-	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
+  if (par->poisson_cycle == gfs_poisson_cycle) {
+    while (par->niter < par->nitermin ||
+	   (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
 #if 0
     if (domain->pid <= 0)
       fprintf (stderr, "%d bias: %g first: %g second: %g infty: %g\n",
@@ -346,16 +347,21 @@ static void mac_projection (GfsDomain * domain,
 	       par->residual.second, 
 	       par->residual.infty);
 #endif
-    //   gfs_poisson_cycle (domain, par, p, div, dia, res1);
+      gfs_poisson_cycle (domain, par, p, div, dia, res1);
+      par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
+      if (par->residual.infty == res_max_before) /* convergence has stopped!! */
+	break;
+      if (par->residual.infty > res_max_before/1.1 && par->minlevel < par->depth)
+	par->minlevel++;
+      res_max_before = par->residual.infty;
+      par->niter++;
+    }
+  }
+  else {
     par->poisson_cycle (domain, par, p, div, dia, res1);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
-    if (par->residual.infty == res_max_before) /* convergence has stopped!! */
-      break;
-    if (par->residual.infty > res_max_before/1.1 && par->minlevel < par->depth)
-      par->minlevel++;
-    res_max_before = par->residual.infty;
-    par->niter++;
   }
+
   par->minlevel = minlevel;
 
   gts_object_destroy (GTS_OBJECT (dia));
