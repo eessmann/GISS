@@ -38,10 +38,22 @@ static FttVector rpos[FTT_NEIGHBORS] = {
 
 static void symmetry (FttCellFace * f, GfsBc * b)
 {
-  if (b->v->component == f->d/2)
+  if (b->v->component == f->d/2) {
     GFS_VARIABLE (f->cell, b->v->i) = - GFS_VARIABLE (f->neighbor, b->v->i);
-  else
+
+    if (b->cp && b->cp->id) {
+      gfs_add_boundary_element(f->cell, b->cp, 0., 1.);
+      gfs_add_stencil_element (f->neighbor, b->cp, 1.);
+    }
+  }
+  else {
     GFS_VARIABLE (f->cell, b->v->i) =   GFS_VARIABLE (f->neighbor, b->v->i);
+
+    if (b->cp && b->cp->id) {
+      gfs_add_boundary_element(f->cell, b->cp, 0., 1.);
+      gfs_add_stencil_element (f->neighbor, b->cp, -1.);
+    }
+  }
 }
 
 static void face_symmetry (FttCellFace * f, GfsBc * b)
