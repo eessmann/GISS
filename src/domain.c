@@ -632,6 +632,7 @@ static void box_bc (GfsBox * box, BcData * p)
       if (bc) {
 	b->v = p->v1;
 	bc->v = p->v1;
+	bc->cp = p->cp;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
 	ftt_face_traverse_boundary (b->root, b->d,
 				    FTT_PRE_ORDER, p->flags, p->max_depth,
@@ -882,6 +883,7 @@ static void update_mpi_boundaries (GfsBox * box, TraverseBcData * p)
 	b->v = p->b.v1;
 	bc->v = p->b.v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+	bc->cp = p->b.cp;
 	ftt_face_traverse_boundary (b->root, b->d,
 				    FTT_PRE_ORDER, p->b.flags, p->b.max_depth,
 				    bc->bc, bc);
@@ -904,6 +906,7 @@ static void update_other_homogeneous_boundaries (GfsBox * box, BcData * p)
 	b->v = p->v1;
 	bc->v = p->v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+	bc->cp = p->cp;
 	ftt_face_traverse_boundary (b->root, b->d,
 				    FTT_PRE_ORDER, p->flags, p->max_depth,
 				    bc->homogeneous_bc, bc);
@@ -984,6 +987,7 @@ static void update_other_boundaries (GfsBox * box, BcData * p)
 	b->v = p->v1;
 	bc->v = p->v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+	bc->cp = p->cp;
 	ftt_face_traverse_boundary (b->root, b->d,
 				    FTT_PRE_ORDER, p->flags, p->max_depth,
 				    bc->bc, bc);

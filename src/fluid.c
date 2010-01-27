@@ -100,11 +100,12 @@ static void print_below (FttCell * cell, CoeffParams * cp, gdouble w)
   printf("PRINT_BRLOW!!!\n");
 
   for (i = 0; i < FTT_CELLS; i++)
-    if (child.c[i])
+    if (child.c[i]) {
       if (FTT_CELL_IS_LEAF(child.c[i]))
 	gfs_add_stencil_element ( child.c[i], cp, w/num);
       else
 	print_below (child.c[i],cp,w*1./(gdouble) num);      
+    }
 }
 
 static gdouble average_neighbor_value (const FttCellFace * face,
@@ -141,21 +142,23 @@ static gdouble average_neighbor_value (const FttCellFace * face,
       if (children.c[i]) {
 	gdouble w = GFS_IS_MIXED (children.c[i]) ? GFS_STATE (children.c[i])->solid->s[od] : 1.;
 	
-	if (cp)
-	  if (FTT_CELL_IS_LEAF (children.c[i])) 
+	if (cp) {
+	  if (FTT_CELL_IS_LEAF (children.c[i]))
 	    gfs_add_stencil_element ( children.c[i], cp, cp->w*w/a);
 	  else
 	    print_below(children.c[i],cp,cp->w * w/a);
+	}
       }
       return av/a;
     }
     else {
-
-      if (cp)
-	if (FTT_CELL_IS_LEAF (face->cell)) 
+      
+      if (cp) {
+	if (FTT_CELL_IS_LEAF (face->cell))
 	  gfs_add_stencil_element ( face->cell, cp, cp->w);
 	else
 	  print_below (face->cell,cp,cp->w);
+	}      
 
       return GFS_VARIABLE (face->cell, v);
     }
@@ -922,7 +925,7 @@ static void coeff_face_weighted_gradient (const FttCellFace * face,
   g_return_if_fail (face != NULL);
 
   g->a = g->b = 0.;
-  /* PART1 */
+  
   if (face->neighbor == NULL)
     return;
 
@@ -937,15 +940,15 @@ static void coeff_face_weighted_gradient (const FttCellFace * face,
     g->a = w*gcf.a;
     g->b = w*(gcf.b*GFS_VARIABLE (face->neighbor, cp->u->i) + gcf.c);
 
-    /* ****** */
-    if (cp->id)
-      if (FTT_CELL_IS_LEAF(face->neighbor))
+    if (cp->id) {
+      if (FTT_CELL_IS_LEAF(face->neighbor)) {
 	gfs_add_stencil_element ( face->neighbor, cp, w*gcf.b);
-      else
+      }
+      else {
 	print_below (face->neighbor,cp,w*gcf.b);
-    /* ****** */
+      }
+    }
   }
-  /* PART2 - Cartesian Grid*/
   else {
     if (level == max_level || FTT_CELL_IS_LEAF (face->neighbor)) {
       /* neighbor is at the same level */
@@ -954,11 +957,8 @@ static void coeff_face_weighted_gradient (const FttCellFace * face,
       g->a = w;
       g->b = w*GFS_VARIABLE (face->neighbor, cp->u->i);
       
-      /* ****** */
       gfs_add_stencil_element ( face->neighbor, cp, w);
-      /* ****** */
     }
-    /* PART3 */
     else {
       /* neighbor is at a deeper level */
       FttCellChildren children;
@@ -979,20 +979,24 @@ static void coeff_face_weighted_gradient (const FttCellFace * face,
 	  g->b += w*(gcf.a*GFS_VARIABLE (f.cell, cp->u->i) - gcf.c);
 	  
 	  /* ****** */
-	  if (cp->id)
+	  if (cp->id) {
 	    if (dimension > 2) {
-	      if (FTT_CELL_IS_LEAF(f.cell)) 
+	      if (FTT_CELL_IS_LEAF(f.cell))  {
 		gfs_add_stencil_element ( f.cell, cp, w*gcf.a/(n/2.));
-	      else
+	      }
+	      else {
 		print_below (f.cell,cp,-w*gcf.a);
+	      }
 	    }
 	    else {
-	      if (FTT_CELL_IS_LEAF(f.cell))
+	      if (FTT_CELL_IS_LEAF(f.cell)) {
 		gfs_add_stencil_element ( f.cell, cp, w*gcf.a/(n/2.));
-	      else
+	      }
+	      else {
 		print_below (f.cell,cp,-w*gcf.a);
+	      }
 	    }
-	  /* ****** */
+	  }
 	}
       if (dimension > 2) { /* To deal with */
 	/* fixme??? */

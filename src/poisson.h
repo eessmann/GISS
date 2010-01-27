@@ -50,7 +50,7 @@ struct _GfsMultilevelParams {
   GfsNorm residual_before, residual;
   GfsPoissonSolverFunc poisson_cycle;
   
-  void (* read)      (GfsMultilevelParams * par, FILE * fp);
+  void (* read)      (GfsMultilevelParams * par, GtsFile * fp);
   void (* write)     (GfsMultilevelParams * par, FILE * fp);
 };
 

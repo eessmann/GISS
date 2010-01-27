@@ -346,7 +346,8 @@ static void mac_projection (GfsDomain * domain,
 	       par->residual.second, 
 	       par->residual.infty);
 #endif
-    gfs_poisson_cycle (domain, par, p, div, dia, res1);
+    //   gfs_poisson_cycle (domain, par, p, div, dia, res1);
+    par->poisson_cycle (domain, par, p, div, dia, res1);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
     if (par->residual.infty == res_max_before) /* convergence has stopped!! */
       break;
