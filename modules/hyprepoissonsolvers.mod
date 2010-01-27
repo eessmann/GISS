@@ -283,7 +283,7 @@ static void copy_poisson_problem_solution_to_simulation_tree (CoeffParams * cp)
   gfs_domain_cell_traverse (cp->domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) copy_poisson_solution, cp);
 
-  g_assert(cp->poisson_problem_end->next == NULL);
+  /* g_assert(cp->poisson_problem_end->next == NULL); */
 }
 
 

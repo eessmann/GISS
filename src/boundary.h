@@ -46,6 +46,7 @@ struct _GfsBc {
   gboolean extra;
   FttFaceTraverseFunc bc, homogeneous_bc;
   FttFaceTraverseFunc face_bc;
+  CoeffParams * cp;
 };
 
 typedef struct _GfsBcClass    GfsBcClass;

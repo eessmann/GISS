@@ -617,6 +617,7 @@ typedef struct {
   gint max_depth;
   GfsVariable * v, * v1;
   FttComponent c;
+  CoeffParams * cp;
 } BcData;
 
 static void box_bc (GfsBox * box, BcData * p)
@@ -742,7 +743,7 @@ void gfs_domain_copy_bc (GfsDomain * domain,
 			 GfsVariable * v,
 			 GfsVariable * v1)
 {
-  BcData b = { flags, max_depth, v, v1, FTT_XYZ };
+  BcData b = { flags, max_depth, v, v1, FTT_XYZ, NULL };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (v != NULL);
@@ -792,6 +793,7 @@ static void box_homogeneous_bc (GfsBox * box, BcData * p)
 	b->v = p->v1;
 	bc->v = p->v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+	bc->cp = p->cp;
 	ftt_face_traverse_boundary (b->root, b->d,
 				    FTT_PRE_ORDER, p->flags, p->max_depth,
 				    bc->homogeneous_bc, bc);
@@ -816,9 +818,10 @@ void gfs_domain_homogeneous_bc (GfsDomain * domain,
 				FttTraverseFlags flags,
 				gint max_depth,
 				GfsVariable * ov,
-				GfsVariable * v)
+				GfsVariable * v,
+				CoeffParams * cp)
 {
-  BcData b = { flags, max_depth, v, ov, FTT_XYZ };
+  BcData b = { flags, max_depth, v, ov, FTT_XYZ, cp };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (ov != NULL);
@@ -940,18 +943,19 @@ void gfs_traverse_and_homogeneous_bc (GfsDomain * domain,
 				      FttCellTraverseFunc func,
 				      gpointer data,
 				      GfsVariable * ov,
-				      GfsVariable * v)
+				      GfsVariable * v,
+				      CoeffParams * cp)
 {
   g_return_if_fail (domain != NULL);
 
   if (domain->pid < 0 || !domain->overlap) {
     gfs_domain_cell_traverse (domain, order, flags, max_depth, func, data);
-    gfs_domain_homogeneous_bc (domain, flags, max_depth, ov, v);
+    gfs_domain_homogeneous_bc (domain, flags, max_depth, ov, v, cp);
   }
   else {
     TraverseBcData d = {
       { func, data, order, flags, max_depth }, 
-      { flags, max_depth, v, ov, FTT_XYZ }
+      { flags, max_depth, v, ov, FTT_XYZ, NULL }
     };
     /* Update and send MPI boundary values */
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) update_mpi_boundaries, &d);
@@ -1030,7 +1034,7 @@ void gfs_traverse_and_bc (GfsDomain * domain,
   else {
     TraverseBcData d = {
       { func, data, order, flags, max_depth },
-      { flags, max_depth, v, v1, FTT_XYZ }
+      { flags, max_depth, v, v1, FTT_XYZ, NULL }
     };
     /* Update and send MPI boundary values */
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) update_mpi_boundaries, &d);
@@ -1057,7 +1061,7 @@ void gfs_domain_face_bc (GfsDomain * domain,
 			 FttComponent c,
 			 GfsVariable * v)
 {
-  BcData b = { FTT_TRAVERSE_LEAFS, -1, v, v, c };
+  BcData b = { FTT_TRAVERSE_LEAFS, -1, v, v, c, NULL };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (c == FTT_XYZ || (c >= 0 && c < FTT_DIMENSION));
@@ -1099,7 +1103,7 @@ static void box_depth (GfsBox * box, guint * depth)
 
 static gboolean domain_match (GfsDomain * domain)
 {
-  BcData b = { FTT_TRAVERSE_LEAFS, -1, NULL, NULL, FTT_XYZ };
+  BcData b = { FTT_TRAVERSE_LEAFS, -1, NULL, NULL, FTT_XYZ, NULL };
   gboolean changed = FALSE;
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_match, NULL);
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_receive_bc, &b);

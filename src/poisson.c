@@ -775,12 +775,12 @@ static void relax_loop (GfsDomain * domain,
 
   gfs_domain_homogeneous_bc (domain,
 			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel, 
-			     dp, u);
+			     dp, u, NULL);
   for (n = 0; n < nrelax - 1; n++)
     gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
 				     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
 				     (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), &cp,
-				     dp, u);
+				     dp, u, NULL);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
 			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), &cp);
@@ -827,22 +827,17 @@ void gfs_get_poisson_problem (GfsDomain * domain,
   GfsVariable * id = gfs_temporary_variable (domain);
   gint nleafs=0;
   nleafs_data leafs_data;
-  nleafs_data bc_leafs_data;
-
+ 
+  /* Cell numbering */
   leafs_data.id = id;
   leafs_data.nleafs = nleafs;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) leafs_numbering, &leafs_data);
 
   
-  bc_leafs_data.id = id;
-  bc_leafs_data.nleafs = leafs_data.nleafs;
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leafs_numbering, &bc_leafs_data);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leafs_numbering, &leafs_data);
+  /* End - Cell numebering */
 
-  gfs_domain_homogeneous_bc (domain,
-			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, 
-			     dp, u);
-  
   cp->domain = domain;
   cp->u = dp;
   cp->id = id;
@@ -850,10 +845,12 @@ void gfs_get_poisson_problem (GfsDomain * domain,
   cp->maxlength = 0;
   cp->poisson_problem_size = leafs_data.nleafs;
 
+  /* Creates stencils on the fly */
   gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
 				   FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,-1,
 				   (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), cp,
-				   dp, u);
+				   dp, u, cp);
+  /*End - Creates stencils on the fly */
 
   cp->id = NULL;
   gts_object_destroy (GTS_OBJECT (id));
@@ -1256,12 +1253,12 @@ static void diffusion_relax_loop (GfsDomain * domain,
   guint n;
   gfs_domain_homogeneous_bc (domain, 
 			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
-			     dp, u);
+			     dp, u, NULL);
   for (n = 0; n < nrelax - 1; n++)
     gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
 				     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
 				     (FttCellTraverseFunc) diffusion_relax, p,
-				     dp, u);
+				     dp, u, NULL);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
 			    (FttCellTraverseFunc) diffusion_relax, p);

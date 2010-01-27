@@ -172,7 +172,8 @@ void         gfs_domain_homogeneous_bc        (GfsDomain * domain,
 					       FttTraverseFlags flags,
 					       gint max_depth,
 					       GfsVariable * ov,
-					       GfsVariable * v);
+					       GfsVariable * v,
+					       CoeffParams * cp);
 void         gfs_traverse_and_homogeneous_bc  (GfsDomain * domain,
 					       FttTraverseType order,
 					       FttTraverseFlags flags,
@@ -180,7 +181,8 @@ void         gfs_traverse_and_homogeneous_bc  (GfsDomain * domain,
 					       FttCellTraverseFunc func,
 					       gpointer data,
 					       GfsVariable * ov,
-					       GfsVariable * v);
+					       GfsVariable * v,
+					       CoeffParams * cp);
 void         gfs_traverse_and_bc              (GfsDomain * domain,
 					       FttTraverseType order,
 					       FttTraverseFlags flags,
