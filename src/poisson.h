@@ -54,6 +54,10 @@ struct _GfsMultilevelParams {
   void (* write)     (GfsMultilevelParams * par, FILE * fp);
 };
 
+void                  gfs_add_boundary_element           (FttCell * cell,
+							  CoeffParams * cp,
+							  gdouble val,
+							  gdouble coeff);
 void                  gfs_multilevel_params_init     (GfsMultilevelParams * par);
 void                  gfs_multilevel_params_write    (GfsMultilevelParams * par, 
 						      FILE * fp);

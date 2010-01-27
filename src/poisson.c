@@ -49,6 +49,26 @@ static void fill_diagonal_element (CoeffParams * cp, gdouble coeff)
   cp->poisson_problem_end->cell_coeff = coeff;
 }
 
+void gfs_add_boundary_element (FttCell * cell, CoeffParams * cp, gdouble val, gdouble coeff)
+{
+  GfsDiagElement * new =g_malloc (sizeof (GfsDiagElement));
+
+  new->cell_id = GFS_VALUE(cell, cp->id);
+  new->rhs = val;
+  new->u = GFS_VARIABLE (cell, cp->p->u);
+  new->stencil = NULL;
+  new->next = NULL;
+  new->cell_coeff = coeff;
+  
+  if (!cp->poisson_problem)
+    cp->poisson_problem = new;
+  else
+    cp->poisson_problem_end->next = new;
+  
+  cp->poisson_problem_end = new;
+  new = NULL;
+}
+
 static void destroy_stencil_element_list (GfsStencilElement * list)
 {
   GfsStencilElement * to_destroy;
