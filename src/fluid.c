@@ -55,7 +55,7 @@ struct _Gradient {
   gdouble a, b, c;
 };
 
-static void add_stencil_element (FttCell * cell, CoeffParams * cp, gdouble coeff)
+void gfs_add_stencil_element (FttCell * cell, CoeffParams * cp, gdouble coeff)
 {
   GfsStencilElement * search;
   gint done = 0;
@@ -102,7 +102,7 @@ static void print_below (FttCell * cell, CoeffParams * cp, gdouble w)
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i])
       if (FTT_CELL_IS_LEAF(child.c[i]))
-	add_stencil_element ( child.c[i], cp, w/num);
+	gfs_add_stencil_element ( child.c[i], cp, w/num);
       else
 	print_below (child.c[i],cp,w*1./(gdouble) num);      
 }
@@ -118,7 +118,7 @@ static gdouble average_neighbor_value (const FttCellFace * face,
   if (FTT_CELL_IS_LEAF (face->neighbor)) {
 
     if (cp)     
-      add_stencil_element ( face->neighbor, cp, cp->w);
+      gfs_add_stencil_element ( face->neighbor, cp, cp->w);
 
     return GFS_VARIABLE (face->neighbor, v);
   }
@@ -143,7 +143,7 @@ static gdouble average_neighbor_value (const FttCellFace * face,
 	
 	if (cp)
 	  if (FTT_CELL_IS_LEAF (children.c[i])) 
-	    add_stencil_element ( children.c[i], cp, cp->w*w/a);
+	    gfs_add_stencil_element ( children.c[i], cp, cp->w*w/a);
 	  else
 	    print_below(children.c[i],cp,cp->w * w/a);
       }
@@ -153,7 +153,7 @@ static gdouble average_neighbor_value (const FttCellFace * face,
 
       if (cp)
 	if (FTT_CELL_IS_LEAF (face->cell)) 
-	  add_stencil_element ( face->cell, cp, cp->w);
+	  gfs_add_stencil_element ( face->cell, cp, cp->w);
 	else
 	  print_below (face->cell,cp,cp->w);
 
@@ -940,7 +940,7 @@ static void coeff_face_weighted_gradient (const FttCellFace * face,
     /* ****** */
     if (cp->id)
       if (FTT_CELL_IS_LEAF(face->neighbor))
-	add_stencil_element ( face->neighbor, cp, w*gcf.b);
+	gfs_add_stencil_element ( face->neighbor, cp, w*gcf.b);
       else
 	print_below (face->neighbor,cp,w*gcf.b);
     /* ****** */
@@ -955,7 +955,7 @@ static void coeff_face_weighted_gradient (const FttCellFace * face,
       g->b = w*GFS_VARIABLE (face->neighbor, cp->u->i);
       
       /* ****** */
-	add_stencil_element ( face->neighbor, cp, w);
+      gfs_add_stencil_element ( face->neighbor, cp, w);
       /* ****** */
     }
     /* PART3 */
@@ -982,13 +982,13 @@ static void coeff_face_weighted_gradient (const FttCellFace * face,
 	  if (cp->id)
 	    if (dimension > 2) {
 	      if (FTT_CELL_IS_LEAF(f.cell)) 
-		add_stencil_element ( f.cell, cp, w*gcf.a/(n/2.));
+		gfs_add_stencil_element ( f.cell, cp, w*gcf.a/(n/2.));
 	      else
 		print_below (f.cell,cp,-w*gcf.a);
 	    }
 	    else {
 	      if (FTT_CELL_IS_LEAF(f.cell))
-		add_stencil_element ( f.cell, cp, w*gcf.a/(n/2.));
+		gfs_add_stencil_element ( f.cell, cp, w*gcf.a/(n/2.));
 	      else
 		print_below (f.cell,cp,-w*gcf.a);
 	    }

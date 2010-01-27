@@ -176,7 +176,9 @@ gdouble               gfs_center_regular_gradient   (FttCell * cell,
 gdouble               gfs_center_regular_2nd_derivative (FttCell * cell, 
 							 FttComponent c, 
 							 GfsVariable * v);
-
+void                  gfs_add_stencil_element       (FttCell * cell,
+						     CoeffParams * cp,
+						     gdouble coeff);
 typedef struct _GfsGradient GfsGradient;
 
 struct _GfsGradient {
