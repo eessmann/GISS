@@ -309,6 +309,11 @@ static void neumann (FttCellFace * f, GfsBc * b)
 static void homogeneous_neumann (FttCellFace * f, GfsBc * b)
 {
   GFS_VALUE (f->cell, b->v) = GFS_VALUE (f->neighbor, b->v);
+
+  if (b->cp && b->cp->id) {
+    gfs_add_boundary_element(f->cell, b->cp, 0., -1.);
+    gfs_add_stencil_element (f->neighbor, b->cp, 1.);
+  }
 }
 
 static void face_neumann (FttCellFace * f, GfsBc * b)
