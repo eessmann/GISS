@@ -23,10 +23,11 @@
 #include "source.h"
 #include "tension.h"
 
-static void  add_diagonal_element_structure (CoeffParams * cp)
+static void add_diagonal_element_structure (CoeffParams * cp, FttCell * cell)
 {
   GfsDiagElement * new =g_malloc (sizeof (GfsDiagElement));
 
+  cp->diag_cell = cell;
 
   new->cell_id = GFS_VALUE(cp->diag_cell, cp->id);
   new->rhs = GFS_VARIABLE (cp->diag_cell, cp->p->rhs);
@@ -43,7 +44,7 @@ static void  add_diagonal_element_structure (CoeffParams * cp)
   new = NULL;
 }
 
-static void  fill_diagonal_element (CoeffParams * cp, gdouble coeff)
+static void fill_diagonal_element (CoeffParams * cp, gdouble coeff)
 {
   cp->poisson_problem_end->cell_coeff = coeff;
 }
@@ -229,8 +230,7 @@ static void relax (FttCell * cell, CoeffParams * cp)
   RelaxParams * p = cp->p;
 
   if (cp->id  && FTT_CELL_IS_LEAF (cell)) {
-    cp->diag_cell = cell;
-    add_diagonal_element_structure (cp);
+    add_diagonal_element_structure (cp, cell);
   }
   g.a = GFS_VARIABLE (cell, p->dia);
   g.b = 0.;
@@ -277,8 +277,7 @@ static void relax2D (FttCell * cell, CoeffParams * cp)
   RelaxParams * p = cp->p;
 
   if (cp->id && FTT_CELL_IS_LEAF (cell)) {
-    cp->diag_cell = cell;
-    add_diagonal_element_structure (cp);
+    add_diagonal_element_structure (cp, cell);
   }
 
   g.a = GFS_VARIABLE (cell, p->dia);
