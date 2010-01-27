@@ -184,36 +184,33 @@ typedef struct {
   FttCell * cell;
 } Polygon;
 
-static void map_inverse (GfsSimulation * sim, FttVector * p, Polygon * poly)
-{
-  gfs_simulation_map_inverse (sim, p);
-  if (p->x < poly->min[0]) poly->min[0] = p->x;
-  if (p->x > poly->max[0]) poly->max[0] = p->x;
-  if (p->y < poly->min[1]) poly->min[1] = p->y;
-  if (p->y > poly->max[1]) poly->max[1] = p->y;
-  poly->c.x += p->x; poly->c.y += p->y;
-}
-
-static void polygon_init (GfsSimulation * sim, Polygon * p, FttCell * cell, RSurfaces * rs)
+static void polygon_init (GfsSimulation * sim, Polygon * poly, FttCell * cell, RSurfaces * rs)
 {
   FttVector q;
   ftt_cell_pos (cell, &q);
-  p->cell = cell;
-  p->rs = rs;
-  p->min[0] = p->min[1] = G_MAXDOUBLE;
-  p->max[0] = p->max[1] = - G_MAXDOUBLE;
-  p->c.x = p->c.y = 0.;
-  p->h = ftt_cell_size (cell)/2.;
-  p->p[0].x = q.x + p->h; p->p[0].y = q.y + p->h;
-  map_inverse (sim, &p->p[0], p);
-  p->p[1].x = q.x - p->h; p->p[1].y = q.y + p->h;
-  map_inverse (sim, &p->p[1], p);
-  p->p[2].x = q.x - p->h; p->p[2].y = q.y - p->h;
-  map_inverse (sim, &p->p[2], p);
-  p->p[3].x = q.x + p->h; p->p[3].y = q.y - p->h;
-  map_inverse (sim, &p->p[3], p);
-  p->c.x /= 4; p->c.y /= 4;
-  p->h = MAX (p->max[0] - p->min[0], p->max[1] - p->min[1])/2.;
+  poly->cell = cell;
+  poly->rs = rs;
+  poly->h = ftt_cell_size (cell)/2.;
+  poly->p[0].x = q.x + poly->h; poly->p[0].y = q.y + poly->h;
+  poly->p[1].x = q.x - poly->h; poly->p[1].y = q.y + poly->h;
+  poly->p[2].x = q.x - poly->h; poly->p[2].y = q.y - poly->h;
+  poly->p[3].x = q.x + poly->h; poly->p[3].y = q.y - poly->h;
+  gfs_simulation_map_inverse_cell (sim, poly->p);
+
+  poly->c.x = poly->c.y = 0.;
+  poly->min[0] = poly->min[1] = G_MAXDOUBLE;
+  poly->max[0] = poly->max[1] = - G_MAXDOUBLE;
+  gint i;
+  FttVector * p = poly->p;
+  for (i = 0; i < 4; i++, p++) {
+    if (p->x < poly->min[0]) poly->min[0] = p->x;
+    if (p->x > poly->max[0]) poly->max[0] = p->x;
+    if (p->y < poly->min[1]) poly->min[1] = p->y;
+    if (p->y > poly->max[1]) poly->max[1] = p->y;
+    poly->c.x += p->x; poly->c.y += p->y;    
+  }
+  poly->c.x /= 4; poly->c.y /= 4;
+  poly->h = MAX (poly->max[0] - poly->min[0], poly->max[1] - poly->min[1])/2.;
 }
 
 static gboolean right (const double a[2], const double b[2], const double c[2])

@@ -115,6 +115,8 @@ void                 gfs_simulation_map          (GfsSimulation * sim,
 						  FttVector * p);
 void                 gfs_simulation_map_inverse  (GfsSimulation * sim, 
 						  FttVector * p);
+void                 gfs_simulation_map_inverse_cell (GfsSimulation * sim, 
+						      FttVector p[4]);
 gdouble              gfs_dimensional_value       (GfsVariable * v, 
 						  gdouble val);
 gboolean             gfs_variable_is_dimensional (GfsVariable * v);

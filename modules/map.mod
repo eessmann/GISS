@@ -127,6 +127,26 @@ static void projection_inverse (GfsMap * map, const FttVector * src, FttVector *
   dest->z = src->z;
 }
 
+static void projection_inverse_cell (GfsMap * map, const FttVector * src, FttVector * dest)
+{
+  gint i;
+  FttVector o = { 0., 0., 0. };
+  for (i = 0; i < 4; i++) {
+    o.x += src[i].x;
+    o.y += src[i].y;
+    o.z += src[i].z;
+    projection_inverse (map, &(src[i]), &(dest[i]));
+  }
+  o.x /= 4.; o.y /= 4.; o.z /= 4.;
+  projection_inverse (map, &o, &o);
+  /* make sure we do not cross periodic longitude boundary */
+  for (i = 0; i < 4; i++)
+    if (dest[i].x > o.x + 180.)
+      dest[i].x -= 360.;
+    else if (dest[i].x < o.x - 180.)
+      dest[i].x += 360.;
+}
+
 static void gfs_map_projection_class_init (GfsMapClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = gfs_map_projection_read;
@@ -143,6 +163,7 @@ static void gfs_map_projection_init (GfsMapProjection * object)
   object->pj = NULL;
   GFS_MAP (object)->transform = projection_transform;
   GFS_MAP (object)->inverse = projection_inverse;
+  GFS_MAP (object)->inverse_cell = projection_inverse_cell;
 }
 
 GfsMapClass * gfs_map_projection_class (void)

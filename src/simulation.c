@@ -1683,6 +1683,32 @@ void gfs_simulation_map_inverse (GfsSimulation * sim, FttVector * p)
 }
 
 /**
+ * gfs_simulation_map_inverse_cell:
+ * @sim: a #GfsSimulation.
+ * @p: an array of #FttVector.
+ *
+ * Array @p should contain the (x,y) coordinates of the four corners
+ * of a #FttCell. This function will inverse transform these
+ * coordinates taking into account any specificity of the mapping
+ * (e.g. periodicity).
+ */
+void gfs_simulation_map_inverse_cell (GfsSimulation * sim, FttVector p[4])
+{
+  g_return_if_fail (sim != NULL);
+  g_return_if_fail (p != NULL);
+  
+  FttComponent j, c;
+  for (j = 0; j < 4; j++)
+    for (c = 0; c < 3; c++)
+      (&p[j].x)[c] *= sim->physical_params.L/(&GFS_DOMAIN (sim)->lambda.x)[c];
+  GSList * i = sim->maps->items;
+  while (i) {
+    (* GFS_MAP (i->data)->inverse_cell) (i->data, p, p);
+    i = i->next;
+  }
+}
+
+/**
  * gfs_dimensional_value:
  * @v: a #GfsVariable.
  * @val: a non-dimensional value of @v.

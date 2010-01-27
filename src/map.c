@@ -65,9 +65,17 @@ static void identity (GfsMap * map, const FttVector * src, FttVector * dest)
   *dest = *src;
 }
 
+static void inverse_cell (GfsMap * map, const FttVector * src, FttVector * dest)
+{
+  gint i;
+  for (i = 0; i < 4; i++)
+    (* map->inverse) (map, &(src[i]), &(dest[i]));
+}
+
 static void gfs_map_init (GfsMap * map)
 {
   map->transform = map->inverse = identity;
+  map->inverse_cell = inverse_cell;
 }
 
 GfsMapClass * gfs_map_class (void)
