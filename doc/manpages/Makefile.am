@@ -17,6 +17,7 @@ dist_man_MANS = \
 	ppm2mpeg.1 \
 	ppmcombine.1 \
 	rsurfacequery.1 \
+	rsurfaceinfo.1 \
 	shapes.1 \
 	streamanime.1 \
 	xyz2rsurface.1 \

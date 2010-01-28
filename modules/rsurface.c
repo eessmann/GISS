@@ -147,3 +147,55 @@ int r_surface_depth (RSurface * rt)
   GetHeight (rt->t, &height);
   return height;
 }
+
+void r_surface_info (RSurface * rt)
+{
+  char name[100];
+  int numbofdim, sizedirentry, sizedataentry, sizeinfo;
+  int maxdirfanout, maxdatafanout, pagesize, numbofdirpages;
+  int numbofdatapages, pagesperlevel[100], numbofrecords, height;
+  boolean unique;
+  
+  InquireRSTDesc(rt->t,
+		 name,
+		 &numbofdim,
+		 &sizedirentry,
+		 &sizedataentry,
+		 &sizeinfo,
+		 &maxdirfanout,
+		 &maxdatafanout,
+		 &pagesize,
+		 &numbofdirpages,
+		 &numbofdatapages,
+		 pagesperlevel,
+		 &numbofrecords,
+		 &height,
+		 &unique);
+  fprintf (stderr, 
+	   "Number of dimensions:\t\t\t\t%d\n"
+	   "Size (bytes) of a directory entry:\t\t%d\n"
+	   "Size (bytes) of a data entry:\t\t\t%d\n"
+	   "Size (bytes) of an information part:\t\t%d\n"
+	   "Maximum # of entries for a directory node:\t%d\n"
+	   "Maximum # of entries for a data node:\t\t%d\n"
+	   "Total # of directory pages:\t\t\t%d\n"
+	   "Total # of data pages:\t\t\t\t%d\n"
+	   "Total # of data records:\t\t\t%d\n"
+	   "Are records unique?:\t\t\t\t%s\n"
+	   "Height of the tree:\t\t\t\t%d\n",
+	   numbofdim,
+	   sizedirentry,
+	   sizedataentry,
+	   sizeinfo,
+	   maxdirfanout,
+	   maxdatafanout,
+	   numbofdirpages,
+	   numbofdatapages,
+	   numbofrecords,
+	   unique ? "yes" : "no",
+	   height);
+  int i;
+  fprintf (stderr, "Number of pages per level:\n");
+  for (i = 0; i < height; i++)
+    fprintf (stderr, "\tlevel %d:\t%d\n", i + 1, pagesperlevel[i]);
+}

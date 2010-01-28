@@ -37,7 +37,8 @@ pkglib_LTLIBRARIES = \
 bin_PROGRAMS = \
 	xyz2rsurface \
 	rsurfacequery \
-	rsurfacedraw
+	rsurfacedraw \
+	rsurfaceinfo
 
 EXTRA_DIST = \
 	map.mod \
@@ -120,6 +121,11 @@ rsurfacedraw_SOURCES = rsurfacedraw.c rsurface.c rsurface.h
 rsurfacedraw_LDADD = -LRStarTree -lcSmRST
 rsurfacedraw_CFLAGS = $(AM_CFLAGS)
 rsurfacedraw_DEPENDENCIES = RStarTree/libcSmRST.la
+
+rsurfaceinfo_SOURCES = rsurfaceinfo.c rsurface.c rsurface.h
+rsurfaceinfo_LDADD = -LRStarTree -lcSmRST
+rsurfaceinfo_CFLAGS = $(AM_CFLAGS)
+rsurfaceinfo_DEPENDENCIES = RStarTree/libcSmRST.la
 
 libparticulates3D_la_SOURCES = particulates.c
 libparticulates3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
