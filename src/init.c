@@ -218,9 +218,9 @@ GtsObjectClass ** gfs_classes (void)
       gfs_output_balance_class (),
       gfs_output_solid_force_class (),
       gfs_output_location_class (),
+        gfs_output_particle_class (),
       gfs_output_simulation_class (),
       gfs_output_boundaries_class (),
-      gfs_output_particle_class (),
 
       gfs_output_scalar_class (),
         gfs_output_scalar_norm_class (),

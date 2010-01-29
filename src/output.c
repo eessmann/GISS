@@ -1078,9 +1078,15 @@ GfsOutputClass * gfs_output_solid_force_class (void)
 
 /* GfsOutputLocation: Object */
 
+static gchar default_precision[] = "%g";
+
 static void gfs_output_location_destroy (GtsObject * object)
 {
-  g_array_free (GFS_OUTPUT_LOCATION (object)->p, TRUE);
+  GfsOutputLocation * l = GFS_OUTPUT_LOCATION (object);
+  g_array_free (l->p, TRUE);
+  g_free (l->label);
+  if (l->precision != default_precision)
+    g_free (l->precision);
 
   (* GTS_OBJECT_CLASS (gfs_output_location_class ())->parent_class->destroy) (object);
 }
@@ -1169,6 +1175,32 @@ static void gfs_output_location_read (GtsObject ** o, GtsFile * fp)
       return;
     g_array_append_val (l->p, p);
   }
+
+  if (fp->type == '{') {
+    gchar * label = NULL, * precision = NULL;
+    GtsFileVariable var[] = {
+      {GTS_STRING, "label", TRUE, &label},
+      {GTS_STRING, "precision", TRUE, &precision},
+      {GTS_NONE}
+    };
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR) {
+      g_free (label);
+      g_free (precision);
+      return;
+    }
+
+    if (precision != NULL) {
+      if (l->precision != default_precision)
+	g_free (l->precision);
+      l->precision = precision;
+    }
+
+    if (label != NULL) {
+      g_free (l->label);
+      l->label = label;
+    }
+  }
 }
 
 static void gfs_output_location_write (GtsObject * o, FILE * fp)
@@ -1179,11 +1211,22 @@ static void gfs_output_location_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_output_location_class ())->parent_class->write) (o, fp);
 
   fputs (" {\n", fp);
+  gchar * format = g_strdup_printf ("%s %s %s\n", l->precision, l->precision, l->precision);
   for (i = 0; i < l->p->len; i++) {
     FttVector p = g_array_index (l->p, FttVector, i);
-    fprintf (fp, "%g %g %g\n", p.x, p.y, p.z);
+    fprintf (fp, format, p.x, p.y, p.z);
   }
+  g_free (format);
   fputc ('}', fp);
+
+  if (l->precision != default_precision || l->label) {
+    fputs (" {\n", fp);
+    if (l->precision != default_precision)
+      fprintf (fp, "  precision = %s\n", l->precision);
+    if (l->label)
+      fprintf (fp, "  label = \"%s\"\n", l->label);
+    fputc ('}', fp);
+  }
 }
 
 static gboolean gfs_output_location_event (GfsEvent * event, 
@@ -1208,6 +1251,10 @@ static gboolean gfs_output_location_event (GfsEvent * event,
       }
       fputc ('\n', fp);
     }
+    gchar * pformat = g_strdup_printf ("%s %s %s %s", 
+				       location->precision, location->precision, 
+				       location->precision, location->precision);
+    gchar * vformat = g_strdup_printf (" %s", location->precision);
     for (i = 0; i < location->p->len; i++) {
       FttVector p = g_array_index (location->p, FttVector, i), pm = p;
       gfs_simulation_map (sim, &pm);
@@ -1216,16 +1263,18 @@ static gboolean gfs_output_location_event (GfsEvent * event,
       if (cell != NULL) {
 	GSList * i = domain->variables;
 	
-	fprintf (fp, "%g %g %g %g", sim->time.t, p.x, p.y, p.z);
+	fprintf (fp, pformat, sim->time.t, p.x, p.y, p.z);
 	while (i) {
 	  GfsVariable * v = i->data;
 	  if (v->name)
-	    fprintf (fp, " %g", gfs_dimensional_value (v, gfs_interpolate (cell, pm, v)));
+	    fprintf (fp, vformat, gfs_dimensional_value (v, gfs_interpolate (cell, pm, v)));
 	  i = i->next;
 	}
 	fputc ('\n', fp);
       }
     }
+    g_free (pformat);
+    g_free (vformat);
     fflush (fp);
     return TRUE;
   }
@@ -1243,6 +1292,7 @@ static void gfs_output_location_class_init (GfsOutputClass * klass)
 static void gfs_output_location_init (GfsOutputLocation * object)
 {
   object->p = g_array_new (FALSE, FALSE, sizeof (FttVector));
+  object->precision = default_precision;
 }
 
 GfsOutputClass * gfs_output_location_class (void)
@@ -1267,8 +1317,6 @@ GfsOutputClass * gfs_output_location_class (void)
 }
 
 /* GfsOutputSimulation: Object */
-
-static gchar default_precision[] = "%g";
 
 static void output_simulation_destroy (GtsObject * object)
 {
@@ -1458,6 +1506,8 @@ static void output_simulation_read (GtsObject ** o, GtsFile * fp)
     gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR) {
       g_free (variables);
+      g_free (format);
+      g_free (precision);
       return;
     }
 

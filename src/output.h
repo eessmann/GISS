@@ -146,6 +146,7 @@ struct _GfsOutputLocation {
 
   /*< public >*/
   GArray * p;
+  gchar * precision, * label;
 };
 
 #define GFS_OUTPUT_LOCATION(obj)            GTS_OBJECT_CAST (obj,\
