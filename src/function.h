@@ -64,4 +64,17 @@ static double correctness (const gchar * name)
   return gfs_vof_correctness (_cell, GFS_VARIABLE_TRACER_VOF (v));
 }
 
+static double distance (double xo, double yo, double zo)
+{
+  /* fixme: this doesn't take mapping into account properly */
+  GtsPoint o;
+  o.x = xo; o.y = yo; o.z = zo;
+  gfs_simulation_map (_sim, (FttVector *) &o.x);
+  GtsBBox bb;
+  ftt_cell_bbox (_cell, &bb);
+  gdouble min, max;
+  gts_bbox_point_distance2 (&bb, &o, &min, &max);
+  return sqrt (min)*_sim->physical_params.L;
+}
+
 #endif /* __FUNCTION_H__ */
