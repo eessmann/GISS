@@ -267,7 +267,7 @@ void gfs_write_gts (GfsDomain * domain,
 		       vertex_cell_face_class ());
   gts_surface_add_face (s, gts_face_new (gts_face_class (), e1, e2, e3));
 
-  norm = gfs_domain_norm_variable (domain, v, NULL, flags, level);
+  norm = gfs_domain_norm_variable (domain, v, NULL, flags, level, NULL, NULL);
   if (norm.infty == 0.)
     norm.infty = 1.;
 #if FTT_2D
@@ -564,28 +564,28 @@ static void write_image_square (FttCell * cell, gpointer * data)
   image_draw_square (image, &p1, &p2, c);
 }
 
-static void max_extent (FttCell * cell, FttVector * max)
+static void max_extent (FttCell * cell, FttVector extent[2])
 {
+  gdouble h = ftt_cell_size (cell)/2.;
   FttVector pos;
   
   ftt_cell_pos (cell, &pos);
-  if (pos.x > max->x) max->x = pos.x;
-  if (pos.y > max->y) max->y = pos.y;
-  if (pos.z > max->z) max->z = pos.z;
+  if (pos.x - h < extent[0].x) extent[0].x = pos.x - h;
+  if (pos.y - h < extent[0].y) extent[0].y = pos.y - h;
+  if (pos.z - h < extent[0].z) extent[0].z = pos.z - h;
+
+  if (pos.x + h > extent[1].x) extent[1].x = pos.x + h;
+  if (pos.y + h > extent[1].y) extent[1].y = pos.y + h;
+  if (pos.z + h > extent[1].z) extent[1].z = pos.z + h;
 }
 
-static void min_extent (FttCell * cell, FttVector * min)
+static gboolean cell_condition (FttCell * cell, gpointer condition)
 {
-  FttVector pos;
-  
-  ftt_cell_pos (cell, &pos);
-  if (pos.x < min->x) min->x = pos.x;
-  if (pos.y < min->y) min->y = pos.y;
-  if (pos.z < min->z) min->z = pos.z;
+  return gfs_function_value (condition, cell);
 }
 
 void gfs_write_ppm (GfsDomain * domain, 
-		    GtsBBox * box,
+		    GfsFunction * condition,
 		    GfsVariable * v, gdouble min, gdouble max,
 		    FttTraverseFlags flags,
 		    gint level,
@@ -594,8 +594,8 @@ void gfs_write_ppm (GfsDomain * domain,
   Colormap * colormap;
   guint depth, size = 1;
   Image * image;
-  FttVector cmax = { - G_MAXDOUBLE, - G_MAXDOUBLE, - G_MAXDOUBLE };
-  FttVector cmin = { G_MAXDOUBLE, G_MAXDOUBLE, G_MAXDOUBLE };
+  FttVector extent[2] = {{ G_MAXDOUBLE, G_MAXDOUBLE, G_MAXDOUBLE },
+			 { - G_MAXDOUBLE, - G_MAXDOUBLE, - G_MAXDOUBLE }};
   gpointer data[6];
 
   g_return_if_fail (domain != NULL);
@@ -610,34 +610,24 @@ void gfs_write_ppm (GfsDomain * domain,
   while (depth-- > 0)
     size *= 2;
 
-  if (box != NULL) {
-    cmin.x = box->x1/domain->lambda.x; 
-    cmin.y = box->y1/domain->lambda.y; 
-    cmin.z = box->z1;
-    cmax.x = box->x2/domain->lambda.x; 
-    cmax.y = box->y2/domain->lambda.y; 
-    cmax.z = box->z2;
-  }
-  else {
-    gdouble h;
+  if (condition)
+    gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
+					(FttCellTraverseFunc) max_extent, extent,
+					cell_condition, condition);
+  else
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
+			      (FttCellTraverseFunc) max_extent, extent);
+    
+  if (extent[0].x == G_MAXDOUBLE)
+    return;
 
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, 
-			      domain->rootlevel,
-			      (FttCellTraverseFunc) min_extent, &cmin);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL,
-			      domain->rootlevel,
-			      (FttCellTraverseFunc) max_extent, &cmax);
-    if (cmin.x == G_MAXDOUBLE)
-      return;
-    h = ftt_level_size (domain->rootlevel)/2.;
-    cmin.x = (cmin.x - h)/domain->lambda.x; 
-    cmin.y = (cmin.y - h)/domain->lambda.y;
-    cmax.x = (cmax.x + h)/domain->lambda.x; 
-    cmax.y = (cmax.y + h)/domain->lambda.y;
-  }
+  extent[0].x /= domain->lambda.x; 
+  extent[0].y /= domain->lambda.y;
+  extent[1].x /= domain->lambda.x; 
+  extent[1].y /= domain->lambda.y;
 
   colormap = colormap_jet ();
-  image = image_new (cmin, cmax, size);
+  image = image_new (extent[0], extent[1], size);
 
   data[0] = colormap;
   data[1] = &min;
@@ -645,9 +635,10 @@ void gfs_write_ppm (GfsDomain * domain,
   data[3] = v;
   data[4] = image;
   data[5] = &domain->lambda;
-  if (box != NULL)
-    gfs_domain_cell_traverse_box (domain, box, FTT_PRE_ORDER, flags, level,
-				  (FttCellTraverseFunc) write_image_square, data);
+  if (condition)
+    gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
+					(FttCellTraverseFunc) write_image_square, data,
+					cell_condition, condition);
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
 			      (FttCellTraverseFunc) write_image_square, data);

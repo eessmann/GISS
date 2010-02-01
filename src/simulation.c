@@ -1866,7 +1866,9 @@ static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * d
 			    (FttCellTraverseFunc) rescale_div, data);
   gts_range_update (&vol);
 
-  ddiv = - gfs_domain_stats_variable (domain, div, FTT_TRAVERSE_LEAFS, -1).mean/vol.mean;
+  ddiv = - gfs_domain_stats_variable (domain, div, 
+				      FTT_TRAVERSE_LEAFS, -1, 
+				      NULL, NULL).mean/vol.mean;
   data[2] = &ddiv;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) add_ddiv, data);

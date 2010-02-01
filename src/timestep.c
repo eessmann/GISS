@@ -637,13 +637,14 @@ void gfs_diffusion (GfsDomain * domain,
   maxlevel = gfs_domain_depth (domain);
   gfs_diffusion_residual (domain, v, rhs, rhoc, axi, res);
   par->residual_before = par->residual = 
-    gfs_domain_norm_variable (domain, res, NULL, FTT_TRAVERSE_LEAFS, -1);
+    gfs_domain_norm_variable (domain, res, NULL, FTT_TRAVERSE_LEAFS, -1, NULL, NULL);
   gdouble res_max_before = par->residual.infty;
   par->niter = 0;
   while (par->niter < par->nitermin ||
 	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
     gfs_diffusion_cycle (domain, minlevel, maxlevel, par->nrelax, v, rhs, rhoc, axi, res);
-    par->residual = gfs_domain_norm_variable (domain, res, NULL, FTT_TRAVERSE_LEAFS, -1);
+    par->residual = gfs_domain_norm_variable (domain, res, NULL, 
+					      FTT_TRAVERSE_LEAFS, -1, NULL, NULL);
     if (par->residual.infty == res_max_before) /* convergence has stopped!! */
       break;
     if (par->residual.infty > res_max_before/1.1 && minlevel < maxlevel)

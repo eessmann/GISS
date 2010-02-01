@@ -43,7 +43,7 @@ void               gfs_write_gnuplot           (GfsDomain * domain,
 						GtsBBox * bbox,
 						FILE * fp);
 void               gfs_write_ppm               (GfsDomain * domain, 
-						GtsBBox * box,
+						GfsFunction * condition,
 						GfsVariable * v, 
 						gdouble min, 
 						gdouble max,

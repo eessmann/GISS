@@ -199,7 +199,9 @@ guint        gfs_domain_depth                 (GfsDomain * domain);
 GtsRange     gfs_domain_stats_variable        (GfsDomain * domain,
 					       GfsVariable * v,
 					       FttTraverseFlags flags,
-					       gint max_depth);
+					       gint max_depth,
+					       gboolean (* condition) (FttCell *, gpointer),
+					       gpointer cdata);
 GtsRange     gfs_domain_stats_solid           (GfsDomain * domain);
 void         gfs_domain_stats_merged          (GfsDomain * domain,
 					       GtsRange * solid,
@@ -212,7 +214,9 @@ GfsNorm      gfs_domain_norm_variable         (GfsDomain * domain,
 					       GfsVariable * v,
 					       GfsFunction * w,
 					       FttTraverseFlags flags,
-					       gint max_depth);
+					       gint max_depth,
+					       gboolean (* condition) (FttCell *, gpointer),
+					       gpointer cdata);
 GfsNorm      gfs_domain_norm_residual         (GfsDomain * domain,
 					       FttTraverseFlags flags,
 					       gint max_depth,

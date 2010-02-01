@@ -779,8 +779,9 @@ static void lonlat_fine_coarse (FttCell * parent, GfsVariable * a)
   ftt_cell_children (parent, &child);
   gdouble va = 0.;
   for (n = 0; n < 4; n++)
+    /* fixme: won't work with solid boundaries */
     va += GFS_VALUE (child.c[n], a);
-  GFS_VALUE (parent, a) = va/4;
+  GFS_VALUE (parent, a) = va/4.;
 
   GFS_VALUE (parent, lonlat->h2) = (GFS_VALUE (child.c[0], lonlat->h2) +
 				    GFS_VALUE (child.c[1], lonlat->h2))/2.;

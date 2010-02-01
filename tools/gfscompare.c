@@ -558,9 +558,11 @@ int main (int argc, char * argv[])
     GtsRange s;
 
     norm = gfs_domain_norm_variable (GFS_DOMAIN (s1),
-				     var1, NULL, FTT_TRAVERSE_LEAFS, -1);
+				     var1, NULL, FTT_TRAVERSE_LEAFS, -1,
+				     NULL, NULL);
     s = gfs_domain_stats_variable (GFS_DOMAIN (s1),
-				   var1, FTT_TRAVERSE_LEAFS, -1);
+				   var1, FTT_TRAVERSE_LEAFS, -1,
+				   NULL, NULL);
     fprintf (stderr, 
 	     "%s:\n"
 	     "  first: %g second: %g infty: %g w: %g\n"
@@ -569,9 +571,11 @@ int main (int argc, char * argv[])
 	     norm.first, norm.second, norm.infty, norm.w,
 	     s.min, s.mean, s.stddev, s.max);
     norm = gfs_domain_norm_variable (GFS_DOMAIN (s2),
-				     var2, NULL, FTT_TRAVERSE_LEAFS, -1);
+				     var2, NULL, FTT_TRAVERSE_LEAFS, -1,
+				     NULL, NULL);
     s = gfs_domain_stats_variable (GFS_DOMAIN (s2),
-				   var2, FTT_TRAVERSE_LEAFS, -1);
+				   var2, FTT_TRAVERSE_LEAFS, -1,
+				   NULL, NULL);
     fprintf (stderr, 
 	     "%s:\n"
 	     "  first: %g second: %g infty: %g w: %g\n"
@@ -674,7 +678,8 @@ int main (int argc, char * argv[])
     if (refined_error) {
       norm = gfs_domain_norm_variable (GFS_DOMAIN (s1),
 				       e, NULL, FTT_TRAVERSE_LEVEL,
-				       gfs_domain_depth (GFS_DOMAIN (s1)));
+				       gfs_domain_depth (GFS_DOMAIN (s1)),
+				       NULL, NULL);
       fprintf (stderr, 
 	  "refined err first: %10.3e second: %10.3e infty: %10.3e w: %g\n",
 	       norm.first, norm.second, norm.infty, norm.w);
@@ -695,7 +700,8 @@ int main (int argc, char * argv[])
 			       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			       (FttCellTraverseFunc) compute_absolute, e);
     if (squares) {
-      GtsRange stats = gfs_domain_stats_variable (GFS_DOMAIN (s1), e, FTT_TRAVERSE_LEAFS, -1);
+      GtsRange stats = gfs_domain_stats_variable (GFS_DOMAIN (s1), e, FTT_TRAVERSE_LEAFS, -1,
+						  NULL, NULL);
 
       gfs_write_squares (GFS_DOMAIN (s1), e, 
 			 min < G_MAXDOUBLE ? min : stats.min, 

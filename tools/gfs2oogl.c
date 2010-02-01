@@ -1020,7 +1020,8 @@ int main (int argc, char * argv[])
 
     if (var != NULL) {
       if (min == max) {
-	stats = gfs_domain_stats_variable (domain, var, FTT_TRAVERSE_ALL, -1);
+	stats = gfs_domain_stats_variable (domain, var, FTT_TRAVERSE_ALL, -1,
+					   NULL, NULL);
 	if (verbose)
 	  fprintf (stderr, 
 		   "min: %g avg: %g| %g max: %g n: %7d\n",
@@ -1129,7 +1130,8 @@ int main (int argc, char * argv[])
       gfs_domain_cell_traverse (domain,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) velocity_norm, data);
-      stats = gfs_domain_stats_variable (domain, norm, FTT_TRAVERSE_LEAFS, -1);
+      stats = gfs_domain_stats_variable (domain, norm, FTT_TRAVERSE_LEAFS, -1,
+					 NULL, NULL);
       gts_object_destroy (GTS_OBJECT (norm));
       if (verbose)
 	fprintf (stderr, 

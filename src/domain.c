@@ -1664,16 +1664,25 @@ static void domain_range_reduce (GfsDomain * domain, GtsRange * s)
  * @v: a #GfsVariable.
  * @flags: which types of cells are to be visited.
  * @max_depth: maximum depth of the traversal.
+ * @condition: a condition or %NULL.
+ * @cdata: user data to pass to @condition.
  *
- * Traverses the domain defined by @domain using gfs_domain_cell_traverse()
- * and gathers statistics about variable @v.
+ * Traverses the domain defined by @domain using
+ * gfs_domain_cell_traverse() and gathers statistics about variable
+ * @v.
+ *
+ * Only cells veryfing @condition are taken into account (if
+ * @condition is not %NULL). See also
+ * gfs_domain_cell_traverse_condition().
  *
  * Returns: a #GtsRange containing the statistics about @v.
  */
 GtsRange gfs_domain_stats_variable (GfsDomain * domain,
 				    GfsVariable * v,
 				    FttTraverseFlags flags,
-				    gint max_depth)
+				    gint max_depth,
+				    gboolean (* condition) (FttCell *, gpointer),
+				    gpointer cdata)
 {
   GtsRange s;
   gpointer data[2];
@@ -1684,8 +1693,13 @@ GtsRange gfs_domain_stats_variable (GfsDomain * domain,
   gts_range_init (&s);
   data[0] = &s;
   data[1] = v;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
-			   (FttCellTraverseFunc) add_stats, data);
+  if (condition)
+    gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, max_depth, 
+					(FttCellTraverseFunc) add_stats, data,
+					condition, cdata);
+  else
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
+			      (FttCellTraverseFunc) add_stats, data);
   domain_range_reduce (domain, &s);
   gts_range_update (&s);
 
@@ -1924,6 +1938,8 @@ static void domain_norm_reduce (GfsDomain * domain, GfsNorm * n)
  * @w: a #GfsFunction or %NULL.
  * @flags: which types of cells are to be visited.
  * @max_depth: maximum depth of the traversal.
+ * @condition: a condition or %NULL.
+ * @cdata: user data to pass to @condition.
  *
  * Traverses the domain defined by @domain using gfs_domain_cell_traverse()
  * and gathers norm statistics about variable @v.
@@ -1931,13 +1947,19 @@ static void domain_norm_reduce (GfsDomain * domain, GfsNorm * n)
  * The norm is weighted by the volume of each cell times the value of
  * function @w (if @w is not %NULL).
  *
+ * Only cells veryfing @condition are taken into account (if
+ * @condition is not %NULL). See also
+ * gfs_domain_cell_traverse_condition().
+ *
  * Returns: a #GfsNorm containing the norm statistics about @v.
  */
 GfsNorm gfs_domain_norm_variable (GfsDomain * domain,
 				  GfsVariable * v,
 				  GfsFunction * w,
 				  FttTraverseFlags flags,
-				  gint max_depth)
+				  gint max_depth,
+				  gboolean (* condition) (FttCell *, gpointer),
+				  gpointer cdata)
 {
   GfsNorm n;
   gpointer data[3];
@@ -1949,12 +1971,16 @@ GfsNorm gfs_domain_norm_variable (GfsDomain * domain,
   data[0] = &n;
   data[1] = v;
   data[2] = w;
-  if (w)
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
-			      (FttCellTraverseFunc) add_norm_weighted, data);
+  FttCellTraverseFunc func = w != NULL ?
+    (FttCellTraverseFunc) add_norm_weighted : 
+    (FttCellTraverseFunc) add_norm;
+  if (condition)
+    gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, max_depth, 
+					(FttCellTraverseFunc) func, data,
+					condition, cdata);
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
-			      (FttCellTraverseFunc) add_norm, data);
+			      (FttCellTraverseFunc) func, data);
   domain_norm_reduce (domain, &n);
   gfs_norm_update (&n);
 

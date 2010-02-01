@@ -1641,11 +1641,11 @@ static void gfs_output_scalar_destroy (GtsObject * o)
 {
   GfsOutputScalar * output = GFS_OUTPUT_SCALAR (o);
 
-  if (output->box)
-    gts_object_destroy (GTS_OBJECT (output->box));
   gts_object_destroy (GTS_OBJECT (output->f));
   g_free (output->name);
-
+  if (output->condition)
+    gts_object_destroy (GTS_OBJECT (output->condition));
+  
   (* GTS_OBJECT_CLASS (gfs_output_scalar_class ())->parent_class->destroy) (o);
 }
 
@@ -1736,84 +1736,16 @@ static void gfs_output_scalar_read (GtsObject ** o, GtsFile * fp)
       output->maxlevel = atoi (fp->token->str);
       gts_file_next_token (fp);
     }
-    else if (!strcmp (fp->token->str, "box")) {
-      gchar * box, * s;
-
+    else if (!strcmp (fp->token->str, "condition")) {
       gts_file_next_token (fp);
       if (fp->type != '=') {
 	gts_file_error (fp, "expecting '='");
 	return;
       }
       gts_file_next_token (fp);
-      if (fp->type != GTS_STRING) {
-	gts_file_error (fp, "expecting a string (box)");
-	return;
-      }
-      box = g_strdup (fp->token->str);
-      s = strtok (box, ",");
-      output->box = GTS_BBOX (gts_object_new (GTS_OBJECT_CLASS (gts_bbox_class ())));
-      if (s == NULL) {
-	gts_file_error (fp, "expecting a number (x1)");
-	g_free (box);
-	return;
-      }
-      output->box->x1 = atof (s);
-      s = strtok (NULL, ",");
-      if (s == NULL) {
-	gts_file_error (fp, "expecting a number (y1)");
-	g_free (box);
-	return;
-      }
-      output->box->y1 = atof (s);
-      s = strtok (NULL, ",");
-#if (!FTT_2D)
-      if (s == NULL) {
-	gts_file_error (fp, "expecting a number (z1)");
-	g_free (box);
-	return;
-      }
-      output->box->z1 = atof (s);
-      s = strtok (NULL, ",");
-#endif /* 3D */
-      if (s == NULL) {
-	gts_file_error (fp, "expecting a number (x2)");
-	g_free (box);
-	return;
-      }
-      output->box->x2 = atof (s);
-      if (output->box->x2 < output->box->x1) {
-	gts_file_error (fp, "x2 must be larger than x1");
-	g_free (box);
-	return;
-      }
-      s = strtok (NULL, ",");
-      if (s == NULL) {
-	gts_file_error (fp, "expecting a number (y2)");
-	g_free (box);
-	return;
-      }
-      output->box->y2 = atof (s);
-      if (output->box->y2 < output->box->y1) {
-	gts_file_error (fp, "y2 must be larger than y1");
-	g_free (box);
-	return;
-      }
-#if (!FTT_2D)
-      s = strtok (NULL, ",");
-      if (s == NULL) {
-	gts_file_error (fp, "expecting a number (z2)");
-	g_free (box);
-	return;
-      }
-      output->box->z2 = atof (s);
-      if (output->box->z2 < output->box->z1) {
-	gts_file_error (fp, "z2 must be larger than z1");
-	g_free (box);
-	return;
-      }
-#endif /* 3D */
-      g_free (box);
-      gts_file_next_token (fp);
+      if (!output->condition)
+	output->condition = gfs_function_new (gfs_function_class (), 0.);
+      gfs_function_read (output->condition, gfs_object_simulation (*o), fp);
     }
     else {
       gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
@@ -1842,15 +1774,10 @@ static void gfs_output_scalar_write (GtsObject * o, FILE * fp)
   gfs_function_write (output->f, fp);
   if (output->maxlevel >= 0)
     fprintf (fp, " maxlevel = %d", output->maxlevel);
-  if (output->box != NULL)
-#if FTT_2D
-    fprintf (fp, " box = %g,%g,%g,%g", 
-	     output->box->x1, output->box->y1, output->box->x2, output->box->y2);
-#else  /* 3D */
-    fprintf (fp, " box = %g,%g,%g,%g,%g,%g",
-	     output->box->x1, output->box->y1, output->box->z1,
-	     output->box->x2, output->box->y2, output->box->z2);
-#endif /* 3D */
+  if (output->condition) {
+    fputs (" condition = ", fp);
+    gfs_function_write (output->condition, fp);
+  }
   if (!output->autoscale)
     fprintf (fp, " min = %g max = %g }", output->min, output->max);
   else
@@ -1860,6 +1787,29 @@ static void gfs_output_scalar_write (GtsObject * o, FILE * fp)
 static void update_v (FttCell * cell, GfsOutputScalar * output)
 {
   GFS_VALUE (cell, output->v) = gfs_function_value (output->f, cell);
+}
+
+static gboolean cell_condition (FttCell * cell, gpointer condition)
+{
+  return gfs_function_value (condition, cell);
+}
+
+static void output_scalar_traverse (GfsOutputScalar * output, 
+				    FttTraverseType order,
+				    FttTraverseFlags flags,
+				    gint max_depth,
+				    FttCellTraverseFunc func,
+				    gpointer data)
+{
+  if (output->condition)
+    gfs_domain_cell_traverse_condition (GFS_DOMAIN (gfs_object_simulation (output)),
+					order, flags, max_depth, 
+					func, data,
+					cell_condition, output->condition);
+  else
+    gfs_domain_cell_traverse (GFS_DOMAIN (gfs_object_simulation (output)),
+			      order, flags, max_depth, 
+			      func, data);
 }
 
 static gboolean gfs_output_scalar_event (GfsEvent * event,
@@ -1873,19 +1823,21 @@ static gboolean gfs_output_scalar_event (GfsEvent * event,
     if (!(output->v = gfs_function_get_variable (output->f)) ||
 	gfs_variable_is_dimensional (output->v)) {
       output->v = gfs_temporary_variable (domain);
-      gfs_domain_cell_traverse (domain,
-				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) update_v, output);
+      output_scalar_traverse (output,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) update_v, output);
     }
     if (output->maxlevel >= 0)
-        gfs_domain_cell_traverse (domain,
-				  FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-				  (FttCellTraverseFunc) output->v->fine_coarse,
-				  output->v);
+      output_scalar_traverse (output,
+			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) output->v->fine_coarse,
+			      output->v);
     if (output->autoscale) {
       GtsRange stats = gfs_domain_stats_variable (domain, output->v, 
-	     FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel);
-
+						  FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
+						  output->maxlevel,
+						  output->condition ? cell_condition : NULL,
+						  output->condition);
       output->min = stats.min;
       output->max = stats.max;
     }
@@ -1921,7 +1873,7 @@ static void gfs_output_scalar_init (GfsOutputScalar * object)
   object->max =  G_MAXDOUBLE;
   object->autoscale = TRUE;
   object->maxlevel = -1;
-  object->box = NULL;
+  object->condition = NULL;
 }
 
 GfsOutputClass * gfs_output_scalar_class (void)
@@ -1956,8 +1908,9 @@ static gboolean gfs_output_scalar_norm_event (GfsEvent * event,
     GfsNorm norm = gfs_domain_norm_variable (GFS_DOMAIN (sim), 
 					     output->v, NULL,
 					     FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
-					     output->maxlevel);
-
+					     output->maxlevel,
+					     output->condition ? cell_condition : NULL,
+					     output->condition);
     fprintf (GFS_OUTPUT (event)->file->fp, 
 	     "%s time: %g first: % 10.3e second: % 10.3e infty: % 10.3e\n",
 	     output->name,
@@ -2005,8 +1958,9 @@ static gboolean gfs_output_scalar_stats_event (GfsEvent * event,
     GtsRange stats = gfs_domain_stats_variable (GFS_DOMAIN (sim), 
 						output->v,
 						FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
-						output->maxlevel);
-
+						output->maxlevel,
+						output->condition ? cell_condition : NULL,
+						output->condition);
     fprintf (GFS_OUTPUT (event)->file->fp, 
 	     "%s time: %g min: %10.3e avg: %10.3e | %10.3e max: %10.3e\n",
 	     output->name, sim->time.t,
@@ -2064,11 +2018,11 @@ static gboolean gfs_output_scalar_sum_event (GfsEvent * event,
 
     data[0] = output->v;
     data[1] = &sum;
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim),
-			      FTT_PRE_ORDER, 
-			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
-			      output->maxlevel,
-			      (FttCellTraverseFunc) add, data);
+    output_scalar_traverse (output,
+			    FTT_PRE_ORDER, 
+			    FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
+			    output->maxlevel,
+			    (FttCellTraverseFunc) add, data);
     gfs_all_reduce (GFS_DOMAIN (sim), sum, MPI_DOUBLE, MPI_SUM);
     fprintf (GFS_OUTPUT (event)->file->fp, 
 	     "%s time: %g sum: % 15.6e\n", output->name, sim->time.t, 
@@ -2174,11 +2128,11 @@ static gboolean gfs_output_scalar_maxima_event (GfsEvent * event,
     for (i = 0; i < m->N; i++)
       m->m[3][i] = -G_MAXDOUBLE;
 
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim),
-			      FTT_PRE_ORDER, 
-			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
-			      output->maxlevel,
-			      (FttCellTraverseFunc) maxima, m);
+    output_scalar_traverse (output,
+			    FTT_PRE_ORDER, 
+			    FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
+			    output->maxlevel,
+			    (FttCellTraverseFunc) maxima, m);
     for (i = 0; i < m->N; i++)
       fprintf (GFS_OUTPUT (event)->file->fp, 
 	       "%s time: %g #: %d x: %g y: %g z: %g value: %g\n", 
@@ -2376,7 +2330,7 @@ static gboolean gfs_output_scalar_histogram_event (GfsEvent * event,
       GfsOutput * output = GFS_OUTPUT (event);
       guint i;
 
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
+      output_scalar_traverse (GFS_OUTPUT_SCALAR (output), FTT_PRE_ORDER, 
 				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
 				GFS_OUTPUT_SCALAR (output)->maxlevel,
 				(FttCellTraverseFunc) update_histogram, output);
@@ -2533,8 +2487,8 @@ static gboolean gfs_output_droplet_sums_event (GfsEvent * event, GfsSimulation *
     p.n = gfs_domain_tag_droplets (domain, p.c, p.tag);
     if (p.n > 0) {
       p.v = g_malloc0 (p.n*sizeof (VolumePair));
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) droplet_sums, &p);
+      output_scalar_traverse (GFS_OUTPUT_SCALAR (event), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) droplet_sums, &p);
 #ifdef HAVE_MPI
       if (domain->pid >= 0) {
 	VolumePair * gv = g_malloc0 (p.n*sizeof (VolumePair));
@@ -2766,38 +2720,44 @@ static gboolean gfs_output_error_norm_event (GfsEvent * event,
     if (v == NULL)
       enorm->v = gfs_temporary_variable (domain);
     if (enorm->relative) {
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
-				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
-				output->maxlevel,
-				(FttCellTraverseFunc) reference_solution, output);
+      output_scalar_traverse (output, FTT_PRE_ORDER, 
+			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
+			      output->maxlevel,
+			      (FttCellTraverseFunc) reference_solution, output);
       snorm = gfs_domain_norm_variable (domain, enorm->v, enorm->w,
 					FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
-					output->maxlevel);
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
-				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
-				output->maxlevel,
-				(FttCellTraverseFunc) substract, output);
+					output->maxlevel,
+					output->condition ? cell_condition : NULL,
+					output->condition);
+      output_scalar_traverse (output, FTT_PRE_ORDER, 
+			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
+			      output->maxlevel,
+			      (FttCellTraverseFunc) substract, output);
     }
     else
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
-				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
-				output->maxlevel,
-				(FttCellTraverseFunc) compute_error, output);
+      output_scalar_traverse (output, FTT_PRE_ORDER, 
+			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
+			      output->maxlevel,
+			      (FttCellTraverseFunc) compute_error, output);
     norm = gfs_domain_norm_variable (domain, enorm->v, enorm->w,
 				     FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
-				     output->maxlevel);
+				     output->maxlevel,
+				     output->condition ? cell_condition : NULL,
+				     output->condition);
     if (GFS_OUTPUT_ERROR_NORM (event)->unbiased) {
       gpointer data[2];
 
       data[0] = enorm->v;
       data[1] = &norm;
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
-				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
-				output->maxlevel,
-				(FttCellTraverseFunc) remove_bias, data);
+      output_scalar_traverse (output, FTT_PRE_ORDER, 
+			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
+			      output->maxlevel,
+			      (FttCellTraverseFunc) remove_bias, data);
       norm = gfs_domain_norm_variable (domain, enorm->v, enorm->w,
 				       FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
-				       output->maxlevel);
+				       output->maxlevel,
+				       output->condition ? cell_condition : NULL,
+				       output->condition);
     }
     if (v == NULL) {
       gts_object_destroy (GTS_OBJECT (enorm->v));
@@ -2886,22 +2846,24 @@ static gboolean gfs_output_correlation_event (GfsEvent * event,
     if (v == NULL)
       enorm->v = gfs_temporary_variable (GFS_DOMAIN (sim));
     if (enorm->unbiased) {
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER,
-				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
-				output->maxlevel,
-				(FttCellTraverseFunc) compute_error, output);
+      output_scalar_traverse (output, FTT_PRE_ORDER,
+			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
+			      output->maxlevel,
+			      (FttCellTraverseFunc) compute_error, output);
       bias = gfs_domain_norm_variable (GFS_DOMAIN (sim), enorm->v, NULL,
 				       FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
-				       output->maxlevel).bias;
+				       output->maxlevel,
+				       output->condition ? cell_condition : NULL,
+				       output->condition).bias;
     }
     data[0] = output;
     data[1] = &bias;
     data[2] = &sum;
     data[3] = &sumref;
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER,
-			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
-			      output->maxlevel,
-			      (FttCellTraverseFunc) compute_correlation, data);
+    output_scalar_traverse (output, FTT_PRE_ORDER,
+			    FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
+			    output->maxlevel,
+			    (FttCellTraverseFunc) compute_correlation, data);
     if (v == NULL) {
       gts_object_destroy (GTS_OBJECT (enorm->v));
       enorm->v = NULL;
@@ -3169,7 +3131,7 @@ static gboolean gfs_output_ppm_event (GfsEvent * event, GfsSimulation * sim)
 #endif /* 2D3 or 3D */
 
     gfs_write_ppm (domain,
-		   output->box,
+		   output->condition,
 		   output->v, output->min, output->max,
 		   FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
 		   GFS_OUTPUT (event)->file->fp);
