@@ -2,7 +2,7 @@ version=20$(grep GFS_BUILD_VERSION src/version.h | awk 'BEGIN{FS=" |\"|-"}{print
 date=$(date +"%a, %e %b %Y %T %z")
 
 cat <<EOF > debian/changelog
-gerris-snapshot ($version) hardy; urgency=low
+gerris-snapshot ($version) jaunty; urgency=low
 
 EOF
 
