@@ -92,6 +92,8 @@ static void print_below (FttCell * cell, CoeffParams * cp, gdouble w)
   guint i, num=0;
   FttCellChildren child;
 
+  g_assert_not_reached ();
+
   ftt_cell_children (cell, &child);
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i])

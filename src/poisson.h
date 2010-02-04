@@ -49,9 +49,6 @@ struct _GfsMultilevelParams {
   gdouble beta, omega;
   GfsNorm residual_before, residual;
   GfsPoissonSolverFunc poisson_cycle;
-  
-  void (* read)      (GfsMultilevelParams * par, GtsFile * fp);
-  void (* write)     (GfsMultilevelParams * par, FILE * fp);
 };
 
 void                  gfs_add_boundary_element           (FttCell * cell,

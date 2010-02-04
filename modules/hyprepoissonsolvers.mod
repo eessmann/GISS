@@ -607,30 +607,9 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
   }
 }
 
-static void hypre_projection_params_read (GfsMultilevelParams * par, GtsFile * fp)
-{
-  hypre_solver_read (&proj_hp, fp);
-}
-
-static void hypre_projection_params_write (GfsMultilevelParams * par, FILE * fp)
-{
-  hypre_solver_write (&proj_hp, fp);
-}
-
-static void hypre_approx_params_read (GfsMultilevelParams * par, GtsFile * fp)
-{
-  HypreSolverParams dummy;
-
-  printf("No distinction is made between approx and mac projection\n");
-  printf(" in the hyprepoissonsolvers module \n");
-  printf("ApproxProjectionParams won't get read \n");
-  printf("Use ProjectionParams to specify parameters");
-
-  hypre_solver_read (&dummy, fp);
-}
-
 /* Initialize module */
 void          gfs_module_read     (GtsFile * fp, GfsSimulation * sim);
+void          gfs_module_write    (FILE * fp);
 
 /* only define gfs_module_name for "official" modules (i.e. those installed in
    GFS_MODULES_DIR) */
@@ -644,21 +623,18 @@ const gchar * g_module_check_init (void)
 
 void gfs_module_read (GtsFile * fp, GfsSimulation * sim)
 {
-  sim->approx_projection_params.read = hypre_approx_params_read;
-  sim->approx_projection_params.write =  hypre_projection_params_write;
+  g_return_if_fail (fp != NULL);
 
-  sim->projection_params.read = hypre_projection_params_read;
-  sim->projection_params.write = hypre_projection_params_write;
+  hypre_solver_read (&proj_hp, fp);
   
+  /* initialise the poisson cycle hook */
   sim->approx_projection_params.poisson_cycle = gfs_hypre_poisson_cycle;
   sim->projection_params.poisson_cycle = gfs_hypre_poisson_cycle;
-  
-  sim->projection_params.tolerance = proj_hp.tolerance;
-  sim->approx_projection_params.tolerance = proj_hp.tolerance;
-  
-  sim->projection_params.nitermax = 1;
-  sim->projection_params.nitermin = 0;
-  
-  sim->approx_projection_params.nitermax = 1;
-  sim->approx_projection_params.nitermin = 0;
+}
+
+void gfs_module_write (FILE * fp)
+{
+  g_return_if_fail (fp != NULL);
+
+  hypre_solver_write (&proj_hp, fp);
 }

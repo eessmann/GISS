@@ -143,9 +143,6 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
   par->weighted = FALSE;
   par->beta = 0.5;
   par->omega = 1.;
-
-  par->read = gfs_multilevel_params_read;
-  par->write = gfs_multilevel_params_write;
 }
 
 void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
