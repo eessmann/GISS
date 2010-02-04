@@ -323,12 +323,12 @@ static void correct (FttCell * cell, gpointer * data)
   GFS_VALUE (cell, u) += GFS_VALUE (cell, dp);
 }
 
-static void gfs_hypre_poisson_cycle (GfsDomain * domain,
+static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
 				     GfsMultilevelParams * p,
 				     GfsVariable * u,
 				     GfsVariable * rhs,
 				     GfsVariable * dia,
-				     GfsVariable * axi,
+				     /* GfsVariable * axi, */
 				     GfsVariable * res)
 {
   RelaxParams q;
@@ -356,7 +356,6 @@ static void gfs_hypre_poisson_cycle (GfsDomain * domain,
  
   solve_poisson_problem_using_hypre (&cp, p);
 
-
   gfs_domain_timer_start (domain, "Copy problem");
   copy_poisson_problem_solution_to_simulation_tree (&cp);
   gfs_domain_timer_stop (domain, "Copy problem");
@@ -377,6 +376,10 @@ static void gfs_hypre_poisson_cycle (GfsDomain * domain,
   
   gts_object_destroy (GTS_OBJECT (dp));
   gfs_domain_timer_stop (domain, "Correct field");
+
+  p->tolerance = proj_hp.tolerance;
+
+  return TRUE;
 }
 
 static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
@@ -387,7 +390,7 @@ static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
     fputs ("  solver_type      = boomer_amg\n", fp);
     fputs ("  relax_type       = sor-j-forward\n", fp);
     fputs ("  precond_type     = none\n", fp);
-    fputs ("  coarsening_type  = hmis\n", fp);
+    fputs ("  coarsening_type  = cgc_e\n", fp);
     fputs ("  cycle_type       = 1\n", fp);
     fputs ("  nlevel           = 11\n", fp);
     fputs ("}\n", fp);

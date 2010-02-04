@@ -877,13 +877,16 @@ void gfs_destroy_poisson_problem (GfsDiagElement * problem)
  *
  * The values of @u on the leaf cells are updated as well as the values
  * of @res (i.e. the cell tree is ready for another iteration).
+ *
+ * Returns a gboolean : TRUE if the function uses its own convergence
+ * criterion and satisfied it. FALSE otherwise.
  */
-void gfs_poisson_cycle (GfsDomain * domain,
-			GfsMultilevelParams * p,
-			GfsVariable * u,
-			GfsVariable * rhs,
-			GfsVariable * dia,
-			GfsVariable * res)
+gboolean gfs_poisson_cycle (GfsDomain * domain,
+			   GfsMultilevelParams * p,
+			   GfsVariable * u,
+			   GfsVariable * rhs,
+			   GfsVariable * dia,
+			   GfsVariable * res)
 {
   guint l, nrelax, minlevel;
   GfsVariable * dp;
@@ -944,6 +947,8 @@ void gfs_poisson_cycle (GfsDomain * domain,
   gfs_residual (domain, p->dimension, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
 
   gts_object_destroy (GTS_OBJECT (dp));
+
+  return FALSE;
 }
 
 typedef struct {

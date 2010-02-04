@@ -29,12 +29,12 @@ extern "C" {
 #include "domain.h"
 
 typedef struct _GfsMultilevelParams GfsMultilevelParams;
-typedef void (* GfsPoissonSolverFunc)       (GfsDomain * domain,
-					 GfsMultilevelParams * p,
-					 GfsVariable * u,
-					 GfsVariable * rhs,
-					 GfsVariable * dia,
-					 GfsVariable * res);
+typedef gboolean (* GfsPoissonSolverFunc)       (GfsDomain * domain,
+					     GfsMultilevelParams * p,
+					     GfsVariable * u,
+					     GfsVariable * rhs,
+					     GfsVariable * dia,
+					     GfsVariable * res);
 
 struct _GfsMultilevelParams {
   gdouble tolerance;
@@ -83,7 +83,7 @@ void                  gfs_residual                   (GfsDomain * domain,
 						      GfsVariable * res);
 void                  gfs_poisson_coefficients       (GfsDomain * domain,
 						      GfsFunction * alpha);
-void                  gfs_poisson_cycle              (GfsDomain * domain,
+gboolean              gfs_poisson_cycle              (GfsDomain * domain,
 						      GfsMultilevelParams * p,
 						      GfsVariable * u,
 						      GfsVariable * rhs,
