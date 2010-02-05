@@ -3403,8 +3403,7 @@ static void unify_tag_range (GfsDomain * domain, TagPar * p)
     guint * tags;
     MPI_Comm_size (MPI_COMM_WORLD, &gsize);
     tags = g_malloc (sizeof (guint)*gsize);
-    tags[domain->pid] = p->tag;
-    MPI_Allgather (&tags[domain->pid], 1, MPI_UNSIGNED, tags, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
+    MPI_Allgather (&p->tag, 1, MPI_UNSIGNED, tags, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
     /* tags[] now contains the p->tag value on each PE */
     guint i;
     p->tag = 0;

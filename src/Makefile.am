@@ -141,13 +141,16 @@ bin_PROGRAMS = gerris2D gerris3D gerris2D3
 gerris2D_SOURCES = gerris.c
 gerris2D_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 gerris2D_LDADD = $(GFS2D_LIBS)
+gerris2D_DEPENDENCIES = libgfs2D.la
 
 gerris3D_SOURCES = gerris.c
 gerris3D_LDADD = $(GFS3D_LIBS)
+gerris3D_DEPENDENCIES = libgfs3D.la
 
 gerris2D3_SOURCES = gerris.c
 gerris2D3_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
 gerris2D3_LDADD = $(GFS2D3_LIBS)
+gerris2D3_DEPENDENCIES = libgfs2D3.la
 
 if DARCS_CONTROLLED
 DARCS_VERSION = darcsversion

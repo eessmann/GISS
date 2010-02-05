@@ -1248,8 +1248,8 @@ void gfs_simulation_union_write (GfsSimulation * sim,
 
     MPI_Comm_size (MPI_COMM_WORLD, &gsize);
     nbox = g_malloc (sizeof (guint)*gsize);
-    nbox[domain->pid] = gts_container_size (GTS_CONTAINER (sim));
-    MPI_Allgather (&nbox[domain->pid], 1, MPI_UNSIGNED, nbox, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
+    guint n = gts_container_size (GTS_CONTAINER (sim));
+    MPI_Allgather (&n, 1, MPI_UNSIGNED, nbox, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
     /* nbox[] now contains the number of boxes on each PE */
 
     /* see gts/src/graph.c:gts_graph_write() for the original (serial) implementation */

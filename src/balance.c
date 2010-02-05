@@ -279,7 +279,15 @@ static gboolean gfs_event_balance_event (GfsEvent * event, GfsSimulation * sim)
 	GArray * pid = g_array_new (FALSE, TRUE, sizeof (guint));
 	g_array_set_size (pid, nb);
 	gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) get_pid, pid);
+#if MPI_VERSION == 2
 	MPI_Allreduce (MPI_IN_PLACE, pid->data, nb, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD);
+#else /* MPI-1 does not have the MPI_IN_PLACE option */ 
+	GArray * recv = g_array_new (FALSE, TRUE, sizeof (guint));
+	g_array_set_size (recv, nb);
+	MPI_Allreduce (pid->data, recv->data, nb, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD);
+	g_array_free (pid, TRUE);
+	pid = recv;
+#endif /* MPI-1 */
 	/* pid[id] now contains the current pid of box with index id */
 	gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) update_box_pid, pid);
 	g_array_free (pid, TRUE);
