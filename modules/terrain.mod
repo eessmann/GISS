@@ -1504,7 +1504,7 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
       else { /* surrounded by dry cells */
 	for (n = 0; n < FTT_CELLS; n++)
 	  if (child.c[n])
-	    GFS_VALUE (child.c[n], t->H) = GFS_VALUE (child.c[n], v); /* dry cell */
+	    GFS_VALUE (child.c[n], t->H) = 0.; /* default "sealevel" */
       }
     }
     else {
