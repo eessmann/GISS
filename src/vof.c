@@ -1274,6 +1274,8 @@ static void vof_cell_fine_init (FttCell * parent, VofParms * p)
   GFS_STATE (child.c[2])->f[0].un = GFS_STATE (child.c[3])->f[1].un = P[3] - P[2];
   GFS_STATE (child.c[0])->f[3].un = GFS_STATE (child.c[2])->f[2].un = P[0] - P[2];
   GFS_STATE (child.c[1])->f[3].un = GFS_STATE (child.c[3])->f[2].un = P[1] - P[3];
+#elif FTT_2D3
+  g_assert_not_implemented ();
 #else /* 3D */
   static gdouble m[7][7] = {{7./12.,5./24.,3./8.,5./24.,3./8.,1./4.,1./3.},
 			    {5./24.,7./12.,3./8.,5./24.,1./4.,3./8.,1./3.}, 
