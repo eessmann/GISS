@@ -928,6 +928,10 @@ void gfs_advection_params_write (GfsAdvectionParams * par, FILE * fp)
 	   "gfs_center_van_leer_gradient" :
 	   par->gradient == gfs_center_minmod_gradient ?
 	   "gfs_center_minmod_gradient" :
+	   par->gradient == gfs_center_superbee_gradient ?
+	   "gfs_center_superbee_gradient" :
+	   par->gradient == gfs_center_sweby_gradient ?
+	   "gfs_center_sweby_gradient" :
 	   "none",
 	   par->flux == gfs_face_advection_flux ?
 	   "gfs_face_advection_flux" :
@@ -1008,6 +1012,10 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
       par->gradient = gfs_center_van_leer_gradient;
     else if (!strcmp (gradient, "gfs_center_minmod_gradient"))
       par->gradient = gfs_center_minmod_gradient;
+    else if (!strcmp (gradient, "gfs_center_superbee_gradient"))
+      par->gradient = gfs_center_superbee_gradient;
+    else if (!strcmp (gradient, "gfs_center_sweby_gradient"))
+      par->gradient = gfs_center_sweby_gradient;
     else if (!strcmp (gradient, "none"))
       par->gradient = none;
     else if (fp->type != GTS_ERROR)

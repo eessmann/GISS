@@ -514,8 +514,9 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
     
     if (f2.neighbor) {
       /* two neighbors: second-order differencing (parabola)
-	 + van Leer limiter */
+	 + van Leer limiter. See http://en.wikipedia.org/wiki/Flux_limiter */
       gdouble x1 = 1., x2 = 1., v0, v1, v2;
+      gdouble theta = 2.;
       gdouble s0, s1, s2;
       
       v0 = GFS_VARIABLE (cell, v);
@@ -539,11 +540,57 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
   return 0.;
 }
 
-static gdouble limiter (gdouble r, gdouble beta)
+static gdouble generic_limiter (gdouble r, gdouble beta)
 {
   gdouble v1 = MIN (r, beta), v2 = MIN (beta*r, 1.);
   v1 = MAX (0., v1);
   return MAX (v1, v2);
+}
+
+static gdouble minmod_limiter (gdouble r)
+{
+  return generic_limiter (r, 1.);
+}
+
+static gdouble superbee_limiter (gdouble r)
+{
+  return generic_limiter (r, 2.);
+}
+
+static gdouble sweby_limiter (gdouble r)
+{
+  return generic_limiter (r, 1.5);
+}
+
+static gdouble center_limited_gradient (FttCell * cell,
+					FttComponent c,
+					guint v,
+					gdouble (* limiter) (gdouble))
+{
+  FttDirection d = 2*c;
+  FttCellFace f1;
+  gdouble v0;
+
+  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+  v0 = GFS_VARIABLE (cell, v);
+  if (f1.neighbor) {
+    FttCellFace f2 = gfs_cell_face (cell, d);
+    if (f2.neighbor) {
+      /* two neighbors */
+      gdouble x1 = 1., v1, x2 = 1., v2;
+      v1 = neighbor_value (&f1, v, &x1);
+      v2 = neighbor_value (&f2, v, &x2);
+
+      gdouble g;
+      if (v0 == v1)
+	g = 0.;
+      else
+	g = (* limiter) ((v2 - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
+      return g;
+    }
+  }
+  /* only one or no neighbors */
+  return 0.;
 }
 
 /**
@@ -562,33 +609,54 @@ gdouble gfs_center_minmod_gradient (FttCell * cell,
 				    FttComponent c,
 				    guint v)
 {
-  FttDirection d = 2*c;
-  FttCellFace f1;
-  gdouble v0;
-
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (c < FTT_DIMENSION, 0.);
 
-  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
-  v0 = GFS_VARIABLE (cell, v);
-  if (f1.neighbor) {
-    FttCellFace f2 = gfs_cell_face (cell, d);
-    if (f2.neighbor) {
-      /* two neighbors */
-      gdouble x1 = 1., v1, x2 = 1., v2;
-      v1 = neighbor_value (&f1, v, &x1);
-      v2 = neighbor_value (&f2, v, &x2);
+  return center_limited_gradient (cell, c, v, minmod_limiter);
+}
 
-      gdouble g;
-      if (v0 == v1)
-	g = 0.;
-      else
-	g = limiter ((v2 - v0)*x1/((v0 - v1)*x2), 1.)*(v0 - v1)/x1;
-      return g;
-    }
-  }
-  /* only one or no neighbors */
-  return 0.;
+/**
+ * gfs_center_superbee_gradient:
+ * @cell: a #FttCell.
+ * @c: a component.
+ * @v: a #GfsVariable index.
+ *
+ * The gradient is normalized by the size of the cell and is limited
+ * using a superbee limiter.
+ *
+ * Returns: the value of the @c component of the gradient of variable @v
+ * at the center of the cell.  
+ */
+gdouble gfs_center_superbee_gradient (FttCell * cell,
+				      FttComponent c,
+				      guint v)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (c < FTT_DIMENSION, 0.);
+
+  return center_limited_gradient (cell, c, v, superbee_limiter);
+}
+
+/**
+ * gfs_center_sweby_gradient:
+ * @cell: a #FttCell.
+ * @c: a component.
+ * @v: a #GfsVariable index.
+ *
+ * The gradient is normalized by the size of the cell and is limited
+ * using a Sweby limiter (beta = 1.5).
+ *
+ * Returns: the value of the @c component of the gradient of variable @v
+ * at the center of the cell.  
+ */
+gdouble gfs_center_sweby_gradient (FttCell * cell,
+				   FttComponent c,
+				   guint v)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (c < FTT_DIMENSION, 0.);
+
+  return center_limited_gradient (cell, c, v, sweby_limiter);
 }
 
 /**

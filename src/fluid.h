@@ -121,6 +121,12 @@ gdouble               gfs_center_van_leer_gradient  (FttCell * cell,
 gdouble               gfs_center_minmod_gradient    (FttCell * cell,
 						     FttComponent c,
 						     guint v);
+gdouble               gfs_center_superbee_gradient  (FttCell * cell,
+						     FttComponent c,
+						     guint v);
+gdouble               gfs_center_sweby_gradient     (FttCell * cell,
+						     FttComponent c,
+						     guint v);
 gdouble               gfs_center_regular_gradient   (FttCell * cell,
 						     FttComponent c,
 						     GfsVariable * v);

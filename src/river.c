@@ -275,12 +275,22 @@ static void cell_gradients (FttCell * cell,
   FttComponent c;
   guint v;
 
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    for (v = 0; v < GFS_RIVER_NVAR; v++)
-      GFS_VALUE (cell, r->dv[c][v]) = (* r->gradient) (cell, c, r->v[v]->i)/2.;
-    /* recontruct Zb + eta rather than Zb: see Theorem 3.1 of Audusse et al, 2004 */
-    GFS_VALUE (cell, r->dv[c][3]) = 
-      (* r->gradient) (cell, c, r->H->i)/2. - GFS_VALUE (cell, r->dv[c][0]);
+  if (GFS_VALUE (cell, r->v[0]) < r->dry) {
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      for (v = 0; v < GFS_RIVER_NVAR; v++)
+	GFS_VALUE (cell, r->dv[c][v]) = 0.;
+      GFS_VALUE (cell, r->dv[c][3]) = 0.;
+    }
+  }
+  else { /* wet */
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      for (v = 0; v < GFS_RIVER_NVAR; v++)
+	GFS_VALUE (cell, r->dv[c][v]) = (* r->gradient) (cell, c, r->v[v]->i)/2.;
+      /* recontruct Zb + eta rather than Zb: see Theorem 3.1 of Audusse et al, 2004 */
+      GFS_VALUE (cell, r->dv[c][3]) =
+	(* r->gradient) (cell, c, r->H->i)/2.
+	- GFS_VALUE (cell, r->dv[c][0]);
+    }
   }
 }
 
