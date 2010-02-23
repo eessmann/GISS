@@ -1181,6 +1181,7 @@ static void gfs_output_location_read (GtsObject ** o, GtsFile * fp)
     GtsFileVariable var[] = {
       {GTS_STRING, "label", TRUE, &label},
       {GTS_STRING, "precision", TRUE, &precision},
+      {GTS_INT,    "interpolate", TRUE, &l->interpolate},
       {GTS_NONE}
     };
     gts_file_assign_variables (fp, var);
@@ -1225,6 +1226,8 @@ static void gfs_output_location_write (GtsObject * o, FILE * fp)
       fprintf (fp, "  precision = %s\n", l->precision);
     if (l->label)
       fprintf (fp, "  label = \"%s\"\n", l->label);
+    if (!l->interpolate)
+      fputs ("  interpolate = 0\n", fp);
     fputc ('}', fp);
   }
 }
@@ -1267,7 +1270,10 @@ static gboolean gfs_output_location_event (GfsEvent * event,
 	while (i) {
 	  GfsVariable * v = i->data;
 	  if (v->name)
-	    fprintf (fp, vformat, gfs_dimensional_value (v, gfs_interpolate (cell, pm, v)));
+	    fprintf (fp, vformat, gfs_dimensional_value (v, 
+							 location->interpolate ? 
+							 gfs_interpolate (cell, pm, v) :
+							 GFS_VALUE (cell, v)));
 	  i = i->next;
 	}
 	fputc ('\n', fp);
@@ -1293,6 +1299,7 @@ static void gfs_output_location_init (GfsOutputLocation * object)
 {
   object->p = g_array_new (FALSE, FALSE, sizeof (FttVector));
   object->precision = default_precision;
+  object->interpolate = TRUE;
 }
 
 GfsOutputClass * gfs_output_location_class (void)
