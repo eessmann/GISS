@@ -534,7 +534,8 @@ static gdouble height (FttCell * cell)
   if (!GFS_IS_MIXED (cell))
     return 1.;
   gdouble f = GFS_STATE (cell)->solid->s[FTT_FRONT];
-  g_assert (f);
+  if (f == 0.)
+    return 0.;
 #if FTT_2D3
   return GFS_STATE (cell)->solid->a/f;
 #else /* 3D */
@@ -546,7 +547,7 @@ static gdouble height (FttCell * cell)
 
 static void compute_H (FttCell * cell, GfsVariable * H)
 {
-  GFS_VARIABLE (cell, H->i) = height (cell);
+  GFS_VALUE (cell, H) = height (cell);
 }
 
 static void face_interpolated_normal_velocity (const FttCellFace * face, GfsVariable ** v)
@@ -566,6 +567,7 @@ static void face_interpolated_normal_velocity (const FttCellFace * face, GfsVari
     break;
   case FTT_FINE_COARSE: {
     gdouble w1 = height (face->cell), w2 = height (face->neighbor);
+    g_assert (w1 + w2);
     w1 = 2.*w1/(w1 + w2);
     u = w1*gfs_face_interpolated_value (face, i) + (1. - w1)*GFS_VARIABLE (face->neighbor, i);
     break;
@@ -816,9 +818,30 @@ static void gfs_ocean_class_init (GfsSimulationClass * klass)
   klass->run = ocean_run;
 }
 
+static void depth_coarse_fine (FttCell * parent, GfsVariable * H)
+{
+  FttCellChildren child;
+  guint i;
+
+  ftt_cell_children (parent, &child);
+  for (i = 0; i < FTT_CELLS; i++)
+    if (child.c[i]) {
+      GFS_VALUE (child.c[i], H) = height (child.c[i]);
+      if (GFS_VALUE (child.c[i], H) <= 0.)
+	ftt_cell_destroy (child.c[i], (FttCellCleanupFunc) gfs_cell_cleanup, H->domain);
+    }
+}
+
+static void depth_fine_coarse (FttCell * parent, GfsVariable * H)
+{
+  GFS_VALUE (parent, H) = height (parent);
+}
+
 static void gfs_ocean_init (GfsOcean * object)
 {
-  gfs_domain_add_variable (GFS_DOMAIN (object), "H", "Depth");
+  GfsVariable * H = gfs_domain_add_variable (GFS_DOMAIN (object), "H", "Depth");
+  H->coarse_fine = depth_coarse_fine;
+  H->fine_coarse = depth_fine_coarse;
   GFS_SIMULATION (object)->approx_projection_params.weighted = 1;
   object->layer = g_ptr_array_new ();
   new_layer (object);
