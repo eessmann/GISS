@@ -2836,7 +2836,7 @@ static void append_stencil_element_to_stencil (GArray * stencil, gint id, gdoubl
   g_array_append_val (stencil, diag);
 }
 
-static gdouble get_average_neighbor_value (const FttCellFace * face,
+static void get_average_neighbor_value (const FttCellFace * face,
 					   guint v, gdouble * x, stencil_data * sd,
 					   gdouble weight)
 {
@@ -2898,14 +2898,12 @@ static GfsGradient get_interpolate_1D1 (FttCell * cell,
 
   f = gfs_cell_face (cell, d);
   if (f.neighbor) {
-    gdouble x2 = 1., p2 = get_average_neighbor_value (&f, v, &x2, sd, weight*x);
+    gdouble x2 = 1.;
+    get_average_neighbor_value (&f, v, &x2, sd, weight*x);
     p.a = 1. - x/x2;
-    p.b = p2*x/x2;
   }
-  else {
+  else
     p.a = 1.;
-    p.b = 0.;
-  }
 
   return p;
 }
@@ -2925,27 +2923,23 @@ static GfsGradient get_interpolate_2D1 (FttCell * cell,
   GfsGradient p;
   gdouble y1 = 1.;
   gdouble x2 = 1.;
-  gdouble p1 = 0., p2 = 0.;
   gdouble a1 = y, a2 = x;
   FttCellFace f1, f2;
 
   p.a = 1.;
-  p.b = 0.;
 
   f1 = gfs_cell_face (cell, d1);
   if (f1.neighbor) {
-    p1 = get_average_neighbor_value (&f1, v, &y1, sd, a1);
+    get_average_neighbor_value (&f1, v, &y1, sd, a1);
     a1 /= y1;
     p.a -= a1;
-    p.b += a1*p1; /* <----- */
   }
     
   f2 = gfs_cell_face (cell, d2);
   if (f2.neighbor) {
-    p2 = get_average_neighbor_value (&f2, v, &x2, sd, a2);
+    get_average_neighbor_value (&f2, v, &x2, sd, a2);
     a2 /= x2;
     p.a -= a2;
-    p.b += a2*p2; /* <----- */
   }
   
   return p;
@@ -2978,7 +2972,6 @@ static Gradient get_gradient_fine_coarse (const FttCellFace * face, guint v,
 
   g.a = 2./3.;
   g.b = 2.*p.a/3.;
-  g.c = 2.*p.b/3.;
 
   return g;
 }
@@ -2993,7 +2986,7 @@ static void get_face_weighted_gradient (const FttCellFace * face,
 
   g_return_if_fail (face != NULL);
 
-  g->a = g->b = 0.;
+  g->a = 0.;
   
   if (face->neighbor == NULL)
     return;
@@ -3006,16 +2999,7 @@ static void get_face_weighted_gradient (const FttCellFace * face,
 
     gcf = get_gradient_fine_coarse (face,sd->u->i, sd, w);
     g->a = w*gcf.a;
-    g->b = w*(gcf.b*GFS_VARIABLE (face->neighbor, sd->u->i) + gcf.c);
-
-    
-    /* if (FTT_CELL_IS_LEAF(face->neighbor)) { */
-      append_stencil_element_to_stencil (sd->stencil, (gint) GFS_VALUE (face->neighbor, sd->id), w*gcf.b);
-    /* } */
-/*     else { */
-/*       print_below (face->neighbor,cp,w*gcf.b); */
-/*     } */
-    
+    append_stencil_element_to_stencil (sd->stencil, (gint) GFS_VALUE (face->neighbor, sd->id), w*gcf.b);
   }
   else {
     if (level == max_level || FTT_CELL_IS_LEAF (face->neighbor)) {
@@ -3023,8 +3007,6 @@ static void get_face_weighted_gradient (const FttCellFace * face,
       gdouble w = GFS_STATE (face->cell)->f[face->d].v;
 
       g->a = w;
-      g->b = w*GFS_VARIABLE (face->neighbor, sd->u->i);
-      
       append_stencil_element_to_stencil (sd->stencil, (gint) GFS_VALUE (face->neighbor, sd->id), w);
     }
     else {
@@ -3043,31 +3025,15 @@ static void get_face_weighted_gradient (const FttCellFace * face,
 	
 	  gcf = get_gradient_fine_coarse (&f, sd->u->i, sd, -w);
 	  g->a += w*gcf.b;
-	  g->b += w*(gcf.a*GFS_VARIABLE (f.cell, sd->u->i) - gcf.c);
 	  
-	  /* ****** */
-	 
-	  if (dimension > 2) {
-	    /* if (FTT_CELL_IS_LEAF(f.cell))  { */
+	  if (dimension > 2)
 	    append_stencil_element_to_stencil (sd->stencil, (gint) GFS_VALUE (f.cell, sd->id), w*gcf.a/(n/2.));
-	    /* } */
-	    /* 	      else { */
-	    /* 		print_below (f.cell,cp,-w*gcf.a); */
-	    /* 	      } */
-	  }
-	  else {
-	    /*  if (FTT_CELL_IS_LEAF(f.cell)) { */
+	  else
 	    append_stencil_element_to_stencil (sd->stencil, (gint) GFS_VALUE (f.cell, sd->id), w*gcf.a/(n/2.));
-	    /*  } */
-	    /* 	      else { */
-	    /* 		print_below (f.cell,cp,-w*gcf.a); */
-	    /* 	      } */
-	  } 
 	}
       if (dimension > 2) { /* To deal with */
 	/* fixme??? */
 	g->a /= n/2.;
-	g->b /= n/2.;
       }
     }
   }
@@ -3088,5 +3054,3 @@ void gfs_get_face_weighted_gradient_2D (const FttCellFace * face,
 {
   get_face_weighted_gradient (face, g, max_level, 2, sd);
 }
-
-/********************************************************************/

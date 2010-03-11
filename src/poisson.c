@@ -209,11 +209,14 @@ static void append_stencil_element_to_stencil (GArray * stencil, gint id,
   g_array_append_val (stencil, diag);
 }
 
-static void append_stencil_to_linear_problem (GArray * stencil, LP_data * lpd)
+static void append_stencil_to_linear_problem (GArray * stencil, LP_data * lp)
 {
   g_assert (stencil != NULL);
 
-  g_ptr_array_add (lpd->LP, stencil);
+  g_ptr_array_add (lp->LP, stencil);
+  
+  if (stencil->len > lp->maxsize)
+    lp->maxsize = sd.stencil->len;
 }
 
 void gfs_destroy_linear_problem (LP_data * lp)
@@ -264,8 +267,6 @@ static void get_relax_coeff (FttCell * cell, LP_data * lp)
   }
 
   append_stencil_to_linear_problem (sd.stencil, lp);
-  if (sd.stencil->len > lp->maxsize)
-    lp->maxsize = sd.stencil->len;
 }
 
 static void get_relax2D_coeff (FttCell * cell, LP_data * lp)
@@ -301,8 +302,6 @@ static void get_relax2D_coeff (FttCell * cell, LP_data * lp)
   }
 
   append_stencil_to_linear_problem (sd.stencil, lp);
-  if (sd.stencil->len > lp->maxsize)
-    lp->maxsize = sd.stencil->len;
 }
 
 static void leafs_numbering (FttCell * cell, LP_data * lp) {
@@ -329,12 +328,10 @@ static void bc_leafs_numbering (GfsBox * box, LP_data * lp) {
     if (GFS_IS_BOUNDARY (box->neighbor[d])) {
       GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
       
-      
       b->type = GFS_BOUNDARY_CENTER_VARIABLE;
       ftt_face_traverse_boundary (b->root, b->d,
 				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, lp->maxlevel,
-				  (FttFaceTraverseFunc) number_bc, lp);
-      
+				  (FttFaceTraverseFunc) number_bc, lp);   
     }
 }
 
