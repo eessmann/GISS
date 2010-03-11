@@ -617,7 +617,7 @@ typedef struct {
   gint max_depth;
   GfsVariable * v, * v1;
   FttComponent c;
-  CoeffParams * cp;
+  LP_data * lp; /* HYPRE */
 } BcData;
 
 static void box_bc (GfsBox * box, BcData * p)
@@ -632,11 +632,17 @@ static void box_bc (GfsBox * box, BcData * p)
       if (bc) {
 	b->v = p->v1;
 	bc->v = p->v1;
-	bc->cp = p->cp;
-	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
-	ftt_face_traverse_boundary (b->root, b->d,
-				    FTT_PRE_ORDER, p->flags, p->max_depth,
-				    bc->bc, bc);
+  	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+	if (p->lp == NULL)
+	  ftt_face_traverse_boundary (b->root, b->d,
+				      FTT_PRE_ORDER, p->flags, p->max_depth,
+				      bc->bc, bc);
+	else {
+	  bc->lp = p->lp; /* HYPRE */
+	  ftt_face_traverse_boundary (b->root, b->d,
+				      FTT_PRE_ORDER, p->flags, p->max_depth,
+				      bc->bc_stencil, bc);
+	}
 	bc->v = p->v;
 	gfs_boundary_send (b);
       }
@@ -794,10 +800,16 @@ static void box_homogeneous_bc (GfsBox * box, BcData * p)
 	b->v = p->v1;
 	bc->v = p->v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
-	bc->cp = p->cp;
-	ftt_face_traverse_boundary (b->root, b->d,
-				    FTT_PRE_ORDER, p->flags, p->max_depth,
-				    bc->homogeneous_bc, bc);
+	if (p->lp == NULL)
+	  ftt_face_traverse_boundary (b->root, b->d,
+				      FTT_PRE_ORDER, p->flags, p->max_depth,
+				      bc->homogeneous_bc, bc);
+	else {
+	  bc->lp = p->lp; /* HYPRE */
+	  ftt_face_traverse_boundary (b->root, b->d,
+				      FTT_PRE_ORDER, p->flags, p->max_depth,
+				      bc->homogeneous_bc_stencil, bc);
+	}
 	bc->v = p->v;
 	gfs_boundary_send (b);
       }
@@ -820,9 +832,9 @@ void gfs_domain_homogeneous_bc (GfsDomain * domain,
 				gint max_depth,
 				GfsVariable * ov,
 				GfsVariable * v,
-				CoeffParams * cp)
+				LP_data * lp) /* HYPRE */
 {
-  BcData b = { flags, max_depth, v, ov, FTT_XYZ, cp };
+  BcData b = { flags, max_depth, v, ov, FTT_XYZ, lp };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (ov != NULL);
@@ -883,10 +895,16 @@ static void update_mpi_boundaries (GfsBox * box, TraverseBcData * p)
 	b->v = p->b.v1;
 	bc->v = p->b.v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
-	bc->cp = p->b.cp;
-	ftt_face_traverse_boundary (b->root, b->d,
-				    FTT_PRE_ORDER, p->b.flags, p->b.max_depth,
-				    bc->bc, bc);
+	if (p->b.lp == NULL)
+	  ftt_face_traverse_boundary (b->root, b->d,
+				      FTT_PRE_ORDER, p->b.flags, p->b.max_depth,
+				      bc->bc, bc);
+	else {
+	  bc->lp = p->b.lp; /* HYPRE */
+	  ftt_face_traverse_boundary (b->root, b->d,
+				      FTT_PRE_ORDER, p->b.flags, p->b.max_depth,
+				      bc->bc_stencil, bc);
+	}
 	bc->v = p->b.v;
 	gfs_boundary_send (b);
       }
@@ -906,10 +924,16 @@ static void update_other_homogeneous_boundaries (GfsBox * box, BcData * p)
 	b->v = p->v1;
 	bc->v = p->v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
-	bc->cp = p->cp;
-	ftt_face_traverse_boundary (b->root, b->d,
-				    FTT_PRE_ORDER, p->flags, p->max_depth,
-				    bc->homogeneous_bc, bc);
+	if (p->lp == NULL)
+	  ftt_face_traverse_boundary (b->root, b->d,
+				      FTT_PRE_ORDER, p->flags, p->max_depth,
+				      bc->homogeneous_bc, bc);
+	else {
+	  bc->lp = p->lp; /* HYPRE */
+	  ftt_face_traverse_boundary (b->root, b->d,
+				      FTT_PRE_ORDER, p->flags, p->max_depth,
+				      bc->homogeneous_bc_stencil, bc);
+	}
 	bc->v = p->v;
 	gfs_boundary_send (b);
       }
@@ -947,13 +971,13 @@ void gfs_traverse_and_homogeneous_bc (GfsDomain * domain,
 				      gpointer data,
 				      GfsVariable * ov,
 				      GfsVariable * v,
-				      CoeffParams * cp)
+				      LP_data * lp) /* HYPRE */
 {
   g_return_if_fail (domain != NULL);
 
   if (domain->pid < 0 || !domain->overlap) {
     gfs_domain_cell_traverse (domain, order, flags, max_depth, func, data);
-    gfs_domain_homogeneous_bc (domain, flags, max_depth, ov, v, cp);
+    gfs_domain_homogeneous_bc (domain, flags, max_depth, ov, v, lp);
   }
   else {
     TraverseBcData d = {
@@ -987,10 +1011,16 @@ static void update_other_boundaries (GfsBox * box, BcData * p)
 	b->v = p->v1;
 	bc->v = p->v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
-	bc->cp = p->cp;
-	ftt_face_traverse_boundary (b->root, b->d,
-				    FTT_PRE_ORDER, p->flags, p->max_depth,
-				    bc->bc, bc);
+	if (p->lp == NULL)
+	  ftt_face_traverse_boundary (b->root, b->d,
+				      FTT_PRE_ORDER, p->flags, p->max_depth,
+				      bc->bc, bc);
+	else {
+	  bc->lp = p->lp;
+	  ftt_face_traverse_boundary (b->root, b->d,
+				      FTT_PRE_ORDER, p->flags, p->max_depth,
+				      bc->bc_stencil, bc);
+	}
 	bc->v = p->v;
 	gfs_boundary_send (b);
       }

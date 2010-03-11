@@ -36,11 +36,6 @@ typedef struct _GfsStateVector     GfsStateVector;
 typedef struct _GfsSolidVector     GfsSolidVector;
 typedef struct _GfsFaceStateVector GfsFaceStateVector;
 
-typedef struct _RelaxParams RelaxParams;
-typedef struct _CoeffParams CoeffParams;
-typedef struct GfsStencilElement GfsStencilElement;
-typedef struct GfsDiagElement GfsDiagElement;
-
 struct _GfsFaceStateVector {
   gdouble un;
   gdouble v;
@@ -63,42 +58,21 @@ struct _GfsSolidVector {
   FttVector cm, ca;
 };
 
-struct GfsStencilElement {
-  gint cell_id;
+typedef struct _LP_data LP_data;
+typedef struct _StencilElement StencilElement;
+
+struct _LP_data{
+  GPtrArray * LP;
+  GArray * rhs, * lhs;
+  GfsVariable * rhs_v, * lhs_v, * id;
+  GfsVariable * u, * dp, * dia;
+  gdouble beta, omega, nleafs;
+  gint maxsize, maxlevel;
+};
+
+struct _StencilElement{
   gdouble cell_coeff;
-  struct GfsStencilElement * next;
-};
-
-struct  GfsDiagElement{
   gint cell_id;
-  gdouble cell_coeff;
-  gdouble rhs;
-  gdouble u;
-  GfsStencilElement * stencil;
-  GfsDiagElement * next;
-};
-
-struct _RelaxParams{
-  guint u, rhs, dia, res;
-  gint maxlevel;
-  gdouble beta, omega;
-  FttComponent component;
-  guint axi;
-};
-
-struct _CoeffParams {
-  GfsDomain * domain;
-  RelaxParams * p;
-  GfsVariable * u, * id;
-  FttCell * diag_cell;
-  gint maxlength, length, poisson_problem_size;
-  gdouble w;
-  gdouble wx[FTT_DIMENSION];
-  GfsDiagElement * poisson_problem;
-  GfsDiagElement * poisson_problem_end;
-/*   gint BC_num; */
-/*   GfsDiagElement * BC_problem; */
-/*   GfsDiagElement * BC_problem_end; */
 };
 
 typedef enum {
@@ -176,9 +150,6 @@ gdouble               gfs_center_regular_gradient   (FttCell * cell,
 gdouble               gfs_center_regular_2nd_derivative (FttCell * cell, 
 							 FttComponent c, 
 							 GfsVariable * v);
-void                  gfs_add_stencil_element       (FttCell * cell,
-						     CoeffParams * cp,
-						     gdouble coeff);
 typedef struct _GfsGradient GfsGradient;
 
 struct _GfsGradient {
@@ -193,17 +164,9 @@ void                  gfs_face_weighted_gradient     (const FttCellFace * face,
 						      GfsGradient * g,
 						      guint v,
 						      gint max_level);
-void                  gfs_coeff_face_weighted_gradient (const FttCellFace * face,
-						       GfsGradient * g,
-						       CoeffParams * cp,
-						       gint max_level);
 void                  gfs_face_weighted_gradient_2D  (const FttCellFace * face,
 						      GfsGradient * g,
 						      guint v,
-						      gint max_level);
-void                  gfs_coeff_face_weighted_gradient_2D  (const FttCellFace * face,
-						      GfsGradient * g,
-						      CoeffParams * cp,
 						      gint max_level);
 void                  gfs_face_gradient_flux         (const FttCellFace * face,
 						      GfsGradient * g,
@@ -312,6 +275,24 @@ gdouble               gfs_cell_corner_value         (FttCell * cell,
 						     FttDirection * d,
 						     GfsVariable * v,
 						     gint max_level);
+
+typedef struct _stencil_data stencil_data;
+
+struct _stencil_data {
+  GfsVariable * id;
+  GfsVariable * u;
+  GArray * stencil;
+};
+
+void                  gfs_get_face_weighted_gradient (const FttCellFace * face,
+						      GfsGradient * g,
+						      gint max_level,
+						      stencil_data * sd);
+void                  gfs_get_face_weighted_gradient_2D (const FttCellFace * face,
+							 GfsGradient * g,
+							 gint max_level,
+							 stencil_data * sd);
+
 
 #ifdef __cplusplus
 }

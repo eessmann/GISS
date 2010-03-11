@@ -51,10 +51,6 @@ struct _GfsMultilevelParams {
   GfsPoissonSolverFunc poisson_cycle;
 };
 
-void                  gfs_add_boundary_element           (FttCell * cell,
-							  CoeffParams * cp,
-							  gdouble val,
-							  gdouble coeff);
 void                  gfs_multilevel_params_init     (GfsMultilevelParams * par);
 void                  gfs_multilevel_params_write    (GfsMultilevelParams * par, 
 						      FILE * fp);
@@ -63,9 +59,10 @@ void                  gfs_multilevel_params_read     (GfsMultilevelParams * par,
 void                  gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 							 FILE * fp);
 void                  gfs_get_poisson_problem        (GfsDomain * domain, 
-			                              GfsVariable * dp, GfsVariable * u, 
-					              CoeffParams * cp, guint dimension);
-void                  gfs_destroy_poisson_problem    (GfsDiagElement * problem);
+						      GfsVariable * rhs, GfsVariable * lhs, 
+						      GfsVariable * dia, guint dimension,
+						      LP_data * lp);
+void                  gfs_destroy_linear_problem     (LP_data * lp);
 void                  gfs_relax                      (GfsDomain * domain,
 						      guint d,
 						      gint max_depth,

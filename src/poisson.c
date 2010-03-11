@@ -23,75 +23,6 @@
 #include "source.h"
 #include "tension.h"
 
-static void add_diagonal_element_structure (CoeffParams * cp, FttCell * cell)
-{
-  GfsDiagElement * new =g_malloc (sizeof (GfsDiagElement));
-
-  cp->diag_cell = cell;
-
-  new->cell_id = GFS_VALUE(cp->diag_cell, cp->id);
-  new->rhs = GFS_VARIABLE (cp->diag_cell, cp->p->rhs);
-  new->u =  GFS_VARIABLE (cp->diag_cell, cp->p->u);
-  new->stencil = NULL;
-  new->next = NULL;
-  
-  if (!cp->poisson_problem)
-    cp->poisson_problem = new;
-  else
-    cp->poisson_problem_end->next = new;
-  
-  cp->poisson_problem_end = new;
-  new = NULL;
-}
-
-static void fill_diagonal_element (CoeffParams * cp, gdouble coeff)
-{
-  cp->poisson_problem_end->cell_coeff = coeff;
-}
-
-void gfs_add_boundary_element (FttCell * cell, CoeffParams * cp, gdouble val, gdouble coeff)
-{
-  GfsDiagElement * new =g_malloc (sizeof (GfsDiagElement));
-
-  new->cell_id = GFS_VALUE(cell, cp->id);
-  new->rhs = val;
-  new->u = GFS_VARIABLE (cell, cp->p->u);
-  new->stencil = NULL;
-  new->next = NULL;
-  new->cell_coeff = coeff;
-  
-  if (!cp->poisson_problem)
-    cp->poisson_problem = new;
-  else
-    cp->poisson_problem_end->next = new;
-  
-  cp->poisson_problem_end = new;
-  new = NULL;
-}
-
-static void destroy_stencil_element_list (GfsStencilElement * list)
-{
-  GfsStencilElement * to_destroy;
-
-  while (list) {
-    to_destroy = list;
-    list = list->next;
-    g_free(to_destroy);
-  }
-}
-
-static void destroy_diagonal_element_list (GfsDiagElement * list)
-{
-  GfsDiagElement * to_destroy;
-  
-  while (list) {
-    to_destroy = list;
-    list = list->next;
-    destroy_stencil_element_list (to_destroy->stencil);
-    g_free(to_destroy);
-  }
-}
-
 /**
  * gfs_multilevel_params_write:
  * @par: the multilevel parameters.
@@ -237,18 +168,250 @@ void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 		 par->niter));
 }
 
-static void relax (FttCell * cell, CoeffParams * cp)
+/* The convention is that the first element is the diagonal */
+
+static GArray * new_stencil ()
+{
+  return g_array_new (FALSE, FALSE, sizeof (StencilElement));
+}
+
+static void destroy_stencil (GArray * stencil)
+{
+  if (stencil)
+  g_array_free (stencil, TRUE);
+}
+
+static void prepend_stencil_element_to_stencil (GArray * stencil, gint id,
+						gdouble coeff)
+{
+  StencilElement diag; /* Might want to check if diagonal term is used in stencil */
+
+  diag.cell_coeff = coeff;
+  diag.cell_id = id;
+
+  g_array_prepend_val (stencil, diag);
+}
+
+static void append_stencil_element_to_stencil (GArray * stencil, gint id,
+					       gdouble coeff)
+{
+  StencilElement diag;
+  gint i, j;
+  
+  for (i = 0; i < stencil->len; i++)
+    if (g_array_index (stencil, StencilElement, i).cell_id == id) {
+      g_array_index (stencil, StencilElement, i).cell_coeff += coeff;
+      return;
+    }
+
+  diag.cell_coeff = coeff;
+  diag.cell_id = id;
+  g_array_append_val (stencil, diag);
+}
+
+static void append_stencil_to_linear_problem (GArray * stencil, LP_data * lpd)
+{
+  g_assert (stencil != NULL);
+
+  g_ptr_array_add (lpd->LP, stencil);
+}
+
+void gfs_destroy_linear_problem (LP_data * lp)
+{
+  if (lp->id)
+    gts_object_destroy (GTS_OBJECT (lp->id));
+
+  if (lp->rhs)
+    g_array_free (lp->rhs, TRUE);
+  if (lp->lhs)
+    g_array_free (lp->lhs, TRUE);
+
+  g_ptr_array_foreach (lp->LP, (GFunc) destroy_stencil, NULL);
+  if (lp->LP)
+    g_ptr_array_free (lp->LP, TRUE);
+}
+
+static void get_relax_coeff (FttCell * cell, LP_data * lp)
+{
+  GfsGradient g;
+  FttCellNeighbors neighbor;
+  FttCellFace f;
+  GfsGradient ng;
+  
+  stencil_data sd;
+  sd.id = lp->id;
+  sd.u = lp->u;
+  sd.stencil = new_stencil ();
+
+  g.a = GFS_VALUE (cell, lp->dia);
+  g.b = 0.;
+  f.cell = cell;
+  ftt_cell_neighbors (cell, &neighbor);
+  for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
+    f.neighbor = neighbor.c[f.d];
+    if (f.neighbor) {
+      if (FTT_CELL_IS_LEAF (cell)) {
+	  gfs_get_face_weighted_gradient (&f, &ng, -1, &sd);
+      }
+      else
+	gfs_face_weighted_gradient (&f, &ng, lp->u, lp->maxlevel);
+      g.a += ng.a;
+      g.b += ng.b;
+    }
+  }
+    
+  if (FTT_CELL_IS_LEAF (cell)) {
+    if (g.a > 0.)
+      prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
+    else {
+      sd.stencil = NULL;
+      destroy_stencil (sd.stencil);
+      sd.stencil = new_stencil ();
+      prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), -1.);
+    }
+  }
+  else {
+    if (g.a > 0.)
+      GFS_VALUE (cell, lp->u) = (g.b - GFS_VALUE (cell, lp->rhs_v))/g.a;
+    else
+      GFS_VALUE (cell, lp->u) = 0.;
+  }
+
+  prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), -1.);
+
+  append_stencil_to_linear_problem (sd.stencil, lp);
+  if (sd.stencil->len > lp->maxsize)
+    lp->maxsize = sd.stencil->len;
+}
+
+static void get_relax2D_coeff (FttCell * cell, LP_data * lp)
+{
+  GfsGradient g;
+  FttCellNeighbors neighbor;
+  FttCellFace f;
+  GfsGradient ng;
+  
+  stencil_data sd;
+  sd.id = lp->id;
+  sd.u = lp->u;
+  sd.stencil = new_stencil ();
+
+  g.a = GFS_VALUE (cell, lp->dia);
+  g.b = 0.;
+  f.cell = cell;
+  ftt_cell_neighbors (cell, &neighbor);
+  for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
+    f.neighbor = neighbor.c[f.d];
+    if (f.neighbor) {
+      if (FTT_CELL_IS_LEAF (cell)) {
+	gfs_get_face_weighted_gradient_2D  (&f, &ng, -1, &sd);
+      }
+      else
+	gfs_face_weighted_gradient_2D (&f, &ng, lp->u, lp->maxlevel);
+      g.a += ng.a;
+      g.b += ng.b;
+    }
+  }
+  
+  if (FTT_CELL_IS_LEAF (cell)) {
+    if (g.a > 0.)
+      prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), -g.a);
+    else
+      prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), -1.);
+  }
+  else {
+    if (g.a > 0.)
+      GFS_VALUE (cell, lp->u) =
+	(1. - lp->omega)*GFS_VALUE (cell, lp->u)
+	+ lp->omega*(g.b - GFS_VALUE (cell, lp->rhs_v))/g.a;
+    else
+      GFS_VALUE (cell, lp->u) = 0.;
+  }
+
+  append_stencil_to_linear_problem (sd.stencil, lp);
+  if (sd.stencil->len > lp->maxsize)
+    lp->maxsize = sd.stencil->len;
+}
+
+static void leafs_numbering (FttCell * cell, LP_data * lp) {
+ 
+  GFS_VALUE (cell, lp->id) = (gdouble) lp->nleafs;
+  g_array_append_val (lp->lhs, GFS_VALUE (cell, lp->lhs_v));
+  g_array_append_val (lp->rhs, GFS_VALUE (cell, lp->rhs_v));
+  lp->nleafs++;
+}
+
+static void number_bc (FttCellFace * f, LP_data * lp)
+{
+  GFS_VALUE(f->cell, lp->id) = (gdouble) lp->nleafs;
+  g_array_append_val (lp->lhs, GFS_VALUE (f->cell, lp->lhs_v));
+  g_array_append_val (lp->rhs, GFS_VALUE (f->cell, lp->rhs_v));
+  lp->nleafs++;
+}
+
+static void bc_leafs_numbering (GfsBox * box, LP_data * lp) {
+ 
+  FttDirection d;
+  
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      
+      
+      b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+      ftt_face_traverse_boundary (b->root, b->d,
+				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, lp->maxlevel,
+				  (FttFaceTraverseFunc) number_bc, lp);
+      
+    }
+}
+
+void gfs_get_poisson_problem (GfsDomain * domain, 
+			      GfsVariable * rhs, GfsVariable * lhs, GfsVariable * dia,
+			      guint dimension,
+			      LP_data * lp)
+{
+  GfsVariable * id = gfs_temporary_variable (domain);
+
+  lp->rhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  lp->lhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  lp->rhs_v = rhs;
+  lp->lhs_v = lhs;
+  lp->id = id;
+  lp->LP = g_ptr_array_new ();
+  lp->maxsize = 0;
+  lp->nleafs = 0;
+  
+  /* Cell numbering */
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, lp->maxlevel,
+			    (FttCellTraverseFunc) leafs_numbering, lp);
+
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leafs_numbering, lp);
+  /* End - Cell numbering */
+ 
+  /* Creates stencils on the fly */
+  gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER,
+				   FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, lp->maxlevel,
+				   (FttCellTraverseFunc) (dimension == 2 ? get_relax2D_coeff : get_relax_coeff), lp,
+				   lp->dp, lp->u, lp);
+  /*End - Creates stencils on the fly */
+}
+
+typedef struct {
+  guint u, rhs, dia, res;
+  gint maxlevel;
+  gdouble beta, omega;
+  FttComponent component;
+  guint axi;
+} RelaxParams;
+
+static void relax (FttCell * cell, RelaxParams * p)
 {
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
 
-  RelaxParams * p = cp->p;
-
-  if (cp->id  && FTT_CELL_IS_LEAF (cell)) {
-    add_diagonal_element_structure (cp, cell);
-  }
   g.a = GFS_VARIABLE (cell, p->dia);
   g.b = 0.;
   f.cell = cell;
@@ -256,46 +419,23 @@ static void relax (FttCell * cell, CoeffParams * cp)
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      if (cp->id  && FTT_CELL_IS_LEAF (cell)) {
-	  cp->diag_cell=cell;
-	  gfs_coeff_face_weighted_gradient (&f, &ng, cp, -1);
-      }
-      else
-	gfs_face_weighted_gradient (&f, &ng, p->u, p->maxlevel);
+      gfs_face_weighted_gradient (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
   }
-    
-  if (cp->id && FTT_CELL_IS_LEAF (cell)) {
-    if (g.a > 0.) {
-      fill_diagonal_element (cp, -g.a);
-    }
-    else {
-      destroy_stencil_element_list (cp->poisson_problem_end->stencil);
-      fill_diagonal_element (cp, -1);
-    }
-  }
-  else {
-    if (g.a > 0.)
-      GFS_VARIABLE (cell, p->u) = (g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
-    else
-      GFS_VARIABLE (cell, p->u) = 0.;
-  }
+  if (g.a > 0.)
+    GFS_VARIABLE (cell, p->u) = (g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
+  else
+    GFS_VARIABLE (cell, p->u) = 0.;
 }
 
-static void relax2D (FttCell * cell, CoeffParams * cp)
+static void relax2D (FttCell * cell, RelaxParams * p)
 {
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
-
-  RelaxParams * p = cp->p;
-
-  if (cp->id && FTT_CELL_IS_LEAF (cell)) {
-    add_diagonal_element_structure (cp, cell);
-  }
 
   g.a = GFS_VARIABLE (cell, p->dia);
   g.b = 0.;
@@ -304,34 +444,17 @@ static void relax2D (FttCell * cell, CoeffParams * cp)
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      if (cp->id && FTT_CELL_IS_LEAF (cell)) {
-	cp->diag_cell=cell;
-	gfs_coeff_face_weighted_gradient_2D  (&f, &ng, cp, -1);
-      }
-      else
-	gfs_face_weighted_gradient_2D (&f, &ng, p->u, p->maxlevel);
+      gfs_face_weighted_gradient_2D (&f, &ng, p->u, p->maxlevel);
       g.a += ng.a;
       g.b += ng.b;
     }
   }
-  
-  if (cp->id && FTT_CELL_IS_LEAF (cell)) {
-    if (g.a > 0.) {
-      fill_diagonal_element (cp, -g.a);
-    }
-    else {
-      destroy_stencil_element_list (cp->poisson_problem_end->stencil);
-      fill_diagonal_element (cp, -1);
-    }
-  }
-  else {
-    if (g.a > 0.)
-      GFS_VARIABLE (cell, p->u) =
-	(1. - p->omega)*GFS_VARIABLE (cell, p->u)
-	+ p->omega*(g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
-    else
-      GFS_VARIABLE (cell, p->u) = 0.;
-  }
+  if (g.a > 0.)
+    GFS_VARIABLE (cell, p->u) = 
+      (1. - p->omega)*GFS_VARIABLE (cell, p->u) 
+      + p->omega*(g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
+  else
+    GFS_VARIABLE (cell, p->u) = 0.;
 }
 
 /**
@@ -358,7 +481,6 @@ void gfs_relax (GfsDomain * domain,
 		GfsVariable * dia)
 {
   RelaxParams p;
-  CoeffParams cp;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (d > 1 && d <= 3);
@@ -372,12 +494,11 @@ void gfs_relax (GfsDomain * domain,
   p.dia = dia->i;
   p.maxlevel = max_depth;
   p.omega = omega;
-  cp.p = &p;
-  cp.id = NULL;
+  
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 			    max_depth,
-			    (FttCellTraverseFunc) (d == 2 ? relax2D : relax), &cp);
+			    (FttCellTraverseFunc) (d == 2 ? relax2D : relax), &p);
 }
 
 static void residual_set (FttCell * cell, RelaxParams * p)
@@ -766,9 +887,6 @@ static void relax_loop (GfsDomain * domain,
 			guint dimension)
 {
   guint n;
-  CoeffParams cp;
-  cp.p = q;
-  cp.id = NULL;
 
   gfs_domain_homogeneous_bc (domain,
 			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel, 
@@ -776,86 +894,11 @@ static void relax_loop (GfsDomain * domain,
   for (n = 0; n < nrelax - 1; n++)
     gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
 				     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
-				     (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), &cp,
+				     (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q,
 				     dp, u, NULL);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
-			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), &cp);
-}
-
-typedef struct {
-  GfsVariable * id;
-  gint nleafs;
-} nleafs_data;
-
-static void leafs_numbering (FttCell * cell, nleafs_data * data) {
- 
-  GFS_VALUE(cell,  data->id) = (gdouble) data->nleafs;
-  data->nleafs++;
-}
-
-static void number_bc (FttCellFace * f, nleafs_data * data)
-{
-  GFS_VALUE(f->cell,  data->id) = (gdouble) data->nleafs;
-  data->nleafs++;
-}
-
-static void bc_leafs_numbering (GfsBox * box, nleafs_data * data) {
- 
-  FttDirection d;
-  
-  for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
-      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
-      
-      
-      b->type = GFS_BOUNDARY_CENTER_VARIABLE;
-      ftt_face_traverse_boundary (b->root, b->d,
-				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				  (FttFaceTraverseFunc) number_bc, data);
-      
-    }
-}
-
-void gfs_get_poisson_problem (GfsDomain * domain, 
-			  GfsVariable * dp, GfsVariable * u, 
-			  CoeffParams * cp, guint dimension)
-{
-  GfsVariable * id = gfs_temporary_variable (domain);
-  gint nleafs=0;
-  nleafs_data leafs_data;
- 
-  /* Cell numbering */
-  leafs_data.id = id;
-  leafs_data.nleafs = nleafs;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) leafs_numbering, &leafs_data);
-
-  
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leafs_numbering, &leafs_data);
-  /* End - Cell numebering */
-
-  cp->domain = domain;
-  cp->u = dp;
-  cp->id = id;
-  cp->poisson_problem = NULL;
-  cp->maxlength = 0;
-  cp->poisson_problem_size = leafs_data.nleafs;
-
-  /* Creates stencils on the fly */
-  gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
-				   FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,-1,
-				   (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), cp,
-				   dp, u, cp);
-  /*End - Creates stencils on the fly */
-
-  cp->id = NULL;
-  gts_object_destroy (GTS_OBJECT (id));
- }
-
-void gfs_destroy_poisson_problem (GfsDiagElement * problem)
-{
-  destroy_diagonal_element_list (problem);
+			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q);
 }
 
 /**
