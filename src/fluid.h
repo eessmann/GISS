@@ -58,23 +58,6 @@ struct _GfsSolidVector {
   FttVector cm, ca;
 };
 
-typedef struct _LP_data LP_data;
-typedef struct _StencilElement StencilElement;
-
-struct _LP_data{
-  GPtrArray * LP;
-  GArray * rhs, * lhs;
-  GfsVariable * rhs_v, * lhs_v, * id;
-  GfsVariable * u, * dp, * dia;
-  gdouble beta, omega, nleafs;
-  gint maxsize, maxlevel;
-};
-
-struct _StencilElement{
-  gdouble cell_coeff;
-  gint cell_id;
-};
-
 typedef enum {
   GFS_FLAG_USED =              1 <<  FTT_FLAG_USER,
   GFS_FLAG_BOUNDARY          = 1 << (FTT_FLAG_USER + 1),
@@ -275,8 +258,23 @@ gdouble               gfs_cell_corner_value         (FttCell * cell,
 						     FttDirection * d,
 						     GfsVariable * v,
 						     gint max_level);
-
+typedef struct _LP_data LP_data;
+typedef struct _StencilElement StencilElement;
 typedef struct _stencil_data stencil_data;
+
+struct _LP_data{
+  GPtrArray * LP;
+  GArray * rhs, * lhs;
+  GfsVariable * rhs_v, * lhs_v, * id;
+  GfsVariable * u, * dp, * dia;
+  gdouble beta, omega, nleafs;
+  gint maxsize, maxlevel;
+};
+
+struct _StencilElement{
+  gdouble cell_coeff;
+  gint cell_id;
+};
 
 struct _stencil_data {
   GfsVariable * id;

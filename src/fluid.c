@@ -2846,7 +2846,7 @@ static gdouble get_average_neighbor_value (const FttCellFace * face,
   if (FTT_CELL_IS_LEAF (face->neighbor)) {
 
     append_stencil_element_to_stencil (sd->stencil, (gint) GFS_VALUE(face->neighbor, sd->id),
-				       weight/* / *x */);
+				       weight / *x );
  
     return GFS_VARIABLE (face->neighbor, v);
   }
@@ -2869,18 +2869,19 @@ static gdouble get_average_neighbor_value (const FttCellFace * face,
 	if (children.c[i]) {
 	  gdouble w = GFS_IS_MIXED (children.c[i]) ? GFS_STATE (children.c[i])->solid->s[od] : 1.;
 	  
-	  append_stencil_element_to_stencil (sd->stencil,(gint) GFS_VALUE (children.c[i], sd->id), weight*w/a /* / *x */);
+	  append_stencil_element_to_stencil (sd->stencil,(gint) GFS_VALUE (children.c[i], sd->id), weight*w/a / *x);
 	}
       return av/a;
     }
     else {
-      append_stencil_element_to_stencil (sd->stencil, (gint) GFS_VALUE (face->cell, sd->id), weight/* / *x */);
+      append_stencil_element_to_stencil (sd->stencil, (gint) GFS_VALUE (face->cell, sd->id), weight / *x);
           
     return GFS_VARIABLE (face->cell, v);
     }
   }
 }
 
+#if (FTT_2D || FTT_2D3)
 /* v = a*v(cell) + b 
  * 
  * First order 1D interpolation.
@@ -2892,18 +2893,14 @@ static GfsGradient get_interpolate_1D1 (FttCell * cell,
 					stencil_data * sd,
 					gdouble weight)
 {
-  /* Only p.b contribution is missing */
-
   GfsGradient p;
   FttCellFace f;
 
   f = gfs_cell_face (cell, d);
   if (f.neighbor) {
-    gdouble x2 = 1., p2 = /* get_ */average_neighbor_value (&f, v, &x2/* , sd, weight*x */);
+    gdouble x2 = 1., p2 = get_average_neighbor_value (&f, v, &x2, sd, weight*x);
     p.a = 1. - x/x2;
     p.b = p2*x/x2;
-
-    gdouble x2bis = 1., p2bis = get_average_neighbor_value (&f, v, &x2bis, sd, weight*x/x2);
   }
   else {
     p.a = 1.;
@@ -2913,51 +2910,48 @@ static GfsGradient get_interpolate_1D1 (FttCell * cell,
   return p;
 }
 
+#else
+
+/* v = a*v(cell) + b 
+ * 
+ * First order 2D interpolation.
+ */
 static GfsGradient get_interpolate_2D1 (FttCell * cell,
-					FttDirection d1, FttDirection d2,
-					gdouble x, gdouble y,
-					guint v, stencil_data * sd,
-					gdouble weight)
+				    FttDirection d1, FttDirection d2,
+				    gdouble x, gdouble y,
+				    guint v, stencil_data * sd,
+				    gdouble weight)
 {
   GfsGradient p;
   gdouble y1 = 1.;
   gdouble x2 = 1.;
   gdouble p1 = 0., p2 = 0.;
-  gdouble a1, a2;
+  gdouble a1 = y, a2 = x;
   FttCellFace f1, f2;
 
-  f1 = gfs_cell_face (cell, d1);
-  if (f1.neighbor)
-    p1 = average_neighbor_value (&f1, v, &y1);
-  f2 = gfs_cell_face (cell, d2);
-  if (f2.neighbor)
-    p2 = average_neighbor_value (&f2, v, &x2);
-
-  a1 = y/y1;
-  a2 = x/x2;
-
-  p.a = 1. - a1 - a2;
+  p.a = 1.;
   p.b = 0.;
+
+  f1 = gfs_cell_face (cell, d1);
   if (f1.neighbor) {
-    p.b += a1*p1; 
-    
-  
-    gdouble y1bis = 1.;
-    gdouble p1bis = get_average_neighbor_value (&f1, v, &y1bis, sd, weight*a1);
+    p1 = get_average_neighbor_value (&f1, v, &y1, sd, a1);
+    a1 /= y1;
+    p.a -= a1;
+    p.b += a1*p1; /* <----- */
   }
-  else
-    p.a += a1;
+    
+  f2 = gfs_cell_face (cell, d2);
   if (f2.neighbor) {
-    p.b += a2*p2; 
-    
-    gdouble x2bis = 1.;
-    gdouble p2bis = get_average_neighbor_value (&f2, v, &x2bis, sd, weight*a2);
+    p2 = get_average_neighbor_value (&f2, v, &x2, sd, a2);
+    a2 /= x2;
+    p.a -= a2;
+    p.b += a2*p2; /* <----- */
   }
-  else
-    p.a += a2;
   
   return p;
 }
+
+#endif /* not FTT_2D */
 
 static Gradient get_gradient_fine_coarse (const FttCellFace * face, guint v,
 					  stencil_data * sd, gdouble weight)

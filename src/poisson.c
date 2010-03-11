@@ -244,40 +244,24 @@ static void get_relax_coeff (FttCell * cell, LP_data * lp)
   sd.stencil = new_stencil ();
 
   g.a = GFS_VALUE (cell, lp->dia);
-  g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      if (FTT_CELL_IS_LEAF (cell)) {
-	  gfs_get_face_weighted_gradient (&f, &ng, -1, &sd);
-      }
-      else
-	gfs_face_weighted_gradient (&f, &ng, lp->u, lp->maxlevel);
+      gfs_get_face_weighted_gradient (&f, &ng, lp->maxlevel, &sd);
       g.a += ng.a;
-      g.b += ng.b;
     }
-  }
-    
-  if (FTT_CELL_IS_LEAF (cell)) {
-    if (g.a > 0.)
-      prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
-    else {
-      sd.stencil = NULL;
-      destroy_stencil (sd.stencil);
-      sd.stencil = new_stencil ();
-      prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), -1.);
-    }
-  }
-  else {
-    if (g.a > 0.)
-      GFS_VALUE (cell, lp->u) = (g.b - GFS_VALUE (cell, lp->rhs_v))/g.a;
-    else
-      GFS_VALUE (cell, lp->u) = 0.;
   }
 
-  prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), -1.);
+  if (g.a > 0.)
+    prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
+  else {
+    destroy_stencil (sd.stencil);
+    sd.stencil = new_stencil ();
+    prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
+    g_array_index (lp->rhs, gdouble, (gint) GFS_VALUE (cell, lp->id)) = 0.;
+  }
 
   append_stencil_to_linear_problem (sd.stencil, lp);
   if (sd.stencil->len > lp->maxsize)
@@ -297,35 +281,23 @@ static void get_relax2D_coeff (FttCell * cell, LP_data * lp)
   sd.stencil = new_stencil ();
 
   g.a = GFS_VALUE (cell, lp->dia);
-  g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      if (FTT_CELL_IS_LEAF (cell)) {
-	gfs_get_face_weighted_gradient_2D  (&f, &ng, -1, &sd);
-      }
-      else
-	gfs_face_weighted_gradient_2D (&f, &ng, lp->u, lp->maxlevel);
+      gfs_get_face_weighted_gradient_2D  (&f, &ng, lp->maxlevel, &sd);
       g.a += ng.a;
-      g.b += ng.b;
     }
   }
   
-  if (FTT_CELL_IS_LEAF (cell)) {
-    if (g.a > 0.)
-      prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), -g.a);
-    else
-      prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), -1.);
-  }
+  if (g.a > 0.)
+    prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), -g.a);
   else {
-    if (g.a > 0.)
-      GFS_VALUE (cell, lp->u) =
-	(1. - lp->omega)*GFS_VALUE (cell, lp->u)
-	+ lp->omega*(g.b - GFS_VALUE (cell, lp->rhs_v))/g.a;
-    else
-      GFS_VALUE (cell, lp->u) = 0.;
+    destroy_stencil (sd.stencil);
+    sd.stencil = new_stencil ();
+    prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
+    g_array_index (lp->rhs, gdouble, (gint) GFS_VALUE (cell, lp->id)) = 0.;
   }
 
   append_stencil_to_linear_problem (sd.stencil, lp);
