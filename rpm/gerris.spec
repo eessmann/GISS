@@ -1,15 +1,15 @@
 %define	alphatag %(date +%Y%m%d)
-%define current %(pkg-config gerris2D --modversion)
-%define gts_version %(pkg-config gts --modversion)
+%define current %(pkg-config gerris2D --modversion --silence-errors)
+%define gts_version %(pkg-config gts --modversion --silence-errors)
 
 Summary: The Gerris Flow Solver (development snapshot)
-Name: gerris
+Name: gerris-snapshot
 %if "%{current}" == ""
 Version: 1.3.2
 %else
 Version: %{current}
 %endif
-Release: 9.%{alphatag}cvs%{?dist}
+Release: 11.%{alphatag}cvs%{?dist}
 License: GPLv2
 # SuSE should have this macro set. If doubt specify in ~/.rpmmacros
 %if 0%{?suse_version}
@@ -20,8 +20,8 @@ Group: Productivity/Scientific/Other
 Group: Applications/Engineering
 %endif
 URL: http://gfs.sourceforge.net
-Packager: Ivan Adam Vari <i.vari@niwa.co.nz>
-Source0: %{name}-stable.tar.gz
+Packager: Matthieu Castellazzi <m.castellazzi@niwa.co.nz>
+Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %if 0%{?fedora_version}
 Requires: proj gsl netcdf
@@ -29,12 +29,17 @@ BuildRequires: netcdf-devel proj-devel gcc-gfortran
 %endif
 %if 0%{?suse_version}
 Requires: libproj0 gsl libnetcdf-4
-BuildRequires: libnetcdf-devel libproj-devel gcc-fortran
+BuildRequires: libnetcdf-devel libproj-devel gcc-fortran python
 %endif
 # For both distros
 Requires: gts-snapshot-devel >= %{gts_version} pkgconfig gcc sed gawk m4
 BuildRequires: glibc-devel automake libtool gsl-devel gts-snapshot-devel >= %{gts_version}
+BuildRequires: openmpi openmpi-devel
 
+%package devel
+Summary:	Headers and libraries for The Gerris Flow Solver (development snapshot)
+Group:		Productivity/Scientific/Other
+Requires:	%{name} =  %{version}-%{release}
 
 %description
 Gerris is an Open Source Free Software library for the solution of the 
@@ -56,9 +61,11 @@ A brief summary of its main (current) features:
       
 See http://gfs.sf.net for more information and documentation.
 
+%description devel
+Source code, doc, faq and demos files for The Gerris Flow Solver (development snapshot)
 
 %prep
-%setup -q -n %{name}-stable
+%setup -q -n %{name}
 
 
 %build
@@ -69,14 +76,12 @@ if [ -x ./configure ]; then
 	--prefix=%{_prefix} \
 	--libdir=%{_prefix}/%_lib \
 	--mandir=%{_mandir} \
-	--disable-mpi \
 	--disable-static
 else
     CFLAGS="$RPM_OPT_FLAGS" sh autogen.sh \
 	--prefix=%{_prefix} \
 	--libdir=%{_prefix}/%_lib \
 	--mandir=%{_mandir} \
-	--disable-mpi \
 	--disable-static
 fi
 %endif
@@ -145,11 +150,8 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 %defattr(-,root,root)
 %doc NEWS README TODO COPYING
 %{_bindir}/*
-%{_includedir}/*.h
 %dir %{_includedir}/gerris
-%{_includedir}/gerris/*.h
 %{_libdir}/*.so.*
-%{_libdir}/*.so
 %dir %{_libdir}/gerris
 %{_libdir}/gerris/*
 %{_libdir}/pkgconfig/*.pc
@@ -157,11 +159,29 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 %{_datadir}/gerris/gfs.lang
 %{_datadir}/gerris/gerris.dic
 %{_datadir}/mime/packages/*.xml
+%dir %{_datadir}/icons/hicolor
+%dir %{_datadir}/icons/hicolor/48x48
+%dir %{_datadir}/icons/hicolor/48x48/mimetypes
 %{_datadir}/icons/hicolor/48x48/mimetypes/*.png
 %{_mandir}/man1/*.gz
 
+%files devel
+%defattr(-,root,root,-)
+%{_includedir}/*.h
+%{_includedir}/gerris/*.h
+%{_libdir}/*.so
 
 %changelog
+* Wed Feb 24 2010 Matthieu Castellazzi <m.castellazzi@niwa.co.nz> - 12
+- enabled mpi and added openmpi requirement for build
+
+* Tue Feb 16 2010 Matthieu Castellazzi <m.castellazzi@niwa.co.nz> - 11
+- add gerris-snapshot-devel
+
+* Thu Nov 05 2009 Matthieu Castellazzi <m.castellazzi@niwa.co.nz> - 10
+- change the name to gerris-snapshot
+- add --silence-errors options to define %current and %gts_version
+
 * Thu Jan 29 2009 Ivan Adam Vari <i.vari@niwa.co.nz> - 9
 - Version change (1.3.1 -> 1.3.2) related minor fixes
 - Added fortran dependency
