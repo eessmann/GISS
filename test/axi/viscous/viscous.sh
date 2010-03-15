@@ -41,7 +41,7 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-if (Curve('cp-12-100',1,2) - Curve('fadlun-cp-100',1,2)).norm2() > 1e-2:
+if (Curve('cp-12-100',1,2) - Curve('fadlun-cp-100',1,2)).norm2() > 1.1e-2:
     print (Curve('cp-12-100',1,2) - Curve('fadlun-cp-100',1,2)).norm2()
     exit(1)
 EOF
