@@ -86,6 +86,6 @@
 
     OutputPPM { start = end } { convert ppm:- dt-5.eps } { v = DT }
 
-    OutputScalarSum { istep = 1 } { awk '{ print $3,$5-8.743441e-01 }' > t } { v = T }
+    OutputScalarSum { istep = 1 } { awk '{ print $3,$5-0.8743665 }' > t } { v = T }
 }
 GfsBox {}
