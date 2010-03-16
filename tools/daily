@@ -201,7 +201,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	   gts_snapshot=true
 	   if $gts_changed ; then
 	       if ( darcs2dist gts $darcs_gts/$gts $gtsweb && \
-                    cd $wdir/$gts && make ChangeLog launchpad-snapshot ) \
+                    cd $wdir/$gts && make ChangeLog buildservice-snapshot ) \
                > $wdir/snapshot 2>&1 ; then :
 	       else
 		   echo
@@ -225,7 +225,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	   fi
 	   gerris_debian=true
            if $gts_snapshot && ( $gts_changed || $gerris_changed ) ; then
-	       if ( cd $wdir/$gerris && make ChangeLog launchpad-snapshot ) \
+	       if ( cd $wdir/$gerris && make ChangeLog buildservice-snapshot ) \
 		   > $wdir/debian 2>&1 ; then :
 	       else
 		   echo
@@ -248,7 +248,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	   gfsview_debian=true
 	   if $gts_snapshot && $gerris_debian && \
               ( $gts_changed || $gerris_changed || $gfsview_changed ) ; then
-	       if ( cd $wdir/$gfsview && make ChangeLog launchpad-snapshot ) \
+	       if ( cd $wdir/$gfsview && make ChangeLog buildservice-snapshot ) \
                > $wdir/debian 2>&1 ; then :
 	       else
 		   echo
