@@ -2,7 +2,10 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-# changed this to your dput command
+# change this to your OSC directory
+OSC_DIR=$(HOME)/local/src/osc/home:popinet/$(PACKAGE)-snapshot
+
+# change this to your dput command
 DPUT = socksify dput
 
 # change this to your launchpad PPA
@@ -39,8 +42,21 @@ debian-snapshot: $(DARCS_CHANGELOG) config.h src/version.h
 
 launchpad-snapshot: $(DARCS_CHANGELOG) config.h src/version.h dist
 	tar xzf gerris-?.?.?.tar.gz
-	cd gerris-?.?.? && ./configure && sh debian/changelog.sh $(LOG) && dpkg-buildpackage -rfakeroot -k$(KEY) -S -sa
+	cd gerris-?.?.? && ./configure && sh debian/changelog.sh $(LOG) && chmod +x debian/rules && dpkg-buildpackage -rfakeroot -k$(KEY) -S -sa
 	rm -f gerris-?.?.?.tar.gz
 	rm -r -f gerris-?.?.?
 	$(DPUT) $(PPA) gerris-snapshot_*_source.changes
 	rm -f gerris-snapshot_*
+
+buildservice-snapshot: $(DARCS_CHANGELOG) config.h src/version.h dist
+	tar xzf $(PACKAGE)-?.?.?.tar.gz
+	rm -f $(PACKAGE)-?.?.?.tar.gz
+	mv -f $(PACKAGE)-?.?.? $(PACKAGE)-snapshot
+	cd $(PACKAGE)-snapshot && ./configure && sh debian/changelog.sh $(LOG) && chmod +x debian/rules
+	tar czvf $(PACKAGE)-snapshot.tar.gz $(PACKAGE)-snapshot
+	dpkg-source -b $(PACKAGE)-snapshot
+	rm -r -f $(PACKAGE)-snapshot
+	rm -f $(OSC_DIR)/*
+	cp -f rpm/$(PACKAGE).spec $(OSC_DIR)
+	mv -f $(PACKAGE)-snapshot.tar.gz $(PACKAGE)-snapshot_*.tar.gz $(PACKAGE)-snapshot_*.dsc $(OSC_DIR)
+	cd $(OSC_DIR) && osc addremove && osc commit -m "snapshot release"
