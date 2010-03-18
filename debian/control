@@ -15,7 +15,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
 	 openmpi-bin [i386 amd64],
 	 libgts-snapshot-dev,
 	 pkg-config, gcc, sed, gawk, m4
-Replaces: gerris
+Replaces: gerris, libgfs-1.3-1, libgfs-dev
 Suggests: gfsview-snapshot, source-highlight, imagemagick, ffmpeg
 Description: Gerris Flow Solver (development snapshot)
  Gerris is a system for the solution of the partial differential

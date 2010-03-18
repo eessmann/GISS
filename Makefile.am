@@ -52,11 +52,11 @@ buildservice-snapshot: $(DARCS_CHANGELOG) config.h src/version.h dist
 	tar xzf $(PACKAGE)-?.?.?.tar.gz
 	rm -f $(PACKAGE)-?.?.?.tar.gz
 	mv -f $(PACKAGE)-?.?.? $(PACKAGE)-snapshot
-	cd $(PACKAGE)-snapshot && ./configure && sh debian/changelog.sh $(LOG) && chmod +x debian/rules
+	cd $(PACKAGE)-snapshot && ./configure && sh debian/changelog.sh $(LOG) && chmod +x debian/rules && make distclean
 	tar czvf $(PACKAGE)-snapshot.tar.gz $(PACKAGE)-snapshot
 	dpkg-source -b $(PACKAGE)-snapshot
 	rm -r -f $(PACKAGE)-snapshot
-	rm -f $(OSC_DIR)/*
+	cd $(OSC_DIR) && osc update && rm -f $(OSC_DIR)/*
 	cp -f rpm/$(PACKAGE).spec $(OSC_DIR)
 	mv -f $(PACKAGE)-snapshot.tar.gz $(PACKAGE)-snapshot_*.tar.gz $(PACKAGE)-snapshot_*.dsc $(OSC_DIR)
 	cd $(OSC_DIR) && osc addremove && osc commit -m "snapshot release"
