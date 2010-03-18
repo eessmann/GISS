@@ -196,7 +196,7 @@ static void append_stencil_element_to_stencil (GArray * stencil, gint id,
 					       gdouble coeff)
 {
   StencilElement diag;
-  gint i, j;
+  gint i;
   
   for (i = 0; i < stencil->len; i++)
     if (g_array_index (stencil, StencilElement, i).cell_id == id) {
@@ -216,7 +216,7 @@ static void append_stencil_to_linear_problem (GArray * stencil, LP_data * lp)
   g_ptr_array_add (lp->LP, stencil);
   
   if (stencil->len > lp->maxsize)
-    lp->maxsize = sd.stencil->len;
+    lp->maxsize = stencil->len;
 }
 
 void gfs_destroy_linear_problem (LP_data * lp)
