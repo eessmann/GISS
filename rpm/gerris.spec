@@ -28,18 +28,17 @@ Requires: proj gsl netcdf
 BuildRequires: netcdf-devel proj-devel gcc-gfortran
 %endif
 %if 0%{?suse_version}
-Requires: libproj0 gsl libnetcdf-4
 BuildRequires: libnetcdf-devel libproj-devel gcc-fortran python
 %endif
 # For both distros
-Requires: gts-snapshot-devel >= %{gts_version} pkgconfig gcc sed gawk m4
+Requires: pkgconfig gcc sed gawk m4
 BuildRequires: glibc-devel automake libtool gsl-devel gts-snapshot-devel >= %{gts_version}
 BuildRequires: openmpi openmpi-devel
 
 %package devel
 Summary:	Headers and libraries for The Gerris Flow Solver (development snapshot)
 Group:		Productivity/Scientific/Other
-Requires:	%{name} =  %{version}-%{release}
+Requires:	%{name} =  %{version}-%{release}, gts-snapshot-devel >= %{gts_version}
 
 %description
 Gerris is an Open Source Free Software library for the solution of the 
@@ -153,8 +152,6 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 %dir %{_includedir}/gerris
 %{_libdir}/*.so.*
 %dir %{_libdir}/gerris
-%{_libdir}/gerris/*
-%{_libdir}/pkgconfig/*.pc
 %dir %{_datadir}/gerris
 %{_datadir}/gerris/gfs.lang
 %{_datadir}/gerris/gerris.dic
@@ -169,6 +166,8 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 %defattr(-,root,root,-)
 %{_includedir}/*.h
 %{_includedir}/gerris/*.h
+%{_libdir}/gerris/*
+%{_libdir}/pkgconfig/*.pc
 %{_libdir}/*.so
 
 %changelog
