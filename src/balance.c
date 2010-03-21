@@ -125,7 +125,8 @@ static BalancingFlow * balancing_flow_new (GfsDomain * domain, int average)
   for (i = 0; i < b->n; i++)
     lambda[i] = lambda1 - lambda[i + 1];
   b->flow = lambda;
-  b->pid = (guint *) g_array_free (pe, FALSE);
+  b->pid = (guint *) pe->data;
+  g_array_free (pe, FALSE);
   return b;
 }
 
