@@ -86,7 +86,6 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
   /* Create solver */
   HYPRE_BoomerAMGCreate(&solver);
 
-
   if (proj_hp.verbose)
     HYPRE_BoomerAMGSetPrintLevel(solver, 3);  /* print solve info + parameters */
   HYPRE_BoomerAMGSetCoarsenType(solver, proj_hp.coarsening_type);
@@ -227,7 +226,7 @@ static void init_hypre_problem (HypreProblem * hp, GfsLinearProblem * lp)
     rows[i] = i;
   }
   
-  HYPRE_IJVectorSetValues(hp->b, lp->rhs->len, rows, rhs_values);
+  HYPRE_IJVectorSetValues(hp->b, lp->rhs->len, rows, rhs_values );
   HYPRE_IJVectorSetValues(hp->x, lp->lhs->len, rows, x_values);
 
   /* Assemble after setting the coefficients */
@@ -240,11 +239,11 @@ static void init_hypre_problem (HypreProblem * hp, GfsLinearProblem * lp)
   HYPRE_IJVectorGetObject(hp->b, (void **) &hp->par_b);
   HYPRE_IJVectorGetObject(hp->x, (void **) &hp->par_x);
 
-  if (0) {
-    HYPRE_IJMatrixPrint(hp->A, "Aij.dat");
-    HYPRE_IJVectorPrint(hp->x, "xi.dat");
-    HYPRE_IJVectorPrint(hp->b, "bi.dat");
-  }
+/* #if DEBUG */
+/*   HYPRE_IJMatrixPrint(hp->A, "Aij.dat"); */
+/*   HYPRE_IJVectorPrint(hp->x, "xi.dat"); */
+/*   HYPRE_IJVectorPrint(hp->b, "bi.dat"); */
+/* #endif */
 
   free(x_values);
   free(rhs_values);
