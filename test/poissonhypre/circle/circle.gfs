@@ -47,7 +47,7 @@
   Time { iend = 1 }
   Refine (x*x + y*y <= 0.25*0.25 ? LEVEL + 2 : LEVEL)
 
-  GModule hypresolvers { tolerance = 1e-30 ncyclemax = CYCLE ncyclemin = CYCLE }
+  GModule hypre { tolerance = 1e-30 ncyclemax = CYCLE ncyclemin = CYCLE }
   Init {} {
     Div = {
       int k = 3, l = 3;

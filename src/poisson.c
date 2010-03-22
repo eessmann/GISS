@@ -234,7 +234,7 @@ void gfs_destroy_linear_problem (GfsLinearProblem * lp)
     g_ptr_array_free (lp->LP, TRUE);
 }
 
-static void get_relax_coeff (FttCell * cell, GfsLinearProblem * lp)
+static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
 {
   GfsGradient g;
   FttCellNeighbors neighbor;
@@ -252,7 +252,7 @@ static void get_relax_coeff (FttCell * cell, GfsLinearProblem * lp)
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_get_face_weighted_gradient (&f, &ng, lp->maxlevel, &sd);
+      gfs_face_weighted_gradient_stencil (&f, &ng, lp->maxlevel, &sd);
       g.a += ng.a;
     }
   }
@@ -269,7 +269,7 @@ static void get_relax_coeff (FttCell * cell, GfsLinearProblem * lp)
   append_stencil_to_linear_problem (sd.stencil, lp);
 }
 
-static void get_relax2D_coeff (FttCell * cell, GfsLinearProblem * lp)
+static void relax2D_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
 {
   GfsGradient g;
   FttCellNeighbors neighbor;
@@ -287,7 +287,7 @@ static void get_relax2D_coeff (FttCell * cell, GfsLinearProblem * lp)
   for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_get_face_weighted_gradient_2D  (&f, &ng, lp->maxlevel, &sd);
+      gfs_face_weighted_gradient_2D_stencil  (&f, &ng, lp->maxlevel, &sd);
       g.a += ng.a;
     }
   }
@@ -361,7 +361,7 @@ void gfs_get_poisson_problem (GfsDomain * domain,
   /* Creates stencils on the fly */
   gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER,
 				   FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, lp->maxlevel,
-				   (FttCellTraverseFunc) (dimension == 2 ? get_relax2D_coeff : get_relax_coeff), lp,
+				   (FttCellTraverseFunc) (dimension == 2 ? relax2D_coeff_stencil : relax_coeff_stencil), lp,
 				   lp->dp, lp->u, lp);
   /*End - Creates stencils on the fly */
 }

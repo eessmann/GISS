@@ -54,7 +54,7 @@
             return x*x + y*y - radius*radius;
           })
 
-  GModule hypresolvers { tolerance = 1e-30 ncyclemax = CYCLE ncyclemin = CYCLE }
+  GModule hypre { tolerance = 1e-30 ncyclemax = CYCLE ncyclemin = CYCLE }
   Init {} {
     Div = {
       int k = 3, l = 3;

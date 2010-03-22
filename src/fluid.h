@@ -282,14 +282,14 @@ struct _GfsStencilElement{
   gint cell_id;
 };
 
-void                  gfs_get_face_weighted_gradient (const FttCellFace * face,
-						      GfsGradient * g,
-						      gint max_level,
-	       				      GfsStencil * sd);
-void                  gfs_get_face_weighted_gradient_2D (const FttCellFace * face,
-							 GfsGradient * g,
-							 gint max_level,
-							 GfsStencil * sd);
+void            gfs_face_weighted_gradient_stencil    (const FttCellFace * face,
+						       GfsGradient * g,
+						       gint max_level,
+						       GfsStencil * sd);
+void            gfs_face_weighted_gradient_2D_stencil (const FttCellFace * face,
+						       GfsGradient * g,
+						       gint max_level,
+						       GfsStencil * sd);
 
 
 #ifdef __cplusplus
