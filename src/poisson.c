@@ -172,7 +172,7 @@ void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 
 static GArray * new_stencil ()
 {
-  return g_array_new (FALSE, FALSE, sizeof (StencilElement));
+  return g_array_new (FALSE, FALSE, sizeof (GfsStencilElement));
 }
 
 static void destroy_stencil (GArray * stencil)
@@ -184,7 +184,7 @@ static void destroy_stencil (GArray * stencil)
 static void prepend_stencil_element_to_stencil (GArray * stencil, gint id,
 						gdouble coeff)
 {
-  StencilElement diag; /* Might want to check if diagonal term is used in stencil */
+  GfsStencilElement diag; /* Might want to check if diagonal term is used in stencil */
 
   diag.cell_coeff = coeff;
   diag.cell_id = id;
@@ -195,12 +195,12 @@ static void prepend_stencil_element_to_stencil (GArray * stencil, gint id,
 static void append_stencil_element_to_stencil (GArray * stencil, gint id,
 					       gdouble coeff)
 {
-  StencilElement diag;
+  GfsStencilElement diag;
   gint i;
   
   for (i = 0; i < stencil->len; i++)
-    if (g_array_index (stencil, StencilElement, i).cell_id == id) {
-      g_array_index (stencil, StencilElement, i).cell_coeff += coeff;
+    if (g_array_index (stencil, GfsStencilElement, i).cell_id == id) {
+      g_array_index (stencil, GfsStencilElement, i).cell_coeff += coeff;
       return;
     }
 
@@ -209,7 +209,7 @@ static void append_stencil_element_to_stencil (GArray * stencil, gint id,
   g_array_append_val (stencil, diag);
 }
 
-static void append_stencil_to_linear_problem (GArray * stencil, LP_data * lp)
+static void append_stencil_to_linear_problem (GArray * stencil, GfsLinearProblem * lp)
 {
   g_assert (stencil != NULL);
 
@@ -219,7 +219,7 @@ static void append_stencil_to_linear_problem (GArray * stencil, LP_data * lp)
     lp->maxsize = stencil->len;
 }
 
-void gfs_destroy_linear_problem (LP_data * lp)
+void gfs_destroy_linear_problem (GfsLinearProblem * lp)
 {
   if (lp->id)
     gts_object_destroy (GTS_OBJECT (lp->id));
@@ -234,14 +234,14 @@ void gfs_destroy_linear_problem (LP_data * lp)
     g_ptr_array_free (lp->LP, TRUE);
 }
 
-static void get_relax_coeff (FttCell * cell, LP_data * lp)
+static void get_relax_coeff (FttCell * cell, GfsLinearProblem * lp)
 {
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
   
-  stencil_data sd;
+  GfsStencil sd;
   sd.id = lp->id;
   sd.u = lp->u;
   sd.stencil = new_stencil ();
@@ -269,14 +269,14 @@ static void get_relax_coeff (FttCell * cell, LP_data * lp)
   append_stencil_to_linear_problem (sd.stencil, lp);
 }
 
-static void get_relax2D_coeff (FttCell * cell, LP_data * lp)
+static void get_relax2D_coeff (FttCell * cell, GfsLinearProblem * lp)
 {
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
   
-  stencil_data sd;
+  GfsStencil sd;
   sd.id = lp->id;
   sd.u = lp->u;
   sd.stencil = new_stencil ();
@@ -304,7 +304,7 @@ static void get_relax2D_coeff (FttCell * cell, LP_data * lp)
   append_stencil_to_linear_problem (sd.stencil, lp);
 }
 
-static void leafs_numbering (FttCell * cell, LP_data * lp) {
+static void leafs_numbering (FttCell * cell, GfsLinearProblem * lp) {
  
   GFS_VALUE (cell, lp->id) = (gdouble) lp->nleafs;
   g_array_append_val (lp->lhs, GFS_VALUE (cell, lp->lhs_v));
@@ -312,7 +312,7 @@ static void leafs_numbering (FttCell * cell, LP_data * lp) {
   lp->nleafs++;
 }
 
-static void number_bc (FttCellFace * f, LP_data * lp)
+static void number_bc (FttCellFace * f, GfsLinearProblem * lp)
 {
   GFS_VALUE(f->cell, lp->id) = (gdouble) lp->nleafs;
   g_array_append_val (lp->lhs, GFS_VALUE (f->cell, lp->lhs_v));
@@ -320,7 +320,7 @@ static void number_bc (FttCellFace * f, LP_data * lp)
   lp->nleafs++;
 }
 
-static void bc_leafs_numbering (GfsBox * box, LP_data * lp) {
+static void bc_leafs_numbering (GfsBox * box, GfsLinearProblem * lp) {
  
   FttDirection d;
   
@@ -338,7 +338,7 @@ static void bc_leafs_numbering (GfsBox * box, LP_data * lp) {
 void gfs_get_poisson_problem (GfsDomain * domain, 
 			      GfsVariable * rhs, GfsVariable * lhs, GfsVariable * dia,
 			      guint dimension,
-			      LP_data * lp)
+			      GfsLinearProblem * lp)
 {
   GfsVariable * id = gfs_temporary_variable (domain);
 

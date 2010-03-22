@@ -47,7 +47,7 @@ struct _GfsBc {
   FttFaceTraverseFunc bc, homogeneous_bc;
   FttFaceTraverseFunc bc_stencil, homogeneous_bc_stencil;
   FttFaceTraverseFunc face_bc;
-  LP_data * lp; /* HYPRE */
+  GfsLinearProblem * lp; /* HYPRE */
 };
 
 typedef struct _GfsBcClass    GfsBcClass;

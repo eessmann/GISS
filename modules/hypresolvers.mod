@@ -192,7 +192,7 @@ static void extract_stencil (GArray * stencil, HypreProblem * hp)
   gint i, index;
   
   for (i = 0; i < stencil->len; i++) {
-    StencilElement * tmp = &g_array_index (stencil, StencilElement, i);
+    GfsStencilElement * tmp = &g_array_index (stencil, GfsStencilElement, i);
     if (i == 0)
       index = tmp->cell_id;
     cols[i] = tmp->cell_id;
@@ -203,7 +203,7 @@ static void extract_stencil (GArray * stencil, HypreProblem * hp)
   HYPRE_IJMatrixSetValues(hp->A, 1, &i, &index, cols, values);
 }
 
-static void init_hypre_problem (HypreProblem * hp, LP_data * lp)
+static void init_hypre_problem (HypreProblem * hp, GfsLinearProblem * lp)
 {
   double *rhs_values, *x_values;
   int    *rows;
@@ -247,7 +247,7 @@ static void init_hypre_problem (HypreProblem * hp, LP_data * lp)
   free(rows);
 }
 
-static void print_hypre_solution (HypreProblem * hp, LP_data * lp)
+static void print_hypre_solution (HypreProblem * hp, GfsLinearProblem * lp)
 {
   double *x_values;
   int    *rows;
@@ -271,13 +271,13 @@ static void print_hypre_solution (HypreProblem * hp, LP_data * lp)
   free(rows);
 }
 
-static void copy_poisson_solution (FttCell * cell, LP_data * lp)
+static void copy_poisson_solution (FttCell * cell, GfsLinearProblem * lp)
 {
   GFS_VALUE (cell, lp->lhs_v) = g_array_index (lp->lhs, gdouble, (gint) GFS_VALUE (cell, lp->id));
 }
 
 static void copy_poisson_problem_solution_to_simulation_tree (GfsDomain * domain,
-							      LP_data * lp)
+							      GfsLinearProblem * lp)
 {
   
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -286,7 +286,7 @@ static void copy_poisson_problem_solution_to_simulation_tree (GfsDomain * domain
 
 
 static void solve_poisson_problem_using_hypre (GfsDomain * domain,
-					       LP_data * lp,
+					       GfsLinearProblem * lp,
 					       GfsMultilevelParams * par)
 {
   HypreProblem hp;
@@ -337,7 +337,7 @@ static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
 
   gfs_domain_timer_start (domain, "Putting problem together");
 
-  LP_data lp;
+  GfsLinearProblem lp;
   lp.u = u;
   lp.dp = dp;
   lp.dia = dia;

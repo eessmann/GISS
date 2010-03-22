@@ -617,7 +617,7 @@ typedef struct {
   gint max_depth;
   GfsVariable * v, * v1;
   FttComponent c;
-  LP_data * lp; /* HYPRE */
+  GfsLinearProblem * lp; /* HYPRE */
 } BcData;
 
 static void box_bc (GfsBox * box, BcData * p)
@@ -832,7 +832,7 @@ void gfs_domain_homogeneous_bc (GfsDomain * domain,
 				gint max_depth,
 				GfsVariable * ov,
 				GfsVariable * v,
-				LP_data * lp) /* HYPRE */
+				GfsLinearProblem * lp) /* HYPRE */
 {
   BcData b = { flags, max_depth, v, ov, FTT_XYZ, lp };
 
@@ -971,7 +971,7 @@ void gfs_traverse_and_homogeneous_bc (GfsDomain * domain,
 				      gpointer data,
 				      GfsVariable * ov,
 				      GfsVariable * v,
-				      LP_data * lp) /* HYPRE */
+				      GfsLinearProblem * lp) /* HYPRE */
 {
   g_return_if_fail (domain != NULL);
 

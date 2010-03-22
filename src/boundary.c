@@ -36,12 +36,12 @@ static FttVector rpos[FTT_NEIGHBORS] = {
 
 static void append_stencil_element_to_stencil (GArray * stencil, gint id, gdouble coeff)
 {
-  StencilElement diag;
+  GfsStencilElement diag;
   gint i, j;
 
   for (i = 0; i < stencil->len; i++)
-    if (g_array_index (stencil, StencilElement, i).cell_id == id) {
-      g_array_index (stencil, StencilElement, i).cell_coeff += coeff;
+    if (g_array_index (stencil, GfsStencilElement, i).cell_id == id) {
+      g_array_index (stencil, GfsStencilElement, i).cell_coeff += coeff;
       return;
     }
 
@@ -51,7 +51,7 @@ static void append_stencil_element_to_stencil (GArray * stencil, gint id, gdoubl
   g_array_append_val (stencil, diag);
 }
 
-static void append_stencil_to_linear_problem (GArray * stencil, LP_data * lp)
+static void append_stencil_to_linear_problem (GArray * stencil, GfsLinearProblem * lp)
 {
   g_assert (stencil != NULL);
 
@@ -60,7 +60,7 @@ static void append_stencil_to_linear_problem (GArray * stencil, LP_data * lp)
 
 static GArray * new_stencil ()
 {
-  return g_array_new (FALSE, FALSE, sizeof (StencilElement));
+  return g_array_new (FALSE, FALSE, sizeof (GfsStencilElement));
 }
 
 /* GfsBc: Object */

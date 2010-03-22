@@ -174,7 +174,7 @@ void         gfs_domain_homogeneous_bc        (GfsDomain * domain,
 					       gint max_depth,
 					       GfsVariable * ov,
 					       GfsVariable * v,
-					       LP_data * lp); /* HYPRE */
+					       GfsLinearProblem * lp); /* HYPRE */
 void         gfs_traverse_and_homogeneous_bc  (GfsDomain * domain,
 					       FttTraverseType order,
 					       FttTraverseFlags flags,
@@ -183,7 +183,7 @@ void         gfs_traverse_and_homogeneous_bc  (GfsDomain * domain,
 					       gpointer data,
 					       GfsVariable * ov,
 					       GfsVariable * v,
-					       LP_data * lp); /* HYPRE */
+					       GfsLinearProblem * lp); /* HYPRE */
 void         gfs_traverse_and_bc              (GfsDomain * domain,
 					       FttTraverseType order,
 					       FttTraverseFlags flags,
