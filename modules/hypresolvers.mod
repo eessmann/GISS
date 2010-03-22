@@ -19,11 +19,15 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include "_hypre_utilities.h"
-#include "HYPRE_krylov.h"
-#include "HYPRE.h"
-#include "HYPRE_parcsr_ls.h"
-#include "gfs.h"
+#include <_hypre_utilities.h>
+#include <HYPRE_krylov.h>
+#include <HYPRE.h>
+#include <HYPRE_parcsr_ls.h>
+
+#include "variable.h"
+#include "poisson.h"
+
+/* #define DEBUG 0 */
 
 typedef enum {
   HYPRE_BOOMER_AMG,
@@ -210,9 +214,9 @@ static void init_hypre_problem (HypreProblem * hp, GfsLinearProblem * lp)
   gint i;
 
   /* Now go through my local rows and set the matrix entries.*/
-  rhs_values = calloc(lp->rhs->len, sizeof(double));
-  x_values = calloc(lp->lhs->len, sizeof(double));
-  rows = calloc(lp->lhs->len, sizeof(int));
+  rhs_values = malloc(lp->rhs->len * sizeof(double));
+  x_values = malloc(lp->lhs->len * sizeof(double));
+  rows = malloc(lp->lhs->len * sizeof(int));
     
   hp->maxsize = lp->maxsize;
   g_ptr_array_foreach (lp->LP, (GFunc) extract_stencil, hp);
@@ -254,8 +258,8 @@ static void print_hypre_solution (HypreProblem * hp, GfsLinearProblem * lp)
   gint i;
 
   /* Copy the solution in the poisson problem structure */
-  x_values = calloc( lp->lhs->len, sizeof(double));
-  rows = calloc( lp->lhs->len, sizeof(int));
+  x_values = malloc( lp->lhs->len * sizeof(double));
+  rows = malloc( lp->lhs->len * sizeof(int));
     
   for (i=0; i< lp->lhs->len; i++) {
     x_values[i] =  0.;
