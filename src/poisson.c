@@ -323,10 +323,14 @@ void gfs_get_poisson_problem (GfsDomain * domain,
   /* End - Cell numbering */
  
   /* Creates stencils on the fly */
-  gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER,
-				   FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, lp->maxlevel,
-				   (FttCellTraverseFunc)  relax_coeff_stencil, lp,
-				   lp->dp, lp->u, lp);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
+			    lp->maxlevel, (FttCellTraverseFunc)  relax_coeff_stencil, lp);
+
+  gfs_domain_homogeneous_bc_stencil (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
+				     lp->maxlevel, lp->dp, lp->u, lp);
+  
+  /* ov / v good names ?*/
+  
   /*End - Creates stencils on the fly */
 }
 
@@ -823,12 +827,12 @@ static void relax_loop (GfsDomain * domain,
 
   gfs_domain_homogeneous_bc (domain,
 			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel, 
-			     dp, u, NULL);
+			     dp, u);
   for (n = 0; n < nrelax - 1; n++)
     gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
 				     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
 				     (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q,
-				     dp, u, NULL);
+				     dp, u);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
 			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q);
@@ -1231,12 +1235,12 @@ static void diffusion_relax_loop (GfsDomain * domain,
   guint n;
   gfs_domain_homogeneous_bc (domain, 
 			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
-			     dp, u, NULL);
+			     dp, u);
   for (n = 0; n < nrelax - 1; n++)
     gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
 				     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
 				     (FttCellTraverseFunc) diffusion_relax, p,
-				     dp, u, NULL);
+				     dp, u);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
 			    (FttCellTraverseFunc) diffusion_relax, p);

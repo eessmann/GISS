@@ -173,8 +173,13 @@ void         gfs_domain_homogeneous_bc        (GfsDomain * domain,
 					       FttTraverseFlags flags,
 					       gint max_depth,
 					       GfsVariable * ov,
+					       GfsVariable * v);
+void         gfs_domain_homogeneous_bc_stencil(GfsDomain * domain,
+					       FttTraverseFlags flags,
+					       gint max_depth,
+					       GfsVariable * ov,
 					       GfsVariable * v,
-					       GfsLinearProblem * lp); /* HYPRE */
+					       GfsLinearProblem * lp);
 void         gfs_traverse_and_homogeneous_bc  (GfsDomain * domain,
 					       FttTraverseType order,
 					       FttTraverseFlags flags,
@@ -182,8 +187,7 @@ void         gfs_traverse_and_homogeneous_bc  (GfsDomain * domain,
 					       FttCellTraverseFunc func,
 					       gpointer data,
 					       GfsVariable * ov,
-					       GfsVariable * v,
-					       GfsLinearProblem * lp); /* HYPRE */
+					       GfsVariable * v);
 void         gfs_traverse_and_bc              (GfsDomain * domain,
 					       FttTraverseType order,
 					       FttTraverseFlags flags,
