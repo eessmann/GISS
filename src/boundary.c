@@ -143,7 +143,6 @@ static void gfs_bc_init (GfsBc * object)
 {
   object->bc =                     (FttFaceTraverseFunc) symmetry;
   object->homogeneous_bc =         (FttFaceTraverseFunc) symmetry;
-  object->bc_stencil =             (FttFaceTraverseFunc) symmetry_stencil;
   object->homogeneous_bc_stencil = (FttFaceTraverseFunc) symmetry_stencil;
   object->face_bc =                (FttFaceTraverseFunc) face_symmetry;
 }
@@ -277,11 +276,6 @@ static void dirichlet (FttCellFace * f, GfsBc * b)
     - GFS_VALUE (f->neighbor, b->v);
 }
 
-static void dirichlet_stencil (FttCellFace * f, GfsBc * b)
-{
-  g_assert_not_implemented ();
-}
-
 static void dirichlet_vof (FttCellFace * f, GfsBc * b)
 {
   GFS_VALUE (f->cell, b->v) = gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
@@ -325,7 +319,6 @@ static void gfs_bc_dirichlet_init (GfsBc * object)
 {
   object->bc =                     (FttFaceTraverseFunc) dirichlet;
   object->homogeneous_bc =         (FttFaceTraverseFunc) homogeneous_dirichlet;
-  object->bc_stencil =             (FttFaceTraverseFunc) dirichlet_stencil;
   object->homogeneous_bc_stencil = (FttFaceTraverseFunc) homogeneous_dirichlet_stencil;
   object->face_bc =                (FttFaceTraverseFunc) face_dirichlet;
 }
@@ -366,11 +359,6 @@ static void neumann (FttCellFace * f, GfsBc * b)
     *ftt_cell_size (f->cell);
 }
 
-static void neumann_stencil (FttCellFace * f, GfsBc * b)
-{
-  g_assert_not_implemented ();
-}
-
 static void homogeneous_neumann (FttCellFace * f, GfsBc * b)
 {
   GFS_VALUE (f->cell, b->v) = GFS_VALUE (f->neighbor, b->v);
@@ -409,7 +397,6 @@ static void gfs_bc_neumann_init (GfsBc * object)
 {
   object->bc =                     (FttFaceTraverseFunc) neumann;
   object->homogeneous_bc =         (FttFaceTraverseFunc) homogeneous_neumann;
-  object->bc_stencil =             (FttFaceTraverseFunc) neumann_stencil;
   object->homogeneous_bc_stencil = (FttFaceTraverseFunc) homogeneous_neumann_stencil;
   object->face_bc =                (FttFaceTraverseFunc) face_neumann;
 }
@@ -451,11 +438,6 @@ static void navier (FttCellFace * f, GfsBc * b)
      - (h - 2.*lambda)*GFS_VARIABLE (f->neighbor, b->v->i))/(h + 2.*lambda);
 }
 
-static void navier_stencil (FttCellFace * f, GfsBc * b)
-{
-  g_assert_not_implemented ();
-}
-
 static void face_navier (FttCellFace * f, GfsBc * b)
 {
   gdouble h = ftt_cell_size (f->cell);
@@ -489,7 +471,6 @@ static void gfs_bc_navier_init (GfsBc * object)
 {
   object->bc =                     (FttFaceTraverseFunc) navier;
   object->homogeneous_bc =         (FttFaceTraverseFunc) homogeneous_dirichlet;
-  object->bc_stencil =             (FttFaceTraverseFunc) navier_stencil;
   object->homogeneous_bc_stencil = (FttFaceTraverseFunc) homogeneous_dirichlet_stencil;
   object->face_bc =                (FttFaceTraverseFunc) face_navier;
 }

@@ -202,7 +202,6 @@ static void extract_stencil (GArray * stencil, HypreProblem * hp)
     values[i] = tmp->cell_coeff;
   }
 
-  /* printf("%i %i %i\n", hp->maxsize, i, index); */
   HYPRE_IJMatrixSetValues(hp->A, 1, &i, &index, cols, values);
 }
 

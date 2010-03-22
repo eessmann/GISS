@@ -633,16 +633,9 @@ static void box_bc (GfsBox * box, BcData * p)
 	b->v = p->v1;
 	bc->v = p->v1;
   	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
-	if (p->lp == NULL)
-	  ftt_face_traverse_boundary (b->root, b->d,
-				      FTT_PRE_ORDER, p->flags, p->max_depth,
-				      bc->bc, bc);
-	else {
-	  bc->lp = p->lp; /* HYPRE */
-	  ftt_face_traverse_boundary (b->root, b->d,
-				      FTT_PRE_ORDER, p->flags, p->max_depth,
-				      bc->bc_stencil, bc);
-	}
+	ftt_face_traverse_boundary (b->root, b->d,
+				    FTT_PRE_ORDER, p->flags, p->max_depth,
+				    bc->bc, bc);
 	bc->v = p->v;
 	gfs_boundary_send (b);
       }
@@ -895,16 +888,9 @@ static void update_mpi_boundaries (GfsBox * box, TraverseBcData * p)
 	b->v = p->b.v1;
 	bc->v = p->b.v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
-	if (p->b.lp == NULL)
-	  ftt_face_traverse_boundary (b->root, b->d,
-				      FTT_PRE_ORDER, p->b.flags, p->b.max_depth,
-				      bc->bc, bc);
-	else {
-	  bc->lp = p->b.lp; /* HYPRE */
-	  ftt_face_traverse_boundary (b->root, b->d,
-				      FTT_PRE_ORDER, p->b.flags, p->b.max_depth,
-				      bc->bc_stencil, bc);
-	}
+	ftt_face_traverse_boundary (b->root, b->d,
+				    FTT_PRE_ORDER, p->b.flags, p->b.max_depth,
+				    bc->bc, bc);
 	bc->v = p->b.v;
 	gfs_boundary_send (b);
       }
@@ -1011,16 +997,9 @@ static void update_other_boundaries (GfsBox * box, BcData * p)
 	b->v = p->v1;
 	bc->v = p->v1;
 	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
-	if (p->lp == NULL)
-	  ftt_face_traverse_boundary (b->root, b->d,
-				      FTT_PRE_ORDER, p->flags, p->max_depth,
-				      bc->bc, bc);
-	else {
-	  bc->lp = p->lp;
-	  ftt_face_traverse_boundary (b->root, b->d,
-				      FTT_PRE_ORDER, p->flags, p->max_depth,
-				      bc->bc_stencil, bc);
-	}
+	ftt_face_traverse_boundary (b->root, b->d,
+				    FTT_PRE_ORDER, p->flags, p->max_depth,
+				    bc->bc, bc);
 	bc->v = p->v;
 	gfs_boundary_send (b);
       }
