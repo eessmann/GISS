@@ -269,41 +269,6 @@ static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
   append_stencil_to_linear_problem (sd.stencil, lp);
 }
 
-static void relax2D_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
-{
-  GfsGradient g;
-  FttCellNeighbors neighbor;
-  FttCellFace f;
-  GfsGradient ng;
-  
-  GfsStencil sd;
-  sd.id = lp->id;
-  sd.u = lp->u;
-  sd.stencil = new_stencil ();
-
-  g.a = GFS_VALUE (cell, lp->dia);
-  f.cell = cell;
-  ftt_cell_neighbors (cell, &neighbor);
-  for (f.d = 0; f.d < FTT_NEIGHBORS_2D; f.d++) {
-    f.neighbor = neighbor.c[f.d];
-    if (f.neighbor) {
-      gfs_face_weighted_gradient_2D_stencil  (&f, &ng, lp->maxlevel, &sd);
-      g.a += ng.a;
-    }
-  }
-  
-  if (g.a > 0.)
-    prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), -g.a);
-  else {
-    destroy_stencil (sd.stencil);
-    sd.stencil = new_stencil ();
-    prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
-    g_array_index (lp->rhs, gdouble, (gint) GFS_VALUE (cell, lp->id)) = 0.;
-  }
-
-  append_stencil_to_linear_problem (sd.stencil, lp);
-}
-
 static void leafs_numbering (FttCell * cell, GfsLinearProblem * lp) {
  
   GFS_VALUE (cell, lp->id) = (gdouble) lp->nleafs;
@@ -361,7 +326,7 @@ void gfs_get_poisson_problem (GfsDomain * domain,
   /* Creates stencils on the fly */
   gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER,
 				   FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, lp->maxlevel,
-				   (FttCellTraverseFunc) (dimension == 2 ? relax2D_coeff_stencil : relax_coeff_stencil), lp,
+				   (FttCellTraverseFunc)  relax_coeff_stencil, lp,
 				   lp->dp, lp->u, lp);
   /*End - Creates stencils on the fly */
 }
