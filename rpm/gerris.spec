@@ -36,9 +36,10 @@ BuildRequires: glibc-devel automake libtool gsl-devel gts-snapshot-devel >= %{gt
 BuildRequires: openmpi openmpi-devel
 
 %package devel
-Summary:	Headers and libraries for The Gerris Flow Solver (development snapshot)
-Group:		Productivity/Scientific/Other
-Requires:	%{name} =  %{version}-%{release}, gts-snapshot-devel >= %{gts_version}
+Summary:  Headers and libraries for The Gerris Flow Solver (development snapshot)
+Group:	  Productivity/Scientific/Other
+Requires: %{name} =  %{version}-%{release}, gts-snapshot-devel >= %{gts_version}
+Requires: openmpi-devel
 
 %description
 Gerris is an Open Source Free Software library for the solution of the 
