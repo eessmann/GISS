@@ -339,27 +339,27 @@ static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
 
   gfs_domain_timer_start (domain, "Putting problem together");
 
-  GfsLinearProblem lp;
-  lp.u = u;
-  lp.dp = dp;
-  lp.dia = dia;
-  lp.maxlevel = -1;
-  lp.maxsize = 0;
-  lp.omega = p->omega;
-  lp.beta = p->beta;
+  GfsLinearProblem * lp = gfs_linear_problem_new ();
+  lp->u = u;
+  lp->dp = dp;
+  lp->dia = dia;
+  lp->maxlevel = -1;
+  lp->maxsize = 0;
+  lp->omega = p->omega;
+  lp->beta = p->beta;
 
-  gfs_get_poisson_problem (domain, res, dp, dia, p->dimension, &lp);
+  gfs_get_poisson_problem (domain, res, dp, dia, p->dimension, lp);
 					              
   gfs_domain_timer_stop (domain, "Putting problem together");
  
-  solve_poisson_problem_using_hypre (domain, &lp, p);
+  solve_poisson_problem_using_hypre (domain, lp, p);
 
   gfs_domain_timer_start (domain, "Copy problem");
-  copy_poisson_problem_solution_to_simulation_tree (domain, &lp);
+  copy_poisson_problem_solution_to_simulation_tree (domain, lp);
   gfs_domain_timer_stop (domain, "Copy problem");
 
   gfs_domain_timer_start (domain, "Destroy problem");
-  gfs_destroy_linear_problem (&lp);
+  gfs_destroy_linear_problem (lp);
   gfs_domain_timer_stop (domain, "Destroy problem");
 
   gfs_domain_timer_start (domain, "Correct field");

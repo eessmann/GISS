@@ -30,11 +30,11 @@ extern "C" {
 
 typedef struct _GfsMultilevelParams GfsMultilevelParams;
 typedef gboolean (* GfsPoissonSolverFunc)       (GfsDomain * domain,
-					     GfsMultilevelParams * p,
-					     GfsVariable * u,
-					     GfsVariable * rhs,
-					     GfsVariable * dia,
-					     GfsVariable * res);
+						 GfsMultilevelParams * p,
+						 GfsVariable * u,
+						 GfsVariable * rhs,
+						 GfsVariable * dia,
+						 GfsVariable * res);
 
 struct _GfsMultilevelParams {
   gdouble tolerance;
@@ -62,6 +62,8 @@ void                  gfs_get_poisson_problem        (GfsDomain * domain,
 						      GfsVariable * rhs, GfsVariable * lhs, 
 						      GfsVariable * dia, guint dimension,
 						      GfsLinearProblem * lp);
+GfsLinearProblem *    gfs_linear_problem_new         ();
+void                  gfs_init_linear_problem        (GfsLinearProblem * lp);
 void                  gfs_destroy_linear_problem     (GfsLinearProblem * lp);
 void                  gfs_relax                      (GfsDomain * domain,
 						      guint d,

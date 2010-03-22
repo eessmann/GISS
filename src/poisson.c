@@ -177,22 +177,10 @@ static GArray * new_stencil ()
 
 static void destroy_stencil (GArray * stencil)
 {
-  if (stencil)
   g_array_free (stencil, TRUE);
 }
 
-static void prepend_stencil_element_to_stencil (GArray * stencil, gint id,
-						gdouble coeff)
-{
-  GfsStencilElement diag; /* Might want to check if diagonal term is used in stencil */
-
-  diag.cell_coeff = coeff;
-  diag.cell_id = id;
-
-  g_array_prepend_val (stencil, diag);
-}
-
-static void append_stencil_element_to_stencil (GArray * stencil, gint id,
+static void add_stencil_element_to_stencil (GArray * stencil, gint id,
 					       gdouble coeff)
 {
   GfsStencilElement diag;
@@ -209,7 +197,19 @@ static void append_stencil_element_to_stencil (GArray * stencil, gint id,
   g_array_append_val (stencil, diag);
 }
 
-static void append_stencil_to_linear_problem (GArray * stencil, GfsLinearProblem * lp)
+/***************** GfsLinearProblem **************************************************/
+
+GfsLinearProblem * gfs_linear_problem_new ()
+{
+   return g_malloc (sizeof (GfsLinearProblem));
+}
+
+void gfs_init_linear_problem (GfsLinearProblem * lp)
+{
+ 
+}
+
+static void add_stencil_to_linear_problem (GArray * stencil, GfsLinearProblem * lp)
 {
   g_assert (stencil != NULL);
 
@@ -221,17 +221,14 @@ static void append_stencil_to_linear_problem (GArray * stencil, GfsLinearProblem
 
 void gfs_destroy_linear_problem (GfsLinearProblem * lp)
 {
-  if (lp->id)
-    gts_object_destroy (GTS_OBJECT (lp->id));
+  gts_object_destroy (GTS_OBJECT (lp->id));
 
-  if (lp->rhs)
-    g_array_free (lp->rhs, TRUE);
-  if (lp->lhs)
-    g_array_free (lp->lhs, TRUE);
-
+  g_array_free (lp->rhs, TRUE);
+  
+  g_array_free (lp->lhs, TRUE);
+  
   g_ptr_array_foreach (lp->LP, (GFunc) destroy_stencil, NULL);
-  if (lp->LP)
-    g_ptr_array_free (lp->LP, TRUE);
+  g_ptr_array_free (lp->LP, TRUE);
 }
 
 static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
@@ -246,6 +243,8 @@ static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
   sd.u = lp->u;
   sd.stencil = new_stencil ();
 
+  add_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), 0.);
+
   g.a = GFS_VALUE (cell, lp->dia);
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
@@ -258,15 +257,15 @@ static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
   }
 
   if (g.a > 0.)
-    prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
+    add_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
   else {
     destroy_stencil (sd.stencil);
     sd.stencil = new_stencil ();
-    prepend_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
+    add_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
     g_array_index (lp->rhs, gdouble, (gint) GFS_VALUE (cell, lp->id)) = 0.;
   }
 
-  append_stencil_to_linear_problem (sd.stencil, lp);
+  add_stencil_to_linear_problem (sd.stencil, lp);
 }
 
 static void leafs_numbering (FttCell * cell, GfsLinearProblem * lp) {
