@@ -177,7 +177,6 @@ void         gfs_domain_homogeneous_bc        (GfsDomain * domain,
 void         gfs_domain_homogeneous_bc_stencil(GfsDomain * domain,
 					       FttTraverseFlags flags,
 					       gint max_depth,
-					       GfsVariable * ov,
 					       GfsVariable * v,
 					       GfsLinearProblem * lp);
 void         gfs_traverse_and_homogeneous_bc  (GfsDomain * domain,

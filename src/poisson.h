@@ -58,12 +58,21 @@ void                  gfs_multilevel_params_read     (GfsMultilevelParams * par,
 						      GtsFile * fp);
 void                  gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 							 FILE * fp);
-void                  gfs_get_poisson_problem        (GfsDomain * domain, 
-						      GfsVariable * rhs, GfsVariable * lhs, 
-						      GfsVariable * dia, guint dimension,
-						      GfsLinearProblem * lp);
+GfsLinearProblem *   gfs_get_poisson_problem         (GfsDomain * domain,
+						      GfsMultilevelParams * par,
+						      GfsVariable * rhs, 
+						      GfsVariable * lhs,
+						      GfsVariable * dia,
+						      guint maxlevel);
 GfsLinearProblem *    gfs_linear_problem_new         ();
-void                  gfs_linear_problem_init        (GfsLinearProblem * lp);
+void                  gfs_linear_problem_init        (GfsLinearProblem * lp,
+						      GfsVariable * rhs,
+						      GfsVariable * lhs,
+						      GfsVariable * dia,
+						      GfsVariable * id,
+						      gdouble omega,
+						      gdouble beta,
+						      guint maxlevel);
 void                  gfs_linear_problem_add_stencil  (GfsLinearProblem * lp, 
 						      GArray * stencil);
 void                  gfs_linear_problem_destroy     (GfsLinearProblem * lp);

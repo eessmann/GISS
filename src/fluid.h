@@ -271,7 +271,7 @@ struct _GfsLinearProblem{
   GPtrArray * LP;
   GArray * rhs, * lhs;
   GfsVariable * rhs_v, * lhs_v, * id;
-  GfsVariable * u, * dp, * dia;
+  GfsVariable * dia;
   gdouble beta, omega, nleafs;
   gint maxsize, maxlevel;
 };

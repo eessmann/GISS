@@ -59,6 +59,7 @@
   Refine LEVEL
 
   GModule hypre { tolerance = 1e-30 solver_type = boomer_amg  ncyclemax = CYCLE ncyclemin = CYCLE }
+
   Init {} {
     Div = {
       int k = 3, l = 3;

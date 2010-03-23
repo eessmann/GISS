@@ -55,6 +55,9 @@ struct _Gradient {
   gdouble a, b, c;
 };
 
+/* get_average_neighbor_value_stencil need to be updated whenever 
+ * this funciton is modified
+ */
 static gdouble average_neighbor_value (const FttCellFace * face,
 				       guint v,
 				       gdouble * x)
@@ -158,6 +161,8 @@ static GfsGradient interpolate_1D2 (FttCell * cell,
 /* v = a*v(cell) + b 
  * 
  * First order 1D interpolation.
+ * get_interpolate_1D1_stencil need to be updated whenever 
+ * this funciton is modified
  */
 static GfsGradient interpolate_1D1 (FttCell * cell,
 				    FttDirection d,
@@ -198,6 +203,9 @@ static void interpolate_1D1_stencil (FttCell * cell,
 /* v = a*v(cell) + b 
  * 
  * First order 2D interpolation.
+ *
+ *  get_interpolate_2D1_stencil need to be updated whenever 
+ *  this funciton is modified                                 
  */
 static GfsGradient interpolate_2D1 (FttCell * cell,
 				    FttDirection d1, FttDirection d2,
@@ -268,6 +276,8 @@ static gint perpendicular[FTT_NEIGHBORS][FTT_CELLS][2] =
    {{-1,-1},{-1,-1},{-1,-1},{-1,-1},{1,2},{0,2},{1,3},{0,3}}};
 #endif /* FTT_3D */
 
+/* gradient_fine_coarse_stencil need to be updated whenever  */
+/* this funciton is modified                                 */
 static Gradient gradient_fine_coarse (const FttCellFace * face, guint v)
 {
   Gradient g;
@@ -804,6 +814,8 @@ void gfs_face_gradient (const FttCellFace * face,
   }
 }
 
+/* face_weighted_gradient_stencil need to be updated whenever  */
+/* this funciton is modified                                   */
 static void face_weighted_gradient (const FttCellFace * face,
 				    GfsGradient * g,
 				    guint v,
@@ -2817,8 +2829,6 @@ gdouble gfs_cell_corner_value (FttCell * cell,
   return val;
 }
 
-/**************************************************************/
-
 /************** Stencil **********************************/
 /* The convention is that the first element is the diagonal */
 
@@ -3015,7 +3025,8 @@ static Gradient gradient_fine_coarse_stencil (const FttCellFace * face,
   p = get_interpolate_1D1_stencil (face->neighbor, dp, 1./4., v, id, stencil, 2./3.*weight);
 #else  /* FTT_3D */
   g_assert (dp[0] >= 0 && dp[1] >= 0);
-  p = get_interpolate_2D1_stencil (face->neighbor, dp[0], dp[1], 1./4., 1./4., v, id, stencil, 2./3.*weight);
+  p = get_interpolate_2D1_stencil (face->neighbor, dp[0], dp[1], 1./4., 1./4., v, id,
+				   stencil, 2./3.*weight);
 #endif /* FTT_3D */
 
   g.a = 2./3.;

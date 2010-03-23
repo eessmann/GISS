@@ -27,7 +27,7 @@
 #include "variable.h"
 #include "poisson.h"
 
-/* #define DEBUG 0 */
+/*#define DEBUG*/
 
 typedef enum {
   HYPRE_BOOMER_AMG,
@@ -74,7 +74,8 @@ struct _HypreProblem {
 /***********************************************/
 /*     Boomer Algebraic Multigrid Solver       */
 /***********************************************/
-static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * par, HypreProblem * hp)
+static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * par,
+				    HypreProblem * hp)
 {
   HYPRE_Solver solver;
   int num_iterations;
@@ -127,7 +128,8 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
 /******************************************/
 /*       PreConjugateGradient Solver      */
 /******************************************/
-static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par, HypreProblem * hp)
+static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par,
+			     HypreProblem * hp)
 {
   HYPRE_Solver solver;
   gfs_domain_timer_start (domain, "Hypre: PCG_Solver");
@@ -249,11 +251,11 @@ static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp,
   HYPRE_IJVectorGetObject(hp->b, (void **) &hp->par_b);
   HYPRE_IJVectorGetObject(hp->x, (void **) &hp->par_x);
 
-/* #if DEBUG */
+#ifdef DEBUG
   HYPRE_IJMatrixPrint(hp->A, "Aij.dat");
   HYPRE_IJVectorPrint(hp->x, "xi.dat");
   HYPRE_IJVectorPrint(hp->b, "bi.dat");
-/* #endif */
+#endif
 
   free(x_values);
   free(rhs_values);
@@ -287,7 +289,8 @@ static void hypre_problem_copy (HypreProblem * hp, GfsLinearProblem * lp)
 
 static void copy_poisson_solution (FttCell * cell, GfsLinearProblem * lp)
 {
-  GFS_VALUE (cell, lp->lhs_v) = g_array_index (lp->lhs, gdouble, (gint) GFS_VALUE (cell, lp->id));
+  GFS_VALUE (cell, lp->lhs_v) = g_array_index (lp->lhs, gdouble,
+					       (gint) GFS_VALUE (cell, lp->id));
 }
 
 static void copy_poisson_problem_solution_to_simulation_tree (GfsDomain * domain,
@@ -327,6 +330,24 @@ static void correct (FttCell * cell, gpointer * data)
   GFS_VALUE (cell, u) += GFS_VALUE (cell, dp);
 }
 
+/**
+ * gfs_hypre_poisson_solve:
+ * @domain: the domain over which the poisson problem is solved.
+ * @par: the parameters of the poisson problem.
+ * @lhs: the variable to use as left-hand side.
+ * @rhs: the variable to use as right-hand side.
+ * @res: the variable to store the residual
+ * @dia: the diagonal weight.
+ * @dt: the length of the time-step.
+ *
+ * Solves the poisson problem over domain using one of the solvers
+ * of the HYPRE library.
+ *
+ * First the poisson problem is extracted as a GfsLinearProblem, which
+ * is then fed to the HYPRE library.
+ *
+ * The solution is then copied to the quadtree.
+ */
 static void gfs_hypre_poisson_solve (GfsDomain * domain,
 				     GfsMultilevelParams * par,
 				     GfsVariable * lhs,
@@ -337,7 +358,7 @@ static void gfs_hypre_poisson_solve (GfsDomain * domain,
 {
   GfsVariable * dp = gfs_temporary_variable (domain);
   gpointer data[2];
-  printf("HYPRE\n");
+
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dp);
 
@@ -346,17 +367,7 @@ static void gfs_hypre_poisson_solve (GfsDomain * domain,
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
 
-  GfsLinearProblem * lp = gfs_linear_problem_new ();
-  gfs_linear_problem_init (lp);
-  lp->u = lhs;
-  lp->dp = dp;
-  lp->dia = dia;
-  lp->maxlevel = -1;
-  lp->maxsize = 0;
-  lp->omega = par->omega;
-  lp->beta = par->beta;
-
-  gfs_get_poisson_problem (domain, res, dp, dia, par->dimension, lp);
+  GfsLinearProblem * lp = gfs_get_poisson_problem (domain, par, res, dp, dia, -1);
  
   solve_poisson_problem_using_hypre (domain, lp, par);
 
@@ -545,7 +556,7 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
 
   if (coarsening_type) {
     if (par->solver_type != HYPRE_BOOMER_AMG) {
-      printf("Warning *** Coarsening algorithms are only for the Boomer AMG Solver !!\n");
+      printf("Warning *** Coarsening algorithms are only for the BoomerAMG Solver !!\n");
       printf("Warning *** None will be used with the selected solver.\n");
     }
 
@@ -569,25 +580,29 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
     g_free (coarsening_type);
   }
 
-  if (par->cycle_type != 1 && par->cycle_type != 2 && par->cycle_type != 3 && par->cycle_type != 4 && par->cycle_type != 5 && par->cycle_type != 6 && par->cycle_type != 7 && par->cycle_type != 8 && par->cycle_type != 11 && par->cycle_type != 12 && par->cycle_type != 13 && par->cycle_type != 14)
+  if ( par->cycle_type < 1 || (par->cycle_type > 8 && par->cycle_type < 11) ||
+       par->cycle_type > 14)
     gts_file_variable_error (fp, var, "cycle_type",
-			       "unknown Cycle Type `%i'", par->cycle_type);
-    
+			     "unknown Cycle Type `%i'", par->cycle_type);
+  
   if (par->nlevel < 0)
     gts_file_variable_error (fp, var, "nlevel",
-			       "error in hypre solver parameter nlevel < 0.");
+			     "error in hypre solver parameter nlevel < 0.");
 
   if (par->verbose != 1 && par->verbose != 0)
     gts_file_variable_error (fp, var, "verbose",
-			     "error in hypre solver parameter verbose != 0 or 1: `%i'", par->verbose);
-
+			     "error in hypre solver parameter verbose != 0 or 1: `%i'",
+			     par->verbose);
+  
   if (par->ncyclemax < 1)
     gts_file_variable_error (fp, var, "verbose",
-			     "error in hypre solver parameter ncyclemax can't be < 1  `%i'", par->ncyclemax);
+			     "error in hypre solver parameter ncyclemax can't be < 1  `%i'",
+			     par->ncyclemax);
 
   if (par->ncyclemin < 1)
     gts_file_variable_error (fp, var, "verbose",
-			     "error in hypre solver parameter ncyclemin can't be < 1  `%i'", par->ncyclemin);
+			     "error in hypre solver parameter ncyclemin can't be < 1  `%i'",
+			     par->ncyclemin);
 
   if (par->tolerance <= 0.) {
     gts_file_variable_error (fp, var, "tolerance",
@@ -614,7 +629,6 @@ const gchar * g_module_check_init (void);
 
 const gchar * g_module_check_init (void)
 {
-
   return NULL;
 }
 

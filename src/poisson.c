@@ -168,7 +168,7 @@ void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 		 par->niter));
 }
 
-      /** Methods for GfsLinearProblem **/
+      /** "Methods" for GfsLinearProblem **/
 /**
  * gfs_linear_problem_new:
  *
@@ -182,7 +182,7 @@ GfsLinearProblem * gfs_linear_problem_new ()
 
 /**
  * gfs_linear_problem_init:
- * @lp: a pointer on a GfsLinearProblem.
+ * @lp: a pointer on the GfsLinearProblem to initialise.
  * 
  * Initialises a GfsLinearProblem. Creates the structure
  * to store the problem LP, the right hand and left hand
@@ -190,13 +190,26 @@ GfsLinearProblem * gfs_linear_problem_new ()
  * Initialises the maximum size for a stencil to 0.
  * And the number of diagonal element to 0.
  */
-void gfs_linear_problem_init (GfsLinearProblem * lp)
+void gfs_linear_problem_init (GfsLinearProblem * lp, GfsVariable * rhs,
+			      GfsVariable * lhs, GfsVariable * dia,
+			      GfsVariable * id, gdouble omega,
+			      gdouble beta, guint maxlevel)
 {
   lp->rhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
   lp->lhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
   lp->LP = g_ptr_array_new ();
+
   lp->maxsize = 0;
   lp->nleafs = 0;
+
+  lp->rhs_v = rhs;
+  lp->lhs_v = lhs;
+  lp->id = id;
+  lp->dia = dia;
+  
+  lp->omega = omega;
+  lp->beta = beta;
+  lp->maxlevel =  maxlevel;
 }
 
 /**
@@ -240,8 +253,6 @@ void gfs_linear_problem_destroy (GfsLinearProblem * lp)
   g_ptr_array_free (lp->LP, TRUE);
 }
 
-/*******************************************************************/
-
 static void relax_stencil (FttCell * cell, GfsLinearProblem * lp)
 {
   GfsGradient g;
@@ -259,7 +270,7 @@ static void relax_stencil (FttCell * cell, GfsLinearProblem * lp)
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_face_weighted_gradient_stencil (&f, &ng, lp->maxlevel, lp->u, lp->id, stencil);
+      gfs_face_weighted_gradient_stencil (&f, &ng, lp->maxlevel, lp->lhs, lp->id, stencil);
       g.a += ng.a;
     }
   }
@@ -275,7 +286,7 @@ static void relax_stencil (FttCell * cell, GfsLinearProblem * lp)
   gfs_linear_problem_add_stencil (lp, stencil);
 }
 
-static void leafs_numbering (FttCell * cell, GfsLinearProblem * lp) {
+static void leaves_numbering (FttCell * cell, GfsLinearProblem * lp) {
  
   GFS_VALUE (cell, lp->id) = (gdouble) lp->nleafs;
   g_array_append_val (lp->lhs, GFS_VALUE (cell, lp->lhs_v));
@@ -291,7 +302,7 @@ static void bc_number (FttCellFace * f, GfsLinearProblem * lp)
   lp->nleafs++;
 }
 
-static void bc_leafs_numbering (GfsBox * box, GfsLinearProblem * lp) {
+static void bc_leaves_numbering (GfsBox * box, GfsLinearProblem * lp) {
  
   FttDirection d;
   
@@ -306,37 +317,57 @@ static void bc_leafs_numbering (GfsBox * box, GfsLinearProblem * lp) {
     }
 }
 
-void gfs_get_poisson_problem (GfsDomain * domain, 
-			      GfsVariable * rhs, GfsVariable * lhs, GfsVariable * dia,
-			      guint dimension,
-			      GfsLinearProblem * lp)
-{
-  GfsVariable * id = gfs_temporary_variable (domain);
+/**
+ * gfs_get_poisson_problem:
+ * @domain: the domain over which the poisson problem is defined
+ * @par: the GfsMultilevelParams
+ * @rhs: the variable to use as right-hand side
+ * @lhs: the variable to use as left-hand side
+ * @dia: the diagonal weight
+ * @maxlevel: the maximum level to consider (or -1).
+ *
+ * Extracts the poisson problem associated with @lhs, @rhs and the
+ * boundary conditions defined in the parameter file.
+ *
+ * First cells are numbered. Then stencils are built on the fly using
+ * modified versions of the functions of the native gerris poisson
+ * solver.
+ *
+ * A GfsLinearProblem is returned. This GfsLinearProblem contains two
+ * GArray that store the rhs and lhs values and a GPtrArray which stores
+ * the matrix of the poisson problem. The matrix is stored as an array
+ * of pointer. Each pointer points a stencil (GArray of GfsStencilElement)
+ */
 
+GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain, GfsMultilevelParams * par,
+					    GfsVariable * rhs, GfsVariable * lhs,
+					    GfsVariable * dia, guint maxlevel)
+{
   gfs_domain_timer_start (domain, "get_poisson_problem");
 
-  lp->rhs_v = rhs;
-  lp->lhs_v = lhs;
-  lp->id = id;
+  GfsLinearProblem * lp = gfs_linear_problem_new ();
+  GfsVariable * id = gfs_temporary_variable (domain);
+
+  gfs_linear_problem_init (lp, rhs, lhs, dia, id, par->omega, par->beta, maxlevel);
   
   /* Cell numbering */
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, lp->maxlevel,
-			    (FttCellTraverseFunc) leafs_numbering, lp);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
+			    (FttCellTraverseFunc) leaves_numbering, lp);
 
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leafs_numbering, lp);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leaves_numbering, lp);
   /* End - Cell numbering */
  
   /* Creates stencils on the fly */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-			    lp->maxlevel, (FttCellTraverseFunc) relax_stencil, lp);
+			    maxlevel, (FttCellTraverseFunc) relax_stencil, lp);
 
   gfs_domain_homogeneous_bc_stencil (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-				     lp->maxlevel, lp->dp, lp->u, lp);
-  
-  /* ov / v good names ?*/
+				     maxlevel, lhs, lp);
   
   /*End - Creates stencils on the fly */
   gfs_domain_timer_stop (domain, "get_poisson_problem");
+
+  return lp;
 }
 
 typedef struct {
@@ -347,6 +378,9 @@ typedef struct {
   guint axi;
 } RelaxParams;
 
+/* relax_stencil needs to updated whenever this
+ * function is modified
+ */
 static void relax (FttCell * cell, RelaxParams * p)
 {
   GfsGradient g;
@@ -866,6 +900,7 @@ static void relax_loop (GfsDomain * domain,
  * Returns a gboolean : TRUE if the function uses its own convergence
  * criterion and satisfied it. FALSE otherwise.
  */
+
 void gfs_poisson_cycle (GfsDomain * domain,
 			   GfsMultilevelParams * p,
 			   GfsVariable * u,
@@ -935,16 +970,16 @@ void gfs_poisson_cycle (GfsDomain * domain,
 }
 
 /**
- * gfs_poisson_solver:
+ * gfs_poisson_solve:
  * @domain: the domain over which the poisson problem is solved.
  * @par: the parameters of the poisson problem.
  * @lhs: the variable to use as left-hand side.
  * @rhs: the variable to use as right-hand side.
- * @res: the varaible to store the residual
+ * @res: the variable to store the residual
  * @dia: the diagonal weight.
  * @dt: the length of the time-step.
  *
- * Solve the poisson problem over domain using the Gerris' native
+ * Solves the poisson problem over domain using the Gerris' native
  * multigrid poisson solver.
  */
 void gfs_poisson_solve (GfsDomain * domain, GfsMultilevelParams * par,

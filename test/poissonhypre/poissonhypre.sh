@@ -2,6 +2,7 @@ if  ! $donotrun; then
     rm -f error
     echo "0 0.00000000" > time
     echo "0 1.776e+02 0" > proj
+    params="GModule hypre { tolerance = 1e-30 solver_type = boomer_amg  ncyclemax = CYCLE ncyclemin = CYCLE }"
     for cycle in 1 2 3 4 5 6 7 8 9 10 ; do
 	if ( gerris2D -m -DLEVEL=7 -DCYCLE=$cycle $1 ) ; then :
 	else
