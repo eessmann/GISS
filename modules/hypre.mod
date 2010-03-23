@@ -80,6 +80,8 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
   int num_iterations;
   double final_res_norm;
 
+  gfs_domain_timer_start (domain, "Hypre: AMG_Boomer_solver");
+
   if (proj_hp.nlevel == 0)
     proj_hp.nlevel = gfs_domain_depth (domain);
   
@@ -119,6 +121,7 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
   
   /* Destroy solver */
   HYPRE_BoomerAMGDestroy(solver);
+  gfs_domain_timer_stop (domain, "Hypre: AMG_Boomer_solver");
 }
 
 /******************************************/
@@ -127,6 +130,7 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
 static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par, HypreProblem * hp)
 {
   HYPRE_Solver solver;
+  gfs_domain_timer_start (domain, "Hypre: PCG_Solver");
 
   /* Create solver */
   HYPRE_ParCSRPCGCreate(MPI_COMM_WORLD, &solver);
@@ -157,10 +161,15 @@ static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par, Hypr
   
   /* Destroy solver */
   HYPRE_ParCSRPCGDestroy(solver);
+  gfs_domain_timer_stop (domain, "Hypre: PCG_Solver");
 }
 
-static void create_hypre_problem_structure (HypreProblem * hp, gdouble size)
+
+
+static void hypre_problem_new (HypreProblem * hp, gdouble size)
 {
+  gfs_domain_timer_start (domain, "HYPRE: Solver setup");
+  
   /* Create the matrix.*/
   HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, size-1, 0, size-1, &hp->A);
 
@@ -179,7 +188,7 @@ static void create_hypre_problem_structure (HypreProblem * hp, gdouble size)
   HYPRE_IJVectorInitialize(hp->x);
 }
 
-static void destroy_hypre_problem_structure (HypreProblem * hp)
+static void hypre_problem_destroy (HypreProblem * hp)
 {
   g_assert (hp->A);
 
@@ -205,7 +214,7 @@ static void extract_stencil (GfsStencil * stencil, HypreProblem * hp)
   HYPRE_IJMatrixSetValues(hp->A, 1, &i, &index, cols, values);
 }
 
-static void init_hypre_problem (HypreProblem * hp, GfsLinearProblem * lp)
+static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp)
 {
   double *rhs_values, *x_values;
   int    *rows;
@@ -239,23 +248,24 @@ static void init_hypre_problem (HypreProblem * hp, GfsLinearProblem * lp)
   HYPRE_IJVectorGetObject(hp->x, (void **) &hp->par_x);
 
 /* #if DEBUG */
-/*   HYPRE_IJMatrixPrint(hp->A, "Aij.dat"); */
-/*   HYPRE_IJVectorPrint(hp->x, "xi.dat"); */
-/*   HYPRE_IJVectorPrint(hp->b, "bi.dat"); */
+  HYPRE_IJMatrixPrint(hp->A, "Aij.dat");
+  HYPRE_IJVectorPrint(hp->x, "xi.dat");
+  HYPRE_IJVectorPrint(hp->b, "bi.dat");
 /* #endif */
 
   free(x_values);
   free(rhs_values);
   free(rows);
+  gfs_domain_timer_stop (domain, "HYPRE: Solver setup");
 }
 
-static void print_hypre_solution (HypreProblem * hp, GfsLinearProblem * lp)
+static void hypre_problem_copy (HypreProblem * hp, GfsLinearProblem * lp)
 {
   double *x_values;
   int    *rows;
   gint i;
 
-  /* Copy the solution in the poisson problem structure */
+  /* Copy the solution to the GfsLinearProblem structure */
   x_values = malloc( lp->lhs->len * sizeof(double));
   rows = malloc( lp->lhs->len * sizeof(int));
     
@@ -292,15 +302,9 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
 					       GfsMultilevelParams * par)
 {
   HypreProblem hp;
-
-  gfs_domain_timer_start (domain, "Solver setup");
      
-  create_hypre_problem_structure (&hp, lp->rhs->len);
-
-  init_hypre_problem (&hp, lp);
-
-  gfs_domain_timer_stop (domain, "Solver setup");
-  gfs_domain_timer_start (domain, "Solving the problem");
+  hypre_problem_new (&hp, lp->rhs->len);
+  hypre_problem_init (&hp, lp);
   
   /* Choose a solver and solve the system */
   if (proj_hp.solver_type == HYPRE_BOOMER_AMG)
@@ -310,11 +314,8 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
   else
     g_assert_not_reached();
   
-  print_hypre_solution (&hp, lp);
-  
-  destroy_hypre_problem_structure (&hp);
-
-  gfs_domain_timer_stop (domain, "Solving the problem");
+  hypre_problem_copy (&hp, lp);
+  hypre_problem_destroy (&hp);
 }
 
 static void correct (FttCell * cell, gpointer * data)
@@ -337,7 +338,7 @@ static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dp);
 
-  gfs_domain_timer_start (domain, "Putting problem together");
+  
 
   GfsLinearProblem * lp = gfs_linear_problem_new ();
   lp->init (lp);
@@ -350,20 +351,13 @@ static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
   lp->beta = p->beta;
 
   gfs_get_poisson_problem (domain, res, dp, dia, p->dimension, lp);
-					              
-  gfs_domain_timer_stop (domain, "Putting problem together");
  
   solve_poisson_problem_using_hypre (domain, lp, p);
 
-  gfs_domain_timer_start (domain, "Copy problem");
   copy_poisson_problem_solution_to_simulation_tree (domain, lp);
-  gfs_domain_timer_stop (domain, "Copy problem");
 
-  gfs_domain_timer_start (domain, "Destroy problem");
   lp->destroy (lp);
-  gfs_domain_timer_stop (domain, "Destroy problem");
 
-  gfs_domain_timer_start (domain, "Correct field");
   /* correct on leaf cells */
   data[0] = u;
   data[1] = dp;
@@ -374,7 +368,6 @@ static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
   gfs_residual (domain, p->dimension, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
   
   gts_object_destroy (GTS_OBJECT (dp));
-  gfs_domain_timer_stop (domain, "Correct field");
 
   p->tolerance = proj_hp.tolerance;
 

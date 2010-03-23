@@ -292,6 +292,8 @@ void gfs_get_poisson_problem (GfsDomain * domain,
 {
   GfsVariable * id = gfs_temporary_variable (domain);
 
+  gfs_domain_timer_start (domain, "get_poisson_problem");
+
   lp->rhs_v = rhs;
   lp->lhs_v = lhs;
   lp->id = id;
@@ -313,6 +315,7 @@ void gfs_get_poisson_problem (GfsDomain * domain,
   /* ov / v good names ?*/
   
   /*End - Creates stencils on the fly */
+  gfs_domain_timer_stop (domain, "get_poisson_problem");
 }
 
 typedef struct {
