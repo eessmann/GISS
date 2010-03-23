@@ -168,58 +168,33 @@ void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 		 par->niter));
 }
 
-/* The convention is that the first element is the diagonal */
+      /** Methods for GfsLinearProblem **/
 
-static GArray * new_stencil ()
-{
-  return g_array_new (FALSE, FALSE, sizeof (GfsStencilElement));
-}
-
-static void destroy_stencil (GArray * stencil)
-{
-  g_array_free (stencil, TRUE);
-}
-
-static void add_stencil_element_to_stencil (GArray * stencil, gint id,
-					       gdouble coeff)
-{
-  GfsStencilElement diag;
-  gint i;
-  
-  for (i = 0; i < stencil->len; i++)
-    if (g_array_index (stencil, GfsStencilElement, i).cell_id == id) {
-      g_array_index (stencil, GfsStencilElement, i).cell_coeff += coeff;
-      return;
-    }
-
-  diag.cell_coeff = coeff;
-  diag.cell_id = id;
-  g_array_append_val (stencil, diag);
-}
-
-/***************** GfsLinearProblem **************************************************/
-
-GfsLinearProblem * gfs_linear_problem_new ()
-{
-   return g_malloc (sizeof (GfsLinearProblem));
-}
-
-void gfs_init_linear_problem (GfsLinearProblem * lp)
-{
- 
-}
-
-static void add_stencil_to_linear_problem (GArray * stencil, GfsLinearProblem * lp)
+static void add_stencil_to_linear_problem (GfsLinearProblem * lp, GfsStencil * stencil)
 {
   g_assert (stencil != NULL);
 
   g_ptr_array_add (lp->LP, stencil);
   
-  if (stencil->len > lp->maxsize)
-    lp->maxsize = stencil->len;
+  if (stencil->data->len > lp->maxsize)
+    lp->maxsize = stencil->data->len;
 }
 
-void gfs_destroy_linear_problem (GfsLinearProblem * lp)
+static void init_linear_problem (GfsLinearProblem * lp)
+{
+  lp->rhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  lp->lhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  lp->LP = g_ptr_array_new ();
+  lp->maxsize = 0;
+  lp->nleafs = 0;
+}
+
+static void destroy_stencil (GfsStencil * stencil)
+{
+  stencil->destroy (stencil);
+}
+
+static void destroy_linear_problem (GfsLinearProblem * lp)
 {
   gts_object_destroy (GTS_OBJECT (lp->id));
 
@@ -231,6 +206,19 @@ void gfs_destroy_linear_problem (GfsLinearProblem * lp)
   g_ptr_array_free (lp->LP, TRUE);
 }
 
+GfsLinearProblem * gfs_linear_problem_new ()
+{
+  GfsLinearProblem * lp = g_malloc (sizeof (GfsLinearProblem));
+
+  lp->init = init_linear_problem;
+  lp->add_stencil = add_stencil_to_linear_problem;
+  lp->destroy = destroy_linear_problem;
+
+  return lp;
+}
+
+/*******************************************************************/
+
 static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
 {
   GfsGradient g;
@@ -238,12 +226,11 @@ static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
   FttCellFace f;
   GfsGradient ng;
   
-  GfsStencil sd;
-  sd.id = lp->id;
-  sd.u = lp->u;
-  sd.stencil = new_stencil ();
+  GfsStencil * stencil = gfs_stencil_new ();
+  stencil->id = lp->id;
+  stencil->u = lp->u;
 
-  add_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), 0.);
+  stencil->add_element (stencil, (gint) GFS_VALUE (cell, lp->id), 0.);
 
   g.a = GFS_VALUE (cell, lp->dia);
   f.cell = cell;
@@ -251,21 +238,20 @@ static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_face_weighted_gradient_stencil (&f, &ng, lp->maxlevel, &sd);
+      gfs_face_weighted_gradient_stencil (&f, &ng, lp->maxlevel, stencil);
       g.a += ng.a;
     }
   }
 
   if (g.a > 0.)
-    add_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
+    stencil->add_element (stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
   else {
-    destroy_stencil (sd.stencil);
-    sd.stencil = new_stencil ();
-    add_stencil_element_to_stencil (sd.stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
+    stencil->reinit (stencil);
+    stencil->add_element (stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
     g_array_index (lp->rhs, gdouble, (gint) GFS_VALUE (cell, lp->id)) = 0.;
   }
 
-  add_stencil_to_linear_problem (sd.stencil, lp);
+  lp->add_stencil (lp, stencil);
 }
 
 static void leafs_numbering (FttCell * cell, GfsLinearProblem * lp) {
@@ -276,7 +262,7 @@ static void leafs_numbering (FttCell * cell, GfsLinearProblem * lp) {
   lp->nleafs++;
 }
 
-static void number_bc (FttCellFace * f, GfsLinearProblem * lp)
+static void bc_number (FttCellFace * f, GfsLinearProblem * lp)
 {
   GFS_VALUE(f->cell, lp->id) = (gdouble) lp->nleafs;
   g_array_append_val (lp->lhs, GFS_VALUE (f->cell, lp->lhs_v));
@@ -295,7 +281,7 @@ static void bc_leafs_numbering (GfsBox * box, GfsLinearProblem * lp) {
       b->type = GFS_BOUNDARY_CENTER_VARIABLE;
       ftt_face_traverse_boundary (b->root, b->d,
 				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, lp->maxlevel,
-				  (FttFaceTraverseFunc) number_bc, lp);   
+				  (FttFaceTraverseFunc) bc_number, lp);   
     }
 }
 
@@ -306,14 +292,9 @@ void gfs_get_poisson_problem (GfsDomain * domain,
 {
   GfsVariable * id = gfs_temporary_variable (domain);
 
-  lp->rhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  lp->lhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
   lp->rhs_v = rhs;
   lp->lhs_v = lhs;
   lp->id = id;
-  lp->LP = g_ptr_array_new ();
-  lp->maxsize = 0;
-  lp->nleafs = 0;
   
   /* Cell numbering */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, lp->maxlevel,

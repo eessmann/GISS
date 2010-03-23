@@ -188,14 +188,14 @@ static void destroy_hypre_problem_structure (HypreProblem * hp)
   HYPRE_IJVectorDestroy(hp->x);
 }
 
-static void extract_stencil (GArray * stencil, HypreProblem * hp)
+static void extract_stencil (GfsStencil * stencil, HypreProblem * hp)
 {
   double values[hp->maxsize];
   int cols[hp->maxsize];
   gint i, index;
   
-  for (i = 0; i < stencil->len; i++) {
-    GfsStencilElement * tmp = &g_array_index (stencil, GfsStencilElement, i);
+  for (i = 0; i < stencil->data->len; i++) {
+    GfsStencilElement * tmp = &g_array_index (stencil->data, GfsStencilElement, i);
     if (i == 0)
       index = tmp->cell_id;
     cols[i] = tmp->cell_id;
@@ -340,6 +340,7 @@ static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
   gfs_domain_timer_start (domain, "Putting problem together");
 
   GfsLinearProblem * lp = gfs_linear_problem_new ();
+  lp->init (lp);
   lp->u = u;
   lp->dp = dp;
   lp->dia = dia;
@@ -359,7 +360,7 @@ static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
   gfs_domain_timer_stop (domain, "Copy problem");
 
   gfs_domain_timer_start (domain, "Destroy problem");
-  gfs_destroy_linear_problem (lp);
+  lp->destroy (lp);
   gfs_domain_timer_stop (domain, "Destroy problem");
 
   gfs_domain_timer_start (domain, "Correct field");

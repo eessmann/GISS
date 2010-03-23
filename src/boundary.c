@@ -34,35 +34,6 @@ static FttVector rpos[FTT_NEIGHBORS] = {
 #endif /* FTT_3D */
 };
 
-static void append_stencil_element_to_stencil (GArray * stencil, gint id, gdouble coeff)
-{
-  GfsStencilElement diag;
-  gint i, j;
-
-  for (i = 0; i < stencil->len; i++)
-    if (g_array_index (stencil, GfsStencilElement, i).cell_id == id) {
-      g_array_index (stencil, GfsStencilElement, i).cell_coeff += coeff;
-      return;
-    }
-
-  diag.cell_coeff = coeff;
-  diag.cell_id = id;
-
-  g_array_append_val (stencil, diag);
-}
-
-static void append_stencil_to_linear_problem (GArray * stencil, GfsLinearProblem * lp)
-{
-  g_assert (stencil != NULL);
-
-  g_ptr_array_add (lp->LP, stencil);
-}
-
-static GArray * new_stencil ()
-{
-  return g_array_new (FALSE, FALSE, sizeof (GfsStencilElement));
-}
-
 /* GfsBc: Object */
 
 static void symmetry (FttCellFace * f, GfsBc * b)
@@ -76,17 +47,17 @@ static void symmetry (FttCellFace * f, GfsBc * b)
 static void symmetry_stencil (FttCellFace * f, GfsBc * b)
 {
   if (b->v->component == f->d/2) {
-    GArray * stencil = new_stencil ();
-    append_stencil_element_to_stencil (stencil, GFS_VALUE (f->cell, b->lp->id), 1.);
-    append_stencil_element_to_stencil (stencil, GFS_VALUE (f->neighbor, b->lp->id), 1.);
-    append_stencil_to_linear_problem (stencil, b->lp);
+    GfsStencil * stencil = gfs_stencil_new ();
+    stencil->add_element (stencil, GFS_VALUE (f->cell, b->lp->id), 1.);
+    stencil->add_element (stencil, GFS_VALUE (f->neighbor, b->lp->id), 1.);
+    b->lp->add_stencil (b->lp, stencil);
     g_array_index (b->lp->rhs, gdouble, (gint) GFS_VALUE (f->cell, b->lp->id)) = 0.;
   }
   else {
-    GArray * stencil = new_stencil ();
-    append_stencil_element_to_stencil (stencil, GFS_VALUE (f->cell, b->lp->id), 1.);
-    append_stencil_element_to_stencil (stencil, GFS_VALUE (f->neighbor, b->lp->id), -1.);
-    append_stencil_to_linear_problem (stencil, b->lp);
+    GfsStencil * stencil = gfs_stencil_new ();
+    stencil->add_element (stencil, GFS_VALUE (f->cell, b->lp->id), 1.);
+    stencil->add_element (stencil, GFS_VALUE (f->neighbor, b->lp->id), -1.);
+    b->lp->add_stencil (b->lp, stencil);
     g_array_index (b->lp->rhs, gdouble, (gint) GFS_VALUE (f->cell, b->lp->id)) = 0.;
   }
 }
@@ -288,10 +259,10 @@ static void homogeneous_dirichlet (FttCellFace * f, GfsBc * b)
 
 static void homogeneous_dirichlet_stencil (FttCellFace * f, GfsBc * b)
 {
-  GArray * stencil = new_stencil ();
-  append_stencil_element_to_stencil (stencil, GFS_VALUE (f->cell, b->lp->id), 1.);
-  append_stencil_element_to_stencil (stencil, GFS_VALUE (f->neighbor, b->lp->id), 1.);
-  append_stencil_to_linear_problem (stencil, b->lp);
+  GfsStencil * stencil = gfs_stencil_new ();
+  stencil->add_element (stencil, GFS_VALUE (f->cell, b->lp->id), 1.);
+  stencil->add_element (stencil, GFS_VALUE (f->neighbor, b->lp->id), 1.);		
+  b->lp->add_stencil (b->lp, stencil);
   g_array_index (b->lp->rhs, gdouble, (gint) GFS_VALUE (f->cell, b->lp->id)) = 0.;
 }
 
@@ -366,10 +337,10 @@ static void homogeneous_neumann (FttCellFace * f, GfsBc * b)
 
 static void homogeneous_neumann_stencil (FttCellFace * f, GfsBc * b)
 {
-  GArray * stencil = new_stencil ();
-  append_stencil_element_to_stencil (stencil, GFS_VALUE (f->cell, b->lp->id), -1.);
-  append_stencil_element_to_stencil (stencil, GFS_VALUE (f->neighbor, b->lp->id), 1.);
-  append_stencil_to_linear_problem (stencil, b->lp);
+  GfsStencil * stencil = gfs_stencil_new ();
+  stencil->add_element (stencil, GFS_VALUE (f->cell, b->lp->id), -1.);
+  stencil->add_element (stencil, GFS_VALUE (f->neighbor, b->lp->id), 1.);
+  b->lp->add_stencil (b->lp, stencil);
   g_array_index (b->lp->rhs, gdouble, (gint) GFS_VALUE (f->cell, b->lp->id)) = 0.;
 }
 
