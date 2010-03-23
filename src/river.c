@@ -95,6 +95,8 @@ typedef struct {
   gdouble dv;
 } Sym;
 
+#define CFL_CLAMP(u, umax) (fabs (u) <= (umax) ? (u) : (u) > 0. ? (umax) : - (umax))
+
 static void face_fluxes (FttCellFace * face, GfsRiver * r)
 {
   if (GFS_VALUE (face->cell, r->v1[0]) <= r->dry &&
@@ -108,7 +110,8 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     {V, -1., U,  1.}
   };
   Sym * s = &sym[face->d];
-  gdouble etaL = (GFS_VALUE (face->cell, r->v1[0]) + 
+  gdouble etaL = (GFS_VALUE (face->cell, r->v1[0]) < r->dry ? 0. :
+		  GFS_VALUE (face->cell, r->v1[0]) + 
 		  s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0]));
   gdouble zbL = (GFS_VALUE (face->cell, r->v[3]) + 
 		 s->du*GFS_VALUE (face->cell, r->dv[face->d/2][3]));
@@ -128,7 +131,8 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   uL[0] = MAX (0., etaL + zbL - zbLR);
   uL[3] = 0.;
 
-  gdouble etaR = (GFS_VALUE (face->neighbor, r->v1[0]) -
+  gdouble etaR = (GFS_VALUE (face->neighbor, r->v1[0]) < r->dry ? 0. :
+		  GFS_VALUE (face->neighbor, r->v1[0]) -
 		  s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][0]));
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE: case FTT_FINE_COARSE:
@@ -149,9 +153,16 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     g_assert_not_reached ();
   }
 
+  gdouble h = ftt_cell_size (face->cell);
+  gdouble umax = GFS_SIMULATION (r)->advection_params.cfl*h/r->dt;
+  uL[1] = CFL_CLAMP (uL[1], umax);
+  uR[1] = CFL_CLAMP (uR[1], umax);
+  uL[2] = CFL_CLAMP (uL[2], umax);
+  uR[2] = CFL_CLAMP (uR[2], umax);
+
   riemann_hllc (uL, uR, r->g, f);
 
-  gdouble dt = gfs_domain_face_fraction (r->v[0]->domain, face)*r->dt/ftt_cell_size (face->cell);
+  gdouble dt = gfs_domain_face_fraction (GFS_DOMAIN (r), face)*r->dt/h;
   f[0] *= dt;
   f[2] = s->dv*dt*f[2];
   GFS_VALUE (face->cell, r->flux[0])    -= f[0];
