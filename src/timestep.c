@@ -327,40 +327,11 @@ static void mac_projection (GfsDomain * domain,
 #endif
   
   /* compute residual */
-  par->depth = gfs_domain_depth (domain);
-  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res1);
-  /* solve for pressure */
-  par->residual_before = par->residual = 
-    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
-  gdouble res_max_before = par->residual.infty;
   guint minlevel = par->minlevel;
+  par->depth = gfs_domain_depth (domain);
   par->niter = 0;
-  gboolean converged = FALSE;
 
-  while (par->niter < par->nitermin ||
-	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
-#if 0
-    if (domain->pid <= 0)
-      fprintf (stderr, "%d bias: %g first: %g second: %g infty: %g\n",
-	       par->niter, 
-	       par->residual.bias, 
-	       par->residual.first, 
-	       par->residual.second, 
-	       par->residual.infty);
-#endif
-    converged = par->poisson_cycle (domain, par, p, div, dia, res1);
-    
-    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
-
-    if (converged) /* convergence reached in the poisson_cycle routine */
-      break;
-    if (par->residual.infty == res_max_before) /* convergence has stopped!! */
-      break;
-    if (par->residual.infty > res_max_before/1.1 && par->minlevel < par->depth)
-      par->minlevel++;
-    res_max_before = par->residual.infty;
-    par->niter++;
-  }
+  par->poisson_solve (domain, par, p, div, res1, dia, apar->dt);
 
   par->minlevel = minlevel;
 

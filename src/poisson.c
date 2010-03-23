@@ -868,7 +868,7 @@ static void relax_loop (GfsDomain * domain,
  * Returns a gboolean : TRUE if the function uses its own convergence
  * criterion and satisfied it. FALSE otherwise.
  */
-gboolean gfs_poisson_cycle (GfsDomain * domain,
+void gfs_poisson_cycle (GfsDomain * domain,
 			   GfsMultilevelParams * p,
 			   GfsVariable * u,
 			   GfsVariable * rhs,
@@ -934,8 +934,50 @@ gboolean gfs_poisson_cycle (GfsDomain * domain,
   gfs_residual (domain, p->dimension, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
 
   gts_object_destroy (GTS_OBJECT (dp));
+}
 
-  return FALSE;
+/**
+ * gfs_poisson_solver:
+ * @domain: the domain over which the poisson problem is solved.
+ * @par: the parameters of the poisson problem.
+ * @lhs: the variable to use as left-hand side.
+ * @rhs: the variable to use as right-hand side.
+ * @res: the varaible to store the residual
+ * @dia: the diagonal weight.
+ * @dt: the length of the time-step.
+ *
+ * Solve the poisson problem over domain using the Gerris' native
+ * multigrid poisson solver.
+ */
+void gfs_poisson_solve (GfsDomain * domain, GfsMultilevelParams * par,
+			GfsVariable * lhs, GfsVariable * rhs, GfsVariable * res,
+			GfsVariable * dia, gdouble dt)
+{
+  gfs_domain_timer_start (domain, "poisson_solve");
+
+  /* calculates the intial residual and its norm */
+  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, lhs, rhs, dia, res);
+  par->residual_before = par->residual = 
+    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
+
+  gdouble res_max_before = par->residual.infty;
+
+  while (par->niter < par->nitermin ||
+	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
+
+    /* Does one iteration */
+    gfs_poisson_cycle (domain, par, lhs, rhs, dia, res);
+    
+    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
+
+    if (par->residual.infty == res_max_before) /* convergence has stopped!! */
+      break;
+    if (par->residual.infty > res_max_before/1.1 && par->minlevel < par->depth)
+      par->minlevel++;
+    res_max_before = par->residual.infty;
+    par->niter++;
+  }
+  gfs_domain_timer_stop (domain, "poisson_solve");
 }
 
 typedef struct {

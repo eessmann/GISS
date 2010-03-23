@@ -212,25 +212,10 @@ static void gfs_free_surface_pressure (GfsDomain * toplayer,
   
   /* solve for pressure */
   par->depth = gfs_domain_depth (toplayer);
-  gfs_residual (toplayer, 2, FTT_TRAVERSE_LEAFS, -1, p, fp.div, fp.dia, res1);
-  par->residual_before = par->residual = 
-    gfs_domain_norm_residual (toplayer, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
   par->niter = 0;
   par->dimension = 2;
-  while (par->niter < par->nitermin ||
-	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
-#if 0
-    fprintf (stderr, "%d bias: %g first: %g second: %g infty: %g\n",
-	     par->niter, 
-	     par->residual.bias, 
-	     par->residual.first, 
-	     par->residual.second, 
-	     par->residual.infty);
-#endif
-    par->poisson_cycle (toplayer, par, p, fp.div, fp.dia, res1);
-    par->residual = gfs_domain_norm_residual (toplayer, FTT_TRAVERSE_LEAFS, -1, apar->dt, res1);
-    par->niter++;
-  }
+
+  par->poisson_solve (toplayer, par, p, fp.div, res1, fp.dia, apar->dt);
 
   if (!res)
     gts_object_destroy (GTS_OBJECT (res1));

@@ -885,9 +885,9 @@ static void simulation_init (GfsSimulation * object)
   object->advection_params.average = TRUE;
 
   gfs_multilevel_params_init (&object->projection_params);
-  object->projection_params.poisson_cycle = (GfsPoissonSolverFunc) gfs_poisson_cycle;
+  object->projection_params.poisson_solve = (GfsPoissonSolverFunc) gfs_poisson_solve;
   gfs_multilevel_params_init (&object->approx_projection_params);
-  object->approx_projection_params.poisson_cycle = (GfsPoissonSolverFunc) gfs_poisson_cycle;
+  object->approx_projection_params.poisson_solve = (GfsPoissonSolverFunc) gfs_poisson_solve;
 
   object->solids = GTS_SLIST_CONTAINER (gts_container_new
 					(GTS_CONTAINER_CLASS
@@ -1935,10 +1935,7 @@ static void poisson_run (GfsSimulation * sim)
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
   par->niter = 0;
-  while (sim->time.t < sim->time.end &&
-	 sim->time.i < sim->time.iend &&
-	 sim->time.i < par->nitermax &&
-	 par->residual.infty > par->tolerance) {
+  if (par->residual.infty > par->tolerance) {
     gdouble tstart = gfs_clock_elapsed (domain->timer);
 
     if (res) {
@@ -1948,22 +1945,12 @@ static void poisson_run (GfsSimulation * sim)
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) copy_res, data);
     }
-
+    
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
-    gfs_domain_timer_start (domain, "poisson_cycle");
-    par->poisson_cycle (domain, par, p, div, dia, res1);
-    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
-    gfs_domain_timer_stop (domain, "poisson_cycle");
+    par->poisson_solve (domain, par, p, div, res1, dia, 1.);
 
-    gfs_domain_cell_traverse (domain,
-			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
-    gfs_simulation_adapt (sim);
-
-    par->niter++;
-    sim->time.t = sim->tnext;
-    sim->time.i++;
+    sim->time.t = sim->time.end;
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);

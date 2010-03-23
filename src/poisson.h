@@ -30,12 +30,12 @@ extern "C" {
 
 typedef struct _GfsMultilevelParams GfsMultilevelParams;
 typedef gboolean (* GfsPoissonSolverFunc)       (GfsDomain * domain,
-						 GfsMultilevelParams * p,
-						 GfsVariable * u,
+						 GfsMultilevelParams * par,
+						 GfsVariable * lhs,
 						 GfsVariable * rhs,
+						 GfsVariable * res,
 						 GfsVariable * dia,
-						 GfsVariable * res);
-
+						 gdouble dt);
 struct _GfsMultilevelParams {
   gdouble tolerance;
   guint nrelax, erelax;
@@ -48,7 +48,7 @@ struct _GfsMultilevelParams {
   gboolean weighted;
   gdouble beta, omega;
   GfsNorm residual_before, residual;
-  GfsPoissonSolverFunc poisson_cycle;
+  GfsPoissonSolverFunc poisson_solve;
 };
 
 void                  gfs_multilevel_params_init     (GfsMultilevelParams * par);
@@ -84,12 +84,19 @@ void                  gfs_residual                   (GfsDomain * domain,
 						      GfsVariable * res);
 void                  gfs_poisson_coefficients       (GfsDomain * domain,
 						      GfsFunction * alpha);
-gboolean              gfs_poisson_cycle              (GfsDomain * domain,
+void                  gfs_poisson_cycle              (GfsDomain * domain,
 						      GfsMultilevelParams * p,
 						      GfsVariable * u,
 						      GfsVariable * rhs,
 						      GfsVariable * dia,
 						      GfsVariable * res);
+void                  gfs_poisson_solve              (GfsDomain * domain,
+						      GfsMultilevelParams * par,
+						      GfsVariable * lhs,
+						      GfsVariable * rhs,
+						      GfsVariable * res,
+						      GfsVariable * dia,
+						      gdouble dt);
 void                  gfs_diffusion_coefficients     (GfsDomain * domain,
 						      GfsSourceDiffusion * d,
 						      gdouble dt,

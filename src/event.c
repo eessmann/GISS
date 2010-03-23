@@ -929,7 +929,7 @@ static void stream_from_vorticity (GfsDomain * domain,
   gfs_multilevel_params_init (&par);
   par.depth = gfs_domain_depth (domain);
   while (norm.infty > tolerance && maxit) {
-    par.poisson_cycle (domain, &par, stream, vorticity, dia, res);
+    gfs_poisson_cycle (domain, &par, stream, vorticity, dia, res);
     norm = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res);
     maxit--;
   }

@@ -327,53 +327,53 @@ static void correct (FttCell * cell, gpointer * data)
   GFS_VALUE (cell, u) += GFS_VALUE (cell, dp);
 }
 
-static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
-					 GfsMultilevelParams * p,
-					 GfsVariable * u,
-					 GfsVariable * rhs,
-					 GfsVariable * dia,
-					 GfsVariable * res)
+static void gfs_hypre_poisson_solve (GfsDomain * domain,
+				     GfsMultilevelParams * par,
+				     GfsVariable * lhs,
+				     GfsVariable * rhs,
+				     GfsVariable * res,
+				     GfsVariable * dia,
+				     gdouble dt)
 {
   GfsVariable * dp = gfs_temporary_variable (domain);
   gpointer data[2];
-
+  printf("HYPRE\n");
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dp);
 
-  
+  /* calculates the intial residual and its norm */
+  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, lhs, rhs, dia, res);
+  par->residual_before = par->residual = 
+    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
 
   GfsLinearProblem * lp = gfs_linear_problem_new ();
   gfs_linear_problem_init (lp);
-  lp->u = u;
+  lp->u = lhs;
   lp->dp = dp;
   lp->dia = dia;
   lp->maxlevel = -1;
   lp->maxsize = 0;
-  lp->omega = p->omega;
-  lp->beta = p->beta;
+  lp->omega = par->omega;
+  lp->beta = par->beta;
 
-  gfs_get_poisson_problem (domain, res, dp, dia, p->dimension, lp);
+  gfs_get_poisson_problem (domain, res, dp, dia, par->dimension, lp);
  
-  solve_poisson_problem_using_hypre (domain, lp, p);
+  solve_poisson_problem_using_hypre (domain, lp, par);
 
   copy_poisson_problem_solution_to_simulation_tree (domain, lp);
 
   gfs_linear_problem_destroy (lp);
 
   /* correct on leaf cells */
-  data[0] = u;
+  data[0] = lhs;
   data[1] = dp;
   gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 		       (FttCellTraverseFunc) correct, data,
-		       u, u);
+		       lhs, lhs);
   /* compute new residual on leaf cells */
-  gfs_residual (domain, p->dimension, FTT_TRAVERSE_LEAFS, -1, u, rhs, dia, res);
-  
+  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, lhs, rhs, dia, res);
+  par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
   gts_object_destroy (GTS_OBJECT (dp));
-
-  p->tolerance = proj_hp.tolerance;
-
-  return TRUE;
 }
 
 static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
@@ -625,8 +625,8 @@ void gfs_module_read (GtsFile * fp, GfsSimulation * sim)
   hypre_solver_read (&proj_hp, fp);
   
   /* initialise the poisson cycle hook */
-  sim->approx_projection_params.poisson_cycle = gfs_hypre_poisson_cycle;
-  sim->projection_params.poisson_cycle = gfs_hypre_poisson_cycle;
+  sim->approx_projection_params.poisson_solve = gfs_hypre_poisson_solve;
+  sim->projection_params.poisson_solve = gfs_hypre_poisson_solve;
 }
 
 void gfs_module_write (FILE * fp)
