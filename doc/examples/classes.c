@@ -23,6 +23,8 @@ int main (int argc, char * argv[])
   key_value_pair ("GfsDefine", stdout);
   key_value_pair ("GfsProjectionParams", stdout);
   key_value_pair ("GfsApproxProjectionParams", stdout);
+  key_value_pair ("GfsPhysicalParams", stdout);
+  key_value_pair ("GfsAdvectionParams", stdout);
 
   /* Map module  */
   key_value_pair ("GfsMapProjection", stdout);
