@@ -32,7 +32,7 @@
 
     # Set a solid boundary close to the top boundary to limit the
     # domain width to one cell (i.e. a 1D domain)
-    Solid (y/8. + 1./pow(2,9) - 1e-6 - 0.5)
+    Solid (y - 3.9999)
 
     # Set the topography Zb and the initial water surface elevation P
     Init {} {
