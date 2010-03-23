@@ -65,7 +65,7 @@ void                  gfs_get_poisson_problem        (GfsDomain * domain,
 GfsLinearProblem *    gfs_linear_problem_new         ();
 void                  gfs_linear_problem_init        (GfsLinearProblem * lp);
 void                  gfs_linear_problem_add_stencil  (GfsLinearProblem * lp, 
-						      GfsStencil * stencil);
+						      GArray * stencil);
 void                  gfs_linear_problem_destroy     (GfsLinearProblem * lp);
 void                  gfs_relax                      (GfsDomain * domain,
 						      guint d,

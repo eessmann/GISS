@@ -198,14 +198,14 @@ static void hypre_problem_destroy (HypreProblem * hp)
   HYPRE_IJVectorDestroy(hp->x);
 }
 
-static void extract_stencil (GfsStencil * stencil, HypreProblem * hp)
+static void extract_stencil (GArray * stencil, HypreProblem * hp)
 {
   double values[hp->maxsize];
   int cols[hp->maxsize];
   gint i, index;
   
-  for (i = 0; i < stencil->data->len; i++) {
-    GfsStencilElement * tmp = &g_array_index (stencil->data, GfsStencilElement, i);
+  for (i = 0; i < stencil->len; i++) {
+    GfsStencilElement * tmp = &g_array_index (stencil, GfsStencilElement, i);
     if (i == 0)
       index = tmp->cell_id;
     cols[i] = tmp->cell_id;

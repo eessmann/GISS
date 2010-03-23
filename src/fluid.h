@@ -260,18 +260,11 @@ gdouble               gfs_cell_corner_value         (FttCell * cell,
 						     gint max_level);
 
 typedef struct _GfsStencilElement GfsStencilElement;
-typedef struct _GfsStencil GfsStencil;
 typedef struct _GfsLinearProblem GfsLinearProblem;
 
 struct _GfsStencilElement{
   gdouble cell_coeff;
   gint cell_id;
-};
-
-struct _GfsStencil {
-  GfsVariable * id;
-  GfsVariable * u;
-  GArray * data;
 };
 
 struct _GfsLinearProblem{
@@ -283,17 +276,19 @@ struct _GfsLinearProblem{
   gint maxsize, maxlevel;
 };
 
-GfsStencil *    gfs_stencil_new                       ();
-void            gfs_stencil_add_element               (GfsStencil * stencil,
+GArray *        gfs_stencil_new                       ();
+void            gfs_stencil_add_element               (GArray * stencil,
 						       gint id,
 						       gdouble coeff);
-void            gfs_stencil_destroy                   (GfsStencil * stencil);
-void            gfs_stencil_reinit                    (GfsStencil * stencil);
+void            gfs_stencil_destroy                   (GArray * stencil);
+void            gfs_stencil_reinit                    (GArray * stencil);
 
 void            gfs_face_weighted_gradient_stencil    (const FttCellFace * face,
 						       GfsGradient * g,
 						       gint max_level,
-						       GfsStencil * sd);
+						       GfsVariable * u,
+						       GfsVariable * id,
+						       GArray * sd);
 
 
 

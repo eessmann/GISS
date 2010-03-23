@@ -208,17 +208,17 @@ void gfs_linear_problem_init (GfsLinearProblem * lp)
  * If the stencil is larger than the previous ones
  * lp->maxsize is updated.
  */
-void gfs_linear_problem_add_stencil (GfsLinearProblem * lp, GfsStencil * stencil)
+void gfs_linear_problem_add_stencil (GfsLinearProblem * lp, GArray * stencil)
 {
   g_assert (stencil != NULL);
 
   g_ptr_array_add (lp->LP, stencil);
   
-  if (stencil->data->len > lp->maxsize)
-    lp->maxsize = stencil->data->len;
+  if (stencil->len > lp->maxsize)
+    lp->maxsize = stencil->len;
 }
 
-static void destroy_stencil (GfsStencil * stencil)
+static void destroy_stencil (GArray * stencil)
 {
   gfs_stencil_destroy (stencil);
 }
@@ -242,16 +242,14 @@ void gfs_linear_problem_destroy (GfsLinearProblem * lp)
 
 /*******************************************************************/
 
-static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
+static void relax_stencil (FttCell * cell, GfsLinearProblem * lp)
 {
   GfsGradient g;
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
   
-  GfsStencil * stencil = gfs_stencil_new ();
-  stencil->id = lp->id;
-  stencil->u = lp->u;
+  GArray * stencil = gfs_stencil_new ();
 
   gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, lp->id), 0.);
 
@@ -261,7 +259,7 @@ static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_face_weighted_gradient_stencil (&f, &ng, lp->maxlevel, stencil);
+      gfs_face_weighted_gradient_stencil (&f, &ng, lp->maxlevel, lp->u, lp->id, stencil);
       g.a += ng.a;
     }
   }
@@ -330,7 +328,7 @@ void gfs_get_poisson_problem (GfsDomain * domain,
  
   /* Creates stencils on the fly */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-			    lp->maxlevel, (FttCellTraverseFunc)  relax_coeff_stencil, lp);
+			    lp->maxlevel, (FttCellTraverseFunc) relax_stencil, lp);
 
   gfs_domain_homogeneous_bc_stencil (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 				     lp->maxlevel, lp->dp, lp->u, lp);
