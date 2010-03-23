@@ -272,10 +272,6 @@ struct _GfsStencil {
   GfsVariable * id;
   GfsVariable * u;
   GArray * data;
-
-  void (* reinit) (GfsStencil * stencil);
-  void (* add_element) (GfsStencil * stencil, gint id, gdouble coeff);
-  void (* destroy) (GfsStencil * stencil);
 };
 
 struct _GfsLinearProblem{
@@ -285,14 +281,14 @@ struct _GfsLinearProblem{
   GfsVariable * u, * dp, * dia;
   gdouble beta, omega, nleafs;
   gint maxsize, maxlevel;
-
-  void (* init)        (GfsLinearProblem * lp);
-  void (* add_stencil) (GfsLinearProblem * lp, GfsStencil * stencil);
-  void (* destroy)     (GfsLinearProblem * lp);
 };
 
-GfsStencil *        gfs_stencil_new                       ();
-
+GfsStencil *    gfs_stencil_new                       ();
+void            gfs_stencil_add_element               (GfsStencil * stencil,
+						       gint id,
+						       gdouble coeff);
+void            gfs_stencil_destroy                   (GfsStencil * stencil);
+void            gfs_stencil_reinit                    (GfsStencil * stencil);
 
 void            gfs_face_weighted_gradient_stencil    (const FttCellFace * face,
 						       GfsGradient * g,

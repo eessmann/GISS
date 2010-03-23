@@ -169,8 +169,46 @@ void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 }
 
       /** Methods for GfsLinearProblem **/
+/**
+ * gfs_linear_problem_new:
+ *
+ * Creates a new GfsLinearProblem.
+ * Returns a pointer on the new GfsLinearProblem. 
+ */
+GfsLinearProblem * gfs_linear_problem_new ()
+{
+  return g_malloc (sizeof (GfsLinearProblem));
+}
 
-static void add_stencil_to_linear_problem (GfsLinearProblem * lp, GfsStencil * stencil)
+/**
+ * gfs_linear_problem_init:
+ * @lp: a pointer on a GfsLinearProblem.
+ * 
+ * Initialises a GfsLinearProblem. Creates the structure
+ * to store the problem LP, the right hand and left hand
+ * side vectors rhs and lhs.
+ * Initialises the maximum size for a stencil to 0.
+ * And the number of diagonal element to 0.
+ */
+void gfs_linear_problem_init (GfsLinearProblem * lp)
+{
+  lp->rhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  lp->lhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
+  lp->LP = g_ptr_array_new ();
+  lp->maxsize = 0;
+  lp->nleafs = 0;
+}
+
+/**
+ * gfs_linear_problem_add_stencil:
+ * @lp: a pointer on a GfsLinearProblem.
+ * @stencil: a pointer on a GfsStencil. 
+ *
+ * Adds a stencil to the linear problem.
+ * If the stencil is larger than the previous ones
+ * lp->maxsize is updated.
+ */
+void gfs_linear_problem_add_stencil (GfsLinearProblem * lp, GfsStencil * stencil)
 {
   g_assert (stencil != NULL);
 
@@ -180,41 +218,26 @@ static void add_stencil_to_linear_problem (GfsLinearProblem * lp, GfsStencil * s
     lp->maxsize = stencil->data->len;
 }
 
-static void init_linear_problem (GfsLinearProblem * lp)
-{
-  lp->rhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  lp->lhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
-  lp->LP = g_ptr_array_new ();
-  lp->maxsize = 0;
-  lp->nleafs = 0;
-}
-
 static void destroy_stencil (GfsStencil * stencil)
 {
-  stencil->destroy (stencil);
+  gfs_stencil_destroy (stencil);
 }
 
-static void destroy_linear_problem (GfsLinearProblem * lp)
+/**
+ * gfs_linear_problem_destroy:
+ * @lp: a pointer on a GfsLinearProblem.
+ * 
+ * Destroys a GfsLinearProblem.
+ */
+void gfs_linear_problem_destroy (GfsLinearProblem * lp)
 {
   gts_object_destroy (GTS_OBJECT (lp->id));
 
-  g_array_free (lp->rhs, TRUE);
-  
+  g_array_free (lp->rhs, TRUE);  
   g_array_free (lp->lhs, TRUE);
   
   g_ptr_array_foreach (lp->LP, (GFunc) destroy_stencil, NULL);
   g_ptr_array_free (lp->LP, TRUE);
-}
-
-GfsLinearProblem * gfs_linear_problem_new ()
-{
-  GfsLinearProblem * lp = g_malloc (sizeof (GfsLinearProblem));
-
-  lp->init = init_linear_problem;
-  lp->add_stencil = add_stencil_to_linear_problem;
-  lp->destroy = destroy_linear_problem;
-
-  return lp;
 }
 
 /*******************************************************************/
@@ -230,7 +253,7 @@ static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
   stencil->id = lp->id;
   stencil->u = lp->u;
 
-  stencil->add_element (stencil, (gint) GFS_VALUE (cell, lp->id), 0.);
+  gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, lp->id), 0.);
 
   g.a = GFS_VALUE (cell, lp->dia);
   f.cell = cell;
@@ -244,14 +267,14 @@ static void relax_coeff_stencil (FttCell * cell, GfsLinearProblem * lp)
   }
 
   if (g.a > 0.)
-    stencil->add_element (stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
+    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
   else {
-    stencil->reinit (stencil);
-    stencil->add_element (stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
+    gfs_stencil_reinit (stencil);
+    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
     g_array_index (lp->rhs, gdouble, (gint) GFS_VALUE (cell, lp->id)) = 0.;
   }
 
-  lp->add_stencil (lp, stencil);
+  gfs_linear_problem_add_stencil (lp, stencil);
 }
 
 static void leafs_numbering (FttCell * cell, GfsLinearProblem * lp) {

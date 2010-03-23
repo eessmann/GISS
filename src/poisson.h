@@ -63,6 +63,10 @@ void                  gfs_get_poisson_problem        (GfsDomain * domain,
 						      GfsVariable * dia, guint dimension,
 						      GfsLinearProblem * lp);
 GfsLinearProblem *    gfs_linear_problem_new         ();
+void                  gfs_linear_problem_init        (GfsLinearProblem * lp);
+void                  gfs_linear_problem_add_stencil  (GfsLinearProblem * lp, 
+						      GfsStencil * stencil);
+void                  gfs_linear_problem_destroy     (GfsLinearProblem * lp);
 void                  gfs_relax                      (GfsDomain * domain,
 						      guint d,
 						      gint max_depth,

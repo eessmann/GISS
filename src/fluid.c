@@ -2822,8 +2822,30 @@ gdouble gfs_cell_corner_value (FttCell * cell,
 /************** GfsStencil **********************************/
 /* The convention is that the first element is the diagonal */
 
-static void add_stencil_element_to_stencil (GfsStencil * stencil, gint id,
-					    gdouble coeff)
+/**
+ * gfs_stencil_new:
+ * 
+ * Creates a new  GfsStencil.
+ */
+GfsStencil * gfs_stencil_new ()
+{
+  GfsStencil * stencil = g_malloc (sizeof (GfsStencil));
+  stencil->data = g_array_new (FALSE, FALSE, sizeof (GfsStencilElement));
+
+  return stencil;
+}
+
+/**
+ * gfs_stencil_add_element:
+ * @stencil: a GfsStencil
+ * @id: an integer
+ * @coeff: a gdouble 
+ *
+ * Add a GfsStencilElement (contribution of a cell to a stencil)
+ * made of the id of the cell and its coefficient to a GfsStencil.
+ */
+void gfs_stencil_add_element (GfsStencil * stencil, gint id,
+				     gdouble coeff)
 {
   GfsStencilElement new;
   gint i;
@@ -2840,33 +2862,30 @@ static void add_stencil_element_to_stencil (GfsStencil * stencil, gint id,
   g_array_append_val (stencil->data, new);
 }
 
-static void stencil_destroy (GfsStencil * stencil)
+/**
+ * gfs_stencil_destroy:
+ * @stencil: a GfsStencil 
+ *
+ * Destroys a GfsStencil.
+ */
+void gfs_stencil_destroy (GfsStencil * stencil)
 {
   g_array_free (stencil->data, TRUE);
   g_free (stencil);
 }
 
-static void stencil_reinit (GfsStencil * stencil)
+/**
+ * gfs_stencil_destroy:
+ * @stencil: a GfsStencil 
+ *
+ * Destroys and recreate a GfsStencil.
+ */
+void gfs_stencil_reinit (GfsStencil * stencil)
 {
-  stencil_destroy (stencil);
+  gfs_stencil_destroy (stencil);
   stencil = gfs_stencil_new ();
 }
 
-GfsStencil * gfs_stencil_new ()
-{
-  
-  GfsStencil * stencil = g_malloc (sizeof (GfsStencil));
-  stencil->data = g_array_new (FALSE, FALSE, sizeof (GfsStencilElement));
-
-  stencil->reinit = stencil_reinit;
-  stencil->add_element = add_stencil_element_to_stencil;
-  stencil->destroy = stencil_destroy;
-  return stencil;
-}
-
-void gfs_init_stencil () {
-
-}
 
 static void get_average_neighbor_value_stencil (const FttCellFace * face,
 						guint v, gdouble * x,
@@ -2876,7 +2895,7 @@ static void get_average_neighbor_value_stencil (const FttCellFace * face,
   g_assert (ftt_cell_level (face->neighbor) == ftt_cell_level (face->cell));
   
   if (FTT_CELL_IS_LEAF (face->neighbor)) {
-    stencil->add_element (stencil, (gint) GFS_VALUE(face->neighbor, stencil->id), weight / *x );
+    gfs_stencil_add_element (stencil, (gint) GFS_VALUE(face->neighbor, stencil->id), weight / *x );
 
     return GFS_VARIABLE (face->neighbor, v);
   }
@@ -2899,12 +2918,12 @@ static void get_average_neighbor_value_stencil (const FttCellFace * face,
 	if (children.c[i]) {
 	  gdouble w = GFS_IS_MIXED (children.c[i]) ? GFS_STATE (children.c[i])->solid->s[od] : 1.;
 
-	  stencil->add_element (stencil, (gint) GFS_VALUE (children.c[i], stencil->id), weight*w/a / *x);
+	  gfs_stencil_add_element (stencil, (gint) GFS_VALUE (children.c[i], stencil->id), weight*w/a / *x);
 	}
       return av/a;
     }
     else {
-      stencil->add_element (stencil, (gint) GFS_VALUE (face->cell, stencil->id), weight / *x);
+      gfs_stencil_add_element (stencil, (gint) GFS_VALUE (face->cell, stencil->id), weight / *x);
           
     return GFS_VARIABLE (face->cell, v);
     }
@@ -3030,7 +3049,7 @@ static void face_weighted_gradient_stencil (const FttCellFace * face,
     gcf = gradient_fine_coarse_stencil (face, stencil->u->i, stencil, w);
     g->a = w*gcf.a;
 
-    stencil->add_element (stencil, (gint) GFS_VALUE (face->neighbor, stencil->id),  w*gcf.b); 
+    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (face->neighbor, stencil->id),  w*gcf.b); 
   }
   else {
     if (level == max_level || FTT_CELL_IS_LEAF (face->neighbor)) {
@@ -3039,7 +3058,7 @@ static void face_weighted_gradient_stencil (const FttCellFace * face,
 
       g->a = w;
 
-      stencil->add_element (stencil, (gint) GFS_VALUE (face->neighbor, stencil->id), w);
+      gfs_stencil_add_element (stencil, (gint) GFS_VALUE (face->neighbor, stencil->id), w);
     }
     else {
       /* neighbor is at a deeper level */
@@ -3059,9 +3078,9 @@ static void face_weighted_gradient_stencil (const FttCellFace * face,
 	  g->a += w*gcf.b;
 	  
 	  if (dimension > 2)
-	    stencil->add_element (stencil, (gint) GFS_VALUE (f.cell, stencil->id), w*gcf.a/(n/2.));
+	    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (f.cell, stencil->id), w*gcf.a/(n/2.));
 	  else
-	    stencil->add_element (stencil, (gint) GFS_VALUE (f.cell, stencil->id), w*gcf.a/(n/2.));
+	    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (f.cell, stencil->id), w*gcf.a/(n/2.));
 	}
       if (dimension > 2) { /* To deal with */
 	/* fixme??? */
@@ -3071,6 +3090,16 @@ static void face_weighted_gradient_stencil (const FttCellFace * face,
   }
 }
 
+/**
+ * gfs_face_weighted_gradient_stencil:
+ * @face: a FttCellFace
+ * @g: a GfsGradient
+ * @max_level: an integer
+ * @stencil: a GfsStencil 
+ *
+ * Fills stencil with the stencil corresponding to the
+ * weighted gradient on face.
+ */
 void gfs_face_weighted_gradient_stencil (const FttCellFace * face,
 					 GfsGradient * g,
 					 gint max_level,

@@ -166,7 +166,8 @@ static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par, Hypr
 
 
 
-static void hypre_problem_new (HypreProblem * hp, gdouble size)
+static void hypre_problem_new (HypreProblem * hp, GfsDomain * domain,
+			       gdouble size)
 {
   gfs_domain_timer_start (domain, "HYPRE: Solver setup");
   
@@ -214,7 +215,8 @@ static void extract_stencil (GfsStencil * stencil, HypreProblem * hp)
   HYPRE_IJMatrixSetValues(hp->A, 1, &i, &index, cols, values);
 }
 
-static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp)
+static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp,
+				GfsDomain * domain)
 {
   double *rhs_values, *x_values;
   int    *rows;
@@ -303,8 +305,8 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
 {
   HypreProblem hp;
      
-  hypre_problem_new (&hp, lp->rhs->len);
-  hypre_problem_init (&hp, lp);
+  hypre_problem_new (&hp, domain, lp->rhs->len);
+  hypre_problem_init (&hp, lp, domain);
   
   /* Choose a solver and solve the system */
   if (proj_hp.solver_type == HYPRE_BOOMER_AMG)
@@ -341,7 +343,7 @@ static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
   
 
   GfsLinearProblem * lp = gfs_linear_problem_new ();
-  lp->init (lp);
+  gfs_linear_problem_init (lp);
   lp->u = u;
   lp->dp = dp;
   lp->dia = dia;
@@ -356,7 +358,7 @@ static gboolean gfs_hypre_poisson_cycle (GfsDomain * domain,
 
   copy_poisson_problem_solution_to_simulation_tree (domain, lp);
 
-  lp->destroy (lp);
+  gfs_linear_problem_destroy (lp);
 
   /* correct on leaf cells */
   data[0] = u;
