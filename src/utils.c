@@ -475,8 +475,6 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
   gchar cccommand[] = "gcc `pkg-config "
 #if FTT_2D
     "gerris2D"
-#elif FTT_2D3
-    "gerris2D3"
 #else /* 3D */
     "gerris3D"
 #endif

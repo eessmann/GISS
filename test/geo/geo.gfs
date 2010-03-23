@@ -67,7 +67,7 @@
 #
 # Author: St\'ephane Popinet
 # Command: sh geo.sh geo.gfs
-# Version: 0.8.0
+# Version: 100323
 # Required files: geo.sh geo.gfv e.ref
 # Running time: 3 minutes
 # Generated files: geo_error.eps error-100.eps error-200.eps error-300.eps error-400.eps error-1500.eps
@@ -82,24 +82,28 @@
   PhysicalParams { g = 9.4534734306584e-4 }
   AdvectionParams { scheme = none }
   ApproxProjectionParams { tolerance = 1e-6 }
+  Solid (z + 1.)
   Init {} {
     # e-folding radius = 100 km
     # umax = 0.5 m/s = sqrt(200)*exp(-1/2)
     U = (5.667583815e-4*200.*y*exp (-100.*(x*x + y*y)))
     V = (- 5.667583815e-4*200.*x*exp (-100.*(x*x + y*y)))
     P = (5.667583815e-4*exp (-100.*(x*x + y*y)))
-    H = 1
   }
   # f0 = 1.0285e-4 s-1
-  SourceCoriolis {} 1
+  SourceCoriolis 1
 
-  OutputErrorNorm { istep = 1 } { awk '{print $3/1.0285e-4/3600./24. " " $9*1000e6*1.0285e-4*1.0285e-4/0.01;}' > e } { v = P } {
+  OutputErrorNorm { istep = 1 } { 
+      awk '{print $3/1.0285e-4/3600./24. " " $9*1000e6*1.0285e-4*1.0285e-4/0.01;}' > e 
+  } { v = P } {
     s = (5.667583815e-4*exp (-100.*(x*x + y*y)))
     unbiased = 1
     v = E
   }
   OutputSimulation { istart = 100 iend = 500 istep = 100 } stdout
-  EventScript { istart = 100 iend = 500 istep = 100 } { echo "Save error-$GfsIter.eps { format = EPS }"}
+  EventScript { istart = 100 iend = 500 istep = 100 } { 
+      echo "Save error-$GfsIter.eps { format = EPS }"
+  }
   OutputSimulation { istart = 1500 } stdout
   EventScript { istart = 1500 } { echo "Save error-$GfsIter.eps { format = EPS }"}
   EventScript { start = end } {

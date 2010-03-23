@@ -33,7 +33,7 @@ extern "C" {
 
 #define FTT_MAINTAINER "s.popinet@niwa.co.nz"
 
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
 # define FTT_CELLS     4
 #else  /* FTT_3D */
 # define FTT_CELLS     8
@@ -81,17 +81,12 @@ typedef enum
 #if (!FTT_2D)
   FTT_FRONT,
   FTT_BACK,
-#endif /* FTT_3D || FTT_2D3 */
+#endif /* FTT_3D */
   FTT_NEIGHBORS
 } FttDirection;
 
 #define FTT_NEIGHBORS_2D (FTT_BOTTOM + 1)
-
-#if FTT_2D3
-# define FTT_CELLS_DIRECTION(d) ((d) < FTT_NEIGHBORS_2D ? FTT_CELLS/2 : FTT_CELLS)
-#else  /* 2D && 3D */
-# define FTT_CELLS_DIRECTION(d) (FTT_CELLS/2)
-#endif /* 2D && 3D */
+#define FTT_CELLS_DIRECTION(d) (FTT_CELLS/2)
 
 GTS_C_VAR gchar * ftt_direction_name[FTT_NEIGHBORS]; /* defined in ftt.c */
 
@@ -101,14 +96,14 @@ typedef enum
   FTT_Y,
 #if (!FTT_2D)
   FTT_Z,
-#endif /* FTT_3D || FTT_2D3 */
+#endif /* FTT_3D */
   FTT_DIMENSION,
   FTT_XY,
 #if FTT_2D
   FTT_XYZ = FTT_XY
-#else  /* FTT_3D || FTT_2D3 */
+#else  /* FTT_3D */
   FTT_XYZ
-#endif /* FTT_3D || FTT_2D3 */
+#endif /* FTT_3D */
 } FttComponent;
 
 typedef enum {
@@ -148,9 +143,6 @@ struct _FttRootCell {
   FttCellNeighbors neighbors;
   FttVector pos;
   guint level;
-#if FTT_2D3
-  gdouble dz;
-#endif
   gpointer parent;
 };
 
@@ -159,9 +151,6 @@ struct _FttOct {
   FttCell * parent;
   FttCellNeighbors neighbors;
   FttVector pos;
-#if FTT_2D3
-  gdouble dz;
-#endif
 
   FttCell cell[FTT_CELLS];
 };
@@ -231,13 +220,7 @@ FttCell *            ftt_cell_new                    (FttCellInitFunc init,
                                          ((struct _FttRootCell *) c)->level)
 #define              ftt_cell_parent(c) ((c)->parent ?\
                                          (c)->parent->parent : NULL)
-#ifdef FTT_2D3
-# define             ftt_cell_dz(c)     ((c)->parent ?\
-                                         (c)->parent->dz :\
-                                         ((struct _FttRootCell *) c)->dz)
-#else  /* 2D or 3D */
-# define             ftt_cell_dz(c)     (1.)
-#endif /* 2D or 3D */
+#define              ftt_cell_dz(c)     (1.)
 
 /**
  * ftt_level_size:
@@ -286,7 +269,7 @@ gdouble ftt_cell_volume (const FttCell * cell)
   g_return_val_if_fail (cell != NULL, 0.);
 
   size = ftt_level_size (ftt_cell_level (cell));
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
   return size*size;
 #else  /* FTT_3D */
   return size*size*size;
@@ -325,7 +308,7 @@ void ftt_cell_children (const FttCell * cell,
  * @d: a direction.
  * @children: a #FttCellChildren.
  *
- * Fills @children with the children (2 in 2D, 4 in 3D, 2 or 4 in 2D3)
+ * Fills @children with the children (2 in 2D, 4 in 3D)
  * of @cell in direction @d.
  * 
  * This function fails if @cell is a leaf.
@@ -339,7 +322,7 @@ guint ftt_cell_children_direction (const FttCell * cell,
 {
   struct _FttOct * oct;
   guint i;
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
   static gint index[FTT_NEIGHBORS_2D][FTT_CELLS/2] =
   {{1, 3},
    {0, 2},
@@ -362,14 +345,6 @@ guint ftt_cell_children_direction (const FttCell * cell,
 
   oct = cell->children;
 
-#if FTT_2D3
-  if (d >= FTT_NEIGHBORS_2D) {
-    for (i = 0; i < FTT_CELLS; i++)
-      children->c[i] = FTT_CELL_IS_DESTROYED (&(oct->cell[i])) ? NULL : &(oct->cell[i]);
-    return FTT_CELLS;
-  }
-#endif /* 2D3 */
-
   for (i = 0; i < FTT_CELLS/2; i++)
     children->c[i] = FTT_CELL_IS_DESTROYED (&(oct->cell[index[d][i]])) ? 
       NULL : &(oct->cell[index[d][i]]);
@@ -389,7 +364,7 @@ static inline
 FttCell * ftt_cell_child_corner (const FttCell * cell,
 				 FttDirection d[FTT_DIMENSION])
 {
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
   static gint index[FTT_NEIGHBORS_2D][FTT_NEIGHBORS_2D] = {
     {-1,-1,1,3},
     {-1,-1,0,2},
@@ -404,14 +379,7 @@ FttCell * ftt_cell_child_corner (const FttCell * cell,
   g_return_val_if_fail (d[0] < FTT_NEIGHBORS, NULL);
   g_return_val_if_fail (d[1] < FTT_NEIGHBORS, NULL);
 
-#  if FTT_2D3
-  if (d[0] >= FTT_NEIGHBORS_2D)
-    i = index[d[1]][d[2]];
-  else if (d[1] >= FTT_NEIGHBORS_2D)
-    i = index[d[0]][d[2]];
-  else
-#  endif
-    i = index[d[0]][d[1]];
+  i = index[d[0]][d[1]];
 #else  /* FTT_3D */
   static gint index[FTT_NEIGHBORS][FTT_NEIGHBORS][FTT_NEIGHBORS] = {
     {{-1,-1,-1,-1,-1,-1},{-1,-1,-1,-1,-1,-1},
@@ -468,13 +436,6 @@ void ftt_cell_neighbors_not_cached (const FttCell * cell,
        {-2,0,-4,2},
        {-3,-4,0,1},
        {2,3,-1,-2}};
-#elif FTT_2D3
-    = {{1,-1,3,-3},
-       {-2,0,-4,2},
-       {-3,-4,0,1},
-       {2,3,-1,-2},
-       {-1,-2,-3,-4},
-       {-1,-2,-3,-4}};
 #else  /* FTT_3D */
     = {{1,-1,3,-3,5,-5,7,-7},
        {-2,0,-4,2,-6,4,-8,6},
@@ -534,13 +495,6 @@ FttCell * ftt_cell_neighbor_not_cached (const FttCell * cell,
        {-2,0,-4,2},
        {-3,-4,0,1},
        {2,3,-1,-2}};
-#elif FTT_2D3
-    = {{1,-1,3,-3},
-       {-2,0,-4,2},
-       {-3,-4,0,1},
-       {2,3,-1,-2},
-       {-1,-2,-3,-4},
-       {-1,-2,-3,-4}};
 #else  /* FTT_3D */
     = {{1,-1,3,-3,5,-5,7,-7},
        {-2,0,-4,2,-6,4,-8,6},
@@ -671,8 +625,6 @@ gboolean ftt_cell_neighbor_is_brother (FttCell * cell,
   static gboolean b[FTT_CELLS][FTT_NEIGHBORS] = {
 #if FTT_2D
     {1,0,0,1}, {0,1,0,1}, {1,0,1,0}, {0,1,1,0}
-#elif FTT_2D3
-    {1,0,0,1,0,0}, {0,1,0,1,0,0}, {1,0,1,0,0,0}, {0,1,1,0,0,0}
 #else  /* 3D */
     {1,0,0,1,0,1}, {0,1,0,1,0,1}, {1,0,1,0,0,1}, {0,1,1,0,0,1},
     {1,0,0,1,1,0}, {0,1,0,1,1,0}, {1,0,1,0,1,0}, {0,1,1,0,1,0}

@@ -202,7 +202,7 @@ GtsObjectClass ** gfs_classes (void)
           gfs_source_tension_css_class (),
 #if !FTT_2D
         gfs_source_hydrostatic_class (),
-#endif /* 2D3 or 3D */
+#endif /* 3D */
     gfs_remove_droplets_class (),
     gfs_remove_ponds_class (),
     gfs_event_filter_class (),

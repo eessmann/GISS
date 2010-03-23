@@ -135,7 +135,7 @@ class Example:
         for f in self.required:
             files += " " + path + f
         command = self.command
-        for v in ["2D","2D3","3D"]:
+        for v in ["2D","3D"]:
             command = command.replace("gfsview" + v, "gfsview-batch" + v)
         out = os.popen("cd " + wdname + " && " +\
                        "mkdir test && cd test && " +\

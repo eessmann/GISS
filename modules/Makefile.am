@@ -8,10 +8,10 @@ INCLUDES = -I$(top_srcdir)/src -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs-modules\" $(GTS_CFLAGS)
 
 if HAS_LIBPROJ
-MAP = libmap2D.la libmap3D.la libmap2D3.la
+MAP = libmap2D.la libmap3D.la
 endif
 if BUILD_TIDE
-TIDE = libtide2D.la libtide3D.la libtide2D3.la
+TIDE = libtide2D.la libtide3D.la
 endif
 if BUILD_STOKES
 STOKES = libstokes2D.la libstokes3D.la
@@ -27,10 +27,8 @@ pkglib_LTLIBRARIES = \
 	$(MAP) \
 	libterrain2D.la \
 	libterrain3D.la \
-	libterrain2D3.la \
 	libparticulates2D.la \
 	libparticulates3D.la \
-	libparticulates2D3.la \
 	libokada2D.la \
 	libokada3D.la \
 	libdf33D.la \
@@ -76,9 +74,6 @@ libmap3D_la_LIBADD = -lproj
 libmap2D_la_SOURCES = map.c
 libmap2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 libmap2D_la_LIBADD = -lproj
-libmap2D3_la_SOURCES = map.c
-libmap2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
-libmap2D3_la_LIBADD = -lproj
 
 libterrain3D_la_SOURCES = terrain.c rsurface.c rsurface.h
 libterrain3D_la_LIBADD = -LRStarTree -lcSmRST
@@ -89,20 +84,12 @@ libterrain2D_la_SOURCES = terrain.c rsurface.c rsurface.h
 libterrain2D_la_LIBADD = -LRStarTree -lcSmRST
 libterrain2D_la_DEPENDENCIES = RStarTree/libcSmRST.la
 
-libterrain2D3_la_SOURCES = terrain.c rsurface.c rsurface.h
-libterrain2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
-libterrain2D3_la_LIBADD = -LRStarTree -lcSmRST
-libterrain2D3_la_DEPENDENCIES = RStarTree/libcSmRST.la
-
 libtide3D_la_SOURCES = tide.c
 libtide3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
 libtide3D_la_LIBADD = -Lfes2004 -lfes -lnetcdf $(GSL_LIBS)
 libtide2D_la_SOURCES = tide.c
 libtide2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
 libtide2D_la_LIBADD = -Lfes2004 -lfes -lnetcdf $(GSL_LIBS)
-libtide2D3_la_SOURCES = tide.c
-libtide2D3_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D3=1
-libtide2D3_la_LIBADD = -Lfes2004 -lfes -lnetcdf $(GSL_LIBS)
 
 libstokes3D_la_SOURCES = stokes.c CW263.f
 libstokes3D_la_CFLAGS = $(AM_CFLAGS)
@@ -147,8 +134,6 @@ libparticulates3D_la_SOURCES = particulates.c
 libparticulates3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
 libparticulates2D_la_SOURCES = particulates.c
 libparticulates2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
-libparticulates2D3_la_SOURCES = particulates.c
-libparticulates2D3_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D3=1
 
 libokada3D_la_SOURCES = okada.c
 libokada3D_la_CFLAGS = $(AM_CFLAGS)

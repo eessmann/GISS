@@ -37,7 +37,7 @@ struct _GfsOcean {
 #if !FTT_2D
   GPtrArray * layer;
   GfsDomain * toplayer;
-#endif /* 2D3 or 3D */
+#endif /* 3D */
 };
 
 #define GFS_OCEAN(obj)            GTS_OBJECT_CAST (obj,\
@@ -77,7 +77,7 @@ struct _GfsSourceHydrostatic {
 
 GfsSourceGenericClass * gfs_source_hydrostatic_class    (void);
 
-#endif /* 2D3 or 3D */
+#endif /* 3D */
 
 /* GfsSourceFriction: Header */
 

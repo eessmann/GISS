@@ -1,7 +1,7 @@
 if ! $donotrun; then
     rm -f correlation res-* sim-*
     for level in 5 6 7; do
-	if sed "s/LEVEL/$level/g" < $1 | gerris2D3 - | \
+	if sed "s/LEVEL/$level/g" < $1 | gerris2D - | \
 	    awk '{ print $1 " " $5 }' > res-$level && \
 	    awk -v l=$level 'BEGIN { min1 = 0. } {
          if ($2 > min1) {
@@ -17,7 +17,7 @@ if ! $donotrun; then
     done
 fi
 
-echo "Save solution.eps { format = EPS }" | gfsview-batch2D3 sim-7 solution.gfv
+echo "Save solution.eps { format = EPS }" | gfsview-batch2D sim-7 solution.gfv
 
 awk 'BEGIN {
   print "\\begin{tabular}{|c|c|c|}"

@@ -2172,9 +2172,6 @@ static void box_split (GfsBox * box, SplitPar * p)
 	ftt_cell_refine_single (child.c[i], (FttCellInitFunc) gfs_cell_init, domain);
     }
 
-#if FTT_2D3
-  g_assert_not_implemented ();
-#endif
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOUNDARY (box->neighbor[d])) {
       GfsBoundary * boundary = GFS_BOUNDARY (box->neighbor[d]);
@@ -2253,7 +2250,6 @@ static void box_link (GfsBox * box, SplitPar * p)
 	   static FttDirection match[FTT_CELLS][FTT_DIMENSION] = {
 #if FTT_2D
 	     {0,2}, {1,2}, {0,3}, {1,3}
-#elif FTT_2D3
 #else /* 3D */
 	     {0,2,4}, {1,2,4}, {0,3,4}, {1,3,4},
 	     {0,2,5}, {1,2,5}, {0,3,5}, {1,3,5}
@@ -3319,9 +3315,6 @@ static void tag_cell_fraction (GtsFifo * fifo,
 	FttDirection od = FTT_OPPOSITE_DIRECTION (d);
 	guint i;
 
-#if FTT_2D3
-	g_assert_not_implemented ();
-#endif	
 	ftt_cell_children_direction (n.c[d], od, &child);
 	for (i = 0; i < FTT_CELLS/2; i++)
 	  if (child.c[i] && GFS_VALUE (child.c[i], v) == 0. &&
@@ -3789,9 +3782,6 @@ static gboolean tag_speck (FttCell * cell, GfsVariable * v)
 	  FttDirection od = FTT_OPPOSITE_DIRECTION (d);
 	  guint i;
 	  
-#if FTT_2D3
-	  g_assert_not_implemented ();
-#endif	
 	  ftt_cell_children_direction (n.c[d], od, &child);
 	  for (i = 0; i < FTT_CELLS/2; i++)
 	    if (!child.c[i] || (GFS_VARIABLE (child.c[i], v->i) == 0 && 

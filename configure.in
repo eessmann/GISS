@@ -100,6 +100,7 @@ fi
 dnl Initialize libtool
 AC_LIBTOOL_WIN32_DLL
 AM_PROG_LIBTOOL
+AM_PROG_CC_C_O
 
 dnl Enable verbose output from libtool (enable libtool's default)
 AC_ARG_ENABLE(libtool-verbose,
@@ -454,10 +455,8 @@ fi
 AC_SUBST(MODULES)
 GFS2D_LIBS="\$(top_builddir)/src/libgfs2D.la $GTS_LIBS $MODULES"
 GFS3D_LIBS="\$(top_builddir)/src/libgfs3D.la $GTS_LIBS $MODULES"
-GFS2D3_LIBS="\$(top_builddir)/src/libgfs2D3.la $GTS_LIBS $MODULES"
 AC_SUBST(GFS2D_LIBS)
 AC_SUBST(GFS3D_LIBS)
-AC_SUBST(GFS2D3_LIBS)
 
 # check whether the code is under darcs
 
@@ -468,7 +467,6 @@ Makefile
 src/Makefile
 src/gfs-config
 src/gerris2D.pc
-src/gerris2D3.pc
 src/gerris3D.pc
 tools/Makefile
 modules/Makefile

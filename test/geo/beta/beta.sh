@@ -1,11 +1,11 @@
 if ! $donotrun; then
-    if gerris2D3 $1; then :
+    if gerris3D $1; then :
     else
 	exit 1
     fi
     mv -f energy energy-nonlinear
     if sed 's/Refine 6/Refine 6\nAdvectionParams {scheme = none}/' < $1 |\
-       gerris2D3 -; then :
+       gerris3D -; then :
     else
 	exit 1
     fi

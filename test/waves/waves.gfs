@@ -38,7 +38,7 @@
 #
 # Author: St\'ephane Popinet
 # Command: sh waves.sh waves.gfs
-# Version: 1.0.0
+# Version: 100323
 # Required files: waves.sh solution.gfv correlation.ref
 # Generated files: correlation correlation.tex solution.eps
 #
@@ -89,10 +89,11 @@
     P = pwave(cx, cy, 0)
     U = uwave(x, y)
     V = vwave(x, y)
+    # Remove the line below when using gerris3D
     H = 1
   }
   Refine LEVEL
-  Solid (- ellipse (0, 0, 0.25, 0.25)) { scale = 1.999 }
+  Solid (union (- ellipse (0, 0, 0.49975, 0.49975), z + 1.))
   AdvectionParams { scheme = none }
   ApproxProjectionParams { tolerance = 1e-9 weighted = 0 }
   SourceCoriolis {} 1.
@@ -629,7 +630,9 @@
     unbiased = 1
   }
   OutputSimulation { start = end } sim-LEVEL
+#  OutputSimulation { istep = 1 } stdout
 }
 GfsBox {
-  front = Boundary
+  # uncomment the line below when using gerris3D
+#  front = Boundary
 }

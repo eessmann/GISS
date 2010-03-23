@@ -3123,7 +3123,7 @@ static void gfs_output_ppm_read (GtsObject ** o, GtsFile * fp)
 		    "only for GfsOcean simulations");
     return;
   }
-#endif /* 2D3 or 3D */
+#endif /* 3D */
 }
 
 static gboolean gfs_output_ppm_event (GfsEvent * event, GfsSimulation * sim)
@@ -3133,9 +3133,9 @@ static gboolean gfs_output_ppm_event (GfsEvent * event, GfsSimulation * sim)
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
 #if FTT_2D
     GfsDomain * domain = GFS_DOMAIN (sim);
-#else /* 2D3 or 3D */
+#else /* 3D */
     GfsDomain * domain = GFS_IS_OCEAN (sim) ? GFS_OCEAN (sim)->toplayer : GFS_DOMAIN (sim);
-#endif /* 2D3 or 3D */
+#endif /* 3D */
 
     gfs_write_ppm (domain,
 		   output->condition,

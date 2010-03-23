@@ -29,8 +29,8 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: gerris2D3 nz.gfs
-# Version: 1.0.0
+# Command: gerris3D nz.gfs
+# Version: 100323
 # Required files: nz.gfs bath.gts
 # Generated files: p.eps k.eps
 #
@@ -62,7 +62,7 @@
             set grid
             plot 'k' u 3:5 w l t ''
 EOF
-        if awk '{if ($5 > 4e-7) exit (1);}' < k ; then
+        if awk '{if ($5 > 6e-12) exit (1);}' < k ; then
             return 0;
         else
             return $GFS_STOP;

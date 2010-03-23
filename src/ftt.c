@@ -26,15 +26,15 @@ gchar * ftt_direction_name[FTT_NEIGHBORS] = {
   "right", "left", "top", "bottom"
 #if (!FTT_2D)
   , "front", "back"
-#endif /* FTT_3D || FTT_2D3 */
+#endif /* FTT_3D */
 };
 
 gint ftt_opposite_direction[FTT_NEIGHBORS] =
 #if      FTT_2D
   {1, 0, 3, 2};
-#else  /* FTT_3D || FTT_2D3 */
+#else  /* FTT_3D */
   {1, 0, 3, 2, 5, 4};
-#endif /* FTT_3D || FTT_2D3 */
+#endif /* FTT_3D */
 
 typedef struct _FttOct      FttOct;
 typedef struct _FttRootCell FttRootCell;
@@ -53,9 +53,7 @@ static void oct_new (FttCell * parent,
   oct = g_malloc0 (sizeof (FttOct));
   oct->level = ftt_cell_level (parent);
   oct->parent = parent;
-#ifdef FTT_2D3
-  oct->dz = ftt_cell_dz (parent);
-#endif
+
   ftt_cell_pos (parent, &(oct->pos));
   ftt_cell_neighbors (parent, &(oct->neighbors));
 
@@ -94,9 +92,6 @@ FttCell * ftt_cell_new (FttCellInitFunc init,
   FttCell * cell;
 
   cell = g_malloc0 (sizeof (FttRootCell));
-#ifdef FTT_2D3
-  FTT_ROOT_CELL (cell)->dz = 1.;
-#endif
   if (init)
     (* init) (cell, data);
 
@@ -255,7 +250,7 @@ void ftt_face_draw (const FttCellFace * face, FILE * fp)
     {{1.,1.,0.},{-1.,1.,0.}},
     {{-1.,-1.,0.},{1.,-1.,0.}}
   };
-#else  /* FTT_3D || FTT_2D3 */
+#else  /* FTT_3D */
   static FttVector dp[FTT_NEIGHBORS][4] = {
     {{1.,-1.,1.},{1.,-1.,-1.},{1.,1.,-1.},{1.,1.,1.}},
     {{-1.,-1.,1.},{-1.,-1.,-1.},{-1.,1.,-1.},{-1.,1.,1.}},
@@ -264,7 +259,7 @@ void ftt_face_draw (const FttCellFace * face, FILE * fp)
     {{1.,-1.,1.},{1.,1.,1.},{-1.,1.,1.},{-1.,-1.,1.}},
     {{1.,-1.,-1.},{1.,1.,-1.},{-1.,1.,-1.},{-1.,-1.,-1.}},
   };
-#endif /* FTT_3D ||  FTT_2D3 */
+#endif /* FTT_3D */
 
   g_return_if_fail (face != NULL);
   g_return_if_fail (fp != NULL);
@@ -277,7 +272,7 @@ void ftt_face_draw (const FttCellFace * face, FILE * fp)
 	   p.y + dp[face->d][0].y*size,
 	   p.x + dp[face->d][1].x*size, 
 	   p.y + dp[face->d][1].y*size);
-#else /* FTT_3D ||  FTT_2D3 */
+#else /* FTT_3D */
   fprintf (fp, 
 	   "OFF 4 1 4 "
 	   "%g %g %g "
@@ -297,11 +292,11 @@ void ftt_face_draw (const FttCellFace * face, FILE * fp)
 	   p.x + dp[face->d][3].x*size,
 	   p.y + dp[face->d][3].y*size,
 	   p.z + dp[face->d][3].z*size);
-#endif /* FTT_3D ||  FTT_2D3 */
+#endif /* FTT_3D */
 }
 
 static gdouble coords[FTT_CELLS][3] =
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
  {{-1., 1.,0.},
   { 1., 1.,0.},
   {-1.,-1.,0.},
@@ -385,9 +380,9 @@ void ftt_corner_relative_pos (const FttCell * cell,
   static gdouble coords[FTT_NEIGHBORS][3] =
 #if FTT_2D
     {{0.5,0.,0.},{-0.5,0.,0.},{0.,0.5,0.},{0.,-0.5,0.}};
-#else  /* FTT_3D || FTT_2D3 */
+#else  /* FTT_3D */
     {{0.5,0.,0.},{-0.5,0.,0.},{0.,0.5,0.},{0.,-0.5,0.},{0.,0.,0.5},{0.,0.,-0.5}};
-#endif /* FTT_3D || FTT_2D3 */
+#endif /* FTT_3D */
 
   g_return_if_fail (cell != NULL);
   g_return_if_fail (pos != NULL);
@@ -396,11 +391,11 @@ void ftt_corner_relative_pos (const FttCell * cell,
   pos->x = coords[d[0]][0] + coords[d[1]][0];
   pos->y = coords[d[0]][1] + coords[d[1]][1];
   pos->z = 0.;
-#else  /* FTT_3D || FTT_2D3 */
+#else  /* FTT_3D */
   pos->x = coords[d[0]][0] + coords[d[1]][0] + coords[d[2]][0];
   pos->y = coords[d[0]][1] + coords[d[1]][1] + coords[d[2]][1];
   pos->z = coords[d[0]][2] + coords[d[1]][2] + coords[d[2]][2];
-#endif /* FTT_3D || FTT_2D3 */
+#endif /* FTT_3D */
 }
 
 /**
@@ -443,9 +438,9 @@ void ftt_face_pos (const FttCellFace * face, FttVector * pos)
   static gdouble coords[FTT_NEIGHBORS][3] =
 #if FTT_2D
   {{1.,0.,0.},{-1.,0.,0.},{0.,1.,0.},{0.,-1.,0.}};
-#else  /* FTT_3D || FTT_2D3 */
+#else  /* FTT_3D */
   {{1.,0.,0.},{-1.,0.,0.},{0.,1.,0.},{0.,-1.,0.},{0.,0.,1.},{0.,0.,-1.}};
-#endif /* FTT_3D || FTT_2D3 */
+#endif /* FTT_3D */
 
   g_return_if_fail (face != NULL);
   g_return_if_fail (pos != NULL);
@@ -1008,8 +1003,6 @@ void ftt_cell_bbox (const FttCell * cell, GtsBBox * bb)
   bb->x2 = p.x + h; bb->y2 = p.y + h; 
 #if FTT_2D
   bb->z1 = bb->z2 = 0.;
-#elif FTT_2D3
-  bb->z1 = p.z - 1./1.99999; bb->z2 = p.z + 1./1.99999;
 #else  /* 3D */
   bb->z1 = p.z - h; bb->z2 = p.z + h;
 #endif /* 3D */
@@ -1485,15 +1478,10 @@ void ftt_cell_flatten (FttCell * root,
   g_return_if_fail (root != NULL);
   g_return_if_fail (d < FTT_NEIGHBORS);
 
-#if FTT_2D3
-  if (d >= FTT_NEIGHBORS_2D)
-    return;
-#endif /* 2D3 */
-
   if (!FTT_CELL_IS_LEAF (root)) {
     struct _FttOct * oct;
     guint i;
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
     static gint index[FTT_NEIGHBORS_2D][FTT_CELLS/2] =
     {{1, 3},
      {0, 2},
@@ -1555,9 +1543,7 @@ FttCell * ftt_cell_locate (FttCell * root,
 
   if (target.x > pos.x + size || target.x < pos.x - size ||
       target.y > pos.y + size || target.y < pos.y - size
-#if FTT_2D3
-      || target.z > pos.z + 0.5 || target.z < pos.z - 0.5
-#elif !FTT_2D
+#if !FTT_2D
       || target.z > pos.z + size || target.z < pos.z - size
 #endif
       )
@@ -1566,7 +1552,7 @@ FttCell * ftt_cell_locate (FttCell * root,
   do {
     if (FTT_CELL_IS_LEAF (root) || ftt_cell_level (root) == max_depth)
       return root;
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
     static guint index[2][2] = {{2,3},{0,1}};
     guint n = index[target.y > pos.y][target.x > pos.x];
 #else  /* 3D */
@@ -1577,7 +1563,7 @@ FttCell * ftt_cell_locate (FttCell * root,
     size /= 2.;
     pos.x += coords[n][0]*size;
     pos.y += coords[n][1]*size;
-#if !(FTT_2D || FTT_2D3)
+#if !FTT_2D
     pos.z += coords[n][2]*size;
 #endif /* 3D */
   } while (!FTT_CELL_IS_DESTROYED (root));
@@ -1859,9 +1845,6 @@ static gboolean oct_read (FttCell * parent,
   oct = g_malloc0 (sizeof (FttOct));
   oct->level = ftt_cell_level (parent);
   oct->parent = parent;
-#ifdef FTT_2D3
-  oct->dz = ftt_cell_dz (parent);
-#endif
   parent->children = oct;
   ftt_cell_pos (parent, &(oct->pos));
   
@@ -1963,9 +1946,6 @@ static gboolean oct_read_binary (FttCell * parent,
   oct = g_malloc0 (sizeof (FttOct));
   oct->level = ftt_cell_level (parent);
   oct->parent = parent;
-#ifdef FTT_2D3
-  oct->dz = ftt_cell_dz (parent);
-#endif
   parent->children = oct;
   ftt_cell_pos (parent, &(oct->pos));
   
@@ -2035,11 +2015,7 @@ gboolean ftt_refine_corner (const FttCell * cell)
     return FALSE;
 
   ftt_cell_neighbors (cell, &neighbor);
-#if FTT_2D3
-  for (i = 0; i < FTT_NEIGHBORS_2D; i++) {
-#else
   for (i = 0; i < FTT_NEIGHBORS; i++) {
-#endif
     FttCell * n = neighbor.c[i];
 
     if (n && !FTT_CELL_IS_LEAF (n)) {
@@ -2051,7 +2027,7 @@ gboolean ftt_refine_corner (const FttCell * cell)
 	FttCell * c = child.c[j];
 
 	if (c) {
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
 	  static guint perpendicular[FTT_NEIGHBORS_2D][FTT_CELLS/2] =
 	  {{2,3},
 	   {2,3},

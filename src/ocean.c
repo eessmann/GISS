@@ -376,7 +376,7 @@ GfsSimulationClass * gfs_ocean_class (void)
   return klass;
 }
 
-#else /* 2D3 or 3D */
+#else /* 3D */
 
 /* GfsOcean: Object */
 
@@ -401,28 +401,23 @@ static void ocean_destroy (GtsObject * object)
 
 static void ocean_read (GtsObject ** object, GtsFile * fp)
 {
-#if !FTT_2D3
   /* fixme: lambda.z cannot be changed */
   GfsSimulation * sim = GFS_SIMULATION (*object);
   GFS_DOMAIN (sim)->lambda.z = 1./(1 << MAXLEVEL);
-#endif
 
   (* GTS_OBJECT_CLASS (gfs_ocean_class ())->parent_class->read) (object, fp);
   if (fp->type == GTS_ERROR)
     return;
 
   GFS_DOMAIN (*object)->refpos.z = -0.5;
-#if !FTT_2D3
   g_assert (GFS_DOMAIN (sim)->lambda.z == 1./(1 << MAXLEVEL));
   sim->physical_params.g /= sim->physical_params.L/* *GFS_DOMAIN (sim)->lambda.z*/;
   GfsVariable * H = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, "H");
   g_assert (H);
   H->units = 1. - log(/*GFS_DOMAIN (sim)->lambda.z*/1.)/log(sim->physical_params.L);
   GFS_DOMAIN (sim)->lambda.z = 1./(1 << MAXLEVEL);
-#endif
 }
 
-#if !FTT_2D3
 static void ocean_write (GtsObject * object, FILE * fp)
 {
   FttVector * lambda = &GFS_DOMAIN (object)->lambda;
@@ -435,7 +430,6 @@ static void ocean_write (GtsObject * object, FILE * fp)
   lambda->z /= 1 << MAXLEVEL;
   p->g = g;
 }
-#endif /* 3D */
 
 static void new_layer (GfsOcean * ocean)
 {
@@ -507,10 +501,9 @@ static void compute_div (FttCell * c, GfsVariable * W)
 {
   guint level = ftt_cell_level (c);
   gdouble wf = 0., size = ftt_cell_size (c);
-#if !FTT_2D3
+
   g_assert (level <= MAXLEVEL);
   size *= 1 << (MAXLEVEL - level);
-#endif
 
   while (c) {
     GfsStateVector * s = GFS_STATE (c);
@@ -536,13 +529,9 @@ static gdouble height (FttCell * cell)
   gdouble f = GFS_STATE (cell)->solid->s[FTT_FRONT];
   if (f == 0.)
     return 0.;
-#if FTT_2D3
-  return GFS_STATE (cell)->solid->a/f;
-#else /* 3D */
   guint level = ftt_cell_level (cell);
   g_assert (level <= MAXLEVEL);
   return GFS_STATE (cell)->solid->a/f*(1 << (MAXLEVEL - level));
-#endif /* 3D */
 }
 
 static void compute_H (FttCell * cell, GfsVariable * H)
@@ -614,10 +603,9 @@ static void compute_coeff (FttCell * c)
 {
   guint level = ftt_cell_level (c);
   gdouble wf[FTT_NEIGHBORS_2D] = {0.,0.,0.,0.}, size = 1.;
-#if !FTT_2D3
+
   g_assert (level <= MAXLEVEL);
   size = 1 << (MAXLEVEL - level);
-#endif
 
   while (c) {
     GfsStateVector * s = GFS_STATE (c);
@@ -811,9 +799,7 @@ static void gfs_ocean_class_init (GfsSimulationClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->destroy = ocean_destroy;
   GTS_OBJECT_CLASS (klass)->read = ocean_read;
-#if !FTT_2D3
   GTS_OBJECT_CLASS (klass)->write = ocean_write;
-#endif
   GFS_DOMAIN_CLASS (klass)->post_read = ocean_post_read;
   klass->run = ocean_run;
 }
@@ -1064,7 +1050,7 @@ GfsSourceGenericClass * gfs_source_hydrostatic_class (void)
   return klass;
 }
 
-#endif /* 2D3 or 3D */
+#endif /* 3D */
 
 /* GfsSourceFriction: Object */
 
@@ -1264,7 +1250,7 @@ static gdouble flather_value (FttCellFace * f, GfsBc * b)
     gdouble cg = sqrt (sim->physical_params.g*H);
     /* non-dimensional pressure at the boundary */
     gdouble lz = GFS_DOMAIN (sim)->lambda.z;
-#if !FTT_2D && !FTT_2D3
+#if !FTT_2D
     lz *= 1 << MAXLEVEL;
 #endif
     gdouble pb = gfs_function_face_value (GFS_BC_FLATHER (b)->val, f)*sim->physical_params.g*lz;

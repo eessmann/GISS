@@ -1,5 +1,5 @@
 if ! $donotrun; then
-    if gerris2D3 $1 | gfsview-batch2D3 geo.gfv; then :
+    if gerris3D $1 | gfsview-batch3D geo.gfv; then :
     else
 	exit 1
     fi

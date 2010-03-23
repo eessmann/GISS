@@ -34,12 +34,9 @@ Future stuff:
 
 - GFS -> OpenDX file conversion (done 11/2002, DX module).
 
-- Optimize parallel code by overlapping communications and computations: 
+- Optimize parallel code by overlapping communications and
+   computations: (done 2009)
   This could be done relatively easily (in Poisson relaxation for
   example) by first relaxing the cells close to the boundaries, start
   the communications, relax the remaining bulk cells then synchronize
   the communications.
-
-== for 2D3 ==
-
-check on "FTT_CELLS/2" and "ftt_cell_children_direction"

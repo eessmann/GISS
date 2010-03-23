@@ -11,19 +11,17 @@ bin_SCRIPTS = gfs-config
 
 gfs-config: gfs-config.in
 gerris2D.pc: gerris2D.pc.in
-gerris2D3.pc: gerris2D3.pc.in
 gerris3D.pc: gerris3D.pc.in
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = gerris2D.pc gerris3D.pc gerris2D3.pc
+pkgconfig_DATA = gerris2D.pc gerris3D.pc
 pkglib_DATA = m4.awk
 
-lib_LTLIBRARIES = libgfs2D.la libgfs3D.la libgfs2D3.la
+lib_LTLIBRARIES = libgfs2D.la libgfs3D.la
 
 BUILT_SOURCES= \
 	gfs-config  \
 	gerris2D.pc \
-	gerris2D3.pc \
 	gerris3D.pc
 
 GFS_HDS = \
@@ -123,12 +121,6 @@ libgfs2D_la_LDFLAGS = $(NO_UNDEFINED)\
 libgfs2D_la_SOURCES = $(SRC)
 libgfs2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
-libgfs2D3_la_LDFLAGS = $(NO_UNDEFINED)\
-        -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
-	-release $(LT_RELEASE) -export-dynamic
-libgfs2D3_la_SOURCES = $(SRC)
-libgfs2D3_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
-
 CLEANFILES = $(BUILT_SOURCES)
 
 EXTRA_DIST = \
@@ -136,7 +128,7 @@ EXTRA_DIST = \
 	moving2.c \
 	m4.awk
 
-bin_PROGRAMS = gerris2D gerris3D gerris2D3
+bin_PROGRAMS = gerris2D gerris3D
 
 gerris2D_SOURCES = gerris.c
 gerris2D_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
@@ -146,11 +138,6 @@ gerris2D_DEPENDENCIES = libgfs2D.la
 gerris3D_SOURCES = gerris.c
 gerris3D_LDADD = $(GFS3D_LIBS)
 gerris3D_DEPENDENCIES = libgfs3D.la
-
-gerris2D3_SOURCES = gerris.c
-gerris2D3_CFLAGS = $(AM_CFLAGS) -DFTT_2D3=1
-gerris2D3_LDADD = $(GFS2D3_LIBS)
-gerris2D3_DEPENDENCIES = libgfs2D3.la
 
 if DARCS_CONTROLLED
 DARCS_VERSION = darcsversion

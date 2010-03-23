@@ -111,7 +111,7 @@ static void average_neighbor_value_stencil (const FttCellFace * face, guint v)
   }
 }
 
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
 
 /* v = a*v(cell) + b 
  * 
@@ -252,7 +252,7 @@ static void interpolate_2D1_stencil (FttCell * cell,
 
 #endif /* not FTT_2D */
 
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
 static gint perpendicular[FTT_NEIGHBORS][FTT_CELLS] = 
   {{-1,  2, -1,  3},
    { 2, -1,  3, -1},
@@ -272,7 +272,7 @@ static Gradient gradient_fine_coarse (const FttCellFace * face, guint v)
 {
   Gradient g;
   GfsGradient p;
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
   gint dp;
 #else  /* FTT_3D */
   gint * dp;
@@ -282,7 +282,7 @@ static Gradient gradient_fine_coarse (const FttCellFace * face, guint v)
   g_assert (ftt_face_type (face) == FTT_FINE_COARSE);
 
   dp = perpendicular[face->d][FTT_CELL_ID (face->cell)];
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
   g_assert (dp >= 0);
   p = interpolate_1D1 (face->neighbor, dp, 1./4., v);
 #else  /* FTT_3D */
@@ -313,24 +313,20 @@ void ftt_cell_refine_corners (FttCell * cell,
 
   level = ftt_cell_level (cell);
   ftt_cell_neighbors (cell, &neighbor);
-#if FTT_2D3
-  for (d = 0; d < FTT_NEIGHBORS_2D; d++)
-#else /* 2D && 3D */
   for (d = 0; d < FTT_NEIGHBORS; d++)
-#endif  /* 2D && 3D */
     if (neighbor.c[d] && ftt_cell_level (neighbor.c[d]) < level) {
       if (GFS_CELL_IS_BOUNDARY (neighbor.c[d]))
 	ftt_cell_refine_single (neighbor.c[d], init, data);
       else {
 	FttCell * n;
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
 	gint dp;
 #else  /* FTT_3D */
 	gint * dp;
 #endif /* FTT_3D */
 	
 	dp = perpendicular[d][FTT_CELL_ID (cell)];
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
 	g_assert (dp >= 0);
 	n = ftt_cell_neighbor (neighbor.c[d], dp);
 	REFINE_CORNER (n)
@@ -350,7 +346,7 @@ static gdouble neighbor_value (const FttCellFace * face,
 			       gdouble * x)
 {
   GfsGradient vc;
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
   gint dp;
 #else  /* FTT_3D */
   gint * dp;
@@ -362,7 +358,7 @@ static gdouble neighbor_value (const FttCellFace * face,
   else {
     /* neighbor at coarser level */
     dp = perpendicular[face->d][FTT_CELL_ID (face->cell)];
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
     g_assert (dp >= 0);
     vc = interpolate_1D1 (face->neighbor, dp, 1./4., v);
 #else  /* FTT_3D */
@@ -376,7 +372,7 @@ static gdouble neighbor_value (const FttCellFace * face,
 
 static void neighbor_value_stencil (const FttCellFace * face, guint v)
 {
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
   gint dp;
 #else  /* FTT_3D */
   gint * dp;
@@ -388,7 +384,7 @@ static void neighbor_value_stencil (const FttCellFace * face, guint v)
   else {
     /* neighbor at coarser level */
     dp = perpendicular[face->d][FTT_CELL_ID (face->cell)];
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
     g_assert (dp >= 0);
     interpolate_1D1_stencil (face->neighbor, dp, v);
 #else  /* FTT_3D */
@@ -943,9 +939,9 @@ static FttCell * cell_corner_neighbor1 (FttCell * cell,
 
 #if FTT_2D
 # define N_CELLS 4
-#else  /* 2D3 and 3D */
+#else  /* 3D */
 # define N_CELLS 8
-#endif /* 2D3 and 3D */
+#endif /* 3D */
 
 static gboolean inverse (gdouble mi[N_CELLS - 1][N_CELLS - 1])
 {

@@ -331,7 +331,7 @@ gboolean gfs_solid_is_thin (FttCell * cell, GfsGenericSurface * s)
   return solid_face_is_thin (&f);
 }
 
-#else /* 2D3 or 3D */
+#else /* 3D */
 #include "isocube.h"
 
 typedef struct {
@@ -365,11 +365,7 @@ static void rotate (CellFace * f, FttVector * h, FttComponent c)
 static void cell_size (FttCell * cell, FttVector * h)
 {
   h->x = h->y = ftt_cell_size (cell);
-#if FTT_2D3
-  h->z = 1.;
-#else  /* 3D */
   h->z = h->x;
-#endif /* 3D */
 }
 
 /* Returns: the number of closed loops for the given isocube
@@ -624,7 +620,7 @@ gboolean gfs_solid_is_thin (FttCell * cell, GfsGenericSurface * s)
   return (topology (&cube) > 1);
 }
 
-#endif /* 2D3 or 3D */
+#endif /* 3D */
 
 static gdouble solid_sa (GfsSolidVector * s)
 {
@@ -1411,9 +1407,6 @@ static void outer_fractions_coarse_fine (FttCell * parent, FttDirection d)
  */
 void gfs_solid_coarse_fine (FttCell * parent, GfsDomain * domain)
 {
-#if FTT_2D3
-  g_assert_not_implemented ();
-#endif
   g_return_if_fail (parent);
   g_return_if_fail (domain);
   g_return_if_fail (GFS_IS_MIXED (parent));

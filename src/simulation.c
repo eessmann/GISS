@@ -191,8 +191,6 @@ static GModule * load_module (GtsFile * fp, GfsSimulation * sim)
       gchar * name = g_strconcat (fp->token->str, 
 #if FTT_2D
 				  "2D"
-#elif FTT_2D3
-				  "2D3"
 #else
 				  "3D"
 #endif

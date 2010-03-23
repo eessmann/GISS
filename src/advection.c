@@ -171,44 +171,6 @@ static gdouble interpolate_1D1 (const FttCell * cell,
   return s->f[dleft].v;
 }
 
-#elif FTT_2D3
-
-static gdouble interpolate_1D1 (const FttCell * cell,
-				FttDirection dright,
-				FttDirection dup,
-				gdouble x)
-{
-  FttCell * n;
-  FttDirection dleft;
-  GfsStateVector * s;
-
-  g_return_val_if_fail (cell != NULL, 0.);
-
-  dleft = FTT_OPPOSITE_DIRECTION (dright);
-  n = ftt_cell_neighbor (cell, dup);
-  s = GFS_STATE (cell);
-  if (n && !GFS_CELL_IS_BOUNDARY (n)) {
-    /* check for corner refinement violation (topology.fig) */
-    g_assert (ftt_cell_level (n) == ftt_cell_level (cell));
-
-    if (FTT_CELL_IS_LEAF (n))
-      return GFS_STATE (n)->f[dleft].v*x + s->f[dleft].v*(1. - x);
-    else {
-      FttDirection d[FTT_DIMENSION];
-
-      d[0] = dleft;
-      d[1] = FTT_OPPOSITE_DIRECTION (dup);
-      g_assert (d[0] < FTT_NEIGHBORS_2D);
-      g_assert (d[1] < FTT_NEIGHBORS_2D);
-      d[2] = 0;
-      n = ftt_cell_child_corner (n, d);
-      if (n)
-	return (GFS_STATE (n)->f[dleft].v*4.*x + s->f[dleft].v*(3. - 4.*x))/3.;
-    }
-  }
-  return s->f[dleft].v;
-}
-
 #else /* FTT_3D */
 
 static gdouble interpolate_2D1 (const FttCell * cell,
@@ -335,7 +297,7 @@ gdouble gfs_face_upwinded_value (const FttCellFace * face,
       return GFS_STATE (face->cell)->f[face->d].v;
     else {
       gdouble vcoarse;
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
       gint dp;
       static gint perpendicular[FTT_NEIGHBORS_2D][FTT_CELLS] = 
       {{-1,  2, -1,  3},
@@ -353,12 +315,8 @@ gdouble gfs_face_upwinded_value (const FttCellFace * face,
        {{-1,-1},{-1,-1},{-1,-1},{-1,-1},{1,2},{0,2},{1,3},{0,3}}};
 #endif /* FTT_3D */
 
-#if FTT_2D3
-      g_assert (face->d < FTT_NEIGHBORS_2D);
-#endif
-
       dp = perpendicular[face->d][FTT_CELL_ID (face->cell)];
-#if (FTT_2D || FTT_2D3)
+#if FTT_2D
       g_assert (dp >= 0);
       vcoarse = interpolate_1D1 (face->neighbor, face->d, dp, 1./4.);
 #else  /* FTT_3D */
