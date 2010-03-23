@@ -281,7 +281,11 @@ static FttVector compute_lift_force (GfsParticle * p, GfsParticleForce * liftfor
     gdouble norm_relative_vel = sqrt (relative_vel.x*relative_vel.x + 
 				      relative_vel.y*relative_vel.y +
 				      relative_vel.z*relative_vel.z);
-    gdouble dia =  2.*pow(3.0*(particulate->volume)/4.0/M_PI, 1./3.);    
+    gdouble dia =  2.*pow(3.0*(particulate->volume)/4.0/M_PI, 1./3.);
+    if (viscosity == 0) {
+      g_warning ("Viscosity is 0. cannot compute lift force on particulate\n");
+      g_assert_not_reached ();
+    }
     gdouble Re = norm_relative_vel*dia*fluid_rho/viscosity;
 
     GFS_VALUE (cell, coeff->re_p) = Re;
