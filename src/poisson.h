@@ -63,7 +63,8 @@ GfsLinearProblem *   gfs_get_poisson_problem         (GfsDomain * domain,
 						      GfsVariable * rhs, 
 						      GfsVariable * lhs,
 						      GfsVariable * dia,
-						      guint maxlevel);
+						      guint maxlevel,
+						      GfsVariable * dp);
 GfsLinearProblem *    gfs_linear_problem_new         ();
 void                  gfs_linear_problem_init        (GfsLinearProblem * lp,
 						      GfsVariable * rhs,

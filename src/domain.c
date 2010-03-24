@@ -864,7 +864,8 @@ void gfs_domain_homogeneous_bc (GfsDomain * domain,
  * @domain: a #GfsDomain.
  * @flags: the traversal flags.
  * @max_depth: the maximum depth of the traversal.
- * @v: a #GfsVariable.
+ * @ov: a #GfsVariable.
+ * @v: a #GfsVariable of which @ov is an homogeneous version.
  *
  * Gets the stencils corresponding to the homogeneous boundary
  * conditions in @domain for varaible @v
@@ -873,9 +874,10 @@ void gfs_domain_homogeneous_bc_stencil (GfsDomain * domain,
 					FttTraverseFlags flags,
 					gint max_depth,
 					GfsVariable * v,
+					GfsVariable * ov,
 					GfsLinearProblem * lp)
 {
-  BcData b = { flags, max_depth, v, NULL, FTT_XYZ, lp };
+  BcData b = { flags, max_depth, v, ov, FTT_XYZ, lp };
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (v != NULL);

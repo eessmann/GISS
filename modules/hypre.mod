@@ -367,7 +367,7 @@ static void gfs_hypre_poisson_solve (GfsDomain * domain,
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
 
-  GfsLinearProblem * lp = gfs_get_poisson_problem (domain, par, res, dp, dia, -1);
+  GfsLinearProblem * lp = gfs_get_poisson_problem (domain, par, res, dp, dia, -1, lhs);
  
   solve_poisson_problem_using_hypre (domain, lp, par);
 

@@ -324,6 +324,7 @@ static void bc_leaves_numbering (GfsBox * box, GfsLinearProblem * lp) {
  * @rhs: the variable to use as right-hand side
  * @lhs: the variable to use as left-hand side
  * @dia: the diagonal weight
+ * @v: a #GfsVariable of which @lhs is an homogeneous version.
  * @maxlevel: the maximum level to consider (or -1).
  *
  * Extracts the poisson problem associated with @lhs, @rhs and the
@@ -338,10 +339,10 @@ static void bc_leaves_numbering (GfsBox * box, GfsLinearProblem * lp) {
  * the matrix of the poisson problem. The matrix is stored as an array
  * of pointer. Each pointer points a stencil (GArray of GfsStencilElement)
  */
-
 GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain, GfsMultilevelParams * par,
 					    GfsVariable * rhs, GfsVariable * lhs,
-					    GfsVariable * dia, guint maxlevel)
+					    GfsVariable * dia, guint maxlevel,
+					    GfsVariable * v)
 {
   gfs_domain_timer_start (domain, "get_poisson_problem");
 
@@ -362,7 +363,7 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain, GfsMultilevelPar
 			    maxlevel, (FttCellTraverseFunc) relax_stencil, lp);
 
   gfs_domain_homogeneous_bc_stencil (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-				     maxlevel, lhs, lp);
+				     maxlevel, v, lhs, lp);
   
   /*End - Creates stencils on the fly */
   gfs_domain_timer_stop (domain, "get_poisson_problem");
