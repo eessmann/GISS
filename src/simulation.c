@@ -1934,7 +1934,13 @@ static void poisson_run (GfsSimulation * sim)
   /* solve for pressure */
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
+  
   par->niter = 0;
+  sim->time.t = sim->time.start = 0.;
+  sim->time.i = sim->time.istart = 0;
+  sim->time.end = 1.;
+  sim->time.iend = 1;
+
   if (par->residual.infty > par->tolerance) {
     gdouble tstart = gfs_clock_elapsed (domain->timer);
 
@@ -1950,6 +1956,7 @@ static void poisson_run (GfsSimulation * sim)
 
     par->poisson_solve (domain, par, p, div, res1, dia, 1.);
 
+    sim->time.i ++;
     sim->time.t = sim->time.end;
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
