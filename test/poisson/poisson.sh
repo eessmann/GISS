@@ -1,25 +1,53 @@
-if ! $donotrun; then
+if  ! $donotrun; then
     rm -f error
-    for level in 3 4 5 6 7 8; do
-	if ( sed "s/LEVEL/$level/g" < $1 | gerris2D - ) && join time proj > res-$level; then :
+
+    for solver in gerris hypre; do
+
+	echo "0 0.00000000" > time
+	echo "0 1.776e+02 0" > proj
+
+	awk -v solver=$solver '{if ($1 == "PARAMS") {
+                                  if ( solver == "hypre") {
+                                     print "  GModule hypre { tolerance = 1e-30 solver_type = boomer_amg  ncyclemax = CYCLE ncyclemin = CYCLE }"}
+                                  if ( solver == "gerris") {
+                                     print "  ApproxProjectionParams { tolerance = 1e-30 nitermin = CYCLE nitermax = CYCLE }"}
+                                }
+                                else {print $0}}' $1 > tmp.gfs
+
+    
+	for cycle in 1 2 3 4 5 6 7 8 9 10 ; do
+	    if ( gerris2D -DLEVEL=7 -DCYCLE=$cycle -DSOLVER=$solver tmp.gfs ) ; then :
+	    else
+		exit 1
+	    fi     
+	done
+	join time proj | awk '{if (NR == 1) {print $0; old = $3} else {print $1" "$2" "$3" "old/$3; old=$3}}' > res-7
+	rm -f error order proj time runtime status
+	for level in 3 4 5 6 7 8; do
+	    if ( gerris2D -DLEVEL=$level -DCYCLE=10 -DSOLVER=$solver  tmp.gfs ) ; then :
+	    else
+		exit 1
+	    fi
+	done
+	
+	if awk 'BEGIN { n = 0 }
+                      {
+                        l[n] = $1; n1[n] = $2; n2[n] = $3; ni[n++] = $4;
+                      }
+                END {
+                      for (i = 1; i < n; i++)
+                       print l[i] " " log(n1[i-1]/n1[i])/log(2.) " " log(n2[i-1]/n2[i])/log(2.) " " log(ni[i-1]/ni[i])/log(2.);
+                    }' < error > order-$solver; then :
 	else
 	    exit 1
 	fi
+	mv res-7 res-7-$solver
+	mv error error-$solver
     done
+    rm -f tmp.gfs
 fi
 
-if awk '
-BEGIN { n = 0 }
-{
-  l[n] = $1; n1[n] = $2; n2[n] = $3; ni[n++] = $4;
-}
-END {
-  for (i = 1; i < n; i++)
-    print l[i] " " log(n1[i-1]/n1[i])/log(2.) " " log(n2[i-1]/n2[i])/log(2.) " " log(ni[i-1]/ni[i])/log(2.);
-}' < error > order; then :
-else
-    exit 1
-fi
+
 
 if cat <<EOF | gnuplot ; then :
     set term postscript eps color lw 3 solid 20
@@ -27,12 +55,12 @@ if cat <<EOF | gnuplot ; then :
     set xlabel 'CPU time'
     set ylabel 'Maximum residual'
     set logscale y
-    plot 'res-7.ref' u 2:3 t 'ref' w lp, 'res-7' u 2:3 t '' w lp
+    plot 'res-7.ref' u 2:3 t 'Ref' w lp, 'res-7-gerris' u 2:3 t 'Gerris' w lp, 'res-7-hypre' u 2:3 t 'Hypre' w lp
     set output 'rate.eps'
     set xlabel 'V-cycle'
     set ylabel 'Cumulative residual reduction factor'
     unset logscale
-    plot 'res-7.ref' u 1:4 t 'ref' w lp, 'res-7' u 1:4 t '' w lp
+    plot 'res-7.ref' u 1:4 t 'Ref' w lp, 'res-7-gerris' u 1:4 t 'Gerris' w lp, 'res-7-hypre' u 1:4 t 'Hypre' w lp
     set output 'error.eps'
     set xlabel 'Level'
     set ylabel 'Error norms'
@@ -41,13 +69,16 @@ if cat <<EOF | gnuplot ; then :
     plot 'error.ref' u 1:2 t '1 (ref)' w lp, \
          'error.ref' u 1:3 t '2 (ref)' w lp, \
          'error.ref' u 1:4 t 'max (ref)' w lp, \
-         'error' u 1:2 t '1' w lp, \
-         'error' u 1:3 t '2' w lp, \
-         'error' u 1:4 t 'max' w lp
+         'error-gerris' u 1:2 t '1 Gerris' w lp, \
+         'error-gerris' u 1:3 t '2 Gerris' w lp, \
+         'error-gerris' u 1:4 t 'max Gerris' w lp, \
+         'error-hypre' u 1:2 t '1 Hypre' w lp, \
+         'error-hypre' u 1:3 t '2 Hypre' w lp, \
+         'error-hypre' u 1:4 t 'max Hypre' w lp
     set output 'order.eps'
     set xlabel 'Level'
     set ylabel 'Order'
-    set key
+    set key bottom
     unset logscale
     set xtics 0,1
     set ytics 0,1
@@ -55,9 +86,12 @@ if cat <<EOF | gnuplot ; then :
     plot [][0:3] 'order.ref' u 1:2 t '1 (ref)' w lp, \
                  'order.ref' u 1:3 t '2 (ref)' w lp, \
                  'order.ref' u 1:4 t 'max (ref)' w lp, \
-                 'order' u 1:2 t '1' w lp, \
-                 'order' u 1:3 t '2' w lp, \
-                 'order' u 1:4 t 'max' w lp
+                 'order-gerris' u 1:2 t '1 Gerris' w lp, \
+                 'order-gerris' u 1:3 t '2 Gerris' w lp, \
+                 'order-gerris' u 1:4 t 'max Gerris' w lp, \
+                 'order-hypre' u 1:2 t '1 Hypre' w lp, \
+                 'order-hypre' u 1:3 t '2 Hypre' w lp, \
+                 'order-hypre' u 1:4 t 'max Hypre' w lp
 EOF
 else
     exit 1
@@ -67,10 +101,10 @@ if cat <<EOF | python ; then :
 from check import *
 from sys import *
 c = Curve()
-for p in Curve('res-7.ref',2,3).l:
-    c.l.append((p[0]+0.1, p[1]))
-if (Curve('res-7',2,3) - c).max() > 1e-8 or\
-   (Curve('error',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
+if (Curve('res-7-gerris',1,3) - Curve('res-7.ref',1,3)).max() > 1e-8 or\
+   (Curve('res-7-hypre',1,3) - Curve('res-7.ref',1,6)).max() > 1e-8 or\
+   (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max() > 1e-6 or\
+   (Curve('error-hypre',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
     exit(1)
 EOF
 else
