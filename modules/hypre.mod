@@ -225,18 +225,15 @@ static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp,
   gint i;
 
   /* Now go through my local rows and set the matrix entries.*/
-  rhs_values = malloc(lp->rhs->len * sizeof(double));
-  x_values = malloc(lp->lhs->len * sizeof(double));
+  rhs_values = (double *) lp->rhs->data;
+  x_values = (double *) lp->lhs->data;
   rows = malloc(lp->lhs->len * sizeof(int));
     
   hp->maxsize = lp->maxsize;
   g_ptr_array_foreach (lp->LP, (GFunc) extract_stencil, hp);
 
-  for (i = 0; i < lp->rhs->len; i++) {
-    rhs_values[i] = g_array_index (lp->rhs, gdouble, i);
-    x_values[i] = g_array_index (lp->lhs, gdouble, i);
+  for (i = 0; i < lp->rhs->len; i++)
     rows[i] = i;
-  }
   
   HYPRE_IJVectorSetValues(hp->b, lp->rhs->len, rows, rhs_values );
   HYPRE_IJVectorSetValues(hp->x, lp->lhs->len, rows, x_values);
@@ -257,8 +254,6 @@ static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp,
   HYPRE_IJVectorPrint(hp->b, "bi.dat");
 #endif
 
-  free(x_values);
-  free(rhs_values);
   free(rows);
   gfs_domain_timer_stop (domain, "HYPRE: Solver setup");
 }

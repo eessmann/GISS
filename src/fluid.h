@@ -268,8 +268,11 @@ struct _GfsStencilElement{
 };
 
 struct _GfsLinearProblem{
+  /*< public >*/
   GPtrArray * LP;
   GArray * rhs, * lhs;
+
+  /*< private >*/
   GfsVariable * rhs_v, * lhs_v, * id;
   GfsVariable * dia;
   gdouble beta, omega, nleafs;
