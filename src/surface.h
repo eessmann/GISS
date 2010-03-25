@@ -116,6 +116,7 @@ struct _GfsSurface {
   gboolean flip;
   GfsFunction * f;
   GtsMatrix * m;
+  GNode * bbtree;
 
   /*< public >*/
   GtsSurface * s;
