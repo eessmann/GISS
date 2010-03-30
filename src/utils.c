@@ -1490,7 +1490,8 @@ gdouble gfs_matrix_inverse (gdouble ** m, guint n, gdouble pivmin)
 gpointer gfs_matrix_new (guint n, guint p, guint size)
 {
   guint i;
-  gpointer * m, a;
+  gpointer * m;
+  gchar * a;
   
   g_return_val_if_fail (n > 0, NULL);
   g_return_val_if_fail (p > 0, NULL);
@@ -1499,7 +1500,7 @@ gpointer gfs_matrix_new (guint n, guint p, guint size)
   m = g_malloc (n*sizeof (gpointer));
   a = g_malloc0 (n*p*size);
   for (i = 0; i < n; i++)
-    m[i] = GUINT_TO_POINTER (GPOINTER_TO_UINT (a) + i*p*size);
+    m[i] = a + i*p*size;
   return m;
 }
 

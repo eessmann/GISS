@@ -255,7 +255,7 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
       if (*c == '%') {
 	gchar * startf = c, * prev = c;
 	
-	len = GPOINTER_TO_UINT (startf) -  GPOINTER_TO_UINT (start);
+	len = startf - start;
 	if (len > 0)
 	  output->formats = g_slist_prepend (output->formats,
 					     format_new (start, len, NONE));
@@ -300,7 +300,7 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
       }
       c++;
     }
-    len = GPOINTER_TO_UINT (c) - GPOINTER_TO_UINT (start);
+    len = c - start;
     if (len > 0)
       output->formats = g_slist_prepend (output->formats,
 					 format_new (start, len, NONE));
