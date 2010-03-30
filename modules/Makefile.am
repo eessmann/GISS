@@ -19,6 +19,12 @@ endif
 if BUILD_WAVEWATCH
 WAVEWATCH = libwavewatch2D.la
 endif
+if BUILD_HYPRE
+HYPRE = libhypre2D.la libhypre3D.la
+endif
+if BUILD_ODE
+ODE = libode2D.la libode3D.la
+endif
 
 pkglib_LTLIBRARIES = \
 	$(MAP) \
@@ -31,7 +37,9 @@ pkglib_LTLIBRARIES = \
 	libdf33D.la \
 	$(TIDE) \
 	$(STOKES) \
-	$(WAVEWATCH)
+	$(WAVEWATCH) \
+	$(HYPRE) \
+	$(ODE)
 
 bin_PROGRAMS = \
 	xyz2rsurface \
@@ -45,7 +53,11 @@ EXTRA_DIST = \
 	terrain.mod \
 	stokes.mod \
 	wavewatch.mod \
-	particulates.mod
+	particulates.mod \
+	df3.mod \
+	okada.mod \
+	hypre.mod \
+	ode.mod
 
 BUILT_SOURCES = \
 	map.c \
@@ -56,6 +68,7 @@ BUILT_SOURCES = \
 	particulates.c \
 	df3.c \
 	okada.c \
+	hypre.c \
 	ode.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
@@ -127,6 +140,21 @@ libparticulates3D_la_SOURCES = particulates.c
 libparticulates3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
 libparticulates2D_la_SOURCES = particulates.c
 libparticulates2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
+
+libhypre3D_la_SOURCES = hypre.c
+libhypre3D_la_CFLAGS = $(AM_CFLAGS)
+libhypre3D_la_LIBADD = -lHYPRE -lm
+libhypre2D_la_SOURCES = hypre.c
+libhypre2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+libhypre2D_la_LIBADD = -lHYPRE -lm
+
+libokada3D_la_SOURCES = okada.c
+libokada3D_la_CFLAGS = $(AM_CFLAGS)
+libokada2D_la_SOURCES = okada.c
+libokada2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+
+libdf33D_la_SOURCES = df3.c
+libdf33D_la_CFLAGS = $(AM_CFLAGS)
 
 if HAVE_MODULES
 %.c : %.mod

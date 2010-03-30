@@ -168,33 +168,26 @@ void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 		 par->niter));
 }
 
-      /** "Methods" for GfsLinearProblem **/
-/**
- * gfs_linear_problem_new:
- *
- * Creates a new GfsLinearProblem.
- * Returns a pointer on the new GfsLinearProblem. 
- */
-GfsLinearProblem * gfs_linear_problem_new ()
-{
-  return g_malloc (sizeof (GfsLinearProblem));
-}
+/* GfsLinearProblem: Object */
 
 /**
- * gfs_linear_problem_init:
- * @lp: a pointer on the GfsLinearProblem to initialise.
- * 
- * Initialises a GfsLinearProblem. Creates the structure
- * to store the problem LP, the right hand and left hand
- * side vectors rhs and lhs.
- * Initialises the maximum size for a stencil to 0.
- * And the number of diagonal element to 0.
+ * gfs_linear_problem_new:
+ * @rhs: the right-hand-side variable.
+ * @lhs: the left-hand-side variable.
+ * @dia: the diagonal weight.
+ *
+ * Returns: a new #GfsLinearProblem.
  */
-void gfs_linear_problem_init (GfsLinearProblem * lp, GfsVariable * rhs,
-			      GfsVariable * lhs, GfsVariable * dia,
-			      GfsVariable * id, gdouble omega,
-			      gdouble beta, guint maxlevel)
+GfsLinearProblem * gfs_linear_problem_new (GfsVariable * rhs,
+					   GfsVariable * lhs, GfsVariable * dia,
+					   gdouble omega, gdouble beta, guint maxlevel)
 {
+  GfsLinearProblem * lp = g_malloc (sizeof (GfsLinearProblem));
+
+  g_return_val_if_fail (rhs != NULL, NULL);
+  g_return_val_if_fail (lhs != NULL, NULL);
+  g_return_val_if_fail (dia != NULL, NULL);
+
   lp->rhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
   lp->lhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
   lp->LP = g_ptr_array_new ();
@@ -204,52 +197,50 @@ void gfs_linear_problem_init (GfsLinearProblem * lp, GfsVariable * rhs,
 
   lp->rhs_v = rhs;
   lp->lhs_v = lhs;
-  lp->id = id;
+  lp->id = gfs_temporary_variable (rhs->domain);
   lp->dia = dia;
   
   lp->omega = omega;
   lp->beta = beta;
   lp->maxlevel =  maxlevel;
+
+  return lp;
 }
 
 /**
  * gfs_linear_problem_add_stencil:
- * @lp: a pointer on a GfsLinearProblem.
- * @stencil: a pointer on a GfsStencil. 
+ * @lp: a #GfsLinearProblem.
+ * @stencil: a #GfsStencil. 
  *
  * Adds a stencil to the linear problem.
- * If the stencil is larger than the previous ones
- * lp->maxsize is updated.
  */
-void gfs_linear_problem_add_stencil (GfsLinearProblem * lp, GArray * stencil)
+void gfs_linear_problem_add_stencil (GfsLinearProblem * lp, 
+				     GArray * stencil)
 {
-  g_assert (stencil != NULL);
+  g_return_if_fail (lp != NULL);
+  g_return_if_fail (stencil != NULL);
 
-  g_ptr_array_add (lp->LP, stencil);
-  
+  g_ptr_array_add (lp->LP, stencil);  
   if (stencil->len > lp->maxsize)
     lp->maxsize = stencil->len;
 }
 
-static void destroy_stencil (GArray * stencil)
-{
-  gfs_stencil_destroy (stencil);
-}
-
 /**
  * gfs_linear_problem_destroy:
- * @lp: a pointer on a GfsLinearProblem.
+ * @lp: a #GfsLinearProblem.
  * 
- * Destroys a GfsLinearProblem.
+ * Destroys a #GfsLinearProblem.
  */
 void gfs_linear_problem_destroy (GfsLinearProblem * lp)
 {
+  g_return_if_fail (lp != NULL);
+
   gts_object_destroy (GTS_OBJECT (lp->id));
 
   g_array_free (lp->rhs, TRUE);  
   g_array_free (lp->lhs, TRUE);
   
-  g_ptr_array_foreach (lp->LP, (GFunc) destroy_stencil, NULL);
+  g_ptr_array_foreach (lp->LP, (GFunc) gfs_stencil_destroy, NULL);
   g_ptr_array_free (lp->LP, TRUE);
 }
 
@@ -270,7 +261,7 @@ static void relax_stencil (FttCell * cell, GfsLinearProblem * lp)
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_face_weighted_gradient_stencil (&f, &ng, lp->maxlevel, lp->lhs, lp->id, stencil);
+      gfs_face_weighted_gradient_stencil (&f, &ng, lp->maxlevel, lp->id, stencil);
       g.a += ng.a;
     }
   }
@@ -278,7 +269,8 @@ static void relax_stencil (FttCell * cell, GfsLinearProblem * lp)
   if (g.a > 0.)
     gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
   else {
-    gfs_stencil_reinit (stencil);
+    gfs_stencil_destroy (stencil);
+    stencil = gfs_stencil_new ();
     gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
     g_array_index (lp->rhs, gdouble, (gint) GFS_VALUE (cell, lp->id)) = 0.;
   }
@@ -286,30 +278,27 @@ static void relax_stencil (FttCell * cell, GfsLinearProblem * lp)
   gfs_linear_problem_add_stencil (lp, stencil);
 }
 
-static void leaves_numbering (FttCell * cell, GfsLinearProblem * lp) {
- 
-  GFS_VALUE (cell, lp->id) = (gdouble) lp->nleafs;
+static void leaves_numbering (FttCell * cell, GfsLinearProblem * lp)
+{ 
+  GFS_VALUE (cell, lp->id) = (gdouble) lp->nleafs++;
   g_array_append_val (lp->lhs, GFS_VALUE (cell, lp->lhs_v));
   g_array_append_val (lp->rhs, GFS_VALUE (cell, lp->rhs_v));
-  lp->nleafs++;
 }
 
 static void bc_number (FttCellFace * f, GfsLinearProblem * lp)
 {
-  GFS_VALUE(f->cell, lp->id) = (gdouble) lp->nleafs;
+  GFS_VALUE(f->cell, lp->id) = (gdouble) lp->nleafs++;
   g_array_append_val (lp->lhs, GFS_VALUE (f->cell, lp->lhs_v));
   g_array_append_val (lp->rhs, GFS_VALUE (f->cell, lp->rhs_v));
-  lp->nleafs++;
 }
 
-static void bc_leaves_numbering (GfsBox * box, GfsLinearProblem * lp) {
- 
+static void bc_leaves_numbering (GfsBox * box, GfsLinearProblem * lp)
+{ 
   FttDirection d;
   
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOUNDARY (box->neighbor[d])) {
       GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
-      
       b->type = GFS_BOUNDARY_CENTER_VARIABLE;
       ftt_face_traverse_boundary (b->root, b->d,
 				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, lp->maxlevel,
@@ -334,10 +323,10 @@ static void bc_leaves_numbering (GfsBox * box, GfsLinearProblem * lp) {
  * modified versions of the functions of the native gerris poisson
  * solver.
  *
- * A GfsLinearProblem is returned. This GfsLinearProblem contains two
- * GArray that store the rhs and lhs values and a GPtrArray which stores
+ * A #GfsLinearProblem is returned. This #GfsLinearProblem contains two
+ * #GArray which store the rhs and lhs values and a #GPtrArray which stores
  * the matrix of the poisson problem. The matrix is stored as an array
- * of pointer. Each pointer points a stencil (GArray of GfsStencilElement)
+ * of #GfsStencil.
  */
 GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain, GfsMultilevelParams * par,
 					    GfsVariable * rhs, GfsVariable * lhs,
@@ -346,10 +335,7 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain, GfsMultilevelPar
 {
   gfs_domain_timer_start (domain, "get_poisson_problem");
 
-  GfsLinearProblem * lp = gfs_linear_problem_new ();
-  GfsVariable * id = gfs_temporary_variable (domain);
-
-  gfs_linear_problem_init (lp, rhs, lhs, dia, id, par->omega, par->beta, maxlevel);
+  GfsLinearProblem * lp = gfs_linear_problem_new (rhs, lhs, dia, par->omega, par->beta, maxlevel);
   
   /* Cell numbering */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
@@ -363,7 +349,7 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain, GfsMultilevelPar
 			    maxlevel, (FttCellTraverseFunc) relax_stencil, lp);
 
   gfs_domain_homogeneous_bc_stencil (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-				     maxlevel, v, lhs, lp);
+				     maxlevel, lhs, v, lp);
   
   /*End - Creates stencils on the fly */
   gfs_domain_timer_stop (domain, "get_poisson_problem");
@@ -379,7 +365,7 @@ typedef struct {
   guint axi;
 } RelaxParams;
 
-/* relax_stencil needs to updated whenever this
+/* relax_stencil() needs to updated whenever this
  * function is modified
  */
 static void relax (FttCell * cell, RelaxParams * p)
@@ -465,13 +451,11 @@ void gfs_relax (GfsDomain * domain,
   g_return_if_fail (rhs != NULL);
   g_return_if_fail (dia != NULL);
 
-  
   p.u = u->i;
   p.rhs = rhs->i;
   p.dia = dia->i;
   p.maxlevel = max_depth;
   p.omega = omega;
-  
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 			    max_depth,
@@ -897,17 +881,13 @@ static void relax_loop (GfsDomain * domain,
  *
  * The values of @u on the leaf cells are updated as well as the values
  * of @res (i.e. the cell tree is ready for another iteration).
- *
- * Returns a gboolean : TRUE if the function uses its own convergence
- * criterion and satisfied it. FALSE otherwise.
  */
-
 void gfs_poisson_cycle (GfsDomain * domain,
-			   GfsMultilevelParams * p,
-			   GfsVariable * u,
-			   GfsVariable * rhs,
-			   GfsVariable * dia,
-			   GfsVariable * res)
+			GfsMultilevelParams * p,
+			GfsVariable * u,
+			GfsVariable * rhs,
+			GfsVariable * dia,
+			GfsVariable * res)
 {
   guint l, nrelax, minlevel;
   GfsVariable * dp;
@@ -976,20 +956,21 @@ void gfs_poisson_cycle (GfsDomain * domain,
  * @par: the parameters of the poisson problem.
  * @lhs: the variable to use as left-hand side.
  * @rhs: the variable to use as right-hand side.
- * @res: the variable to store the residual
+ * @res: the variable in which to store the residual
  * @dia: the diagonal weight.
- * @dt: the length of the time-step.
+ * @dt:  the length of the time-step.
  *
- * Solves the poisson problem over domain using the Gerris' native
+ * Solves the poisson problem over domain using Gerris' native
  * multigrid poisson solver.
  */
-void gfs_poisson_solve (GfsDomain * domain, GfsMultilevelParams * par,
+void gfs_poisson_solve (GfsDomain * domain, 
+			GfsMultilevelParams * par,
 			GfsVariable * lhs, GfsVariable * rhs, GfsVariable * res,
 			GfsVariable * dia, gdouble dt)
 {
   gfs_domain_timer_start (domain, "poisson_solve");
 
-  /* calculates the intial residual and its norm */
+  /* calculates the initial residual and its norm */
   gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, lhs, rhs, dia, res);
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
@@ -1011,6 +992,7 @@ void gfs_poisson_solve (GfsDomain * domain, GfsMultilevelParams * par,
     res_max_before = par->residual.infty;
     par->niter++;
   }
+
   gfs_domain_timer_stop (domain, "poisson_solve");
 }
 

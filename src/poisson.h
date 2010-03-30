@@ -29,13 +29,13 @@ extern "C" {
 #include "domain.h"
 
 typedef struct _GfsMultilevelParams GfsMultilevelParams;
-typedef gboolean (* GfsPoissonSolverFunc)       (GfsDomain * domain,
-						 GfsMultilevelParams * par,
-						 GfsVariable * lhs,
-						 GfsVariable * rhs,
-						 GfsVariable * res,
-						 GfsVariable * dia,
-						 gdouble dt);
+typedef void (* GfsPoissonSolverFunc) (GfsDomain * domain,
+				       GfsMultilevelParams * par,
+				       GfsVariable * lhs,
+				       GfsVariable * rhs,
+				       GfsVariable * res,
+				       GfsVariable * dia,
+				       gdouble dt);
 struct _GfsMultilevelParams {
   gdouble tolerance;
   guint nrelax, erelax;
@@ -58,25 +58,6 @@ void                  gfs_multilevel_params_read     (GfsMultilevelParams * par,
 						      GtsFile * fp);
 void                  gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 							 FILE * fp);
-GfsLinearProblem *   gfs_get_poisson_problem         (GfsDomain * domain,
-						      GfsMultilevelParams * par,
-						      GfsVariable * rhs, 
-						      GfsVariable * lhs,
-						      GfsVariable * dia,
-						      guint maxlevel,
-						      GfsVariable * dp);
-GfsLinearProblem *    gfs_linear_problem_new         ();
-void                  gfs_linear_problem_init        (GfsLinearProblem * lp,
-						      GfsVariable * rhs,
-						      GfsVariable * lhs,
-						      GfsVariable * dia,
-						      GfsVariable * id,
-						      gdouble omega,
-						      gdouble beta,
-						      guint maxlevel);
-void                  gfs_linear_problem_add_stencil  (GfsLinearProblem * lp, 
-						      GArray * stencil);
-void                  gfs_linear_problem_destroy     (GfsLinearProblem * lp);
 void                  gfs_relax                      (GfsDomain * domain,
 						      guint d,
 						      gint max_depth,
@@ -135,6 +116,37 @@ void                  gfs_diffusion_cycle            (GfsDomain * domain,
 						      GfsVariable * rhoc,
 						      GfsVariable * axi,
 						      GfsVariable * res);
+
+/* GfsLinearProblem: Object */
+
+struct _GfsLinearProblem {
+  /*< private >*/
+  GfsVariable * rhs_v, * lhs_v, * id;
+  GfsVariable * dia;
+  gdouble beta, omega, nleafs;
+  gint maxsize, maxlevel;
+
+  /*< public >*/
+  GPtrArray * LP;
+  GArray * rhs, * lhs;
+};
+
+GfsLinearProblem * gfs_get_poisson_problem           (GfsDomain * domain,
+						      GfsMultilevelParams * par,
+						      GfsVariable * rhs, 
+						      GfsVariable * lhs,
+						      GfsVariable * dia,
+						      guint maxlevel,
+						      GfsVariable * dp);
+GfsLinearProblem * gfs_linear_problem_new            (GfsVariable * rhs,
+						      GfsVariable * lhs,
+						      GfsVariable * dia,
+						      gdouble omega,
+						      gdouble beta,
+						      guint maxlevel);
+void               gfs_linear_problem_add_stencil    (GfsLinearProblem * lp, 
+						      GArray * stencil);
+void               gfs_linear_problem_destroy        (GfsLinearProblem * lp);
 
 #ifdef __cplusplus
 }

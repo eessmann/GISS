@@ -651,7 +651,8 @@ static void ocean_run (GfsSimulation * sim)
 
   domain = GFS_DOMAIN (sim);
   toplayer = GFS_OCEAN (sim)->toplayer;
-
+  gfs_clock_start (toplayer->timer);
+  
   gfs_simulation_refine (sim);
 
   H = gfs_variable_from_name (domain->variables, "H");
@@ -778,6 +779,8 @@ static void ocean_run (GfsSimulation * sim)
 			 (GtsFunc) gts_object_destroy, NULL);
 
   gts_object_destroy (GTS_OBJECT (div));
+
+  gfs_clock_stop (toplayer->timer);
 }
 
 static void gfs_ocean_class_init (GfsSimulationClass * klass)

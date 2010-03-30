@@ -866,15 +866,16 @@ void gfs_domain_homogeneous_bc (GfsDomain * domain,
  * @max_depth: the maximum depth of the traversal.
  * @ov: a #GfsVariable.
  * @v: a #GfsVariable of which @ov is an homogeneous version.
+ * @lp: a #GfsLinearProblem in which to store the stencil.
  *
  * Gets the stencils corresponding to the homogeneous boundary
- * conditions in @domain for varaible @v
+ * conditions in @domain for variable @v.
  */
 void gfs_domain_homogeneous_bc_stencil (GfsDomain * domain,
 					FttTraverseFlags flags,
 					gint max_depth,
-					GfsVariable * v,
 					GfsVariable * ov,
+					GfsVariable * v,
 					GfsLinearProblem * lp)
 {
   BcData b = { flags, max_depth, v, ov, FTT_XYZ, lp };
@@ -882,8 +883,7 @@ void gfs_domain_homogeneous_bc_stencil (GfsDomain * domain,
   g_return_if_fail (domain != NULL);
   g_return_if_fail (v != NULL);
 
-  gts_container_foreach (GTS_CONTAINER (domain),
-			 (GtsFunc) box_homogeneous_bc_stencil, &b);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_homogeneous_bc_stencil, &b);
 }
 
 typedef struct {

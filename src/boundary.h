@@ -39,6 +39,7 @@ typedef struct _GfsBc         GfsBc;
 struct _GfsBc {
   /*< private >*/
   GtsObject parent;
+  GfsLinearProblem * lp;
 
   /*< public >*/
   GfsBoundary * b;
@@ -47,7 +48,6 @@ struct _GfsBc {
   FttFaceTraverseFunc bc, homogeneous_bc;
   FttFaceTraverseFunc homogeneous_bc_stencil;
   FttFaceTraverseFunc face_bc;
-  GfsLinearProblem * lp; /* HYPRE */
 };
 
 typedef struct _GfsBcClass    GfsBcClass;

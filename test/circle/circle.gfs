@@ -11,7 +11,7 @@
 # resolution.
 #
 # \begin{figure}[htbp]
-# \caption{\label{solution}Solution of the Poisson equation solved by Gerris (left) and Hypre (left).}
+# \caption{\label{solution}Solution of the Poisson equation solved by Gerris (left) and Hypre (right).}
 # \begin{center}
 # \includegraphics[width=0.6\hsize]{solution-gerris.eps}
 # \includegraphics[width=0.6\hsize]{solution-hypre.eps}

@@ -337,24 +337,16 @@ fi
 AM_CONDITIONAL(BUILD_ODE, test x$ode = xtrue)
 
 # Build hypre module if HYPRE is installed
-#AC_CHECK_LIB(HYPRE, HYPRE_IJMatrixCreate, lhypre="true", lhypre="false", [-lm])
-#AC_CHECK_HEADERS(HYPRE.h, hhypre="true", hhypre="false")
-#if test lhypre = false -o hhypre = false; then
-#   AC_MSG_WARN([HYPRE not found. Hypre Module won't be available.])
-#fi
-#AM_CONDITIONAL(BUILD_HYPRE, test lhypre = true -a hhypre = true)
-
-# Build hypre module if HYPRE is installed
-AC_CHECK_LIB(HYPRE, HYPRE_IJMatrixCreate, lhypre="true", lhypre="false", [-lm])
-AC_CHECK_HEADERS(HYPRE.h, hypre="true", hypre="false")
-#AM_CONDITIONAL(HAS_HYPRE, test x$hypre = xtrue)
-
-# hypre module requires HYPRE
-if test x$hypre = xfalse -o x$lhypre = xfalse; then
-   AC_MSG_WARN([HYPRE not found. hypre Module won't be available.])
+if test "x$use_mpicc" = "xyes" ; then # HYPRE needs MPI
+   AC_CHECK_LIB(HYPRE, HYPRE_IJMatrixCreate, hypre="true", hypre="false", [-lm])
+   if test x$hypre = xtrue; then
+      AC_CHECK_HEADERS(HYPRE.h, hypre="true", hypre="false")
+   fi
+   if test x$hypre = xfalse; then
+      AC_MSG_WARN([HYPRE not found. hypre Module won't be available.])
+   fi
 fi
-#AM_CONDITIONAL(BUILD_HYPRE, test x$hypre = xtrue)
-AM_CONDITIONAL(BUILD_HYPRE, test x$hypre = xtrue -a x$lhypre = xtrue)
+AM_CONDITIONAL(BUILD_HYPRE, test x$hypre = xtrue)
 
 dnl header file checks
 AC_CHECK_HEADERS(fenv.h, AC_DEFINE(HAVE_FENV_H))

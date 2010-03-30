@@ -12,12 +12,9 @@
 #
 1 0 GfsPoisson GfsBox GfsGEdge {} {
   Refine 3
-  PARAMS
-  GModule hypre { tolerance = 1e-30 ncyclemax = 100 verbose = 1}
   ApproxProjectionParams { nitermax = 1000 minlevel = 1 tolerance = 1e-30 }
   Solid dumbell.gts
   Init {} { Div = y }
   OutputProjectionStats { istep = 1 } stdout
-  OutputProjectionStats { istep = 1 } stuff.dat
 }
 GfsBox {}

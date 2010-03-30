@@ -105,7 +105,6 @@ struct _GfsDomainClass {
                                         sizeof (gdouble)*((d)->allocated->len - 1))
      
 GfsDomainClass * gfs_domain_class          (void);
-
 void         gfs_domain_cell_traverse         (GfsDomain * domain,
 					       FttTraverseType order,
 					       FttTraverseFlags flags,
@@ -174,12 +173,12 @@ void         gfs_domain_homogeneous_bc        (GfsDomain * domain,
 					       gint max_depth,
 					       GfsVariable * ov,
 					       GfsVariable * v);
-void         gfs_domain_homogeneous_bc_stencil(GfsDomain * domain,
-					       FttTraverseFlags flags,
-					       gint max_depth,
-					       GfsVariable * v,
-					       GfsVariable * ov,
-					       GfsLinearProblem * lp);
+void         gfs_domain_homogeneous_bc_stencil (GfsDomain * domain,
+						FttTraverseFlags flags,
+						gint max_depth,
+						GfsVariable * ov,
+						GfsVariable * v,
+						GfsLinearProblem * lp);
 void         gfs_traverse_and_homogeneous_bc  (GfsDomain * domain,
 					       FttTraverseType order,
 					       FttTraverseFlags flags,

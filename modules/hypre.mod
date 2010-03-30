@@ -58,7 +58,7 @@ struct _HypreSolverParams {
   gdouble tolerance;
 };
 
-/* Parameters to the projection schemes are stored in proj_hp */
+/* Parameters for the projection schemes are stored in proj_hp */
 HypreSolverParams proj_hp;
 
 struct _HypreProblem {
@@ -100,7 +100,6 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
   HYPRE_BoomerAMGSetMaxIter(solver, proj_hp.ncyclemax); /* maximum number of iterations */
   HYPRE_BoomerAMGSetMinIter(solver, proj_hp.ncyclemin); /* minimum number of iterations */
 
-
   /* Now setup and solve! */
   HYPRE_BoomerAMGSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
   HYPRE_BoomerAMGSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);
@@ -109,11 +108,8 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
   par->niter = num_iterations;
 
   /* Prints informations on the residual */
-  if (proj_hp.verbose) {
-  
-    
+  if (proj_hp.verbose) {      
     HYPRE_BoomerAMGGetFinalRelativeResidualNorm(solver, &final_res_norm);
-
     printf("\n");
     printf("Iterations = %d\n", num_iterations);
     printf("Final Relative Residual Norm = %e\n", final_res_norm);
@@ -165,8 +161,6 @@ static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par,
   HYPRE_ParCSRPCGDestroy(solver);
   gfs_domain_timer_stop (domain, "Hypre: PCG_Solver");
 }
-
-
 
 static void hypre_problem_new (HypreProblem * hp, GfsDomain * domain,
 			       gdouble size)
@@ -290,12 +284,10 @@ static void copy_poisson_solution (FttCell * cell, GfsLinearProblem * lp)
 
 static void copy_poisson_problem_solution_to_simulation_tree (GfsDomain * domain,
 							      GfsLinearProblem * lp)
-{
-  
+{  
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) copy_poisson_solution, lp);
 }
-
 
 static void solve_poisson_problem_using_hypre (GfsDomain * domain,
 					       GfsLinearProblem * lp,
@@ -325,32 +317,17 @@ static void correct (FttCell * cell, gpointer * data)
   GFS_VALUE (cell, u) += GFS_VALUE (cell, dp);
 }
 
-/**
- * gfs_hypre_poisson_solve:
- * @domain: the domain over which the poisson problem is solved.
- * @par: the parameters of the poisson problem.
- * @lhs: the variable to use as left-hand side.
- * @rhs: the variable to use as right-hand side.
- * @res: the variable to store the residual
- * @dia: the diagonal weight.
- * @dt: the length of the time-step.
- *
- * Solves the poisson problem over domain using one of the solvers
- * of the HYPRE library.
- *
- * First the poisson problem is extracted as a GfsLinearProblem, which
- * is then fed to the HYPRE library.
- *
- * The solution is then copied to the quadtree.
- */
-static void gfs_hypre_poisson_solve (GfsDomain * domain,
-				     GfsMultilevelParams * par,
-				     GfsVariable * lhs,
-				     GfsVariable * rhs,
-				     GfsVariable * res,
-				     GfsVariable * dia,
-				     gdouble dt)
+static void hypre_poisson_solve (GfsDomain * domain,
+				 GfsMultilevelParams * par,
+				 GfsVariable * lhs,
+				 GfsVariable * rhs,
+				 GfsVariable * res,
+				 GfsVariable * dia,
+				 gdouble dt)
 {
+  if (proj_hp.ncyclemax <= 0)
+    return;
+
   GfsVariable * dp = gfs_temporary_variable (domain);
   gpointer data[2];
 
@@ -452,22 +429,22 @@ static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
 
 static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
 {
-  GtsFileVariable var[] = {
-    {GTS_STRING,  "relax_type",      TRUE},
-    {GTS_STRING,  "solver_type",     TRUE},
-    {GTS_STRING,  "precond_type",    TRUE},
-    {GTS_STRING,  "coarsening_type", TRUE},
-    {GTS_INT,     "cycle_type",      TRUE},
-    {GTS_INT,     "nlevel",          TRUE},
-    {GTS_INT,     "verbose",         TRUE},
-    {GTS_INT,     "ncyclemax",       TRUE},
-    {GTS_INT,     "ncyclemin",       TRUE},
-    {GTS_DOUBLE,  "tolerance",       TRUE},
-    {GTS_INT,     "nrelax",          TRUE},
-    {GTS_NONE}
-  };
   gchar * solver_type = NULL, * relax_type = NULL, * coarsening_type = NULL;
   gchar * precond_type = NULL;
+  GtsFileVariable var[] = {
+    {GTS_STRING,  "relax_type",      TRUE, &relax_type},
+    {GTS_STRING,  "solver_type",     TRUE, &solver_type},
+    {GTS_STRING,  "precond_type",    TRUE, &precond_type},
+    {GTS_STRING,  "coarsening_type", TRUE, &coarsening_type},
+    {GTS_INT,     "cycle_type",      TRUE, &par->cycle_type},
+    {GTS_INT,     "nlevel",          TRUE, &par->nlevel},
+    {GTS_INT,     "verbose",         TRUE, &par->verbose},
+    {GTS_INT,     "ncyclemax",       TRUE, &par->ncyclemax},
+    {GTS_INT,     "ncyclemin",       TRUE, &par->ncyclemin},
+    {GTS_DOUBLE,  "tolerance",       TRUE, &par->tolerance},
+    {GTS_INT,     "nrelax",          TRUE, &par->nrelax},
+    {GTS_NONE}
+  };
 
   /* Default hypre solver parameters */
   /* Boomer AMG is the default solver */
@@ -487,28 +464,17 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
   g_assert (par != NULL);
   g_assert (fp != NULL);
 
-  var[0].data = &relax_type;
-  var[1].data = &solver_type;
-  var[2].data = &precond_type;
-  var[3].data = &coarsening_type;
-  var[4].data = &par->cycle_type;
-  var[5].data = &par->nlevel;
-  var[6].data = &par->verbose;
-  var[7].data = &par->ncyclemax;
-  var[8].data = &par->ncyclemin;
-  var[9].data = &par->tolerance;
-  var[10].data= &par->nrelax;
-
   gts_file_assign_variables (fp, var);
+  if (fp->type == GTS_ERROR)
+    return;
 
   if (solver_type) {
     if (!strcmp (solver_type, "boomer_amg"))
       par->solver_type = HYPRE_BOOMER_AMG;
     else if (!strcmp (solver_type, "pcg"))
       par->solver_type = HYPRE_PCG;
-    else if (fp->type != GTS_ERROR)
-      gts_file_variable_error (fp, var, "solver_type",
-			       "unknown Hypre Solver `%s'", solver_type);
+    else
+      gts_file_variable_error (fp, var, "solver_type", "unknown solver type `%s'", solver_type);
     g_free (solver_type);
   }
 
@@ -520,11 +486,13 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
       par->precond_type = HYPRE_PARASAILS_PRECOND;
     else if (!strcmp (precond_type, "none"))
       par->precond_type = NO_PRECOND;
-    else if (fp->type != GTS_ERROR)
-      gts_file_variable_error (fp, var, "precond_type",
-			       "unknown Hypre Preconditioner `%s'", precond_type);
+    else
+      gts_file_variable_error (fp, var, "precond_type", 
+			       "unknown preconditioner `%s'", precond_type);
     g_free (precond_type);
   }
+  if (fp->type == GTS_ERROR)
+    return;
 
   if (relax_type) {
     if (!strcmp (relax_type, "jacobi"))
@@ -543,17 +511,17 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
       par->relax_type = 7;
     else if (!strcmp (relax_type, "direct"))
       par->relax_type = 9;
-    else if (fp->type != GTS_ERROR)
-      gts_file_variable_error (fp, var, "relax_type",
-			       "unknown Hypre Relax `%s'", relax_type);
+    else
+      gts_file_variable_error (fp, var, "relax_type", "unknown relax type `%s'", relax_type);
     g_free (relax_type);
   }
+  if (fp->type == GTS_ERROR)
+    return;
 
   if (coarsening_type) {
-    if (par->solver_type != HYPRE_BOOMER_AMG) {
-      printf("Warning *** Coarsening algorithms are only for the BoomerAMG Solver !!\n");
-      printf("Warning *** None will be used with the selected solver.\n");
-    }
+    if (par->solver_type != HYPRE_BOOMER_AMG)
+      g_warning ("coarsening algorithms are only for the BoomerAMG Solver !!\n"
+		 "none will be used with the selected solver");
 
     if (!strcmp (coarsening_type, "cljp"))
       par->coarsening_type = 0;
@@ -569,49 +537,30 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
       par->coarsening_type = 21;
     else if (!strcmp (coarsening_type, "cgc_e"))
       par->coarsening_type = 22;
-    else if (fp->type != GTS_ERROR)
+    else
       gts_file_variable_error (fp, var, "coarsening_type",
-			       "unknown Hypre Coarsening `%s'", coarsening_type);
+			       "unknown coarsening type `%s'", coarsening_type);
     g_free (coarsening_type);
   }
+  if (fp->type == GTS_ERROR)
+    return;
 
   if ( par->cycle_type < 1 || (par->cycle_type > 8 && par->cycle_type < 11) ||
        par->cycle_type > 14)
     gts_file_variable_error (fp, var, "cycle_type",
-			     "unknown Cycle Type `%i'", par->cycle_type);
-  
-  if (par->nlevel < 0)
-    gts_file_variable_error (fp, var, "nlevel",
-			     "error in hypre solver parameter nlevel < 0.");
-
-  if (par->verbose != 1 && par->verbose != 0)
-    gts_file_variable_error (fp, var, "verbose",
-			     "error in hypre solver parameter verbose != 0 or 1: `%i'",
-			     par->verbose);
-  
-  if (par->ncyclemax < 1)
-    gts_file_variable_error (fp, var, "verbose",
-			     "error in hypre solver parameter ncyclemax can't be < 1  `%i'",
-			     par->ncyclemax);
-
-  if (par->ncyclemin < 1)
-    gts_file_variable_error (fp, var, "verbose",
-			     "error in hypre solver parameter ncyclemin can't be < 1  `%i'",
-			     par->ncyclemin);
-
-  if (par->tolerance <= 0.) {
+			     "unknown cycle type `%i'", par->cycle_type);
+  else if (par->nlevel < 0)
+    gts_file_variable_error (fp, var, "nlevel", "nlevel cannot be < 0");
+  else if (par->ncyclemax < 0)
+    gts_file_variable_error (fp, var, "ncyclemax", "ncyclemax cannot be < 0");
+  else if (par->ncyclemin < 0)
+    gts_file_variable_error (fp, var, "ncyclemin", "ncyclemin cannot be < 0");
+  else if (par->tolerance <= 0.)
     gts_file_variable_error (fp, var, "tolerance",
-			     "tolerance `%g' must be strictly positive",
-			     par->tolerance);
-    return;
-  }
-
-  if (par->nrelax <= 0.) {
+			     "tolerance must be strictly positive");
+  else if (par->nrelax <= 0.)
     gts_file_variable_error (fp, var, "nrelax",
-			     "nrelax `%i' must be strictly positive",
-			     par->nrelax);
-    return;
-  }
+			     "nrelax must be strictly positive");
 }
 
 /* Initialize module */
@@ -620,6 +569,7 @@ void          gfs_module_write    (FILE * fp);
 
 /* only define gfs_module_name for "official" modules (i.e. those installed in
    GFS_MODULES_DIR) */
+const gchar gfs_module_name[] = "hypre";
 const gchar * g_module_check_init (void);
 
 const gchar * g_module_check_init (void)
@@ -634,8 +584,8 @@ void gfs_module_read (GtsFile * fp, GfsSimulation * sim)
   hypre_solver_read (&proj_hp, fp);
   
   /* initialise the poisson cycle hook */
-  sim->approx_projection_params.poisson_solve = gfs_hypre_poisson_solve;
-  sim->projection_params.poisson_solve = gfs_hypre_poisson_solve;
+  sim->approx_projection_params.poisson_solve = hypre_poisson_solve;
+  sim->projection_params.poisson_solve = hypre_poisson_solve;
 }
 
 void gfs_module_write (FILE * fp)

@@ -3,14 +3,15 @@ if  ! $donotrun; then
 
     for solver in gerris hypre; do
 	rm -f time proj
-	awk -v solver=$solver '{if ($1 == "PARAMS") {
-                                  if ( solver == "hypre") {
-                                     print "  GModule hypre { tolerance = 1e-30 solver_type = boomer_amg  ncyclemax = CYCLE ncyclemin = CYCLE }"}
-                                  if ( solver == "gerris") {
-                                     print "  ApproxProjectionParams { tolerance = 1e-30 nitermin = CYCLE nitermax = CYCLE }"}
-                                }
-                                else {print $0}}' $1 > tmp.gfs
-
+	awk -v solver=$solver '{
+          if ($1 == "PARAMS") {
+	      if ( solver == "hypre") {
+		  print "  GModule hypre { tolerance = 1e-30 solver_type = boomer_amg  ncyclemax = CYCLE ncyclemin = CYCLE }"}
+	      if ( solver == "gerris") {
+		  print "  ApproxProjectionParams { tolerance = 1e-30 nitermin = CYCLE nitermax = CYCLE }"}
+	  }
+	  else {print $0}
+	}' $1 > tmp.gfs
     
 	for cycle in 0 1 2 3 4 5 6 7 8 9 10 ; do
 	    if ( gerris2D -DLEVEL=8 -DCYCLE=$cycle -DSOLVER=$solver tmp.gfs ) ; then :
@@ -28,13 +29,13 @@ if  ! $donotrun; then
 	done
 	
 	if awk 'BEGIN { n = 0 }
-                      {
-                        l[n] = $1; n1[n] = $2; n2[n] = $3; ni[n++] = $4;
-                      }
+                {
+		    l[n] = $1; n1[n] = $2; n2[n] = $3; ni[n++] = $4;
+		}
                 END {
-                      for (i = 1; i < n; i++)
-                       print l[i] " " log(n1[i-1]/n1[i])/log(2.) " " log(n2[i-1]/n2[i])/log(2.) " " log(ni[i-1]/ni[i])/log(2.);
-                    }' < error > order-$solver; then :
+		    for (i = 1; i < n; i++)
+			print l[i] " " log(n1[i-1]/n1[i])/log(2.) " " log(n2[i-1]/n2[i])/log(2.) " " log(ni[i-1]/ni[i])/log(2.);
+		}' < error > order-$solver; then :
 	else
 	    exit 1
 	fi
@@ -45,19 +46,22 @@ if  ! $donotrun; then
 fi
 
 
-
 if cat <<EOF | gnuplot ; then :
     set term postscript eps color lw 3 solid 20
     set output 'residual.eps'
     set xlabel 'CPU time'
     set ylabel 'Maximum residual'
     set logscale y
-    plot 'res-7.ref' u 2:3 t 'Ref' w lp, 'res-7-gerris' u 2:3 t 'Gerris' w lp, 'res-7-hypre' u 2:3 t 'Hypre' w lp
+    plot 'res-7.ref' u 2:3 t 'Ref' w lp, \
+	'res-7-gerris' u 2:3 t 'Gerris' w lp, \
+	'res-7-hypre' u 2:3 t 'Hypre' w lp
     set output 'rate.eps'
     set xlabel 'V-cycle'
     set ylabel 'Cumulative residual reduction factor'
     unset logscale
-    plot 'res-7.ref' u 1:4 t 'Ref' w lp, 'res-7-gerris' u 1:4 t 'Gerris' w lp, 'res-7-hypre' u 1:4 t 'Hypre' w lp
+    plot 'res-7.ref' u 1:4 t 'Ref' w lp, \
+	'res-7-gerris' u 1:4 t 'Gerris' w lp, \
+	'res-7-hypre' u 1:4 t 'Hypre' w lp
     set output 'error.eps'
     set xlabel 'Level'
     set ylabel 'Error norms'
