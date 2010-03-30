@@ -2,10 +2,7 @@ if  ! $donotrun; then
     rm -f error
 
     for solver in gerris hypre; do
-
-	echo "0 0.00000000" > time
-	echo "0 1.776e+02 0" > proj
-
+	rm -f time proj
 	awk -v solver=$solver '{if ($1 == "PARAMS") {
                                   if ( solver == "hypre") {
                                      print "  GModule hypre { tolerance = 1e-30 solver_type = boomer_amg  ncyclemax = CYCLE ncyclemin = CYCLE }"}
@@ -15,16 +12,16 @@ if  ! $donotrun; then
                                 else {print $0}}' $1 > tmp.gfs
 
     
-	for cycle in 1 2 3 4 5 6 7 8 9 10 ; do
-	    if ( gerris2D -DLEVEL=7 -DCYCLE=$cycle -DSOLVER=$solver tmp.gfs ) ; then :
+	for cycle in 0 1 2 3 4 5 6 7 8 9 10 ; do
+	    if ( gerris2D -DLEVEL=8 -DCYCLE=$cycle -DSOLVER=$solver tmp.gfs ) ; then :
 	    else
 		exit 1
 	    fi     
 	done
-	join time proj | awk '{if (NR == 1) {print $0; old = $3} else {print $1" "$2" "$3" "old/$3; old=$3}}' > res-7
+	join time proj | awk '{if (NR == 1) {print $0; old = $3} else {print $1,$2,$3,old/$3; old=$3}}' > res-7
 	rm -f error order proj time runtime status
 	for level in 3 4 5 6 7 8; do
-	    if ( gerris2D -DLEVEL=$level -DCYCLE=10 -DSOLVER=$solver  tmp.gfs ) ; then :
+	    if ( gerris2D -DLEVEL=$level -DCYCLE=10 -DSOLVER=$solver tmp.gfs ) ; then :
 	    else
 		exit 1
 	    fi

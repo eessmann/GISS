@@ -2,8 +2,8 @@
 #
 # Description:
 #
-# Same as the previous test but in order to test the performance
-# of the hypre solvers with adaptive meshes, two levels of
+# Same as the previous test but in order to test the accuracy of the
+# gradient operator at coarse/fine boundaries, two levels of
 # refinement are added in a circle centered on the origin and of
 # radius 0.25.
 #
@@ -55,25 +55,23 @@
       return -M_PI*M_PI*(k*k + l*l)*sin (M_PI*k*x)*sin (M_PI*l*y);
     }
   }
- OutputTime { istep = 1 } {
-    awk '{if ($2 == 1) {print "CYCLE " $8}}' >> time
+  OutputTime { istep = 1 } {
+    awk '{if ($2 == 1) print CYCLE, $8;}' >> time
   }
   OutputProjectionStats { start = end } {
-    awk '{
-      
-      if ($1 == "residual.infty:") print "CYCLE "$3 " " $4;
-    }' >> proj
+    awk '{if ($1 == "residual.infty:") print CYCLE, $3, $4;}' >> proj
   }
   OutputErrorNorm { start = end } {
-    awk '{print LEVEL " " $5 " " $7 " " $9}' >> error 
+    awk '{print LEVEL, $5, $7, $9}' >> error 
   } { v = P } {
     s = (sin (M_PI*3.*x)*sin (M_PI*3.*y))
     unbiased = 1
   }
+  OutputSimulation { start = end } end-SOLVER.gfs
 }
 GfsBox {
-   left = Boundary { BcNeumann P (6*M_PI*cos(M_PI*3.*x)*sin (M_PI*3.*y))}
-   right = Boundary { BcNeumann P (6*M_PI*cos(M_PI*3.*x)*sin (M_PI*3.*y))}
-   top = Boundary { BcNeumann P (6*M_PI*cos(M_PI*3.*x)*sin (M_PI*3.*y))}
-   bottom = Boundary { BcNeumann P (6*M_PI*cos(M_PI*3.*x)*sin (M_PI*3.*y))}
+   left =   Boundary { BcNeumann P (- 3.*M_PI*cos(M_PI*3.*x)*sin (M_PI*3.*y)) }
+   right =  Boundary { BcNeumann P (  3.*M_PI*cos(M_PI*3.*x)*sin (M_PI*3.*y)) }
+   top =    Boundary { BcNeumann P (  3.*M_PI*cos(M_PI*3.*y)*sin (M_PI*3.*x)) }
+   bottom = Boundary { BcNeumann P (- 3.*M_PI*cos(M_PI*3.*y)*sin (M_PI*3.*x)) }
 }

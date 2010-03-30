@@ -67,16 +67,13 @@
     }
   }
   OutputTime { istep = 1 } {
-    awk '{if ($2 == 1) {print "CYCLE " $8}}' >> time
+    awk '{if ($2 == 1) print CYCLE, $8;}' >> time
   }
   OutputProjectionStats { start = end } {
-    awk '{
-      
-      if ($1 == "residual.infty:") print "CYCLE "$3 " " $4;
-    }' >> proj
+    awk '{if ($1 == "residual.infty:") print CYCLE, $3, $4;}' >> proj
   }
   OutputErrorNorm { start = end } {
-    awk '{print LEVEL " " $5 " " $7 " " $9}' >> error 
+    awk '{print LEVEL, $5, $7, $9}' >> error 
   } { v = P } {
     s = (sin (M_PI*3.*x)*sin (M_PI*3.*y))
     unbiased = 1
@@ -84,8 +81,8 @@
   OutputSimulation { start = end } end-SOLVER.gfs
 }
 GfsBox {
-   left = Boundary { BcDirichlet P 0}
-   right = Boundary { BcDirichlet P 0}
-   top = Boundary { BcDirichlet P 0}
-   bottom = Boundary { BcDirichlet P 0}
+   left =   Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
+   right =  Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
+   top =    Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
+   bottom = Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
 }
