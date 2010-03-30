@@ -6,12 +6,12 @@
 wdir=$HOME/local/src/gerris-tests
 
 gerris=gerris-stable
-gfsview=gfsview-mainline
+gfsview=gfsview-stable
 gts=gts-mainline
 
-darcs_gerris=$HOME/local/src/darcs/gerris
 darcs_gts=$HOME/local/src/darcs/gts
-darcs_gfsview=$HOME/local/src/darcs/gfsview
+darcs_gerris=popinet@patch-tag.com:/r/popinet
+darcs_gfsview=popinet@patch-tag.com:/r/popinet
 
 gtsweb=popinet,gts@web.sourceforge.net:/home/groups/g/gt/gts/htdocs
 gerrisweb=popinet,gfs@web.sourceforge.net:/home/groups/g/gf/gfs/htdocs
@@ -33,24 +33,6 @@ export DEB_DH_SHLIBDEPS_ARGS_ALL="-- -S$wdir/$gts/debian/libgts-snapshot -S$wdir
 # kill all running rsync processes. Assumes the only ones would be
 # hanging rsync from previous calls of this script!!
 killall rsync 2> /dev/null
-
-# synchronise devel branches
-darcs_synchronise()
-{
-    if ( cd $HOME/local/src/darcs/$1/$1-devel && \
-	darcs pull -a $gerrisweb/darcs/$1/$1-devel && \
-	darcs push -a $gerrisweb/darcs/$1/$1-devel ) > $wdir/sync 2>&1 ; then :
-    else
-	echo
-        echo ====== $HOME/local/src/darcs/$1/$1-devel: sync failed ======
-	echo
-	cat $wdir/sync
-	exit 1
-    fi
-}
-
-darcs_synchronise gerris
-darcs_synchronise gfsview
 
 # argument #1: repository to upgrade
 # argument #2: package name
@@ -79,28 +61,6 @@ darcs_upgrade()
 	else
 	    return 1;
 	fi	
-    fi
-}
-
-# Creates signed Packages and Release files in a debian repository
-debian_release()
-{
-    cat <<EOF > Release
-Archive: stable
-Component: contrib
-Origin: Stephane Popinet
-Label: stable
-Architecture: i386
-EOF
-    if ( rm -f Release.gpg Packages.gz Packages && \
-	apt-ftparchive packages . > Packages && \
-	gzip -9c < Packages > Packages.gz && \
-	apt-ftparchive release . | awk '{if ($3 != "Release") print $0;}' >> Release && \
-	gpg -abs -o Release.gpg Release && \
-	cp -f $archive_key . ) ; then
-	return 0;
-    else
-	return 1;
     fi
 }
 
@@ -294,8 +254,3 @@ if ( $build_gerris || $build_gfsview ) ; then
        fi
    fi
 fi
-
-# Darcs mirroring
-rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gfsview/* $gerrisweb/darcs/gfsview/
-rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gerris/* $gerrisweb/darcs/gerris
-rsync -az --delete --rsh=ssh $HOME/local/src/darcs/gts/* $gtsweb/darcs
