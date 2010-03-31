@@ -958,6 +958,22 @@ static void terrain_coarse_fine (FttCell * parent, GfsVariable * v)
   }
 }
 
+static void hn_coarse_fine (FttCell * parent, GfsVariable * v)
+{
+  FttCellChildren child;
+  ftt_cell_children (parent, &child);
+  guint i, n = 0;
+  for (i = 0; i < FTT_CELLS; i++)
+    if (child.c[i])
+      n++;
+  if (n > 0) {
+    guint hn = GFS_VALUE (parent, v)/n;
+    for (i = 0; i < FTT_CELLS; i++)
+      if (child.c[i])
+	GFS_VALUE (child.c[i], v) = hn;
+  }
+}
+
 static void terrain_refine (GfsRefine * refine, GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
@@ -1101,6 +1117,7 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
   g_free (name);
   name = g_strjoin (NULL, t->name, "n", NULL);
   t->hn = gfs_domain_get_or_add_variable (domain, name, "Terrain samples #");
+  t->hn->coarse_fine = hn_coarse_fine;
   g_free (name);
   name = g_strjoin (NULL, t->name, "dmin", NULL);
   t->hdmin = gfs_domain_get_or_add_variable (domain, name, "Minimum data height");
