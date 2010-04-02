@@ -107,9 +107,13 @@ if cat <<EOF | python ; then :
 from check import *
 from sys import *
 if (Curve('res-7-gerris',1,3) - Curve('res-7.ref',1,3)).max() > 1e-8 or\
-   (Curve('res-7-hypre',1,3) - Curve('res-7.ref',1,6)).max() > 1e-8 or\
+   (Curve('res-7-hypre',1,3) - Curve('res-7.ref',1,7)).max() > 1e-8 or\
    (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max() > 1e-6 or\
-   (Curve('error-hypre',1,4) - Curve('error.ref',1,7)).max() > 1e-6:
+   (Curve('error-hypre',1,4) - Curve('error.ref',1,8)).max() > 1e-6:
+    print (Curve('res-7-gerris',1,3) - Curve('res-7.ref',1,3)).max()
+    print (Curve('res-7-hypre',1,3) - Curve('res-7.ref',1,7)).max()
+    print (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max()
+    print (Curve('error-hypre',1,4) - Curve('error.ref',1,8)).max()
     exit(1)
 EOF
 else
