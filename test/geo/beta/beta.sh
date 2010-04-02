@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     if gerris3D $1; then :
     else
 	exit 1

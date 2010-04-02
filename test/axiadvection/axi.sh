@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     gerris2D axiadvection.gfs | gfsview-batch2D -s vof.gfv > vof.gnu
 fi
 

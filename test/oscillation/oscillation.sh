@@ -1,6 +1,6 @@
 levels="5 6 7 8"
 
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     rm -f fit
     for level in $levels; do
 	if gerris2D -D LEVEL=$level oscillation.gfs >> fit; then :

@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     for model in 0 1 2 3; do
 	if sed "s/MODEL/$model/g" < $1 | gerris2D -; then :
 	else

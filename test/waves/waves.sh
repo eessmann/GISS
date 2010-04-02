@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     rm -f correlation res-* sim-*
     for level in 5 6 7; do
 	if sed "s/LEVEL/$level/g" < $1 | gerris2D - | \

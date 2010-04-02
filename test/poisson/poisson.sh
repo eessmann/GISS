@@ -1,4 +1,4 @@
-if  ! $donotrun; then
+if test x$donotrun != xtrue; then
     rm -f error
 
     for solver in gerris hypre; do

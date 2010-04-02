@@ -1,6 +1,6 @@
 levels="5 6 7 8 9"
 
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     for level in $levels; do
 	if gerris2D -DLEVEL=$level parabola.gfs; then :
 	else

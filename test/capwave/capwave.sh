@@ -1,6 +1,6 @@
 levels="3 4 5 6"
 
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     for level in $levels; do
 	if sed "s/LEVEL/$level/g" < $1 | gerris2D -; then
 	    :

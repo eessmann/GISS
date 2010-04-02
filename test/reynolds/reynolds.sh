@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     rm -f reynolds
 
     for level in 5 6 7; do

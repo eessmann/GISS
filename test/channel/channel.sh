@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     shapes channel | transform --revert --scale 4 --tx 1.5 > channel.gts
     for level in 5 6 7; do
 	if sed "s/LEVEL/$level/g" < $1 | \

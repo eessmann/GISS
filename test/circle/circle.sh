@@ -1,5 +1,4 @@
-if ! $donotrun; then
-    
+if test x$donotrun != xtrue; then    
     for solver in gerris hypre; do
 	
 	awk -v solver=$solver '{

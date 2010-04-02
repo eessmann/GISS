@@ -1,4 +1,4 @@
-if ! $donotrun; then 
+if test x$donotrun != xtrue; then 
     shapes ellipse > cylinder.gts
     if gerris2D strouhal.gfs > strouhal.res; then :
     else

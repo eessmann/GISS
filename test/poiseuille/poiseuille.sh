@@ -1,6 +1,6 @@
 levels="3 4 5 6"
 
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     rm -f error
     for level in $levels; do
 	if gerris2D -DLEVEL=$level poiseuille.gfs >> error; then :

@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     rm -f r0 r1 r2
 
     for r in 0 1 2; do

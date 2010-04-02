@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     for La in 120 1200 12000; do
 	tmax=`echo $La | awk '{print 0.8*0.8/sqrt(0.8/$1)}'`
 	if sed "s/end = TMAX/iend = 1/g" < $1 | gerris2D -DLEVEL=5 -DLAPLACE=$La -DDT=0 - |\

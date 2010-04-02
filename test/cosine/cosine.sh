@@ -1,7 +1,7 @@
 levels="4 5 6 7"
 alphas="45 90"
 
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     for alpha in $alphas; do
 	for i in $levels; do
 	    if gerris2D -DLEVEL=$i -DALPHA=$alpha cosine.gfs 2> log-$i-$alpha; then :

@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     for order in 1 2 ; do
 	if gerris2D -DORDER=$order hexagon.gfs; then :
 	else

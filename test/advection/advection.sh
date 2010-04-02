@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     rm -f error
     for level in 4 5 6 7 8; do
 	if sed "s/LEVEL/$level/g" < $1 | \

@@ -1,4 +1,4 @@
-if ! $donotrun; then
+if test x$donotrun != xtrue; then
     awk 'BEGIN{ for (x = 0.5; x <= 3.; x += 1./256.) print x, 0., 0.;}' > axis
     for Re in 100; do
 	if gerris2D -DLEVEL=12 -DRE=$Re viscous.gfs; then :

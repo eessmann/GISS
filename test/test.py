@@ -6,7 +6,7 @@ sys.path.append("../doc/examples")
 import gfs2tex
 from datetime import *
 
-env = "export PYTHONPATH=$PYTHONPATH:" + os.getcwd() + " && export donotrun=false &&"
+env = "export PYTHONPATH=$PYTHONPATH:" + os.getcwd() + " &&"
 system = commands.getoutput('uname -o -n -m')
 path = commands.getoutput('which gerris2D')
 version = commands.getoutput("""gerris2D -V 2>&1 | head -1 | cut -d' ' -f6-""")
