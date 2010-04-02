@@ -172,37 +172,20 @@ void gfs_multilevel_params_stats_write (GfsMultilevelParams * par,
 
 /**
  * gfs_linear_problem_new:
- * @rhs: the right-hand-side variable.
- * @lhs: the left-hand-side variable.
- * @dia: the diagonal weight.
+ * @domain: a #GfsDomain.
  *
  * Returns: a new #GfsLinearProblem.
  */
-GfsLinearProblem * gfs_linear_problem_new (GfsVariable * rhs,
-					   GfsVariable * lhs, GfsVariable * dia,
-					   gdouble omega, gdouble beta, guint maxlevel)
+GfsLinearProblem * gfs_linear_problem_new (GfsDomain * domain)
 {
-  GfsLinearProblem * lp = g_malloc (sizeof (GfsLinearProblem));
+  g_return_val_if_fail (domain != NULL, NULL);
 
-  g_return_val_if_fail (rhs != NULL, NULL);
-  g_return_val_if_fail (lhs != NULL, NULL);
-  g_return_val_if_fail (dia != NULL, NULL);
+  GfsLinearProblem * lp = g_malloc (sizeof (GfsLinearProblem));
 
   lp->rhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
   lp->lhs = g_array_new (FALSE, FALSE, sizeof (gdouble));
   lp->LP = g_ptr_array_new ();
-
-  lp->maxsize = 0;
-  lp->nleafs = 0;
-
-  lp->rhs_v = rhs;
-  lp->lhs_v = lhs;
-  lp->id = gfs_temporary_variable (rhs->domain);
-  lp->dia = dia;
-  
-  lp->omega = omega;
-  lp->beta = beta;
-  lp->maxlevel =  maxlevel;
+  lp->id = gfs_temporary_variable (domain);
 
   return lp;
 }
@@ -244,7 +227,13 @@ void gfs_linear_problem_destroy (GfsLinearProblem * lp)
   g_ptr_array_free (lp->LP, TRUE);
 }
 
-static void relax_stencil (FttCell * cell, GfsLinearProblem * lp)
+typedef struct {
+  GfsLinearProblem * lp;
+  GfsVariable * dia;
+  gint maxlevel;
+} RelaxStencilParams;
+
+static void relax_stencil (FttCell * cell, RelaxStencilParams * p)
 {
   GfsGradient g;
   FttCellNeighbors neighbor;
@@ -253,56 +242,62 @@ static void relax_stencil (FttCell * cell, GfsLinearProblem * lp)
   
   GArray * stencil = gfs_stencil_new ();
 
-  gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, lp->id), 0.);
+  gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, p->lp->id), 0.);
 
-  g.a = GFS_VALUE (cell, lp->dia);
+  g.a = GFS_VALUE (cell, p->dia);
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
     if (f.neighbor) {
-      gfs_face_weighted_gradient_stencil (&f, &ng, lp->maxlevel, lp->id, stencil);
+      gfs_face_weighted_gradient_stencil (&f, &ng, p->maxlevel, p->lp->id, stencil);
       g.a += ng.a;
     }
   }
 
   if (g.a > 0.)
-    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, lp->id),  -g.a);
+    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, p->lp->id),  -g.a);
   else {
     gfs_stencil_destroy (stencil);
     stencil = gfs_stencil_new ();
-    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, lp->id), 1.);
-    g_array_index (lp->rhs, gdouble, (gint) GFS_VALUE (cell, lp->id)) = 0.;
+    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, p->lp->id), 1.);
+    g_array_index (p->lp->rhs, gdouble, (gint) GFS_VALUE (cell, p->lp->id)) = 0.;
   }
 
-  gfs_linear_problem_add_stencil (lp, stencil);
+  gfs_linear_problem_add_stencil (p->lp, stencil);
 }
 
-static void leaves_numbering (FttCell * cell, GfsLinearProblem * lp)
+typedef struct {
+  GfsLinearProblem * lp;
+  GfsVariable * lhs, * rhs;
+  guint nleafs;
+  gint maxlevel;
+} NumberingParams;
+
+static void leaves_numbering (FttCell * cell, NumberingParams * p)
 { 
-  GFS_VALUE (cell, lp->id) = (gdouble) lp->nleafs++;
-  g_array_append_val (lp->lhs, GFS_VALUE (cell, lp->lhs_v));
-  g_array_append_val (lp->rhs, GFS_VALUE (cell, lp->rhs_v));
+  GFS_VALUE (cell, p->lp->id) = p->nleafs++;
+  g_array_append_val (p->lp->lhs, GFS_VALUE (cell, p->lhs));
+  g_array_append_val (p->lp->rhs, GFS_VALUE (cell, p->rhs));
 }
 
-static void bc_number (FttCellFace * f, GfsLinearProblem * lp)
+static void bc_number (FttCellFace * f, NumberingParams * p)
 {
-  GFS_VALUE(f->cell, lp->id) = (gdouble) lp->nleafs++;
-  g_array_append_val (lp->lhs, GFS_VALUE (f->cell, lp->lhs_v));
-  g_array_append_val (lp->rhs, GFS_VALUE (f->cell, lp->rhs_v));
+  GFS_VALUE (f->cell, p->lp->id) = p->nleafs++;
+  g_array_append_val (p->lp->lhs, GFS_VALUE (f->cell, p->lhs));
+  g_array_append_val (p->lp->rhs, GFS_VALUE (f->cell, p->rhs));
 }
 
-static void bc_leaves_numbering (GfsBox * box, GfsLinearProblem * lp)
+static void bc_leaves_numbering (GfsBox * box, NumberingParams * p)
 { 
   FttDirection d;
   
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOUNDARY (box->neighbor[d])) {
       GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
-      b->type = GFS_BOUNDARY_CENTER_VARIABLE;
       ftt_face_traverse_boundary (b->root, b->d,
-				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, lp->maxlevel,
-				  (FttFaceTraverseFunc) bc_number, lp);   
+				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, p->maxlevel,
+				  (FttFaceTraverseFunc) bc_number, p);
     }
 }
 
@@ -313,8 +308,8 @@ static void bc_leaves_numbering (GfsBox * box, GfsLinearProblem * lp)
  * @rhs: the variable to use as right-hand side
  * @lhs: the variable to use as left-hand side
  * @dia: the diagonal weight
- * @v: a #GfsVariable of which @lhs is an homogeneous version.
  * @maxlevel: the maximum level to consider (or -1).
+ * @v: a #GfsVariable of which @lhs is an homogeneous version.
  *
  * Extracts the poisson problem associated with @lhs, @rhs and the
  * boundary conditions defined in the parameter file.
@@ -328,30 +323,30 @@ static void bc_leaves_numbering (GfsBox * box, GfsLinearProblem * lp)
  * the matrix of the poisson problem. The matrix is stored as an array
  * of #GfsStencil.
  */
-GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain, GfsMultilevelParams * par,
+GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
 					    GfsVariable * rhs, GfsVariable * lhs,
-					    GfsVariable * dia, guint maxlevel,
+					    GfsVariable * dia, gint maxlevel,
 					    GfsVariable * v)
 {
   gfs_domain_timer_start (domain, "get_poisson_problem");
 
-  GfsLinearProblem * lp = gfs_linear_problem_new (rhs, lhs, dia, par->omega, par->beta, maxlevel);
+  GfsLinearProblem * lp = gfs_linear_problem_new (domain);
   
   /* Cell numbering */
+  NumberingParams np = { lp, lhs, rhs, 0, maxlevel };
+  /* fixme: should it be FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
-			    (FttCellTraverseFunc) leaves_numbering, lp);
-
-  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leaves_numbering, lp);
-  /* End - Cell numbering */
+			    (FttCellTraverseFunc) leaves_numbering, &np);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leaves_numbering, &np);
  
   /* Creates stencils on the fly */
+  RelaxStencilParams p = { lp, dia, maxlevel };
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-			    maxlevel, (FttCellTraverseFunc) relax_stencil, lp);
+			    maxlevel, (FttCellTraverseFunc) relax_stencil, &p);
 
   gfs_domain_homogeneous_bc_stencil (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 				     maxlevel, lhs, v, lp);
-  
-  /*End - Creates stencils on the fly */
+
   gfs_domain_timer_stop (domain, "get_poisson_problem");
 
   return lp;
@@ -820,26 +815,6 @@ static void get_from_below_2D (FttCell * cell, const GfsVariable * v)
     if (child.c[i])
       val += GFS_VARIABLE (child.c[i], v->i);
   GFS_VARIABLE (cell, v->i) = val;
-}
-
-typedef struct {
-  GfsVariable * s, * r, * u, * v;
-  gdouble srs, rs2, beta;
-} MRSData;
-
-static void compute_beta (FttCell * cell, MRSData * data)
-{
-  gdouble rs = GFS_VALUE (cell, data->r) - GFS_VALUE (cell, data->s);
-  data->rs2 += rs*rs;
-  data->srs -= GFS_VALUE (cell, data->s)*rs;
-}
-
-static void update_sv (FttCell * cell, MRSData * data)
-{
-  GFS_VALUE (cell, data->s) += data->beta*(GFS_VALUE (cell, data->r) - GFS_VALUE (cell, data->s));
-  GFS_VALUE (cell, data->v) += data->beta*(GFS_VALUE (cell, data->u) - GFS_VALUE (cell, data->v));
-  GFS_VALUE (cell, data->r) = GFS_VALUE (cell, data->s);
-  GFS_VALUE (cell, data->u) = GFS_VALUE (cell, data->v);
 }
 
 static void relax_loop (GfsDomain * domain, 

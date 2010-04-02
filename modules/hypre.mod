@@ -271,17 +271,15 @@ static void hypre_problem_copy (HypreProblem * hp, GfsLinearProblem * lp)
   free(rows);
 }
 
-static void copy_poisson_solution (FttCell * cell, GfsLinearProblem * lp)
-{
-  GFS_VALUE (cell, lp->lhs_v) = g_array_index (lp->lhs, gdouble,
-					       (gint) GFS_VALUE (cell, lp->id));
-}
+typedef struct {
+  GfsLinearProblem * lp;
+  GfsVariable * lhs;
+} CopyParams;
 
-static void copy_poisson_problem_solution_to_simulation_tree (GfsDomain * domain,
-							      GfsLinearProblem * lp)
-{  
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) copy_poisson_solution, lp);
+static void copy_poisson_solution (FttCell * cell, CopyParams * p)
+{
+  GFS_VALUE (cell, p->lhs) = g_array_index (p->lp->lhs, gdouble, 
+					    (gint) GFS_VALUE (cell, p->lp->id));
 }
 
 static void solve_poisson_problem_using_hypre (GfsDomain * domain,
@@ -329,11 +327,13 @@ static void hypre_poisson_solve (GfsDomain * domain,
     GfsVariable * dp = gfs_temporary_variable (domain);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, dp);
-    GfsLinearProblem * lp = gfs_get_poisson_problem (domain, par, res, dp, dia, -1, lhs);
+    GfsLinearProblem * lp = gfs_get_poisson_problem (domain, res, dp, dia, -1, lhs);
  
     solve_poisson_problem_using_hypre (domain, lp, par);
 
-    copy_poisson_problem_solution_to_simulation_tree (domain, lp);
+    CopyParams p = { lp, dp };
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) copy_poisson_solution, &p);
 
     gfs_linear_problem_destroy (lp);
 

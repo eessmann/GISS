@@ -932,7 +932,9 @@ static void terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 	GFS_VALUE (child.c[n], v) = G_MAXDOUBLE;
   }
   else {
+#if !FTT_2D
     gdouble size = ftt_cell_size (parent)/4.;
+#endif
     for (n = 0; n < FTT_CELLS; n++)
       if (child.c[n]) {
 	gdouble hc[NM];

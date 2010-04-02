@@ -120,30 +120,19 @@ void                  gfs_diffusion_cycle            (GfsDomain * domain,
 /* GfsLinearProblem: Object */
 
 struct _GfsLinearProblem {
-  /*< private >*/
-  GfsVariable * rhs_v, * lhs_v, * id;
-  GfsVariable * dia;
-  gdouble beta, omega, nleafs;
-  gint maxsize, maxlevel;
-
-  /*< public >*/
   GPtrArray * LP;
   GArray * rhs, * lhs;
+  GfsVariable * id;
+  guint maxsize;
 };
 
 GfsLinearProblem * gfs_get_poisson_problem           (GfsDomain * domain,
-						      GfsMultilevelParams * par,
 						      GfsVariable * rhs, 
 						      GfsVariable * lhs,
 						      GfsVariable * dia,
-						      guint maxlevel,
-						      GfsVariable * dp);
-GfsLinearProblem * gfs_linear_problem_new            (GfsVariable * rhs,
-						      GfsVariable * lhs,
-						      GfsVariable * dia,
-						      gdouble omega,
-						      gdouble beta,
-						      guint maxlevel);
+						      gint maxlevel,
+						      GfsVariable * v);
+GfsLinearProblem * gfs_linear_problem_new            (GfsDomain * domain);
 void               gfs_linear_problem_add_stencil    (GfsLinearProblem * lp, 
 						      GArray * stencil);
 void               gfs_linear_problem_destroy        (GfsLinearProblem * lp);

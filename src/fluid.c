@@ -523,7 +523,6 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
       /* two neighbors: second-order differencing (parabola)
 	 + van Leer limiter. See http://en.wikipedia.org/wiki/Flux_limiter */
       gdouble x1 = 1., x2 = 1., v0, v1, v2;
-      gdouble theta = 2.;
       gdouble s0, s1, s2;
       
       v0 = GFS_VARIABLE (cell, v);
