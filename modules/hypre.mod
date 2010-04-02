@@ -51,11 +51,6 @@ struct _HypreSolverParams {
   gint cycle_type;
   gint nlevel;
   gboolean verbose;
-  gint ncyclemax;
-  gint ncyclemin;
-  gint niter;
-  gint nrelax;
-  gdouble tolerance;
 };
 
 /* Parameters for the projection schemes are stored in proj_hp */
@@ -94,11 +89,11 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
   HYPRE_BoomerAMGSetCoarsenType(solver, proj_hp.coarsening_type);
   HYPRE_BoomerAMGSetRelaxType(solver, proj_hp.relax_type);
   HYPRE_BoomerAMGSetCycleType(solver, proj_hp.cycle_type);
-  HYPRE_BoomerAMGSetNumSweeps(solver, proj_hp.nrelax);     /* Sweeps on each level */
+  HYPRE_BoomerAMGSetNumSweeps(solver, par->nrelax);     /* Sweeps on each level */
   HYPRE_BoomerAMGSetMaxLevels(solver, proj_hp.nlevel);  /* maximum number of levels */
-  HYPRE_BoomerAMGSetTol(solver, proj_hp.tolerance);        /* conv. tolerance */
-  HYPRE_BoomerAMGSetMaxIter(solver, proj_hp.ncyclemax); /* maximum number of iterations */
-  HYPRE_BoomerAMGSetMinIter(solver, proj_hp.ncyclemin); /* minimum number of iterations */
+  HYPRE_BoomerAMGSetTol(solver, par->tolerance);        /* conv. tolerance */
+  HYPRE_BoomerAMGSetMaxIter(solver, par->nitermax); /* maximum number of iterations */
+  HYPRE_BoomerAMGSetMinIter(solver, par->nitermin); /* minimum number of iterations */
 
   /* Now setup and solve! */
   HYPRE_BoomerAMGSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
@@ -238,7 +233,7 @@ static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp,
   HYPRE_IJVectorAssemble(hp->x);
 
   /* Get the parcsr matrix object to use */
-  HYPRE_IJMatrixGetObject(hp->A, (void**) &hp->parcsr_A);
+  HYPRE_IJMatrixGetObject(hp->A, (void **) &hp->parcsr_A);
   HYPRE_IJVectorGetObject(hp->b, (void **) &hp->par_b);
   HYPRE_IJVectorGetObject(hp->x, (void **) &hp->par_x);
 
@@ -325,106 +320,79 @@ static void hypre_poisson_solve (GfsDomain * domain,
 				 GfsVariable * dia,
 				 gdouble dt)
 {
-  if (proj_hp.ncyclemax <= 0)
-    return;
-
-  GfsVariable * dp = gfs_temporary_variable (domain);
-  gpointer data[2];
-
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) gfs_cell_reset, dp);
-
-  /* calculates the intial residual and its norm */
+  /* calculates the initial residual and its norm */
   gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, lhs, rhs, dia, res);
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
 
-  GfsLinearProblem * lp = gfs_get_poisson_problem (domain, par, res, dp, dia, -1, lhs);
+  if (par->nitermax > 0) {
+    GfsVariable * dp = gfs_temporary_variable (domain);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, dp);
+    GfsLinearProblem * lp = gfs_get_poisson_problem (domain, par, res, dp, dia, -1, lhs);
  
-  solve_poisson_problem_using_hypre (domain, lp, par);
+    solve_poisson_problem_using_hypre (domain, lp, par);
 
-  copy_poisson_problem_solution_to_simulation_tree (domain, lp);
+    copy_poisson_problem_solution_to_simulation_tree (domain, lp);
 
-  gfs_linear_problem_destroy (lp);
+    gfs_linear_problem_destroy (lp);
 
-  /* correct on leaf cells */
-  data[0] = lhs;
-  data[1] = dp;
-  gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-		       (FttCellTraverseFunc) correct, data,
-		       lhs, lhs);
-  /* compute new residual on leaf cells */
-  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, lhs, rhs, dia, res);
-  par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
-  gts_object_destroy (GTS_OBJECT (dp));
+    /* correct on leaf cells */
+    gpointer data[2];
+    data[0] = lhs;
+    data[1] = dp;
+    gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			 (FttCellTraverseFunc) correct, data,
+			 lhs, lhs);
+    /* compute new residual on leaf cells */
+    gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, lhs, rhs, dia, res);
+    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
+    gts_object_destroy (GTS_OBJECT (dp));
+  }
 }
 
 static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
 {
- 
-  if ( par == NULL) {
-    fputs ("{\n",fp);
-    fputs ("  solver_type      = boomer_amg\n", fp);
-    fputs ("  relax_type       = sor-j-forward\n", fp);
-    fputs ("  precond_type     = none\n", fp);
-    fputs ("  coarsening_type  = cgc_e\n", fp);
-    fputs ("  cycle_type       = 1\n", fp);
-    fputs ("  nlevel           = 11\n", fp);
-    fputs ("}\n", fp);
+  fprintf (fp," {\n");
+  switch (par->solver_type) {
+  case HYPRE_BOOMER_AMG: fputs ("  solver_type      = boomer_amg\n", fp); break;
+  case HYPRE_PCG:        fputs ("  solver_type      = pcg\n", fp); break;
   }
-  else {
-    g_return_if_fail (par != NULL);
-    g_return_if_fail (fp != NULL);
-    
-    fprintf (fp,"{\n");
-    switch (par->solver_type) {
-    case HYPRE_BOOMER_AMG: fputs ("  solver_type      = boomer_amg\n", fp); break;
-    case HYPRE_PCG:        fputs ("  solver_type      = pcg\n", fp); break;
-    }
-    
-    switch (par->relax_type) {
-    case 0: fputs ("  relax_type       = jacobi\n", fp); break;
-    case 1: fputs ("  relax_type       = gauss_seidel\n", fp); break;
-    case 3: fputs ("  relax_type       = sor-j-forward\n", fp); break;
-    case 4: fputs ("  relax_type       = sor-j-backward\n", fp); break;
-    case 5: fputs ("  relax_type       = gs-j\n", fp); break;
-    case 6: fputs ("  relax_type       = ssor-j\n", fp); break;
-    case 7: fputs ("  relax_type       = matvec-jacobi\n", fp); break;
-    case 9: fputs ("  relax_type       = direct\n", fp); break;
-    }
 
-    switch (par->precond_type) {
-    case HYPRE_AMG_PRECOND: fputs       ("  precond_type     = amg\n", fp); break;
-    case HYPRE_PARASAILS_PRECOND: fputs ("  precond_type     = parasails\n", fp); break;
-    case NO_PRECOND: fputs              ("  precond_type     = none\n", fp); break;
-    }
-    
-    switch (par->coarsening_type) {
-    case 0: fputs  ("  coarsening_type  = cljp\n", fp); break;
-    case 3: fputs  ("  coarsening_type  = ruge_stueben\n", fp); break;
-    case 6: fputs  ("  coarsening_type  = falgout\n", fp); break;
-    case 8: fputs  ("  coarsening_type  = pmis\n", fp); break;
-    case 10: fputs ("  coarsening_type  = hmis\n", fp); break;
-    case 21: fputs ("  coarsening_type  = cgc\n", fp); break;
-    case 22: fputs ("  coarsening_type  = cgc_e\n", fp); break;
-    }
-
-    fprintf (fp,"  cycle_type       = %i\n", par->cycle_type);
-    
-    fprintf (fp,"  nlevel           = %i\n", par->nlevel);
-    
-    fprintf (fp,"  verbose          = %i\n", par->verbose);
-
-    fprintf (fp,"  ncyclemax        = %i\n", par->ncyclemax);
-
-    fprintf (fp,"  ncyclemin        = %i\n", par->ncyclemin);
-
-    fprintf (fp,"  nrelax           = %i\n", par->nrelax);
-
-    fprintf (fp,"  tolerance        = %e\n", par->tolerance);
-
-    fputc ('}', fp);
+  switch (par->relax_type) {
+  case 0: fputs ("  relax_type       = jacobi\n", fp); break;
+  case 1: fputs ("  relax_type       = gauss_seidel\n", fp); break;
+  case 3: fputs ("  relax_type       = sor-j-forward\n", fp); break;
+  case 4: fputs ("  relax_type       = sor-j-backward\n", fp); break;
+  case 5: fputs ("  relax_type       = gs-j\n", fp); break;
+  case 6: fputs ("  relax_type       = ssor-j\n", fp); break;
+  case 7: fputs ("  relax_type       = matvec-jacobi\n", fp); break;
+  case 9: fputs ("  relax_type       = direct\n", fp); break;
   }
+
+  switch (par->precond_type) {
+  case HYPRE_AMG_PRECOND: fputs       ("  precond_type     = amg\n", fp); break;
+  case HYPRE_PARASAILS_PRECOND: fputs ("  precond_type     = parasails\n", fp); break;
+  case NO_PRECOND: fputs              ("  precond_type     = none\n", fp); break;
+  }
+    
+  switch (par->coarsening_type) {
+  case 0: fputs  ("  coarsening_type  = cljp\n", fp); break;
+  case 3: fputs  ("  coarsening_type  = ruge_stueben\n", fp); break;
+  case 6: fputs  ("  coarsening_type  = falgout\n", fp); break;
+  case 8: fputs  ("  coarsening_type  = pmis\n", fp); break;
+  case 10: fputs ("  coarsening_type  = hmis\n", fp); break;
+  case 21: fputs ("  coarsening_type  = cgc\n", fp); break;
+  case 22: fputs ("  coarsening_type  = cgc_e\n", fp); break;
+  }
+
+  fprintf (fp,"  cycle_type       = %i\n", par->cycle_type);
+    
+  fprintf (fp,"  nlevel           = %i\n", par->nlevel);
+    
+  fprintf (fp,"  verbose          = %i\n", par->verbose);
+
+  fputc ('}', fp);
 }
 
 static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
@@ -439,30 +407,8 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
     {GTS_INT,     "cycle_type",      TRUE, &par->cycle_type},
     {GTS_INT,     "nlevel",          TRUE, &par->nlevel},
     {GTS_INT,     "verbose",         TRUE, &par->verbose},
-    {GTS_INT,     "ncyclemax",       TRUE, &par->ncyclemax},
-    {GTS_INT,     "ncyclemin",       TRUE, &par->ncyclemin},
-    {GTS_DOUBLE,  "tolerance",       TRUE, &par->tolerance},
-    {GTS_INT,     "nrelax",          TRUE, &par->nrelax},
     {GTS_NONE}
   };
-
-  /* Default hypre solver parameters */
-  /* Boomer AMG is the default solver */
-  par->solver_type = HYPRE_BOOMER_AMG;
-  par->precond_type = NO_PRECOND;
-  par->relax_type = 5;
-  par->coarsening_type = 22;
-  par->cycle_type = 1;
-  par->nlevel = 0;
-  par->verbose = FALSE;
-  par->ncyclemax = 100;
-  par->ncyclemin = 1;
-  par->niter = 0;
-  par->nrelax = 4;
-  par->tolerance = 1e-5;
-
-  g_assert (par != NULL);
-  g_assert (fp != NULL);
 
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR)
@@ -545,22 +491,12 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  if ( par->cycle_type < 1 || (par->cycle_type > 8 && par->cycle_type < 11) ||
-       par->cycle_type > 14)
+  if (par->cycle_type < 1 || (par->cycle_type > 8 && par->cycle_type < 11) ||
+      par->cycle_type > 14)
     gts_file_variable_error (fp, var, "cycle_type",
 			     "unknown cycle type `%i'", par->cycle_type);
   else if (par->nlevel < 0)
     gts_file_variable_error (fp, var, "nlevel", "nlevel cannot be < 0");
-  else if (par->ncyclemax < 0)
-    gts_file_variable_error (fp, var, "ncyclemax", "ncyclemax cannot be < 0");
-  else if (par->ncyclemin < 0)
-    gts_file_variable_error (fp, var, "ncyclemin", "ncyclemin cannot be < 0");
-  else if (par->tolerance <= 0.)
-    gts_file_variable_error (fp, var, "tolerance",
-			     "tolerance must be strictly positive");
-  else if (par->nrelax <= 0.)
-    gts_file_variable_error (fp, var, "nrelax",
-			     "nrelax must be strictly positive");
 }
 
 /* Initialize module */
@@ -581,7 +517,18 @@ void gfs_module_read (GtsFile * fp, GfsSimulation * sim)
 {
   g_return_if_fail (fp != NULL);
 
-  hypre_solver_read (&proj_hp, fp);
+  /* Default hypre solver parameters */
+  /* Boomer AMG is the default solver */
+  proj_hp.solver_type = HYPRE_BOOMER_AMG;
+  proj_hp.precond_type = NO_PRECOND;
+  proj_hp.relax_type = 5;
+  proj_hp.coarsening_type = 22;
+  proj_hp.cycle_type = 1;
+  proj_hp.nlevel = 0;
+  proj_hp.verbose = FALSE;
+
+  if (fp->type == '{')
+    hypre_solver_read (&proj_hp, fp);
   
   /* initialise the poisson cycle hook */
   sim->approx_projection_params.poisson_solve = hypre_poisson_solve;

@@ -1,18 +1,14 @@
 if test x$donotrun != xtrue; then    
     for solver in gerris hypre; do
-	
-	awk -v solver=$solver '{
-           if ($1 == "PARAMS") {
-              if ( solver == "hypre") {
-                 print "  GModule hypre { tolerance = 1e-30 ncyclemin = CYCLE ncyclemax = CYCLE}"}
-              if ( solver == "gerris") {
-                 print "  ApproxProjectionParams { nrelax = 4 tolerance = 1e-30 erelax = 2 nitermin = CYCLE nitermax = CYCLE }"}
-           }
-           else {print $0}}' $1 > tmp.gfs
-	
+	if test x$solver = xhypre; then
+	    gmodule=GModule
+	else
+	    gmodule="# GModule"
+	fi
 	for level in 3 4 5 6 7 8 9; do
 	    for cycle in 1 2 3 4 5 6 7 8 9 10; do
-		if gerris2D -DLEVEL=$level -DCYCLE=$cycle -DSOLVER=$solver tmp.gfs; then :
+		if ( sed "s/GModule/$gmodule/" < $1 | \
+                     gerris2D -DLEVEL=$level -DCYCLE=$cycle -DSOLVER=$solver - ) ; then :
 		else
 		    exit 1
 		fi
@@ -21,7 +17,6 @@ if test x$donotrun != xtrue; then
 	    rm -f proj time
 	done
     done
-    rm -f tmp.gfs
 fi
 
 rm -f error error-hypre error-gerris
@@ -36,7 +31,8 @@ for solver in gerris hypre; do
 	fi
     done
     
-    if echo "Save solution-"$solver".eps { format = EPS line_width = 0.25}" | gfsview-batch2D sim-9-$solver solution.gfv; then :
+    if echo "Save solution.eps { format = EPS line_width = 0.25}" | \
+       gfsview-batch2D sim-9-$solver solution.gfv; then :
     else
 	exit 1
     fi
@@ -61,12 +57,16 @@ if cat <<EOF | gnuplot ; then :
     set xlabel 'CPU time'
     set ylabel 'Maximum residual'
     set logscale y
-    plot 'res-7.ref' u 2:3 t 'ref' w lp, 'res-7-gerris' u 2:3 t 'Gerris' w lp, 'res-7-hypre' u 2:3 t 'Hypre' w lp
+    plot 'res-7.ref' u 2:3 t 'ref' w lp, \
+         'res-7-gerris' u 2:3 t 'Gerris' w lp, \
+         'res-7-hypre' u 2:3 t 'Hypre' w lp
     set output 'rate.eps'
     set xlabel 'V-cycle'
     set ylabel 'Cumulative residual reduction factor'
     unset logscale
-    plot 'res-7.ref' u 1:4 t 'ref' w lp, 'res-7-gerris' u 1:4 t 'Gerris' w lp, 'res-7-hypre' u 1:4 t 'Hypre' w lp
+    plot 'res-7.ref' u 1:4 t 'ref' w lp, \
+         'res-7-gerris' u 1:4 t 'Gerris' w lp, \
+         'res-7-hypre' u 1:4 t 'Hypre' w lp
     set output 'error.eps'
     set xlabel 'Level'
     set ylabel 'Error norms'

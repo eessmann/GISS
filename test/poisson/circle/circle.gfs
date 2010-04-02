@@ -47,7 +47,8 @@
   Time { iend = 1 }
   Refine (x*x + y*y <= 0.25*0.25 ? LEVEL + 2 : LEVEL)
 
-  PARAMS
+  GModule hypre
+  ApproxProjectionParams { tolerance = 1e-30 nitermin = CYCLE nitermax = CYCLE }
 
   Init {} {
     Div = {

@@ -4,7 +4,7 @@
 #
 # This is one of the test cases presented in Popinet
 # \cite{popinet2003}.  We solve the Poisson equation in a square
-# domain with Neumann boundary conditions on all sides and the
+# domain with Dirichlet boundary conditions on all sides and the
 # right-hand-side:
 # $$
 # \nabla\cdot{\bf U}^{\star\star}(x,y) = -\pi^2(k^2+l^2)\sin(\pi kx)\sin(\pi ly)
@@ -19,6 +19,10 @@
 # evolution of the norms of the error of the final solution as a
 # function of resolution is illustrated on Figure \ref{error}. The
 # corresponding order of convergence is given on Figure \ref{order}.
+#
+# The curves labeled "Hypre" were obtained using the
+# \htmladdnormallinkfoot{hypre}{http://gfs.sourceforge.net/wiki/index.php/Object_hierarchy#Hypre}
+# module solver rather than Gerris' built-in multilevel solver.
 #
 # \begin{figure}[htbp]
 # \caption{\label{residual}Evolution of the residual.}
@@ -58,7 +62,8 @@
   Time { iend = 1 }
   Refine LEVEL
 
-  PARAMS
+  GModule hypre
+  ApproxProjectionParams { tolerance = 1e-30 nitermin = CYCLE nitermax = CYCLE }
 
   Init {} {
     Div = {
@@ -81,8 +86,8 @@
   OutputSimulation { start = end } end-SOLVER.gfs
 }
 GfsBox {
-   left =   Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
-   right =  Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
-   top =    Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
-   bottom = Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
+  left =   Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
+  right =  Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
+  top =    Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
+  bottom = Boundary { BcDirichlet P (sin (M_PI*3.*x)*sin (M_PI*3.*y)) }
 }

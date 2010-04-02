@@ -1928,37 +1928,29 @@ static void poisson_run (GfsSimulation * sim)
   dia = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dia);
-  /* compute residual */
-  par->depth = gfs_domain_depth (domain);  
-  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, p, div, dia, res1);
-  /* solve for pressure */
-  par->residual_before = par->residual = 
-    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1);
-  
-  par->niter = 0;
-  if (par->residual.infty > par->tolerance) {
-    gdouble tstart = gfs_clock_elapsed (domain->timer);
 
-    if (res) {
-      gpointer data[2];
-      data[0] = res;
-      data[1] = res1;
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) copy_res, data);
-    }
-    
-    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
+  gdouble tstart = gfs_clock_elapsed (domain->timer);
 
-    par->poisson_solve (domain, par, p, div, res1, dia, 1.);
-
-    sim->time.t = sim->tnext;
-    sim->time.i++;
-
-    gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
-    gts_range_update (&domain->timestep);
-    gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
-    gts_range_update (&domain->size);
+  if (res) {
+    gpointer data[2];
+    data[0] = res;
+    data[1] = res1;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) copy_res, data);
   }
+    
+  gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
+  
+  par->poisson_solve (domain, par, p, div, res1, dia, 1.);
+  
+  sim->time.t = sim->tnext;
+  sim->time.i++;
+
+  gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
+  gts_range_update (&domain->timestep);
+  gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
+  gts_range_update (&domain->size);
+
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
   gts_container_foreach (GTS_CONTAINER (sim->events),
 			 (GtsFunc) gts_object_destroy, NULL);

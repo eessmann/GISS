@@ -6,10 +6,9 @@
 # the solid boundary.
 #
 # \begin{figure}[htbp]
-# \caption{\label{solution}Solution of the Poisson equation solved by Gerris (left) and Hypre (right).}
+# \caption{\label{solution}Solution of the Poisson equation.}
 # \begin{center}
-# \includegraphics[width=0.6\hsize]{solution-gerris.eps}
-# \includegraphics[width=0.6\hsize]{solution-hypre.eps}
+# \includegraphics[width=0.6\hsize]{solution.eps}
 # \end{center}
 # \end{figure}
 #
@@ -43,7 +42,7 @@
 #
 # Author: St\'ephane Popinet
 # Command: sh ../circle.sh refined.gfs
-# Version: 1.1.2
+# Version: 100325
 # Required files: res-7.ref error.ref order.ref solution.gfv
 # Generated files: residual.eps rate.eps error.eps order.eps solution.eps
 #
@@ -57,7 +56,8 @@
             double radius = 0.79*(0.45 - dr + dr*cos (6.*theta));
             return x*x + y*y - radius*radius;
           })
-    PARAMS
+    GModule hypre
+    ApproxProjectionParams { tolerance = 1e-30 nitermin = CYCLE nitermax = CYCLE }
     Init {} {
         Div = {
             int k = 3, l = 3;

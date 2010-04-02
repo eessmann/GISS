@@ -3,26 +3,27 @@ if test x$donotrun != xtrue; then
 
     for solver in gerris hypre; do
 	rm -f time proj
-	awk -v solver=$solver '{
-          if ($1 == "PARAMS") {
-	      if ( solver == "hypre") {
-		  print "  GModule hypre { tolerance = 1e-30 solver_type = boomer_amg  ncyclemax = CYCLE ncyclemin = CYCLE }"}
-	      if ( solver == "gerris") {
-		  print "  ApproxProjectionParams { tolerance = 1e-30 nitermin = CYCLE nitermax = CYCLE }"}
-	  }
-	  else {print $0}
-	}' $1 > tmp.gfs
-    
+
+	if test x$solver = xhypre; then
+	    gmodule=GModule
+	else
+	    gmodule="# GModule"
+	fi
+   
 	for cycle in 0 1 2 3 4 5 6 7 8 9 10 ; do
-	    if ( gerris2D -DLEVEL=8 -DCYCLE=$cycle -DSOLVER=$solver tmp.gfs ) ; then :
+	    if ( sed "s/GModule/$gmodule/" < $1 | \
+                 gerris2D -DLEVEL=8 -DCYCLE=$cycle -DSOLVER=$solver - ) ; then :
 	    else
 		exit 1
 	    fi     
 	done
-	join time proj | awk '{if (NR == 1) {print $0; old = $3} else {print $1,$2,$3,old/$3; old=$3}}' > res-7
+	join time proj | awk '{
+          if (NR == 1) {print $0; old = $3} 
+          else {print $1,$2,$3,old/$3; old=$3}}' > res-7
 	rm -f error order proj time runtime status
 	for level in 3 4 5 6 7 8; do
-	    if ( gerris2D -DLEVEL=$level -DCYCLE=10 -DSOLVER=$solver tmp.gfs ) ; then :
+	    if ( sed "s/GModule/$gmodule/" < $1 | \
+		 gerris2D -DLEVEL=$level -DCYCLE=10 -DSOLVER=$solver - ) ; then :
 	    else
 		exit 1
 	    fi
@@ -42,9 +43,7 @@ if test x$donotrun != xtrue; then
 	mv res-7 res-7-$solver
 	mv error error-$solver
     done
-    rm -f tmp.gfs
 fi
-
 
 if cat <<EOF | gnuplot ; then :
     set term postscript eps color lw 3 solid 20
@@ -101,11 +100,20 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-c = Curve()
-if (Curve('res-7-gerris',1,3) - Curve('res-7.ref',1,3)).max() > 1e-8 or\
-   (Curve('res-7-hypre',1,3) - Curve('res-7.ref',1,6)).max() > 1e-8 or\
+cgerris = Curve()
+for p in Curve('res-7.ref',2,3).l:
+    cgerris.l.append((p[0] + 0.1, p[1]*1.2))
+chypre = Curve()
+for p in Curve('res-7.ref',6,7).l:
+    chypre.l.append((p[0] + 0.1, p[1]*1.2))
+if (Curve('res-7-gerris',2,3) - cgerris).max() > 1e-8 or\
+   (Curve('res-7-hypre',2,3) - chypre).max() > 1e-8 or\
    (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max() > 1e-6 or\
    (Curve('error-hypre',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
+    print (Curve('res-7-gerris',2,3) - cgerris).max()
+    print (Curve('res-7-hypre',2,3) - chypre).max()
+    print (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max()
+    print (Curve('error-hypre',1,4) - Curve('error.ref',1,4)).max()
     exit(1)
 EOF
 else

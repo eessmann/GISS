@@ -365,7 +365,7 @@ typedef struct {
   guint axi;
 } RelaxParams;
 
-/* relax_stencil() needs to updated whenever this
+/* relax_stencil() needs to be updated whenever this
  * function is modified
  */
 static void relax (FttCell * cell, RelaxParams * p)
@@ -970,6 +970,10 @@ void gfs_poisson_solve (GfsDomain * domain,
 {
   gfs_domain_timer_start (domain, "poisson_solve");
 
+  guint minlevel = par->minlevel;
+  par->depth = gfs_domain_depth (domain);
+  par->niter = 0;
+
   /* calculates the initial residual and its norm */
   gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, lhs, rhs, dia, res);
   par->residual_before = par->residual = 
@@ -992,6 +996,8 @@ void gfs_poisson_solve (GfsDomain * domain,
     res_max_before = par->residual.infty;
     par->niter++;
   }
+
+  par->minlevel = minlevel;
 
   gfs_domain_timer_stop (domain, "poisson_solve");
 }

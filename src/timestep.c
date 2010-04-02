@@ -326,14 +326,7 @@ static void mac_projection (GfsDomain * domain,
   }
 #endif
   
-  /* compute residual */
-  guint minlevel = par->minlevel;
-  par->depth = gfs_domain_depth (domain);
-  par->niter = 0;
-
   par->poisson_solve (domain, par, p, div, res1, dia, apar->dt);
-
-  par->minlevel = minlevel;
 
   gts_object_destroy (GTS_OBJECT (dia));
   gts_object_destroy (GTS_OBJECT (div));

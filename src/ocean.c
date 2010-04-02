@@ -211,10 +211,7 @@ static void gfs_free_surface_pressure (GfsDomain * toplayer,
   			    (FttCellTraverseFunc) scale_divergence_helmoltz, &fp);
   
   /* solve for pressure */
-  par->depth = gfs_domain_depth (toplayer);
-  par->niter = 0;
   par->dimension = 2;
-
   par->poisson_solve (toplayer, par, p, fp.div, res1, fp.dia, apar->dt);
 
   if (!res)

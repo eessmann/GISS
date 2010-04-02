@@ -29,8 +29,7 @@ TESTDIRS = \
 	nz \
 	parabola \
 	lonlat \
-	cosine \
-	poissonhypre
+	cosine
 
 EXTRA_DIST = \
 	template.tex \
