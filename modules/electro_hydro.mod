@@ -145,7 +145,7 @@ static void setting_E_from_phi (FttCellFace * f, GfsBc * b)
     GfsGradient g; 
     gfs_face_gradient (f, &g, phi->i, -1);
     double slope = (- g.b + g.a*GFS_VALUE (f->cell, phi))/ftt_cell_size (f->cell)
-      *(FTT_FACE_DIRECT(f) ? 1 : -1)/GFS_SIMULATION (phi->domain)->physical_params.L;
+      *(FTT_FACE_DIRECT(f) ? 1 : -1);
     GFS_VALUE (f->cell, b->v) = - GFS_VALUE (f->neighbor, b->v) + 2.*slope;
   }
   else
@@ -159,7 +159,7 @@ static void face_setting_E_from_phi(FttCellFace *f, GfsBc * b)
     GfsGradient g; 
     gfs_face_gradient (f, &g, phi->i, -1);
     double slope = (- g.b + g.a*GFS_VALUE (f->cell, phi))/ftt_cell_size (f->cell)
-      *(FTT_FACE_DIRECT(f) ? 1 : -1)/GFS_SIMULATION (phi->domain)->physical_params.L;
+      *(FTT_FACE_DIRECT(f) ? 1 : -1);
     GFS_STATE (f->cell)->f[f->d].v = 
       GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = slope;
   }
@@ -179,14 +179,18 @@ static void gfs_electro_hydro_init (GfsElectroHydro * object)
   object->phi = gfs_domain_add_variable (domain, "Phi", "Electric potential");
   object->rhoe = gfs_variable_new (gfs_variable_tracer_class(), domain,
 				   "Rhoe", "Volumetric charge density");
+  object->rhoe->units = - FTT_DIMENSION;
   domain->variables = g_slist_append (domain->variables, object->rhoe);
 
-  for (c = 0; c < FTT_DIMENSION; c++)
+  for (c = 0; c < FTT_DIMENSION; c++) {
     object->E[c] = gfs_domain_add_variable (domain , name[c], desc[c]);
+    object->E[c]->units = -1.;
+  }
   gfs_variable_set_vector (object->E, FTT_DIMENSION);
 
   gfs_multilevel_params_init (&object->electric_projection_params);
   object->perm = gfs_function_new (gfs_function_class (), 1.);
+  gfs_function_set_units (object->perm, -1.);
 
   /* default BC for the electric field */
   for (c = 0; c < FTT_DIMENSION; c++) {
@@ -233,7 +237,7 @@ static void rescale_div (FttCell * cell, gpointer * data)
 {
   GfsVariable * divu = data[0];
   GfsVariable * div = data[1];
-  gdouble size = ftt_cell_size (cell)*GFS_SIMULATION (div->domain)->physical_params.L;
+  gdouble size = ftt_cell_size (cell);
 
   GFS_VALUE (cell, div) = - GFS_VALUE (cell, divu)*size*size*(GFS_IS_MIXED (cell) ?
 							      GFS_STATE (cell)->solid->a : 1.);
@@ -256,7 +260,7 @@ static void minus_gradient (FttCell * cell, gpointer * data)
   GfsVariable * v = data[0];
   GfsVariable ** g = data[1];
   FttComponent c;
-  gdouble size = ftt_cell_size (cell)*GFS_SIMULATION (v->domain)->physical_params.L;
+  gdouble size = ftt_cell_size (cell);
 
   for (c = 0; c < FTT_DIMENSION; c++)
     GFS_VALUE (cell, g[c]) = - gfs_center_gradient (cell, c, v->i)/size;
@@ -496,15 +500,14 @@ static void gfs_source_electric_read (GtsObject ** o, GtsFile * fp)
 
 static void save_fe (FttCell * cell, GfsSourceElectric * s)
 {
-  GfsSimulation * sim = gfs_object_simulation (s);
-  GfsElectroHydro * elec  = GFS_ELECTRO_HYDRO (sim);
+  GfsElectroHydro * elec = GFS_ELECTRO_HYDRO (gfs_object_simulation (s));
 
   GfsFunction * perm = elec->perm;
   GfsVariable ** e = elec->E;
   GfsVariable * phi = elec->phi;
 
   FttComponent c;
-  gdouble h = ftt_cell_size (cell)*sim->physical_params.L;
+  gdouble h = ftt_cell_size (cell);
 
   FttCellFace f;
   FttCellNeighbors n;
@@ -534,7 +537,7 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
   }
   
   for (c = 0; c < FTT_DIMENSION; c++)
-    GFS_VALUE (cell, s->fe[c]) = fe[c];
+    GFS_VALUE (cell, s->fe[c]) = fe[c]/h;
 }
 
 static gboolean gfs_source_electric_event (GfsEvent * event, GfsSimulation * sim)
@@ -552,9 +555,7 @@ static gdouble gfs_source_electric_centered_value (GfsSourceGeneric * s,
 						   FttCell * cell,
 						   GfsVariable * v)
 {
-  gdouble size = ftt_cell_size (cell)*GFS_SIMULATION (v->domain)->physical_params.L*
-    GFS_SIMULATION (v->domain)->physical_params.L;
-  return GFS_VALUE (cell, GFS_SOURCE_ELECTRIC (s)->fe[v->component])/size;
+  return GFS_VALUE (cell, GFS_SOURCE_ELECTRIC (s)->fe[v->component]);
 }
 
 static void gfs_source_electric_class_init (GfsSourceGenericClass * klass)
@@ -628,6 +629,7 @@ static void gfs_source_charge_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GFS_SOURCE_CHARGE (*o)->conductivity = gfs_function_new (gfs_function_class(), 0.);
+  gfs_function_set_units (GFS_SOURCE_CHARGE (*o)->conductivity, -1.);
   gfs_function_read (GFS_SOURCE_CHARGE (*o)->conductivity, gfs_object_simulation (*o), fp);
 }
 
@@ -648,10 +650,8 @@ static gdouble source_charge_value (GfsSourceGeneric * s,
 			            FttCell * cell,
 				    GfsVariable * v)
 {
-  GfsSimulation * sim = gfs_object_simulation (s);
-  GfsElectroHydro * elec = GFS_ELECTRO_HYDRO (sim);
-  GfsVariable * phi = elec->phi;
-  gdouble value = 0., h = ftt_cell_size (cell)*sim->physical_params.L ;
+  GfsVariable * phi = GFS_ELECTRO_HYDRO (gfs_object_simulation (s))->phi;
+  gdouble value = 0., h = ftt_cell_size (cell);
 
   FttCellFace f;
   FttCellNeighbors n;
@@ -664,10 +664,10 @@ static gdouble source_charge_value (GfsSourceGeneric * s,
     gdouble conduct = gfs_function_face_value (GFS_SOURCE_CHARGE (s)->conductivity, &f);
     GfsGradient g;
     gfs_face_gradient (&f, &g, phi->i, -1);
-    gdouble en= (-g.b + g.a*GFS_VALUE (cell, phi))/h;
+    gdouble en= -g.b + g.a*GFS_VALUE (cell, phi);
     value -= conduct*en;
   }
-  return value/h ;
+  return value/(h*h);
 }
 
 static void gfs_source_charge_init (GfsSourceCharge * object)
