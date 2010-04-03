@@ -17,7 +17,9 @@
  * 02111-1307, USA.  
  */
 
-#include <gfs.h>
+#include "simulation.h"
+#include "source.h"
+#include "adaptive.h"
 
 /* GfsElectroHydro: Header */
 
@@ -136,31 +138,30 @@ static void gfs_electro_hydro_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_electro_hydro_class ())->parent_class->destroy) (object);
 }
 
-static void setting_E_from_phi(FttCellFace *f, GfsBc * b)
+static void setting_E_from_phi (FttCellFace * f, GfsBc * b)
 {
-  if (b->v->component == f->d/2){
-    GfsVariable * phi = 
-      gfs_variable_from_name (GFS_DOMAIN(gfs_object_simulation(b))->variables,"Phi");
+  if (b->v->component == f->d/2) {
+    GfsVariable * phi = GFS_ELECTRO_HYDRO (gfs_object_simulation(b))->phi;
     GfsGradient g; 
     gfs_face_gradient (f, &g, phi->i, -1);
-    double slope = (-g.b+g.a*GFS_VARIABLE(f->cell,phi->i))/ftt_cell_size(f->cell)
-      *(FTT_FACE_DIRECT(f) ? 1 : -1)/GFS_SIMULATION (phi->domain)->physical_params.L ;
-    GFS_VALUE(f->cell, b->v) = -GFS_VALUE(f->neighbor,b->v)+2.*slope;
+    double slope = (- g.b + g.a*GFS_VALUE (f->cell, phi))/ftt_cell_size (f->cell)
+      *(FTT_FACE_DIRECT(f) ? 1 : -1)/GFS_SIMULATION (phi->domain)->physical_params.L;
+    GFS_VALUE (f->cell, b->v) = - GFS_VALUE (f->neighbor, b->v) + 2.*slope;
   }
   else
-    GFS_VALUE(f->cell, b->v)= GFS_VALUE(f->neighbor, b->v);
+    GFS_VALUE (f->cell, b->v) = GFS_VALUE (f->neighbor, b->v);
 }
 
 static void face_setting_E_from_phi(FttCellFace *f, GfsBc * b)
 {
-  if(b->v->component == f->d/2){
-    GfsVariable * phi = 
-      gfs_variable_from_name (GFS_DOMAIN(gfs_object_simulation(b))->variables,"Phi");
+  if (b->v->component == f->d/2) {
+    GfsVariable * phi = GFS_ELECTRO_HYDRO (gfs_object_simulation(b))->phi;
     GfsGradient g; 
     gfs_face_gradient (f, &g, phi->i, -1);
-    double slope = (-g.b+g.a*GFS_VARIABLE(f->cell,phi->i))/ftt_cell_size(f->cell)
+    double slope = (- g.b + g.a*GFS_VALUE (f->cell, phi))/ftt_cell_size (f->cell)
       *(FTT_FACE_DIRECT(f) ? 1 : -1)/GFS_SIMULATION (phi->domain)->physical_params.L;
-    GFS_STATE (f->cell)->f[f->d].v = GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = slope;
+    GFS_STATE (f->cell)->f[f->d].v = 
+      GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = slope;
   }
   else
     GFS_STATE (f->cell)->f[f->d].v = GFS_VALUE (f->neighbor, b->v);
@@ -187,14 +188,13 @@ static void gfs_electro_hydro_init (GfsElectroHydro * object)
   gfs_multilevel_params_init (&object->electric_projection_params);
   object->perm = gfs_function_new (gfs_function_class (), 1.);
 
-  /*default Bc for the electric field */
-
-  for (c = 0; c < FTT_DIMENSION; c++){
-    GfsBc * bc1 = gfs_bc_new(gfs_bc_neumann_class(),object->E[c], FALSE);
-    bc1->bc      = (FttFaceTraverseFunc) setting_E_from_phi;
-    bc1->face_bc = (FttFaceTraverseFunc)face_setting_E_from_phi ;
-    gfs_variable_set_default_bc (object->E[c], bc1);
-  }   
+  /* default BC for the electric field */
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    GfsBc * bc = gfs_bc_new (gfs_bc_neumann_class(), object->E[c], FALSE);
+    bc->bc      = (FttFaceTraverseFunc) setting_E_from_phi;
+    bc->face_bc = (FttFaceTraverseFunc) face_setting_E_from_phi;
+    gfs_variable_set_default_bc (object->E[c], bc);
+  }
 }
 
 static void gfs_electro_hydro_run (GfsSimulation * sim);
@@ -235,8 +235,8 @@ static void rescale_div (FttCell * cell, gpointer * data)
   GfsVariable * div = data[1];
   gdouble size = ftt_cell_size (cell)*GFS_SIMULATION (div->domain)->physical_params.L;
 
-  GFS_VALUE (cell, div) = -GFS_VALUE (cell, divu)*size*size*(GFS_IS_MIXED (cell) ?
-							     GFS_STATE (cell)->solid->a : 1.);
+  GFS_VALUE (cell, div) = - GFS_VALUE (cell, divu)*size*size*(GFS_IS_MIXED (cell) ?
+							      GFS_STATE (cell)->solid->a : 1.);
 }
 
 static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * div)
