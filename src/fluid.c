@@ -2836,39 +2836,40 @@ gdouble gfs_cell_corner_value (FttCell * cell,
 /**
  * gfs_stencil_new:
  * 
- * Creates a new  stencil.
+ * Returns: a new #GfsStencil.
  */
-GArray * gfs_stencil_new (void)
+GfsStencil * gfs_stencil_new (void)
 {
-  return g_array_new (FALSE, FALSE, sizeof (GfsStencilElement));
+  GfsStencil * s = g_malloc (sizeof (GfsStencil));
+  s->id = g_array_new (FALSE, FALSE, sizeof (int));
+  s->coeff = g_array_new (FALSE, FALSE, sizeof (double));
+  return s;
 }
 
 /**
  * gfs_stencil_add_element:
  * @stencil: the stencil
- * @id: a variable that stores the cell's id
- * @coeff: a gdouble 
+ * @id: the cell id.
+ * @coeff: the cell coeff.
  *
- * Adds a #GfsStencilElement (contribution of a cell to a stencil)
- * made of the id of the cell and its coefficient to a stencil.
+ * Adds the contribution of a cell to a stencil.
  */
-void gfs_stencil_add_element (GArray * stencil, gint id,
+void gfs_stencil_add_element (GfsStencil * stencil, 
+			      gint id,
 			      gdouble coeff)
 {
   gint i;
 
   g_return_if_fail (stencil != NULL);
   
-  for (i = 0; i < stencil->len; i++)
-    if (g_array_index (stencil, GfsStencilElement, i).cell_id == id) {
-      g_array_index (stencil, GfsStencilElement, i).cell_coeff += coeff;
+  for (i = 0; i < stencil->id->len; i++)
+    if (g_array_index (stencil->id, int, i) == id) {
+      g_array_index (stencil->coeff, double, i) += coeff;
       return;
     }
 
-  GfsStencilElement new;
-  new.cell_coeff = coeff;
-  new.cell_id = id;
-  g_array_append_val (stencil, new);
+  g_array_append_val (stencil->id, id);
+  g_array_append_val (stencil->coeff, coeff);
 }
 
 /**
@@ -2877,22 +2878,24 @@ void gfs_stencil_add_element (GArray * stencil, gint id,
  *
  * Destroys a stencil.
  */
-void gfs_stencil_destroy (GArray * stencil)
+void gfs_stencil_destroy (GfsStencil * stencil)
 {
   g_return_if_fail (stencil != NULL);
-  g_array_free (stencil, TRUE);
+  g_array_free (stencil->id, TRUE);
+  g_array_free (stencil->coeff, TRUE);
+  g_free (stencil);
 }
 
 static void get_average_neighbor_value_stencil (const FttCellFace * face,
 						gdouble * x,
-						GfsVariable * id, GArray * stencil,
+						GfsVariable * id, GfsStencil * stencil,
 						gdouble weight)
 {
   /* check for corner refinement violation (topology.fig) */
   g_assert (ftt_cell_level (face->neighbor) == ftt_cell_level (face->cell));
   
   if (FTT_CELL_IS_LEAF (face->neighbor))
-    gfs_stencil_add_element (stencil, (gint) GFS_VALUE(face->neighbor, id), weight/(*x) );
+    gfs_stencil_add_element (stencil, (gint) GFS_VALUE(face->neighbor, id), weight/(*x));
   else {
     FttCellChildren children;
     gdouble a = 0.;
@@ -2928,7 +2931,7 @@ static GfsGradient get_interpolate_1D1_stencil (FttCell * cell,
 						FttDirection d,
 						gdouble x,
 						GfsVariable * id,
-						GArray * stencil,
+						GfsStencil * stencil,
 						gdouble weight)
 {
   GfsGradient p;
@@ -2955,7 +2958,7 @@ static GfsGradient get_interpolate_1D1_stencil (FttCell * cell,
 static GfsGradient get_interpolate_2D1_stencil (FttCell * cell,
 						FttDirection d1, FttDirection d2,
 						gdouble x, gdouble y,
-						GfsVariable * id, GArray * stencil,
+						GfsVariable * id, GfsStencil * stencil,
 						gdouble weight)
 {
   GfsGradient p;
@@ -2987,7 +2990,7 @@ static GfsGradient get_interpolate_2D1_stencil (FttCell * cell,
 
 static Gradient gradient_fine_coarse_stencil (const FttCellFace * face,
 					      GfsVariable * id,
-					      GArray * stencil, gdouble weight)
+					      GfsStencil * stencil, gdouble weight)
 {
   Gradient g;
   GfsGradient p;
@@ -3012,6 +3015,7 @@ static Gradient gradient_fine_coarse_stencil (const FttCellFace * face,
 
   g.a = 2./3.;
   g.b = 2.*p.a/3.;
+  g.c = 0.;
 
   return g;
 }
@@ -3021,7 +3025,7 @@ static void face_weighted_gradient_stencil (const FttCellFace * face,
 					    gint max_level,
 					    guint dimension,
 					    GfsVariable * id,
-					    GArray * stencil)
+					    GfsStencil * stencil)
 {
   guint level;
 
@@ -3097,7 +3101,7 @@ void gfs_face_weighted_gradient_stencil (const FttCellFace * face,
 					 GfsGradient * g,
 					 gint max_level,
 					 GfsVariable * id,
-					 GArray * stencil)
+					 GfsStencil * stencil)
 {
   face_weighted_gradient_stencil (face, g, max_level, FTT_DIMENSION, id, stencil);
 }

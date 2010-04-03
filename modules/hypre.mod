@@ -63,7 +63,6 @@ struct _HypreProblem {
   HYPRE_ParVector par_b;
   HYPRE_IJVector x;
   HYPRE_ParVector par_x;
-  gint maxsize;
 };
 
 /***********************************************/
@@ -189,21 +188,12 @@ static void hypre_problem_destroy (HypreProblem * hp)
   HYPRE_IJVectorDestroy(hp->x);
 }
 
-static void extract_stencil (GArray * stencil, HypreProblem * hp)
+static void extract_stencil (GfsStencil * stencil, HypreProblem * hp)
 {
-  double values[hp->maxsize];
-  int cols[hp->maxsize];
-  gint i, index;
-  
-  for (i = 0; i < stencil->len; i++) {
-    GfsStencilElement * tmp = &g_array_index (stencil, GfsStencilElement, i);
-    if (i == 0)
-      index = tmp->cell_id;
-    cols[i] = tmp->cell_id;
-    values[i] = tmp->cell_coeff;
-  }
-
-  HYPRE_IJMatrixSetValues(hp->A, 1, &i, &index, cols, values);
+  int ncols = stencil->id->len;
+  int rows = g_array_index (stencil->id, int, 0);
+  HYPRE_IJMatrixSetValues (hp->A, 1, &ncols, &rows, 
+			   (int *) stencil->id->data, (double *) stencil->coeff->data);
 }
 
 static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp,
@@ -216,9 +206,7 @@ static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp,
   /* Now go through my local rows and set the matrix entries.*/
   rhs_values = (double *) lp->rhs->data;
   x_values = (double *) lp->lhs->data;
-  rows = malloc(lp->lhs->len * sizeof(int));
-    
-  hp->maxsize = lp->maxsize;
+  rows = g_malloc (lp->lhs->len*sizeof(int));
   g_ptr_array_foreach (lp->LP, (GFunc) extract_stencil, hp);
 
   for (i = 0; i < lp->rhs->len; i++)
@@ -254,11 +242,11 @@ static void hypre_problem_copy (HypreProblem * hp, GfsLinearProblem * lp)
   gint i;
 
   /* Copy the solution to the GfsLinearProblem structure */
-  x_values = malloc( lp->lhs->len * sizeof(double));
-  rows = malloc( lp->lhs->len * sizeof(int));
+  x_values = g_malloc (lp->lhs->len*sizeof (double));
+  rows = g_malloc (lp->lhs->len*sizeof (int));
     
-  for (i=0; i< lp->lhs->len; i++) {
-    x_values[i] =  0.;
+  for (i = 0; i < lp->lhs->len; i++) {
+    x_values[i] = 0.;
     rows[i] = i;
   }
     

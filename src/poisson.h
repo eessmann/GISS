@@ -123,7 +123,6 @@ struct _GfsLinearProblem {
   GPtrArray * LP;
   GArray * rhs, * lhs;
   GfsVariable * id;
-  guint maxsize;
 };
 
 GfsLinearProblem * gfs_get_poisson_problem           (GfsDomain * domain,
@@ -134,7 +133,7 @@ GfsLinearProblem * gfs_get_poisson_problem           (GfsDomain * domain,
 						      GfsVariable * v);
 GfsLinearProblem * gfs_linear_problem_new            (GfsDomain * domain);
 void               gfs_linear_problem_add_stencil    (GfsLinearProblem * lp, 
-						      GArray * stencil);
+						      GfsStencil * stencil);
 void               gfs_linear_problem_destroy        (GfsLinearProblem * lp);
 
 #ifdef __cplusplus

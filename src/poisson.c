@@ -198,14 +198,12 @@ GfsLinearProblem * gfs_linear_problem_new (GfsDomain * domain)
  * Adds a stencil to the linear problem.
  */
 void gfs_linear_problem_add_stencil (GfsLinearProblem * lp, 
-				     GArray * stencil)
+				     GfsStencil * stencil)
 {
   g_return_if_fail (lp != NULL);
   g_return_if_fail (stencil != NULL);
 
-  g_ptr_array_add (lp->LP, stencil);  
-  if (stencil->len > lp->maxsize)
-    lp->maxsize = stencil->len;
+  g_ptr_array_add (lp->LP, stencil);
 }
 
 /**
@@ -240,7 +238,7 @@ static void relax_stencil (FttCell * cell, RelaxStencilParams * p)
   FttCellFace f;
   GfsGradient ng;
   
-  GArray * stencil = gfs_stencil_new ();
+  GfsStencil * stencil = gfs_stencil_new ();
 
   gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, p->lp->id), 0.);
 
