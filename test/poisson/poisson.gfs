@@ -9,7 +9,8 @@
 # $$
 # \nabla\cdot{\bf U}^{\star\star}(x,y) = -\pi^2(k^2+l^2)\sin(\pi kx)\sin(\pi ly)
 # $$
-# with $k = l = 3$. The exact solution of the Poisson equation with this source term is
+# with $k = l = 3$. The exact solution of the Poisson equation 
+# with this source term is
 # $$
 # \phi(x,y)=\sin(\pi kx)\sin(\pi ly).
 # $$
@@ -21,7 +22,7 @@
 # corresponding order of convergence is given on Figure \ref{order}.
 #
 # The curves labeled "Hypre" were obtained using the
-# \htmladdnormallinkfoot{hypre}{http://gfs.sourceforge.net/wiki/index.php/Object_hierarchy#Hypre}
+# \url{http://gfs.sourceforge.net/wiki/index.php/Object_hierarchy#Hypre}{hypre}
 # module solver rather than Gerris' built-in multilevel solver.
 #
 # \begin{figure}[htbp]
