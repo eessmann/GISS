@@ -35,6 +35,8 @@ pkglib_LTLIBRARIES = \
 	libokada2D.la \
 	libokada3D.la \
 	libdf33D.la \
+	libelectro_hydro2D.la \
+	libelectro_hydro3D.la \
 	$(TIDE) \
 	$(STOKES) \
 	$(WAVEWATCH) \
@@ -55,6 +57,7 @@ EXTRA_DIST = \
 	wavewatch.mod \
 	particulates.mod \
 	df3.mod \
+	electro_hydro.mod \
 	okada.mod \
 	hypre.mod \
 	ode.mod
@@ -67,6 +70,7 @@ BUILT_SOURCES = \
 	wavewatch.c \
 	particulates.c \
 	df3.c \
+	electro_hydro.c \
 	okada.c \
 	hypre.c \
 	ode.c
@@ -155,6 +159,11 @@ libokada2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
 libdf33D_la_SOURCES = df3.c
 libdf33D_la_CFLAGS = $(AM_CFLAGS)
+
+libelectro_hydro3D_la_SOURCES = electro_hydro.c
+libelectro_hydro3D_la_CFLAGS = $(AM_CFLAGS)
+libelectro_hydro2D_la_SOURCES = electro_hydro.c
+libelectro_hydro2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
 if HAVE_MODULES
 %.c : %.mod
