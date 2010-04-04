@@ -34,34 +34,82 @@ export DEB_DH_SHLIBDEPS_ARGS_ALL="-- -S$wdir/$gts/debian/libgts-snapshot -S$wdir
 # hanging rsync from previous calls of this script!!
 killall rsync 2> /dev/null
 
+# Formats log files
+redate()
+{
+    awk 'BEGIN {
+	Month["Jan"] = 1
+	Month["Feb"] = 2
+	Month["Mar"] = 3
+	Month["Apr"] = 4
+	Month["May"] = 5
+	Month["Jun"] = 6
+	Month["Jul"] = 7
+	Month["Aug"] = 8
+	Month["Sep"] = 9
+	Month["Oct"] = 10
+	Month["Nov"] = 11
+	Month["Dec"] = 12
+	date=""
+    }{
+	if ($5 == "NZST" || $5 == "NZDT") {
+	    year=$6
+	    day=$3
+	    month=$2
+	    date=sprintf ("%d-%02d-%02d", int(year), int(Month[month]), int(day));
+	    for (i = 7; i <= NF; i++)
+		date=sprintf ("%s %s", date, $i);
+	    getline
+	    if ($1 != "tagged" && ($2 != "old" || $3 != "tag:")) {
+		noprint = 0
+		print date
+		print $0
+	    }
+	    else
+		noprint = 1;
+	    while (getline && NF > 0) {
+		if (!noprint)
+		    print $0;
+	    }
+	    if (!noprint)
+		print;
+	}
+    }' | sed 's/@/ at /g'
+}
+
 # argument #1: repository to upgrade
 # argument #2: package name
 darcs_upgrade()
 {
     package=$localgerrisweb/version/$2
-    if ( darcs push --dry-run --no-set-default $1 | \
-	 grep "No recorded local changes to push" ) ; then :
-    else
-	if ( darcs push --dry-run --no-set-default $1 | \
-	       grep -v "^\(Making no changes\|Pushing to\|Would push\)" | \
-	       $HOME/local/bin/redate | \
-	       source-highlight -f html -s changelog -c mystyle --no-doc > $package"_changes" ) && \
-	   ( darcs changes | \
-	       $HOME/local/bin/redate | \
-	       source-highlight -f html -s changelog -c mystyle --no-doc > $package"_all_changes" ) && \
-	   ( grep -c 'class="date"' $package"_changes" | awk '{printf ("%d", $1)}' > $package"_changes_number" ) && \
-	   ( darcs changes --last=1 --xml-output | \
-	      awk 'BEGIN{RS=" ";FS="="} {
+    changes=`mktemp`
+    if darcs push --dry-run --no-set-default $1 >> $changes; then
+	if ( grep "No recorded local changes to push" $changes ) ; then :
+	else
+	    if ( grep -v "^\(Making no changes\|Pushing to\|Would push\)" $changes | \
+		redate | \
+		source-highlight -f html -s changelog -c mystyle --no-doc > $package"_changes" ) && \
+		( darcs changes | \
+		redate | \
+		source-highlight -f html -s changelog -c mystyle --no-doc > $package"_all_changes" ) && \
+		( grep -c 'class="date"' $package"_changes" | awk '{printf ("%d", $1)}' > $package"_changes_number" ) && \
+		( darcs changes --last=1 --xml-output | \
+		awk 'BEGIN{RS=" ";FS="="} {
                 if ($1 == "date") 
                   printf ("%s-%s-%s", substr($2,2,4), substr($2,6,2), substr($2,8,2));
                }' > $package"_current" ) && \
-	    darcs tag $(cat $package"_current") && \
-	    darcs push -a --no-set-default $1 ; then
-	    return 0;
-	else
-	    return 1;
+		   darcs tag $(cat $package"_current") && \
+		   darcs push -a --no-set-default $1 ; then :
+	    else
+		rm -f $changes
+		return 1;
+	    fi	
 	fi	
+    else
+	rm -f $changes
+	return 1;
     fi
+    rm -f $changes
 }
 
 build_gts=false
@@ -239,11 +287,11 @@ if ( $build_gerris || $build_gfsview ) ; then
 	   cd $HOME/local/src/gerris-www/publish/examples/ && \
 	   tar xzf examples.tar.gz && rm -f examples.tar.gz && \
 	   cd $wdir/$gts && rm -f ChangeLog && make ChangeLog && \
-	   $HOME/local/bin/redate < ChangeLog | source-highlight -f html -s changelog -d -T "GTS ChangeLog" > $HOME/local/src/gts-www/publish/ChangeLog.html && \
+	   redate < ChangeLog | source-highlight -f html -s changelog -d -T "GTS ChangeLog" > $HOME/local/src/gts-www/publish/ChangeLog.html && \
 	   cd $wdir/$gerris && rm -f ChangeLog && make ChangeLog && \
-	   $HOME/local/bin/redate < ChangeLog | source-highlight -f html -s changelog -d -T "Gerris ChangeLog" > $localgerrisweb/gerris-ChangeLog.html && \
+	   redate < ChangeLog | source-highlight -f html -s changelog -d -T "Gerris ChangeLog" > $localgerrisweb/gerris-ChangeLog.html && \
 	   cd $wdir/$gfsview && rm -f ChangeLog && make ChangeLog && \
-	   $HOME/local/bin/redate < ChangeLog | source-highlight -f html -s changelog -d -T "GfsView ChangeLog" > $localgerrisweb/gfsview-ChangeLog.html && \
+	   redate < ChangeLog | source-highlight -f html -s changelog -d -T "GfsView ChangeLog" > $localgerrisweb/gfsview-ChangeLog.html && \
 	   cd $HOME/local/src/gerris-www && make publish_local sync && \
 	   cd $HOME/local/src/gts-www && make sync ) > $wdir/www 2>&1 ; then :
        else
