@@ -368,6 +368,11 @@ int main (int argc, char * argv[])
       gts_file_destroy (fp);
     }
     gfs_clock_start (domain->timer);
+    GSList * j = domain->variables;
+    while (j) {
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, j->data);
+      j = j->next;
+    }
     g_slist_foreach (l, (GFunc) gfs_event_do, simulation);    
     gfs_clock_stop (domain->timer);
     setup_binary_IO (domain);
