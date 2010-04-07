@@ -169,6 +169,35 @@ static void scale_divergence_helmoltz (FttCell * cell, FreeSurfaceParams * p)
     c*GFS_VARIABLE (cell, p->pn->i);
 }
 
+#if !FTT_2D
+static void merge_pressures (GSList * merged, GfsVariable * v)
+{
+  if (merged->next != NULL) {
+    /* average value */
+    GSList * i = merged;
+    gdouble w = 0., total_area = 0.;
+
+    while (i) {
+      FttCell * cell = i->data;
+      GfsSolidVector * solid = GFS_STATE (cell)->solid;
+      gdouble h = ftt_cell_size (cell);
+      gdouble area = h*h*solid->s[FTT_FRONT];
+      total_area += area;
+      w += area*GFS_VALUE (cell, v);
+      i = i->next;
+    }
+    w /= total_area;
+
+    i = merged;
+    while (i) {
+      FttCell * cell = i->data;
+      GFS_VALUE (cell, v) = w;
+      i = i->next;
+    }
+  }
+}
+#endif /* 3D */
+
 /**
  * gfs_free_surface_pressure:
  * @toplayer: a #GfsDomain.
@@ -213,6 +242,9 @@ static void gfs_free_surface_pressure (GfsDomain * toplayer,
   /* solve for pressure */
   par->dimension = 2;
   par->poisson_solve (toplayer, par, p, fp.div, res1, fp.dia, apar->dt);
+#if !FTT_2D
+  gfs_domain_traverse_merged (toplayer, (GfsMergedTraverseFunc) merge_pressures, p);
+#endif
 
   if (!res)
     gts_object_destroy (GTS_OBJECT (res1));
