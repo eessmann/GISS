@@ -580,8 +580,26 @@ static void match (FttCell * cell, GfsBoundary * boundary)
 
 static void boundary_match (GfsBoundary * boundary)
 {
-  guint l = ftt_cell_level (boundary->root);
+  if (boundary->root == NULL) {
+    GfsBox * box = boundary->box;
+    GfsDomain * domain = gfs_box_domain (box);
+    boundary->root = ftt_cell_new ((FttCellInitFunc) gfs_cell_init, domain);
+    FTT_ROOT_CELL (boundary->root)->parent = box;
+    ftt_cell_set_level (boundary->root, ftt_cell_level (box->root));
+    ftt_cell_set_neighbor_match (boundary->root, box->root, boundary->d, 
+				 (FttCellInitFunc) gfs_cell_init, domain);
+    FttVector pos;
+    ftt_cell_pos (box->root, &pos);
+    gdouble size = ftt_cell_size (box->root);
+    FttDirection d = FTT_OPPOSITE_DIRECTION (boundary->d);
+    pos.x += rpos[d].x*size;
+    pos.y += rpos[d].y*size;
+    pos.z += rpos[d].z*size;
+    ftt_cell_set_pos (boundary->root, &pos);
+  }
 
+  guint l = ftt_cell_level (boundary->root);
+  
   boundary->changed = FALSE;
   boundary->depth = l;
   while (l <= boundary->depth) {
@@ -747,9 +765,6 @@ GfsBoundary * gfs_boundary_new (GfsBoundaryClass * klass,
 				FttDirection d)
 {
   GfsBoundary * boundary;
-  GfsDomain * domain;
-  FttVector pos;
-  gdouble size;
 
   g_return_val_if_fail (box != NULL, NULL);
   g_return_val_if_fail (d < FTT_NEIGHBORS, NULL);
@@ -759,22 +774,8 @@ GfsBoundary * gfs_boundary_new (GfsBoundaryClass * klass,
   boundary->box = box;
   box->neighbor[d] = GTS_OBJECT (boundary);
   boundary->d = FTT_OPPOSITE_DIRECTION (d);
-  if (box->root) {
-    domain = gfs_box_domain (box);
-    boundary->root = ftt_cell_new ((FttCellInitFunc) gfs_cell_init, domain);
-    FTT_ROOT_CELL (boundary->root)->parent = box;
-    ftt_cell_set_level (boundary->root, ftt_cell_level (box->root));
-    ftt_cell_set_neighbor_match (boundary->root, box->root, boundary->d, 
-				 (FttCellInitFunc) gfs_cell_init, domain);
-    ftt_cell_pos (box->root, &pos);
-    size = ftt_cell_size (box->root);
-    pos.x += rpos[d].x*size;
-    pos.y += rpos[d].y*size;
-    pos.z += rpos[d].z*size;
-    ftt_cell_set_pos (boundary->root, &pos);
-
+  if (box->root)
     boundary_match (boundary);
-  }
 
   return boundary;
 }

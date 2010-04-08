@@ -1663,7 +1663,7 @@ void gfs_domain_cell_traverse_boundary (GfsDomain * domain,
 static void add_stats (const FttCell * cell, gpointer * data)
 {
   GtsRange * s = data[0];
-  gdouble v = GFS_VARIABLE (cell, GFS_VARIABLE1 (data[1])->i);
+  gdouble v = GFS_VALUE (cell, GFS_VARIABLE1 (data[1]));
 
   if (v < G_MAXDOUBLE)
     gts_range_add_value (s, v);
@@ -2044,7 +2044,7 @@ static void add_norm_residual (const FttCell * cell, gpointer * data)
   GfsVariable * res = data[0];
   GfsNorm * n = data[1];
   
-  gfs_norm_add (n, GFS_VARIABLE (cell, res->i)/(size*size), 1.);
+  gfs_norm_add (n, GFS_VALUE (cell, res)/(size*size), 1.);
 }
 
 /**
@@ -2217,7 +2217,7 @@ static void box_split (GfsBox * box, SplitPar * p)
       else
 	newbox->id = (p->bid)++;
 
-      GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], p->newboxp->i)) = newbox;
+      GFS_DOUBLE_TO_POINTER (GFS_VALUE (child.c[i], p->newboxp)) = newbox;
 
       if (FTT_CELL_IS_LEAF (child.c[i]))
 	ftt_cell_refine_single (child.c[i], (FttCellInitFunc) gfs_cell_init, domain);
@@ -2226,25 +2226,22 @@ static void box_split (GfsBox * box, SplitPar * p)
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOUNDARY (box->neighbor[d])) {
       GfsBoundary * boundary = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBoundaryClass * klass = GFS_BOUNDARY_CLASS (GTS_OBJECT (boundary)->klass);
 
-      ftt_cell_children (boundary->root, &child);
-      for (i = 0; i < FTT_CELLS; i++)
-	if (child.c[i] && FTT_CELL_IS_LEAF (child.c[i]))
-	  ftt_cell_refine_single (child.c[i], (FttCellInitFunc) gfs_cell_init, domain);
-      ftt_cell_destroy_root (boundary->root, &child, (FttCellCleanupFunc) gfs_cell_cleanup, domain);
+      ftt_cell_destroy (boundary->root, (FttCellCleanupFunc) gfs_cell_cleanup, domain);
       boundary->root = NULL;
-
+      
       ftt_cell_children_direction (box->root, d, &child);
       for (i = 0; i < FTT_CELLS/2; i++)
 	if (child.c[i]) {
-	  FttCell * neighbor = ftt_cell_neighbor (child.c[i], d);
-	  GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], p->newboxp->i));
-	  GfsBoundaryClass * klass = GFS_BOUNDARY_CLASS (GTS_OBJECT (boundary)->klass);
+	  GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VALUE (child.c[i], p->newboxp));
 	  GtsObject * newboundary = GTS_OBJECT (gfs_boundary_new (klass, newbox, d));
 
-	  if (GFS_IS_BOUNDARY_PERIODIC (newboundary))
+	  if (GFS_IS_BOUNDARY_PERIODIC (newboundary)) {
 	    GFS_BOUNDARY_PERIODIC (newboundary)->matching = 
 	      GFS_BOUNDARY_PERIODIC (boundary)->matching;
+	    GFS_BOUNDARY_PERIODIC (newboundary)->d = GFS_BOUNDARY_PERIODIC (boundary)->d;
+	  }
 	  else {
 	    gchar fname[] = "/tmp/XXXXXX";
 	    gint fd = mkstemp (fname);
@@ -2262,10 +2259,9 @@ static void box_split (GfsBox * box, SplitPar * p)
 	    gts_file_destroy (gfp);
 	    fclose (fp);
 	  }
-	  g_assert (neighbor);
-	  GFS_BOUNDARY (newboundary)->root = neighbor;
 	}
       gts_object_destroy (GTS_OBJECT (boundary));
+      box->neighbor[d] = NULL;
     }
 }
 
@@ -2289,7 +2285,7 @@ static void box_link (GfsBox * box, SplitPar * p)
   ftt_cell_children (box->root, &child);
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i]) {
-       GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], p->newboxp->i));
+       GfsBox * newbox = GFS_DOUBLE_TO_POINTER (GFS_VALUE (child.c[i], p->newboxp));
        FttDirection d;
        
        g_assert (newbox);
@@ -2298,18 +2294,30 @@ static void box_link (GfsBox * box, SplitPar * p)
        for (d = 0; d < FTT_NEIGHBORS; d++)
 	 if (newbox->neighbor[d] != NULL && GFS_IS_BOUNDARY_PERIODIC (newbox->neighbor[d])) {
 	   GfsBox * matching =  GFS_BOUNDARY_PERIODIC (newbox->neighbor[d])->matching;
-	   static FttDirection match[FTT_CELLS][FTT_DIMENSION] = {
+	   static gint match[FTT_CELLS][FTT_NEIGHBORS] = {
 #if FTT_2D
-	     {0,2}, {1,2}, {0,3}, {1,3}
+	     { -1, 1, 2, -1 },
+	     { 0, -1, 3, -1 },
+	     { -1, 3, -1, 0 },
+	     { 2, -1, -1, 1 }
 #else /* 3D */
-	     {0,2,4}, {1,2,4}, {0,3,4}, {1,3,4},
-	     {0,2,5}, {1,2,5}, {0,3,5}, {1,3,5}
+	     { -1, 1, 2, -1, 4, -1 },
+	     { 0, -1, 3, -1, 5, -1 },
+	     { -1, 3, -1, 0, 6, -1 },
+	     { 2, -1, -1, 1, 7, -1 },
+	     { -1, 5, 6, -1, -1, 0 },
+	     { 4, -1, 7, -1, -1, 1 },
+	     { -1, 7, -1, 4, -1, 2 },
+	     { 6, -1, -1, 5, -1, 3 },	     
 #endif /* 3D */
 	   };
-	   FttCell * neighbor = ftt_cell_child_corner (matching->root, 
-						       match[FTT_CELL_ID (child.c[i])]);
+	   gint ci = match[FTT_CELL_ID (child.c[i])][d];
+	   g_assert (ci >= 0);
+	   FttCellChildren neighbors;
+	   ftt_cell_children (matching->root, &neighbors);
+	   FttCell * neighbor = neighbors.c[ci];
 	   g_assert (neighbor);
-	   GfsBox * newbox1 = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (neighbor, p->newboxp->i));
+	   GfsBox * newbox1 = GFS_DOUBLE_TO_POINTER (GFS_VALUE (neighbor, p->newboxp));
 	   g_assert (newbox1);
 	   GFS_BOUNDARY_PERIODIC (newbox->neighbor[d])->matching = newbox1;
 	   if (!node_is_linked (GTS_GNODE (newbox1), GTS_GNODE (newbox), 
@@ -2324,7 +2332,7 @@ static void box_link (GfsBox * box, SplitPar * p)
 	   FttCell * neighbor = ftt_cell_neighbor (child.c[i], d);
 
 	   if (neighbor) {
-	     GfsBox * newbox1 = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (neighbor, p->newboxp->i));
+	     GfsBox * newbox1 = GFS_DOUBLE_TO_POINTER (GFS_VALUE (neighbor, p->newboxp));
 	     FttDirection od = FTT_OPPOSITE_DIRECTION (d);
 	     GfsGEdge * edge;
 
@@ -2350,7 +2358,7 @@ static void box_destroy (GfsBox * box, GfsVariable * newboxp)
   ftt_cell_children (box->root, &child);
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i])
-      newbox[i] = GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (child.c[i], newboxp->i));
+      newbox[i] = GFS_DOUBLE_TO_POINTER (GFS_VALUE (child.c[i], newboxp));
     else
       newbox[i] = NULL;
 
@@ -2875,7 +2883,7 @@ void gfs_cell_write (const FttCell * cell, FILE * fp,
     fputs (" -1", fp);
   
   while (variables) {
-    fprintf (fp, " %g", GFS_VARIABLE (cell, GFS_VARIABLE1 (variables->data)->i));
+    fprintf (fp, " %g", GFS_VALUE (cell, GFS_VARIABLE1 (variables->data)));
     variables = variables->next;
   }
 }
@@ -2951,7 +2959,7 @@ void gfs_cell_read (FttCell * cell, GtsFile * fp, GfsDomain * domain)
       gts_file_error (fp, "expecting a number (%s)", v->name);
       return;
     }
-    GFS_VARIABLE (cell, v->i) = atof (fp->token->str);
+    GFS_VALUE (cell, v) = atof (fp->token->str);
     gts_file_next_token (fp);
     i = i->next;
   }
@@ -2987,7 +2995,7 @@ void gfs_cell_write_binary (const FttCell * cell, FILE * fp,
   }
   
   while (variables) {
-    gdouble a = GFS_VARIABLE (cell, GFS_VARIABLE1 (variables->data)->i);
+    gdouble a = GFS_VALUE (cell, GFS_VARIABLE1 (variables->data));
     fwrite (&a, sizeof (gdouble), 1, fp);
     variables = variables->next;
   }
@@ -3057,7 +3065,7 @@ void gfs_cell_read_binary (FttCell * cell, GtsFile * fp, GfsDomain * domain)
       gts_file_error (fp, "expecting a number (%s)", v->name);
       return;
     }
-    GFS_VARIABLE (cell, v->i) = a;
+    GFS_VALUE (cell, v) = a;
     i = i->next;
   }
 }
@@ -3661,11 +3669,11 @@ static void tag_cell (FttCell * cell, GfsVariable * v, guint tag, guint * size)
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
 
   g_assert (FTT_CELL_IS_LEAF (cell));
-  GFS_VARIABLE (cell, v->i) = tag;
+  GFS_VALUE (cell, v) = tag;
   (*size)++;
   ftt_cell_neighbors (cell, &n);
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (n.c[d] && GFS_VARIABLE (n.c[d], v->i) == 0. &&
+    if (n.c[d] && GFS_VALUE (n.c[d], v) == 0. &&
 	!GFS_CELL_IS_BOUNDARY (n.c[d]) &&
 	(!solid || solid->s[d] > 0.)) {
       if (FTT_CELL_IS_LEAF (n.c[d]))
@@ -3677,7 +3685,7 @@ static void tag_cell (FttCell * cell, GfsVariable * v, guint tag, guint * size)
 	
 	j = ftt_cell_children_direction (n.c[d], od, &child);
 	for (i = 0; i < j; i++)
-	  if (child.c[i] && GFS_VARIABLE (child.c[i], v->i) == 0. &&
+	  if (child.c[i] && GFS_VALUE (child.c[i], v) == 0. &&
 	      (!GFS_IS_MIXED (child.c[i]) || GFS_STATE (child.c[i])->solid->s[od] > 0.))
 	    tag_cell (child.c[i], v, tag, size);
       }
@@ -3688,7 +3696,7 @@ static void tag_new_region (FttCell * cell, gpointer * data)
 {
   GfsVariable * v = data[0];
 
-  if (GFS_VARIABLE (cell, v->i) == 0.) {
+  if (GFS_VALUE (cell, v) == 0.) {
     GArray * sizes = data[1];
     guint size = 0;
 
@@ -3702,9 +3710,9 @@ static gboolean remove_small (FttCell * cell, gpointer * data)
   if (FTT_CELL_IS_LEAF (cell)) {
     GArray * sizes = data[0];
     GfsVariable * v = data[5];
-    guint * min = data[1], i = GFS_VARIABLE (cell, v->i) - 1.;
+    guint * min = data[1], i = GFS_VALUE (cell, v) - 1.;
 
-    g_assert (GFS_VARIABLE (cell, v->i) > 0.);
+    g_assert (GFS_VALUE (cell, v) > 0.);
     if (g_array_index (sizes, guint, i) < *min) {
       if (FTT_CELL_IS_ROOT (cell))
 	g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR, "root cell belongs to a pond");
@@ -3806,7 +3814,7 @@ void gfs_domain_remove_ponds (GfsDomain * domain,
 
 static gboolean tag_speck (FttCell * cell, GfsVariable * v)
 {
-  if (GFS_VARIABLE (cell, v->i) == 0.) {
+  if (GFS_VALUE (cell, v) == 0.) {
     FttDirection d;
     FttCellNeighbors n;
     GfsSolidVector * solid = GFS_STATE (cell)->solid;
@@ -3816,15 +3824,15 @@ static gboolean tag_speck (FttCell * cell, GfsVariable * v)
     for (d = 0; d < FTT_NEIGHBORS; d++)
       if (!n.c[d])
 	return FALSE;
-    GFS_VARIABLE (cell, v->i) = 1.;
+    GFS_VALUE (cell, v) = 1.;
     for (d = 0; d < FTT_NEIGHBORS; d++)
-      if (GFS_VARIABLE (n.c[d], v->i) == 0. && 
+      if (GFS_VALUE (n.c[d], v) == 0. && 
 	  !GFS_CELL_IS_BOUNDARY (n.c[d]) &&
 	  solid->s[d] > 0. && solid->s[d] < 1.) {
 	g_assert (GFS_IS_MIXED (n.c[d]));
 	if (FTT_CELL_IS_LEAF (n.c[d])) {
 	  if (!tag_speck (n.c[d], v)) {
-	    GFS_VARIABLE (cell, v->i) = 0.;
+	    GFS_VALUE (cell, v) = 0.;
 	    return FALSE;
 	  }
 	}
@@ -3835,10 +3843,10 @@ static gboolean tag_speck (FttCell * cell, GfsVariable * v)
 	  
 	  ftt_cell_children_direction (n.c[d], od, &child);
 	  for (i = 0; i < FTT_CELLS/2; i++)
-	    if (!child.c[i] || (GFS_VARIABLE (child.c[i], v->i) == 0 && 
+	    if (!child.c[i] || (GFS_VALUE (child.c[i], v) == 0 && 
 				GFS_IS_MIXED (child.c[i]) &&
 				!tag_speck (child.c[i], v))) {
-	      GFS_VARIABLE (cell, v->i) = 0.;
+	      GFS_VALUE (cell, v) = 0.;
 	      return FALSE;
 	    }
 	}
@@ -3851,7 +3859,7 @@ static void fill_speck (FttCell * cell, gpointer * data)
 {
   GfsVariable * v = data[0];
 
-  if (GFS_VARIABLE (cell, v->i) == 1.) {
+  if (GFS_VALUE (cell, v) == 1.) {
     gboolean * changed = data[1];
     g_free (GFS_STATE (cell)->solid);
     GFS_STATE (cell)->solid = NULL;
@@ -4118,7 +4126,7 @@ static void sum (FttCell * cell, SumData * data)
       /* fixme: does not work if the resolution varies along data->d */
       g_assert (ftt_cell_level (n) == ftt_cell_level (cell));
       s += product (n, data->f);
-      GFS_VARIABLE (n, data->v->i) = s;
+      GFS_VALUE (n, data->v) = s;
       n = ftt_cell_neighbor (n, FTT_OPPOSITE_DIRECTION (data->d));
     } while (n && !GFS_CELL_IS_BOUNDARY (n) && 
 	     (!GFS_IS_MIXED (n) || GFS_STATE (n)->solid->s[data->d] > 0.));
@@ -4170,7 +4178,7 @@ static void filter (FttCell * cell, gpointer * data)
 
   for (i = 0; i < 4*(FTT_DIMENSION - 1); i++)
     val += gfs_cell_corner_value (cell, d[i], a, -1);
-  GFS_VARIABLE (cell, b->i) = val/(4*(FTT_DIMENSION - 1));
+  GFS_VALUE (cell, b) = val/(4*(FTT_DIMENSION - 1));
 }
 
 /**
