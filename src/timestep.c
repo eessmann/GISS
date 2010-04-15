@@ -242,12 +242,7 @@ static void velocity_face_sources (GfsDomain * domain,
       while (i) {
 	GfsSourceGeneric * s = i->data;
 	if (s->face_value) {
-	  FaceSource f;
-	  f.s = s;
-	  f.v = u[c];
-	  f.g = g;
-	  f.dt = dt;
-	  f.c = c;
+	  FaceSource f = { s, u[c], g, c, dt };
 	  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) ignore_dirichlet_boundaries, &f);
 	  gfs_domain_face_traverse (domain, c,
 				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,

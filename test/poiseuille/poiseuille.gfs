@@ -5,12 +5,12 @@
 # A simple parabolic Poiseuille flow in a periodic channel with a
 # constant along-channel acceleration $a$. The theoretical solution is given by:
 # $$u(y)={a\over 2\nu}(1/4-y^2)$$
-# Figure \ref{convergence} illustrates the maximum error between the
-# computed and theoretical solutions as a function of spatial
+# Figure \ref{convergence} illustrates the norms of the error between
+# the computed and theoretical solutions as functions of spatial
 # resolution.
 #
 # \begin{figure}[htbp]
-# \caption{\label{convergence}Convergence of the maximum error as a function
+# \caption{\label{convergence}Convergence of the error norms as functions
 # of resolution (number of grid points across the channel).}
 # \begin{center}
 # \includegraphics[width=\hsize]{convergence.eps}
@@ -18,8 +18,8 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: sh poiseuille.sh
-# Version: 1.2.0
+# Command: sh poiseuille.sh poiseuille.gfs
+# Version: 100416
 # Required files: poiseuille.sh error.ref
 # Generated files: convergence.eps
 #
@@ -28,6 +28,7 @@
     # use backward Euler to avoid Crank-Nicholson oscillations in time
     SourceViscosity 1. { beta = 1 }
     Source U 1
+    # add a transverse source term to also test hydrostatic balance
     Source V 1
 
     # we need this so that acceleration can be balanced by viscous stress
