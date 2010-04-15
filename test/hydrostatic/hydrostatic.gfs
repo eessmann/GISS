@@ -20,11 +20,13 @@
 
     OutputScalarNorm { istep = 1 } v { v = V }
     EventScript { start = end } { 
-        if awk '{if ($9 > 1e-12) exit (1);}' < v ; then
+        if awk '{if ($9 > 1e-12) { print $9 > "/dev/stderr"; exit (1); }}' < v ; then
             exit 0;
         else
             exit $GFS_STOP;
         fi
-    } 
+    }
 }
-GfsBox {}
+GfsBox {
+    bottom = Boundary
+}

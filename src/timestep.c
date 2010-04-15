@@ -176,14 +176,41 @@ static void scale_divergence (FttCell * cell, gpointer * data)
 typedef struct {
   GfsSourceGeneric * s;
   GfsVariable * v, ** g;
+  FttComponent c;
   gdouble dt;
 } FaceSource;
+
+#define DIRICHLET_BOUNDARY (1 << GFS_FLAG_USER)
+
+static void tag_dirichlet (FttCellFace * f)
+{
+  f->cell->flags |= DIRICHLET_BOUNDARY;
+}
+
+static void ignore_dirichlet_boundaries (GfsBox * box, FaceSource * f)
+{
+  FttDirection d;
+  for (d = 2*f->c; d <= 2*f->c + 1; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, f->v);
+      if (GFS_IS_BC_DIRICHLET (bc))
+	ftt_face_traverse_boundary (b->root, b->d,
+				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				    (FttFaceTraverseFunc) tag_dirichlet, NULL);
+    }
+}
 
 static void add_face_source (FttCellFace * face,
 			     FaceSource * f)
 {
   gdouble dp;
   FttComponent c;
+
+  if (face->neighbor->flags & DIRICHLET_BOUNDARY) {
+    face->neighbor->flags &= ~DIRICHLET_BOUNDARY;
+    return;
+  }
 
   if (GFS_FACE_FRACTION_RIGHT (face) == 0.)
     return;
@@ -220,6 +247,8 @@ static void velocity_face_sources (GfsDomain * domain,
 	  f.v = u[c];
 	  f.g = g;
 	  f.dt = dt;
+	  f.c = c;
+	  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) ignore_dirichlet_boundaries, &f);
 	  gfs_domain_face_traverse (domain, c,
 				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				    (FttFaceTraverseFunc) add_face_source, &f);

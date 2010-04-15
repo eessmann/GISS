@@ -442,7 +442,6 @@ static void gfs_bc_navier_init (GfsBc * object)
 {
   object->bc =                     (FttFaceTraverseFunc) navier;
   object->homogeneous_bc =         (FttFaceTraverseFunc) homogeneous_dirichlet;
-  object->homogeneous_bc_stencil = (FttFaceTraverseFunc) homogeneous_dirichlet_stencil;
   object->face_bc =                (FttFaceTraverseFunc) face_navier;
 }
 
@@ -708,6 +707,10 @@ static void gfs_boundary_read (GtsObject ** o, GtsFile * fp)
       (o, fp);
   if (fp->type == GTS_ERROR)
     return;
+
+  GfsBoundary * b = GFS_BOUNDARY (*o);
+  GfsVariable ** v = gfs_domain_velocity (gfs_box_domain (b->box));
+  gfs_boundary_add_bc (b, gfs_bc_value_new (gfs_bc_dirichlet_class (), v[b->d/2], NULL, FALSE));
 
   boundary_read_extra_bc (GFS_BOUNDARY (*o), fp);
 }

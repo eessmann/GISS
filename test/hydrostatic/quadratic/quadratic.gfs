@@ -43,4 +43,6 @@
         fi
     } 
 }
-GfsBox {}
+GfsBox {
+    bottom = Boundary
+}
