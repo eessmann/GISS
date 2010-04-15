@@ -516,7 +516,7 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
   for (c = 0; c < FTT_DIMENSION; c++)
     fe[c] = 0.;
 
-  f.cell= cell;
+  f.cell = cell;
   ftt_cell_neighbors (cell, &n);
 
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {

@@ -32,7 +32,7 @@ static void reset_cell_gradients (FttCell * cell, gpointer * data)
   FttComponent c;
 
   for (c = 0; c < *dimension; c++)
-    GFS_VARIABLE (cell, g[c]->i) = 0.;
+    GFS_VALUE (cell, g[c]) = 0.;
 }
 
 static void reset_gradients (GfsDomain * domain, guint dimension, GfsVariable ** g)
@@ -56,9 +56,9 @@ static void scale_cell_gradients (FttCell * cell, gpointer * data)
 
     for (c = 0; c < *dimension; c++)
       if (s->s[2*c] + s->s[2*c + 1] > 0.)
-	GFS_VARIABLE (cell, g[c]->i) /= s->s[2*c] + s->s[2*c + 1];
+	GFS_VALUE (cell, g[c]) /= s->s[2*c] + s->s[2*c + 1];
       else
-	g_assert (GFS_VARIABLE (cell, g[c]->i) == 0.);
+	g_assert (GFS_VALUE (cell, g[c]) == 0.);
   }
   else {
     FttCellNeighbors n;
@@ -68,7 +68,7 @@ static void scale_cell_gradients (FttCell * cell, gpointer * data)
       FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
       
       if (c1 && c2 && !GFS_CELL_IS_GRADIENT_BOUNDARY (c1) && !GFS_CELL_IS_GRADIENT_BOUNDARY (c2))
-	GFS_VARIABLE (cell, g[c]->i) /= 2.;
+	GFS_VALUE (cell, g[c]) /= 2.;
     }
   }
 }
@@ -170,7 +170,7 @@ static void scale_divergence (FttCell * cell, gpointer * data)
   GfsVariable * div = data[0];
   gdouble * dt = data[1];
 
-  GFS_VARIABLE (cell, div->i) /= *dt;
+  GFS_VALUE (cell, div) /= *dt;
 }
 
 typedef struct {
@@ -192,13 +192,13 @@ static void add_face_source (FttCellFace * face,
   dp = (* f->s->face_value) (f->s, face, f->v);
   GFS_FACE_NORMAL_VELOCITY_LEFT (face) += dp*f->dt;
   if (f->g)
-    GFS_VARIABLE (face->cell, f->g[c]->i) -= dp*GFS_FACE_FRACTION_LEFT (face);
+    GFS_VALUE (face->cell, f->g[c]) -= dp*GFS_FACE_FRACTION_LEFT (face);
 
   if (ftt_face_type (face) == FTT_FINE_COARSE)
     dp *= GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*FTT_CELLS/2);
   GFS_FACE_NORMAL_VELOCITY_RIGHT (face) += dp*f->dt;
   if (f->g)
-    GFS_VARIABLE (face->neighbor, f->g[c]->i) -= dp*GFS_FACE_FRACTION_RIGHT (face);
+    GFS_VALUE (face->neighbor, f->g[c]) -= dp*GFS_FACE_FRACTION_RIGHT (face);
 }
 
 static void velocity_face_sources (GfsDomain * domain,
@@ -415,7 +415,7 @@ static void correct (FttCell * cell, gpointer * data)
   guint * dimension = data[3];
 
   for (c = 0; c < *dimension; c++)
-    GFS_VARIABLE (cell, v[c]->i) -= GFS_VARIABLE (cell, g[c]->i)*(*dt);
+    GFS_VALUE (cell, v[c]) -= GFS_VALUE (cell, g[c])*(*dt);
 }
 
 /**

@@ -1246,7 +1246,7 @@ static gboolean gfs_output_location_event (GfsEvent * event,
       GSList * i = domain->variables;
       guint nv = 5;
 
-      fputs ("# 1:T 2:X 3:Y 4:Z", fp);
+      fputs ("# 1:t 2:x 3:y 4:z", fp);
       while (i) {
 	if (GFS_VARIABLE1 (i->data)->name)
 	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
@@ -1400,7 +1400,7 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
 	GSList * i = domain->variables_io;
 	guint nv = 4;
 
-	fputs ("# 1:X 2:Y 3:Z", fp);
+	fputs ("# 1:x 2:y 3:z", fp);
 	while (i) {
 	  g_assert (GFS_VARIABLE1 (i->data)->name);
 	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);

@@ -254,7 +254,7 @@ static void gfs_write_povray_density(GfsDomain * domain,
   density_buf = g_malloc (density_buf_s);
 
   if (density_buf == NULL) {
-    g_warning ("GfsOutputPovrayDF3: Failed to allocate %d bytes of memory",
+    g_warning ("GfsOutputPovrayDF3: Failed to allocate %ld bytes of memory",
 	       density_buf_s);
     return; /* failure */
   }

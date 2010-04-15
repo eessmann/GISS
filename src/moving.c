@@ -49,6 +49,7 @@ typedef struct {
   GfsSimulation * sim;
   GfsSolidMoving * s;
   GfsVariable * old_solid_v, ** sold2, ** v;
+  guint notin;
 } SolidInfo;
 
 static double surface_value (FttCell * cell, GfsVariable * v, FttVector * ca)
@@ -652,7 +653,7 @@ static void move_vertex (GtsPoint * p, SolidInfo * par)
       (&p->x)[c] += surface_value (cell, par->v[c], &pos)*dt;
   }
   else
-    g_warning ("point %g,%g not in domain", pos.x, pos.y);
+    par->notin++;
 }
 
 static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
@@ -663,7 +664,10 @@ static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
     p.sim = sim;
     p.s = solid;
     p.v = gfs_domain_velocity (GFS_DOMAIN (sim));
+    p.notin = 0;
     gts_surface_foreach_vertex (surface->s, (GtsFunc) move_vertex, &p);
+    if (p.notin > 0)
+      g_warning ("%d vertices of the moving surface are outside of the domain", p.notin);
   }
   else
     /* implicit surface */
