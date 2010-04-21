@@ -275,6 +275,17 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
 					       GfsMultilevelParams * par)
 {
   HypreProblem hp;
+  gdouble tolerance = par->tolerance, res0 = 0.;
+  gdouble size = ftt_level_size (gfs_domain_depth (domain));
+  gint i;
+
+  for (i=0;i< lp->rhs->len;i++)
+    res0 += pow(g_array_index (lp->rhs, gdouble, i),2.);
+  res0 = sqrt(res0);
+
+  /* Tolerance has to be rescaled to account for the different of method */
+  /* used by Hypre to computed the norm of the residual */
+  par->tolerance *= size*size*sqrt(((gdouble) lp->rhs->len))/res0;
      
   hypre_problem_new (&hp, domain, lp->rhs->len);
   hypre_problem_init (&hp, lp, domain);
@@ -289,6 +300,7 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
   
   hypre_problem_copy (&hp, lp);
   hypre_problem_destroy (&hp);
+  par->tolerance = tolerance;
 }
 
 static void correct (FttCell * cell, gpointer * data)
