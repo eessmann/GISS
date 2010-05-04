@@ -362,6 +362,26 @@ GfsOutputClass * gfs_output_particle_class  (void);
 
 GfsOutputClass * gfs_output_ppm_class  (void);
 
+/* GfsOutputGRD: Header */
+
+typedef struct _GfsOutputGRD         GfsOutputGRD;
+
+struct _GfsOutputGRD {
+  /*< private >*/
+  GfsOutputScalar parent;
+
+  /*< public >*/
+  gdouble xll, yll;
+};
+
+#define GFS_OUTPUT_GRD(obj)         GTS_OBJECT_CAST (obj,\
+					       GfsOutputGRD,\
+					       gfs_output_grd_class ())
+#define GFS_IS_OUTPUT_GRD(obj)         (gts_object_is_from_class (obj,\
+						 gfs_output_grd_class ()))
+
+GfsOutputClass * gfs_output_grd_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

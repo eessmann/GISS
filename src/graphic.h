@@ -50,6 +50,13 @@ void               gfs_write_ppm               (GfsDomain * domain,
 						FttTraverseFlags flags,
 						gint level,
 						FILE * fp);
+void               gfs_write_grd               (GfsDomain * domain, 
+						GfsFunction * condition,
+						GfsVariable * v,
+						gdouble xll, gdouble yll, gdouble length,
+						FttTraverseFlags flags,
+						gint level,
+						FILE * fp);
 gint               gfs_combine_ppm             (gchar ** fname, 
 						guint nname, 
 						FILE * fp);

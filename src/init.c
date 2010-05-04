@@ -235,6 +235,7 @@ GtsObjectClass ** gfs_classes (void)
 	gfs_output_squares_class (),
 	gfs_output_streamline_class (),
         gfs_output_ppm_class (),  
+        gfs_output_grd_class (),  
 
   gfs_map_class (),
     gfs_map_function_class (),

@@ -647,6 +647,150 @@ void gfs_write_ppm (GfsDomain * domain,
   colormap_destroy (colormap);
 }
 
+typedef struct {
+  FttVector min;
+  guint width, height, size;
+  gfloat * buf, ** data;
+  gdouble xll, yll, cellsize;
+} Grid;
+
+static Grid * grid_new (FttVector min, FttVector max, guint size, 
+			gdouble xll, gdouble yll, gdouble cellsize)
+{
+  Grid * im = g_malloc0 (sizeof (Grid));
+  guint i;
+
+  im->min = min;
+  im->size = size;
+  im->xll = xll;
+  im->yll = yll;
+  im->cellsize = cellsize;
+  im->width = (max.x - min.x)*size;
+  im->height = (max.y - min.y)*size;
+  im->buf = g_malloc (sizeof (gfloat)*im->width*im->height);
+  for (i = 0; i < im->height*im->width; i++)
+    im->buf[i] = -9999;
+  im->data = g_malloc (sizeof (gfloat *)*im->height);
+  for (i = 0; i < im->height; i++)
+    im->data[i] = &im->buf[i*im->width];
+  return im;
+}
+
+static void grid_write (Grid * im, FILE * fp)
+{
+  fprintf (fp, 
+	   "ncols\t\t%d\n"
+	   "nrows\t\t%d\n"
+	   "xllcorner\t%f\n"
+	   "yllcorner\t%f\n"
+	   "cellsize\t%.10f\n"
+	   "nodata_value\t-9999\n",
+	   im->width, im->height, 
+	   im->xll, im->yll, im->cellsize);
+  guint i, j;
+  for (i = 0; i < im->height; i++)
+    for (j = 0; j < im->width; j++)
+      fprintf (fp, "%g ", im->data[i][j]);
+}
+
+static void grid_destroy (Grid * im)
+{
+  g_free (im->data);
+  g_free (im->buf);
+  g_free (im);
+}
+
+static void grid_draw_square (Grid * im,
+			      FttVector * p1, FttVector * p2,
+			      gfloat c)
+{
+  gint i1, j1, i2, j2, i, j;
+
+  i1 = (p1->x - im->min.x)*im->size;
+  i2 = (p2->x - im->min.x)*im->size;
+  j1 = (p1->y - im->min.y)*im->size;
+  j2 = (p2->y - im->min.y)*im->size;
+
+  j1 = im->height - 1 - j1;
+  j2 = im->height - 1 - j2;
+  for (i = i1; i <= i2; i++)
+    for (j = j2; j <= j1; j++) 
+      if (i >= 0 && i < im->width && j >= 0 && j < im->height)
+	im->data[j][i] = c;
+}
+
+static void write_grid_square (FttCell * cell, gpointer * data)
+{
+  GfsVariable * v = data[3];
+  Grid * grid = data[4];
+  FttVector * lambda = data[5];
+  FttVector p;
+  gdouble size = ftt_cell_size (cell)/2.;
+  FttVector p1, p2;
+
+  ftt_cell_pos (cell, &p);
+  p1.x = (p.x - size)/lambda->x + 1e-9;
+  p1.y = (p.y - size)/lambda->y + 1e-9;
+  p2.x = (p.x + size)/lambda->x - 1e-9;
+  p2.y = (p.y + size)/lambda->y - 1e-9;
+  grid_draw_square (grid, &p1, &p2, GFS_VALUE (cell, v));
+}
+
+void gfs_write_grd (GfsDomain * domain, 
+		    GfsFunction * condition,
+		    GfsVariable * v,
+		    gdouble xll, gdouble yll, gdouble length,
+		    FttTraverseFlags flags,
+		    gint level,
+		    FILE * fp)
+{
+  guint depth, size = 1;
+  Grid * grid;
+  FttVector extent[2] = {{ G_MAXDOUBLE, G_MAXDOUBLE, G_MAXDOUBLE },
+			 { - G_MAXDOUBLE, - G_MAXDOUBLE, - G_MAXDOUBLE }};
+  gpointer data[6];
+
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (fp != NULL);
+
+  if (level < 0)
+    depth = gfs_domain_depth (domain);
+  else
+    depth = level;
+  while (depth-- > 0)
+    size *= 2;
+
+  if (condition)
+    gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
+					(FttCellTraverseFunc) max_extent, extent,
+					cell_condition, condition);
+  else
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
+			      (FttCellTraverseFunc) max_extent, extent);
+    
+  if (extent[0].x == G_MAXDOUBLE)
+    return;
+
+  extent[0].x /= domain->lambda.x; 
+  extent[0].y /= domain->lambda.y;
+  extent[1].x /= domain->lambda.x; 
+  extent[1].y /= domain->lambda.y;
+
+  grid = grid_new (extent[0], extent[1], size, xll, yll, length/size);
+  data[3] = v;
+  data[4] = grid;
+  data[5] = &domain->lambda;
+  if (condition)
+    gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
+					(FttCellTraverseFunc) write_grid_square, data,
+					cell_condition, condition);
+  else
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
+			      (FttCellTraverseFunc) write_grid_square, data);
+  grid_write (grid, fp);
+  grid_destroy (grid);
+}
+
 static gint gfs_combine_close (FILE ** f, Image ** im, gint n, gint ret)
 {
   guint i;
