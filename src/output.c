@@ -3177,54 +3177,22 @@ GfsOutputClass * gfs_output_ppm_class (void)
 
 /* GfsOutputGRD: Object */
 
-static void gfs_output_grd_read (GtsObject ** o, GtsFile * fp)
-{
-  (* GTS_OBJECT_CLASS (gfs_output_grd_class ())->parent_class->read) (o, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-#if (!FTT_2D)
-  if (!GFS_IS_OCEAN (gfs_object_simulation (*o))) {
-    gts_file_error (fp, 
-		    "In more than two dimensions GRD output is possible\n"
-		    "only for GfsOcean simulations");
-    return;
-  }
-#endif /* 3D */
-  
-  if (fp->type == '{') {
-    GtsFileVariable var[] = {
-      {GTS_DOUBLE, "xll", TRUE, &GFS_OUTPUT_GRD (*o)->xll },
-      {GTS_DOUBLE, "yll", TRUE, &GFS_OUTPUT_GRD (*o)->yll },
-      {GTS_NONE}
-    };
-    gts_file_assign_variables (fp, var);
-  }
-}
-
-static void gfs_output_grd_write (GtsObject * o, FILE * fp)
-{
-  (* GTS_OBJECT_CLASS (gfs_output_grd_class ())->parent_class->write) (o, fp);
-  GfsOutputGRD * grd = GFS_OUTPUT_GRD (o);
-  if (grd->xll != 0. || grd->yll != 0.)
-    fprintf (fp, " { xll = %g yll = %g }", grd->xll, grd->yll);
-}
-
 static gboolean gfs_output_grd_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_grd_class ())->parent_class)->event) 
       (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
-    GfsOutputGRD * grd = GFS_OUTPUT_GRD (event);
 #if FTT_2D
     GfsDomain * domain = GFS_DOMAIN (sim);
 #else /* 3D */
     GfsDomain * domain = GFS_IS_OCEAN (sim) ? GFS_OCEAN (sim)->toplayer : GFS_DOMAIN (sim);
 #endif /* 3D */
-
+    FttVector o = {0.,0.,0.};
+    gfs_simulation_map_inverse (sim, &o);
     gfs_write_grd (domain,
 		   output->condition,
 		   output->v,
-		   grd->xll, grd->yll, sim->physical_params.L,
+		   o.x, o.y, sim->physical_params.L,
 		   FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
 		   GFS_OUTPUT (event)->file->fp);
     fflush (GFS_OUTPUT (event)->file->fp);
@@ -3235,8 +3203,6 @@ static gboolean gfs_output_grd_event (GfsEvent * event, GfsSimulation * sim)
 
 static void gfs_output_grd_class_init (GfsOutputClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->read = gfs_output_grd_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_output_grd_write;
   GFS_EVENT_CLASS (klass)->event = gfs_output_grd_event;
 }
 
@@ -3247,7 +3213,7 @@ GfsOutputClass * gfs_output_grd_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo gfs_output_grd_info = {
       "GfsOutputGRD",
-      sizeof (GfsOutputGRD),
+      sizeof (GfsOutputScalar),
       sizeof (GfsOutputClass),
       (GtsObjectClassInitFunc) gfs_output_grd_class_init,
       (GtsObjectInitFunc) NULL,

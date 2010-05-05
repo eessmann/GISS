@@ -53,7 +53,7 @@ void               gfs_write_ppm               (GfsDomain * domain,
 void               gfs_write_grd               (GfsDomain * domain, 
 						GfsFunction * condition,
 						GfsVariable * v,
-						gdouble xll, gdouble yll, gdouble length,
+						gdouble xc, gdouble yc, gdouble length,
 						FttTraverseFlags flags,
 						gint level,
 						FILE * fp);

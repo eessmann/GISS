@@ -655,18 +655,18 @@ typedef struct {
 } Grid;
 
 static Grid * grid_new (FttVector min, FttVector max, guint size, 
-			gdouble xll, gdouble yll, gdouble cellsize)
+			gdouble xc, gdouble yc, gdouble length)
 {
   Grid * im = g_malloc0 (sizeof (Grid));
   guint i;
 
   im->min = min;
   im->size = size;
-  im->xll = xll;
-  im->yll = yll;
-  im->cellsize = cellsize;
+  im->cellsize = length/size;
   im->width = (max.x - min.x)*size;
   im->height = (max.y - min.y)*size;
+  im->xll = xc + min.x*length;
+  im->yll = yc + min.y*length;
   im->buf = g_malloc (sizeof (gfloat)*im->width*im->height);
   for (i = 0; i < im->height*im->width; i++)
     im->buf[i] = -9999;
@@ -739,7 +739,7 @@ static void write_grid_square (FttCell * cell, gpointer * data)
 void gfs_write_grd (GfsDomain * domain, 
 		    GfsFunction * condition,
 		    GfsVariable * v,
-		    gdouble xll, gdouble yll, gdouble length,
+		    gdouble xc, gdouble yc, gdouble length,
 		    FttTraverseFlags flags,
 		    gint level,
 		    FILE * fp)
@@ -776,7 +776,7 @@ void gfs_write_grd (GfsDomain * domain,
   extent[1].x /= domain->lambda.x; 
   extent[1].y /= domain->lambda.y;
 
-  grid = grid_new (extent[0], extent[1], size, xll, yll, length/size);
+  grid = grid_new (extent[0], extent[1], size, xc, yc, length);
   data[3] = v;
   data[4] = grid;
   data[5] = &domain->lambda;
