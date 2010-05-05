@@ -1419,7 +1419,7 @@ struct _GfsVariableTerrain {
   GfsVariable parent;
 
   /*< public >*/
-  GfsVariable * p, * H;
+  GfsVariable * p, * H, * n, * dmin, * dmax;
   RSurfaces rs;
 };
 
@@ -1468,10 +1468,16 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 				    (RSurfaceCheck) polygon_includes,
 				    (RSurfaceCheck) polygon_intersects, &poly, 
 				    rect, &s);
-      if (s.n > 0)
+      GFS_VALUE (child.c[n], t->n) = s.n;
+      if (s.n > 0) {
 	GFS_VALUE (child.c[n], v) = s.H0/s.n/sim->physical_params.L;
+	GFS_VALUE (child.c[n], t->dmin) = s.Hmin;
+	GFS_VALUE (child.c[n], t->dmax) = s.Hmax;
+      }
       else {
 	GFS_VALUE (child.c[n], v) = GFS_VALUE (parent, v);
+	GFS_VALUE (child.c[n], t->dmin) = G_MAXDOUBLE;
+	GFS_VALUE (child.c[n], t->dmax) = G_MAXDOUBLE;
 	if (!GFS_CELL_IS_BOUNDARY (parent)) {
 	  FttVector p;
 	  FttComponent c;
@@ -1568,23 +1574,32 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 
 static void variable_terrain_fine_coarse (FttCell * parent, GfsVariable * v)
 {
+  GfsVariableTerrain * t = GFS_VARIABLE_TERRAIN (v);
   FttCellChildren child;
   guint n;
 
   /* Reconstruct terrain (weighted average) */
   gdouble Zb = 0., sa = 0.;
+  gdouble N = 0., dmin = G_MAXDOUBLE, dmax = - G_MAXDOUBLE;
   ftt_cell_children (parent, &child);
   for (n = 0; n < FTT_CELLS; n++) 
     if (child.c[n]) {
       gdouble a = GFS_IS_MIXED (child.c[n]) ? GFS_STATE (child.c[n])->solid->a : 1.;
       Zb += GFS_VALUE (child.c[n], v)*a;
       sa += a;
+      N += GFS_VALUE (child.c[n], t->n);
+      if (GFS_VALUE (child.c[n], t->n) > 0) {
+	dmax = MAX (dmax, GFS_VALUE (child.c[n], t->dmax));
+	dmin = MIN (dmin, GFS_VALUE (child.c[n], t->dmin));
+      }
     }
   if (sa > 0.)
     GFS_VALUE (parent, v) = Zb/sa;
+  GFS_VALUE (parent, t->n) = N;
+  GFS_VALUE (parent, t->dmax) = dmax > - G_MAXDOUBLE ? dmax : G_MAXDOUBLE;
+  GFS_VALUE (parent, t->dmin) = dmin;
 
   /* If we are part of GfsRiver, reconstruct H and P */
-  GfsVariableTerrain * t = GFS_VARIABLE_TERRAIN (v);
   if (t->H) {
     /* Reconstruct H */
     gdouble H = 0., sa = 0.;
@@ -1624,6 +1639,22 @@ static void variable_terrain_read (GtsObject ** o, GtsFile * fp)
   v1->fine_coarse = variable_terrain_fine_coarse;
 
   GfsSimulation * sim = gfs_object_simulation (*o);
+  gchar * name = g_strjoin (NULL, v1->name, "n", NULL);
+  v->n = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), name, "Terrain samples #");
+  v->n->coarse_fine = none;
+  v->n->fine_coarse = none;
+  g_free (name);
+  name = g_strjoin (NULL, v1->name, "dmin", NULL);
+  v->dmin = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), name, "Minimum data height");
+  v->dmin->coarse_fine = none;
+  v->dmin->fine_coarse = none;
+  g_free (name);
+  name = g_strjoin (NULL, v1->name, "dmax", NULL);
+  v->dmax = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), name, "Maximum data height");
+  v->dmax->coarse_fine = none;
+  v->dmax->fine_coarse = none;
+  g_free (name);
+
   if (GFS_IS_RIVER (sim) && fp->type == '{') {
     gboolean reconstruct = FALSE;
     GtsFileVariable var[] = {
