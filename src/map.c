@@ -250,3 +250,84 @@ GfsMapClass * gfs_map_function_class (void)
 
   return klass;
 }
+
+/* GfsMapTransform: Object */
+
+static void gfs_map_transform_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_map_transform_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != '{') {
+    gts_file_error (fp, "expecting an opening brace");
+    return;
+  }
+  GfsMapTransform * map = GFS_MAP_TRANSFORM (*o);
+  GtsFileVariable var[] = {
+    {GTS_DOUBLE, "tx", TRUE, &map->translate[0]},
+    {GTS_DOUBLE, "ty", TRUE, &map->translate[1]},
+    {GTS_DOUBLE, "tz", TRUE, &map->translate[2]},
+    {GTS_NONE}
+  };
+  gts_file_assign_variables (fp, var);
+}
+
+static void gfs_map_transform_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_map_transform_class ())->parent_class->write) (o, fp);
+  GfsMapTransform * map = GFS_MAP_TRANSFORM (o);
+  fputs (" {\n", fp);
+  if (gts_vector_norm (map->translate) > 0.)
+    fprintf (fp, "  tx = %g ty = %g tz = %g\n",
+	     map->translate[0], map->translate[1], map->translate[2]);
+  fputc ('}', fp);
+}
+
+static void gfs_map_transform_class_init (GfsMapClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = gfs_map_transform_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_map_transform_write;
+}
+
+static void map_transform_transform (GfsMap * map, const FttVector * src, FttVector * dest)
+{
+  GfsMapTransform * mf = GFS_MAP_TRANSFORM (map);
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&dest->x)[c] = (&src->x)[c] - mf->translate[c];
+}
+
+static void map_transform_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
+{
+  GfsMapTransform * mf = GFS_MAP_TRANSFORM (map);
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&dest->x)[c] = (&src->x)[c] + mf->translate[c];
+}
+
+static void gfs_map_transform_init (GfsMap * map)
+{
+  map->transform = map_transform_transform;
+  map->inverse =   map_transform_inverse;
+}
+
+GfsMapClass * gfs_map_transform_class (void)
+{
+  static GfsMapClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_map_transform_info = {
+      "GfsMapTransform",
+      sizeof (GfsMapTransform),
+      sizeof (GfsMapClass),
+      (GtsObjectClassInitFunc) gfs_map_transform_class_init,
+      (GtsObjectInitFunc) gfs_map_transform_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_map_class ()), &gfs_map_transform_info);
+  }
+
+  return klass;
+}

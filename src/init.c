@@ -239,6 +239,7 @@ GtsObjectClass ** gfs_classes (void)
 
   gfs_map_class (),
     gfs_map_function_class (),
+    gfs_map_transform_class (),
 
   gfs_particle_class (),
 

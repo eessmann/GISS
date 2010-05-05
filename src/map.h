@@ -81,6 +81,26 @@ struct _GfsMapFunction {
 
 GfsMapClass * gfs_map_function_class      (void);
 
+/* GfsMapTransform: Header */
+
+typedef struct _GfsMapTransform         GfsMapTransform;
+
+struct _GfsMapTransform {
+  /*< private >*/
+  GfsMap parent;
+
+  /*< public >*/
+  GtsVector translate;
+};
+
+#define GFS_MAP_TRANSFORM(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsMapTransform,\
+					         gfs_map_transform_class ())
+#define GFS_IS_MAP_TRANSFORM(obj)         (gts_object_is_from_class (obj,\
+						 gfs_map_transform_class ()))
+
+GfsMapClass * gfs_map_transform_class      (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
