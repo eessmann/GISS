@@ -3662,22 +3662,23 @@ void gfs_domain_remove_droplets (GfsDomain * domain,
   gts_object_destroy (GTS_OBJECT (p.tag));
 }
 
-static void tag_cell (FttCell * cell, GfsVariable * v, guint tag, guint * size)
+static void tag_cell (GtsFifo * fifo, FttCell * cell, GfsVariable * v, guint tag, guint * size)
 {
   FttDirection d;
   FttCellNeighbors n;
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
 
   g_assert (FTT_CELL_IS_LEAF (cell));
-  GFS_VALUE (cell, v) = tag;
   (*size)++;
   ftt_cell_neighbors (cell, &n);
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (n.c[d] && GFS_VALUE (n.c[d], v) == 0. &&
 	!GFS_CELL_IS_BOUNDARY (n.c[d]) &&
 	(!solid || solid->s[d] > 0.)) {
-      if (FTT_CELL_IS_LEAF (n.c[d]))
-	tag_cell (n.c[d], v, tag, size);
+      if (FTT_CELL_IS_LEAF (n.c[d])) {
+	GFS_VALUE (n.c[d], v) = tag;
+	gts_fifo_push (fifo, n.c[d]);
+      }
       else {
 	FttCellChildren child;
 	FttDirection od = FTT_OPPOSITE_DIRECTION (d);
@@ -3686,8 +3687,10 @@ static void tag_cell (FttCell * cell, GfsVariable * v, guint tag, guint * size)
 	j = ftt_cell_children_direction (n.c[d], od, &child);
 	for (i = 0; i < j; i++)
 	  if (child.c[i] && GFS_VALUE (child.c[i], v) == 0. &&
-	      (!GFS_IS_MIXED (child.c[i]) || GFS_STATE (child.c[i])->solid->s[od] > 0.))
-	    tag_cell (child.c[i], v, tag, size);
+	      (!GFS_IS_MIXED (child.c[i]) || GFS_STATE (child.c[i])->solid->s[od] > 0.)) {
+	    GFS_VALUE (child.c[i], v) = tag;
+	    gts_fifo_push (fifo, child.c[i]);
+	  }
       }
     }
 }
@@ -3699,9 +3702,14 @@ static void tag_new_region (FttCell * cell, gpointer * data)
   if (GFS_VALUE (cell, v) == 0.) {
     GArray * sizes = data[1];
     guint size = 0;
+    GtsFifo * fifo = gts_fifo_new ();
 
-    tag_cell (cell, v, sizes->len + 1, &size);
+    GFS_VALUE (cell, v) = sizes->len + 1;
+    gts_fifo_push (fifo, cell);
+    while ((cell = gts_fifo_pop (fifo)))
+      tag_cell (fifo, cell, v, sizes->len + 1, &size);
     g_array_append_val (sizes, size);
+    gts_fifo_destroy (fifo);
   }
 }
 
