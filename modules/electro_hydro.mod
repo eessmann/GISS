@@ -697,6 +697,49 @@ GfsSourceGenericClass * gfs_source_charge_class (void)
   return klass;
 }
 
+/* GfsElectroHydroAxi: Header */
+
+GfsSimulationClass * gfs_electro_hydro_axi_class  (void);
+
+/* GfsElectroHydroAxi: Object */
+
+static void gfs_electro_hydro_axi_read (GtsObject ** o, GtsFile * fp)
+{
+  gfs_electro_hydro_read (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  GFS_DOMAIN (*o)->refpos.y = 0.5;
+}
+
+static void gfs_electro_hydro_axi_class_init (GfsSimulationClass * klass) 
+{
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_electro_hydro_destroy;
+  GTS_OBJECT_CLASS (klass)->read =    gfs_electro_hydro_axi_read;
+  GTS_OBJECT_CLASS (klass)->write =   gfs_electro_hydro_write;
+  klass->run =                        gfs_electro_hydro_run;
+}
+
+GfsSimulationClass * gfs_electro_hydro_axi_class (void)
+{
+  static GfsSimulationClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_electro_hydro_axi_info = {
+      "GfsElectroHydroAxi",
+      sizeof (GfsElectroHydro),
+      sizeof (GfsSimulationClass),
+      (GtsObjectClassInitFunc) gfs_electro_hydro_axi_class_init,
+      (GtsObjectInitFunc) gfs_electro_hydro_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_axi_class ()),
+				  &gfs_electro_hydro_axi_info);
+  }
+
+  return klass;
+}
+
 /* Initialize module */
 
 /* only define gfs_module_name for "official" modules (i.e. those installed in
@@ -707,6 +750,7 @@ const gchar * g_module_check_init (void);
 const gchar * g_module_check_init (void)
 {
   gfs_electro_hydro_class ();
+  gfs_electro_hydro_axi_class ();
   gfs_source_electric_class ();
   gfs_source_charge_class ();
   return NULL;
