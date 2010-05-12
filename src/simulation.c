@@ -35,6 +35,12 @@
 
 /* GfsSimulation: object */
 
+static void module_close (GModule *module)
+{
+  if (!g_module_close (module))
+    g_warning ("%s: %s", g_module_name (module), g_module_error ());
+}
+
 static void simulation_destroy (GtsObject * object)
 {
   GfsSimulation * sim = GFS_SIMULATION (object);
@@ -51,11 +57,11 @@ static void simulation_destroy (GtsObject * object)
   gts_object_destroy (GTS_OBJECT (sim->adapts));
   gts_object_destroy (GTS_OBJECT (sim->solids));
 
-  g_slist_foreach (sim->modules, (GFunc) g_module_close, NULL);
+  g_slist_foreach (sim->modules, (GFunc) module_close, NULL);
   g_slist_free (sim->modules);
   g_slist_foreach (sim->globals, (GFunc) gts_object_destroy, NULL);
   g_slist_free (sim->globals);
-  g_slist_foreach (sim->preloaded_modules, (GFunc) g_module_close, NULL);
+  g_slist_foreach (sim->preloaded_modules, (GFunc) module_close, NULL);
   g_slist_free (sim->preloaded_modules);
 
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->destroy) (object);

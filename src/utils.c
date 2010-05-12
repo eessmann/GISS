@@ -698,8 +698,9 @@ static void check_for_deferred_compilation (GfsFunction * f)
   if (f->f == DEFERRED_COMPILATION) {
     function_compile (f, &f->fpd);
     if (f->fpd.type == GTS_ERROR) {
-      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_CRITICAL, 
-	     "error in deferred compilation\n%s", 
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_CRITICAL,
+	     "error in deferred compilation\n%s\n%s", 
+	     f->expr ? f->expr->str : NULL,
 	     f->fpd.error);
       exit (1);
     }
@@ -799,7 +800,8 @@ static void function_destroy (GtsObject * object)
 {
   GfsFunction * f = GFS_FUNCTION (object);
 
-  if (f->module) g_module_close (f->module);
+  if (f->module && !g_module_close (f->module))
+    g_warning ("%s: %s", g_module_name (f->module), g_module_error ());
   if (f->expr) g_string_free (f->expr, TRUE);
   if (f->s) {
     gts_object_destroy (GTS_OBJECT (f->s));
