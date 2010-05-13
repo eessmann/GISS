@@ -132,6 +132,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_boundary_inflow_constant_class (),
     gfs_boundary_outflow_class (),
     gfs_boundary_gradient_class (),
+    gfs_boundary_discharge_class (),
     gfs_boundary_periodic_class (),
       gfs_boundary_mpi_class (),
 

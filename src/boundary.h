@@ -162,6 +162,7 @@ struct _GfsBoundaryClass {
 			      FttTraverseFlags flags,
 			      gint max_depth);
   void (* synchronize)       (GfsBoundary * boundary);
+  void (* update)            (GfsBoundary * boundary);
 };
 
 #define GFS_BOUNDARY(obj)            GTS_OBJECT_CAST (obj,\
@@ -178,6 +179,7 @@ GfsBoundary *      gfs_boundary_new                  (GfsBoundaryClass * klass,
 						      GfsBox * box,
 						      FttDirection d);
 void               gfs_boundary_send                 (GfsBoundary * boundary);
+void               gfs_boundary_update               (GfsBoundary * boundary);
 void               gfs_boundary_receive              (GfsBoundary * boundary,
 						      FttTraverseFlags flags,
 						      gint max_depth);

@@ -624,15 +624,16 @@ static void box_bc (GfsBox * box, BcData * p)
 {
   FttDirection d;
 
-  for (d = 0; d < FTT_NEIGHBORS; d++) 
+  for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOUNDARY (box->neighbor[d])) {
       GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
       GfsBc * bc = gfs_boundary_lookup_bc (b, p->v);
 
       if (bc) {
 	b->v = p->v1;
-	bc->v = p->v1;
   	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+	gfs_boundary_update (b);
+	bc->v = p->v1;
 	ftt_face_traverse_boundary (b->root, b->d,
 				    FTT_PRE_ORDER, p->flags, p->max_depth,
 				    bc->bc, bc);

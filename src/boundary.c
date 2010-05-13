@@ -182,16 +182,12 @@ static void bc_value_read (GtsObject ** o, GtsFile * fp)
       (o, fp);
   if (fp->type == GTS_ERROR)
     return;
-  if (bc->val == NULL)
-    bc->val = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (GFS_BC_VALUE (*o)->val, gfs_box_domain (GFS_BC (bc)->b->box), fp);
 }
 
 static void bc_value_destroy (GtsObject * o)
 {
-  if (GFS_BC_VALUE (o)->val)
-    gts_object_destroy (GTS_OBJECT (GFS_BC_VALUE (o)->val));
-
+  gts_object_destroy (GTS_OBJECT (GFS_BC_VALUE (o)->val));
   (* GTS_OBJECT_CLASS (gfs_bc_value_class ())->parent_class->destroy) (o);
 }
 
@@ -200,6 +196,11 @@ static void gfs_bc_value_class_init (GtsObjectClass * klass)
   klass->write   = bc_value_write;
   klass->read    = bc_value_read;
   klass->destroy = bc_value_destroy;
+}
+
+static void gfs_bc_value_init (GfsBcValue * bc)
+{
+  bc->val = gfs_function_new (gfs_function_class (), 0.);
 }
 
 GfsBcClass * gfs_bc_value_class (void)
@@ -212,7 +213,7 @@ GfsBcClass * gfs_bc_value_class (void)
       sizeof (GfsBcValue),
       sizeof (GfsBcClass),
       (GtsObjectClassInitFunc) gfs_bc_value_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) gfs_bc_value_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -230,10 +231,10 @@ static GfsBc * gfs_bc_value_new (GfsBcClass * k,
 {
   GfsBcValue * bc = GFS_BC_VALUE (gfs_bc_new (k, v, extra));
 
-  if (val == NULL)
-    bc->val = gfs_function_new (gfs_function_class (), 0.);
-  else
+  if (val != NULL) {
+    gts_object_destroy (GTS_OBJECT (bc->val));
     bc->val = val;
+  }
 
   return GFS_BC (bc);
 }
@@ -781,6 +782,20 @@ GfsBoundary * gfs_boundary_new (GfsBoundaryClass * klass,
     boundary_match (boundary);
 
   return boundary;
+}
+
+/**
+ * gfs_boundary_update:
+ * @boundary: a #GfsBoundary.
+ *
+ * Calls the @update() method of @boundary.
+ */
+void gfs_boundary_update (GfsBoundary * boundary)
+{
+  g_return_if_fail (boundary != NULL);
+
+  if (GFS_BOUNDARY_CLASS (GTS_OBJECT (boundary)->klass)->update)
+    (* GFS_BOUNDARY_CLASS (GTS_OBJECT (boundary)->klass)->update) (boundary);
 }
 
 /**
