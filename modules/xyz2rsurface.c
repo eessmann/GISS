@@ -52,6 +52,11 @@ static int intersects (RSurfaceRect RSTrect, Params * p, int depth)
   return (depth < p->maxdepth);
 }
 
+static int includes_true (RSurfaceRect RSTrect, Params * p, int depth)
+{
+  return 1;
+}
+
 int main (int argc, char** argv)
 {
   int c = 0, pagesize = 2048;
@@ -133,6 +138,16 @@ int main (int argc, char** argv)
   if (verbose) {
     RSurfaceRect rect = {{-0.5,-0.5},{0.5,0.5}};
     RSurfaceSum s;
+
+    r_surface_sum_init (&s);
+    r_surface_query_region_sum (rs, 
+				(RSurfaceCheck) includes_true, (RSurfaceCheck) includes_true, NULL,
+				rect, &s);
+    fprintf (stderr,
+	     "Height min: %g average: %g max: %g\n", 
+	     s.Hmin, s.H0/s.n, s.Hmax);
+
+    fprintf (stderr, "Bounding box aspect ratio and average # of entries:\n");
     Params p;
     p.maxdepth = r_surface_depth (rs);
     p.size = calloc (p.maxdepth + 1, sizeof (int));
@@ -140,13 +155,12 @@ int main (int argc, char** argv)
     r_surface_sum_init (&s);
     r_surface_query_region_sum (rs, (RSurfaceCheck) includes, (RSurfaceCheck) intersects, &p,
 				rect, &s);
-
     int i;
     for (i = 1; i <= p.maxdepth; i++)
       if (p.size[i] > 0) {
 	fprintf (stderr, "level %d: %d\n", i, p.size[i]);
 	if (i < p.maxdepth && p.size[i + 1] > 0)
-	  fprintf (stderr, "\taverage ratio: %g average # of entries: %g\n",
+	  fprintf (stderr, "\taverage aspect ratio: %g average # of entries: %g\n",
 		   p.ratio[i]/p.size[i],
 		   p.size[i + 1]/(double) p.size[i]);
 	else

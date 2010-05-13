@@ -138,7 +138,7 @@ int main (int argc, char** argv)
       if (p.size[i] > 0) {
 	fprintf (stderr, "level %d: %d\n", i, p.size[i]);
 	if (i < p.maxdepth && p.size[i + 1] > 0)
-	  fprintf (stderr, "\taverage ratio: %g\taverage # of entries: %g\n",
+	  fprintf (stderr, "\taverage aspect ratio: %g\taverage # of entries: %g\n",
 		   p.ratio[i]/p.size[i],
 		   p.size[i + 1]/(double) p.size[i]);
 	else
