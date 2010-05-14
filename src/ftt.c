@@ -2000,9 +2000,8 @@ FttCell * ftt_cell_read_binary (GtsFile * fp,
  * ftt_refine_corner:
  * @cell: a #FttCell.
  *
- * Returns: %TRUE if @cell is a leaf and if any of its "corner"
- * neighbors are more than one level more refined, %FALSE otherwise
- * (see figure topology.fig). 
+ * Returns: %TRUE if any "corner" neighbors of @cell are more than one
+ * level more refined, %FALSE otherwise (see figure topology.fig).
  */
 gboolean ftt_refine_corner (const FttCell * cell)
 {
@@ -2010,9 +2009,6 @@ gboolean ftt_refine_corner (const FttCell * cell)
   guint i;
 
   g_return_val_if_fail (cell != NULL, FALSE);
-
-  if (!FTT_CELL_IS_LEAF (cell))
-    return FALSE;
 
   ftt_cell_neighbors (cell, &neighbor);
   for (i = 0; i < FTT_NEIGHBORS; i++) {

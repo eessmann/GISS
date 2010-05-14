@@ -656,7 +656,7 @@ GfsEventClass * gfs_adapt_error_class (void)
 
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {
-  if (ftt_refine_corner (cell))
+  if (FTT_CELL_IS_LEAF (cell) && ftt_refine_corner (cell))
     ftt_cell_refine_single (cell, domain->cell_init, domain->cell_init_data);
 }
 
@@ -828,7 +828,9 @@ static gboolean fine_cell_coarsenable (FttCell * cell, AdaptParams * p)
     return FALSE;
   if (ftt_cell_level (cell) < minlevel (cell, p->sim))
     return FALSE;
-  return TRUE;      
+  if (ftt_refine_corner (cell))
+    return FALSE;
+  return TRUE;
 }
 
 static void fine_cell_cleanup (FttCell * cell, AdaptParams * p)
@@ -968,15 +970,19 @@ static gboolean coarsen_cell (FttCell * cell, AdaptLocalParams * p)
 {
   if (GFS_CELL_IS_BOUNDARY (cell))
     return TRUE;
+  if (ftt_refine_corner (cell))
+    return FALSE;
   return COARSENABLE (cell, p);
 }
 
 static void cell_cleanup (FttCell * cell, AdaptLocalParams * p)
 {
-  gfs_cell_cleanup (cell, GFS_DOMAIN (p->sim));
-  p->s->removed++;
-  p->nc--;
+  if (!GFS_CELL_IS_BOUNDARY (cell)) {
+    p->s->removed++;
+    p->nc--;
+  }
   p->changed = TRUE;
+  gfs_cell_cleanup (cell, GFS_DOMAIN (p->sim));
 }
 
 static void coarsen_box (GfsBox * box, AdaptLocalParams * p)

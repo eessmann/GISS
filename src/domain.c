@@ -1137,7 +1137,7 @@ static void box_changed (GfsBox * box, gboolean * changed)
 
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {
-  if (ftt_refine_corner (cell))
+  if (FTT_CELL_IS_LEAF (cell) && ftt_refine_corner (cell))
     ftt_cell_refine_single (cell, domain->cell_init, domain->cell_init_data);
 }
 
