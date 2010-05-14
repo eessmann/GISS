@@ -179,7 +179,7 @@ static void gfs_electro_hydro_init (GfsElectroHydro * object)
   object->phi = gfs_domain_add_variable (domain, "Phi", "Electric potential");
   object->rhoe = gfs_variable_new (gfs_variable_tracer_class(), domain,
 				   "Rhoe", "Volumetric charge density");
-  object->rhoe->units = - FTT_DIMENSION;
+  object->rhoe->units = -3.;
   domain->variables = g_slist_append (domain->variables, object->rhoe);
 
   for (c = 0; c < FTT_DIMENSION; c++) {
@@ -421,8 +421,6 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
     gfs_simulation_set_timestep (sim);
     gfs_advance_tracers (domain, sim->advection_params.dt);
 
-    poisson_electric (elec); 
-
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
     gts_range_add_value (&domain->size, gfs_domain_size (domain, FTT_TRAVERSE_LEAFS, -1));
@@ -535,9 +533,11 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
     }
     fe[f.d/2] -= sign*0.5*emod*permf;
   }
-  
+
+  /* fixme: we need to rescale, not entirely clear why... */
+  gdouble scale = pow (GFS_SIMULATION (elec)->physical_params.L, -5.);
   for (c = 0; c < FTT_DIMENSION; c++)
-    GFS_VALUE (cell, s->fe[c]) = fe[c]/h;
+    GFS_VALUE (cell, s->fe[c]) = scale*fe[c]/h;
 }
 
 static gboolean gfs_source_electric_event (GfsEvent * event, GfsSimulation * sim)
