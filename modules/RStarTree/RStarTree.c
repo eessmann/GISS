@@ -40,7 +40,8 @@ void NoRSTree(RSTREE *r)
 
 /************************************************************************/
 
-boolean CreateRST(char *name,
+boolean CreateRST(const 
+char *name,
                   int pagelen,
                   boolean unique)
 
@@ -51,6 +52,7 @@ boolean CreateRST(char *name,
   BasicCheck();
   
   R= (RSTREE)malloc(sizeof(rstree));
+  (*R).readonly = FALSE;
   strcpy((*R).dirname,name);
   (*R).RSTDone= TRUE;
   CreateRSFiles(R);
@@ -92,7 +94,7 @@ boolean CreateRST(char *name,
 
 /************************************************************************/
 
-boolean RemoveRST(char *name)
+boolean RemoveRST(const char *name)
 
 {
   RSTName SufName;
@@ -136,7 +138,8 @@ boolean OpenRST(RSTREE *r,
   R= *r;
   strcpy((*R).dirname,name);
   (*R).RSTDone= TRUE;
-  OpenRSFiles(R, strcmp (mode, "rw") ? O_RDONLY : O_RDWR);
+  (*R).readonly = strcmp (mode, "rw");
+  OpenRSFiles(R, (*R).readonly ? O_RDONLY : O_RDWR);
   if (! (*R).RSTDone) {
     free(R); *r= NULL;
     return FALSE;
@@ -186,15 +189,17 @@ boolean CloseRST(RSTREE *r)
   }
   R= *r;
   (*R).RSTDone= TRUE;
-  
-  par= &(*R).parameters._;
-  WritePage(R,(*R).dirPD,paramblocknumb,par);
-  WritePage(R,(*R).dirPD,firstPDblocknumb,&(*R).dirpagedir);
-  WritePage(R,(*R).dataPD,paramblocknumb,par);     /* -- unused -- */
-  WritePage(R,(*R).dataPD,firstPDblocknumb,&(*R).datapagedir);
-  for (i= 1; i <= (*par).height; i++) {
-    if ((*R).Nmodified[i]) {
-      PutNode(R,(*R).N[i],(*R).P[i],i);
+
+  if (!(*R).readonly) {
+    par= &(*R).parameters._;
+    WritePage(R,(*R).dirPD,paramblocknumb,par);
+    WritePage(R,(*R).dirPD,firstPDblocknumb,&(*R).dirpagedir);
+    WritePage(R,(*R).dataPD,paramblocknumb,par);     /* -- unused -- */
+    WritePage(R,(*R).dataPD,firstPDblocknumb,&(*R).datapagedir);
+    for (i= 1; i <= (*par).height; i++) {
+      if ((*R).Nmodified[i]) {
+	PutNode(R,(*R).N[i],(*R).P[i],i);
+      }
     }
   }
   if (! (*R).RSTDone) {
@@ -816,38 +821,38 @@ static void BasicCheck()
     fprintf(stderr,"%s\n","FATAL ERROR:");
     fprintf(stderr,"%s\n","BasicCheck 1");
     fprintf(stderr,"%s\n","sizeof(byte) != 1");
-    fprintf(stderr,"%s %d\n","sizeof(byte):",sizeof(byte));
+    fprintf(stderr,"%s %ld\n","sizeof(byte):",sizeof(byte));
     abort();
     /* concerning application of type ByteArray */
   }
   if (sizeof(int) < 4) {
     fprintf(stderr,"%s\n","BasicCheck 2");
     fprintf(stderr,"%s\n","sizeof(int) < 4");
-    fprintf(stderr,"%s %d\n","sizeof(int):",sizeof(int));
+    fprintf(stderr,"%s %ld\n","sizeof(int):",sizeof(int));
     fprintf(stderr,"%s\n","WARNING: bigger int range assumed.");
   }
   if (sizeof(typinfo) < sizeof(int)) {
     fprintf(stderr,"%s\n","FATAL ERROR:");
     fprintf(stderr,"%s\n","BasicCheck 3");
     fprintf(stderr,"%s\n","sizeof(typinfo) < sizeof(int)");
-    fprintf(stderr,"%s %d\n","sizeof(typinfo):",sizeof(typinfo));
-    fprintf(stderr,"%s %d\n","    sizeof(int):",sizeof(int));
+    fprintf(stderr,"%s %ld\n","sizeof(typinfo):",sizeof(typinfo));
+    fprintf(stderr,"%s %ld\n","    sizeof(int):",sizeof(int));
     abort();
   }
   if (sizeof(typpagedir) > sizeof(typfixblock)) {
     fprintf(stderr,"%s\n","FATAL ERROR:");
     fprintf(stderr,"%s\n","BasicCheck 4");
     fprintf(stderr,"%s\n","sizeof(typpagedir) > sizeof(typfixblock)");
-    fprintf(stderr,"%s %d\n"," sizeof(typpagedir):",sizeof(typpagedir));
-    fprintf(stderr,"%s %d\n","sizeof(typfixblock):",sizeof(typfixblock));
+    fprintf(stderr,"%s %ld\n"," sizeof(typpagedir):",sizeof(typpagedir));
+    fprintf(stderr,"%s %ld\n","sizeof(typfixblock):",sizeof(typfixblock));
     abort();
   }
   if (sizeof(typparameters) > sizeof(typfixblock)) {
     fprintf(stderr,"%s\n","FATAL ERROR:");
     fprintf(stderr,"%s\n","BasicCheck 5");
     fprintf(stderr,"%s\n","sizeof(typparameters) > sizeof(typfixblock)");
-    fprintf(stderr,"%s %d\n","sizeof(typparameters):",sizeof(typparameters));
-    fprintf(stderr,"%s %d\n","  sizeof(typfixblock):",sizeof(typfixblock));
+    fprintf(stderr,"%s %ld\n","sizeof(typparameters):",sizeof(typparameters));
+    fprintf(stderr,"%s %ld\n","  sizeof(typfixblock):",sizeof(typfixblock));
     abort();
   }
 }

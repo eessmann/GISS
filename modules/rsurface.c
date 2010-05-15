@@ -35,11 +35,12 @@ RSurface * r_surface_open (const char * fname, const char * mode, int size)
   return rt;
 }
 
-void r_surface_close (RSurface * rt)
-{
-  CloseRST (&rt->t);
+int r_surface_close (RSurface * rt)
+{ 
+  int status = CloseRST (&rt->t);
   free (rt->name);
   free (rt);
+  return status;
 }
 
 int r_surface_insert  (RSurface * rt, double p[3], int id)

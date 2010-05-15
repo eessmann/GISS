@@ -44,7 +44,7 @@ static void rsurfaces_destroy (RSurfaces * rs)
   if (rs->rs) {
     guint i;
     for (i = 0; i < rs->nrs; i++)
-      r_surface_close (rs->rs[i]);
+      g_assert (r_surface_close (rs->rs[i]));
     g_free (rs->rs);
   }
 }

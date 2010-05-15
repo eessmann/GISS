@@ -32,7 +32,7 @@ typedef int (* RSurfaceCheck) (RSurfaceRect rect, void * data, int depth);
 RSurface * r_surface_new      (const char * fname, int size, FILE * fp);
 RSurface * r_surface_open     (const char * fname, const char * mode, int size);
 void       r_surface_update   (RSurface * rt);
-void       r_surface_close    (RSurface * rt);
+int        r_surface_close    (RSurface * rt);
 int        r_surface_insert   (RSurface * rt, double p[3], int id);
 
 typedef int (* RSurfaceQuery) (double p[3], void * user_data);

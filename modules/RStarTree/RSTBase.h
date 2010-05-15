@@ -10,6 +10,7 @@ Non vector types are always called "typ<..>",
     Side, rstree.
 References to non vector types are always called "ref<..>".
   Exceptions:
+
     RSTREE.
 Vector types are always called <..>Array.
   Exceptions:
@@ -171,6 +172,7 @@ typedef struct {
                refnode        helpdirnode, helpdatanode, Ntosplit, Nsibling;
                typfiledesc    dir, data, dirPD, dataPD;
                RSTName        dirname;
+               boolean        readonly;
                } rstree;
 
 

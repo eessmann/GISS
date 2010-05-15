@@ -247,7 +247,7 @@ void     NoRSTree(RSTREE *rst);
             demands a non NULL identifier. */
 
 
-boolean  CreateRST(char     *name,
+boolean  CreateRST(const char     *name,
                    int      pagesize,
                    boolean  unique);
 
@@ -272,7 +272,7 @@ boolean  CreateRST(char     *name,
             without further internal tests. */
 
 
-boolean  RemoveRST(char *name);
+boolean  RemoveRST(const char *name);
 
          /* RemoveRST removes all files corresponding to an R*-tree. */
 
