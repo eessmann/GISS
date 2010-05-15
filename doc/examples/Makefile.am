@@ -21,7 +21,8 @@ EXTRA_DIST = \
 	test.py \
 	Makefile.deps \
 	crossref.sh.in \
-	gfsxref
+	gfsxref \
+	gfs-mode.el
 
 TESTS = test.sh
 
@@ -33,18 +34,21 @@ bin_SCRIPTS = \
 	gfs2doc gfs-highlight gfsxref
 
 BUILT_SOURCES= \
-	gfs2doc gfs-highlight gfs.lang gerris.dic
+	gfs2doc gfs-highlight gfs.lang gerris.dic gfs-keywords.el
 
 CLEANFILES = $(BUILT_SOURCES) Makefile.deps
 
 pkglib_DATA = gfs2tex.py
-pkgdata_DATA = gfs.lang gerris.dic
+pkgdata_DATA = gfs.lang gerris.dic gfs-keywords.el gfs-mode.el
 
 gfs.lang: classes
-	$(srcdir)/classes > gfs.lang
+	$(srcdir)/classes
 
 gerris.dic: classes
-	$(srcdir)/classes | awk '$$1 ~ /gfs_keyword/ {print $$3}' | sed 's/"//g' > gerris.dic
+	$(srcdir)/classes
+
+gfs-keywords.el: classes
+	$(srcdir)/classes
 
 gfs2doc: gfs2doc.in
 
