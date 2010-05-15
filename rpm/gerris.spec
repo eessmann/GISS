@@ -154,8 +154,7 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 %{_libdir}/*.so.*
 %dir %{_libdir}/gerris
 %dir %{_datadir}/gerris
-%{_datadir}/gerris/gfs.lang
-%{_datadir}/gerris/gerris.dic
+%{_datadir}/gerris/*
 %{_datadir}/mime/packages/*.xml
 %dir %{_datadir}/icons/hicolor
 %dir %{_datadir}/icons/hicolor/48x48
