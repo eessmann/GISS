@@ -316,7 +316,7 @@ static void gfs_output_povray_density_class_init (GfsOutputClass * klass)
   GFS_EVENT_CLASS (klass)->event = gfs_output_povray_density_event;
 }
 
-GfsOutputClass * gfs_output_povray_density_class (void)
+GfsOutputClass * gfs_output_povray_DF3_class (void)
 {
   static GfsOutputClass * klass = NULL;
   
@@ -347,6 +347,6 @@ const gchar * g_module_check_init (void);
 
 const gchar * g_module_check_init (void)
 {
-  gfs_output_povray_density_class ();
+  gfs_output_povray_DF3_class ();
   return NULL;
 }
