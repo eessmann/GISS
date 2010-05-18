@@ -34,6 +34,11 @@
     (eval-when-compile
       (concat "\\<" (regexp-opt gfs-abbrevs t) "\\>"))
     "Regular expression compiled Gerris keywords.")
+
+  (defvar gfs-modules-regexp
+    (eval-when-compile
+      (concat "\\<" (regexp-opt gfs-modules t) "\\>"))
+    "Regular expression compiled Gerris modules.")
   
   (define-key gfs-mode-map [mouse-2] 'gfs-mode-mouse-2)
   (define-key gfs-mode-map [follow-link] 'mouse-face)
@@ -51,6 +56,19 @@
 			       )
 	  t)))
 
+  (defun gfs-clickable-modules (limit)
+    "Font-lock function which finds Gerris modules and makes them clickable."
+    (if	(re-search-forward (eval gfs-modules-regexp) limit t)
+	(progn
+	  (add-text-properties (match-beginning 0) (match-end 0)
+			       (list 'mouse-face 'highlight
+				     'gfs-module
+				     (match-string 0)
+				     'help-echo "mouse-2: documentation"
+				     )
+			       )
+	  t)))
+
   (defun gfs-comments (limit)
     "Font-lock function which finds Gerris comments."
     (if	(re-search-forward "#.*$" limit t)
@@ -59,29 +77,29 @@
   (defconst gfs-font-lock-keywords
     (list 
      '(gfs-clickable-refs (0 'font-lock-function-name-face t))
+     '(gfs-clickable-modules (0 'font-lock-type-face t))
      '(gfs-comments (0 'font-lock-comment-face t)))
     "Font-lock-keywords to be added when gfs-mode is active.")
 
-  (defun gfs-url-create (ref-string)
+  (defun gfs-url-create (ref-string module)
     "Returns REF-STRING without carriage returns and with spaces converted
 to + signs, useful when creating a URL to lookup on the Gerris website."
     (with-temp-buffer
       (insert gfs-browse-base)
-      (unless (string= (substring ref-string 0 3) "Gfs")
-	(insert "Gfs"))
-      (insert ref-string)
-      (goto-char (point-min))
-      (while (re-search-forward "\n" nil t)
-	(replace-match ""))
-      (goto-char (point-min))
-      (while (re-search-forward " " nil t)
-	(replace-match "+"))
+      (if module
+	  (progn 
+	    (insert "Object_hierarchy#")
+	    (insert (capitalize ref-string)))
+	(progn 
+	  (unless (string= (substring ref-string 0 3) "Gfs")
+	    (insert "Gfs"))
+	  (insert ref-string)))
       (buffer-string)))
 
-  (defun gfs-browse-reference (reference)
+  (defun gfs-browse-reference (reference &optional module)
     "Wrapper function to call standard Emacs browser function for REFERENCE."
     (message "Linking to Gerris website for %s..." reference)
-    (browse-url (gfs-url-create reference)))
+    (browse-url (gfs-url-create reference module)))
   
   (defun gfs-mode-mouse-2 (event arg)
     "Fetch documentation for keyword under the mouse click."
@@ -95,7 +113,14 @@ to + signs, useful when creating a URL to lookup on the Gerris website."
 	  (progn
 	    (select-window (posn-window (event-end event)))
 	    (gfs-browse-reference my-keyword))
-	(mouse-yank-at-click event arg))))
+	(progn
+	  (setq my-keyword (get-text-property (point) 'gfs-module))
+	  (if my-keyword
+	      (progn
+		(select-window (posn-window (event-end event)))
+		(gfs-browse-reference my-keyword t))
+	    (mouse-yank-at-click event arg)
+	    )))))
 
   (font-lock-add-keywords nil gfs-font-lock-keywords)
 

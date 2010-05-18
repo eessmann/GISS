@@ -51,7 +51,7 @@ static void gfs_map_read (GtsObject ** o, GtsFile * fp)
 
 static void gfs_map_write (GtsObject * o, FILE * fp)
 {
-  fprintf (fp, "%s", o->klass->info.name);
+  fprintf (fp, "  %s", o->klass->info.name);
 }
 
 static void gfs_map_class_init (GfsMapClass * klass)

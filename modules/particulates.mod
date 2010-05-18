@@ -1149,7 +1149,9 @@ GfsEventClass * gfs_droplet_to_particle_class (void)
   return klass;
 }
 
-/* Initialize modules */
+/* Initialize module */
+
+const gchar gfs_module_name[] = "particulates";
 const gchar * g_module_check_init (void);
 
 const gchar * g_module_check_init (void)

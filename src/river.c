@@ -722,6 +722,10 @@ static void discharge_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "GfsBoundaryDischarge only makes sense for GfsRiver simulations");
     return;
   }
+  if (domain->pid >= 0) {
+    gts_file_error (fp, "GfsBoundaryDischarge is not implemented in parallel (yet)");
+    return;
+  }
   gfs_function_read (GFS_BOUNDARY_DISCHARGE (b)->Q, domain, fp);
   if (fp->type == GTS_ERROR)
     return;

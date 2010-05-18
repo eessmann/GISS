@@ -29,10 +29,10 @@ typedef struct Vector_ {
 
 /* GfsOutputPovrayDF3: Header */
 
-GfsOutputClass * gfs_output_povray_density_class (void);
+GfsOutputClass * gfs_output_povray_DF3_class (void);
 
 #define GFS_IS_OUTPUT_POVRAY_DF3(obj) (gts_object_is_from_class (obj, \
-								 gfs_output_povray_density_class ()))
+								 gfs_output_povray_DF3_class ()))
 
 static void write_density_value (FttCell * cell, gpointer * data)
 {
@@ -294,7 +294,7 @@ static gboolean gfs_output_povray_density_event (GfsEvent * event,
 						 GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS
-			  (gfs_output_povray_density_class ())->parent_class)->event)
+			  (gfs_output_povray_DF3_class ())->parent_class)->event)
       (event, sim)) {
     GfsOutputScalar *output = GFS_OUTPUT_SCALAR (event);
     GfsDomain *domain = GFS_DOMAIN (sim);
@@ -311,7 +311,7 @@ static gboolean gfs_output_povray_density_event (GfsEvent * event,
   return FALSE;
 }
 
-static void gfs_output_povray_density_class_init (GfsOutputClass * klass)
+static void gfs_output_povray_DF3_class_init (GfsOutputClass * klass)
 {
   GFS_EVENT_CLASS (klass)->event = gfs_output_povray_density_event;
 }
@@ -325,7 +325,7 @@ GfsOutputClass * gfs_output_povray_DF3_class (void)
       "GfsOutputPovrayDF3",
       sizeof (GfsOutputScalar),
       sizeof (GfsOutputClass),
-      (GtsObjectClassInitFunc) gfs_output_povray_density_class_init,
+      (GtsObjectClassInitFunc) gfs_output_povray_DF3_class_init,
       (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
@@ -340,8 +340,6 @@ GfsOutputClass * gfs_output_povray_DF3_class (void)
 
 /* Initialize module */
 
-/* only define gfs_module_name for "official" modules (i.e. those installed in
-   GFS_MODULES_DIR) */
 const gchar gfs_module_name[] = "df3";
 const gchar * g_module_check_init (void);
 

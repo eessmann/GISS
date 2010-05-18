@@ -2306,10 +2306,12 @@ static guint independent_positions (GtsVector * interface, guint n)
  * adaptive meshes.
  *
  * If @kmax is not %NULL, it is filled with the absolute value of the
- * maximum surface curvature (note that in 2D this is just the absolute value of
- * the mean curvature).
+ * maximum surface curvature (note that in 2D this is just the
+ * absolute value of the mean curvature).
  *
- * Returns: (double in 3D) the mean curvature of the interface contained in @cell.
+ * Returns: (double in 3D) the mean curvature of the interface
+ * contained in @cell, or %G_MAXDOUBLE if the HF method could not
+ * compute a consistent curvature.
  */
 gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble * kmax)
 {
