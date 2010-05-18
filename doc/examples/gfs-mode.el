@@ -40,8 +40,7 @@
 
   (defun gfs-clickable-refs (limit)
     "Font-lock function which finds Gerris keywords and makes them clickable."
-    (if	(and (re-search-forward (eval gfs-ref-regexp) limit t)
-	     (not (string= (get-text-property (point) 'face) "font-lock-comment-face")))
+    (if	(re-search-forward (eval gfs-ref-regexp) limit t)
 	(progn
 	  (add-text-properties (match-beginning 0) (match-end 0)
 			       (list 'mouse-face 'highlight
@@ -52,9 +51,15 @@
 			       )
 	  t)))
 
+  (defun gfs-comments (limit)
+    "Font-lock function which finds Gerris comments."
+    (if	(re-search-forward "#.*$" limit t)
+	(progn t)))
+
   (defconst gfs-font-lock-keywords
     (list 
-     '(gfs-clickable-refs (0 'font-lock-function-name-face t)))
+     '(gfs-clickable-refs (0 'font-lock-function-name-face t))
+     '(gfs-comments (0 'font-lock-comment-face t)))
     "Font-lock-keywords to be added when gfs-mode is active.")
 
   (defun gfs-url-create (ref-string)
@@ -97,6 +102,8 @@ to + signs, useful when creating a URL to lookup on the Gerris website."
   ;; load keywords for autocompletion with dabbrev
   (find-file-noselect (locate-file "gfs-keywords.el" load-path) t)
   (setq case-fold-search nil)
+
+  (column-number-mode)
 )
 
 (add-to-list 'auto-mode-alist '("\\.gfs\\'" . gfs-mode))
