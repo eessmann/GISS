@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 
 #include "config.h"
 #ifdef HAVE_GETOPT_H
@@ -60,25 +61,29 @@ static int includes_true (RSurfaceRect RSTrect, Params * p, int depth)
 int main (int argc, char** argv)
 {
   int c = 0, pagesize = 2048;
-  int verbose = 0;
+  int randomize = 0, verbose = 0;
 
   /* parse options using getopt */
   while (c != EOF) {
 #ifdef HAVE_GETOPT_LONG
     static struct option long_options[] = {
       {"pagesize", required_argument, NULL, 'p'},
+      {"randomize", no_argument, NULL, 'r'},
       {"verbose", no_argument, NULL, 'v'},
       {"help", no_argument, NULL, 'h'},
       { NULL }
     };
     int option_index = 0;
-    switch ((c = getopt_long (argc, argv, "p:vh",
+    switch ((c = getopt_long (argc, argv, "p:vhr",
 			      long_options, &option_index))) {
 #else /* not HAVE_GETOPT_LONG */
-    switch ((c = getopt (argc, argv, "p:vh"))) {
+    switch ((c = getopt (argc, argv, "p:vhr"))) {
 #endif /* not HAVE_GETOPT_LONG */
     case 'p': /* pagesize */
       pagesize = atoi (optarg);
+      break;
+    case 'r': /* randomize */
+      randomize = 1;
       break;
     case 'v': /* verbose */
       verbose = 1;
@@ -92,6 +97,7 @@ int main (int argc, char** argv)
 	       "GfsRefineTerrain object of Gerris.\n"
 	       "\n"
 	       "  -p N  --pagesize=N  sets the pagesize in bytes (default is 2048)\n"
+	       "  -r    --randomize   randomize (shuffle) the input\n"
 	       "  -v    --verbose     display progress bar\n"
 	       "  -h    --help        display this help and exit\n"
 	       "\n"
@@ -116,10 +122,24 @@ int main (int argc, char** argv)
   if (rs == NULL) {
     fprintf (stderr, "xyz2rsurface: cannot open files `%s*'\n", argv[optind]);
     return 1;
+  }  
+
+  FILE * input;
+  if (!randomize)
+    input = stdin;
+  else {
+    input = popen ("awk '{ printf(\"%5d %s\\n\", int (rand()*2**16), $0); }' "
+		   "| sort -T. -n -k 1,2 | cut -c7-", "r");
+    if (input == NULL) {
+      fprintf (stderr, "xyz2rsurface: could not open randomization pipe\n");
+      perror ("");
+      return 1;
+    }
   }
+  
   double x[3];
   int count = 0;
-  while (scanf ("%lf %lf %lf", &x[0], &x[1], &x[2]) == 3) {
+  while (fscanf (input, "%lf %lf %lf", &x[0], &x[1], &x[2]) == 3) {
     if (!r_surface_insert (rs, x, 0)) {
       fprintf (stderr, "\nxyz2rsurface: error inserting point #%d (%g,%g,%g)\n",
 	       count, x[0], x[1], x[2]);
@@ -134,6 +154,20 @@ int main (int argc, char** argv)
     fprintf (stderr, "xyz2rsurface: updating...\n");
   }
   r_surface_update (rs);
+
+  if (randomize) {
+    int status = pclose (input);
+    if (status == -1) {
+      fprintf (stderr, "xyz2rsurface: failed to close randomization pipe\n");
+      perror ("");
+      return 1;
+    }
+    status = WEXITSTATUS (status);
+    if (status != 0) {
+      fprintf (stderr, "xyz2rsurface: the randomization pipe returned error %d\n", status);
+      return 1;
+    }
+  }
 
   if (verbose) {
     RSurfaceRect rect = {{-0.5,-0.5},{0.5,0.5}};
