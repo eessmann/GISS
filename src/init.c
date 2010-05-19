@@ -22,6 +22,15 @@
 #ifdef HAVE_FENV_H
 # define _GNU_SOURCE
 # include <fenv.h>
+# ifdef FE_NOMASK_ENV
+#  ifdef FE_DIVBYZERO
+#    ifdef FE_INVALID
+#     define EXCEPTIONS (FE_DIVBYZERO|FE_INVALID)
+#    else
+#     define EXCEPTIONS (FE_DIVBYZERO)
+#   endif
+#  endif /* !FE_DIVBYZERO */
+# endif /* FE_NO_MASK_ENV */
 #endif /* HAVE_FENV_H */
 
 #include <stdlib.h>
@@ -258,6 +267,39 @@ GtsObjectClass ** gfs_classes (void)
 typedef void (* AtExitFunc) (void);
 
 /**
+ * gfs_catch_floating_point_exceptions:
+ *
+ * Catch the default floating-point exceptions set in the Gerris
+ * library.
+ */
+void gfs_catch_floating_point_exceptions (void)
+{
+#ifdef EXCEPTIONS
+  fedisableexcept (EXCEPTIONS);
+  feclearexcept(EXCEPTIONS);
+#endif /* EXCEPTIONS */
+}
+
+/**
+ * gfs_catch_floating_point_exceptions:
+ *
+ * Restores the default floating-point exceptions set in the Gerris
+ * library.
+ *
+ * Returns: 0 if no exceptions where raised between this call and the
+ * call to gfs_catch_floating_point_exceptions(), non-zero otherwise.
+ */
+int gfs_restore_floating_point_exceptions (void)
+{
+#ifdef EXCEPTIONS
+  feenableexcept (EXCEPTIONS);
+  return fetestexcept (EXCEPTIONS);
+#else /* !EXCEPTIONS */
+  return 0;
+#endif /* !EXCEPTIONS */
+}
+
+/**
  * gfs_init:
  * @argc: a pointer on the number of command line arguments passed to
  * the program.
@@ -297,11 +339,9 @@ void gfs_init (int * argc, char *** argv)
 #endif /* HAVE_MPI */
   initialized = TRUE;
 
-#ifdef FE_NOMASK_ENV
-# ifdef FE_DIVBYZERO
-  feenableexcept (FE_DIVBYZERO);
-# endif /* FE_DIVBYZERO */
-#endif /* FE_NO_MASK_ENV */
+#ifdef EXCEPTIONS
+  feenableexcept (EXCEPTIONS);
+#endif /* EXCEPTIONS */
 
   g_log_set_handler (G_LOG_DOMAIN,
 		     G_LOG_LEVEL_ERROR |

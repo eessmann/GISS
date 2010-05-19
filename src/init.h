@@ -29,6 +29,8 @@ extern "C" {
 GtsObjectClass ** gfs_classes             (void);
 void              gfs_init                (int * argc, 
 					   char *** argv);
+void gfs_catch_floating_point_exceptions   (void);
+int  gfs_restore_floating_point_exceptions (void);
 
 #ifdef __cplusplus
 }
