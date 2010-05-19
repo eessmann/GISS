@@ -52,3 +52,13 @@ void       r_surface_query_region_sum (RSurface * rt,
 const char * r_surface_name  (RSurface * rt);
 int          r_surface_depth (RSurface * rt);
 void         r_surface_info  (RSurface * rt);
+
+typedef struct {
+  int nlevel;       /* number of levels */
+  int * nentries;   /* number of entries for each level */
+  double ** aspect; /* aspect ratio for each entry */
+} RSurfaceStats;
+
+RSurfaceStats * r_surface_stats_new  (RSurface * rt, 
+				      int level);
+void            r_surface_stats_free (RSurfaceStats * s);

@@ -200,3 +200,76 @@ void r_surface_info (RSurface * rt)
   for (i = 0; i < height; i++)
     fprintf (stderr, "\tlevel %d:\t%d\n", i + 1, pagesperlevel[i]);
 }
+
+static int includes (RSurfaceRect RSTrect, RSurfaceStats * s, int depth)
+{
+  return 0;
+}
+
+static int intersects (RSurfaceRect RSTrect, RSurfaceStats * s, int depth)
+{
+  double w = RSTrect[0].h - RSTrect[0].l, h = RSTrect[1].h - RSTrect[1].l;
+  double ratio = 0.;
+  if (w > 0. && h > 0.)
+    ratio = w < h ? w/h : h/w;
+  s->aspect[depth][s->nentries[depth]++] = ratio;
+  return (depth < s->nlevel - 1);
+}
+
+static int compare_double (const void * p1, const void * p2)
+{
+  return (*(double * ) p1 < *(double * ) p2);
+}
+
+RSurfaceStats * r_surface_stats_new (RSurface * rt, int level)
+{
+  char name[100];
+  int numbofdim, sizedirentry, sizedataentry, sizeinfo;
+  int maxdirfanout, maxdatafanout, pagesize, numbofdirpages;
+  int numbofdatapages, pagesperlevel[100], numbofrecords, height;
+  boolean unique;
+  
+  InquireRSTDesc(rt->t,
+		 name,
+		 &numbofdim,
+		 &sizedirentry,
+		 &sizedataentry,
+		 &sizeinfo,
+		 &maxdirfanout,
+		 &maxdatafanout,
+		 &pagesize,
+		 &numbofdirpages,
+		 &numbofdatapages,
+		 pagesperlevel,
+		 &numbofrecords,
+		 &height,
+		 &unique);
+
+  RSurfaceStats * s = malloc (sizeof (RSurfaceStats));
+  s->nlevel = level <= 0 ? height - 1 : (level < height - 1 ? level : height - 1);
+  s->nentries = calloc (sizeof (int), s->nlevel);
+  s->aspect = malloc (sizeof (double *)*s->nlevel);
+  int i;
+  for (i = 0; i < s->nlevel; i++)
+    s->aspect[i] = malloc (sizeof (double)*pagesperlevel[i]);
+
+  RSurfaceRect rect = {{-0.5,-0.5},{0.5,0.5}};
+  RSurfaceSum sum;
+  r_surface_sum_init (&sum);
+  r_surface_query_region_sum (rt, (RSurfaceCheck) includes, (RSurfaceCheck) intersects, s,
+			      rect, &sum);
+  for (i = 1; i < s->nlevel; i++)
+    qsort (s->aspect[i], s->nentries[i], sizeof (double), compare_double);
+
+  return s;
+}
+
+void r_surface_stats_free (RSurfaceStats * s)
+{
+  int i;
+  for (i = 0; i < s->nlevel; i++)
+    free (s->aspect[i]);
+  free (s->aspect);
+  free (s->nentries);
+  free (s);
+}

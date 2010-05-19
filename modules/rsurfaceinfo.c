@@ -28,31 +28,7 @@
 #include "ftt.h"
 #include "rsurface.h"
 
-typedef struct {
-  int maxdepth;
-  double * ratio;
-  int * size;
-} Params;
-
-static int includes (RSurfaceRect RSTrect, Params * p, int depth)
-{
-  if (RSTrect[0].l == RSTrect[0].h && RSTrect[1].l == RSTrect[1].h)
-    p->size[depth]++;
-  return 0;
-}
-
-static int intersects (RSurfaceRect RSTrect, Params * p, int depth)
-{
-  double w = RSTrect[0].h - RSTrect[0].l, h = RSTrect[1].h - RSTrect[1].l;
-  double ratio = 1e10;
-  if (w > 0. && h > 0.)
-    ratio = w > h ? w/h : h/w;
-  p->ratio[depth] += ratio;
-  p->size[depth]++;
-  return (depth < p->maxdepth);
-}
-
-static int includes_true (RSurfaceRect RSTrect, Params * p, int depth)
+static int includes_true (RSurfaceRect RSTrect)
 {
   return 1;
 }
@@ -124,26 +100,23 @@ int main (int argc, char** argv)
 	   s.Hmin, s.H0/s.n, s.Hmax);
 
   if (maxdepth != 0) {
-    fprintf (stderr, "Bounding box aspect ratio and average # of entries:\n");
-    Params p;
-    p.maxdepth = maxdepth < 0 ? r_surface_depth (rs) : maxdepth;
-    p.size = calloc (p.maxdepth + 1, sizeof (int));
-    p.ratio = calloc (p.maxdepth + 1, sizeof (double));
-    r_surface_sum_init (&s);
-    r_surface_query_region_sum (rs, (RSurfaceCheck) includes, (RSurfaceCheck) intersects, &p,
-				rect, &s);
-  
+    RSurfaceStats * s = r_surface_stats_new (rs, maxdepth);
+    fprintf (stderr, "Level\tAverage # of entries\t Aspect ratio percentiles\n");
+    fprintf (stderr, "     \t                    \t  50%%   75%%   95%%   100%%\n");
     int i;
-    for (i = 1; i <= p.maxdepth; i++)
-      if (p.size[i] > 0) {
-	fprintf (stderr, "level %d: %d\n", i, p.size[i]);
-	if (i < p.maxdepth && p.size[i + 1] > 0)
-	  fprintf (stderr, "\taverage aspect ratio: %g\taverage # of entries: %g\n",
-		   p.ratio[i]/p.size[i],
-		   p.size[i + 1]/(double) p.size[i]);
-	else
-	  fputc ('\n', stderr);
-      }
+    for (i = 1; i < s->nlevel; i++) {
+      fprintf (stderr, "%5d\t", i + 1);
+      if (i < s->nlevel - 1)
+	fprintf (stderr, "      %4.2f\t\t", s->nentries[i + 1]/(double)s->nentries[i]);
+      else
+	fprintf (stderr, "         -\t\t");
+      fprintf (stderr, "%5.1f %5.1f %5.1f %5.1f\n",
+	       1./s->aspect[i][(int) (0.50*(s->nentries[i] - 1))],
+	       1./s->aspect[i][(int) (0.75*(s->nentries[i] - 1))],
+	       1./s->aspect[i][(int) (0.95*(s->nentries[i] - 1))],
+	       1./s->aspect[i][(int) (1.00*(s->nentries[i] - 1))]);
+    }
+    r_surface_stats_free (s);
   }
   r_surface_close (rs);
 
