@@ -319,7 +319,9 @@ struct _GfsSourceCoriolis {
   GfsVariable * u[2];
 
   /*< public >*/
-  GfsFunction * omegaz, * drag;
+  GfsFunction * omegaz; /* Coriolis coefficient */
+  GfsFunction *   drag; /* Linear drag coefficient */
+  gdouble         beta; /* "implicitness coefficient" 0.5 CN, 1 backward Euler */
 };
 
 #define GFS_SOURCE_CORIOLIS(obj)            GTS_OBJECT_CAST (obj,\
