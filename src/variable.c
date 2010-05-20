@@ -545,7 +545,7 @@ static void variable_diagonal (FttCell * cell, gpointer * data)
   FttCellFace f;
   GfsGradient ng;
 
-  GFS_VARIABLE (cell, tmp->i) = G_MAXDOUBLE;
+  GFS_VALUE (cell, tmp) = G_MAXDOUBLE;
   g.a = g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
@@ -558,10 +558,10 @@ static void variable_diagonal (FttCell * cell, gpointer * data)
     }
   }
   if (g.a > 0.)
-    GFS_VARIABLE (cell, v->i) = g.b/g.a;
+    GFS_VALUE (cell, v) = g.b/g.a;
   else
-    GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
-  GFS_VARIABLE (cell, tmp->i) = 1.;
+    GFS_VALUE (cell, v) = G_MAXDOUBLE;
+  GFS_VALUE (cell, tmp) = 1.;
 }
 
 static gboolean variable_diagonal_event (GfsEvent * event, GfsSimulation * sim)

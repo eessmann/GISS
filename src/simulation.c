@@ -1749,7 +1749,7 @@ gdouble gfs_dimensional_value (GfsVariable * v, gdouble val)
   g_return_val_if_fail (v != NULL, 0.);
 
   gdouble L;
-  if (val == G_MAXDOUBLE || v->units == 0. || 
+  if (val == GFS_NODATA || v->units == 0. || 
       (L = GFS_SIMULATION (v->domain)->physical_params.L) == 1.)
     return val;
   return val*pow (L, v->units);

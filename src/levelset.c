@@ -72,7 +72,7 @@ static gdouble vof_distance2 (FttCell * cell, GtsPoint * t, gpointer v)
   gdouble f = GFS_VALUE (cell, GFS_VARIABLE1 (v));
   
   if (GFS_IS_FULL (f))
-    return G_MAXDOUBLE;
+    return GFS_NODATA;
   if (!FTT_CELL_IS_LEAF (cell))
     return ftt_cell_point_distance2_min (cell, t);
   else
@@ -94,7 +94,7 @@ static void distance_for_stencil (FttCell * cell, gpointer * data)
     GFS_VALUE (cell, v) = GFS_VALUE (cell, l->v) > 0.5 ? sqrt (d2) : -sqrt (d2);
   }
   else
-    GFS_VALUE (cell, v) = G_MAXDOUBLE;
+    GFS_VALUE (cell, v) = GFS_NODATA;
 }
 
 static void distance (FttCell * cell, GfsVariable * v)

@@ -65,6 +65,8 @@ extern "C" {
 #endif /* HAVE_CONFIG_H */
 
 #define GFS_DOUBLE_TO_POINTER(d)     (*((gpointer *) &(d)))
+#define GFS_NODATA                   G_MAXDOUBLE
+#define GFS_HAS_DATA(cell,v)         (GFS_VALUE (cell, v) != GFS_NODATA)
 
 gboolean gfs_char_in_string (char c, const char * s);
 gchar *  gfs_file_statement (GtsFile * fp);

@@ -383,14 +383,14 @@ static void curvature_fine_coarse (FttCell * parent, GfsVariable * v)
 
   ftt_cell_children (parent, &child);
   for (i = 0; i < FTT_CELLS; i++)
-    if (child.c[i] && GFS_VALUE (child.c[i], v) < G_MAXDOUBLE) {
+    if (child.c[i] && GFS_HAS_DATA (child.c[i], v)) {
       val += GFS_VALUE (child.c[i], v);
       sa += 1.;
     }
   if (sa > 0.)
     GFS_VALUE (parent, v) = val/sa;
   else
-    GFS_VALUE (parent, v) = G_MAXDOUBLE;
+    GFS_VALUE (parent, v) = GFS_NODATA;
 }
 
 static void variable_curvature_read (GtsObject ** o, GtsFile * fp)
@@ -468,9 +468,9 @@ static void height_curvature (FttCell * cell, GfsVariable * v)
   gdouble f = GFS_VALUE (cell, t);
 
   if (GFS_IS_FULL (f)) {
-    GFS_VALUE (cell, v) = G_MAXDOUBLE;
+    GFS_VALUE (cell, v) = GFS_NODATA;
     if (kmax)
-      GFS_VALUE (cell, kmax) = G_MAXDOUBLE;
+      GFS_VALUE (cell, kmax) = GFS_NODATA;
   }
   else {
     if (kmax) {
@@ -488,7 +488,7 @@ static void fit_curvature (FttCell * cell, GfsVariable * v)
   GfsVariable * t = GFS_VARIABLE_CURVATURE (v)->f;
   gdouble f = GFS_VALUE (cell, t);
 
-  if (!GFS_IS_FULL (f) && GFS_VALUE (cell, v) == G_MAXDOUBLE) {
+  if (!GFS_IS_FULL (f) && !GFS_HAS_DATA (cell, v)) {
     GfsVariable * kmax = GFS_VARIABLE_CURVATURE (v)->kmax;
     if (kmax) {
       gdouble k;
@@ -509,7 +509,7 @@ typedef struct {
 static void diffuse_kmax (FttCell * cell, DiffuseParms * p)
 {
   gdouble f = GFS_VALUE (cell, p->f);
-  if (GFS_VALUE (cell, p->v) < G_MAXDOUBLE && f*(1. - f) > FMIN*(1. - FMIN))
+  if (GFS_HAS_DATA (cell, p->v) && f*(1. - f) > FMIN*(1. - FMIN))
     GFS_VALUE (cell, p->tmp) = GFS_VALUE (cell, p->v);
   else {
     FttCellNeighbors neighbor;
@@ -518,7 +518,7 @@ static void diffuse_kmax (FttCell * cell, DiffuseParms * p)
 
     ftt_cell_neighbors (cell, &neighbor);
     for (d = 0; d < FTT_NEIGHBORS; d++)
-      if (neighbor.c[d] && GFS_VALUE (neighbor.c[d], p->v) < G_MAXDOUBLE) {
+      if (neighbor.c[d] && GFS_HAS_DATA (neighbor.c[d], p->v)) {
 	gdouble f = GFS_VALUE (neighbor.c[d], p->f);
 	if (f*(1. - f) > FMIN*(1. - FMIN)) {
 	  f *= 1. - f;
@@ -535,7 +535,7 @@ static void diffuse_kmax (FttCell * cell, DiffuseParms * p)
 
 static void diffuse (FttCell * cell, DiffuseParms * p)
 {
-  if (GFS_VALUE (cell, p->v) < G_MAXDOUBLE)
+  if (GFS_HAS_DATA (cell, p->v))
     GFS_VALUE (cell, p->tmp) = GFS_VALUE (cell, p->v);
   else {
     FttCellNeighbors neighbor;
@@ -544,14 +544,14 @@ static void diffuse (FttCell * cell, DiffuseParms * p)
 
     ftt_cell_neighbors (cell, &neighbor);
     for (d = 0; d < FTT_NEIGHBORS; d++)
-      if (neighbor.c[d] && GFS_VALUE (neighbor.c[d], p->v) < G_MAXDOUBLE) {
+      if (neighbor.c[d] && GFS_HAS_DATA (neighbor.c[d], p->v)) {
 	s += GFS_VALUE (neighbor.c[d], p->v);
 	sa += 1.;
       }
     if (sa > 0.)
       GFS_VALUE (cell, p->tmp) = s/sa;
     else
-      GFS_VALUE (cell, p->tmp) = G_MAXDOUBLE;
+      GFS_VALUE (cell, p->tmp) = GFS_NODATA;
   }
 }
 
@@ -639,7 +639,7 @@ static void interface_curvature (FttCell * cell, gpointer * data)
   gdouble f = GFS_VALUE (cell, GFS_VARIABLE_DISTANCE (k->f)->v);
 
   if (GFS_IS_FULL (f))
-    GFS_VALUE (cell, v) = G_MAXDOUBLE;
+    GFS_VALUE (cell, v) = GFS_NODATA;
   else {
     GfsVariable ** nv = data[0];
     gdouble h = ftt_cell_size (cell)/2.;
@@ -797,10 +797,10 @@ static void position (FttCell * cell, GfsVariable * v)
   FttVector p;
 
   if (gfs_vof_center (cell, GFS_VARIABLE_TRACER_VOF (GFS_VARIABLE_CURVATURE (v)->f), &p))
-    GFS_VARIABLE (cell, v->i) = (&p.x)[GFS_VARIABLE_POSITION (v)->c] - 
+    GFS_VALUE (cell, v) = (&p.x)[GFS_VARIABLE_POSITION (v)->c] - 
       GFS_VARIABLE_POSITION (v)->ref;
   else
-    GFS_VARIABLE (cell, v->i) = G_MAXDOUBLE;
+    GFS_VALUE (cell, v) = GFS_NODATA;
 }
 
 static gboolean variable_position_event (GfsEvent * event, GfsSimulation * sim)

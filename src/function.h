@@ -20,6 +20,8 @@
 #ifndef __FUNCTION_H__
 #define __FUNCTION_H__
 
+#define NODATA GFS_NODATA
+
 static double Dirichlet = 1.;
 static double Neumann = 0.;
 static GfsSimulation * _sim = NULL;

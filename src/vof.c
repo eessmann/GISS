@@ -1677,19 +1677,19 @@ guint gfs_vof_facet (FttCell * cell,
  * @p: a #GtsPoint.
  *
  * Returns: the square of the distance between point @p and the
- * VOF-reconstructed interface facet defined by @t or %G_MAXDOUBLE if
+ * VOF-reconstructed interface facet defined by @t or %GFS_NODATA if
  * @cell does not contain an interface.
  */
 gdouble gfs_vof_facet_distance2 (FttCell * cell,
 				 GfsVariableTracerVOF * t,
 				 GtsPoint * p)
 {
-  g_return_val_if_fail (cell != NULL, G_MAXDOUBLE);
-  g_return_val_if_fail (t != NULL, G_MAXDOUBLE);
-  g_return_val_if_fail (p != NULL, G_MAXDOUBLE);
+  g_return_val_if_fail (cell != NULL, GFS_NODATA);
+  g_return_val_if_fail (t != NULL, GFS_NODATA);
+  g_return_val_if_fail (p != NULL, GFS_NODATA);
 
   if (GFS_IS_FULL (GFS_VALUE (cell, GFS_VARIABLE1 (t))))
-    return G_MAXDOUBLE;
+    return GFS_NODATA;
 
   FttVector q, m;
   ftt_cell_pos (cell, &q);
@@ -1729,7 +1729,7 @@ gdouble gfs_vof_facet_distance2 (FttCell * cell,
 	if (d < dmin)
 	  dmin = d;
       }
-      return dmin;
+      return dmin == G_MAXDOUBLE ? GFS_NODATA : dmin;
     }
   }
   return h*h*lambda*lambda*norm2;
@@ -1744,7 +1744,7 @@ gdouble gfs_vof_facet_distance2 (FttCell * cell,
  * Fills @p with the coordinates of the center of mass of the
  * VOF-reconstructed interface facet defined by @t.
  *
- * Returns: the area (length in 2D) of the VOF-reconstructed facet or 0. if the
+ * Returns: the area (length in 2D) of the VOF-reconstructed facet or 0 if the
  * cell is not cut by the interface.
  */
 gdouble gfs_vof_center (FttCell * cell, GfsVariableTracerVOF * t, FttVector * p)
@@ -2310,7 +2310,7 @@ static guint independent_positions (GtsVector * interface, guint n)
  * absolute value of the mean curvature).
  *
  * Returns: (double in 3D) the mean curvature of the interface
- * contained in @cell, or %G_MAXDOUBLE if the HF method could not
+ * contained in @cell, or %GFS_NODATA if the HF method could not
  * compute a consistent curvature.
  */
 gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble * kmax)
@@ -2341,7 +2341,7 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
    * Try parabola fitting of the collected interface positions */
 
   if (independent_positions (interface, n) < 3*(FTT_DIMENSION - 1))
-    return G_MAXDOUBLE;
+    return GFS_NODATA;
 
   gdouble h = ftt_cell_size (cell);
   ParabolaFit fit;

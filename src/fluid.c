@@ -1732,13 +1732,15 @@ void gfs_get_from_below_intensive (FttCell * cell, const GfsVariable * v)
 
   ftt_cell_children (cell, &child);
   for (i = 0; i < FTT_CELLS; i++)
-    if (child.c[i]) {
+    if (child.c[i] && GFS_HAS_DATA (child.c[i], v)) {
       gdouble a = gfs_domain_cell_fraction (v->domain, child.c[i]);
-      val += GFS_VARIABLE (child.c[i], v->i)*a;
+      val += GFS_VALUE (child.c[i], v)*a;
       sa += a;
     }
   if (sa > 0.)
-    GFS_VARIABLE (cell, v->i) = val/sa;
+    GFS_VALUE (cell, v) = val/sa;
+  else
+    GFS_VALUE (cell, v) = GFS_NODATA;
 }
 
 /**
@@ -1765,7 +1767,7 @@ void gfs_cell_coarse_fine (FttCell * parent, GfsVariable * v)
     if (child.c[n])
       GFS_VALUE (child.c[n], v) = GFS_VALUE (parent, v);
 
-  if (!GFS_CELL_IS_BOUNDARY (parent)) {
+  if (!GFS_CELL_IS_BOUNDARY (parent) && GFS_HAS_DATA (parent, v)) {
     FttVector g;
     FttComponent c;
     
@@ -1855,7 +1857,7 @@ static void add_stats (const FttCell * cell, gpointer * data)
   GtsRange * s = data[0];
   gdouble v = GFS_VARIABLE (cell, GFS_VARIABLE1 (data[1])->i);
 
-  if (v < G_MAXDOUBLE)
+  if (v != GFS_NODATA)
     gts_range_add_value (s, v);
 }
 
@@ -1975,7 +1977,7 @@ void gfs_norm_add (GfsNorm * n, gdouble val, gdouble weight)
 {
   g_return_if_fail (n != NULL);
 
-  if (val < G_MAXDOUBLE) {
+  if (val != GFS_NODATA) {
     n->bias += weight*val;
     val = fabs (val);
     if (weight != 0. && val > n->infty)

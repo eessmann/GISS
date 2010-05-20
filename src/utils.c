@@ -944,7 +944,7 @@ gchar * gfs_function_description (GfsFunction * f,
 static gdouble adimensional_value (GfsFunction * f, gdouble v)
 {
   gdouble L;
-  if (v == G_MAXDOUBLE || f->units == 0. || 
+  if (v == GFS_NODATA || f->units == 0. || 
       (L = gfs_object_simulation (f)->physical_params.L) == 1.)
     return v;
   return v*pow (L, - f->units);

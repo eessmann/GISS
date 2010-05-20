@@ -360,9 +360,9 @@ static void rms_update (RMS * rms)
   if (rms->m[0][0] == 0.) {
     for (i = 1; i < NM; i++)
       rms->h[i] = 0.;
-    rms->h[0] = G_MAXDOUBLE;
+    rms->h[0] = GFS_NODATA;
     rms->he = 0.;
-    rms->cond = G_MAXDOUBLE;
+    rms->cond = GFS_NODATA;
     return;
   }
   else if (rms->m[0][0] >= NM) {
@@ -379,7 +379,7 @@ static void rms_update (RMS * rms)
 	m[i+NM*j] = rms->m[i][j];
     gsl_matrix_view gm = gsl_matrix_view_array (m, NM, NM);
     gsl_linalg_SV_decomp_jacobi (&gm.matrix, &gv.matrix, &gs.vector);
-    rms->cond = s[NM - 1] > 0. ? s[0]/s[NM - 1] : G_MAXDOUBLE;
+    rms->cond = s[NM - 1] > 0. ? s[0]/s[NM - 1] : GFS_NODATA;
     if (rms->cond < 10000.) {
       gsl_vector_view gH = gsl_vector_view_array (rms->H, NM);
       gsl_vector_view gh = gsl_vector_view_array (rms->h, NM);
@@ -856,9 +856,9 @@ static void reset_empty_cell (FttCell * cell, GfsRefineTerrain * t)
   if (GFS_VALUE (cell, t->type) != CONTAINS_SURFACE) {
     guint i;
     for (i = 0; i < NM; i++)
-      GFS_VALUE (cell, t->h[i]) = G_MAXDOUBLE;
-    GFS_VALUE (cell, t->he) = G_MAXDOUBLE;
-    GFS_VALUE (cell, t->hn) = G_MAXDOUBLE;
+      GFS_VALUE (cell, t->h[i]) = GFS_NODATA;
+    GFS_VALUE (cell, t->he) = GFS_NODATA;
+    GFS_VALUE (cell, t->hn) = GFS_NODATA;
   }
 }
 #endif /* 3D */
@@ -926,10 +926,10 @@ static void terrain_coarse_fine (FttCell * parent, GfsVariable * v)
   }
 
   ftt_cell_children (parent, &child);
-  if (h[0] == G_MAXDOUBLE) {
+  if (h[0] == GFS_NODATA) {
     for (n = 0; n < FTT_CELLS; n++)
       if (child.c[n])
-	GFS_VALUE (child.c[n], v) = G_MAXDOUBLE;
+	GFS_VALUE (child.c[n], v) = GFS_NODATA;
   }
   else {
 #if !FTT_2D
@@ -952,7 +952,7 @@ static void terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 	gfs_simulation_map (GFS_SIMULATION (v->domain), &p);
 	terrain_min_max (hc, minmax, p.z);
 	if (minmax[0] > zmax || minmax[1] < zmin)
-	  GFS_VALUE (child.c[n], v) = G_MAXDOUBLE;
+	  GFS_VALUE (child.c[n], v) = GFS_NODATA;
 	else
 #endif
 	  GFS_VALUE (child.c[n], v) = hc[c];
@@ -1266,7 +1266,7 @@ static GfsGenericSurface * cell_is_cut (FttCell * cell, GfsGenericSurface * s1,
   g_assert (!flatten); /* not implemented */
   if (!FTT_CELL_IS_LEAF (cell))
     return s1;
-  return GFS_VALUE (cell, GFS_SURFACE_TERRAIN (s1)->h[0]) != G_MAXDOUBLE ? s1 : NULL;
+  return GFS_VALUE (cell, GFS_SURFACE_TERRAIN (s1)->h[0]) != GFS_NODATA ? s1 : NULL;
 }
 
 static gdouble zscale (GfsSurfaceTerrain * t)
@@ -1453,7 +1453,7 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 
   /* Reconstruct terrain */
   ftt_cell_children (parent, &child);
-  for (n = 0; n < FTT_CELLS; n++) 
+  for (n = 0; n < FTT_CELLS; n++)
     if (child.c[n]) {
       Polygon poly;
       RSurfaceRect rect;
@@ -1476,8 +1476,8 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
       }
       else {
 	GFS_VALUE (child.c[n], v) = GFS_VALUE (parent, v);
-	GFS_VALUE (child.c[n], t->dmin) = G_MAXDOUBLE;
-	GFS_VALUE (child.c[n], t->dmax) = G_MAXDOUBLE;
+	GFS_VALUE (child.c[n], t->dmin) = GFS_NODATA;
+	GFS_VALUE (child.c[n], t->dmax) = GFS_NODATA;
 	if (!GFS_CELL_IS_BOUNDARY (parent)) {
 	  FttVector p;
 	  FttComponent c;
@@ -1596,8 +1596,8 @@ static void variable_terrain_fine_coarse (FttCell * parent, GfsVariable * v)
   if (sa > 0.)
     GFS_VALUE (parent, v) = Zb/sa;
   GFS_VALUE (parent, t->n) = N;
-  GFS_VALUE (parent, t->dmax) = dmax > - G_MAXDOUBLE ? dmax : G_MAXDOUBLE;
-  GFS_VALUE (parent, t->dmin) = dmin;
+  GFS_VALUE (parent, t->dmax) = dmax > - G_MAXDOUBLE ? dmax : GFS_NODATA;
+  GFS_VALUE (parent, t->dmin) = dmin <   G_MAXDOUBLE ? dmin : GFS_NODATA;
 
   /* If we are part of GfsRiver, reconstruct H and P */
   if (t->H) {

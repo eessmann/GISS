@@ -1666,7 +1666,7 @@ static void add_stats (const FttCell * cell, gpointer * data)
   GtsRange * s = data[0];
   gdouble v = GFS_VALUE (cell, GFS_VARIABLE1 (data[1]));
 
-  if (v < G_MAXDOUBLE)
+  if (v != GFS_NODATA)
     gts_range_add_value (s, v);
 }
 

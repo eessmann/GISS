@@ -548,7 +548,9 @@ static void write_image_square (FttCell * cell, gpointer * data)
   Image * image = data[4];
   FttVector * lambda = data[5];
   FttVector p;
-  GtsColor fc = colormap_color (colormap, (GFS_VARIABLE (cell, v->i) - *min)/(*max - *min));
+  GtsColor fc = { 0., 0., 0. }; /* nodata = black */
+  if (GFS_HAS_DATA (cell, v))
+    fc = colormap_color (colormap, (GFS_VALUE (cell, v) - *min)/(*max - *min));
   Color c;
   gdouble size = ftt_cell_size (cell)/2.;
   FttVector p1, p2;
@@ -647,6 +649,8 @@ void gfs_write_ppm (GfsDomain * domain,
   colormap_destroy (colormap);
 }
 
+#define NODATA -9999
+
 typedef struct {
   FttVector min;
   guint width, height, size;
@@ -669,7 +673,7 @@ static Grid * grid_new (FttVector min, FttVector max, guint size,
   im->yll = yc + min.y*length;
   im->buf = g_malloc (sizeof (gfloat)*im->width*im->height);
   for (i = 0; i < im->height*im->width; i++)
-    im->buf[i] = -9999;
+    im->buf[i] = NODATA;
   im->data = g_malloc (sizeof (gfloat *)*im->height);
   for (i = 0; i < im->height; i++)
     im->data[i] = &im->buf[i*im->width];
@@ -684,9 +688,10 @@ static void grid_write (Grid * im, FILE * fp)
 	   "xllcorner\t%f\n"
 	   "yllcorner\t%f\n"
 	   "cellsize\t%.10f\n"
-	   "nodata_value\t-9999\n",
+	   "nodata_value\t%d\n",
 	   im->width, im->height, 
-	   im->xll, im->yll, im->cellsize);
+	   im->xll, im->yll, im->cellsize,
+	   NODATA);
   guint i, j;
   for (i = 0; i < im->height; i++)
     for (j = 0; j < im->width; j++)
@@ -733,7 +738,7 @@ static void write_grid_square (FttCell * cell, gpointer * data)
   p1.y = (p.y - size)/lambda->y + 1e-9;
   p2.x = (p.x + size)/lambda->x - 1e-9;
   p2.y = (p.y + size)/lambda->y - 1e-9;
-  grid_draw_square (grid, &p1, &p2, GFS_VALUE (cell, v));
+  grid_draw_square (grid, &p1, &p2, GFS_HAS_DATA (cell, v) ? GFS_VALUE (cell, v) : NODATA);
 }
 
 void gfs_write_grd (GfsDomain * domain, 
