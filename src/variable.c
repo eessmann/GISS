@@ -847,6 +847,61 @@ GfsVariableClass * gfs_variable_stream_function_class (void)
 
 #endif /* FTT_2D */
 
+/* GfsVariableAge: object */
+
+static void increment_age (FttCell * cell, GfsVariable * v)
+{
+  GFS_VALUE (cell, v) += 1.;
+}
+
+static gboolean variable_age_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_age_class ())->parent_class)->event)
+      (event, sim)) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim),
+			      FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) increment_age, event);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void variable_age_class_init (GtsObjectClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = variable_age_event;
+}
+
+static void none (FttCell * parent, GfsVariable * v)
+{
+}
+
+static void variable_age_init (GfsVariable * v)
+{
+  v->fine_coarse = none;
+  v->coarse_fine = none;
+}
+
+GfsVariableClass * gfs_variable_age_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_age_info = {
+      "GfsVariableAge",
+      sizeof (GfsVariable),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_age_class_init,
+      (GtsObjectInitFunc) variable_age_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
+				  &gfs_variable_age_info);
+  }
+
+  return klass;
+}
+
 /* GfsDerivedVariable: object */
 
 static void gfs_derived_variable_destroy (GtsObject * object)

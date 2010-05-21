@@ -178,6 +178,13 @@ GfsVariableClass * gfs_variable_stream_function_class  (void);
 
 #endif /* FTT_2D */
 
+/* GfsVariableAge: header */
+
+#define GFS_IS_VARIABLE_AGE(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_age_class ()))
+
+GfsVariableClass * gfs_variable_age_class  (void);
+
 /* GfsDerivedVariable: Header */
 
 struct _GfsDerivedVariable {
