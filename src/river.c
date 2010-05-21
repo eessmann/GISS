@@ -508,6 +508,17 @@ static gdouble cell_velocity2 (FttCell * cell, FttCellFace * face, GfsRiver * r)
     L*L*gfs_vector_norm2 (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/(D*D) : 0.;
 }
 
+static void momentum_coarse_fine (FttCell * parent, GfsVariable * v)
+{
+  /* Only initializes momentum when @parent is "deep enough". This
+     assumes that shallow parents have just been submerged. For these
+     shallow cells, childrens' initial momentum defaults to zero. This
+     prevents creating spurious large velocities. */
+  GfsRiver * r = GFS_RIVER (v->domain);
+  if (GFS_VALUE (parent, r->v[0]) > 2.*r->dry)
+    gfs_cell_coarse_fine (parent, v);
+}
+
 static void river_init (GfsRiver * r)
 {
   GfsDomain * domain = GFS_DOMAIN (r);
@@ -523,11 +534,13 @@ static void river_init (GfsRiver * r)
   r->v[1]->units = 2.;
   g_free (r->v[1]->description);
   r->v[1]->description = g_strdup ("x-component of the fluid flux");
+  r->v[1]->coarse_fine = momentum_coarse_fine;
 
   r->v[2] = gfs_variable_from_name (domain->variables, "V");
   r->v[2]->units = 2.;
   g_free (r->v[2]->description);
   r->v[2]->description = g_strdup ("y-component of the fluid flux");
+  r->v[2]->coarse_fine = momentum_coarse_fine;
 
   r->zb = gfs_domain_add_variable (domain, "Zb", "Bed elevation above datum");
   r->zb->units = 1.;
