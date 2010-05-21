@@ -49,11 +49,9 @@
 	(progn
 	  (add-text-properties (match-beginning 0) (match-end 0)
 			       (list 'mouse-face 'highlight
-				     'gfs-keyword
-				     (match-string 0)
+				     'gfs-keyword (match-string 0)
 				     'help-echo "mouse-2: documentation"
-				     )
-			       )
+				     'rear-nonsticky '(mouse-face gfs-keyword help-echo)))
 	  t)))
 
   (defun gfs-clickable-modules (limit)
@@ -62,17 +60,14 @@
 	(progn
 	  (add-text-properties (match-beginning 0) (match-end 0)
 			       (list 'mouse-face 'highlight
-				     'gfs-module
-				     (match-string 0)
+				     'gfs-module (match-string 0)
 				     'help-echo "mouse-2: documentation"
-				     )
-			       )
+				     'rear-nonsticky '(mouse-face gfs-module help-echo)))
 	  t)))
 
   (defun gfs-comments (limit)
     "Font-lock function which finds Gerris comments."
-    (if	(re-search-forward "#.*$" limit t)
-	(progn t)))
+    (re-search-forward "#.*$" limit t))
 
   (defconst gfs-font-lock-keywords
     (list 
@@ -128,7 +123,7 @@ to + signs, useful when creating a URL to lookup on the Gerris website."
   (find-file-noselect (locate-file "gfs-keywords.el" load-path) t)
   (setq case-fold-search nil)
 
-  (column-number-mode)
+  (column-number-mode 1)
 )
 
 (add-to-list 'auto-mode-alist '("\\.gfs\\'" . gfs-mode))
