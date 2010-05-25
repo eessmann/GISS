@@ -163,6 +163,7 @@ GtsObjectClass ** gfs_classes (void)
 #if FTT_2D
         gfs_variable_stream_function_class (),
 #endif /* FTT_2D */
+      gfs_variable_age_class (),
       gfs_variable_curvature_class (),
         gfs_variable_position_class (),
       gfs_variable_distance_class (),

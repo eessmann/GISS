@@ -1413,13 +1413,15 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
       data[0] = output;
       if (GFS_OUTPUT (output)->parallel) {
 	data[1] = GFS_OUTPUT (event)->file->fp;
-	gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+	gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL|FTT_TRAVERSE_LEAFS,
+				  output->max_depth,
 				  (FttCellTraverseFunc) write_text, data);
       }
       else {
 	FILE * fpp = gfs_union_open (GFS_OUTPUT (event)->file->fp, domain->pid);
 	data[1] = fpp;
-	gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+	gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL|FTT_TRAVERSE_LEAFS,
+				  output->max_depth,
 				  (FttCellTraverseFunc) write_text, data);
 	gfs_union_close (GFS_OUTPUT (event)->file->fp, domain->pid, fpp);
       }
