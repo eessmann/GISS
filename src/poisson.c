@@ -18,10 +18,12 @@
  */
 
 #include <math.h>
+#include <stdlib.h>
 #include "poisson.h"
 #include "solid.h"
 #include "source.h"
 #include "tension.h"
+#include "init.h"
 
 /**
  * gfs_multilevel_params_write:
@@ -1071,9 +1073,11 @@ void gfs_diffusion_coefficients (GfsDomain * domain,
   coef.alpha = alpha;
   coef.domain = domain;
   coef.axi = axi;
+  gfs_catch_floating_point_exceptions ();
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) diffusion_mixed_coef, &coef);
+  gfs_restore_fpe_for_function (alpha);
   gfs_domain_face_traverse (domain, FTT_XYZ, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) diffusion_coef, &coef);

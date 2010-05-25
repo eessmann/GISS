@@ -26,6 +26,7 @@
 #include "solid.h"
 #include "variable.h"
 #include "version.h"
+#include "init.h"
 
 #if !FTT_2D
 #  include "isocube.h"
@@ -612,10 +613,13 @@ void gfs_write_ppm (GfsDomain * domain,
   while (depth-- > 0)
     size *= 2;
 
-  if (condition)
+  if (condition) {
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
 					(FttCellTraverseFunc) max_extent, extent,
 					cell_condition, condition);
+    gfs_restore_fpe_for_function (condition);
+  }
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
 			      (FttCellTraverseFunc) max_extent, extent);
@@ -637,10 +641,13 @@ void gfs_write_ppm (GfsDomain * domain,
   data[3] = v;
   data[4] = image;
   data[5] = &domain->lambda;
-  if (condition)
+  if (condition) {
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
 					(FttCellTraverseFunc) write_image_square, data,
 					cell_condition, condition);
+    gfs_restore_fpe_for_function (condition);
+  }
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
 			      (FttCellTraverseFunc) write_image_square, data);
@@ -765,10 +772,13 @@ void gfs_write_grd (GfsDomain * domain,
   while (depth-- > 0)
     size *= 2;
 
-  if (condition)
+  if (condition) {
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
 					(FttCellTraverseFunc) max_extent, extent,
 					cell_condition, condition);
+    gfs_restore_fpe_for_function (condition);
+  }
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
 			      (FttCellTraverseFunc) max_extent, extent);
@@ -785,10 +795,13 @@ void gfs_write_grd (GfsDomain * domain,
   data[3] = v;
   data[4] = grid;
   data[5] = &domain->lambda;
-  if (condition)
+  if (condition) {
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
 					(FttCellTraverseFunc) write_grid_square, data,
 					cell_condition, condition);
+    gfs_restore_fpe_for_function (condition);
+  }
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
 			      (FttCellTraverseFunc) write_grid_square, data);

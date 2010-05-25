@@ -17,9 +17,11 @@
  * 02111-1307, USA.  
  */
 
+#include <stdlib.h>
 #include "river.h"
 #include "adaptive.h"
 #include "source.h"
+#include "init.h"
 
 /* GfsRiver: Object */
 
@@ -790,8 +792,10 @@ static void discharge_update (GfsBoundary * b)
 
     for (v = 0; v < GFS_RIVER_NVAR; v++)
       gfs_variables_swap (r->v[v], r->v1[v]);
-
+    
+    gfs_catch_floating_point_exceptions ();
     gdouble Q = gfs_function_value (bd->Q, NULL);
+    gfs_restore_fpe_for_function (bd->Q);
     gdouble hmax, hmin = 0.;
 
     hmax = bd->H*2.;

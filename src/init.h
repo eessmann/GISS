@@ -32,6 +32,15 @@ void              gfs_init                (int * argc,
 void gfs_catch_floating_point_exceptions   (void);
 int  gfs_restore_floating_point_exceptions (void);
 
+#define gfs_restore_fpe_for_function(f) \
+       { \
+         if (gfs_restore_floating_point_exceptions ()) { \
+           g_message ("floating-point exception in user-defined function:\n%s", \
+	              gfs_function_description (f, FALSE)); \
+           exit (1); \
+         } \
+       }
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -17,9 +17,11 @@
  * 02111-1307, USA.  
  */
 
+#include <stdlib.h>
 #include "wave.h"
 #include "adaptive.h"
 #include "solid.h"
+#include "init.h"
 
 /* GfsWave: Object */
 
@@ -425,7 +427,11 @@ static void init_energy (FttCell * cell, GfsInitWave * event)
   for (wave->ik = 0; wave->ik < wave->nk; wave->ik++)
     for (wave->ith = 0; wave->ith < wave->ntheta; wave->ith++)
       GFS_VALUE (cell, wave->F[wave->ik][wave->ith]) = gfs_function_value (event->d, cell);
+}
 
+static void scale_energy (FttCell * cell, GfsInitWave * event)
+{
+  GfsWave * wave = GFS_WAVE (gfs_object_simulation (event));
   gdouble E = cell_E (cell, NULL, GFS_DOMAIN (wave));
   if (E > 0.) {
     gdouble Hs = gfs_function_value (event->hs, cell);
@@ -441,8 +447,14 @@ static gboolean gfs_init_wave_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_wave_class ())->parent_class)->event) 
       (event, sim)) {
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) init_energy, event);
+    gfs_restore_fpe_for_function (GFS_INIT_WAVE (event)->d);
+    gfs_catch_floating_point_exceptions ();
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) scale_energy, event);
+    gfs_restore_fpe_for_function (GFS_INIT_WAVE (event)->hs);
     return TRUE;
   }
   return FALSE;

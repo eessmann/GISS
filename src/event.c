@@ -27,6 +27,7 @@
 #include "event.h"
 #include "solid.h"
 #include "output.h"
+#include "init.h"
 
 /**
  * gfs_event_next:
@@ -648,8 +649,10 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
 
     while (i) {
       VarFunc * vf = i->data;
+      gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) init_vf, vf);
+      gfs_restore_fpe_for_function (vf->f);
       i = i->next;
     }
     /* boundary conditions need to be called in a separate loop so
@@ -755,7 +758,9 @@ static gboolean gfs_init_mask_event (GfsEvent * event, GfsSimulation * sim)
       (event, sim)) {
     GfsInitMask * m = GFS_INIT_MASK (event);
     m->masked_boxes = NULL;
+    gfs_catch_floating_point_exceptions ();
     gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) foreach_box, m);
+    gfs_restore_fpe_for_function (m->mask);
     g_slist_foreach (m->masked_boxes, (GFunc) gts_object_destroy, NULL);
     g_slist_free (m->masked_boxes);
     gfs_domain_match (GFS_DOMAIN (sim));
@@ -952,7 +957,7 @@ static void compute_vorticity (FttCell * cell, GfsInitVorticity * init)
 {
   gdouble size = ftt_cell_size (cell);
 
-  GFS_VARIABLE (cell, init->vort->i) = gfs_function_value (init->f, cell)*size*size;  
+  GFS_VALUE (cell, init->vort) = gfs_function_value (init->f, cell)*size*size;
 }
 
 static gboolean gfs_init_vorticity_event (GfsEvent * event, 
@@ -965,8 +970,10 @@ static gboolean gfs_init_vorticity_event (GfsEvent * event,
 
     init->vort = gfs_temporary_variable (domain);
     init->stream = gfs_temporary_variable (domain);
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) compute_vorticity, event);
+    gfs_restore_fpe_for_function (init->f);
     stream_from_vorticity (domain, init->stream, init->vort, 1e-9);
     gts_object_destroy (GTS_OBJECT (init->vort));
     init->u = gfs_domain_velocity (domain);
@@ -1072,9 +1079,11 @@ static gboolean gfs_event_sum_event (GfsEvent * event, GfsSimulation * sim)
 				(FttCellTraverseFunc) gfs_cell_reset, s->sv);
     else {
       s->dt = sim->time.t - s->last;
+      gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (GFS_DOMAIN (sim),
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				s->sum, s);
+      gfs_restore_fpe_for_function (s->v);
     }
     s->last = sim->time.t;
     return TRUE;
@@ -1092,7 +1101,7 @@ static void gfs_event_sum_class_init (GfsEventClass * klass)
 
 static void sum (FttCell * cell, GfsEventSum * s)
 {
-  GFS_VARIABLE (cell, s->sv->i) += s->dt*gfs_function_value (s->v, cell);
+  GFS_VALUE (cell, s->sv) += s->dt*gfs_function_value (s->v, cell);
 }
 
 static void gfs_event_sum_init (GfsEventSum * object)
@@ -1948,8 +1957,10 @@ static gboolean gfs_remove_droplets_event (GfsEvent * event, GfsSimulation * sim
       gfs_domain_remove_droplets (domain, d->v, d->c, d->min);
     else {
       d->v = gfs_temporary_variable (domain);
+      gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 				(FttCellTraverseFunc) compute_v, d);
+      gfs_restore_fpe_for_function (d->fc);
       gfs_domain_remove_droplets (domain, d->v, d->c, d->min);
       gts_object_destroy (GTS_OBJECT (d->v));
     }

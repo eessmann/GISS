@@ -23,6 +23,7 @@
 #include "simulation.h"
 #include "river.h"
 #include "solid.h"
+#include "init.h"
 
 /**
  * gfs_variable_mac_source:
@@ -551,10 +552,12 @@ static void source_control_field_root (FttCell * root, GfsSourceControlField * f
 static gboolean source_control_field_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* gfs_event_class ()->event) (event, sim)) {
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
 			      FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, 
 			      GFS_SOURCE_CONTROL_FIELD (event)->level,
 			      (FttCellTraverseFunc) source_control_field_root, event);
+    gfs_restore_fpe_for_function (GFS_SOURCE_CONTROL (event)->intensity);
     return TRUE;
   }
   return FALSE;
@@ -647,8 +650,12 @@ static gboolean source_flux_event (GfsEvent * event, GfsSimulation * sim)
   if ((* gfs_event_class ()->event) (event, sim)) {
     GfsSourceFlux * s = GFS_SOURCE_FLUX (event);
     s->s = 0.;
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_traverse_leaves (GFS_DOMAIN (sim), (FttCellTraverseFunc) add, s);
+    gfs_restore_fpe_for_function (s->fraction);
+    gfs_catch_floating_point_exceptions ();
     s->s = s->s > 0. ? gfs_function_value (s->intensity, NULL)/s->s : 0.;
+    gfs_restore_fpe_for_function (s->intensity);
     return TRUE;
   }
   return FALSE;
@@ -733,7 +740,7 @@ static void diffusion_write (GtsObject * o, FILE * fp)
 
 static void update_mu (FttCell * cell, GfsDiffusion * d)
 {
-  GFS_VARIABLE (cell, d->mu->i) = gfs_function_value (d->val, cell);
+  GFS_VALUE (cell, d->mu) = gfs_function_value (d->val, cell);
 }
 
 static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
@@ -743,9 +750,12 @@ static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
   if (gfs_function_get_constant_value (d->val) == G_MAXDOUBLE) {
     if (d->mu == NULL && (d->mu = gfs_function_get_variable (d->val)) == NULL)
       d->mu = gfs_temporary_variable (GFS_DOMAIN (sim));
-    if (d->mu != gfs_function_get_variable (d->val))
+    if (d->mu != gfs_function_get_variable (d->val)) {
+      gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) update_mu, event);
+      gfs_restore_fpe_for_function (d->val);
+    }
     gfs_domain_cell_traverse (GFS_DOMAIN (sim),
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_get_from_below_intensive, d->mu);
@@ -1285,8 +1295,10 @@ static gdouble source_viscosity_stability (GfsSourceGeneric * s,
   par.s = s;
   par.dtmax = G_MAXDOUBLE;
   par.alpha = sim->physical_params.alpha;
+  gfs_catch_floating_point_exceptions ();
   gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) cell_diffusion_stability, &par);
+  gfs_restore_fpe_for_function (par.alpha);
   return 0.1*par.dtmax;
 }
 
@@ -1522,9 +1534,20 @@ static gboolean gfs_source_coriolis_event (GfsEvent * event, GfsSimulation * sim
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class)->event) 
       (event, sim)) {
-    if (GFS_SOURCE_CORIOLIS (event)->beta < 1.)
+    if (GFS_SOURCE_CORIOLIS (event)->beta < 1.) {
+      gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) save_coriolis, event);
+      if (gfs_restore_floating_point_exceptions ()) {
+	GfsSourceCoriolis * c = GFS_SOURCE_CORIOLIS (event);
+	gchar * s = g_strconcat ("\n", gfs_function_description (c->omegaz, FALSE), NULL);
+	if (c->drag)
+	  s = g_strconcat (s, "\n", gfs_function_description (c->drag, FALSE), NULL);
+	/* fixme: memory leaks */
+	g_message ("floating-point exception in user-defined function(s):%s", s);
+	exit (1);
+      }
+    }
     return TRUE;
   }
   return FALSE;
@@ -1639,8 +1662,17 @@ void gfs_source_coriolis_implicit (GfsDomain * domain,
     GfsSimulation * sim = GFS_SIMULATION (domain);
     gdouble olddt = sim->advection_params.dt;
     sim->advection_params.dt = dt;
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) implicit_coriolis, s);
+    if (gfs_restore_floating_point_exceptions ()) {
+      gchar * c = g_strconcat ("\n", gfs_function_description (s->omegaz, FALSE), NULL);
+      if (s->drag)
+	c = g_strconcat (c, "\n", gfs_function_description (s->drag, FALSE), NULL);
+      /* fixme: memory leaks */
+      g_message ("floating-point exception in user-defined function(s):%s", c);
+      exit (1);
+    }
     sim->advection_params.dt = olddt;
   }
 }

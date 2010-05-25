@@ -17,9 +17,11 @@
  * 02111-1307, USA.  
  */
 
+#include <stdlib.h>
 #include "simulation.h"
 #include "map.h"
 #include "output.h"
+#include "init.h"
 
 typedef struct Vector_ {
   gint x, y, z;
@@ -215,10 +217,13 @@ static void gfs_write_povray_density(GfsDomain * domain,
     max_depth = level;
   }
 
-  if (condition)
+  if (condition) {
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
 					(FttCellTraverseFunc) max_extent, extent,
 					cell_condition, condition);
+    gfs_restore_fpe_for_function (condition);
+  }
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
 			      (FttCellTraverseFunc) max_extent, extent);
@@ -272,9 +277,11 @@ static void gfs_write_povray_density(GfsDomain * domain,
   data[8] = &bb_density;
 
   if (condition) {
+    gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
 					(FttCellTraverseFunc) write_density_value, data,
 					cell_condition, condition);
+    gfs_restore_fpe_for_function (condition);
   }
   else {
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,

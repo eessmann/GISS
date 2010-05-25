@@ -22,6 +22,7 @@
 
 #include "adaptive.h"
 #include "solid.h"
+#include "init.h"
 
 #include "graphic.h"
 
@@ -480,8 +481,10 @@ static gboolean gfs_adapt_gradient_event (GfsEvent * event,
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_adapt_gradient_class ())->parent_class)->event) 
       (event, sim)) {
     if (!gfs_function_get_variable (GFS_ADAPT_FUNCTION (event)->f)) {
+      gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) update_f, event);
+      gfs_restore_fpe_for_function (GFS_ADAPT_FUNCTION (event)->f);
       GfsVariable * v = GFS_ADAPT_GRADIENT (event)->v;
       gfs_domain_cell_traverse (GFS_DOMAIN (sim),
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
@@ -688,20 +691,20 @@ void gfs_domain_reshape (GfsDomain * domain, guint depth)
   }
 }
 
-#define CELL_COST(cell) (GFS_VARIABLE (cell, p->costv->i))
-#define CELL_HCOARSE(c) (GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (c, p->hcoarsev->i)))
-#define CELL_HFINE(c) (GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (c, p->hfinev->i)))
+#define CELL_COST(cell) (GFS_VALUE (cell, p->costv))
+#define CELL_HCOARSE(c) (GFS_DOUBLE_TO_POINTER (GFS_VALUE (c, p->hcoarsev)))
+#define CELL_HFINE(c) (GFS_DOUBLE_TO_POINTER (GFS_VALUE (c, p->hfinev)))
 
 static FttCell * remove_top_coarse (GtsEHeap * h, gdouble * cost, GfsVariable * hcoarse)
 {
   FttCell * cell = gts_eheap_remove_top (h, cost);
 
   if (cell)
-    GFS_VARIABLE (cell, hcoarse->i) = 0.;
+    GFS_VALUE (cell, hcoarse) = 0.;
   while (cell && !FTT_CELL_IS_LEAF (cell)) {
     cell = gts_eheap_remove_top (h, cost);
     if (cell) 
-      GFS_VARIABLE (cell, hcoarse->i) = 0.;
+      GFS_VALUE (cell, hcoarse) = 0.;
   }
   return cell;
 }

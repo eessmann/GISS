@@ -281,7 +281,7 @@ void gfs_catch_floating_point_exceptions (void)
 }
 
 /**
- * gfs_catch_floating_point_exceptions:
+ * gfs_restore_floating_point_exceptions:
  *
  * Restores the default floating-point exceptions set in the Gerris
  * library.

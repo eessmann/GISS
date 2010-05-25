@@ -32,6 +32,7 @@
 #include "mpi_boundary.h"
 #include "metric.h"
 #include "version.h"
+#include "init.h"
 
 #include "config.h"
 
@@ -2026,6 +2027,8 @@ GfsNorm gfs_domain_norm_variable (GfsDomain * domain,
   FttCellTraverseFunc func = w != NULL ?
     (FttCellTraverseFunc) add_norm_weighted : 
     (FttCellTraverseFunc) add_norm;
+  if (w)
+    gfs_catch_floating_point_exceptions ();
   if (condition)
     gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, max_depth, 
 					(FttCellTraverseFunc) func, data,
@@ -2033,6 +2036,8 @@ GfsNorm gfs_domain_norm_variable (GfsDomain * domain,
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
 			      (FttCellTraverseFunc) func, data);
+  if (w)
+    gfs_restore_fpe_for_function (w);
   domain_norm_reduce (domain, &n);
   gfs_norm_update (&n);
 
@@ -3328,9 +3333,12 @@ void gfs_domain_solid_force (GfsDomain * domain,
   data[1] = pm;
   data[2] = gfs_variable_from_name (domain->variables, "P");
   data[3] = weight;
+  if (weight)
+    gfs_catch_floating_point_exceptions ();
   gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			     (FttCellTraverseFunc) add_pressure_force, data);
-
+  if (weight)
+    gfs_restore_fpe_for_function (weight);
   vf->x = vf->y = vf->z = 0.;
   vm->x = vm->y = vm->z = 0.;
   v = gfs_domain_velocity (domain);
@@ -3346,8 +3354,12 @@ void gfs_domain_solid_force (GfsDomain * domain,
       data[2] = v[c];
       data[3] = D;
       data[4] = weight;
+      if (weight)
+	gfs_catch_floating_point_exceptions ();
       gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 				 (FttCellTraverseFunc) add_viscous_force, data);
+      if (weight)
+	gfs_restore_fpe_for_function (weight);
     }
   }
 }
@@ -4164,8 +4176,10 @@ void gfs_domain_sum (GfsDomain * domain, FttDirection d, GfsFunction * f, GfsVar
   data.d = d;
   data.f = f;
   data.v = v;
+  gfs_catch_floating_point_exceptions ();
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) sum, &data);
+  gfs_restore_fpe_for_function (f);
 }
 
 static void filter (FttCell * cell, gpointer * data)

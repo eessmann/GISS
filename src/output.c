@@ -31,6 +31,7 @@
 #include "solid.h"
 #include "ocean.h"
 #include "unstructured.h"
+#include "init.h"
 
 /* GfsOutput: object */
 
@@ -1830,9 +1831,11 @@ static gboolean gfs_output_scalar_event (GfsEvent * event,
     if (!(output->v = gfs_function_get_variable (output->f)) ||
 	gfs_variable_is_dimensional (output->v)) {
       output->v = gfs_temporary_variable (domain);
+      gfs_catch_floating_point_exceptions ();
       output_scalar_traverse (output,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) update_v, output);
+      gfs_restore_fpe_for_function (output->f);
     }
     if (output->maxlevel >= 0)
       output_scalar_traverse (output,
@@ -2337,10 +2340,21 @@ static gboolean gfs_output_scalar_histogram_event (GfsEvent * event,
       GfsOutput * output = GFS_OUTPUT (event);
       guint i;
 
+      gfs_catch_floating_point_exceptions ();
       output_scalar_traverse (GFS_OUTPUT_SCALAR (output), FTT_PRE_ORDER, 
 				FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
 				GFS_OUTPUT_SCALAR (output)->maxlevel,
 				(FttCellTraverseFunc) update_histogram, output);
+      if (gfs_restore_floating_point_exceptions ()) {
+	gchar * s = g_strdup ("\n");
+	if (h->wf)
+	  s = g_strconcat (s, gfs_function_description (h->wf, FALSE), NULL);
+	if (h->yf)
+	  s = g_strconcat (s, "\n", gfs_function_description (h->yf, FALSE), NULL);
+	/* fixme: memory leaks */
+	g_message ("floating-point exception in user-defined function(s):%s", s);
+	exit (1);
+      }
 
       if (output->file && !output->dynamic)
 	output->file->fp = freopen (output->format, "w", output->file->fp);
@@ -2487,8 +2501,10 @@ static gboolean gfs_output_droplet_sums_event (GfsEvent * event, GfsSimulation *
     if (!p.c) {
       p.c = gfs_temporary_variable (domain);
       p.fc = d->c;
+      gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 				(FttCellTraverseFunc) compute_c, &p);
+      gfs_restore_fpe_for_function (p.fc);
     }
     p.tag = d->tag ? d->tag : gfs_temporary_variable (domain);
     p.n = gfs_domain_tag_droplets (domain, p.c, p.tag);
@@ -2727,10 +2743,12 @@ static gboolean gfs_output_error_norm_event (GfsEvent * event,
     if (v == NULL)
       enorm->v = gfs_temporary_variable (domain);
     if (enorm->relative) {
+      gfs_catch_floating_point_exceptions ();
       output_scalar_traverse (output, FTT_PRE_ORDER, 
 			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
 			      output->maxlevel,
 			      (FttCellTraverseFunc) reference_solution, output);
+      gfs_restore_fpe_for_function (enorm->s);
       snorm = gfs_domain_norm_variable (domain, enorm->v, enorm->w,
 					FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
 					output->maxlevel,
@@ -2741,11 +2759,14 @@ static gboolean gfs_output_error_norm_event (GfsEvent * event,
 			      output->maxlevel,
 			      (FttCellTraverseFunc) substract, output);
     }
-    else
+    else {
+      gfs_catch_floating_point_exceptions ();
       output_scalar_traverse (output, FTT_PRE_ORDER, 
 			      FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,  
 			      output->maxlevel,
 			      (FttCellTraverseFunc) compute_error, output);
+      gfs_restore_fpe_for_function (enorm->s);
+    }
     norm = gfs_domain_norm_variable (domain, enorm->v, enorm->w,
 				     FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
 				     output->maxlevel,
@@ -2867,10 +2888,12 @@ static gboolean gfs_output_correlation_event (GfsEvent * event,
     data[1] = &bias;
     data[2] = &sum;
     data[3] = &sumref;
+    gfs_catch_floating_point_exceptions ();
     output_scalar_traverse (output, FTT_PRE_ORDER,
 			    FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
 			    output->maxlevel,
 			    (FttCellTraverseFunc) compute_correlation, data);
+    gfs_restore_fpe_for_function (enorm->s);
     if (v == NULL) {
       gts_object_destroy (GTS_OBJECT (enorm->v));
       enorm->v = NULL;

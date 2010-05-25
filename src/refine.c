@@ -21,6 +21,7 @@
 #include "refine.h"
 #include "solid.h"
 #include "adaptive.h"
+#include "init.h"
 
 /* GfsRefine: Object */
 
@@ -38,8 +39,10 @@ static void refine_box (GfsBox * box, GfsFunction * maxlevel)
 
 static void gfs_refine_refine (GfsRefine * refine, GfsSimulation * sim)
 {
+  gfs_catch_floating_point_exceptions ();
   gts_container_foreach (GTS_CONTAINER (sim),
 			 (GtsFunc) refine_box, refine->maxlevel);
+  gfs_restore_fpe_for_function (refine->maxlevel);
 }
 
 static void gfs_refine_destroy (GtsObject * o)
@@ -227,6 +230,7 @@ static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
     GSList * i = sim->solids->items;
     while (i) {
       p.surface = GFS_SOLID (i->data)->s;
+      gfs_catch_floating_point_exceptions ();
       if (GFS_SURFACE (p.surface)->s)
 	gfs_domain_traverse_cut (GFS_DOMAIN (sim), p.surface,
 				 FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
@@ -235,6 +239,7 @@ static void gfs_refine_solid_refine (GfsRefine * refine, GfsSimulation * sim)
 	gfs_domain_cell_traverse (GFS_DOMAIN (sim),
 				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				  (FttCellTraverseFunc) refine_implicit_cell, &p);
+      gfs_restore_fpe_for_function (refine->maxlevel);
       i = i->next;
     }
   }
