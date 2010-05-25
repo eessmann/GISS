@@ -191,10 +191,10 @@ static void polygon_init (GfsSimulation * sim, Polygon * poly, FttCell * cell, R
   poly->cell = cell;
   poly->rs = rs;
   poly->h = ftt_cell_size (cell)/2.;
-  poly->p[0].x = q.x + poly->h; poly->p[0].y = q.y + poly->h;
-  poly->p[1].x = q.x - poly->h; poly->p[1].y = q.y + poly->h;
-  poly->p[2].x = q.x - poly->h; poly->p[2].y = q.y - poly->h;
-  poly->p[3].x = q.x + poly->h; poly->p[3].y = q.y - poly->h;
+  poly->p[0].x = q.x + poly->h; poly->p[0].y = q.y + poly->h; poly->p[0].z = 0.;
+  poly->p[1].x = q.x - poly->h; poly->p[1].y = q.y + poly->h; poly->p[1].z = 0.;
+  poly->p[2].x = q.x - poly->h; poly->p[2].y = q.y - poly->h; poly->p[2].z = 0.;
+  poly->p[3].x = q.x + poly->h; poly->p[3].y = q.y - poly->h; poly->p[3].z = 0.;
   gfs_simulation_map_inverse_cell (sim, poly->p);
 
   poly->c.x = poly->c.y = 0.;
@@ -306,6 +306,8 @@ static gdouble rms_minimum (RMS * rms)
 
 static gdouble cell_value (FttCell * cell, GfsVariable * h[NM], FttVector p)
 {
+  if (GFS_VALUE (cell, h[0]) == GFS_NODATA)
+    return GFS_NODATA;
   gdouble size = ftt_cell_size (cell)/2.;
   FttVector q;
   ftt_cell_pos (cell, &q);
@@ -784,9 +786,8 @@ static void min_max (FttCell * cell, GfsRefineTerrain * t)
   }
   else {
     FttCellChildren child;
-    guint i;
-    ftt_cell_children (cell, &child);
-    for (i = 0; i < FTT_CELLS; i++)
+    guint i, n = ftt_cell_children_direction (cell, FTT_FRONT, &child);
+    for (i = 0; i < n; i++)
       if (child.c[i]) {
 	if (GFS_VALUE (child.c[i], t->max) > minmax[1])
 	  minmax[1] = GFS_VALUE (child.c[i], t->max);
@@ -857,8 +858,8 @@ static void reset_empty_cell (FttCell * cell, GfsRefineTerrain * t)
     guint i;
     for (i = 0; i < NM; i++)
       GFS_VALUE (cell, t->h[i]) = GFS_NODATA;
-    GFS_VALUE (cell, t->he) = GFS_NODATA;
-    GFS_VALUE (cell, t->hn) = GFS_NODATA;
+    GFS_VALUE (cell, t->he) = 0.;
+    GFS_VALUE (cell, t->hn) = 0.;
   }
 }
 #endif /* 3D */
@@ -1089,6 +1090,10 @@ static gdouble terrain_hmax (FttCell * cell, FttCellFace * face,
   return max;
 }
 
+static void none (FttCell * parent, GfsVariable * v)
+{
+}
+
 static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_refine_terrain_class ())->parent_class->read) (o, fp);
@@ -1112,10 +1117,12 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
   for (i = 0; i < NM; i++) {
     gchar * name = g_strdup_printf ("%s%d", t->name, i);
     t->h[i] = gfs_domain_get_or_add_variable (domain, name, "Terrain height");
+    t->h[i]->coarse_fine = none;
     g_free (name);
   }
   gchar * name = g_strjoin (NULL, t->name, "e", NULL);
   t->he = gfs_domain_get_or_add_variable (domain, name, "Terrain RMS error");
+  t->he->coarse_fine = none;
   g_free (name);
   name = g_strjoin (NULL, t->name, "n", NULL);
   t->hn = gfs_domain_get_or_add_variable (domain, name, "Terrain samples #");
@@ -1123,9 +1130,11 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
   g_free (name);
   name = g_strjoin (NULL, t->name, "dmin", NULL);
   t->hdmin = gfs_domain_get_or_add_variable (domain, name, "Minimum data height");
+  t->hdmin->coarse_fine = none;
   g_free (name);
   name = g_strjoin (NULL, t->name, "dmax", NULL);
   t->hdmax = gfs_domain_get_or_add_variable (domain, name, "Maximum data height");
+  t->hdmax->coarse_fine = none;
   g_free (name);
 
   GfsDerivedVariableInfo v;
@@ -1438,10 +1447,6 @@ static void variable_terrain_destroy (GtsObject * o)
   rsurfaces_destroy (&GFS_VARIABLE_TERRAIN (o)->rs);
 
   (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->destroy) (o);
-}
-
-static void none (FttCell * parent, GfsVariable * v)
-{
 }
 
 static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
