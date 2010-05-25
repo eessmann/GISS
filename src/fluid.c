@@ -2415,6 +2415,9 @@ gdouble gfs_interpolate (FttCell * cell,
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (v != NULL, 0.);
 
+  if (GFS_VALUE (cell, v) == GFS_NODATA)
+    return GFS_NODATA;
+
   ftt_cell_pos (cell, &o);
   size = ftt_cell_size (cell)/2.;
   p.x = (p.x - o.x)/size;
@@ -2826,8 +2829,12 @@ gdouble gfs_cell_corner_value (FttCell * cell,
   g_return_val_if_fail (v != NULL, 0.);
 
   gfs_cell_corner_interpolator (cell, d, max_level, v->centered, &inter);
-  for (i = 0; i < inter.n; i++)
-    val += inter.w[i]*GFS_VARIABLE (inter.c[i], v->i);
+  for (i = 0; i < inter.n; i++) {
+    gdouble v1 = GFS_VALUE (inter.c[i], v);
+    if (v1 == GFS_NODATA)
+      return GFS_VALUE (cell, v);
+    val += inter.w[i]*v1;
+  }
   return val;
 }
 
