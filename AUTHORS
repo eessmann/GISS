@@ -2,8 +2,9 @@ Original Authors
 ----------------
 Stéphane Popinet   <popinet@users.sf.net>
 Sébastien Delaux   <s.delaux@niwa.co.nz> : Moving solid boundaries
-Gaurav Tomar       <gaurav.tomar03@gmail.com> : particulates and droplet2particle modules
+Gaurav Tomar       <gaurav.tomar03@gmail.com> : particulates module
 Andris Rudzītis    <andrisrudzitis@gmail.com> : df3 povray module
+Jose M. López-Herrera Sánchez <jose.lopez.herrera.s@gmail.com> : electro_hydro module
 
 Contributors
 ------------
