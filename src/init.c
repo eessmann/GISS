@@ -277,7 +277,7 @@ void gfs_catch_floating_point_exceptions (void)
 {
 #ifdef EXCEPTIONS
   fedisableexcept (EXCEPTIONS);
-  feclearexcept(EXCEPTIONS);
+  feclearexcept (EXCEPTIONS);
 #endif /* EXCEPTIONS */
 }
 
@@ -293,8 +293,10 @@ void gfs_catch_floating_point_exceptions (void)
 int gfs_restore_floating_point_exceptions (void)
 {
 #ifdef EXCEPTIONS
+  int ret = fetestexcept (EXCEPTIONS);
+  feclearexcept (EXCEPTIONS);
   feenableexcept (EXCEPTIONS);
-  return fetestexcept (EXCEPTIONS);
+  return ret;
 #else /* !EXCEPTIONS */
   return 0;
 #endif /* !EXCEPTIONS */

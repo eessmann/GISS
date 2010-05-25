@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include "init.h"
 #include "wave.h"
 #include "config.h"
 #if WW3_VERSION == 222
@@ -282,7 +283,10 @@ static void wavewatch_source (GfsWave * wave)
     p.CG[i] = 9.81/omega/2.;
   }
 
+  gfs_catch_floating_point_exceptions ();
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) source, &p);
+  if (gfs_restore_floating_point_exceptions ())
+    g_warning ("floating-point exceptions caught in wavewatch module");
 
   g_free (p.A);
   g_free (p.CG);

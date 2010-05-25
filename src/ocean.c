@@ -428,7 +428,7 @@ static void ocean_read (GtsObject ** object, GtsFile * fp)
   sim->physical_params.g /= sim->physical_params.L/* *GFS_DOMAIN (sim)->lambda.z*/;
   GfsVariable * H = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, "H");
   g_assert (H);
-  H->units = 1. - log(/*GFS_DOMAIN (sim)->lambda.z*/1.)/log(sim->physical_params.L);
+  H->units = 1.;
   GFS_DOMAIN (sim)->lambda.z = 1./(1 << MAXLEVEL);
 }
 
