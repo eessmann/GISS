@@ -238,11 +238,9 @@ static void rescale_div (FttCell * cell, gpointer * data)
   GfsVariable * divu = data[0];
   GfsVariable * div = data[1];
   gdouble size = ftt_cell_size (cell);
-  gdouble radc=1.0;
-  if(GFS_IS_AXI(div->domain)) radc=(* (div->domain)->cell_metric) (div->domain, cell);
 
-  GFS_VALUE (cell, div) = - GFS_VALUE (cell, divu)*size*size*(GFS_IS_MIXED (cell) ?
-							      GFS_STATE (cell)->solid->a : 1.)*radc;
+  GFS_VALUE (cell, div) = - GFS_VALUE (cell, divu)*size*size*
+    gfs_domain_cell_fraction (div->domain, cell);
 }
 
 static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * div)
@@ -276,7 +274,6 @@ static void poisson_electric (GfsElectroHydro * elec)
   GfsVariable * diae, * dive, * res1e;
   GfsVariable * phi = elec->phi; 
   GfsVariable ** e = elec->E;
-
 
   gfs_domain_timer_start (domain, "poisson_electric");
 
@@ -513,16 +510,13 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
   FttCellNeighbors n;
   gdouble fe[FTT_DIMENSION];
 
-  gdouble radc=1.0;
-  if(GFS_IS_AXI (GFS_DOMAIN (gfs_object_simulation (s)))) 
-    radc= (* GFS_DOMAIN (gfs_object_simulation (s))->cell_metric) (GFS_DOMAIN (gfs_object_simulation (s)), cell);
-
   for (c = 0; c < FTT_DIMENSION; c++)
     fe[c] = 0.;
 
   f.cell = cell;
   ftt_cell_neighbors (cell, &n);
 
+  gdouble radc = gfs_domain_cell_fraction (GFS_DOMAIN (elec), cell);
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = n.c[f.d]; 
     gdouble permf = gfs_function_face_value (perm, &f);
@@ -532,16 +526,13 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
     gdouble en = (- g.b + g.a*GFS_VALUE (cell, phi))/h;
     gdouble sign = (FTT_FACE_DIRECT (&f) ? 1 : -1);
 
-    gdouble radf=1.0 ;
-    if(GFS_IS_AXI(GFS_DOMAIN (gfs_object_simulation (s)))) 
-      radf = (* GFS_DOMAIN (gfs_object_simulation (s))->face_metric) (GFS_DOMAIN (gfs_object_simulation (s)), &f);
-
-   for (c = 0; c < FTT_DIMENSION; c++) {
+    gdouble radf = gfs_domain_face_fraction (GFS_DOMAIN (elec), &f);
+    for (c = 0; c < FTT_DIMENSION; c++) {
       gdouble es = (c == f.d/2 ? sign*en : gfs_face_interpolated_value (&f, e[c]->i));
       emod += es*es; 
-      fe[c] += permf*es*en*radf;     
-   }
-    fe[f.d/2] -= sign*0.5*emod*permf*radc;
+      fe[c] += permf*es*en*radf;
+    }
+    fe[f.d/2] -= sign*emod*permf*radc/2.;
   }
 
   /* fixme: we need to rescale, not entirely clear why... */
@@ -549,7 +540,6 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
   for (c = 0; c < FTT_DIMENSION; c++)
     GFS_VALUE (cell, s->fe[c]) = scale*fe[c]/h/radc;
 }
-
 
 static gboolean gfs_source_electric_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -661,14 +651,9 @@ static gdouble source_charge_value (GfsSourceGeneric * s,
 			            FttCell * cell,
 				    GfsVariable * v)
 {
-  GfsVariable * phi = GFS_ELECTRO_HYDRO (gfs_object_simulation (s))->phi;
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (s));
+  GfsVariable * phi = GFS_ELECTRO_HYDRO (domain)->phi;
   gdouble value = 0., h = ftt_cell_size (cell);
-  GfsDomain * domain= GFS_DOMAIN (gfs_object_simulation (s)) ;
-  gdouble radc=1.0;
-
-  if(GFS_IS_AXI(domain)) radc = (* domain->cell_metric) (domain, cell);
- 
-
   FttCellFace f;
   FttCellNeighbors n;
 
@@ -680,12 +665,10 @@ static gdouble source_charge_value (GfsSourceGeneric * s,
     gdouble conduct = gfs_function_face_value (GFS_SOURCE_CHARGE (s)->conductivity, &f);
     GfsGradient g;
     gfs_face_gradient (&f, &g, phi->i, -1);
-    gdouble en= -g.b + g.a*GFS_VALUE (cell, phi);
-    gdouble radf=1.0;
-  if(GFS_IS_AXI(domain)) radf = (* domain->face_metric) (domain, &f);
-    value -= conduct*en*radf;
+    gdouble en = -g.b + g.a*GFS_VALUE (cell, phi);
+    value -= conduct*en*gfs_domain_face_fraction (domain, &f);
   }
-  return value/(h*h)/radc;
+  return value/(h*h*gfs_domain_cell_fraction (domain, cell));
 }
 
 static void gfs_source_charge_init (GfsSourceCharge * object)
@@ -729,7 +712,6 @@ static void gfs_electro_hydro_axi_read (GtsObject ** o, GtsFile * fp)
   GFS_DOMAIN (*o)->refpos.y = 0.5;
 }
 
-
 static void gfs_electro_hydro_axi_class_init (GfsSimulationClass * klass) 
 {
   GTS_OBJECT_CLASS (klass)->destroy = gfs_electro_hydro_destroy;
@@ -748,7 +730,7 @@ GfsSimulationClass * gfs_electro_hydro_axi_class (void)
       sizeof (GfsElectroHydro),
       sizeof (GfsSimulationClass),
       (GtsObjectClassInitFunc) gfs_electro_hydro_axi_class_init,
-      (GtsObjectInitFunc) gfs_electro_hydro_init,  
+      (GtsObjectInitFunc) gfs_electro_hydro_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
