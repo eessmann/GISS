@@ -362,8 +362,7 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
 				p, sim->physical_params.alpha, res, g, NULL);
     gfs_simulation_set_timestep (sim);
     gfs_advance_tracers (domain, sim->advection_params.dt/2.);
-    poisson_electric (elec); 
-
+    poisson_electric (elec);
   }
   else if (sim->advection_params.gc)
     gfs_update_gradients (domain, p, sim->physical_params.alpha, g);
@@ -391,8 +390,6 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
 					       gmac,
 					       sim->time.i > 0 || !gc ? gc : gmac,
 					       sim->physical_params.alpha);
- 
-    poisson_electric (elec);
 
     if (gc) {
       gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
@@ -420,6 +417,7 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
 
     gfs_simulation_set_timestep (sim);
     gfs_advance_tracers (domain, sim->advection_params.dt);
+    poisson_electric (elec);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
