@@ -269,34 +269,21 @@ static void minus_gradient (FttCell * cell, gpointer * data)
 static void poisson_electric (GfsElectroHydro * elec)
 {
   GfsMultilevelParams * par = &elec->electric_projection_params;
-  GfsFunction * perm = elec->perm;
   GfsDomain * domain = GFS_DOMAIN (elec);
   GfsVariable * diae, * dive, * res1e;
   GfsVariable * phi = elec->phi; 
   GfsVariable ** e = elec->E;
 
-  gfs_domain_timer_start (domain, "poisson_electric");
-
   dive = gfs_temporary_variable (domain);
   correct_div (domain, elec->rhoe, dive);
-  gfs_poisson_coefficients (domain, perm);
+  gfs_poisson_coefficients (domain, elec->perm);
   res1e = gfs_temporary_variable (domain);
   diae = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, diae);
-  /* compute residual */
-  par->depth = gfs_domain_depth (domain);
-  gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, phi, dive, diae, res1e);
-  /* solve for the potential */
-  par->residual_before = par->residual = 
-    gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1e);
-  par->niter = 0;
-  while (par->niter < par->nitermin ||
-	 (par->residual.infty > par->tolerance && par->niter < par->nitermax)) {
-    gfs_poisson_cycle (domain, par, phi, dive, diae, res1e);
-    par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res1e);
-    par->niter++;
-  }
+  par->poisson_solve (domain, par, phi, dive, res1e, diae, 1.);
+  if (par->residual.infty > par->tolerance)
+    g_warning ("poisson_electric: max residual %g > %g", par->residual.infty, par->tolerance);
 
   /* Set the electric field (-gradient of the potential) */
   gpointer data[2];
@@ -311,8 +298,6 @@ static void poisson_electric (GfsElectroHydro * elec)
   gts_object_destroy (GTS_OBJECT (diae));
   gts_object_destroy (GTS_OBJECT (dive));
   gts_object_destroy (GTS_OBJECT (res1e));
-
-  gfs_domain_timer_stop (domain, "poisson_electric");
 }
 
 static void gfs_electro_hydro_run (GfsSimulation * sim)

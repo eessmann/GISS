@@ -76,6 +76,8 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
   par->weighted = FALSE;
   par->beta = 0.5;
   par->omega = 1.;
+
+  par->poisson_solve = gfs_poisson_solve;
 }
 
 void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
