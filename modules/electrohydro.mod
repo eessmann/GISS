@@ -541,7 +541,7 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
 
 static gboolean gfs_source_electric_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_event_sum_class ())->parent_class)->event)
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_source_electric_class ())->parent_class)->event)
       (event, sim)) {
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) save_fe, event);
@@ -564,10 +564,9 @@ static void gfs_source_electric_class_init (GfsSourceGenericClass * klass)
   GTS_OBJECT_CLASS (klass)->destroy = gfs_source_electric_destroy;
 }
 
-static void gfs_source_electric_init (GfsSourceElectric * s)
+static void gfs_source_electric_init (GfsSourceGeneric * s)
 {
-  GFS_SOURCE_GENERIC (s)->mac_value = GFS_SOURCE_GENERIC (s)->centered_value = 
-    gfs_source_electric_centered_value;
+  s->mac_value = s->centered_value = gfs_source_electric_centered_value;
 }
 
 GfsSourceGenericClass * gfs_source_electric_class (void)
@@ -598,6 +597,7 @@ typedef struct _GfsSourceCharge         GfsSourceCharge;
 struct _GfsSourceCharge {
   /*< private >*/
   GfsSourceScalar parent;
+  GfsVariable * c;
 
   /*< public >*/
   GfsFunction * conductivity;
@@ -615,8 +615,11 @@ GfsSourceGenericClass * gfs_source_charge_class  (void);
 
 static void gfs_source_charge_destroy (GtsObject * o)
 {
-  if (GFS_SOURCE_CHARGE (o)->conductivity)
-    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CHARGE (o)->conductivity));
+  GfsSourceCharge * s = GFS_SOURCE_CHARGE (o);
+  if (s->conductivity)
+    gts_object_destroy (GTS_OBJECT (s->conductivity));
+  if (s->c)
+    gts_object_destroy (GTS_OBJECT (s->c));
 
   (* GTS_OBJECT_CLASS (gfs_source_charge_class ())->parent_class->destroy) (o);
 }
@@ -627,9 +630,11 @@ static void gfs_source_charge_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  GFS_SOURCE_CHARGE (*o)->conductivity = gfs_function_new (gfs_function_class(), 0.);
-  gfs_function_set_units (GFS_SOURCE_CHARGE (*o)->conductivity, -1.);
-  gfs_function_read (GFS_SOURCE_CHARGE (*o)->conductivity, gfs_object_simulation (*o), fp);
+  GfsSourceCharge * s = GFS_SOURCE_CHARGE (*o);
+  s->conductivity = gfs_function_new (gfs_function_class(), 0.);
+  gfs_function_set_units (s->conductivity, -1.);
+  gfs_function_read (s->conductivity, gfs_object_simulation (s), fp);
+  s->c = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (s)));
 }
 
 static void gfs_source_charge_write (GtsObject * o, FILE * fp)
@@ -638,16 +643,7 @@ static void gfs_source_charge_write (GtsObject * o, FILE * fp)
   gfs_function_write (GFS_SOURCE_CHARGE (o)->conductivity, fp);
 }
 
-static void gfs_source_charge_class_init (GfsSourceGenericClass * klass)
-{
-  GTS_OBJECT_CLASS (klass)->read = gfs_source_charge_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_source_charge_write;
-  GTS_OBJECT_CLASS (klass)->destroy = gfs_source_charge_destroy;
-}
-
-static gdouble source_charge_value (GfsSourceGeneric * s,
-			            FttCell * cell,
-				    GfsVariable * v)
+static void source_charge (FttCell * cell, GfsSourceCharge * s)
 {
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (s));
   GfsVariable * phi = GFS_ELECTRO_HYDRO (domain)->phi;
@@ -660,18 +656,42 @@ static gdouble source_charge_value (GfsSourceGeneric * s,
 
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = n.c[f.d];
-    gdouble conduct = gfs_function_face_value (GFS_SOURCE_CHARGE (s)->conductivity, &f);
     GfsGradient g;
-    gfs_face_gradient (&f, &g, phi->i, -1);
-    gdouble en = -g.b + g.a*GFS_VALUE (cell, phi);
-    value -= conduct*en*gfs_domain_face_fraction (domain, &f);
+    gfs_face_weighted_gradient (&f, &g, phi->i, -1);
+    value -= g.a*GFS_VALUE (cell, phi) - g.b;
   }
-  return value/(h*h*gfs_domain_cell_fraction (domain, cell));
+  GFS_VALUE (cell, s->c) = value/(h*h*gfs_domain_cell_fraction (domain, cell));
 }
 
-static void gfs_source_charge_init (GfsSourceCharge * object)
+static gboolean gfs_source_charge_event (GfsEvent * event, GfsSimulation * sim)
 {
-  GfsSourceGeneric * s = GFS_SOURCE_GENERIC (object);
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_source_charge_class ())->parent_class)->event)
+      (event, sim)) {
+    gfs_poisson_coefficients (GFS_DOMAIN (sim), GFS_SOURCE_CHARGE (event)->conductivity);
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) source_charge, event);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_source_charge_class_init (GfsSourceGenericClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = gfs_source_charge_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_source_charge_write;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_source_charge_destroy;
+  GFS_EVENT_CLASS (klass)->event = gfs_source_charge_event;
+}
+
+static gdouble source_charge_value (GfsSourceGeneric * s,
+			            FttCell * cell,
+				    GfsVariable * v)
+{
+  return GFS_VALUE (cell, GFS_SOURCE_CHARGE (s)->c);
+}
+
+static void gfs_source_charge_init (GfsSourceGeneric * s)
+{
   s->mac_value = s->centered_value = source_charge_value;
 }
 
