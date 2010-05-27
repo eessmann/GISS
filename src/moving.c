@@ -45,6 +45,47 @@ typedef struct {
 
 #include "moving2.c"
 
+static void numbered_vertex_read (GtsObject ** o, GtsFile * f)
+{
+  static glong count = 0;
+
+  (* GTS_OBJECT_CLASS (gfs_numbered_vertex_class ())->parent_class->read) (o, f);
+
+  GfsNumberedVertex * v = GFS_NUMBERED_VERTEX (*o);
+  v->num = count++;
+}
+
+static void numbered_vertex_class_init (GfsNumberedVertexClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = numbered_vertex_read;
+}
+
+/**
+ * gfs_numbered_vertex_class:
+ *
+ * Returns: the #GfsNumberedVertexClass.
+ */
+GfsNumberedVertexClass * gfs_numbered_vertex_class (void)
+{
+  static GfsNumberedVertexClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo numbered_vertex_info = {
+      "GfsNumberedVertex",
+      sizeof (GfsNumberedVertex),
+      sizeof (GfsNumberedVertexClass),
+      (GtsObjectClassInitFunc) numbered_vertex_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_vertex_class ()),
+				  &numbered_vertex_info);
+  }
+
+  return klass;
+}
+
 typedef struct {
   GfsSimulation * sim;
   GfsSolidMoving * s;

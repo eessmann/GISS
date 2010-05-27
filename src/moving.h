@@ -30,6 +30,30 @@
 extern "C" {
 #endif /* __cplusplus */
 
+typedef struct _GfsNumberedVertex        GfsNumberedVertex;
+typedef struct _GfsNumberedVertexClass   GfsNumberedVertexClass;
+
+#define GFS_IS_NUMBERED_VERTEX(obj)   (gts_object_is_from_class (obj,\
+								 gfs_numbered_vertex_class ()))
+#define GFS_NUMBERED_VERTEX(obj)             GTS_OBJECT_CAST (obj,\
+						     GfsNumberedVertex,\
+						     gfs_numbered_vertex_class ())
+#define GTFS_NUMBERED_VERTEX_CLASS(klass)     GTS_OBJECT_CLASS_CAST (klass,\
+							   GfsNumberedVertexClass,\
+							   gfs_numbered_vertex_class ())
+struct _GfsNumberedVertex {
+  GtsVertex parent;
+  glong num;
+};
+
+struct _GfsNumberedVertexClass {
+  GtsVertexClass parent_class;
+};
+
+GfsNumberedVertexClass * gfs_numbered_vertex_class          (void);
+
+/* ****** */
+
 typedef struct _GfsSolidMoving         GfsSolidMoving;
 
 struct _GfsSolidMoving {
