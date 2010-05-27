@@ -1571,6 +1571,8 @@ static void gfs_event_stop_write (GtsObject * o, FILE * fp)
   fprintf (fp, " %s %g", s->v->name, s->max);
   if (s->diff)
     fprintf (fp, " %s", s->diff->name);
+  if (s->relative)
+    fputs (" { relative = 1 }", fp);
 }
 
 static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
@@ -1613,6 +1615,14 @@ static void gfs_event_stop_read (GtsObject ** o, GtsFile * fp)
     s->diff->units = s->v->units;
     gts_file_next_token (fp);
   }
+
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_INT, "relative", TRUE, &s->relative},
+      {GTS_NONE}
+    };
+    gts_file_assign_variables (fp, var);    
+  }
 }
 
 static void gfs_event_stop_destroy (GtsObject * o)
@@ -1642,12 +1652,21 @@ static gboolean gfs_event_stop_event (GfsEvent * event, GfsSimulation * sim)
 
     if (s->last >= 0.) {
       GfsNorm n;
+      gdouble max = 1.;
 
+      if (s->relative) {
+	n = gfs_domain_norm_variable (domain, s->oldv, NULL, FTT_TRAVERSE_LEAFS, -1, NULL, NULL);
+	max = n.infty;
+      }
       gfs_domain_cell_traverse (domain,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) diff, s);
       n = gfs_domain_norm_variable (domain, s->oldv, NULL, FTT_TRAVERSE_LEAFS, -1, NULL, NULL);
-      if (gfs_dimensional_value (s->v, n.infty) <= s->max)
+      if (s->relative) {
+	if (n.infty <= s->max*max)
+	  sim->time.end = sim->time.t;
+      }
+      else if (gfs_dimensional_value (s->v, n.infty) <= s->max)
 	sim->time.end = sim->time.t;
       if (s->diff) {
 	gfs_variables_swap (s->diff, s->oldv);

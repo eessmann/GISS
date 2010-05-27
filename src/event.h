@@ -230,6 +230,7 @@ struct _GfsEventStop {
 
   GfsVariable * v, * oldv, * diff;
   gdouble last, max;
+  gboolean relative;
 };
 
 #define GFS_EVENT_STOP(obj)            GTS_OBJECT_CAST (obj,\
