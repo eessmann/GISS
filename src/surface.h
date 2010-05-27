@@ -121,6 +121,10 @@ struct _GfsSurface {
   /*< public >*/
   GtsSurface * s;
   gboolean twod;
+
+  GtsFaceClass * face_class;
+  GtsEdgeClass * edge_class;
+  GtsVertexClass * vertex_class;
 };
 
 #define GFS_SURFACE(obj)            GTS_OBJECT_CAST (obj,\

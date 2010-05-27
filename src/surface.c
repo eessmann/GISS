@@ -348,9 +348,9 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
     if (surface->s)
       gts_object_destroy (GTS_OBJECT (surface->s));
     surface->s = gts_surface_new (gts_surface_class (), 
-				  gts_face_class (), 
-				  gts_edge_class (), 
-				  gts_vertex_class ());
+				  surface->face_class, 
+				  surface->edge_class, 
+				  surface->vertex_class);
     if (gts_surface_read (surface->s, fp))
       return;
     if (fp->type != '}') {
@@ -371,9 +371,9 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
     }
     GtsFile * fp1 = gts_file_new (fptr);
     surface->s = gts_surface_new (gts_surface_class (), 
-				  gts_face_class (), 
-				  gts_edge_class (), 
-				  gts_vertex_class ());
+				  surface->face_class, 
+				  surface->edge_class, 
+				  surface->vertex_class);
     if (gts_surface_read (surface->s, fp1)) {
       gts_file_error (fp, 
 		      "file `%s' is not a valid GTS file\n"
@@ -784,6 +784,9 @@ static void gfs_surface_init (GfsSurface * s)
 {
   s->scale[0] = 1.; s->scale[1] = 1.; s->scale[2] = 1.;
   s->flip = FALSE;
+  s->vertex_class = gts_vertex_class ();
+  s->edge_class = gts_edge_class ();
+  s->face_class = gts_face_class ();
 }
 
 GfsGenericSurfaceClass * gfs_surface_class (void)

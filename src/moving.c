@@ -90,7 +90,7 @@ typedef struct {
   GfsSimulation * sim;
   GfsSolidMoving * s;
   GfsVariable * old_solid_v, ** sold2, ** v;
-  guint notin;
+  GArray * stmp, * sall;
 } SolidInfo;
 
 static double surface_value (FttCell * cell, GfsVariable * v, FttVector * ca)
@@ -243,6 +243,163 @@ static void create_new_cells (FttCell * cell, GfsSurface * s, SolidInfo * solid_
 		     (FttCellInitFunc) gfs_cell_fine_init, solid_info->sim);
 }
 
+static void refine_direction (FttCell * cell, GfsDomain * domain, gint level)
+{
+  g_assert (cell);
+  
+  if (ftt_cell_level (cell) < level) {
+    if (FTT_CELL_IS_LEAF (cell)) {
+      FttCellChildren child;
+      guint num = ftt_cell_children_direction (cell, 1, &child);
+      gint j;
+
+      for (j = 0; j < num; j++)
+	if (child.c[j] == NULL) {
+	  if (FTT_CELL_IS_DESTROYED (cell))
+	      cell->flags &= ~FTT_FLAG_DESTROYED;
+	  g_assert (!child.c[j]);
+	  fprintf (stderr, "11\n");
+	  gfs_cell_init (child.c[j], domain);
+	  fprintf (stderr, "22\n");
+	}
+    }
+    else {
+      
+    }
+  }
+}
+
+static FttVector rpos[FTT_NEIGHBORS] = {
+#if FTT_2D
+  {1.,0.,0.}, {-1.,0.,0.}, {0.,1.,0.}, {0.,-1.,0.}
+#else  /* FTT_3D */
+  {1.,0.,0.}, {-1.,0.,0.}, {0.,1.,0.}, {0.,-1.,0.}, {0.,0.,1.}, {0.,0.,-1.}
+#endif /* FTT_3D */
+};
+
+static void match (FttCell * cell, GfsBoundary * boundary)
+{
+  FttCell * neighbor = ftt_cell_neighbor (cell, boundary->d);
+  FttCell * parent = ftt_cell_parent (cell);
+  guint level = ftt_cell_level (cell);
+
+  cell->flags |= GFS_FLAG_BOUNDARY;
+  if (parent && GFS_CELL_IS_GRADIENT_BOUNDARY (parent))
+    cell->flags |= GFS_FLAG_GRADIENT_BOUNDARY;
+  if (neighbor == NULL || ftt_cell_level (neighbor) < level) {
+    if (FTT_CELL_IS_ROOT (cell))
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
+	     "root cell is entirely outside of the fluid domain\n"
+	     "the solid surface orientation may be incorrect");
+    ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup, gfs_box_domain (boundary->box));
+    boundary->changed = TRUE;
+    return;
+  }
+  if (ftt_cell_level (neighbor) == level) {
+    GfsSolidVector * s = GFS_STATE (neighbor)->solid;
+
+    if (s && s->s[FTT_OPPOSITE_DIRECTION (boundary->d)] == 0.) {
+      if (FTT_CELL_IS_ROOT (cell))
+	g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
+	       "root cell is entirely outside of the fluid domain\n"
+	       "the solid surface orientation may be incorrect");
+      ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup,
+			gfs_box_domain (boundary->box));
+      boundary->changed = TRUE;
+      return;
+    }
+    if (s) {
+      FttDirection d;
+      FttComponent c;
+      GfsSolidVector * t;
+
+      if (GFS_STATE (cell)->solid == NULL)
+	GFS_STATE (cell)->solid = g_malloc0 (sizeof (GfsSolidVector));
+      t = GFS_STATE (cell)->solid;
+      t->a = s->a;
+      for (d = 0; d < FTT_NEIGHBORS; d++)
+	if (d/2 == boundary->d/2)
+	  t->s[d] = s->s[FTT_OPPOSITE_DIRECTION (d)];
+	else
+	  t->s[d] = s->s[d];
+      for (c = 0; c < FTT_DIMENSION; c++)
+	if (c == boundary->d/2) {
+	  FttVector p1, p2;
+	  ftt_cell_pos (cell, &p1);
+	  ftt_cell_pos (neighbor, &p2);
+	  (&t->cm.x)[c] = (&p1.x)[c] + (&p2.x)[c] - (&s->cm.x)[c];
+	  (&t->ca.x)[c] = (&p1.x)[c] + (&p2.x)[c] - (&s->ca.x)[c];
+	}
+	else {
+	  (&t->cm.x)[c] = (&s->cm.x)[c];
+	  (&t->ca.x)[c] = (&s->ca.x)[c];
+	}
+    }
+    else if (GFS_STATE (cell)->solid != NULL) {
+      g_free (GFS_STATE (cell)->solid);
+      GFS_STATE (cell)->solid = NULL;
+    }      
+    if (FTT_CELL_IS_LEAF (cell) && !FTT_CELL_IS_LEAF (neighbor)) {
+      GfsDomain * domain = gfs_box_domain (boundary->box);
+      ftt_cell_refine_single (cell, domain->cell_init, domain->cell_init_data);
+      boundary->changed = TRUE;
+    }
+  }
+  else
+    g_assert_not_reached ();
+  if (!FTT_CELL_IS_LEAF (cell))
+    level++;
+  if (level > boundary->depth)
+    boundary->depth = level;
+}
+
+static void boundary_match (GfsBoundary * boundary)
+{
+  guint l = ftt_cell_level (boundary->root);
+
+  boundary->changed = FALSE;
+  boundary->depth = l;
+  while (l <= boundary->depth) {
+    ftt_cell_traverse_boundary (boundary->root, boundary->d,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
+				(FttCellTraverseFunc) match, boundary);
+    l++;
+  }
+  if (boundary->changed)
+    ftt_cell_flatten (boundary->root, boundary->d, (FttCellCleanupFunc) gfs_cell_cleanup, 
+		      gfs_box_domain (boundary->box));
+}
+
+static void renew_boundary (GfsBox * box, GfsSimulation * sim)
+{
+  GfsDomain * domain = GFS_DOMAIN(sim);
+  FttDirection d;
+  FttVector pos;
+  gdouble size;
+  
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      GfsBoundary * boundary = GFS_BOUNDARY (box->neighbor[d]);
+
+      /* Expensive but case independent fix */
+
+      ftt_cell_destroy (boundary->root, (FttCellCleanupFunc) gfs_cell_cleanup, domain);
+      
+      domain = gfs_box_domain (box);
+      boundary->root = ftt_cell_new ((FttCellInitFunc) gfs_cell_init, domain);
+      FTT_ROOT_CELL (boundary->root)->parent = box;
+      ftt_cell_set_level (boundary->root, ftt_cell_level (box->root));
+      ftt_cell_set_neighbor_match (boundary->root, box->root, boundary->d, (FttCellInitFunc) gfs_cell_init, domain);
+      ftt_cell_pos (box->root, &pos);
+      size = ftt_cell_size (box->root);
+      pos.x += rpos[d].x*size;
+      pos.y += rpos[d].y*size;
+      pos.z += rpos[d].z*size;
+      ftt_cell_set_pos (boundary->root, &pos);
+      boundary_match (boundary);
+    }
+}
+
 static void remesh_surface_moving (GfsSimulation * sim, GfsSolidMoving * s)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
@@ -255,6 +412,9 @@ static void remesh_surface_moving (GfsSimulation * sim, GfsSolidMoving * s)
   gfs_domain_traverse_cut (domain, GFS_SOLID (s)->s,
 			   FTT_POST_ORDER, FTT_TRAVERSE_LEAFS | FTT_TRAVERSE_DESTROYED,
 			   (FttCellTraverseCutFunc) create_new_cells, &solid_info);
+
+  if (domain->pid >= 0)
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) renew_boundary, sim);
 }
 
 static void solid_moving_destroy (GtsObject * object)
@@ -263,15 +423,26 @@ static void solid_moving_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_solid_moving_class ())->parent_class->destroy) (object);
 }
 
+static void count_vertex (GfsNumberedVertex * v, GfsSolidMoving * solid)
+{
+  solid->nvertex++;
+}
+
 static void solid_moving_read (GtsObject ** o, GtsFile * fp)
 {
   GfsSolidMoving * solid = GFS_SOLID_MOVING (*o);
-  
+
+  GFS_SURFACE (GFS_SOLID (solid)->s)->vertex_class = gfs_numbered_vertex_class ();
+
   if (GTS_OBJECT_CLASS (gfs_solid_moving_class ())->parent_class->read)
     (* GTS_OBJECT_CLASS (gfs_solid_moving_class ())->parent_class->read) 
       (o, fp);
   if (fp->type == GTS_ERROR)
     return;
+  
+  solid->nvertex = 0;
+  gts_surface_foreach_vertex (GFS_SURFACE (GFS_SOLID (solid)->s)->s ,
+			      (GtsFunc) count_vertex, solid);
 
   if (!GFS_IS_SURFACE (GFS_SOLID (solid)->s) || !GFS_SURFACE (GFS_SOLID (solid)->s)->s) {
     gts_file_error (fp, "moving implicit surfaces are not implemented yet");
@@ -683,18 +854,47 @@ static void simulation_moving_set_timestep (GfsSimulation * sim)
   sim->time.dtmax = dtmax;
 }
 
-static void move_vertex (GtsPoint * p, SolidInfo * par)
+static void move_vertex_mpi (GfsNumberedVertex * v, SolidInfo * par)
 { 
+  GtsPoint * p = &GTS_VERTEX(v)->p;
   FttVector pos = *((FttVector *) &p->x);
   FttCell * cell = gfs_domain_locate (GFS_DOMAIN (par->sim), pos, -2, NULL);
+  FttComponent c;
+
   if (cell) {
     gdouble dt = par->sim->advection_params.dt;
-    FttComponent c;
+    for (c = 0; c < FTT_DIMENSION; c++) { 
+      (&p->x)[c] += surface_value (cell, par->v[c], &pos)*dt;
+      g_array_index(par->stmp, double, 3*v->num+c) = (&p->x)[c];
+    }  
+  }
+  else {
+    for (c = 0; c < FTT_DIMENSION; c++)
+      g_array_index(par->stmp,double,3*v->num+c) = -G_MAXDOUBLE;
+  }
+}
+
+static void move_vertex (GfsNumberedVertex * v, SolidInfo * par)
+{ 
+  GtsPoint * p = &GTS_VERTEX(v)->p;
+  FttVector pos = *((FttVector *) &p->x);
+  FttCell * cell = gfs_domain_locate (GFS_DOMAIN (par->sim), pos, -2, NULL);
+  FttComponent c;
+
+  if (cell) {
+    gdouble dt = par->sim->advection_params.dt;
     for (c = 0; c < FTT_DIMENSION; c++)
       (&p->x)[c] += surface_value (cell, par->v[c], &pos)*dt;
   }
-  else
-    par->notin++;
+}
+
+static void synchronize_vertex (GfsNumberedVertex * v, SolidInfo * par)
+{
+  GtsPoint * p = &GTS_VERTEX(v)->p;
+  FttComponent c;
+
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&p->x)[c] = g_array_index(par->sall,double,3*v->num+c);
 }
 
 static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
@@ -705,10 +905,22 @@ static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
     p.sim = sim;
     p.s = solid;
     p.v = gfs_domain_velocity (GFS_DOMAIN (sim));
-    p.notin = 0;
-    gts_surface_foreach_vertex (surface->s, (GtsFunc) move_vertex, &p);
-    if (p.notin > 0)
-      g_warning ("%d vertices of the moving surface are outside of the domain", p.notin);
+
+    if (GFS_DOMAIN (sim)->pid >= 0) { /* Parallel simulation */
+      p.stmp = g_array_set_size ( g_array_new (FALSE, FALSE, sizeof (double)) , 3*solid->nvertex);
+      p.sall = g_array_set_size ( g_array_new (FALSE, FALSE, sizeof (double)) , 3*solid->nvertex);
+
+      gts_surface_foreach_vertex (surface->s, (GtsFunc) move_vertex_mpi, &p);
+
+      MPI_Allreduce (p.stmp->data, p.sall->data, p.stmp->len, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+      
+      gts_surface_foreach_vertex (surface->s, (GtsFunc) synchronize_vertex, &p);
+      
+      g_array_free (p.stmp, FALSE);
+      g_array_free (p.sall, FALSE);
+    }
+    else
+      gts_surface_foreach_vertex (surface->s, (GtsFunc) move_vertex, &p);
   }
   else
     /* implicit surface */
