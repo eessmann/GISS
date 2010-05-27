@@ -81,6 +81,10 @@ void                  gfs_poisson_cycle              (GfsDomain * domain,
 						      GfsVariable * rhs,
 						      GfsVariable * dia,
 						      GfsVariable * res);
+gdouble               gfs_poisson_compatibility      (GfsDomain * domain, 
+						      GfsVariable * lhs, 
+						      GfsVariable * rhs,
+						      gdouble dt);
 void                  gfs_poisson_solve              (GfsDomain * domain,
 						      GfsMultilevelParams * par,
 						      GfsVariable * lhs,

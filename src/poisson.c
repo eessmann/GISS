@@ -925,6 +925,56 @@ void gfs_poisson_cycle (GfsDomain * domain,
   gts_object_destroy (GTS_OBJECT (dp));
 }
 
+typedef struct {
+  GfsVariable * lhs;
+  gboolean dirichlet;
+} CompatPar;
+
+static void check_box_dirichlet (GfsBox * box, CompatPar * p)
+{
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, p->lhs);
+      if (GFS_IS_BC_DIRICHLET (bc)) {
+	p->dirichlet = TRUE;
+	return;
+      }	
+    }
+}
+
+/**
+ * gfs_poisson_compatibility:
+ * @domain: the domain over which the poisson problem is solved.
+ * @lhs: the variable to use as left-hand side.
+ * @rhs: the variable to use as right-hand side.
+ * @dt: the timestep.
+ *
+ * Returns: the absolute value of the compatibility condition for a
+ * Poisson equation using @lhs as left-hand-side and @rhs as
+ * right-hand-side.
+ */
+gdouble gfs_poisson_compatibility (GfsDomain * domain,
+				   GfsVariable * lhs,
+				   GfsVariable * rhs,
+				   gdouble dt)
+{
+  g_return_val_if_fail (domain != NULL, 0.);
+  g_return_val_if_fail (lhs != NULL, 0.);
+  g_return_val_if_fail (rhs != NULL, 0.);
+
+  /* check whether any boundary has a Dirichlet condition on @lhs */
+  CompatPar p = { lhs, FALSE };
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) check_box_dirichlet, &p);
+  if (p.dirichlet)
+    /* Assumes that the domain is simply connected in which case compatibility is guaranteed */
+    return 0.;
+  /* compute volume integral of right-hand-side (again we assume that
+     the domain is simply connected) */
+  return fabs (gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, rhs).bias);
+}
+
 /**
  * gfs_poisson_solve:
  * @domain: the domain over which the poisson problem is solved.
@@ -943,6 +993,13 @@ void gfs_poisson_solve (GfsDomain * domain,
 			GfsVariable * lhs, GfsVariable * rhs, GfsVariable * res,
 			GfsVariable * dia, gdouble dt)
 {
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (par != NULL);
+  g_return_if_fail (lhs != NULL);
+  g_return_if_fail (rhs != NULL);
+  g_return_if_fail (res != NULL);
+  g_return_if_fail (dia != NULL);
+
   gfs_domain_timer_start (domain, "poisson_solve");
 
   guint minlevel = par->minlevel;
