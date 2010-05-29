@@ -20,6 +20,7 @@
 #include "simulation.h"
 #include "source.h"
 #include "adaptive.h"
+#include "output.h"
 
 /* GfsElectroHydro: Header */
 
@@ -744,6 +745,51 @@ GfsSimulationClass * gfs_electro_hydro_axi_class (void)
   return klass;
 }
 
+/* GfsOutputPotentialStats: Object */
+
+static gboolean potential_stats_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
+    GfsElectroHydro * elec = GFS_ELECTRO_HYDRO (sim);
+    FILE * fp = GFS_OUTPUT (event)->file->fp;
+
+    if (elec->electric_projection_params.niter > 0) {
+      fprintf (fp, "Electric potential    before     after       rate\n");
+      gfs_multilevel_params_stats_write (&elec->electric_projection_params, fp);
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_output_potential_stats_class_init (GfsEventClass * klass)
+{
+  klass->event = potential_stats_event;
+}
+
+GfsOutputClass * gfs_output_potential_stats_class (void);
+
+GfsOutputClass * gfs_output_potential_stats_class (void)
+{
+  static GfsOutputClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_output_potential_stats_info = {
+      "GfsOutputPotentialStats",
+      sizeof (GfsOutput),
+      sizeof (GfsOutputClass),
+      (GtsObjectClassInitFunc) gfs_output_potential_stats_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_output_class ()),
+				  &gfs_output_potential_stats_info);
+  }
+
+  return klass;
+}
+
 /* Initialize module */
 
 /* only define gfs_module_name for "official" modules (i.e. those installed in
@@ -757,5 +803,6 @@ const gchar * g_module_check_init (void)
   gfs_electro_hydro_axi_class ();
   gfs_source_electric_class ();
   gfs_source_charge_class ();
+  gfs_output_potential_stats_class ();
   return NULL;
 } 
