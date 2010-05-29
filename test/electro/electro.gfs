@@ -72,7 +72,7 @@ GModule electrohydro
     SourceElectric
     SourceCharge Rhoe F*((1. - T)+ R*T)
 
-    Init {} { Phi = -Ef*x }
+    Init {} { Phi = Ef*x }
 
     EventStop { istep = 10 } Rhoe 0.001 { relative = 1 }
 

@@ -1,16 +1,21 @@
 if test x$donotrun != xtrue; then
     awk 'BEGIN{for (x = 0.35/100.; x <= 0.35; x += 0.35/100.) print x,x,0;}' > thetapi4
     cp -f electro.gfs result-7.gfs
-    rm -f fprof-*
+    rm -f fprof-* convergence
     for level in 8 9 10; do
 	level1=`expr $level - 1`
-	echo -n "$level "
-	sed -e 's/GfsTime.*$/Time { end = 1 }/' \
+	echo -n "$level " >> convergence
+	if sed -e 's/GfsTime.*$/Time { end = 1 }/' \
             -e "s/maxlevel = $level1/maxlevel = $level/g" < result-$level1.gfs | \
-	    gerris2D - 2>&1
-	mv -f result.gfs result-$level.gfs
-	mv -f fprof fprof-$level
-    done > convergence
+	    gerris2D - 2> log; then
+	    mv -f result.gfs result-$level.gfs
+	    mv -f fprof fprof-$level
+	    cat log >> convergence
+	else
+	    cat log > /dev/stderr
+	    exit 1
+	fi
+    done
 fi
 
 if echo "Save figure.eps { format = EPS }" | gfsview-batch2D result-10.gfs figure.gfv; then :
