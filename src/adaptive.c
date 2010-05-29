@@ -1133,6 +1133,7 @@ gboolean gfs_simulation_adapt (GfsSimulation * simulation)
     gfs_all_reduce (domain, changed, MPI_INT, MPI_MAX);
     if (changed) {
       gfs_domain_reshape (domain, depth);
+      gfs_all_reduce (domain, depth, MPI_UNSIGNED, MPI_MAX);
       simulation->adapts_stats.depth_increase = depth - depth_before;
     }
   }
