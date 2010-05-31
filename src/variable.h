@@ -206,6 +206,27 @@ GtsObjectClass *     gfs_derived_variable_class            (void);
 GfsDerivedVariable * gfs_derived_variable_from_name        (GSList * i, 
 							    const gchar * name);
 
+/* GfsConstant: Header */
+
+typedef struct _GfsConstant GfsConstant;
+
+struct _GfsConstant {
+  /*< private >*/
+  GfsEvent parent;
+  GfsDerivedVariable * derived;
+
+  /*< public >*/
+  gdouble val;
+};
+
+#define GFS_CONSTANT(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsConstant,\
+					         gfs_constant_class ())
+#define GFS_IS_CONSTANT(obj)         (gts_object_is_from_class (obj,\
+						 gfs_constant_class ()))
+
+GfsEventClass *     gfs_constant_class            (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

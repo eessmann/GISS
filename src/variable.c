@@ -957,3 +957,80 @@ GfsDerivedVariable * gfs_derived_variable_from_name (GSList * i, const gchar * n
   }
   return NULL;
 }
+
+/* GfsConstant: object */
+
+static void gfs_constant_destroy (GtsObject * object)
+{
+  if (GFS_CONSTANT (object)->derived)
+    gfs_domain_remove_derived_variable (GFS_DOMAIN (gfs_object_simulation (object)), 
+					GFS_CONSTANT (object)->derived->name);
+
+  (* GTS_OBJECT_CLASS (gfs_constant_class ())->parent_class->destroy) (object);
+}
+
+static gdouble constant_func (FttCell * cell, FttCellFace * face, GfsConstant * c)
+{
+  return c->val;
+}
+
+static void gfs_constant_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_constant_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (name)");
+    return;
+  }
+  GfsDerivedVariableInfo info = {
+    fp->token->str, NULL,
+    constant_func, *o
+  };
+  GFS_CONSTANT(*o)->derived = 
+    gfs_domain_add_derived_variable (GFS_DOMAIN (gfs_object_simulation (*o)), info);
+  if (!GFS_CONSTANT(*o)->derived) {
+    gts_file_error (fp, "'%s' keyword already used", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+}
+
+static void gfs_constant_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_constant_class ())->parent_class->write) (o, fp);  
+  fprintf (fp, " %s", GFS_CONSTANT (o)->derived->name);
+}
+
+static void gfs_constant_class_init (GtsObjectClass * klass)
+{
+  klass->destroy = gfs_constant_destroy;
+  klass->read =    gfs_constant_read;
+  klass->write =   gfs_constant_write;
+}
+
+static void gfs_constant_init (GfsEvent * event)
+{
+  event->istep = 1;
+}
+
+GfsEventClass * gfs_constant_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_constant_info = {
+      "GfsConstant",
+      sizeof (GfsConstant),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_constant_class_init,
+      (GtsObjectInitFunc) gfs_constant_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()), &gfs_constant_info);
+  }
+
+  return klass;
+}
