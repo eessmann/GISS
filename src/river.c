@@ -668,213 +668,6 @@ GfsBcClass * gfs_bc_subcritical_class (void)
   return klass;
 }
 
-/* GfsBcDischarge: Object */
-
-static void discharge_boundary (FttCellFace * f, GfsVariable * v, GfsBoundaryDischarge * b)
-{
-  GfsRiver * r = GFS_RIVER (v->domain);
-  GFS_VALUE (f->cell, v) = MAX (gfs_function_face_value (b->profile, f) + b->H - 
-				GFS_VALUE (f->cell, r->zb), 0.);
-}
-
-static void discharge (FttCellFace * f, GfsBc * b)
-{
-  discharge_boundary (f, b->v, GFS_BOUNDARY_DISCHARGE (b->b));
-}
-
-static void gfs_bc_discharge_init (GfsBc * object)
-{
-  object->bc =  (FttFaceTraverseFunc) discharge;
-}
-
-static GfsBcClass * gfs_bc_discharge_class (void)
-{
-  static GfsBcClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_bc_discharge_info = {
-      "GfsBcDischarge",
-      sizeof (GfsBcValue),
-      sizeof (GfsBcClass),
-      (GtsObjectClassInitFunc) NULL,
-      (GtsObjectInitFunc) gfs_bc_discharge_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_bc_class ()),
-				  &gfs_bc_discharge_info);
-  }
-
-  return klass;
-}
-
-/* GfsBoundaryDischarge: Object */
-
-static GtsColor discharge_color (GtsObject * o)
-{
-  GtsColor c = { 0., 0., 1. }; /* blue */
-  return c;
-}
-
-static void discharge_destroy (GtsObject * o)
-{
-  gts_object_destroy (GTS_OBJECT (GFS_BOUNDARY_DISCHARGE (o)->Q));
-  gts_object_destroy (GTS_OBJECT (GFS_BOUNDARY_DISCHARGE (o)->profile));
-
-  (* GTS_OBJECT_CLASS (gfs_boundary_discharge_class ())->parent_class->destroy) (o);
-}
-
-static void discharge_read (GtsObject ** o, GtsFile * fp)
-{
-  GfsBoundary * b = GFS_BOUNDARY (*o);
-
-  (* GTS_OBJECT_CLASS (gfs_boundary_discharge_class ())->parent_class->read) (o, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-
-  GfsDomain * domain = gfs_box_domain (b->box);
-  if (!GFS_IS_RIVER (domain)) {
-    gts_file_error (fp, "GfsBoundaryDischarge only makes sense for GfsRiver simulations");
-    return;
-  }
-  if (domain->pid >= 0) {
-    gts_file_error (fp, "GfsBoundaryDischarge is not implemented in parallel (yet)");
-    return;
-  }
-  gfs_function_read (GFS_BOUNDARY_DISCHARGE (b)->Q, domain, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-
-  if (fp->type != '\n' && fp->type != '}')
-    gfs_function_read (GFS_BOUNDARY_DISCHARGE (b)->profile, domain, fp);
-  else
-    gfs_object_simulation_set (GFS_BOUNDARY_DISCHARGE (b)->profile, domain);
-
-  GfsRiver * river = GFS_RIVER (domain);
-  river->v[3] = river->zb = gfs_variable_from_name (domain->variables, "Zb");
-  gfs_boundary_add_bc (b, gfs_bc_new (gfs_bc_discharge_class (), river->v[0], FALSE));
-}
-
-static void discharge_write (GtsObject * o, FILE * fp)
-{
-  (* GTS_OBJECT_CLASS (gfs_boundary_discharge_class ())->parent_class->write) (o, fp);
-  gfs_function_write (GFS_BOUNDARY_DISCHARGE (o)->Q, fp);
-  if (gfs_function_get_constant_value (GFS_BOUNDARY_DISCHARGE (o)->profile) != 0.)
-    gfs_function_write (GFS_BOUNDARY_DISCHARGE (o)->profile, fp);
-}
-
-static void boundary_flux (FttCellFace * f, GfsBoundaryDischarge * b)
-{
-  GfsRiver * river = GFS_RIVER (gfs_box_domain (GFS_BOUNDARY (b)->box));
-  GFS_VALUE (f->cell, river->flux[0]) = 0.;
-  discharge_boundary (f, river->v1[0], b);
-  gdouble dt = river->dt;
-  river->dt = 1.;
-  face_fluxes (f, river);
-  river->dt = dt;
-  double h = ftt_cell_size (f->cell);
-  b->flow -= GFS_VALUE (f->cell, river->flux[0])*h*h;
-}
-
-static void discharge_update (GfsBoundary * b)
-{
-  GfsBoundaryDischarge * bd = GFS_BOUNDARY_DISCHARGE (b);
-  GfsDomain * domain = gfs_box_domain (b->box);
-  GfsSimulation * sim = GFS_SIMULATION (domain);
-
-  if (bd->last_updated == 0 && sim->time.i > 0)
-    /* do not update on first timestep when restarting a simulation */
-    bd->last_updated = sim->time.i + 1;
-
-  if (bd->last_updated <= sim->time.i) {
-    GfsRiver * r = GFS_RIVER (sim);
-    guint v;
-
-    for (v = 0; v < GFS_RIVER_NVAR; v++)
-      gfs_variables_swap (r->v[v], r->v1[v]);
-    
-    gfs_catch_floating_point_exceptions ();
-    gdouble Q = gfs_function_value (bd->Q, NULL);
-    gfs_restore_fpe_for_function (bd->Q);
-    gdouble hmax, hmin = 0.;
-
-    hmax = bd->H*2.;
-    bd->flow = 0.;
-    bd->H = hmax;
-    ftt_face_traverse_boundary (b->root, b->d,
-				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttFaceTraverseFunc) boundary_flux, b);
-    if (Q > bd->flow)
-      hmax = 1.;
-
-    guint n = 0, nitermin = 4, nitermax = 100;
-    bd->H = hmax/2.;
-    do {
-      bd->flow = 0.;
-      ftt_face_traverse_boundary (b->root, b->d,
-				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				  (FttFaceTraverseFunc) boundary_flux, b);
-      if (bd->flow > Q) {
-	hmax = bd->H;
-	bd->H = (bd->H + hmin)/2.;
-      }
-      else {
-	hmin = bd->H;
-	bd->H = (bd->H + hmax)/2.;
-      }
-      n++;
-    } while (n < nitermax && (n < nitermin || fabs (Q - bd->flow)/Q > bd->tolerance));
-    if (n == nitermax && bd->last_updated > 0)
-      g_warning ("discharge_update() did not converge after %d iterations: %g", n, 
-		   fabs (Q - bd->flow)/Q);
-    /*    fprintf (stderr, "flow: %g H: %g nitermax: %d\n", bd->flow*pow(sim->physical_params.L,3), 
-	  bd->H*sim->physical_params.L, n); */
-
-    for (v = 0; v < GFS_RIVER_NVAR; v++)
-      gfs_variables_swap (r->v[v], r->v1[v]);
-    bd->last_updated = sim->time.i + 1;
-  }
-}
-
-static void gfs_boundary_discharge_class_init (GfsBoundaryClass * klass)
-{
-  GTS_OBJECT_CLASS (klass)->destroy  = discharge_destroy;
-  GTS_OBJECT_CLASS (klass)->read     = discharge_read;
-  GTS_OBJECT_CLASS (klass)->write    = discharge_write;
-  GTS_OBJECT_CLASS (klass)->color    = discharge_color;
-  klass->update = discharge_update;
-}
-
-static void gfs_boundary_discharge_init (GfsBoundaryDischarge * b)
-{
-  b->tolerance = 1e-2;
-  b->Q = gfs_function_new (gfs_function_class (), 0.);
-  gfs_function_set_units (b->Q, 3.);
-  b->profile = gfs_function_new (gfs_function_class (), 0.);
-  gfs_function_set_units (b->profile, 1.);
-}
-
-GfsBoundaryClass * gfs_boundary_discharge_class (void)
-{
-  static GfsBoundaryClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_boundary_discharge_info = {
-      "GfsBoundaryDischarge",
-      sizeof (GfsBoundaryDischarge),
-      sizeof (GfsBoundaryClass),
-      (GtsObjectClassInitFunc) gfs_boundary_discharge_class_init,
-      (GtsObjectInitFunc) gfs_boundary_discharge_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_boundary_class ()),
-				  &gfs_boundary_discharge_info);
-  }
-
-  return klass;
-}
-
 /* GfsDischargeElevation: Object */
 
 static void discharge_elevation_destroy (GtsObject * o)
@@ -919,7 +712,7 @@ static void discharge_elevation_write (GtsObject * o, FILE * fp)
     gfs_function_write (GFS_DISCHARGE_ELEVATION (o)->profile, fp);
 }
 
-static void boundary_flux1 (FttCellFace * f, GfsDischargeElevation * b)
+static void boundary_flux (FttCellFace * f, GfsDischargeElevation * b)
 {
   if (gfs_function_face_value (b->profile, f) != GFS_NODATA) {
     GfsRiver * river = GFS_RIVER (gfs_object_simulation (b));
@@ -949,7 +742,7 @@ static void traverse_dirichlet_boundaries (GfsBox * box, GfsDischargeElevation *
       if (GFS_IS_BC_DIRICHLET (bc))
 	ftt_face_traverse_boundary (b->root, b->d,
 				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				    (FttFaceTraverseFunc) boundary_flux1, bd);
+				    (FttFaceTraverseFunc) boundary_flux, bd);
     }
 }
 
@@ -976,6 +769,7 @@ static gboolean discharge_elevation_event (GfsEvent * event, GfsSimulation * sim
     bd->flow = 0.;
     c->val = hmax;
     gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) traverse_dirichlet_boundaries, bd);
+    gfs_all_reduce (GFS_DOMAIN (sim), bd->flow, MPI_DOUBLE, MPI_SUM);
     if (Q > bd->flow)
       hmax = 1.;
       
@@ -984,6 +778,7 @@ static gboolean discharge_elevation_event (GfsEvent * event, GfsSimulation * sim
     do {
       bd->flow = 0.;
       gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) traverse_dirichlet_boundaries, bd);
+      gfs_all_reduce (GFS_DOMAIN (sim), bd->flow, MPI_DOUBLE, MPI_SUM);
       if (bd->flow > Q) {
 	hmax = c->val;
 	c->val = (c->val + hmin)/2.;
@@ -998,7 +793,7 @@ static gboolean discharge_elevation_event (GfsEvent * event, GfsSimulation * sim
       g_warning ("discharge_elevation_event() did not converge after %d iterations: %g", n, 
 		 fabs (Q - bd->flow)/Q);
     c->val *= L;
-    g_message ("### flow: %g H: %g nitermax: %d\n", bd->flow*pow(L,3), c->val, n);
+    /* g_message ("### flow: %g H: %g nitermax: %d\n", bd->flow*pow(L,3), c->val, n); */
 
     for (v = 0; v < GFS_RIVER_NVAR; v++)
       gfs_variables_swap (r->v[v], r->v1[v]);
