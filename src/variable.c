@@ -969,7 +969,8 @@ static void gfs_constant_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_constant_class ())->parent_class->destroy) (object);
 }
 
-static gdouble constant_func (FttCell * cell, FttCellFace * face, GfsConstant * c)
+static gdouble constant_func (FttCell * cell, FttCellFace * face, GfsDomain * domain,
+			      GfsConstant * c)
 {
   return c->val;
 }
@@ -984,13 +985,13 @@ static void gfs_constant_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (name)");
     return;
   }
-  GfsDerivedVariableInfo info = {
-    fp->token->str, NULL,
+  GfsDerivedVariableInfo v = {
+    fp->token->str, "Constant",
     constant_func, *o
   };
-  GFS_CONSTANT(*o)->derived = 
-    gfs_domain_add_derived_variable (GFS_DOMAIN (gfs_object_simulation (*o)), info);
-  if (!GFS_CONSTANT(*o)->derived) {
+  GFS_CONSTANT (*o)->derived = 
+    gfs_domain_add_derived_variable (GFS_DOMAIN (gfs_object_simulation (*o)), v);
+  if (!GFS_CONSTANT (*o)->derived) {
     gts_file_error (fp, "'%s' keyword already used", fp->token->str);
     return;
   }

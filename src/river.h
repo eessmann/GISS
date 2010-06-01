@@ -61,7 +61,7 @@ GfsSimulationClass * gfs_river_class        (void);
 						 gfs_bc_subcritical_class ()))
 GfsBcClass * gfs_bc_subcritical_class  (void);
 
-/* GfsBoundaryDischarge: Object */
+/* GfsBoundaryDischarge: Header */
 
 typedef struct _GfsBoundaryDischarge GfsBoundaryDischarge;
 
@@ -83,6 +83,29 @@ struct _GfsBoundaryDischarge {
 						   gfs_boundary_discharge_class ()))
 
 GfsBoundaryClass * gfs_boundary_discharge_class (void);
+
+/* GfsDischargeElevation: Header */
+
+typedef struct _GfsDischargeElevation GfsDischargeElevation;
+
+struct _GfsDischargeElevation {
+  /*< private >*/
+  GfsConstant parent;
+  GfsVariable * P;
+  gdouble flow;
+
+  /*< public >*/
+  GfsFunction * Q, * profile;
+  gdouble tolerance;
+};
+
+#define GFS_DISCHARGE_ELEVATION(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsDischargeElevation,\
+					           gfs_discharge_elevation_class ())
+#define GFS_IS_DISCHARGE_ELEVATION(obj)         (gts_object_is_from_class (obj,\
+						   gfs_discharge_elevation_class ()))
+
+GfsEventClass * gfs_discharge_elevation_class (void);
 
 #ifdef __cplusplus
 }
