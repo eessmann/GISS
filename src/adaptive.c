@@ -972,7 +972,7 @@ typedef struct {
 static gboolean coarsen_cell (FttCell * cell, AdaptLocalParams * p)
 {
   if (GFS_CELL_IS_BOUNDARY (cell))
-    return TRUE;
+    return COARSENABLE (cell, p);
   if (ftt_refine_corner (cell))
     return FALSE;
   return COARSENABLE (cell, p);
@@ -1022,7 +1022,7 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
 {
   p->nc++;
   REFINABLE (cell, p) = FALSE;
-  COARSENABLE (cell, p) = !GFS_CELL_IS_PERMANENT (cell);
+  COARSENABLE (cell, p) = !GFS_CELL_IS_PERMANENT (cell) && !ftt_refine_corner (cell);
 
   guint level = ftt_cell_level (cell);
   GSList * i = p->sim->adapts->items;
@@ -1050,6 +1050,25 @@ static void refine_cell_mark (FttCell * cell, AdaptLocalParams * p)
   }
 }
 
+static void check_periodic (FttCellFace * f, AdaptLocalParams * p)
+{
+  g_assert (ftt_face_type (f) == FTT_FINE_FINE);
+  if (!COARSENABLE (f->cell, p))
+    COARSENABLE (f->neighbor, p) = FALSE;
+}
+
+static void enforce_periodic (GfsBox * box, AdaptLocalParams * p)
+{
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY_PERIODIC (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      ftt_face_traverse_boundary (b->root, b->d,
+				  FTT_PRE_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				  (FttFaceTraverseFunc) check_periodic, p);
+    }
+}
+
 static gboolean adapt_local (GfsSimulation * sim, guint * depth, GfsAdaptStats * s)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
@@ -1064,6 +1083,9 @@ static gboolean adapt_local (GfsSimulation * sim, guint * depth, GfsAdaptStats *
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) refine_cell_mark, &p);
+  gfs_domain_bc (domain, FTT_TRAVERSE_NON_LEAFS, -1, p.c);
+  /* enforce fine/fine faces on periodic/MPI boundaries */
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) enforce_periodic, &p);
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) refine_cell, &p);

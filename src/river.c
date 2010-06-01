@@ -714,13 +714,13 @@ static void discharge_elevation_write (GtsObject * o, FILE * fp)
 
 static void boundary_flux (FttCellFace * f, GfsDischargeElevation * b)
 {
-  if (gfs_function_face_value (b->profile, f) != GFS_NODATA) {
+  gdouble profile = gfs_function_face_value (b->profile, f);
+  if (profile != GFS_NODATA) {
     GfsRiver * river = GFS_RIVER (gfs_object_simulation (b));
     GFS_VALUE (f->cell, river->flux[0]) = 0.;
     gdouble v1 = GFS_VALUE (f->cell, river->v1[0]);
     GFS_VALUE (f->cell, river->v1[0]) = MAX (0.,
-					     gfs_function_face_value (b->profile, f) +
-					     GFS_CONSTANT (b)->val - 
+					     profile + GFS_CONSTANT (b)->val - 
 					     gfs_face_interpolated_value (f, river->zb->i));
     gdouble dt = river->dt;
     river->dt = 1.;
