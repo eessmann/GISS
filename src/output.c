@@ -3166,7 +3166,8 @@ static gboolean gfs_output_ppm_event (GfsEvent * event, GfsSimulation * sim)
 		   output->condition,
 		   output->v, output->min, output->max,
 		   FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
-		   GFS_OUTPUT (event)->file->fp);
+		   GFS_OUTPUT (event)->file->fp,
+		   GFS_OUTPUT (event)->parallel);
     fflush (GFS_OUTPUT (event)->file->fp);
     return TRUE;
   }
@@ -3219,7 +3220,8 @@ static gboolean gfs_output_grd_event (GfsEvent * event, GfsSimulation * sim)
 		   output->v,
 		   o.x, o.y, sim->physical_params.L,
 		   FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
-		   GFS_OUTPUT (event)->file->fp);
+		   GFS_OUTPUT (event)->file->fp,
+		   GFS_OUTPUT (event)->parallel);
     fflush (GFS_OUTPUT (event)->file->fp);
     return TRUE;
   }

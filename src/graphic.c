@@ -17,6 +17,13 @@
  * 02111-1307, USA.  
  */
 
+#ifdef HAVE_CONFIG_H
+#  include "config.h"
+#  ifdef HAVE_MPI
+#    include <mpi.h>
+#  endif
+#endif
+
 #include <stdlib.h>
 #include <math.h>
 #include <gts.h>
@@ -592,7 +599,8 @@ void gfs_write_ppm (GfsDomain * domain,
 		    GfsVariable * v, gdouble min, gdouble max,
 		    FttTraverseFlags flags,
 		    gint level,
-		    FILE * fp)
+		    FILE * fp,
+		    gboolean parallel)
 {
   Colormap * colormap;
   guint depth, size = 1;
@@ -623,6 +631,11 @@ void gfs_write_ppm (GfsDomain * domain,
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
 			      (FttCellTraverseFunc) max_extent, extent);
+
+  gfs_all_reduce (domain, extent[0].x, MPI_DOUBLE, MPI_MIN);
+  gfs_all_reduce (domain, extent[0].y, MPI_DOUBLE, MPI_MIN);
+  gfs_all_reduce (domain, extent[1].x, MPI_DOUBLE, MPI_MAX);
+  gfs_all_reduce (domain, extent[1].y, MPI_DOUBLE, MPI_MAX);
     
   if (extent[0].x == G_MAXDOUBLE)
     return;
@@ -651,7 +664,34 @@ void gfs_write_ppm (GfsDomain * domain,
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
 			      (FttCellTraverseFunc) write_image_square, data);
-  image_write (image, fp);
+
+#ifdef HAVE_MPI
+  if (!parallel && domain->pid >= 0) {
+    if (domain->pid == 0) {
+      Image * im = image_new (extent[0], extent[1], size);
+      int n, np;
+      MPI_Comm_size (MPI_COMM_WORLD, &np);
+      for (n = 1; n < np; n++) {
+	MPI_Status status;
+	MPI_Recv (im->buf, 3*image->width*image->height, MPI_BYTE, n, 0, MPI_COMM_WORLD, &status);
+	int i, j;
+	for (i = 0; i < im->height; i++)
+	  for (j = 0; j < im->width; j++)
+	    if (im->data[i][j][0] || im->data[i][j][1] || im->data[i][j][2]) {
+	      image->data[i][j][0] = im->data[i][j][0];
+	      image->data[i][j][1] = im->data[i][j][1];
+	      image->data[i][j][2] = im->data[i][j][2];
+	    }
+      }
+      image_destroy (im);
+      image_write (image, fp);      
+    }
+    else if (domain->pid > 0)
+      MPI_Send (image->buf, 3*image->width*image->height, MPI_BYTE, 0, 0, MPI_COMM_WORLD);    
+  }
+  else
+#endif
+    image_write (image, fp);
   image_destroy (image);
   colormap_destroy (colormap);
 }
@@ -754,7 +794,8 @@ void gfs_write_grd (GfsDomain * domain,
 		    gdouble xc, gdouble yc, gdouble length,
 		    FttTraverseFlags flags,
 		    gint level,
-		    FILE * fp)
+		    FILE * fp,
+		    gboolean parallel)
 {
   guint depth, size = 1;
   Grid * grid;
@@ -783,6 +824,11 @@ void gfs_write_grd (GfsDomain * domain,
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
 			      (FttCellTraverseFunc) max_extent, extent);
     
+  gfs_all_reduce (domain, extent[0].x, MPI_DOUBLE, MPI_MIN);
+  gfs_all_reduce (domain, extent[0].y, MPI_DOUBLE, MPI_MIN);
+  gfs_all_reduce (domain, extent[1].x, MPI_DOUBLE, MPI_MAX);
+  gfs_all_reduce (domain, extent[1].y, MPI_DOUBLE, MPI_MAX);
+    
   if (extent[0].x == G_MAXDOUBLE)
     return;
 
@@ -805,7 +851,31 @@ void gfs_write_grd (GfsDomain * domain,
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
 			      (FttCellTraverseFunc) write_grid_square, data);
-  grid_write (grid, fp);
+
+#ifdef HAVE_MPI
+  if (!parallel && domain->pid >= 0) {
+    if (domain->pid == 0) {
+      Grid * im = grid_new (extent[0], extent[1], size, xc, yc, length);
+      int n, np;
+      MPI_Comm_size (MPI_COMM_WORLD, &np);
+      for (n = 1; n < np; n++) {
+	MPI_Status status;
+	MPI_Recv (im->buf, grid->width*grid->height, MPI_FLOAT, n, 0, MPI_COMM_WORLD, &status);
+	int i, j;
+	for (i = 0; i < im->height; i++)
+	  for (j = 0; j < im->width; j++)
+	    if (im->data[i][j] != NODATA)
+	      grid->data[i][j] = im->data[i][j];
+      }
+      grid_destroy (im);
+      grid_write (grid, fp);      
+    }
+    else if (domain->pid > 0)
+      MPI_Send (grid->buf, grid->width*grid->height, MPI_FLOAT, 0, 0, MPI_COMM_WORLD);
+  }
+  else
+#endif
+    grid_write (grid, fp);
   grid_destroy (grid);
 }
 

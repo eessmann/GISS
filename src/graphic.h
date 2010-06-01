@@ -49,14 +49,16 @@ void               gfs_write_ppm               (GfsDomain * domain,
 						gdouble max,
 						FttTraverseFlags flags,
 						gint level,
-						FILE * fp);
+						FILE * fp,
+						gboolean parallel);
 void               gfs_write_grd               (GfsDomain * domain, 
 						GfsFunction * condition,
 						GfsVariable * v,
 						gdouble xc, gdouble yc, gdouble length,
 						FttTraverseFlags flags,
 						gint level,
-						FILE * fp);
+						FILE * fp,
+						gboolean parallel);
 gint               gfs_combine_ppm             (gchar ** fname, 
 						guint nname, 
 						FILE * fp);
