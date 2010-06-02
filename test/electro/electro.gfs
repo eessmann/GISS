@@ -19,7 +19,7 @@
 # \end{figure}
 #
 # In the limit of Stokes flows, an analytical solution for the
-# velocity field is available \cite{taylor64,tomar2007}. Figure
+# velocity field is available \cite{taylor66,tomar2007}. Figure
 # \ref{profile} gives a comparison of the numerical and theoretical
 # results for the radial and azimuthal components of the velocity
 # along a transect inclined at 45 degrees.
