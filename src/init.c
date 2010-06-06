@@ -267,6 +267,10 @@ GtsObjectClass ** gfs_classes (void)
   return classes;
 }
 
+#ifdef EXCEPTIONS
+static fenv_t fenv;
+#endif
+
 typedef void (* AtExitFunc) (void);
 
 /**
@@ -278,6 +282,7 @@ typedef void (* AtExitFunc) (void);
 void gfs_catch_floating_point_exceptions (void)
 {
 #ifdef EXCEPTIONS
+  fegetenv (&fenv);
   fedisableexcept (EXCEPTIONS);
   feclearexcept (EXCEPTIONS);
 #endif /* EXCEPTIONS */
@@ -297,7 +302,7 @@ int gfs_restore_floating_point_exceptions (void)
 #ifdef EXCEPTIONS
   int ret = fetestexcept (EXCEPTIONS);
   feclearexcept (EXCEPTIONS);
-  feenableexcept (EXCEPTIONS);
+  fesetenv (&fenv);
   return ret;
 #else /* !EXCEPTIONS */
   return 0;
