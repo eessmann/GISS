@@ -1,0 +1,75 @@
+# Title: Relaxation of a charge bump
+#
+# Description:
+#
+# A concentrated bump of charge of the form,
+# \[
+# \rho_e(x,t=0)=\frac{\exp{-\frac{x^2+y^2}{2a^2}}{a \sqrt{2 \pi}}
+# \]
+#is initially set in  a single fluid of conductivity $K$ and permittivity $\varpesilon$. Due to conduction the bump decays exponentially in time  (see figure \ref{decay}) accordingly with,
+# \[
+# \rho_e(x,t)=\rho_e(x,t=0) \exp{-K t/\varepsilon} \label{td}
+# \] 
+#preserving the initial geometry (see figure \ref{form}).
+#
+# \begin{figure}[htbp] 
+# \caption{\label{decay} Temporal decay of the charge density at (0,0). (Continuous) analytical solution \ref{td}, ($\circ$ symbols) Gerris EHD module.
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{profile.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp] 
+# \caption{\label{profile} Spatial distribution of charge density along the x axis (times equal 0, 2, 4 and 6 are shown). (continuous) analytical solution, ($\circ$ symbols) present simulation.
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{figure.eps}
+# \end{center}
+# \end{figure}
+# 
+#
+# Author: Jose M. L\'opez-Herrera S\'anchez
+# Command: sh bump.sh
+# Version: 100527
+# Required files: bump.sh bump.gfs
+# Running time: 30 seconds
+# Generated files: profile.eps figure.eps
+
+GModule libelectrohydro
+
+1 0 GfsElectroHydro GfsBox GfsGEdge {} {
+    Global {
+	#define a 0.05
+    }
+    Refine 7*(1-4*(x*x+y*y))
+    Time { end = 6 dtmax=1e-2 }
+    PhysicalParams{L=1}
+    Init {} {Rhoe=exp(-(x*x+y*y)/2./a/a)/a/sqrt(2.*M_PI)}
+
+    OutputTime { istep = 5 } stderr
+    GfsSourceCharge Rhoe 1
+
+    GfsOutputLocation {step=2} {awk 'BEGIN{name="t_"}{if($1 != "#") print $2, $10 > (name $1)}'} xprofile
+    OutputLocation{ istep = 10} { 
+         awk '
+         BEGIN {
+                a=0.05 
+                perm =2.
+                K= 1.
+                rhoinic=1./a/sqrt(2.*3.14159265358979)
+         } 
+         {
+            if($1 != "#") { print $1, rhoinic*exp(-$1*K/perm), $10              
+              }
+         }' > timevol
+         } {0. 0. 0.}
+} {
+    # Electric parameters
+    perm = 2
+    GfsElectricProjectionParams { tolerance = 1e-7 }
+}
+GfsBox {
+     left   = Boundary{BcDirichlet Phi 0}
+     right  = Boundary{BcDirichlet Phi 0}
+     top    = Boundary{BcDirichlet Phi 0}
+     bottom = Boundary{BcDirichlet Phi 0}
+}
