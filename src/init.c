@@ -267,9 +267,7 @@ GtsObjectClass ** gfs_classes (void)
   return classes;
 }
 
-#ifdef EXCEPTIONS
-static fenv_t fenv;
-#endif
+static gboolean disabled_fpe = FALSE;
 
 typedef void (* AtExitFunc) (void);
 
@@ -282,7 +280,6 @@ typedef void (* AtExitFunc) (void);
 void gfs_catch_floating_point_exceptions (void)
 {
 #ifdef EXCEPTIONS
-  fegetenv (&fenv);
   fedisableexcept (EXCEPTIONS);
   feclearexcept (EXCEPTIONS);
 #endif /* EXCEPTIONS */
@@ -302,10 +299,25 @@ int gfs_restore_floating_point_exceptions (void)
 #ifdef EXCEPTIONS
   int ret = fetestexcept (EXCEPTIONS);
   feclearexcept (EXCEPTIONS);
-  fesetenv (&fenv);
+  if (!disabled_fpe)
+    feenableexcept (EXCEPTIONS);
   return ret;
 #else /* !EXCEPTIONS */
   return 0;
+#endif /* !EXCEPTIONS */
+}
+
+/**
+ * gfs_disable_floating_point_exceptions:
+ *
+ * Disables floating-point exceptions (they are enabled by default
+ * when using the Gerris library).
+ */
+void gfs_disable_floating_point_exceptions (void)
+{
+#ifdef EXCEPTIONS
+  disabled_fpe = TRUE;
+  fedisableexcept (EXCEPTIONS);
 #endif /* !EXCEPTIONS */
 }
 

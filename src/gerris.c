@@ -191,7 +191,7 @@ int main (int argc, char * argv[])
 	       "  MPI:          %s\n"
 	       "  pkg-config:   %s\n"
 	       "  m4 and gawk:  %s\n"
-	       "Copyright (C) 2001-2009 NIWA.\n"
+	       "Copyright (C) 2001-2010 NIWA.\n"
 	       "This is free software; see the source for copying conditions.  There is NO\n"
 	       "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
 	       FTT_DIMENSION,
