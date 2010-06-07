@@ -11,7 +11,8 @@ EXAMPLES = \
 	garden \
 	dam \
 	hump \
-	cyclone
+	cyclone \
+	plateau
 
 EXTRA_DIST = \
 	template.tex \
