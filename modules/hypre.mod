@@ -26,6 +26,7 @@
 
 #include "variable.h"
 #include "poisson.h"
+#include "mpi_boundary.h"
 
 /*#define DEBUG*/
 
@@ -102,7 +103,7 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
   par->niter = num_iterations;
 
   /* Prints informations on the residual */
-  if (proj_hp.verbose) {      
+  if (proj_hp.verbose && domain->pid <= 0) {      
     HYPRE_BoomerAMGGetFinalRelativeResidualNorm(solver, &final_res_norm);
     printf("\n");
     printf("Iterations = %d\n", num_iterations);
@@ -139,7 +140,7 @@ static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par,
   HYPRE_ParCSRPCGSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);
 
   /*  Run info - needed logging turned on */
-  if (proj_hp.verbose) {
+  if (proj_hp.verbose && domain->pid <= 0) {
     int num_iterations;
     double final_res_norm;
     HYPRE_PCGGetNumIterations(solver, &num_iterations);
@@ -157,16 +158,16 @@ static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par,
 }
 
 static void hypre_problem_new (HypreProblem * hp, GfsDomain * domain,
-			       gdouble size)
+			       gint size, gint istart)
 {
   gfs_domain_timer_start (domain, "HYPRE: Solver setup");
   
   /* Create the matrix.*/
-  HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 0, size-1, 0, size-1, &hp->A);
+  HYPRE_IJMatrixCreate(MPI_COMM_WORLD, istart, istart + size-1, istart, istart + size-1, &hp->A);
 
   /* Create the vectors rhs and solution.*/
-  HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, size-1, &hp->b);
-  HYPRE_IJVectorCreate(MPI_COMM_WORLD, 0, size-1, &hp->x);
+  HYPRE_IJVectorCreate(MPI_COMM_WORLD, istart, istart + size-1, &hp->b);
+  HYPRE_IJVectorCreate(MPI_COMM_WORLD, istart, istart + size-1, &hp->x);
   
   /* Choose a parallel csr format storage */
   HYPRE_IJMatrixSetObjectType(hp->A, HYPRE_PARCSR);
@@ -210,7 +211,7 @@ static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp,
   g_ptr_array_foreach (lp->LP, (GFunc) extract_stencil, hp);
 
   for (i = 0; i < lp->rhs->len; i++)
-    rows[i] = i;
+    rows[i] = lp->istart + i;
   
   HYPRE_IJVectorSetValues(hp->b, lp->rhs->len, rows, rhs_values );
   HYPRE_IJVectorSetValues(hp->x, lp->lhs->len, rows, x_values);
@@ -247,7 +248,7 @@ static void hypre_problem_copy (HypreProblem * hp, GfsLinearProblem * lp)
     
   for (i = 0; i < lp->lhs->len; i++) {
     x_values[i] = 0.;
-    rows[i] = i;
+    rows[i] = i + lp->istart;
   }
     
   HYPRE_IJVectorGetValues(hp->x, lp->lhs->len, rows, x_values);
@@ -306,9 +307,9 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
 
   /* Tolerance has to be rescaled to account for the different of method */
   /* used by Hypre to computed the norm of the residual */
-  par->tolerance *= size*size*sqrt(((gdouble) lp->rhs->len))/res0;
-     
-  hypre_problem_new (&hp, domain, lp->rhs->len);
+  par->tolerance *= sqrt(((gdouble) lp->rhs->len))/res0;
+ 
+  hypre_problem_new (&hp, domain, lp->rhs->len, lp->istart);
   hypre_problem_init (&hp, lp, domain);
   
   /* Choose a solver and solve the system */

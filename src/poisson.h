@@ -127,6 +127,7 @@ struct _GfsLinearProblem {
   GPtrArray * LP;
   GArray * rhs, * lhs;
   GfsVariable * id;
+  gint istart;
 };
 
 GfsLinearProblem * gfs_get_poisson_problem           (GfsDomain * domain,
