@@ -266,8 +266,29 @@ typedef struct {
 
 static void copy_poisson_solution (FttCell * cell, CopyParams * p)
 {
-  GFS_VALUE (cell, p->lhs) = g_array_index (p->lp->lhs, gdouble, 
-					    (gint) GFS_VALUE (cell, p->lp->id));
+   GFS_VALUE (cell, p->lhs) =
+     g_array_index (p->lp->lhs, gdouble, (int) GFS_VALUE (cell, p->lp->id) - p->lp->istart);
+}
+
+static void bc_copy_solution (FttCellFace * f, CopyParams * p)
+{
+  GFS_VALUE (f->cell, p->lhs) =
+    g_array_index (p->lp->lhs, gdouble, (int) GFS_VALUE (f->cell, p->lp->id) - p->lp->istart);
+}
+
+static void box_copy_poisson_solution_bc (GfsBox * box, CopyParams * p)
+{ 
+  FttDirection d;
+  
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      if(!GFS_IS_BOUNDARY_MPI(box->neighbor[d])) {
+	GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+	ftt_face_traverse_boundary (b->root, b->d,
+				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				    (FttFaceTraverseFunc) bc_copy_solution, p);
+      }
+    }
 }
 
 static void solve_poisson_problem_using_hypre (GfsDomain * domain,
@@ -310,6 +331,29 @@ static void correct (FttCell * cell, gpointer * data)
   GFS_VALUE (cell, u) += GFS_VALUE (cell, dp);
 }
 
+static void correct_bc (FttCellFace * f, gpointer * data)
+{
+  GfsVariable * u = data[0];
+  GfsVariable * dp = data[1];
+
+  GFS_VALUE (f->cell, u) += GFS_VALUE (f->cell, dp);
+}
+
+static void box_correct_bc (GfsBox * box, gpointer data)
+{ 
+  FttDirection d;
+  
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      if(!GFS_IS_BOUNDARY_MPI(box->neighbor[d])) {
+	GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+	ftt_face_traverse_boundary (b->root, b->d,
+				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				    (FttFaceTraverseFunc) correct_bc, data);
+      }
+    }
+}
+
 static void hypre_poisson_solve (GfsDomain * domain,
 				 GfsMultilevelParams * par,
 				 GfsVariable * lhs,
@@ -333,7 +377,8 @@ static void hypre_poisson_solve (GfsDomain * domain,
 
     CopyParams p = { lp, dp };
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) copy_poisson_solution, &p);
+    			      (FttCellTraverseFunc) copy_poisson_solution, &p);
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_copy_poisson_solution_bc, &p);
 
     gfs_linear_problem_destroy (lp);
 
@@ -341,9 +386,14 @@ static void hypre_poisson_solve (GfsDomain * domain,
     gpointer data[2];
     data[0] = lhs;
     data[1] = dp;
-    gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			 (FttCellTraverseFunc) correct, data,
-			 lhs, lhs);
+
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) correct, data);
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_correct_bc, data);
+
+    if ( domain->pid >= 0 )
+      gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, lhs, lhs);
+
     /* compute new residual on leaf cells */
     gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, lhs, rhs, dia, res);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
