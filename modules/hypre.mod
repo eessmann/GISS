@@ -301,15 +301,20 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
   HypreProblem hp;
   gdouble tolerance = par->tolerance, res0 = 0.;
   gdouble size = ftt_level_size (gfs_domain_depth (domain));
-  gint i;
+  gint i, len = lp->rhs->len;
 
   for (i=0;i< lp->rhs->len;i++)
     res0 += pow(g_array_index (lp->rhs, gdouble, i),2.);
   res0 = sqrt(res0);
 
+  if (domain->pid >= 0) {
+    gfs_all_reduce (domain, res0, MPI_DOUBLE, MPI_SUM);
+    gfs_all_reduce (domain, len, MPI_INT, MPI_SUM);
+  }
+
   /* Tolerance has to be rescaled to account for the different of method */
   /* used by Hypre to computed the norm of the residual */
-  par->tolerance *= sqrt(((gdouble) lp->rhs->len))/res0;
+  par->tolerance *= sqrt(((gdouble) len))/res0;
  
   hypre_problem_new (&hp, domain, lp->rhs->len, lp->istart);
   hypre_problem_init (&hp, lp, domain);
