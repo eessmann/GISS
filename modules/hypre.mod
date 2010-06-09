@@ -32,12 +32,21 @@
 
 typedef enum {
   HYPRE_BOOMER_AMG,
-  HYPRE_PCG
+  HYPRE_PCG,
+  HYPRE_HYBRID,
+  HYPRE_LGMRES,
+  HYPRE_BICGSTAB,
+  HYPRE_GMRES,
+  HYPRE_AMS,
+  HYPRE_FLEXGMRES
 } HypreSolverType;
 
 typedef enum {
   HYPRE_AMG_PRECOND,
   HYPRE_PARASAILS_PRECOND,
+  HYPRE_EUCLID_PRECOND,
+  HYPRE_PILUT_PRECOND,
+  HYPRE_AMS_PRECOND,
   NO_PRECOND
 } HyprePrecondType;
 
@@ -65,6 +74,119 @@ struct _HypreProblem {
   HYPRE_IJVector x;
   HYPRE_ParVector par_x;
 };
+
+static HYPRE_PtrToParSolverFcn HYPRE_precond_solver ()
+{
+
+  if (proj_hp.precond_type == HYPRE_AMG_PRECOND)
+    return HYPRE_BoomerAMGSolve;
+  else if (proj_hp.precond_type == HYPRE_PARASAILS_PRECOND)
+    return HYPRE_ParaSailsSolve;
+  else if (proj_hp.precond_type == HYPRE_EUCLID_PRECOND)
+    return HYPRE_EuclidSolve;
+  else if (proj_hp.precond_type == HYPRE_PILUT_PRECOND)
+    return HYPRE_ParCSRPilutSolve;
+  else if (proj_hp.precond_type == HYPRE_AMS_PRECOND)
+    return HYPRE_AMSSolve;
+}
+
+static HYPRE_PtrToParSolverFcn HYPRE_precond_setup ()
+{
+   if (proj_hp.precond_type == HYPRE_AMG_PRECOND)
+    return HYPRE_BoomerAMGSetup;
+  else if (proj_hp.precond_type == HYPRE_PARASAILS_PRECOND)
+    return HYPRE_ParaSailsSetup;
+  else if (proj_hp.precond_type == HYPRE_EUCLID_PRECOND)
+    return HYPRE_EuclidSetup;
+  else if (proj_hp.precond_type == HYPRE_PILUT_PRECOND)
+    return HYPRE_ParCSRPilutSetup;
+  else if (proj_hp.precond_type == HYPRE_AMS_PRECOND)
+    return HYPRE_AMSSetup;
+}
+
+static void ParaSails_precond (HYPRE_Solver * precond)
+{
+  HYPRE_Solver pc;
+  int      sai_max_levels = 1;
+  double   sai_threshold = 0.1;
+  double   sai_filter = 0.05;
+  int      sai_sym = 1;
+  
+/* Set some parameters (See Reference Manual for more parameters) */
+  HYPRE_ParaSailsCreate(MPI_COMM_WORLD, &pc);
+  HYPRE_ParaSailsSetParams(pc, sai_threshold, sai_max_levels);
+  HYPRE_ParaSailsSetFilter(pc, sai_filter);
+  HYPRE_ParaSailsSetSym(pc, sai_sym);
+  HYPRE_ParaSailsSetLogging(pc, 3);
+  *precond = pc;
+}
+
+static void AMG_precond (HYPRE_Solver * precond)
+{
+  HYPRE_Solver pc;
+  
+  HYPRE_BoomerAMGCreate(&pc);
+  HYPRE_BoomerAMGSetPrintLevel(pc, 1); /* print amg solution info */
+  HYPRE_BoomerAMGSetCoarsenType(pc, 6);
+  HYPRE_BoomerAMGSetRelaxType(pc, 6); /* Sym G.S./Jacobi hybrid */ 
+  HYPRE_BoomerAMGSetNumSweeps(pc, 1);
+  HYPRE_BoomerAMGSetTol(pc, 0.0); /* conv. tolerance zero */
+  HYPRE_BoomerAMGSetMaxIter(pc, 1); /* do only one iteration! */
+  *precond = pc;
+}
+
+static void Euclid_precond (HYPRE_Solver * precond)
+{
+  HYPRE_Solver pc;
+    
+  HYPRE_EuclidCreate (MPI_COMM_WORLD, &pc);
+  *precond = pc;
+}
+
+static void Pilut_precond (HYPRE_Solver * precond)
+{
+  HYPRE_Solver pc;
+
+  HYPRE_ParCSRPilutCreate (MPI_COMM_WORLD, &pc);
+  HYPRE_ParCSRPilutSetMaxIter (pc, 3);
+  *precond = pc;
+}
+
+static void AMS_precond (HYPRE_Solver * precond)
+{
+  HYPRE_Solver pc;
+
+  HYPRE_AMSCreate (&pc);
+  *precond = pc;
+}
+
+static void set_precond (HYPRE_Solver * precond)
+{
+  if (proj_hp.precond_type == HYPRE_PARASAILS_PRECOND)
+    ParaSails_precond (precond);
+  else if (proj_hp.precond_type == HYPRE_AMG_PRECOND)
+    AMG_precond (precond);
+  else if (proj_hp.precond_type == HYPRE_EUCLID_PRECOND)
+    Euclid_precond (precond);
+  else if (proj_hp.precond_type == HYPRE_PILUT_PRECOND)
+    Pilut_precond (precond);
+  else if (proj_hp.precond_type == HYPRE_AMS_PRECOND)
+    AMS_precond (precond);
+}
+
+static void destroy_precond (HYPRE_Solver precond)
+{
+  if (proj_hp.precond_type == HYPRE_PARASAILS_PRECOND)
+    HYPRE_ParaSailsDestroy(precond);
+  else if (proj_hp.precond_type == HYPRE_AMG_PRECOND)
+    HYPRE_BoomerAMGDestroy(precond);
+  else if (proj_hp.precond_type == HYPRE_EUCLID_PRECOND)
+    HYPRE_EuclidDestroy(precond);
+  else if (proj_hp.precond_type == HYPRE_PILUT_PRECOND)
+    HYPRE_ParCSRPilutDestroy(precond);
+  else if (proj_hp.precond_type == HYPRE_AMS_PRECOND)
+    HYPRE_AMSDestroy(precond);
+}
 
 /***********************************************/
 /*     Boomer Algebraic Multigrid Solver       */
@@ -122,7 +244,8 @@ static void call_AMG_Boomer_solver (GfsDomain * domain, GfsMultilevelParams * pa
 static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par,
 			     HypreProblem * hp)
 {
-  HYPRE_Solver solver;
+  HYPRE_Solver solver, precond;
+  int num_iterations;
   gfs_domain_timer_start (domain, "Hypre: PCG_Solver");
 
   /* Create solver */
@@ -130,21 +253,31 @@ static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par,
   
   /* Set some parameters (See Reference Manual for more parameters) */
   if (proj_hp.verbose)
-    HYPRE_BoomerAMGSetPrintLevel(solver, 3);  /* print solve info + parameters */
-  HYPRE_PCGSetMaxIter(solver, par->nitermax); /* max iterations */
-  HYPRE_PCGSetTol(solver, par->tolerance); /* conv. tolerance */
-  HYPRE_PCGSetTwoNorm(solver, 1); /* use the two norm as the stopping criteria */
-  HYPRE_PCGSetLogging(solver, 1); /* needed to get run info later */
+    HYPRE_ParCSRPCGSetPrintLevel(solver, 3);  /* print solve info + parameters */
+  HYPRE_ParCSRPCGSetMaxIter(solver, par->nitermax); /* max iterations */
+  HYPRE_ParCSRPCGSetTol(solver, par->tolerance); /* conv. tolerance */
+  HYPRE_ParCSRPCGSetTwoNorm(solver, 1); /* use the two norm as the stopping criteria */
+  HYPRE_ParCSRPCGSetLogging(solver, 1); /* needed to get run info later */
+  
+
+  if (proj_hp.precond_type != NO_PRECOND) {
+    set_precond (&precond);
+
+    HYPRE_ParCSRPCGSetPrecond(solver,
+			      (HYPRE_PtrToParSolverFcn) HYPRE_precond_solver (),
+			      (HYPRE_PtrToParSolverFcn) HYPRE_precond_setup (),
+			      precond);
+  }
 
   HYPRE_ParCSRPCGSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
   HYPRE_ParCSRPCGSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);
 
+  HYPRE_ParCSRPCGGetNumIterations(solver, &num_iterations);
+  par->niter = num_iterations;
   /*  Run info - needed logging turned on */
   if (proj_hp.verbose && domain->pid <= 0) {
-    int num_iterations;
     double final_res_norm;
-    HYPRE_PCGGetNumIterations(solver, &num_iterations);
-    HYPRE_PCGGetFinalRelativeResidualNorm(solver, &final_res_norm);
+    HYPRE_ParCSRPCGGetFinalRelativeResidualNorm(solver, &final_res_norm);
     
     printf("\n");
   	  printf("Iterations = %d\n", num_iterations);
@@ -154,7 +287,313 @@ static void call_PCG_solver (GfsDomain * domain, GfsMultilevelParams * par,
   
   /* Destroy solver */
   HYPRE_ParCSRPCGDestroy(solver);
+  if (proj_hp.precond_type != NO_PRECOND)
+    destroy_precond (precond);
   gfs_domain_timer_stop (domain, "Hypre: PCG_Solver");
+}
+
+/**********************************************/
+/*          Hybrid DSCG/PCG Solver            */
+/**********************************************/
+static void call_Hybrid_solver (GfsDomain * domain, GfsMultilevelParams * par,
+			     HypreProblem * hp)
+{
+  HYPRE_Solver solver, precond;
+  int num_iterations;
+  gfs_domain_timer_start (domain, "Hypre: Hybrid_Solver");
+
+  /* Create solver */
+  HYPRE_ParCSRHybridCreate(&solver);
+  
+  /* Set some parameters (See Reference Manual for more parameters) */
+  if (proj_hp.verbose)
+    HYPRE_ParCSRHybridSetPrintLevel(solver, 3);  /* print solve info + parameters */
+  HYPRE_ParCSRHybridSetDSCGMaxIter(solver, par->nitermax); /* max iterations */
+  HYPRE_ParCSRHybridSetPCGMaxIter(solver, par->nitermax);
+  HYPRE_ParCSRHybridSetTol(solver, par->tolerance); /* conv. tolerance */
+  HYPRE_ParCSRHybridSetTwoNorm(solver, 1); /* use the two norm as the stopping criteria */
+  HYPRE_ParCSRHybridSetLogging(solver, 1); /* needed to get run info later */
+
+  if (proj_hp.precond_type != NO_PRECOND) {
+    set_precond (&precond);
+
+    HYPRE_ParCSRHybridSetPrecond(solver,
+				 (HYPRE_PtrToParSolverFcn) HYPRE_precond_solver (),
+				 (HYPRE_PtrToParSolverFcn) HYPRE_precond_setup (),
+				 precond);
+  }
+
+  HYPRE_ParCSRHybridSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+  HYPRE_ParCSRHybridSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+
+  HYPRE_ParCSRHybridGetNumIterations(solver, &num_iterations);
+  par->niter = num_iterations;
+  /*  Run info - needed logging turned on */
+  if (proj_hp.verbose && domain->pid <= 0) {
+    double final_res_norm;
+    HYPRE_ParCSRHybridGetFinalRelativeResidualNorm(solver, &final_res_norm);
+    
+    printf("\n");
+  	  printf("Iterations = %d\n", num_iterations);
+  	  printf("Final Relative Residual Norm = %e\n", final_res_norm);
+  	  printf("\n");
+  }
+  
+  /* Destroy solver */
+  HYPRE_ParCSRHybridDestroy(solver);
+  if (proj_hp.precond_type != NO_PRECOND)
+    destroy_precond (precond);
+  gfs_domain_timer_stop (domain, "Hypre: Hybrid_Solver");
+}
+
+/******************************************/
+/*              BICGSTAB Solver           */
+/******************************************/
+static void call_BICGSTAB_solver (GfsDomain * domain, GfsMultilevelParams * par,
+			     HypreProblem * hp)
+{
+  HYPRE_Solver solver, precond;
+  int num_iterations;
+  gfs_domain_timer_start (domain, "Hypre: BICGSTAB_Solver");
+
+  /* Create solver */
+  HYPRE_ParCSRBiCGSTABCreate(MPI_COMM_WORLD, &solver);
+  
+  /* Set some parameters (See Reference Manual for more parameters) */
+  if (proj_hp.verbose)
+    HYPRE_ParCSRBiCGSTABSetPrintLevel(solver, 3);  /* print solve info + parameters */
+  HYPRE_ParCSRBiCGSTABSetMaxIter(solver, par->nitermax); /* max iterations */
+  HYPRE_ParCSRBiCGSTABSetTol(solver, par->tolerance); /* conv. tolerance */
+  HYPRE_ParCSRBiCGSTABSetLogging(solver, 1); /* needed to get run info later */
+
+  if (proj_hp.precond_type != NO_PRECOND) {
+    set_precond (&precond);
+
+    HYPRE_ParCSRBiCGSTABSetPrecond(solver,
+			      (HYPRE_PtrToParSolverFcn) HYPRE_precond_solver (),
+			      (HYPRE_PtrToParSolverFcn) HYPRE_precond_setup (),
+			      precond);
+  }
+
+  HYPRE_ParCSRBiCGSTABSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+  HYPRE_ParCSRBiCGSTABSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+
+  HYPRE_ParCSRBiCGSTABGetNumIterations(solver, &num_iterations);
+  par->niter = num_iterations;
+  /*  Run info - needed logging turned on */
+  if (proj_hp.verbose && domain->pid <= 0) {
+    double final_res_norm;
+    HYPRE_ParCSRBiCGSTABGetFinalRelativeResidualNorm(solver, &final_res_norm);
+    
+    printf("\n");
+  	  printf("Iterations = %d\n", num_iterations);
+  	  printf("Final Relative Residual Norm = %e\n", final_res_norm);
+  	  printf("\n");
+  }
+  
+  /* Destroy solver */
+  HYPRE_ParCSRBiCGSTABDestroy(solver);
+  if (proj_hp.precond_type != NO_PRECOND)
+    destroy_precond (precond);
+  gfs_domain_timer_stop (domain, "Hypre: BICGSTAB_Solver");
+}
+
+/******************************************/
+/*              LGMRES Solver             */
+/******************************************/
+static void call_LGMRES_solver (GfsDomain * domain, GfsMultilevelParams * par,
+			     HypreProblem * hp)
+{
+  HYPRE_Solver solver, precond;
+  int num_iterations;
+  gfs_domain_timer_start (domain, "Hypre: LGMRES_Solver");
+
+  /* Create solver */
+  HYPRE_ParCSRLGMRESCreate(MPI_COMM_WORLD, &solver);
+  
+  /* Set some parameters (See Reference Manual for more parameters) */
+  if (proj_hp.verbose)
+    HYPRE_ParCSRLGMRESSetPrintLevel(solver, 3);  /* print solve info + parameters */
+  HYPRE_ParCSRLGMRESSetMaxIter(solver, par->nitermax); /* max iterations */
+  HYPRE_ParCSRLGMRESSetTol(solver, par->tolerance); /* conv. tolerance */
+  /* HYPRE_ParCSRLGMRESSetTwoNorm(solver, 1);  *//* use the two norm as the stopping criteria */
+  HYPRE_ParCSRLGMRESSetLogging(solver, 1); /* needed to get run info later */
+
+  if (proj_hp.precond_type != NO_PRECOND) {
+    set_precond (&precond);
+
+    HYPRE_ParCSRLGMRESSetPrecond(solver,
+			      (HYPRE_PtrToParSolverFcn) HYPRE_precond_solver (),
+			      (HYPRE_PtrToParSolverFcn) HYPRE_precond_setup (),
+			      precond);
+  }
+
+  HYPRE_ParCSRLGMRESSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+  HYPRE_ParCSRLGMRESSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+
+  HYPRE_ParCSRLGMRESGetNumIterations(solver, &num_iterations);
+  par->niter = num_iterations;
+  /*  Run info - needed logging turned on */
+  if (proj_hp.verbose && domain->pid <= 0) {
+    double final_res_norm;
+    
+    HYPRE_ParCSRLGMRESGetFinalRelativeResidualNorm(solver, &final_res_norm);
+    
+    printf("\n");
+  	  printf("Iterations = %d\n", num_iterations);
+  	  printf("Final Relative Residual Norm = %e\n", final_res_norm);
+  	  printf("\n");
+  }
+  
+  /* Destroy solver */
+  HYPRE_ParCSRLGMRESDestroy(solver);
+  if (proj_hp.precond_type != NO_PRECOND)
+    destroy_precond (precond);
+  gfs_domain_timer_stop (domain, "Hypre: LGMRES_Solver");
+}
+
+/******************************************/
+/*               GMRES Solver             */
+/******************************************/
+static void call_GMRES_solver (GfsDomain * domain, GfsMultilevelParams * par,
+			       HypreProblem * hp)
+{
+  HYPRE_Solver solver, precond;
+  int num_iterations;
+  gfs_domain_timer_start (domain, "Hypre: GMRES_Solver");
+
+  /* Create solver */
+  HYPRE_ParCSRGMRESCreate(MPI_COMM_WORLD, &solver);
+  
+  /* Set some parameters (See Reference Manual for more parameters) */
+  if (proj_hp.verbose)
+    HYPRE_ParCSRGMRESSetPrintLevel(solver, 3);  /* print solve info + parameters */
+  HYPRE_ParCSRGMRESSetMaxIter(solver, par->nitermax); /* max iterations */
+  HYPRE_ParCSRGMRESSetTol(solver, par->tolerance); /* conv. tolerance */
+  /* HYPRE_ParCSRGMRESSetTwoNorm(solver, 1);  *//* use the two norm as the stopping criteria */
+  HYPRE_ParCSRGMRESSetLogging(solver, 1); /* needed to get run info later */
+
+  if (proj_hp.precond_type != NO_PRECOND) {
+    set_precond (&precond);
+
+    HYPRE_ParCSRGMRESSetPrecond(solver,
+				(HYPRE_PtrToParSolverFcn) HYPRE_precond_solver (),
+				(HYPRE_PtrToParSolverFcn) HYPRE_precond_setup (),
+				precond);
+  }
+
+  HYPRE_ParCSRGMRESSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+  HYPRE_ParCSRGMRESSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+
+  HYPRE_ParCSRGMRESGetNumIterations(solver, &num_iterations);
+  par->niter = num_iterations;
+  /*  Run info - needed logging turned on */
+  if (proj_hp.verbose && domain->pid <= 0) {
+    double final_res_norm;
+    HYPRE_ParCSRGMRESGetFinalRelativeResidualNorm(solver, &final_res_norm);
+    
+    printf("\n");
+  	  printf("Iterations = %d\n", num_iterations);
+  	  printf("Final Relative Residual Norm = %e\n", final_res_norm);
+  	  printf("\n");
+  }
+  
+  /* Destroy solver */
+  HYPRE_ParCSRGMRESDestroy(solver);
+  if (proj_hp.precond_type != NO_PRECOND)
+    destroy_precond (precond);
+  gfs_domain_timer_stop (domain, "Hypre: GMRES_Solver");
+}
+
+/******************************************/
+/*               AMS Solver               */
+/******************************************/
+static void call_AMS_solver (GfsDomain * domain, GfsMultilevelParams * par,
+			     HypreProblem * hp)
+{
+  HYPRE_Solver solver;
+  int num_iterations;
+  gfs_domain_timer_start (domain, "Hypre: AMS_Solver");
+
+  /* Create solver */
+  HYPRE_AMSCreate(&solver);
+  
+  /* Set some parameters (See Reference Manual for more parameters) */
+  if (proj_hp.verbose)
+    HYPRE_AMSSetPrintLevel(solver, 3);  /* print solve info + parameters */
+  HYPRE_AMSSetMaxIter(solver, par->nitermax); /* max iterations */
+  HYPRE_AMSSetTol(solver, par->tolerance); /* conv. tolerance */
+
+  HYPRE_AMSSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+  HYPRE_AMSSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+
+  HYPRE_AMSGetNumIterations(solver, &num_iterations);
+  par->niter = num_iterations;
+  /*  Run info - needed logging turned on */
+  if (proj_hp.verbose && domain->pid <= 0) {
+    double final_res_norm;
+    HYPRE_AMSGetFinalRelativeResidualNorm(solver, &final_res_norm);
+    
+    printf("\n");
+  	  printf("Iterations = %d\n", num_iterations);
+  	  printf("Final Relative Residual Norm = %e\n", final_res_norm);
+  	  printf("\n");
+  }
+  
+  /* Destroy solver */
+  HYPRE_AMSDestroy(solver);
+  gfs_domain_timer_stop (domain, "Hypre: AMS_Solver");
+}
+
+/******************************************/
+/*          FlexGMRES Solver              */
+/******************************************/
+static void call_FlexGMRES_solver (GfsDomain * domain, GfsMultilevelParams * par,
+				   HypreProblem * hp)
+{
+  HYPRE_Solver solver, precond;
+  int num_iterations;
+  gfs_domain_timer_start (domain, "Hypre: FlexGMRES_Solver");
+
+  /* Create solver */
+  HYPRE_ParCSRFlexGMRESCreate(MPI_COMM_WORLD, &solver);
+  
+  /* Set some parameters (See Reference Manual for more parameters) */
+  if (proj_hp.verbose)
+    HYPRE_ParCSRFlexGMRESSetPrintLevel(solver, 3);  /* print solve info + parameters */
+  HYPRE_ParCSRFlexGMRESSetMaxIter(solver, par->nitermax); /* max iterations */
+  HYPRE_ParCSRFlexGMRESSetTol(solver, par->tolerance); /* conv. tolerance */
+
+  if (proj_hp.precond_type != NO_PRECOND) {
+    set_precond (&precond);
+
+    HYPRE_ParCSRFlexGMRESSetPrecond(solver,
+				    (HYPRE_PtrToParSolverFcn) HYPRE_precond_solver (),
+				    (HYPRE_PtrToParSolverFcn) HYPRE_precond_setup (),
+				    precond);
+  }
+
+  HYPRE_ParCSRFlexGMRESSetup(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+  HYPRE_ParCSRFlexGMRESSolve(solver, hp->parcsr_A, hp->par_b, hp->par_x);
+
+  HYPRE_ParCSRFlexGMRESGetNumIterations(solver, &num_iterations);
+  par->niter = num_iterations;
+  /*  Run info - needed logging turned on */
+  if (proj_hp.verbose && domain->pid <= 0) {
+    double final_res_norm;
+    HYPRE_ParCSRFlexGMRESGetFinalRelativeResidualNorm(solver, &final_res_norm);
+    
+    printf("\n");
+  	  printf("Iterations = %d\n", num_iterations);
+  	  printf("Final Relative Residual Norm = %e\n", final_res_norm);
+  	  printf("\n");
+  }
+  
+  /* Destroy solver */
+  HYPRE_ParCSRFlexGMRESDestroy(solver);
+  if (proj_hp.precond_type != NO_PRECOND)
+    destroy_precond (precond);
+  gfs_domain_timer_stop (domain, "Hypre: FlexGMRES_Solver");
 }
 
 static void hypre_problem_new (HypreProblem * hp, GfsDomain * domain,
@@ -324,6 +763,18 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
     call_AMG_Boomer_solver (domain, par, &hp);
   else if (proj_hp.solver_type == HYPRE_PCG)
     call_PCG_solver (domain, par, &hp);
+  else if (proj_hp.solver_type == HYPRE_HYBRID)
+    call_Hybrid_solver (domain, par, &hp);
+  else if (proj_hp.solver_type == HYPRE_LGMRES)
+    call_LGMRES_solver (domain, par, &hp);
+  else if (proj_hp.solver_type == HYPRE_GMRES)
+    call_GMRES_solver (domain, par, &hp);
+  else if (proj_hp.solver_type == HYPRE_FLEXGMRES)
+    call_FlexGMRES_solver (domain, par, &hp);
+  else if (proj_hp.solver_type == HYPRE_AMS)
+    call_AMS_solver (domain, par, &hp);
+  else if (proj_hp.solver_type == HYPRE_BICGSTAB)
+    call_BICGSTAB_solver (domain, par, &hp);
   else
     g_assert_not_reached();
   
@@ -415,6 +866,12 @@ static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
   switch (par->solver_type) {
   case HYPRE_BOOMER_AMG: fputs ("  solver_type      = boomer_amg\n", fp); break;
   case HYPRE_PCG:        fputs ("  solver_type      = pcg\n", fp); break;
+  case HYPRE_HYBRID:     fputs ("  solver_type      = hybrid\n", fp); break;
+  case HYPRE_LGMRES:     fputs ("  solver_type      = lgmres\n", fp); break;
+  case HYPRE_GMRES:      fputs ("  solver_type      = gmres\n", fp); break;
+  case HYPRE_FLEXGMRES:  fputs ("  solver_type      = flexgmres\n", fp); break;
+  case HYPRE_AMS:        fputs ("  solver_type      = ams\n", fp); break;
+  case HYPRE_BICGSTAB:   fputs ("  solver_type      = bicgstab\n", fp); break;
   }
 
   switch (par->relax_type) {
@@ -429,9 +886,12 @@ static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
   }
 
   switch (par->precond_type) {
-  case HYPRE_AMG_PRECOND: fputs       ("  precond_type     = amg\n", fp); break;
-  case HYPRE_PARASAILS_PRECOND: fputs ("  precond_type     = parasails\n", fp); break;
-  case NO_PRECOND: fputs              ("  precond_type     = none\n", fp); break;
+  case HYPRE_AMG_PRECOND:      fputs ("  precond_type     = amg\n", fp); break;
+  case HYPRE_PARASAILS_PRECOND:fputs ("  precond_type     = parasails\n", fp); break;
+  case HYPRE_EUCLID_PRECOND:   fputs ("  precond_type     = euclid\n", fp); break;
+  case HYPRE_PILUT_PRECOND:    fputs ("  precond_type     = pilut\n", fp); break;
+  case HYPRE_AMS_PRECOND:      fputs ("  precond_type     = ams\n", fp); break;
+  case NO_PRECOND:             fputs ("  precond_type     = none\n", fp); break;
   }
     
   switch (par->coarsening_type) {
@@ -477,6 +937,18 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
       par->solver_type = HYPRE_BOOMER_AMG;
     else if (!strcmp (solver_type, "pcg"))
       par->solver_type = HYPRE_PCG;
+    else if (!strcmp (solver_type, "hybrid"))
+      par->solver_type = HYPRE_HYBRID;
+    else if (!strcmp (solver_type, "lgmres"))
+      par->solver_type = HYPRE_LGMRES;
+    else if (!strcmp (solver_type, "gmres"))
+      par->solver_type = HYPRE_GMRES;
+    else if (!strcmp (solver_type, "ams"))
+      par->solver_type = HYPRE_AMS;
+    else if (!strcmp (solver_type, "flexgmres"))
+      par->solver_type = HYPRE_FLEXGMRES;
+    else if (!strcmp (solver_type, "bicgstab"))
+      par->solver_type = HYPRE_BICGSTAB;
     else
       gts_file_variable_error (fp, var, "solver_type", "unknown solver type `%s'", solver_type);
     g_free (solver_type);
@@ -488,6 +960,12 @@ static void hypre_solver_read (HypreSolverParams * par, GtsFile * fp)
       par->precond_type = HYPRE_AMG_PRECOND;
     else if (!strcmp (precond_type, "parasails"))
       par->precond_type = HYPRE_PARASAILS_PRECOND;
+    else if (!strcmp (precond_type, "euclid"))
+      par->precond_type = HYPRE_EUCLID_PRECOND;
+    else if (!strcmp (precond_type, "pilut"))
+      par->precond_type = HYPRE_PILUT_PRECOND;
+    else if (!strcmp (precond_type, "ams"))
+      par->precond_type = HYPRE_AMS_PRECOND;
     else if (!strcmp (precond_type, "none"))
       par->precond_type = NO_PRECOND;
     else
