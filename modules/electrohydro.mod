@@ -649,111 +649,11 @@ static void source_charge (FttCell * cell, GfsSourceCharge * s)
   GFS_VALUE (cell, s->c) = value/(h*h*gfs_domain_cell_fraction (domain, cell));
 }
 
-static void reset_coeff (FttCell * cell)
-{
-  FttDirection d;
-  GfsFaceStateVector * f = GFS_STATE (cell)->f;
-  
-  for (d = 0; d < FTT_NEIGHBORS; d++)
-    f[d].v = 0.;
-}
-
-typedef struct {
-  gdouble lambda2[FTT_DIMENSION];
-  GfsFunction * alpha;
-  GfsDomain * domain;
-} PoissonCoeff;
-
-static void conduction_coeff (FttCellFace * face,
-			   PoissonCoeff * p)
-{
-  gdouble alpha = gfs_function_face_value (p->alpha, face);
-  gdouble v = p->lambda2[face->d/2]*alpha*gfs_domain_face_fraction (p->domain, face);
-
-  GFS_STATE (face->cell)->f[face->d].v = v;
-  
-  switch (ftt_face_type (face)) {
-  case FTT_FINE_FINE:
-    GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v = v;
-    break;
-  case FTT_FINE_COARSE:
-    GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v +=
-      v/FTT_CELLS_DIRECTION (face->d);
-    break;
-  default:
-    g_assert_not_reached ();
-  }
-}
-
-static void face_coeff_from_below (FttCell * cell)
-{
-  FttDirection d;
-  GfsFaceStateVector * f = GFS_STATE (cell)->f;
-  guint neighbors = 0;
-
-  for (d = 0; d < FTT_NEIGHBORS; d++) {
-    FttCellChildren child;
-    guint i, n;
-
-    f[d].v = 0.;
-    n = ftt_cell_children_direction (cell, d, &child);
-    for (i = 0; i < n; i++)
-      if (child.c[i])
-	f[d].v += GFS_STATE (child.c[i])->f[d].v;
-    f[d].v /= n;
-
-    FttCell * neighbor;
-    if (f[d].v > 0. && (neighbor = ftt_cell_neighbor (cell, d)) && !GFS_CELL_IS_BOUNDARY (neighbor))
-      neighbors++;
-  }
-
-  if (neighbors == 1)
-    for (d = 0; d < FTT_NEIGHBORS; d++)
-      f[d].v = 0.;
-}
-
-/**
- * gfs_conduction_coefficients:
- * @domain: a #GfsDomain.
- * @alpha: the conductivity or %NULL.
- *
- * Initializes the face coefficients for the conduction term
- *
- */
-
-void gfs_conduction_coefficients (GfsDomain * domain,
-		  	          GfsFunction * alpha)
-{
-  PoissonCoeff p;
-  FttComponent i;
-
-  g_return_if_fail (domain != NULL);
-
-  for (i = 0; i < FTT_DIMENSION; i++) {
-    gdouble lambda = (&domain->lambda.x)[i];
-
-    p.lambda2[i] = lambda*lambda;
-  }
-  gfs_domain_cell_traverse (domain,
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_coeff, NULL);
-  p.alpha = alpha;
-  p.domain = domain;
-  gfs_domain_face_traverse (domain, FTT_XYZ, 
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttFaceTraverseFunc) conduction_coeff, &p);
-  gfs_domain_cell_traverse (domain,
-			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			    (FttCellTraverseFunc) face_coeff_from_below, NULL);
-}
-
-
-
 static gboolean gfs_source_charge_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_source_charge_class ())->parent_class)->event)
       (event, sim)) {
-    gfs_conduction_coefficients (GFS_DOMAIN (sim), GFS_SOURCE_CHARGE (event)->conductivity);
+    gfs_poisson_coefficients (GFS_DOMAIN (sim), GFS_SOURCE_CHARGE (event)->conductivity);
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) source_charge, event);
     return TRUE;
