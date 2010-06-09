@@ -45,6 +45,8 @@ typedef struct {
 
 #include "moving2.c"
 
+/* GfsNumberedVertex: Object */
+
 static void numbered_vertex_read (GtsObject ** o, GtsFile * f)
 {
   static glong count = 0;
@@ -55,25 +57,20 @@ static void numbered_vertex_read (GtsObject ** o, GtsFile * f)
   v->num = count++;
 }
 
-static void numbered_vertex_class_init (GfsNumberedVertexClass * klass)
+static void numbered_vertex_class_init (GtsObjectClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->read = numbered_vertex_read;
+  klass->read = numbered_vertex_read;
 }
 
-/**
- * gfs_numbered_vertex_class:
- *
- * Returns: the #GfsNumberedVertexClass.
- */
-GfsNumberedVertexClass * gfs_numbered_vertex_class (void)
+GtsVertexClass * gfs_numbered_vertex_class (void)
 {
-  static GfsNumberedVertexClass * klass = NULL;
+  static GtsVertexClass * klass = NULL;
 
   if (klass == NULL) {
     GtsObjectClassInfo numbered_vertex_info = {
       "GfsNumberedVertex",
       sizeof (GfsNumberedVertex),
-      sizeof (GfsNumberedVertexClass),
+      sizeof (GtsVertexClass),
       (GtsObjectClassInitFunc) numbered_vertex_class_init,
       (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
@@ -85,6 +82,8 @@ GfsNumberedVertexClass * gfs_numbered_vertex_class (void)
 
   return klass;
 }
+
+/* GfsSolidMoving: Object */
 
 typedef struct {
   GfsSimulation * sim;
@@ -243,32 +242,6 @@ static void create_new_cells (FttCell * cell, GfsSurface * s, SolidInfo * solid_
 		     (FttCellInitFunc) gfs_cell_fine_init, solid_info->sim);
 }
 
-static void refine_direction (FttCell * cell, GfsDomain * domain, gint level)
-{
-  g_assert (cell);
-  
-  if (ftt_cell_level (cell) < level) {
-    if (FTT_CELL_IS_LEAF (cell)) {
-      FttCellChildren child;
-      guint num = ftt_cell_children_direction (cell, 1, &child);
-      gint j;
-
-      for (j = 0; j < num; j++)
-	if (child.c[j] == NULL) {
-	  if (FTT_CELL_IS_DESTROYED (cell))
-	      cell->flags &= ~FTT_FLAG_DESTROYED;
-	  g_assert (!child.c[j]);
-	  fprintf (stderr, "11\n");
-	  gfs_cell_init (child.c[j], domain);
-	  fprintf (stderr, "22\n");
-	}
-    }
-    else {
-      
-    }
-  }
-}
-
 static FttVector rpos[FTT_NEIGHBORS] = {
 #if FTT_2D
   {1.,0.,0.}, {-1.,0.,0.}, {0.,1.,0.}, {0.,-1.,0.}
@@ -423,11 +396,6 @@ static void solid_moving_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_solid_moving_class ())->parent_class->destroy) (object);
 }
 
-static void count_vertex (GfsNumberedVertex * v, GfsSolidMoving * solid)
-{
-  solid->nvertex++;
-}
-
 static void solid_moving_read (GtsObject ** o, GtsFile * fp)
 {
   GfsSolidMoving * solid = GFS_SOLID_MOVING (*o);
@@ -440,9 +408,7 @@ static void solid_moving_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
   
-  solid->nvertex = 0;
-  gts_surface_foreach_vertex (GFS_SURFACE (GFS_SOLID (solid)->s)->s ,
-			      (GtsFunc) count_vertex, solid);
+  solid->nvertex = gts_surface_vertex_number (GFS_SURFACE (GFS_SOLID (solid)->s)->s);
 
   if (!GFS_IS_SURFACE (GFS_SOLID (solid)->s) || !GFS_SURFACE (GFS_SOLID (solid)->s)->s) {
     gts_file_error (fp, "moving implicit surfaces are not implemented yet");
@@ -854,6 +820,22 @@ static void simulation_moving_set_timestep (GfsSimulation * sim)
   sim->time.dtmax = dtmax;
 }
 
+static void move_vertex (GfsNumberedVertex * v, SolidInfo * par)
+{ 
+  GtsPoint * p = &GTS_VERTEX(v)->p;
+  FttVector pos = *((FttVector *) &p->x);
+  FttCell * cell = gfs_domain_locate (GFS_DOMAIN (par->sim), pos, -2, NULL);
+  FttComponent c;
+
+  if (cell) {
+    gdouble dt = par->sim->advection_params.dt;
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&p->x)[c] += surface_value (cell, par->v[c], &pos)*dt;
+  }
+}
+
+#ifdef HAVE_MPI
+
 static void move_vertex_mpi (GfsNumberedVertex * v, SolidInfo * par)
 { 
   GtsPoint * p = &GTS_VERTEX(v)->p;
@@ -874,20 +856,6 @@ static void move_vertex_mpi (GfsNumberedVertex * v, SolidInfo * par)
   }
 }
 
-static void move_vertex (GfsNumberedVertex * v, SolidInfo * par)
-{ 
-  GtsPoint * p = &GTS_VERTEX(v)->p;
-  FttVector pos = *((FttVector *) &p->x);
-  FttCell * cell = gfs_domain_locate (GFS_DOMAIN (par->sim), pos, -2, NULL);
-  FttComponent c;
-
-  if (cell) {
-    gdouble dt = par->sim->advection_params.dt;
-    for (c = 0; c < FTT_DIMENSION; c++)
-      (&p->x)[c] += surface_value (cell, par->v[c], &pos)*dt;
-  }
-}
-
 static void synchronize_vertex (GfsNumberedVertex * v, SolidInfo * par)
 {
   GtsPoint * p = &GTS_VERTEX(v)->p;
@@ -896,6 +864,8 @@ static void synchronize_vertex (GfsNumberedVertex * v, SolidInfo * par)
   for (c = 0; c < FTT_DIMENSION; c++)
     (&p->x)[c] = g_array_index(par->sall,double,3*v->num+c);
 }
+
+#endif /* HAVE_MPI */
 
 static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
 {
@@ -906,6 +876,7 @@ static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
     p.s = solid;
     p.v = gfs_domain_velocity (GFS_DOMAIN (sim));
 
+#ifdef HAVE_MPI
     if (GFS_DOMAIN (sim)->pid >= 0) { /* Parallel simulation */
       p.stmp = g_array_set_size ( g_array_new (FALSE, FALSE, sizeof (double)) , 3*solid->nvertex);
       p.sall = g_array_set_size ( g_array_new (FALSE, FALSE, sizeof (double)) , 3*solid->nvertex);
@@ -920,6 +891,7 @@ static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
       g_array_free (p.sall, FALSE);
     }
     else
+#endif /* HAVE_MPI */
       gts_surface_foreach_vertex (surface->s, (GtsFunc) move_vertex, &p);
   }
   else

@@ -163,7 +163,9 @@ static void hypre_problem_new (HypreProblem * hp, GfsDomain * domain,
   gfs_domain_timer_start (domain, "HYPRE: Solver setup");
   
   /* Create the matrix.*/
-  HYPRE_IJMatrixCreate(MPI_COMM_WORLD, istart, istart + size-1, istart, istart + size-1, &hp->A);
+  HYPRE_IJMatrixCreate(MPI_COMM_WORLD, 
+		       istart, istart + size - 1, istart, istart + size - 1, 
+		       &hp->A);
 
   /* Create the vectors rhs and solution.*/
   HYPRE_IJVectorCreate(MPI_COMM_WORLD, istart, istart + size-1, &hp->b);

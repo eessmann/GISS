@@ -276,6 +276,7 @@ typedef struct {
   GfsVariable * lhs, * rhs;
   guint nleafs;
   gint maxlevel;
+  FttFaceTraverseFunc bc_number;
 } NumberingParams;
 
 static void leaves_numbering (FttCell * cell, NumberingParams * p)
@@ -283,11 +284,6 @@ static void leaves_numbering (FttCell * cell, NumberingParams * p)
   GFS_VALUE (cell, p->lp->id) = p->nleafs++;
   g_array_append_val (p->lp->lhs, GFS_VALUE (cell, p->lhs));
   g_array_append_val (p->lp->rhs, GFS_VALUE (cell, p->rhs));
-}
-
-static void leaves_renumbering (FttCell * cell, NumberingParams * p)
-{ 
-  GFS_VALUE (cell, p->lp->id) = p->nleafs++;
 }
 
 static void bc_number (FttCellFace * f, NumberingParams * p)
@@ -299,44 +295,24 @@ static void bc_number (FttCellFace * f, NumberingParams * p)
   GFS_VALUE (f->cell, p->lp->id) = p->nleafs++;
 }
 
-static void bc_renumber (FttCellFace * f, NumberingParams * p)
-{
-  GFS_VALUE (f->cell, p->lp->id) = p->nleafs++;
-}
-
 static void bc_leaves_numbering (GfsBox * box, NumberingParams * p)
 { 
   FttDirection d;
   
   for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
-      if(!GFS_IS_BOUNDARY_MPI(box->neighbor[d])) {
-	GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
-	ftt_face_traverse_boundary (b->root, b->d,
-				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, p->maxlevel,
-				    (FttFaceTraverseFunc) bc_number, p);
-      }
+    if (GFS_IS_BOUNDARY (box->neighbor[d]) && !GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      ftt_face_traverse_boundary (b->root, b->d,
+				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, p->maxlevel,
+				  p->bc_number, p);
     }
 }
 
-static void bc_leaves_renumbering (GfsBox * box, NumberingParams * p)
-{ 
-  FttDirection d;
-  
-  for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
-      if(!GFS_IS_BOUNDARY_MPI(box->neighbor[d])) {
-	GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
-	ftt_face_traverse_boundary (b->root, b->d,
-				    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, p->maxlevel,
-				    (FttFaceTraverseFunc) bc_renumber, p);
-      }
-    }
-}
+#ifdef HAVE_MPI
 
 static void set_mpi_domain_index (GfsDomain * domain, GfsLinearProblem * lp)
 {
-  int gsize, i, j;
+  int gsize, i;
   guint * mpi_domain_index;
 
   MPI_Comm_size (MPI_COMM_WORLD, &gsize);
@@ -344,17 +320,24 @@ static void set_mpi_domain_index (GfsDomain * domain, GfsLinearProblem * lp)
 
   MPI_Allgather (&lp->rhs->len, 1, MPI_UNSIGNED, mpi_domain_index, 1, MPI_UNSIGNED, MPI_COMM_WORLD);
 
-  for ( i = gsize; i >= 0; i--)
-    for ( j = i; j >= 0; j--)
-      if ( j == i)
-	mpi_domain_index[i] = 0;
-      else
-	mpi_domain_index[i] += mpi_domain_index[j];
-
-  lp->istart = mpi_domain_index[domain->pid];
+  lp->istart = 0;
+  for (i = 0; i < domain->pid; i++)
+    lp->istart += mpi_domain_index[i];
   
   g_free (mpi_domain_index);
 }
+
+static void leaves_renumbering (FttCell * cell, NumberingParams * p)
+{ 
+  GFS_VALUE (cell, p->lp->id) = p->nleafs++;
+}
+
+static void bc_renumber (FttCellFace * f, NumberingParams * p)
+{
+  GFS_VALUE (f->cell, p->lp->id) = p->nleafs++;
+}
+
+#endif /* HAVE_MPI */
 
 /**
  * gfs_get_poisson_problem:
@@ -383,14 +366,14 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
 					    GfsVariable * dia, gint maxlevel,
 					    GfsVariable * v)
 {
-  gfs_domain_timer_start (domain,"get_poisson_problem");
+  gfs_domain_timer_start (domain, "get_poisson_problem");
 
   GfsLinearProblem * lp = gfs_linear_problem_new (domain);
   
   /* Cell numbering */
   
   /* fixme: should it be FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS */
-  NumberingParams np = { lp, lhs, rhs, 0, maxlevel};
+  NumberingParams np = { lp, lhs, rhs, 0, maxlevel, (FttFaceTraverseFunc) bc_number };
 
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
 			    (FttCellTraverseFunc) leaves_numbering, &np);
@@ -400,8 +383,9 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
 
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leaves_numbering, &np);
 
-  /* Renumbering of the different domain for parallel simulations */
-  if ( domain->pid >= 0 ) {
+#ifdef HAVE_MPI
+  /* Renumbering of the different subdomains for parallel simulations */
+  if (domain->pid >= 0) {
     set_mpi_domain_index (domain, lp);
 
     np.nleafs = lp->istart;
@@ -410,8 +394,10 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
 
     gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, lp->id);
 
-    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leaves_renumbering, &np);
+    np.bc_number = (FttFaceTraverseFunc) bc_renumber;
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) bc_leaves_numbering, &np);
   }
+#endif /* HAVE_MPI */
  
   /* Creates stencils on the fly */
   RelaxStencilParams p = { lp, dia, maxlevel };

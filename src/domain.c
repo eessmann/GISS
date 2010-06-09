@@ -809,23 +809,22 @@ static void box_homogeneous_bc_stencil (GfsBox * box, BcData * p)
   FttDirection d;
 
   for (d = 0; d < FTT_NEIGHBORS; d++) 
-    if (GFS_IS_BOUNDARY (box->neighbor[d])) 
-      if (!GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
-	GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
-	GfsBc * bc = gfs_boundary_lookup_bc (b, p->v);
-	
-	if (bc) {
-	  b->v = p->v1;
-	  bc->v = p->v1;
-	  b->type = GFS_BOUNDARY_CENTER_VARIABLE;
-	  bc->lp = p->lp;
-	  ftt_face_traverse_boundary (b->root, b->d,
-				      FTT_PRE_ORDER, p->flags, p->max_depth,
-				      bc->homogeneous_bc_stencil, bc);
-	  bc->v = p->v;
-	  gfs_boundary_send (b);
-	}
+    if (GFS_IS_BOUNDARY (box->neighbor[d]) && !GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, p->v);
+      
+      if (bc) {
+	b->v = p->v1;
+	bc->v = p->v1;
+	b->type = GFS_BOUNDARY_CENTER_VARIABLE;
+	bc->lp = p->lp;
+	ftt_face_traverse_boundary (b->root, b->d,
+				    FTT_PRE_ORDER, p->flags, p->max_depth,
+				    bc->homogeneous_bc_stencil, bc);
+	bc->v = p->v;
+	gfs_boundary_send (b);
       }
+    }
 }
 
 /**
