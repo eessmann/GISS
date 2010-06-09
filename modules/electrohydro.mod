@@ -277,7 +277,7 @@ static void poisson_electric (GfsElectroHydro * elec)
 
   dive = gfs_temporary_variable (domain);
   correct_div (domain, elec->rhoe, dive);
-  gfs_poisson_coefficients (domain, elec->perm);
+  gfs_poisson_coefficients (domain, elec->perm, TRUE);
   res1e = gfs_temporary_variable (domain);
   diae = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
@@ -506,6 +506,7 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
     gdouble permf = gfs_function_face_value (perm, &f);
     gdouble emod = 0.;
     GfsGradient g;
+    /* fixme: should we use gfs_face_weighted_gradient? */
     gfs_face_gradient (&f, &g, phi->i, -1);
     gdouble en = (- g.b + g.a*GFS_VALUE (cell, phi))/h;
     gdouble sign = (FTT_FACE_DIRECT (&f) ? 1 : -1);
@@ -653,7 +654,7 @@ static gboolean gfs_source_charge_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_source_charge_class ())->parent_class)->event)
       (event, sim)) {
-    gfs_poisson_coefficients (GFS_DOMAIN (sim), GFS_SOURCE_CHARGE (event)->conductivity);
+    gfs_poisson_coefficients (GFS_DOMAIN (sim), GFS_SOURCE_CHARGE (event)->conductivity, FALSE);
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) source_charge, event);
     return TRUE;

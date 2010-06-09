@@ -617,6 +617,7 @@ typedef struct {
   gdouble lambda2[FTT_DIMENSION];
   GfsFunction * alpha;
   GfsDomain * domain;
+  gboolean positive;
 } PoissonCoeff;
 
 static void poisson_coeff (FttCellFace * face,
@@ -625,7 +626,7 @@ static void poisson_coeff (FttCellFace * face,
   gdouble alpha = p->alpha ? gfs_function_face_value (p->alpha, face) : 1.;
   gdouble v = p->lambda2[face->d/2]*alpha*gfs_domain_face_fraction (p->domain, face);
 
-  if (alpha <= 0.) {
+  if (alpha <= 0. && p->positive) {
     FttVector p;
     ftt_face_pos (face, &p);
     g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
@@ -679,6 +680,7 @@ static void face_coeff_from_below (FttCell * cell)
  * gfs_poisson_coefficients:
  * @domain: a #GfsDomain.
  * @alpha: the inverse of density or %NULL.
+ * @positive: if %TRUE, @alpha must be strictly positive.
  *
  * Initializes the face coefficients for the Poisson equation
  * $\nabla\cdot\alpha\nabla p=\dots$.
@@ -686,7 +688,8 @@ static void face_coeff_from_below (FttCell * cell)
  * If @alpha is %NULL, it is taken to be unity.
  */
 void gfs_poisson_coefficients (GfsDomain * domain,
-			       GfsFunction * alpha)
+			       GfsFunction * alpha,
+			       gboolean positive)
 {
   PoissonCoeff p;
   FttComponent i;
@@ -703,6 +706,7 @@ void gfs_poisson_coefficients (GfsDomain * domain,
 			    (FttCellTraverseFunc) reset_coeff, NULL);
   p.alpha = alpha;
   p.domain = domain;
+  p.positive = positive;
   gfs_domain_face_traverse (domain, FTT_XYZ, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) poisson_coeff, &p);
