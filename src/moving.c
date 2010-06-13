@@ -847,12 +847,12 @@ static void move_vertex_mpi (GfsNumberedVertex * v, SolidInfo * par)
     gdouble dt = par->sim->advection_params.dt;
     for (c = 0; c < FTT_DIMENSION; c++) { 
       (&p->x)[c] += surface_value (cell, par->v[c], &pos)*dt;
-      g_array_index(par->stmp, double, 3*v->num+c) = (&p->x)[c];
+      g_array_index(par->stmp, double, FTT_DIMENSION*v->num+c) = (&p->x)[c];
     }  
   }
   else {
     for (c = 0; c < FTT_DIMENSION; c++)
-      g_array_index(par->stmp,double,3*v->num+c) = -G_MAXDOUBLE;
+      g_array_index(par->stmp,double,FTT_DIMENSION*v->num+c) = -G_MAXDOUBLE;
   }
 }
 
@@ -862,7 +862,7 @@ static void synchronize_vertex (GfsNumberedVertex * v, SolidInfo * par)
   FttComponent c;
 
   for (c = 0; c < FTT_DIMENSION; c++)
-    (&p->x)[c] = g_array_index(par->sall,double,3*v->num+c);
+    (&p->x)[c] = g_array_index(par->sall,double,FTT_DIMENSION*v->num+c);
 }
 
 #endif /* HAVE_MPI */
@@ -878,8 +878,8 @@ static void solid_move_remesh (GfsSolidMoving * solid, GfsSimulation * sim)
 
 #ifdef HAVE_MPI
     if (GFS_DOMAIN (sim)->pid >= 0) { /* Parallel simulation */
-      p.stmp = g_array_set_size ( g_array_new (FALSE, FALSE, sizeof (double)) , 3*solid->nvertex);
-      p.sall = g_array_set_size ( g_array_new (FALSE, FALSE, sizeof (double)) , 3*solid->nvertex);
+      p.stmp = g_array_set_size ( g_array_new (FALSE, FALSE, sizeof (double)) , FTT_DIMENSION*solid->nvertex);
+      p.sall = g_array_set_size ( g_array_new (FALSE, FALSE, sizeof (double)) , FTT_DIMENSION*solid->nvertex);
 
       gts_surface_foreach_vertex (surface->s, (GtsFunc) move_vertex_mpi, &p);
 
