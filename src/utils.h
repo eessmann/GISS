@@ -64,6 +64,10 @@ extern "C" {
 #  endif /* doesn't HAVE_MPI */
 #endif /* HAVE_CONFIG_H */
 
+#ifndef M_PI
+#  define M_PI 3.14159265358979323846
+#endif
+
 #define GFS_DOUBLE_TO_POINTER(d)     (*((gpointer *) &(d)))
 #define GFS_NODATA                   G_MAXDOUBLE
 #define GFS_HAS_DATA(cell,v)         (GFS_VALUE (cell, v) != GFS_NODATA)

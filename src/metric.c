@@ -93,18 +93,18 @@ static double B[N] = {
 };
 #endif
 
-static complex WofZ (complex Z)
+static complex double WofZ (complex double Z)
 {
-  complex W = 0.;
+  complex double W = 0.;
   int n = N;
   while (n-- > 0)
     W = (W + A[n])*Z;
   return W;
 }
 
-static complex ZofW (complex W)
+static complex double ZofW (complex double W)
 {
-  complex Z = 0.;
+  complex double Z = 0.;
   int n = N;
   while (n-- > 0)
     Z = (Z + B[n])*W;
@@ -140,8 +140,8 @@ static void fmap_xy2XYZ (double x, double y, double * X, double * Y, double * Z)
     y = 1. - y;
   }
 
-  complex z = (x + I*y)/2.;
-  complex W;
+  complex double z = (x + I*y)/2.;
+  complex double W;
   if (cabs (z) > 0.) {
     z = z*z*z*z;
     W = WofZ (z);
@@ -149,8 +149,8 @@ static void fmap_xy2XYZ (double x, double y, double * X, double * Y, double * Z)
   }
   else
     W = 0.;
-  complex cb = I - 1.;
-  complex cc = RA*cb/2.;
+  complex double cb = I - 1.;
+  complex double cc = RA*cb/2.;
   W = (W - RA)/(cb + cc*W);
   *X = creal (W);
   *Y = cimag (W);
@@ -240,14 +240,14 @@ static void fmap_XYZ2xy (double X, double Y, double Z, double * x, double * y)
 
   double H = Z + 1.;
   X /= H; Y /= H;
-  complex W = X + Y*I;
-  complex cb = I - 1.;
-  complex cc = RA*cb/2.;
+  complex double W = X + Y*I;
+  complex double cb = I - 1.;
+  complex double cc = RA*cb/2.;
   W = (W*cb + RA)/(1. - W*cc);
   W = W/I3;
   W = W*W*W;
   W /= I;
-  complex z = ZofW (W);
+  complex double z = ZofW (W);
   z = cpow (z, 1./4.)*2.;
   *x = fabs (creal (z));
   *y = fabs (cimag (z));

@@ -501,7 +501,7 @@ void compute_admittance(gsl_matrix *Mat,gsl_permutation *Perm,gsl_vector *sec_r,
   double dt,dp;
   double a1,a2,b1,b2,ux,uy,uz,vx,vy,vz,pds,angle;
   double ro;
-  double pi=M_PI;
+  double pi=3.14159265358979323846;
 
   double dtr=pi/180.0;
 

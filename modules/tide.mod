@@ -17,7 +17,6 @@
  * 02111-1307, USA.  
  */
 
-#define _XOPEN_SOURCE /* glibc2 needs this for strptime() */
 #include <string.h>
 #include <errno.h>
 #include <time.h>

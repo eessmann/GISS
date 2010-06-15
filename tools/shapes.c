@@ -29,8 +29,8 @@
 #  include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
-#ifndef PI
-# define PI 3.14159265359
+#ifndef M_PI
+# define M_PI 3.14159265359
 #endif
 
 static GtsSurface * triangulate (GSList * vertices,
@@ -204,7 +204,7 @@ static void surface_add_ellipse_shape (GtsSurface * s,
   g_return_if_fail (s != NULL);
   g_return_if_fail (np >= 3);
 
-  if (thetamax < 2.*PI)
+  if (thetamax < 2.*M_PI)
     npm = np + 1;
   for (i = 0; i < npm; i++) {
     gdouble theta1 = theta + i*thetamax/(gdouble) np;
@@ -231,7 +231,7 @@ static void surface_add_star_shape (GtsSurface * s,
   g_return_if_fail (np >= 3);
 
   for (i = 0; i < np; i++) {
-    gdouble theta = .001 + 2.*i*PI/np;
+    gdouble theta = .001 + 2.*i*M_PI/np;
     gdouble radius = 0.45 - dr + dr*cos (6.*theta);
 
     shape = g_slist_prepend (shape, 
@@ -252,7 +252,7 @@ static gdouble shape_func_bottom (gdouble x)
   if (x <= -0.25)
     return y1;
   if (x < 0.25)
-    return y2 + 0.5*(y1 - y2)*(1. + cos (2.*PI*(x + 0.25)));
+    return y2 + 0.5*(y1 - y2)*(1. + cos (2.*M_PI*(x + 0.25)));
   return y2;
 }
 
@@ -505,32 +505,32 @@ int main (int argc, char * argv[])
 		       gts_edge_class (),
 		       gts_vertex_class ());
   if (!strcmp (shape, "ellipse"))
-    surface_add_ellipse_shape (s, 0., 0., 0.25, 0.001, 2.*PI,
+    surface_add_ellipse_shape (s, 0., 0., 0.25, 0.001, 2.*M_PI,
 			       sqrt (1./ratio), - 1., 1., number, closed);
   else if (!strcmp (shape, "star"))
     surface_add_star_shape (s, dr, - 1., 1., number, closed);
   else if (!strcmp (shape, "4ellipses")) {
-    surface_add_ellipse_shape (s, 0.25, 0.25, 5./32./sqrt (2.), 0.001, 2.*PI,
+    surface_add_ellipse_shape (s, 0.25, 0.25, 5./32./sqrt (2.), 0.001, 2.*M_PI,
 			       sqrt (2.), - 1., 1., number, closed);
-    surface_add_ellipse_shape (s, -0.25, 0.25, 5./32./sqrt (2.), 0.001, 2.*PI,
+    surface_add_ellipse_shape (s, -0.25, 0.25, 5./32./sqrt (2.), 0.001, 2.*M_PI,
 			       sqrt (2.), - 1., 1., number, closed);
-    surface_add_ellipse_shape (s, 0.25, -0.25, 5./32./sqrt (2.), 0.001, 2.*PI,
+    surface_add_ellipse_shape (s, 0.25, -0.25, 5./32./sqrt (2.), 0.001, 2.*M_PI,
 			       sqrt (2.), - 1., 1., number, closed);
-    surface_add_ellipse_shape (s, -0.25, -0.25, 5./32./sqrt (2.), 0.001, 2.*PI,
+    surface_add_ellipse_shape (s, -0.25, -0.25, 5./32./sqrt (2.), 0.001, 2.*M_PI,
 			       sqrt (2.), - 1., 1., number, closed);
   }
   else if (!strcmp (shape, "square"))
-    surface_add_ellipse_shape (s, 0., 0., 0.25*sqrt(2.), PI/4.,  2.*PI, 1.,
+    surface_add_ellipse_shape (s, 0., 0., 0.25*sqrt(2.), M_PI/4.,  2.*M_PI, 1.,
 			       - 1., 1., 4, closed);
   else if (!strcmp (shape, "almgren")) {
-    surface_add_ellipse_shape (s, 0.25, 0.25, 0.1, 0.001,  2.*PI, 1., -1., 1., 
+    surface_add_ellipse_shape (s, 0.25, 0.25, 0.1, 0.001,  2.*M_PI, 1., -1., 1., 
 			       number, closed);
     surface_add_ellipse_shape (s, -0.25, 0.125, sqrt (0.15*0.1),
-			       0.001, 2.*PI,
+			       0.001, 2.*M_PI,
 			       0.15/sqrt (0.15*0.1),
 			       -1., 1., number, closed);
     surface_add_ellipse_shape (s, 0., -0.25, sqrt (0.2*0.1),
-			       0.001, 2.*PI,
+			       0.001, 2.*M_PI,
 			       0.2/sqrt (0.2*0.1),
 			       -1., 1., number, closed);
   }
@@ -539,7 +539,7 @@ int main (int argc, char * argv[])
   else if (!strcmp (shape, "half-cylinder")) {
     //    surface_add_rectangular_channel_shape (s, -1., 1., closed);
     surface_add_ellipse_shape (s, -0.375001, 0., 0.03125001, 
-			       PI/2., PI, 1., -1., 1., 
+			       M_PI/2., M_PI, 1., -1., 1., 
 			       number, closed);
   }
   else if (!strcmp (shape, "witch"))
@@ -547,10 +547,10 @@ int main (int argc, char * argv[])
   else if (!strcmp (shape, "rayleigh-taylor"))
     surface_add_rayleigh_taylor_shape (s, 0., 0.025, -1., 1., number);
   else if (!strcmp (shape, "annulus")) {
-    surface_add_ellipse_shape (s, 0., 0., 0.5, 0.001, 2.*PI,
+    surface_add_ellipse_shape (s, 0., 0., 0.5, 0.001, 2.*M_PI,
 			       1., - 2., 2., number, closed);
     gts_surface_foreach_face (s, (GtsFunc) gts_triangle_revert, NULL);
-    surface_add_ellipse_shape (s, 0., 0., 0.25, 0.001, 2.*PI,
+    surface_add_ellipse_shape (s, 0., 0., 0.25, 0.001, 2.*M_PI,
 			       1., - 1., 1., number, closed);
   }
   else if ((!strcmp (shape, "-") && (sfp = stdin)) || 
