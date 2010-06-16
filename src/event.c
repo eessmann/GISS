@@ -885,9 +885,9 @@ static void add_ddiv (FttCell * cell, gpointer * data)
   gdouble size = ftt_cell_size (cell);
   
   if (GFS_IS_MIXED (cell))
-    GFS_VARIABLE (cell, div->i) += size*size*GFS_STATE (cell)->solid->a*(*ddiv);
+    GFS_VALUE (cell, div) += size*size*GFS_STATE (cell)->solid->a*(*ddiv);
   else
-    GFS_VARIABLE (cell, div->i) += size*size*(*ddiv);
+    GFS_VALUE (cell, div) += size*size*(*ddiv);
 }
 
 static void correct_div (GfsDomain * domain, GfsVariable * v)
@@ -1307,7 +1307,7 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
       gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
       return;
     }
-    s->e->units = s->v->units;
+    s->e->units = 2.*s->v->units;
     gts_file_next_token (fp);
   }
 
@@ -1391,16 +1391,16 @@ static void gfs_event_harmonic_read (GtsObject ** o, GtsFile * fp)
 
 static void add_xsin_xcos (FttCell * cell, GfsEventHarmonic * h)
 {
-  gdouble x = GFS_VARIABLE (cell, h->v->i);
+  gdouble x = GFS_VALUE (cell, h->v);
   guint i;
 
   for (i = 0; i < h->omega->len; i++) {
-    GFS_VARIABLE (cell, h->A[i]->i) += x*h->vcos[i];
-    GFS_VARIABLE (cell, h->B[i]->i) += x*h->vsin[i];
+    GFS_VALUE (cell, h->A[i]) += x*h->vcos[i];
+    GFS_VALUE (cell, h->B[i]) += x*h->vsin[i];
   }
-  GFS_VARIABLE (cell, h->z->i) += x;
+  GFS_VALUE (cell, h->z) += x;
   if (h->e)
-    GFS_VARIABLE (cell, h->e->i) += x*x;
+    GFS_VALUE (cell, h->e) += x*x;
 }
 
 static gdouble de (GfsEventHarmonic * h, gdouble ** M)
@@ -1423,16 +1423,16 @@ static gdouble de (GfsEventHarmonic * h, gdouble ** M)
 
 static void update_A_B_Z (FttCell * cell, GfsEventHarmonic * h)
 {
-  gdouble x = GFS_VARIABLE (cell, h->v->i), sx2 = 0.;
+  gdouble x = GFS_VALUE (cell, h->v), sx2 = 0.;
   guint n = h->omega->len;
   guint i, j;
 
   /* A^n */
   for (i = 0; i < n; i++) {
-    h->a[i] =     GFS_VARIABLE (cell, h->A[i]->i);
-    h->a[i + n] = GFS_VARIABLE (cell, h->B[i]->i);
+    h->a[i] =     GFS_VALUE (cell, h->A[i]);
+    h->a[i + n] = GFS_VALUE (cell, h->B[i]);
   }
-  h->a[2*n] = GFS_VARIABLE (cell, h->z->i);
+  h->a[2*n] = GFS_VALUE (cell, h->z);
 
   /* X^n = M^n.A^n */
   for (i = 0; i < 2*n + 1; i++) {
@@ -1443,9 +1443,9 @@ static void update_A_B_Z (FttCell * cell, GfsEventHarmonic * h)
 
   if (h->e) {
     if (h->invertible)
-      sx2 = x*x + h->Mn[2*n][2*n]*GFS_VARIABLE (cell, h->e->i) - de (h, h->Mn);
+      sx2 = x*x + h->Mn[2*n][2*n]*GFS_VALUE (cell, h->e) - de (h, h->Mn);
     else
-      sx2 = x*x + GFS_VARIABLE (cell, h->e->i);
+      sx2 = x*x + GFS_VALUE (cell, h->e);
   }
   
   /* X^n+1 = X^n + Delta^n */
@@ -1463,13 +1463,13 @@ static void update_A_B_Z (FttCell * cell, GfsEventHarmonic * h)
   }
 
   for (i = 0; i < n; i++) {
-    GFS_VARIABLE (cell, h->A[i]->i) = h->a[i];
-    GFS_VARIABLE (cell, h->B[i]->i) = h->a[i + n];
+    GFS_VALUE (cell, h->A[i]) = h->a[i];
+    GFS_VALUE (cell, h->B[i]) = h->a[i + n];
   }
-  GFS_VARIABLE (cell, h->z->i) = h->a[2*n];
+  GFS_VALUE (cell, h->z) = h->a[2*n];
 
   if (h->e)
-    GFS_VARIABLE (cell, h->e->i) = (sx2 + de (h, h->M))/h->M[2*n][2*n];
+    GFS_VALUE (cell, h->e) = (sx2 + de (h, h->M))/h->M[2*n][2*n];
 }
 
 static gboolean gfs_event_harmonic_event (GfsEvent * event, GfsSimulation * sim)
@@ -2144,7 +2144,7 @@ static void filter (FttCell * cell, GfsEventFilter * f)
 
   for (i = 0; i < 4*(FTT_DIMENSION - 1); i++)
     val += gfs_cell_corner_value (cell, d[i], f->v, -1);
-  GFS_VARIABLE (cell, f->tmp->i) = val/(4*(FTT_DIMENSION - 1));
+  GFS_VALUE (cell, f->tmp) = val/(4*(FTT_DIMENSION - 1));
 }
 
 static void filtered (FttCell * cell, GfsEventFilter * f)

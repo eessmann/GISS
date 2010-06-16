@@ -36,7 +36,7 @@ static void reset_gradients (FttCell * cell, gpointer * data)
   FttComponent c;
 
   for (c = 0; c < *dimension; c++)
-    GFS_VARIABLE (cell, g[c]->i) = 0.;
+    GFS_VALUE (cell, g[c]) = 0.;
 }
 
 static void correct_normal_velocity (FttCellFace * face,
@@ -57,17 +57,17 @@ static void correct_normal_velocity (FttCellFace * face,
   c = face->d/2;
 
   gfs_face_gradient (face, &g, p->i, -1);
-  dp = (g.b - g.a*GFS_VARIABLE (face->cell, p->i))/ftt_cell_size (face->cell);
+  dp = (g.b - g.a*GFS_VALUE (face->cell, p))/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
     dp = - dp;
 
   GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= dp*(*dt);
-  GFS_VARIABLE (face->cell, gv[c]->i) += dp;
+  GFS_VALUE (face->cell, gv[c]) += dp;
 
   if (ftt_face_type (face) == FTT_FINE_COARSE)
     dp *= GFS_FACE_FRACTION_LEFT (face)/(GFS_FACE_FRACTION_RIGHT (face)*FTT_CELLS/2);
   GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= dp*(*dt);
-  GFS_VARIABLE (face->neighbor, gv[c]->i) += dp;
+  GFS_VALUE (face->neighbor, gv[c]) += dp;
 }
 
 static void scale_gradients (FttCell * cell, gpointer * data)
@@ -82,7 +82,7 @@ static void scale_gradients (FttCell * cell, gpointer * data)
     FttCell * c1 = n.c[2*c], * c2 = n.c[2*c + 1];
     
     if (c1 && c2 && !GFS_CELL_IS_GRADIENT_BOUNDARY (c1) && !GFS_CELL_IS_GRADIENT_BOUNDARY (c2))
-      GFS_VARIABLE (cell, g[c]->i) /= 2.;
+      GFS_VALUE (cell, g[c]) /= 2.;
   }
 }
 
