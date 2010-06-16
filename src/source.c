@@ -1471,10 +1471,8 @@ static void gfs_source_coriolis_read (GtsObject ** o, GtsFile * fp)
 
   GfsSourceCoriolis * s = GFS_SOURCE_CORIOLIS (*o);
 
-  if (GFS_IS_RIVER (domain)) {
+  if (GFS_IS_RIVER (domain))
     s->beta = 1.; /* backward Euler */
-    GFS_SOURCE_GENERIC (s)->centered_value = NULL;
-  }
 
   s->omegaz = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (s->omegaz, gfs_object_simulation (s), fp);
@@ -1491,6 +1489,10 @@ static void gfs_source_coriolis_read (GtsObject ** o, GtsFile * fp)
   if (s->beta < 1.)
     for (c = 0; c <  2; c++)
       s->u[c] = gfs_temporary_variable (domain);
+  else {
+    GFS_SOURCE_GENERIC (s)->centered_value = NULL;
+    GFS_SOURCE_GENERIC (s)->mac_value = NULL;
+  }
 }
 
 static void gfs_source_coriolis_write (GtsObject * o, FILE * fp)
