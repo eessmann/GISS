@@ -609,8 +609,8 @@ static void update_terrain (FttCell * cell, GfsRefineTerrain * t)
     GFS_VALUE (cell, t->h[i]) = rms.h[i];
   GFS_VALUE (cell, t->he) = rms.he;
   GFS_VALUE (cell, t->hn) = rms.m[0][0];
-  GFS_VALUE (cell, t->hdmin) = rms.min;
-  GFS_VALUE (cell, t->hdmax) = rms.max;
+  GFS_VALUE (cell, t->hdmin) = rms.min <   G_MAXDOUBLE ? rms.min : GFS_NODATA;
+  GFS_VALUE (cell, t->hdmax) = rms.max > - G_MAXDOUBLE ? rms.max : GFS_NODATA;
   GFS_VALUE (cell, t->type) = RAW;
 }
 

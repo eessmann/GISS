@@ -75,7 +75,7 @@ static gdouble average_neighbor_value (const FttCellFace * face,
     
     n = ftt_cell_children_direction (face->neighbor, od, &children);
     for (i = 0; i < n; i++)
-      if (children.c[i]) {
+      if (children.c[i] && GFS_VARIABLE (children.c[i], v) != GFS_NODATA) {
 	gdouble w = GFS_IS_MIXED (children.c[i]) ? GFS_STATE (children.c[i])->solid->s[od] : 1.;
 	a += w;
 	av += w*GFS_VARIABLE (children.c[i], v);
@@ -170,18 +170,18 @@ static GfsGradient interpolate_1D1 (FttCell * cell,
 				    gdouble x,
 				    guint v)
 {
-  GfsGradient p;
+  GfsGradient p = { 1., 0. };
   FttCellFace f;
 
   f = gfs_cell_face (cell, d);
   if (f.neighbor) {
-    gdouble x2 = 1., p2 = average_neighbor_value (&f, v, &x2);
-    p.a = 1. - x/x2;
-    p.b = p2*x/x2;
-  }
-  else {
-    p.a = 1.;
-    p.b = 0.;
+    gdouble x2 = 1.;
+    gdouble p2 = average_neighbor_value (&f, v, &x2);
+    if (p2 != GFS_NODATA) {
+      gdouble a2 = x/x2;
+      p.b += a2*p2;
+      p.a -= a2;
+    }
   }
 
   return p;
@@ -213,33 +213,30 @@ static GfsGradient interpolate_2D1 (FttCell * cell,
 				    gdouble x, gdouble y,
 				    guint v)
 {
-  GfsGradient p;
-  gdouble y1 = 1.;
-  gdouble x2 = 1.;
-  gdouble p1 = 0., p2 = 0.;
-  gdouble a1, a2;
+  GfsGradient p = { 1., 0. };
   FttCellFace f1, f2;
 
   f1 = gfs_cell_face (cell, d1);
-  if (f1.neighbor)
-    p1 = average_neighbor_value (&f1, v, &y1);
+  if (f1.neighbor) {
+    gdouble y1 = 1.;
+    gdouble p1 = average_neighbor_value (&f1, v, &y1);
+    if (p1 != GFS_NODATA) {
+      gdouble a1 = y/y1;
+      p.b += a1*p1;
+      p.a -= a1;
+    }
+  }
+
   f2 = gfs_cell_face (cell, d2);
-  if (f2.neighbor)
-    p2 = average_neighbor_value (&f2, v, &x2);
-
-  a1 = y/y1;
-  a2 = x/x2;
-
-  p.a = 1. - a1 - a2;
-  p.b = 0.;
-  if (f1.neighbor)
-    p.b += a1*p1;
-  else
-    p.a += a1;
-  if (f2.neighbor)
-    p.b += a2*p2;
-  else
-    p.a += a2;
+  if (f2.neighbor) {
+    gdouble x2 = 1.;
+    gdouble p2 = average_neighbor_value (&f2, v, &x2);
+    if (p2 != GFS_NODATA) {
+      gdouble a2 = x/x2;
+      p.b += a2*p2;
+      p.a -= a2;
+    }
+  }
   
   return p;
 }
@@ -367,6 +364,8 @@ static gdouble neighbor_value (const FttCellFace * face,
     /* neighbor at same level */
     return average_neighbor_value (face, v, x);
   else {
+    if (GFS_VARIABLE (face->neighbor, v) == GFS_NODATA)
+      return GFS_NODATA;
     /* neighbor at coarser level */
     dp = perpendicular[face->d][FTT_CELL_ID (face->cell)];
 #if FTT_2D
@@ -522,19 +521,19 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
     if (f2.neighbor) {
       /* two neighbors: second-order differencing (parabola)
 	 + van Leer limiter. See http://en.wikipedia.org/wiki/Flux_limiter */
-      gdouble x1 = 1., x2 = 1., v0, v1, v2;
-      gdouble s0, s1, s2;
-      
+      gdouble x1 = 1., x2 = 1., v0, v1, v2;      
       v0 = GFS_VARIABLE (cell, v);
       v1 = neighbor_value (&f1, v, &x1);
       v2 = neighbor_value (&f2, v, &x2);
+      if (v1 == GFS_NODATA || v2 == GFS_NODATA)
+	return 0.;
 
-      s1 = 2.*(v0 - v1);
-      s2 = 2.*(v2 - v0);
+      gdouble s1 = 2.*(v0 - v1);
+      gdouble s2 = 2.*(v2 - v0);
 
       if (s1*s2 <= 0.)
 	return 0.;
-      s0 = (x1*x1*(v2 - v0) + x2*x2*(v0 - v1))/(x1*x2*(x2 + x1));
+      gdouble s0 = (x1*x1*(v2 - v0) + x2*x2*(v0 - v1))/(x1*x2*(x2 + x1));
       if (ABS (s2) < ABS (s1))
 	s1 = s2;
       if (ABS (s0) < ABS (s1))
