@@ -1490,8 +1490,8 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
     gfs_domain_face_traverse (domain, p.c,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) vof_flux, &p);
-    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, par);
-    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, &p.vpar);
+    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) par->update, par);
+    gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) par->update, &p.vpar);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
     			      (FttCellTraverseFunc) f_over_dV, &p);
     gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,

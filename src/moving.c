@@ -180,9 +180,7 @@ static void moving_cell_init (FttCell * cell, SolidInfo * solid_info)
     
     if (v->coarse_fine == (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine)
       moving_cell_coarse_fine (cell, v);
-    /* these are variables specific to moving solid boudaries */
-    else if (v->coarse_fine != sold2_fine_init && v != old_solid_v)
-      g_assert_not_implemented ();
+
     i = i->next;
   }
 
@@ -731,9 +729,7 @@ static void moving_init (GfsSimulation * sim)
   sim->advection_params.update = (GfsMergedTraverseFunc) moving_advection_update;
 
   while (i) {
-    if (GFS_IS_VARIABLE_TRACER_VOF (i->data))
-      g_assert_not_implemented ();
-    else if (GFS_IS_VARIABLE_TRACER (i->data)) {
+    if (GFS_IS_VARIABLE_TRACER (i->data)) {
       GfsAdvectionParams * par = &GFS_VARIABLE_TRACER (i->data)->advection;
       if (sim->advection_params.moving_order == 2)
 	par->flux = moving_face_advection_flux;
