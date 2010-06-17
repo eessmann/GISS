@@ -3253,3 +3253,91 @@ GfsOutputClass * gfs_output_grd_class (void)
 
   return klass;
 }
+
+/* GfsOutputObject: Object */
+
+GtsObject * gfs_object_from_name (GfsSimulation * sim, GString * name)
+{
+  GSList * i = sim->events->items;
+  
+  while (i) {
+    GtsObject * object = i->data;
+    if (g_string_equal (g_string_new(GFS_EVENT(object)->name), name)) {
+      return object;
+    }
+    i = i->next;
+  }
+  return NULL;
+}
+
+static void output_object_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_output_class())->read) (o, fp);
+
+  GfsOutputObject * output = GFS_OUTPUT_OBJECT (*o);
+  GfsSimulation * sim = GFS_SIMULATION(gfs_object_simulation (*o));
+  GString * name;
+
+  if (fp->type == GTS_STRING) {
+    name = g_string_new (fp->token->str);
+    gts_file_next_token (fp);
+  }
+  else
+    gts_file_error (fp, "expecting a string name of (GfsEvent)");
+
+  output->object = gfs_object_from_name (sim, name);
+
+  if (output->object == NULL)
+    gts_file_error (fp, "unknown name %s", name->str);
+}
+
+static void output_object_write (GtsObject * o, FILE * fp)
+{
+  GfsOutputObject * output = GFS_OUTPUT_OBJECT (o);
+
+  (* GTS_OBJECT_CLASS (gfs_output_object_class ())->parent_class->write) (o, fp);
+  
+  fprintf(fp, " %s\n", GFS_EVENT(output->object)->name );
+}
+
+static gboolean output_object_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
+    GtsObject * object = GFS_OUTPUT_OBJECT (event)->object;
+    FILE * fp = GFS_OUTPUT (event)->file->fp;
+
+    object->klass->write(object, fp);
+    fprintf(fp,"\n");
+
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_output_object_class_init (GfsOutputClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = output_object_read;
+  GTS_OBJECT_CLASS (klass)->write = output_object_write;
+  GFS_EVENT_CLASS(klass)->event = output_object_event;
+}
+
+GfsOutputClass * gfs_output_object_class (void)
+{
+  static GfsOutputClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_output_object_info = {
+      "GfsOutputObject",
+      sizeof (GfsOutputObject),
+      sizeof (GfsOutputClass),
+      (GtsObjectClassInitFunc) gfs_output_object_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_output_class ()),
+				  &gfs_output_object_info);
+  }
+
+  return klass;
+}

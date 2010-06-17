@@ -369,6 +369,28 @@ GfsOutputClass * gfs_output_ppm_class  (void);
 
 GfsOutputClass * gfs_output_grd_class  (void);
 
+/* GfsOutputObject: Header */
+
+typedef struct _GfsOutputObject         GfsOutputObject;
+
+struct _GfsOutputObject {
+  /*< private >*/
+  GfsOutput parent;
+
+  /*< public >*/
+  GtsObject * object;
+};
+
+#define GFS_OUTPUT_OBJECT(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsOutputObject,\
+					         gfs_output_object_class ())
+#define GFS_IS_OUTPUT_OBJECT(obj)         (gts_object_is_from_class (obj,\
+						 gfs_output_object_class ()))
+
+GfsOutputClass * gfs_output_object_class  (void);
+
+GtsObject * gfs_object_from_name        (GfsSimulation * sim, GString * name);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
