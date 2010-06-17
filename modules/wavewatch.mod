@@ -20,6 +20,8 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "init.h"
 #include "wave.h"
 #include "config.h"
@@ -177,8 +179,15 @@ static void initialize (GfsWave * wave)
   if (!initialized) {
 
     /* Creates temporary directory */
+#if 0 /* mkdtemp() is not defined on all systems (only POSIX 2008-compliant systems) */
     char template[] = "/tmp/gfswavewatch.XXXXXX", * tmp;
     tmp = mkdtemp (template);
+#else /* use C89 functions */
+    char template[L_tmpnam], * tmp;
+    tmp = tmpnam (template);
+    if (mkdir (tmp, S_IRUSR | S_IWUSR | S_IXUSR))
+      tmp = NULL;
+#endif
     if (tmp == NULL) {
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR, 
 	     "wavewatch module: could not create temporary directory\n"
