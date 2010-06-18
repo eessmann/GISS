@@ -52,8 +52,11 @@ clean-generic:
 
 DOC = tests
 
+# we need this for gfs.sty
+TEXINPUTS := .:$(top_srcdir)/doc/examples:
+
 tests: tests.dvi
-	hevea -fix $(DOC).tex
+	hevea -fix -I $(top_srcdir)/doc/examples $(DOC).tex
 	imagen -res 500 -extra "pnmscale 0.24" $(DOC)
 	hacha $(DOC).html
 	rm -f $(DOC).html

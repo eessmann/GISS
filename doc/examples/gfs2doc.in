@@ -27,6 +27,7 @@ for d in sys.argv[1:]:
     \usepackage{hevea}
     \usepackage[usenames]{color}
     \usepackage{graphicx}
+    \usepackage{gfs}
     
     \oddsidemargin=4mm
     \evensidemargin=-1mm
@@ -34,9 +35,6 @@ for d in sys.argv[1:]:
     \textwidth=15.42cm
     \textheight=23.2cm
 
-    \newcommand{\htmladdnormallinkfoot}[2]{\footahref{#2}{#1}}
-    \newcommand{\htmladdnormallink}[2]{\ahref{#2}{#1}}
-    
     \begin{document}
     \section{Examples}
     """)
@@ -44,7 +42,8 @@ for d in sys.argv[1:]:
     tex.write("\\end{document}\n")
     tex.close()
     os.symlink(os.getcwd() + "/" + example.name, wdname + "/" + example.name)
-    if os.system("rm -r -f " + example.name + ".pdf " + example.name + "_html" +\
+    if os.system("export TEXINPUTS=\".:@prefix@/share/gerris:\" " +\
+              "&& rm -r -f " + example.name + ".pdf " + example.name + "_html" +\
               "&& cd " + wdname + \
               "&& latex -interaction=nonstopmode 2>&1 " + example.name + ".tex" +\
               "&& latex -interaction=nonstopmode " + example.name + ".tex") or \
@@ -61,7 +60,7 @@ for d in sys.argv[1:]:
     os.symlink("../" + example.name, hname + "/" + example.name)
     wdir = os.getcwd()
     if os.system("cd " + wdname + \
-		 "&& hevea -fix " + example.name + ".tex"):
+		 "&& hevea -fix -I @prefix@/share/gerris " + example.name + ".tex"):
         print "\n\n**** Errors occured while generating directory ****: " + example.name + "_html"
         myexit(1)
     os.system("cd " + wdname + \
