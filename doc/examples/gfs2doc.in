@@ -59,11 +59,14 @@ for d in sys.argv[1:]:
     os.mkdir(hname)
     os.symlink("../" + example.name, hname + "/" + example.name)
     wdir = os.getcwd()
-    if os.system("cd " + wdname + \
-		 "&& hevea -fix -I @prefix@/share/gerris " + example.name + ".tex"):
+    if os.system("export TEXINPUTS=\".:@prefix@/share/gerris:\" " +\
+                 "&& cd " + wdname + \
+		 "&& hevea -fix -I @prefix@/share/gerris " + example.name + ".tex" + \
+                 "&& sh @prefix@/share/gerris/kaltura.sh " + example.name):
         print "\n\n**** Errors occured while generating directory ****: " + example.name + "_html"
         myexit(1)
-    os.system("cd " + wdname + \
+    os.system("export TEXINPUTS=\".:@prefix@/share/gerris:\" " +\
+                  "&& cd " + wdname + \
                   "; imagen -res 600 -extra \"pnmscale 0.24\" " + example.name + " " + \
                   "; mv -f " + example.name + "[0-9][0-9][0-9].png " + example.name + ".html " + \
                   hname + \

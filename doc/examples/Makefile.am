@@ -25,7 +25,7 @@ EXTRA_DIST = \
 	gfsxref \
 	gfs-mode.el \
 	modulesyms.sh \
-	gfs.sty gfs.hva
+	gfs.sty gfs.hva kaltura.sh
 
 TESTS = test.sh
 
@@ -42,7 +42,7 @@ BUILT_SOURCES= \
 CLEANFILES = $(BUILT_SOURCES) Makefile.deps
 
 pkglib_DATA = gfs2tex.py
-pkgdata_DATA = gfs.lang gerris.dic gfs-keywords.el gfs-mode.el gfs.sty gfs.hva
+pkgdata_DATA = gfs.lang gerris.dic gfs-keywords.el gfs-mode.el gfs.sty gfs.hva kaltura.sh
 
 gerris.dic: classes modulesyms.sh $(top_srcdir)/modules/Makefile.am
 	($(srcdir)/classes && sh $(srcdir)/modulesyms.sh $(top_srcdir)/modules) | sort > gerris.dic
