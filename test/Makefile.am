@@ -53,11 +53,11 @@ clean-generic:
 DOC = tests
 
 # we need this for gfs.sty
-TEXINPUTS := .:$(top_srcdir)/doc/examples:
+TEXINPUTS = .:$(top_srcdir)/doc/examples:
 
 tests: tests.dvi
-	hevea -fix -I $(top_srcdir)/doc/examples $(DOC).tex
-	imagen -res 500 -extra "pnmscale 0.24" $(DOC)
+	TEXINPUTS=$(TEXINPUTS) hevea -fix -I $(top_srcdir)/doc/examples $(DOC).tex
+	TEXINPUTS=$(TEXINPUTS) imagen -res 500 -extra "pnmscale 0.24" $(DOC)
 	hacha $(DOC).html
 	rm -f $(DOC).html
 	mv -f $(DOC)[0-9][0-9][0-9].png $(DOC)
@@ -71,10 +71,10 @@ tests: tests.dvi
 	mv references tests
 
 tests.dvi: tests.tex tests.bib
-	latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
+	TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
 	bibtex tests
-	latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
-	latex -interaction=nonstopmode tests.tex
+	TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
+	TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex
 
 tests.pdf: tests.dvi
 	dvips -Ppdf -G0 tests.dvi -o tests.ps
