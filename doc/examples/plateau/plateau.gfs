@@ -13,10 +13,10 @@
 # can sometimes be seen between fragments in the animation.
 #
 # \begin{figure}[htbp]
-# \caption{\label{white}MPEG movie of the evolving interface for a
+# \caption{\label{white}Evolving interface for a
 # Savart--Plateau--Rayleigh instability.}
 # \begin{center}
-# \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{white.eps}}{white.mpg}
+# \video{plateau/white}{600}{600}
 # \end{center}
 # \end{figure}
 #
@@ -30,14 +30,14 @@
 # \begin{figure}[htbp]
 # \caption{\label{plateau}Evolving interface coloured according to the local spatial resolution.}
 # \begin{center}
-# \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{plateau.eps}}{plateau.mpg}
+# \video{plateau/plateau}{600}{600}
 # \end{center}
 # \end{figure}
 #
 # \begin{figure}[htbp]
 # \caption{\label{closeup}Detail of the interface reconnection.}
 # \begin{center}
-# \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{closeup.eps}}{closeup.mpg}
+# \video{plateau/closeup}{600}{600}
 # \end{center}
 # \end{figure}
 #
@@ -62,7 +62,7 @@
 # Version: 100529
 # Required files: plateau.gfv white.gfv closeup.gfv
 # Running time: 2 hours
-# Generated files: plateau.mpg white.mpg closeup.mpg plateau.eps white.eps closeup.eps size.eps
+# Generated files: plateau.ogv white.ogv closeup.ogv plateau.png white.png closeup.png plateau.eps white.eps closeup.eps size.eps
 
 # Air/water physical parameters
 Define RHO_L            998.
@@ -129,7 +129,7 @@ Define MUR(T)           VAR(T, MU_G/MU_L, 1.)
 	rm -f $movies
 	mkfifo $movies
 	for movie in $movies; do
-	    ppm2mpeg -s 800x800 < $movie > $movie.mpg &
+	    ppm2video -s 600x600 $movie.ogv < $movie &
 	done
     }
     OutputSimulation { istep = 5 } stdout
@@ -138,15 +138,18 @@ Define MUR(T)           VAR(T, MU_G/MU_L, 1.)
 	for movie in $movies; do
 	    echo "Clear"
 	    cat $movie.gfv
-	    echo "Append $movie { width = 1600 height = 1600 }"
+	    echo "Append $movie { width = 1200 height = 1200 }"
 	done
     }
 
     # Generate figures
     EventScript { start = end } {
 	for f in white plateau closeup; do
-	    echo "Save $f.eps { format = EPS }" | \
+	    echo "Save $f.ppm { format = PPM width = 1200 height = 1200 }" | \
 		gfsview-batch3D $f.gfv plateau-1000.gfs.gz
+	    convert $f.ppm -geometry 600x600 $f.png
+	    convert $f.png $f.eps
+	    rm -f $f.ppm
 	done
 	cat <<EOF | gnuplot
         set term postscript eps color lw 2 20
