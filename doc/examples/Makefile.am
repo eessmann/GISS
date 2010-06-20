@@ -86,6 +86,7 @@ examples: examples.dvi crossref.sh
 ##	for f in *.html; do konwert iso1-utf8 < $$f > $(DOC)/$$f; rm -f $$f; done
 	mv -f *.html $(DOC)
 	cat $(DOC).css ../share/darcs.css > $(DOC)/$(DOC).css
+	for f in $(DOC)/*.html; do sh kaltura.sh $$f; done
 	sh ../share/fixnav.sh $(DOC)
 	cp -f ../share/contents.png ../share/next.png ../share/prev.png $(DOC)
 	rm -f *_motif.gif $(DOC).h{tml,aux,ind,toc} $(DOC).image.tex $(DOC).css
