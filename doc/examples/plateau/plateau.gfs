@@ -16,7 +16,7 @@
 # \caption{\label{white}Evolving interface for a
 # Savart--Plateau--Rayleigh instability.}
 # \begin{center}
-# \video{plateau/white}{600}{600}
+# \video{plateau/white}{640}{640}
 # \end{center}
 # \end{figure}
 #
@@ -30,14 +30,14 @@
 # \begin{figure}[htbp]
 # \caption{\label{plateau}Evolving interface coloured according to the local spatial resolution.}
 # \begin{center}
-# \video{plateau/plateau}{600}{600}
+# \video{plateau/plateau}{640}{640}
 # \end{center}
 # \end{figure}
 #
 # \begin{figure}[htbp]
 # \caption{\label{closeup}Detail of the interface reconnection.}
 # \begin{center}
-# \video{plateau/closeup}{600}{600}
+# \video{plateau/closeup}{640}{640}
 # \end{center}
 # \end{figure}
 #
@@ -129,7 +129,7 @@ Define MUR(T)           VAR(T, MU_G/MU_L, 1.)
 	rm -f $movies
 	mkfifo $movies
 	for movie in $movies; do
-	    ppm2video -s 600x600 $movie.ogv < $movie &
+	    ppm2theora -s 640x640 < $movie > $movie.ogv &
 	done
     }
     OutputSimulation { istep = 5 } stdout
@@ -138,16 +138,16 @@ Define MUR(T)           VAR(T, MU_G/MU_L, 1.)
 	for movie in $movies; do
 	    echo "Clear"
 	    cat $movie.gfv
-	    echo "Append $movie { width = 1200 height = 1200 }"
+	    echo "Append $movie { width = 1280 height = 1280 }"
 	done
     }
 
     # Generate figures
     EventScript { start = end } {
 	for f in white plateau closeup; do
-	    echo "Save $f.ppm { format = PPM width = 1200 height = 1200 }" | \
+	    echo "Save $f.ppm { format = PPM width = 1280 height = 1280 }" | \
 		gfsview-batch3D $f.gfv plateau-1000.gfs.gz
-	    convert $f.ppm -geometry 600x600 $f.png
+	    convert $f.ppm -geometry 640x640 $f.png
 	    convert $f.png $f.eps
 	    rm -f $f.ppm
 	done
