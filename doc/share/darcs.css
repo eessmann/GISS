@@ -1,6 +1,6 @@
 BODY {
   font: x-small sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   background: white;
   color: black;
   margin: 0;
@@ -56,19 +56,23 @@ H1, H2, H3, H4 {
 }
 
 H1      {
-  font-size: 24px ;
+  font-size: 18px ;
 }
 
 H2      {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 H3      {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 H4      {
   font-size: 14px;
+}
+
+.caption table {
+  font-size: 12px;
 }
 
 /* GFS parameter files */
