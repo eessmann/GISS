@@ -30,7 +30,8 @@ TESTDIRS = \
 	parabola \
 	lonlat \
 	cosine \
-	electro
+	electro \
+	coriolis
 
 EXTRA_DIST = \
 	template.tex \
