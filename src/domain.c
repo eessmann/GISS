@@ -4442,3 +4442,18 @@ GSList * gfs_receive_boxes (GfsDomain * domain, int src)
   }
   return boxes;
 }
+
+/**
+ * gfs_object_from_name:
+ * @domain: a #GfsDomain.
+ * @name: the name.
+ *
+ * Returns: the object of @domain called @name or %NULL.
+ */
+GtsObject * gfs_object_from_name (GfsDomain * domain, const gchar * name)
+{
+  g_return_val_if_fail (domain != NULL, NULL);
+  g_return_val_if_fail (name != NULL, NULL);
+
+  return g_hash_table_lookup (domain->objects, name);
+}

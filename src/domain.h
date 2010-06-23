@@ -435,6 +435,9 @@ gdouble gfs_cell_volume (const FttCell * cell, const GfsDomain * domain)
   return domain->cell_metric ? (* domain->cell_metric) (domain, cell)*v : v;
 }
 
+GtsObject * gfs_object_from_name        (GfsDomain * domain, 
+					 const gchar * name);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

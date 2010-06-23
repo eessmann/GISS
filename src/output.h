@@ -389,8 +389,6 @@ struct _GfsOutputObject {
 
 GfsOutputClass * gfs_output_object_class  (void);
 
-GtsObject * gfs_object_from_name        (GfsSimulation * sim, GString * name);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

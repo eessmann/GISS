@@ -3256,39 +3256,22 @@ GfsOutputClass * gfs_output_grd_class (void)
 
 /* GfsOutputObject: Object */
 
-GtsObject * gfs_object_from_name (GfsSimulation * sim, GString * name)
-{
-  GSList * i = sim->events->items;
-  
-  while (i) {
-    GtsObject * object = i->data;
-    if (g_string_equal (g_string_new(GFS_EVENT(object)->name), name)) {
-      return object;
-    }
-    i = i->next;
-  }
-  return NULL;
-}
-
 static void output_object_read (GtsObject ** o, GtsFile * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_output_class())->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
 
-  GfsOutputObject * output = GFS_OUTPUT_OBJECT (*o);
-  GfsSimulation * sim = GFS_SIMULATION(gfs_object_simulation (*o));
-  GString * name;
-
-  if (fp->type == GTS_STRING) {
-    name = g_string_new (fp->token->str);
-    gts_file_next_token (fp);
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (object name)");
+    return;
   }
-  else
-    gts_file_error (fp, "expecting a string name of (GfsEvent)");
-
-  output->object = gfs_object_from_name (sim, name);
-
+  GfsOutputObject * output = GFS_OUTPUT_OBJECT (*o);
+  output->object = gfs_object_from_name (GFS_DOMAIN (gfs_object_simulation (*o)), fp->token->str);
   if (output->object == NULL)
-    gts_file_error (fp, "unknown name %s", name->str);
+    gts_file_error (fp, "unknown object '%s'", fp->token->str);
+  else
+    gts_file_next_token (fp);
 }
 
 static void output_object_write (GtsObject * o, FILE * fp)
@@ -3297,7 +3280,7 @@ static void output_object_write (GtsObject * o, FILE * fp)
 
   (* GTS_OBJECT_CLASS (gfs_output_object_class ())->parent_class->write) (o, fp);
   
-  fprintf(fp, " %s\n", GFS_EVENT(output->object)->name );
+  fprintf (fp, " %s\n", GFS_EVENT (output->object)->name );
 }
 
 static gboolean output_object_event (GfsEvent * event, GfsSimulation * sim)
@@ -3306,8 +3289,8 @@ static gboolean output_object_event (GfsEvent * event, GfsSimulation * sim)
     GtsObject * object = GFS_OUTPUT_OBJECT (event)->object;
     FILE * fp = GFS_OUTPUT (event)->file->fp;
 
-    object->klass->write(object, fp);
-    fprintf(fp,"\n");
+    object->klass->write (object, fp);
+    fprintf (fp, "\n");
 
     return TRUE;
   }
