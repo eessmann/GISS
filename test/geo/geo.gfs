@@ -112,7 +112,7 @@
     set output 'geo_error.eps'
     set xlabel 'Time (days)'
     set ylabel 'Maximum error on surface height (cm)'
-    plot 'e.ref' u 1:(\$2*100.) t '' w l, 'e' u 1:(\$2*100.) t 'ref' w l
+    plot 'e.ref' u 1:(\$2*100.) t 'ref' w l, 'e' u 1:(\$2*100.) t '' w l
 EOF
   }
 }

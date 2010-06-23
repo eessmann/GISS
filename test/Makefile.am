@@ -16,6 +16,7 @@ TESTDIRS = \
 	couette \
 	kinetic \
 	hydrostatic \
+	coriolis \
 	boundaries \
 	channel \
 	plate \
@@ -30,8 +31,7 @@ TESTDIRS = \
 	parabola \
 	lonlat \
 	cosine \
-	electro \
-	coriolis
+	electro
 
 EXTRA_DIST = \
 	template.tex \

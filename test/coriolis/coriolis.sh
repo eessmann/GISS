@@ -1,17 +1,19 @@
 if test x$donotrun != xtrue; then
-    gerris3D -m $1
+    if gerris3D -m $1; then :
+    else
+	exit 1
+    fi
 fi
 
-if cat <<EOF| gnuplot ; then :
-set term pos enhanced eps color solid lw 2
+if gnuplot <<EOF ; then :
+set term pos enhanced eps color solid lw 2 18
 set out 'velocity.eps'
 
 set bmargin 4
 set rmargin 3.5
 
-set xl '{/Times=25 Time (s)}'
-set yl '{/Times=25 Velocity Components (m/s)}'
-set tics font "Times,20"
+set xl 'Time (s)'
+set yl 'Velocity Components (m/s)'
 
 set key spacing 3
 
@@ -29,9 +31,9 @@ solv(t)=(-A*sin(Phi)*sin(2*Omega*t) + B*sin(Phi)*cos(2*Omega*t) + C)
 solw(t)=(A*cos(Phi)*sin(2*Omega*t) - B*cos(Phi)*cos(2*Omega*t) + D)
 
 plot solu(x) t '', solv(x) t '', solw(x) t '',\
-     'u.dat' w p lc 1 ps 1.8 t '{/Times=30 u}',\
-     'v.dat' w p lc 2 ps 1.8 t '{/Times=30 v}',\
-     'w.dat' w p lc 3 ps 1.8 t '{/Times=30 w}'
+     'u.dat' w p lc 1 ps 1.8 t 'U',\
+     'v.dat' w p lc 2 ps 1.8 t 'V',\
+     'w.dat' w p lc 3 ps 1.8 t 'W'
 
 EOF
 else

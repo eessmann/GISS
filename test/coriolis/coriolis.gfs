@@ -1,48 +1,47 @@
-# Title: Test of the Coriolis formulation in 3-D
+# Title: Coriolis formulation in 3-D
 #
 # Description:
 #
 # This test case is taken from the test cases of the Advanced Regional
-# Prediction System (ARPS - http://www.caps.ou.edu/ARPS).
-# A Coriolis force term is applied to a cubic domain with periodic boundary
+# Prediction System \cite{arps}.
+# A Coriolis term is applied to a cubic domain with periodic boundary
 # conditions in the x, y and z directions. Provided the flow has a unidirectional
 # initial velocity field and a zero initial pressure perturbation,
-# the spatial derivatives are intially zero and a solution exists to the
+# the spatial derivatives are initially zero and a solution exists to the
 # Navier-Stokes equations for which spatial derivatives are zero at
-# all time.
+# all times.
 #
 # In this case the velocity field is given by:
 # $$
-# u = A cos(2\Omega t) + B sin(2\Omega t)
+# u = A \cos(2\Omega t) + B \sin(2\Omega t)
 # $$
 # $$
-# v = - A sin \Phi sin(2\Omega t) + B sin \Phi cos(2\Omega t) + C
+# v = - A \sin \Phi \sin(2\Omega t) + B \sin \Phi \cos(2\Omega t) + C
 # $$
 # $$
-# w = A cos \Phi sin(2\Omega t) - B cos \Phi cos(2\Omega t) + D
+# w = A \cos \Phi \sin(2\Omega t) - B \cos \Phi \cos(2\Omega t) + D
 # $$
-# where A, B, C and D are constants of integration :
+# where $A$, $B$, $C$ and $D$ are constants of integration:
 # $$
 # A = U_0
 # $$
 # $$
-# B = sin \Phi V_0 - cos \Phi W_0
+# B = \sin \Phi V_0 - \cos \Phi W_0
 # $$
 # $$
-# C = cos \Phi \left( cos \Phi V_0 + sin \Phi W_0 \right)
+# C = \cos \Phi \left( \cos \Phi V_0 + \sin \Phi W_0 \right)
 # $$
 # $$
-# D = sin \Phi \left( cos \Phi V_0 + sin \Phi W_0 \right)
+# D = \sin \Phi \left( \cos \Phi V_0 + \sin \Phi W_0 \right)
 # $$
 # 
-# Here $\Phi = \frac{\Pi}{2}$ so that the z component of the
-# Coriolis forces is equal to zero. The results of the test
-# on Figure \ref{velocity} show the evolution of the three
-# components of the velocity field with time.
+# Here $\Phi = \frac{\pi}{2}$ so that the z component of the Coriolis
+# force is equal to zero. Figure \ref{velocity} shows the evolution
+# of the three components of the velocity with time.
 #
 # \begin{figure}[htbp]
 # \caption{\label{velocity} Evolution of the velocity with time.
-# The plain lines are the analytical solution.}
+# The solid lines are the analytical solution.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{velocity.eps}
 # \end{center}
@@ -51,18 +50,21 @@
 # Author: S\'ebastien Delaux
 # Command: sh coriolis.sh coriolis.gfs
 # Version: 100621
-# Required files: coriolis.sh coriolis.gfs
+# Required files: coriolis.sh
 # Generated files: velocity.eps error.dat
 #
-#Initial velocity
+# Initial velocity
 Define U0 2
 Define V0 3
 Define W0 1
-#Latitude (so that rotation is only along z)
+
+# Latitude (so that rotation is only along z)
 Define Phi (M_PI/2.)
-#Coriolis frequency
+
+# Coriolis frequency
 Define Omega 7.292e-5
-#Analitytical solution
+
+# Analytical solution
 Define A0 U0
 Define B0 (sin(Phi)*V0-cos(Phi)*W0)
 Define C0 (cos(Phi)*(cos(Phi)*V0+sin(Phi)*W0))
@@ -71,48 +73,46 @@ Define Usol0 (A0*cos(2*Omega*t)+B0*sin(2*Omega*t))
 Define Vsol0 (-A0*sin(Phi)*sin(2*Omega*t) + B0*sin(Phi)*cos(2*Omega*t) + C0)
 Define Wsol0 (A0*cos(Phi)*sin(2*Omega*t) - B0*cos(Phi)*cos(2*Omega*t) + D0)
 
-1 3 GfsSimulation GfsBox GfsGEdge {ly = 2 lz = 4}{
-
-  #Time is setup so that the simulation runs for 40000 time units
+1 3 GfsSimulation GfsBox GfsGEdge { ly = 2 lz = 4 } {
   Time { end = 30000  }
 
-  #The mesh is uniformly refined to level 3
   Refine 3
   
-  #The reference length is set to 60m
+  # The reference length is set to 60 m
   PhysicalParams { L = 60 }
   
-  #The tolerance for the projections is set to 1e-6
   ApproxProjectionParams { tolerance = 1e-6 }
   ProjectionParams { tolerance = 1e-6 }
 
-  #Initialisation of the velocity field
+  # Initialisation of the velocity field
   Init {} {
       U = U0
       V = V0
       W = W0
   }
   
-  #Setup of the viscosity (or eddy-viscosity)
-  SourceViscosity {} 10
+  # Viscosity (or eddy-viscosity)
+  SourceViscosity 10
 
-  #Coriolis forces (only the x and y components are implemented yet which is why we
-  #choosed to take Phi=90
+  # Coriolis forces (only the x and y components are implemented yet which is why we
+  # chose Phi = 90)
   SourceCoriolis (2.*Omega)
 
   # Output of the integral of each component of the velocity field over the domain every
   # 1000 time steps
-  OutputScalarSum { istep = 1000} {awk '{print $3" "($5/(60*60*60))}' > u.dat} { v = U}
-  OutputScalarSum { istep = 1000} {awk '{print $3" "($5/(60*60*60))}' > v.dat} { v = V}
-  OutputScalarSum { istep = 1000} {awk '{print $3" "($5/(60*60*60))}' > w.dat} { v = W}
+  OutputScalarStats { istep = 1000 } { awk '{print $3, $7}' > u.dat } { v = U }
+  OutputScalarStats { istep = 1000 } { awk '{print $3, $7}' > v.dat } { v = V }
+  OutputScalarStats { istep = 1000 } { awk '{print $3, $7}' > w.dat } { v = W }
 
-  # Output of some king of error measurement
-  OutputScalarSum { istep = 10} {awk '{print $3" "($5/(60*60*60))}' > error.dat} { v = sqrt((U-Usol0)*(U-Usol0)+(V-Vsol0)*(V-Vsol0)+(W-Wsol0)*(W-Wsol0))}
+  # Output of some kind of error measurement
+  OutputScalarStats { istep = 10 } { awk '{print $3,$7}' > error.dat } {
+      v = sqrt((U - Usol0)*(U - Usol0) + (V - Vsol0)*(V - Vsol0) + (W - Wsol0)*(W - Wsol0))
+  }
 
   # Output of the final simulation file
-  GfsOutputSimulation { start = end} end.gfs
+  OutputSimulation { start = end } end.gfs
 }
-GfsBox { }
+GfsBox {}
 # Setup of periodic boundary conditions in the 3 directions of space
 1 1 top
 1 1 right
