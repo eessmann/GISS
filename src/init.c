@@ -323,6 +323,20 @@ void gfs_disable_floating_point_exceptions (void)
 }
 
 /**
+ * gfs_enable_floating_point_exceptions:
+ *
+ * Enables floating-point exceptions (they are enabled by default
+ * when using the Gerris library).
+ */
+void gfs_enable_floating_point_exceptions (void)
+{
+#ifdef EXCEPTIONS
+  disabled_fpe = FALSE;
+  feenableexcept (EXCEPTIONS);
+#endif /* !EXCEPTIONS */
+}
+
+/**
  * gfs_init:
  * @argc: a pointer on the number of command line arguments passed to
  * the program.

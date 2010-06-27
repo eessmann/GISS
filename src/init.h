@@ -32,6 +32,7 @@ void              gfs_init                (int * argc,
 void gfs_catch_floating_point_exceptions   (void);
 int  gfs_restore_floating_point_exceptions (void);
 void gfs_disable_floating_point_exceptions (void);
+void gfs_enable_floating_point_exceptions  (void);
 
 #define gfs_restore_fpe_for_function(f) \
        { \
