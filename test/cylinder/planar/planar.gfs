@@ -1,0 +1,77 @@
+# title: Same problem using a 2D scheme.
+#
+# Description :
+#
+# Same problem but solved using a 2D scheme.
+#
+# \begin{figure}[htbp]
+# \caption{\label{charge-planar}Time evolution of the relative error of the charge per unit of length of cylinder as a function of the resolution. (\% Error =$|1-Q(t)/Q_o)|$ }
+# \begin{center}
+# \includegraphics[width=0.6\hsize]{charge.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{efield-planar} Electric field distribution at the steady state as a function of the resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{efield.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: J.M. L\'opez-Herrera and S. Popinet
+# Command: sh ../cylinder.sh planar.gfs
+# Version: 100609
+# Required files: cylinder.sh planar.gfs
+# Running time: 25 seconds
+# Generated files: charge.eps Efield.eps 
+#
+GModule electrohydro
+
+1 0 GfsElectroHydro GfsBox GfsGEdge {} {
+    Global{
+      #define R0 0.1
+      #define rhoinic 0.5
+      #define K 3
+      #define E1 3
+      #define E2 1
+    }
+    Time { end = 35 dtmax=1.0 }
+
+    VariableTracerVOF {} T
+    InitFraction T (-y*y-x*x+R0*R0)
+    AdaptGradient{istep=1} {cmax=1e-4 minlevel=5 maxlevel=LEVEL +1} T
+    PhysicalParams{L=2}   
+    Init {} { Rhoe = rhoinic*T }  
+ 
+    EventStop { istep = 10 } Ex 0.001  
+
+    GfsSourceCharge Rhoe K*T   
+
+#    OutputTime { istep = 1 } stderr
+    OutputScalarSum {istep=1} {awk '
+       BEGIN {rhoinic = 0.5 ; R0 = 0.1 ;Q = rhoinic*R0*R0*3.141592654}
+       { print $3,$5, 100*sqrt((1.-$5/Q)*(1.-$5/Q)); fflush(stdout);
+       }' > rhoe-LEVEL
+    } {v=Rhoe}
+ OutputLocation {start=end} {awk '{if($1 != "#") print $3, $12 }' > prof-LEVEL} yprofile    
+ OutputSimulation {start=end} result-LEVEL.gfs 
+} {
+    # Electric parameters
+    perm = E1*T+E2*(1.-T)
+    GfsElectricProjectionParams { tolerance = 1e-7 }
+}
+GfsBox {
+   top    = Boundary{
+                    BcDirichlet Phi  0
+                    }
+   bottom = Boundary{
+                    BcDirichlet Phi  0
+                    }
+   left   = Boundary{
+                    BcDirichlet Phi  0
+                   }
+   right   = Boundary{
+                    BcDirichlet Phi  0
+           }
+
+}
