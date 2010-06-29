@@ -220,6 +220,13 @@ void                  gfs_cell_traverse_mixed       (FttCell * root,
 						     FttTraverseFlags flags,
 						     FttCellTraverseFunc func,
 						     gpointer data);
+void                  gfs_cell_corner_values        (FttCell * cell, 
+						     GfsVariable * v, 
+						     gint max_level,
+						     gdouble f[4*(FTT_DIMENSION - 1)]);
+gdouble               gfs_interpolate_from_corners  (FttCell * cell,
+						     FttVector p,
+						     gdouble * f);
 gdouble               gfs_interpolate               (FttCell * cell,
 						     FttVector p,
 						     GfsVariable * v);

@@ -2392,6 +2392,84 @@ static FttDirection corner[8][FTT_DIMENSION] = {
 #endif /* 3D */
 
 /**
+ * gfs_cell_corner_values:
+ * @cell: a #FttCell containing location @p.
+ * @v: a #GfsVariable.
+ * @max_level: the maximum cell level to consider (-1 means no restriction).
+ * @f: an array with the correct size (4*(FTT_DIMENSION - 1)).
+ *
+ * Fills @f with the values of @v interpolated at the corners of @cell.
+ */
+void gfs_cell_corner_values (FttCell * cell, 
+			     GfsVariable * v, 
+			     gint max_level,
+			     gdouble f[4*(FTT_DIMENSION - 1)])
+{
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (v != NULL);
+  g_return_if_fail (f != NULL);
+
+  int i;
+  for (i = 0; i < 4*(FTT_DIMENSION - 1); i++)
+    f[i] = gfs_cell_corner_value (cell, corner[i], v, max_level);
+}
+
+/**
+ * gfs_interpolate_from_corners:
+ * @cell: a #FttCell containing location @p.
+ * @p: the location at which to interpolate.
+ * @f: values at the corners of @cell.
+ *
+ * Returns: the interpolated value at location @p.
+ */
+gdouble gfs_interpolate_from_corners (FttCell * cell,
+				      FttVector p,
+				      gdouble * f)
+{
+  FttVector o;
+  gdouble size;
+
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (f != NULL, 0.);
+
+  ftt_cell_pos (cell, &o);
+  size = ftt_cell_size (cell)/2.;
+  p.x = (p.x - o.x)/size;
+  p.y = (p.y - o.y)/size;
+#if FTT_2D
+  {
+    gdouble a, b, c, d;
+
+    a = f[1] + f[2] - f[0] - f[3];
+    b = f[2] + f[3] - f[0] - f[1];
+    c = f[0] - f[1] + f[2] - f[3];
+    d = f[0] + f[1] + f[2] + f[3];
+
+    return (a*p.x + b*p.y + c*p.x*p.y + d)/4.;
+  }
+#else  /* 3D */
+  {
+    gdouble c[8];
+    
+    p.z = (p.z - o.z)/size;
+    c[0] = - f[0] + f[1] + f[2] - f[3] - f[4] + f[5] + f[6] - f[7];
+    c[1] = - f[0] - f[1] + f[2] + f[3] - f[4] - f[5] + f[6] + f[7];
+    c[2] =   f[0] + f[1] + f[2] + f[3] - f[4] - f[5] - f[6] - f[7];
+    c[3] =   f[0] - f[1] + f[2] - f[3] + f[4] - f[5] + f[6] - f[7];
+    c[4] = - f[0] + f[1] + f[2] - f[3] + f[4] - f[5] - f[6] + f[7];
+    c[5] = - f[0] - f[1] + f[2] + f[3] + f[4] + f[5] - f[6] - f[7];
+    c[6] =   f[0] - f[1] + f[2] - f[3] - f[4] + f[5] - f[6] + f[7];
+    c[7] =   f[0] + f[1] + f[2] + f[3] + f[4] + f[5] + f[6] + f[7];
+
+    return (c[0]*p.x + c[1]*p.y + c[2]*p.z + 
+	    c[3]*p.x*p.y + c[4]*p.x*p.z + c[5]*p.y*p.z + 
+	    c[6]*p.x*p.y*p.z + 
+	    c[7])/8.;
+  }
+#endif /* 3D */  
+}
+
+/**
  * gfs_interpolate:
  * @cell: a #FttCell containing location @p.
  * @p: the location at which to interpolate.
@@ -2407,57 +2485,15 @@ gdouble gfs_interpolate (FttCell * cell,
 			 FttVector p,
 			 GfsVariable * v)
 {
-  FttVector o;
-  gdouble size;
-  guint i;
-
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (v != NULL, 0.);
 
   if (GFS_VALUE (cell, v) == GFS_NODATA)
     return GFS_NODATA;
 
-  ftt_cell_pos (cell, &o);
-  size = ftt_cell_size (cell)/2.;
-  p.x = (p.x - o.x)/size;
-  p.y = (p.y - o.y)/size;
-#if FTT_2D
-  {
-    gdouble f[4], a, b, c, d;
-
-    for (i = 0; i < 4; i++)
-      f[i] = gfs_cell_corner_value (cell, corner[i], v, -1);
-
-    a = f[1] + f[2] - f[0] - f[3];
-    b = f[2] + f[3] - f[0] - f[1];
-    c = f[0] - f[1] + f[2] - f[3];
-    d = f[0] + f[1] + f[2] + f[3];
-
-    return (a*p.x + b*p.y + c*p.x*p.y + d)/4.;
-  }
-#else  /* 3D */
-  {
-    gdouble f[8], c[8];
-    
-    p.z = (p.z - o.z)/size;
-    for (i = 0; i < 8; i++)
-      f[i] = gfs_cell_corner_value (cell, corner[i], v, -1);
-
-    c[0] = - f[0] + f[1] + f[2] - f[3] - f[4] + f[5] + f[6] - f[7];
-    c[1] = - f[0] - f[1] + f[2] + f[3] - f[4] - f[5] + f[6] + f[7];
-    c[2] =   f[0] + f[1] + f[2] + f[3] - f[4] - f[5] - f[6] - f[7];
-    c[3] =   f[0] - f[1] + f[2] - f[3] + f[4] - f[5] + f[6] - f[7];
-    c[4] = - f[0] + f[1] + f[2] - f[3] + f[4] - f[5] - f[6] + f[7];
-    c[5] = - f[0] - f[1] + f[2] + f[3] + f[4] + f[5] - f[6] - f[7];
-    c[6] =   f[0] - f[1] + f[2] - f[3] - f[4] + f[5] - f[6] + f[7];
-    c[7] =   f[0] + f[1] + f[2] + f[3] + f[4] + f[5] + f[6] + f[7];
-
-    return (c[0]*p.x + c[1]*p.y + c[2]*p.z + 
-	    c[3]*p.x*p.y + c[4]*p.x*p.z + c[5]*p.y*p.z + 
-	    c[6]*p.x*p.y*p.z + 
-	    c[7])/8.;
-  }
-#endif /* 3D */
+  gdouble f[4*(FTT_DIMENSION - 1)];
+  gfs_cell_corner_values (cell, v, -1, f);
+  return gfs_interpolate_from_corners (cell, p, f);
 }
 
 /**

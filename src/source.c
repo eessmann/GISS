@@ -532,32 +532,53 @@ static void source_control_field_write (GtsObject * o, FILE * fp)
   fprintf (fp, " %d", GFS_SOURCE_CONTROL_FIELD (o)->level);
 }
 
-static void set_s (FttCell * cell, GfsSourceControlField * f)
-{
-  GFS_VALUE (cell, f->s) = GFS_SOURCE_CONTROL (f)->s;
-}
-
 static void source_control_field_root (FttCell * root, GfsSourceControlField * f)
 {
   Sum su = { GFS_SOURCE_SCALAR (f)->v, 0., 0. };
   ftt_cell_traverse (root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 		     (FttCellTraverseFunc) sum, &su);
   gdouble dt = gfs_object_simulation (f)->advection_params.dt;
-  GFS_SOURCE_CONTROL (f)->s = dt > 0. && su.sv > 0. ? 
+  GFS_VALUE (root, f->s) = dt > 0. && su.sv > 0. ? 
     (gfs_function_value (GFS_SOURCE_CONTROL (f)->intensity, root) - su.s/su.sv)/dt: 0.;
+}
+
+typedef struct {
+  FttCell * root;
+  gdouble * corners;
+  GfsVariable * v;
+} ExtraData;
+
+static void extrapolate (FttCell * cell, ExtraData * p)
+{
+  FttVector pos;
+  ftt_cell_pos (cell, &pos);
+  GFS_VALUE (cell, p->v) = gfs_interpolate_from_corners (p->root, pos, p->corners);
+}
+
+static void extrapolate_field (FttCell * root, GfsSourceControlField * f)
+{
+  gdouble corners[4*(FTT_DIMENSION - 1)];
+  ExtraData p = { root, corners, f->s };
+  gfs_cell_corner_values (root, f->s, f->level, corners);
+  g_assert (!FTT_CELL_IS_LEAF (root));
   ftt_cell_traverse (root, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-		     (FttCellTraverseFunc) set_s, f);
+		     (FttCellTraverseFunc) extrapolate, &p);
 }
 
 static gboolean source_control_field_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* gfs_event_class ()->event) (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    GfsSourceControlField * f = GFS_SOURCE_CONTROL_FIELD (event);
     gfs_catch_floating_point_exceptions ();
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, 
-			      FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, 
-			      GFS_SOURCE_CONTROL_FIELD (event)->level,
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
+			      FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, f->level,
 			      (FttCellTraverseFunc) source_control_field_root, event);
     gfs_restore_fpe_for_function (GFS_SOURCE_CONTROL (event)->intensity);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, f->level, f->s);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER,
+			      FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_NON_LEAFS, f->level,
+			      (FttCellTraverseFunc) extrapolate_field, event);
     return TRUE;
   }
   return FALSE;
