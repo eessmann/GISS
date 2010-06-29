@@ -54,3 +54,11 @@ EOF
 else
     exit 1
 fi
+#
+# norms table
+#
+if awk '{print $3 " & " $5 " & " $7 " & " $9 "\\\\"}' < norms > norms.tex && \
+   awk '{print "{\\color{blue}" $3 "} & {\\color{blue}" $5 "} & {\\color{blue}" $7 "} & {\\color{blue}" $9 "}" "\\\\"}' < norms.ref >> norms.tex ; then :
+else
+    exit 1
+fi
