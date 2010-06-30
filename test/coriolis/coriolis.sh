@@ -20,7 +20,7 @@ set key spacing 3
 U=2
 V=3
 W=1
-Phi=3.14159/2.
+Phi=3.14159/4.
 Omega=7.292e-5
 A=U
 B=(sin(Phi)*V-cos(Phi)*W)

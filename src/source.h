@@ -316,11 +316,14 @@ typedef struct _GfsSourceCoriolis         GfsSourceCoriolis;
 struct _GfsSourceCoriolis {
   /*< private >*/
   GfsSourceVelocity parent;
-  GfsVariable * u[2];
+  GfsVariable * u[FTT_DIMENSION];
 
   /*< public >*/
   GfsFunction * omegaz; /* Coriolis coefficient */
   GfsFunction *   drag; /* Linear drag coefficient */
+
+  FttVector * d; /* Direction of Coriolis rotation vector */
+
   gdouble         beta; /* "implicitness coefficient" 0.5 CN, 1 backward Euler */
 };
 

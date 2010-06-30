@@ -59,7 +59,7 @@ Define V0 3
 Define W0 1
 
 # Latitude (so that rotation is only along z)
-Define Phi (M_PI/2.)
+Define Phi (M_PI/4.)
 
 # Coriolis frequency
 Define Omega 7.292e-5
@@ -76,7 +76,7 @@ Define Wsol0 (A0*cos(Phi)*sin(2*Omega*t) - B0*cos(Phi)*cos(2*Omega*t) + D0)
 1 3 GfsSimulation GfsBox GfsGEdge { ly = 2 lz = 4 } {
   Time { end = 30000  }
 
-  Refine 3
+  Refine 2
   
   # The reference length is set to 60 m
   PhysicalParams { L = 60 }
@@ -94,9 +94,8 @@ Define Wsol0 (A0*cos(Phi)*sin(2*Omega*t) - B0*cos(Phi)*cos(2*Omega*t) + D0)
   # Viscosity (or eddy-viscosity)
   SourceViscosity 10
 
-  # Coriolis forces (only the x and y components are implemented yet which is why we
-  # chose Phi = 90)
-  SourceCoriolis (2.*Omega)
+  # Coriolis forces
+  SourceCoriolis (2.*Omega) 0. { 0. 0.707106781 0.707106781 }
 
   # Output of the integral of each component of the velocity field over the domain every
   # 1000 time steps
