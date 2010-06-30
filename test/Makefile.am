@@ -31,6 +31,8 @@ TESTDIRS = \
 	parabola \
 	lonlat \
 	cosine \
+	bump \
+	cylinder \
 	electro
 
 EXTRA_DIST = \
