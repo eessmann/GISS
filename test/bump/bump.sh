@@ -50,15 +50,29 @@ plot \
           rho2(x) t '{/Symbol r}_{e}(x,2)' lt 2,\
           rho4(x) t '{/Symbol r}_{e}(x,4)' lt 3,\
           rho6(x) t '{/Symbol r}_{e}(x,6)' lt 4
+
+#
+# Evolution of error norms
+# 
+
+set output 'error.eps'
+set xlabel 't'
+set ylabel 'Error'
+plot 'norms.ref' u 3:9 w l t 'Max (ref)', 'norms' u 3:9 w p t 'Max', \
+     'norms.ref' u 3:7 w l t 'L2 (ref)',  'norms' u 3:7 w p t 'L2'
 EOF
 else
     exit 1
 fi
-#
-# norms table
-#
-if awk '{print $3 " & " $5 " & " $7 " & " $9 "\\\\"}' < norms > norms.tex && \
-   awk '{print "{\\color{blue}" $3 "} & {\\color{blue}" $5 "} & {\\color{blue}" $7 "} & {\\color{blue}" $9 "}" "\\\\"}' < norms.ref >> norms.tex ; then :
+
+if cat <<EOF | python ; then :
+from check import *
+if (Curve('norms.ref',3,7) - Curve('norms',3,7)).max() > 1e-5 or \
+   (Curve('norms.ref',3,9) - Curve('norms',3,9)).max() > 1e-5:
+    print (Curve('norms.ref',3,7) - Curve('norms',3,7)).max()
+    print (Curve('norms.ref',3,9) - Curve('norms',3,9)).max()
+    exit(1)
+EOF
 else
-    exit 1
+   exit 1
 fi
