@@ -321,10 +321,8 @@ struct _GfsSourceCoriolis {
   /*< public >*/
   GfsFunction * omegaz; /* Coriolis coefficient */
   GfsFunction *   drag; /* Linear drag coefficient */
-
-  FttVector * d; /* Direction of Coriolis rotation vector */
-
   gdouble         beta; /* "implicitness coefficient" 0.5 CN, 1 backward Euler */
+  double          d[3]; /* Direction of Coriolis rotation vector */
 };
 
 #define GFS_SOURCE_CORIOLIS(obj)            GTS_OBJECT_CAST (obj,\

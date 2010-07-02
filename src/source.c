@@ -1451,20 +1451,17 @@ GfsSourceGenericClass * gfs_source_viscosity_explicit_class (void)
 
 static void source_coriolis_destroy (GtsObject * o)
 {
+  GfsSourceCoriolis * s = GFS_SOURCE_CORIOLIS (o);
   FttComponent c;
 
-  if (GFS_SOURCE_CORIOLIS (o)->omegaz)
-    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CORIOLIS (o)->omegaz));
-  if (GFS_SOURCE_CORIOLIS (o)->drag)
-    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CORIOLIS (o)->drag));
+  if (s->omegaz)
+    gts_object_destroy (GTS_OBJECT (s->omegaz));
+  if (s->drag)
+    gts_object_destroy (GTS_OBJECT (s->drag));
 
   for (c = 0; c <  FTT_DIMENSION; c++)
-    if (GFS_SOURCE_CORIOLIS (o)->u[c])
-      gts_object_destroy (GTS_OBJECT (GFS_SOURCE_CORIOLIS (o)->u[c]));
-
-  GfsSourceCoriolis * s = GFS_SOURCE_CORIOLIS (o);
-  if (s->d)
-    g_free (s->d);
+    if (s->u[c])
+      gts_object_destroy (GTS_OBJECT (s->u[c]));
 
   (* GTS_OBJECT_CLASS (gfs_source_class ())->parent_class->destroy) (o);
 }
@@ -1515,58 +1512,27 @@ static void gfs_source_coriolis_read (GtsObject ** o, GtsFile * fp)
     GFS_SOURCE_GENERIC (s)->mac_value = NULL;
   }
 
+#if !FTT_2D
   if (fp->type == '{') {
-    fp->scope_max++;
-    gts_file_next_token (fp);
-  
-    s->d = g_malloc (sizeof (FttVector));
-    FttVector d = *s->d;
-
-    while (fp->type != GTS_ERROR && fp->type != '}') {
-      FttComponent c;
-
-      for (c = 0; c < FTT_DIMENSION; c++) {
-	while (fp->type == '\n') {
-	  gts_file_next_token (fp);
-	}
-	
-	if (fp->type == GTS_ERROR)
-	  return;
-	else {
-	  if (fp->type != GTS_FLOAT) {
-	    gts_file_error (fp, "expecting a number (component of direction vector)");
-	    return;
-	  }
-	  else
-	    (&d.x)[c] = gfs_read_constant (fp, domain);
-	}
-      }
-    }
-
-#if FTT_2D
-    if ((&d.x)[0] != 0. || (&d.x)[1] != 0. ) {
-      gts_file_error (fp, "Coriolis rotation vector cannot have x or y component in 2D ");
-      return;
-    } 
-#endif
-
-    gts_vector_normalize(&d.x);
-    *s->d = d;
-
-    if ((&d.x)[0] == 0. && (&d.x)[1] == 0. ) {
-      g_free (s->d);
-      s->d = NULL;
-    }
-
+    GtsFileVariable var[] = {
+      {GTS_DOUBLE, "x", TRUE, &s->d[0]},
+      {GTS_DOUBLE, "y", TRUE, &s->d[1]},
+      {GTS_DOUBLE, "z", TRUE, &s->d[2]},
+      {GTS_NONE}
+    };
+    gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR)
       return;
-    if (fp->type != '}') {
-      gts_file_error (fp, "expecting a closing brace");
-      return;
-    }
-    fp->scope_max--;
-    gts_file_next_token (fp);
+    gdouble norm = sqrt (s->d[0]*s->d[0] + s->d[1]*s->d[1] + s->d[2]*s->d[2]);
+    if (norm == 0.)
+      gts_file_error (fp, "vector must be non-zero");
+    else {
+      s->d[0] /= norm;
+      s->d[1] /= norm;
+      s->d[2] /= norm;
+    }      
   }
+#endif /* 3D */
 }
 
 static void gfs_source_coriolis_write (GtsObject * o, FILE * fp)
@@ -1577,11 +1543,8 @@ static void gfs_source_coriolis_write (GtsObject * o, FILE * fp)
   gfs_function_write (s->omegaz, fp);
   if (s->drag)
     gfs_function_write (s->drag, fp);
-
-  if (s->d) {
-    FttVector d = *s->d;
-    fprintf(fp," { %f %f %f }", (&d.x)[0], (&d.x)[1], (&d.x)[2]);
-  }
+  if (s->d[2] != 1.)
+    fprintf (fp," { x = %g y = %g z = %g }", s->d[0], s->d[1], s->d[2]);
 }
 
 static gdouble gfs_source_coriolis_mac_value (GfsSourceGeneric * s,
@@ -1592,31 +1555,20 @@ static gdouble gfs_source_coriolis_mac_value (GfsSourceGeneric * s,
   GfsSourceCoriolis * sc = GFS_SOURCE_CORIOLIS (s);
   gdouble f = gfs_function_value (sc->omegaz, cell);
   gdouble e = sc->drag ? gfs_function_value (sc->drag, cell) : 0.;
-  
-  if (!sc->d) {
-    switch (v->component) {
-    case FTT_X: return - e*GFS_VALUE (cell, sv->v[0]) + f*GFS_VALUE (cell, sv->v[1]);
-    case FTT_Y: return - f*GFS_VALUE (cell, sv->v[0]) - e*GFS_VALUE (cell, sv->v[1]);
-#if !FTT_2D
-    case FTT_Z: return 0.; 
-#endif
-    default: g_assert_not_reached ();
-    }
-  }
-  else {
-    FttVector d = *sc->d;
 
-    switch (v->component) {
-    case FTT_X: return - e*GFS_VALUE (cell, sv->v[0]) +
-	f*(GFS_VALUE (cell, sv->v[1])*(&d.x)[2] - GFS_VALUE (cell, sv->v[2])*(&d.x)[1]);
-    case FTT_Y: return - e*GFS_VALUE (cell, sv->v[1]) +
-	f*(GFS_VALUE (cell, sv->v[2])*(&d.x)[0] - GFS_VALUE (cell, sv->v[0])*(&d.x)[2]);
-#if !FTT_2D
-    case FTT_Z: return - e*GFS_VALUE (cell, sv->v[2]) +
-	f*(GFS_VALUE (cell, sv->v[0])*(&d.x)[1] - GFS_VALUE (cell, sv->v[1])*(&d.x)[0]); 
-#endif
-    default: g_assert_not_reached ();
-    }
+  switch (v->component) {
+#if FTT_2D
+  case FTT_X: return   f*GFS_VALUE (cell, sv->v[1]) - e*GFS_VALUE (cell, sv->v[0]);
+  case FTT_Y: return - e*GFS_VALUE (cell, sv->v[1]) - f*GFS_VALUE (cell, sv->v[0]);
+#else  /* 3D */
+  case FTT_X: return - e*GFS_VALUE (cell, sv->v[0]) +
+      f*(GFS_VALUE (cell, sv->v[1])*sc->d[2] - GFS_VALUE (cell, sv->v[2])*sc->d[1]);
+  case FTT_Y: return - e*GFS_VALUE (cell, sv->v[1]) +
+      f*(GFS_VALUE (cell, sv->v[2])*sc->d[0] - GFS_VALUE (cell, sv->v[0])*sc->d[2]);
+  case FTT_Z: return - e*GFS_VALUE (cell, sv->v[2]) +
+      f*(GFS_VALUE (cell, sv->v[0])*sc->d[1] - GFS_VALUE (cell, sv->v[1])*sc->d[0]);
+#endif /* 3D */
+  default: g_assert_not_reached ();
   }
   return 0.;
 }
@@ -1627,21 +1579,17 @@ static void save_coriolis (FttCell * cell, GfsSourceCoriolis * s)
   gdouble f = gfs_function_value (s->omegaz, cell)*(1. - s->beta);
   gdouble e = s->drag ? gfs_function_value (s->drag, cell)*(1. - s->beta) : 0.;
 
-  if (!s->d) {
-    GFS_VALUE (cell, s->u[0]) = - e*GFS_VALUE (cell, sv->v[0]) + f*GFS_VALUE (cell, sv->v[1]);
-    GFS_VALUE (cell, s->u[1]) = - f*GFS_VALUE (cell, sv->v[0]) - e*GFS_VALUE (cell, sv->v[1]);
-  }
-  else {
-    FttVector d = *s->d;
-
-    GFS_VALUE (cell, s->u[0]) = - e*GFS_VALUE (cell, sv->v[0]) +
-      f*(GFS_VALUE (cell, sv->v[1])*(&d.x)[2] - GFS_VALUE (cell, sv->v[2])*(&d.x)[1]);
-    GFS_VALUE (cell, s->u[1]) = - e*GFS_VALUE (cell, sv->v[1]) +
-      f*(GFS_VALUE (cell, sv->v[2])*(&d.x)[0] - GFS_VALUE (cell, sv->v[0])*(&d.x)[2]);
-    GFS_VALUE (cell, s->u[2]) = - e*GFS_VALUE (cell, sv->v[2]) +
-      f*(GFS_VALUE (cell, sv->v[0])*(&d.x)[1] - GFS_VALUE (cell, sv->v[1])*(&d.x)[0]);
-  }
-
+#if FTT_2D
+  GFS_VALUE (cell, s->u[0]) =   f*GFS_VALUE (cell, sv->v[1]) - e*GFS_VALUE (cell, sv->v[0]);
+  GFS_VALUE (cell, s->u[1]) = - e*GFS_VALUE (cell, sv->v[1]) - f*GFS_VALUE (cell, sv->v[0]);
+#else  /* 3D */
+  GFS_VALUE (cell, s->u[0]) = - e*GFS_VALUE (cell, sv->v[0]) +
+    f*(GFS_VALUE (cell, sv->v[1])*s->d[2] - GFS_VALUE (cell, sv->v[2])*s->d[1]);
+  GFS_VALUE (cell, s->u[1]) = - e*GFS_VALUE (cell, sv->v[1]) +
+    f*(GFS_VALUE (cell, sv->v[2])*s->d[0] - GFS_VALUE (cell, sv->v[0])*s->d[2]);
+  GFS_VALUE (cell, s->u[2]) = - e*GFS_VALUE (cell, sv->v[2]) +
+    f*(GFS_VALUE (cell, sv->v[0])*s->d[1] - GFS_VALUE (cell, sv->v[1])*s->d[0]);
+#endif /* 3D */
 }
 
 static gboolean gfs_source_coriolis_event (GfsEvent * event, GfsSimulation * sim)
@@ -1689,7 +1637,7 @@ static void gfs_source_coriolis_init (GfsSourceGeneric * s)
   GFS_SOURCE_CORIOLIS (s)->beta = 0.5; /* Crank-Nicholson */
   s->centered_value = gfs_source_coriolis_centered_value;
   GfsSourceCoriolis * sc = GFS_SOURCE_CORIOLIS (s);
-  sc->d = NULL;
+  sc->d[0] = sc->d[1] = 0.; sc->d[2] = 1.;
 }
 
 GfsSourceGenericClass * gfs_source_coriolis_class (void)
@@ -1740,83 +1688,52 @@ GfsSourceCoriolis * gfs_has_source_coriolis (GfsDomain * domain)
   return NULL;
 }
 
-static gdouble ** matrix_inverse_3 (gdouble ** m) {
-  gdouble ** res = gfs_matrix_new (3, 3, sizeof (gdouble));
-
-  gdouble det = (m[0][0]*m[1][1]*m[2][2] + m[0][1]*m[1][2]*m[2][0] + m[1][0]*m[2][1]*m[0][2]) -
-    (m[0][0]*m[2][1]*m[1][2] + m[1][0]*m[0][1]*m[2][2] + m[2][0]*m[1][1]*m[0][2]);
-
-  g_assert (det != 0.);
-
-  res[0][0] = (m[1][1]*m[2][2]-m[1][2]*m[2][1])/det;
-  res[0][1] = -(m[1][0]*m[2][2]-m[1][2]*m[2][0])/det;
-  res[0][2] = (m[1][0]*m[2][1]-m[1][1]*m[2][0])/det;
-  res[1][0] = -(m[0][1]*m[2][2]-m[0][2]*m[2][1])/det;
-  res[1][1] = (m[0][0]*m[2][2]-m[0][2]*m[2][0])/det;
-  res[1][2] = -(m[0][0]*m[2][1]-m[0][1]*m[2][0])/det;
-  res[2][0] = (m[0][1]*m[1][2]-m[1][1]*m[0][2])/det;
-  res[2][1] = -(m[0][0]*m[1][2]-m[0][2]*m[1][0])/det;
-  res[2][2] = (m[0][0]*m[1][1]-m[0][1]*m[1][0])/det;
-
-  gfs_matrix_free (m);
-
-  return res;
-}
-
-static void implicit_coriolis (FttCell * cell, GfsSourceCoriolis * s)
+static void implicit_coriolis_2D (FttCell * cell, GfsSourceCoriolis * s)
 {
   GfsSourceVelocity * sv = GFS_SOURCE_VELOCITY (s);
   gdouble c, u, v;
   GfsSimulation * sim = gfs_object_simulation (s);
 
   c = sim->advection_params.dt*gfs_function_value (s->omegaz, cell)*s->beta;
-
-  if (!s->d) {
-    u = GFS_VALUE (cell, sv->v[0]);
-    v = GFS_VALUE (cell, sv->v[1]);
-    if (s->drag) {
-      gdouble e = sim->advection_params.dt*gfs_function_value (s->drag, cell)*s->beta;
-      GFS_VALUE (cell, sv->v[0]) = (u + c*v/(1. + e))/((1. + e) + c*c/(1. + e));
-      GFS_VALUE (cell, sv->v[1]) = (v - c*u/(1. + e))/((1. + e) + c*c/(1. + e));
-    }
-    else {
-      GFS_VALUE (cell, sv->v[0]) = (u + c*v)/(1. + c*c);
-      GFS_VALUE (cell, sv->v[1]) = (v - c*u)/(1. + c*c);
-    }
+  u = GFS_VALUE (cell, sv->v[0]);
+  v = GFS_VALUE (cell, sv->v[1]);
+  if (s->drag) {
+    gdouble e = sim->advection_params.dt*gfs_function_value (s->drag, cell)*s->beta;
+    GFS_VALUE (cell, sv->v[0]) = (u + c*v/(1. + e))/((1. + e) + c*c/(1. + e));
+    GFS_VALUE (cell, sv->v[1]) = (v - c*u/(1. + e))/((1. + e) + c*c/(1. + e));
   }
   else {
-    gint i, j;
-    gdouble e = 0.;
-    gdouble ** m = gfs_matrix_new (FTT_DIMENSION, FTT_DIMENSION, sizeof (gdouble));
-    FttVector vel;
-    FttVector d = *s->d;
-    
-    for (i = 0; i < FTT_DIMENSION; i++)
-      (&vel.x)[i] = GFS_VALUE (cell, sv->v[i]);
-    
-    if (s->drag)
-      e = sim->advection_params.dt*gfs_function_value (s->drag, cell)*s->beta;
-  
-    for (i = 0; i < FTT_DIMENSION; i++)
-      m[i][i] = 1 + e;
-
-    m[0][1] = c*(&d.x)[2];
-    m[0][2] = -c*(&d.x)[1];
-    m[1][0] = -c*(&d.x)[2];
-    m[1][2] = c*(&d.x)[0];
-    m[2][0] = c*(&d.x)[1];
-    m[2][1] = -c*(&d.x)[0];
-
-    m = matrix_inverse_3 (m);
-
-    for (i = 0; i < FTT_DIMENSION; i++) {
-      GFS_VALUE (cell, sv->v[i]) = 0.;
-      for (j = 0; j < FTT_DIMENSION; j++)
-	GFS_VALUE (cell, sv->v[i]) += m[i][j]*(&vel.x)[j];
-    }
-
-    gfs_matrix_free (m);
+    GFS_VALUE (cell, sv->v[0]) = (u + c*v)/(1. + c*c);
+    GFS_VALUE (cell, sv->v[1]) = (v - c*u)/(1. + c*c);
   }
+}
+
+static void implicit_coriolis_3D (FttCell * cell, GfsSourceCoriolis * s)
+{
+  GfsSourceVelocity * sv = GFS_SOURCE_VELOCITY (s);
+  GfsSimulation * sim = gfs_object_simulation (s);
+  gdouble c = sim->advection_params.dt*gfs_function_value (s->omegaz, cell)*s->beta;
+  gdouble e = s->drag ? sim->advection_params.dt*gfs_function_value (s->drag, cell)*s->beta : 0.;
+  GtsMatrix * m = gts_matrix_new (    1. + e, -c*s->d[2],   c*s->d[1],  0.,
+				   c*s->d[2],     1. + e,  -c*s->d[0],  0.,
+				  -c*s->d[1],  c*s->d[0],      1. + e,  0.,
+				          0.,         0.,          0.,  0.);
+  GtsMatrix * im = gts_matrix3_inverse (m);
+  g_assert (im);
+  gint i, j;
+  gdouble vel[3];
+
+  for (i = 0; i < 3; i++)
+    vel[i] = GFS_VALUE (cell, sv->v[i]);
+  
+  for (i = 0; i < 3; i++) {
+    GFS_VALUE (cell, sv->v[i]) = 0.;
+    for (j = 0; j < 3; j++)
+      GFS_VALUE (cell, sv->v[i]) += im[i][j]*vel[j];
+  }
+
+  gts_matrix_destroy (m);
+  gts_matrix_destroy (im);
 }
 
 /**
@@ -1839,7 +1756,9 @@ void gfs_source_coriolis_implicit (GfsDomain * domain,
     sim->advection_params.dt = dt;
     gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) implicit_coriolis, s);
+			      (FttCellTraverseFunc) (s->d[2] != 1. ? 
+						     implicit_coriolis_3D : implicit_coriolis_2D),
+			      s);
     if (gfs_restore_floating_point_exceptions ()) {
       gchar * c = g_strconcat ("\n", gfs_function_description (s->omegaz, FALSE), NULL);
       if (s->drag)

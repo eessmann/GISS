@@ -81,9 +81,6 @@ Define Wsol0 (A0*cos(Phi)*sin(2*Omega*t) - B0*cos(Phi)*cos(2*Omega*t) + D0)
   # The reference length is set to 60 m
   PhysicalParams { L = 60 }
   
-  ApproxProjectionParams { tolerance = 1e-6 }
-  ProjectionParams { tolerance = 1e-6 }
-
   # Initialisation of the velocity field
   Init {} {
       U = U0
@@ -95,13 +92,13 @@ Define Wsol0 (A0*cos(Phi)*sin(2*Omega*t) - B0*cos(Phi)*cos(2*Omega*t) + D0)
   SourceViscosity 10
 
   # Coriolis forces
-  SourceCoriolis (2.*Omega) 0. { 0. 0.707106781 0.707106781 }
+  SourceCoriolis (2.*Omega) 0. { x = 0. y = 1. z = 1. }
 
   # Output of the integral of each component of the velocity field over the domain every
   # 1000 time steps
-  OutputScalarStats { istep = 1000 } { awk '{print $3, $7}' > u.dat } { v = U }
-  OutputScalarStats { istep = 1000 } { awk '{print $3, $7}' > v.dat } { v = V }
-  OutputScalarStats { istep = 1000 } { awk '{print $3, $7}' > w.dat } { v = W }
+  OutputScalarStats { step = 3000 } { awk '{print $3, $7}' > u.dat } { v = U }
+  OutputScalarStats { step = 3000 } { awk '{print $3, $7}' > v.dat } { v = V }
+  OutputScalarStats { step = 3000 } { awk '{print $3, $7}' > w.dat } { v = W }
 
   # Output of some kind of error measurement
   OutputScalarStats { istep = 10 } { awk '{print $3,$7}' > error.dat } {
