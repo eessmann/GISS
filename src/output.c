@@ -1655,6 +1655,8 @@ static void gfs_output_scalar_destroy (GtsObject * o)
   g_free (output->name);
   if (output->condition)
     gts_object_destroy (GTS_OBJECT (output->condition));
+  if (output->w)
+    gts_object_destroy (GTS_OBJECT (output->w));
   
   (* GTS_OBJECT_CLASS (gfs_output_scalar_class ())->parent_class->destroy) (o);
 }
@@ -1757,6 +1759,17 @@ static void gfs_output_scalar_read (GtsObject ** o, GtsFile * fp)
 	output->condition = gfs_function_new (gfs_function_class (), 0.);
       gfs_function_read (output->condition, gfs_object_simulation (*o), fp);
     }
+    else if (!strcmp (fp->token->str, "w")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      if (!output->w)
+	output->w = gfs_function_new (gfs_function_class (), 0.);
+      gfs_function_read (output->w, gfs_object_simulation (*o), fp);
+    }
     else {
       gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
       return;
@@ -1787,6 +1800,10 @@ static void gfs_output_scalar_write (GtsObject * o, FILE * fp)
   if (output->condition) {
     fputs (" condition = ", fp);
     gfs_function_write (output->condition, fp);
+  }
+  if (output->w) {
+    fputs (" w = ", fp);
+    gfs_function_write (output->w, fp);
   }
   if (!output->autoscale)
     fprintf (fp, " min = %g max = %g }", output->min, output->max);
@@ -2010,13 +2027,16 @@ GfsOutputClass * gfs_output_scalar_stats_class (void)
 
 /* GfsOutputScalarSum: Object */
 
-static void add (FttCell * cell, gpointer * data)
-{
-  GfsVariable * v = data[0];
-  gdouble vol = gfs_cell_volume (cell, v->domain);
-  gdouble * sum = data[1];
+typedef struct {
+  GfsVariable * v;
+  GfsFunction * w;
+  gdouble sum;
+} SumData;
 
-  *sum += vol*GFS_VALUE (cell, v);
+static void add (FttCell * cell, SumData * s)
+{
+  gdouble vol = s->w ? gfs_function_value (s->w, cell) : gfs_cell_volume (cell, s->v->domain);
+  s->sum += vol*GFS_VALUE (cell, s->v);
 }
 
 static gboolean gfs_output_scalar_sum_event (GfsEvent * event, 
@@ -2025,20 +2045,18 @@ static gboolean gfs_output_scalar_sum_event (GfsEvent * event,
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_sum_class ())->parent_class)->event)
       (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
-    gpointer data[2];
-    gdouble sum = 0.;
-
-    data[0] = output->v;
-    data[1] = &sum;
+    SumData s = { output->v, output->w, 0. };
     output_scalar_traverse (output,
 			    FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
 			    output->maxlevel,
-			    (FttCellTraverseFunc) add, data);
-    gfs_all_reduce (GFS_DOMAIN (sim), sum, MPI_DOUBLE, MPI_SUM);
-    fprintf (GFS_OUTPUT (event)->file->fp, 
-	     "%s time: %g sum: % 15.6e\n", output->name, sim->time.t, 
-	     sum*pow (sim->physical_params.L, FTT_DIMENSION));
+			    (FttCellTraverseFunc) add, &s);
+    gfs_all_reduce (GFS_DOMAIN (sim), s.sum, MPI_DOUBLE, MPI_SUM);
+    if (!output->w)
+      s.sum *= pow (sim->physical_params.L, FTT_DIMENSION);
+    fprintf (GFS_OUTPUT (event)->file->fp,
+	     "%s time: %g sum: % 15.6e\n", 
+	     output->name, sim->time.t, s.sum);
     return TRUE;
   }
   return FALSE;
