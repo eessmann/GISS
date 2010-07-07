@@ -75,7 +75,8 @@ void                  gfs_residual                   (GfsDomain * domain,
 						      GfsVariable * res);
 void                  gfs_poisson_coefficients       (GfsDomain * domain,
 						      GfsFunction * alpha,
-						      gboolean positive);
+						      gboolean positive,
+						      gboolean centered);
 void                  gfs_poisson_cycle              (GfsDomain * domain,
 						      GfsMultilevelParams * p,
 						      GfsVariable * u,

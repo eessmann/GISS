@@ -576,7 +576,7 @@ static gboolean variable_diagonal_event (GfsEvent * event, GfsSimulation * sim)
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) unity, tmp);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, tmp);
-    gfs_poisson_coefficients (domain, sim->physical_params.alpha, TRUE);
+    gfs_poisson_coefficients (domain, sim->physical_params.alpha, TRUE, TRUE);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) variable_diagonal, data);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));

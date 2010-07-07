@@ -475,6 +475,33 @@ static void relax2D (FttCell * cell, RelaxParams * p)
     GFS_VARIABLE (cell, p->u) = 0.;
 }
 
+static void relax_dirichlet (FttCell * cell, RelaxParams * p)
+{
+  GfsGradient g;
+  FttCellNeighbors neighbor;
+  FttCellFace f;
+  GfsGradient ng;
+
+  g.a = GFS_VARIABLE (cell, p->dia);
+  if (GFS_IS_MIXED (cell) && ((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
+    g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, 0.);
+  else
+    g.b = 0.;
+
+  f.cell = cell;
+  ftt_cell_neighbors (cell, &neighbor);
+  for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
+    f.neighbor = neighbor.c[f.d];
+    gfs_face_gradient_flux (&f, &ng, p->u, p->maxlevel);
+    g.a += ng.a;
+    g.b += ng.b;
+  }
+  if (g.a > 0.)
+    GFS_VARIABLE (cell, p->u) = (g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
+  else
+    GFS_VARIABLE (cell, p->u) = 0.;
+}
+
 /**
  * gfs_relax:
  * @domain: the domain to relax.
@@ -514,7 +541,10 @@ void gfs_relax (GfsDomain * domain,
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 			    max_depth,
-			    (FttCellTraverseFunc) (d == 2 ? relax2D : relax), &p);
+			    (FttCellTraverseFunc) (u->centered ?
+						   (d == 2 ? relax2D : relax) : 
+						   relax_dirichlet),
+			    &p);
 }
 
 static void residual_set (FttCell * cell, RelaxParams * p)
@@ -563,6 +593,31 @@ static void residual_set2D (FttCell * cell, RelaxParams * p)
     (g.b - GFS_VARIABLE (cell, p->u)*g.a);
 }
 
+static void residual_set_dirichlet (FttCell * cell, RelaxParams * p)
+{
+  GfsGradient g;
+  FttCellNeighbors neighbor;
+  FttCellFace f;
+  GfsGradient ng;
+
+  g.a = GFS_VARIABLE (cell, p->dia);
+  if (GFS_IS_MIXED (cell) && ((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
+    g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, GFS_STATE (cell)->solid->fv);
+  else
+    g.b = 0.;
+
+  f.cell = cell;
+  ftt_cell_neighbors (cell, &neighbor);
+  for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
+    f.neighbor = neighbor.c[f.d];
+    gfs_face_gradient_flux (&f, &ng, p->u, p->maxlevel);
+    g.a += ng.a;
+    g.b += ng.b;
+  }
+  GFS_VARIABLE (cell, p->res) = GFS_VARIABLE (cell, p->rhs) - 
+    (g.b - GFS_VARIABLE (cell, p->u)*g.a);
+}
+
 /**
  * gfs_residual:
  * @domain: a domain.
@@ -601,16 +656,10 @@ void gfs_residual (GfsDomain * domain,
   p.res = res->i;
   p.maxlevel = max_depth;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth,
-			    (FttCellTraverseFunc) (d == 2 ? residual_set2D : residual_set), &p);
-}
-
-static void reset_coeff (FttCell * cell)
-{
-  FttDirection d;
-  GfsFaceStateVector * f = GFS_STATE (cell)->f;
-  
-  for (d = 0; d < FTT_NEIGHBORS; d++)
-    f[d].v = 0.;
+			    (FttCellTraverseFunc) (u->centered ? 
+						   (d == 2 ? residual_set2D : residual_set) :
+						   residual_set_dirichlet),
+			    &p);
 }
 
 typedef struct {
@@ -619,6 +668,15 @@ typedef struct {
   GfsDomain * domain;
   gboolean positive;
 } PoissonCoeff;
+
+static void reset_coeff (FttCell * cell, PoissonCoeff * p)
+{
+  FttDirection d;
+  GfsFaceStateVector * f = GFS_STATE (cell)->f;
+  
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    f[d].v = 0.;
+}
 
 static void poisson_coeff (FttCellFace * face,
 			   PoissonCoeff * p)
@@ -646,6 +704,24 @@ static void poisson_coeff (FttCellFace * face,
     break;
   default:
     g_assert_not_reached ();
+  }
+}
+
+static void poisson_mixed_coeff (FttCell * cell, PoissonCoeff * p)
+{
+  reset_coeff (cell, NULL);
+  if (GFS_IS_MIXED (cell)) {
+    gdouble alpha = p->alpha ? gfs_function_value (p->alpha, cell) : 1.;
+    GFS_STATE (cell)->solid->v = alpha*gfs_domain_solid_metric (p->domain, cell);
+
+    if (alpha <= 0. && p->positive) {
+      FttVector p;
+      ftt_cell_pos (cell, &p);
+      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
+	     "alpha is negative (%g) at cell (%g,%g,%g).\n"
+	     "Please check your definition.",
+	     alpha, p.x, p.y, p.z);
+    }
   }
 }
 
@@ -681,6 +757,7 @@ static void face_coeff_from_below (FttCell * cell)
  * @domain: a #GfsDomain.
  * @alpha: the inverse of density or %NULL.
  * @positive: if %TRUE, @alpha must be strictly positive.
+ * @centered: %TRUE if solving for a centered variable.
  *
  * Initializes the face coefficients for the Poisson equation
  * $\nabla\cdot\alpha\nabla p=\dots$.
@@ -689,7 +766,8 @@ static void face_coeff_from_below (FttCell * cell)
  */
 void gfs_poisson_coefficients (GfsDomain * domain,
 			       GfsFunction * alpha,
-			       gboolean positive)
+			       gboolean positive,
+			       gboolean centered)
 {
   PoissonCoeff p;
   FttComponent i;
@@ -701,12 +779,17 @@ void gfs_poisson_coefficients (GfsDomain * domain,
 
     p.lambda2[i] = lambda*lambda;
   }
-  gfs_domain_cell_traverse (domain,
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_coeff, NULL);
   p.alpha = alpha;
   p.domain = domain;
   p.positive = positive;
+  if (centered)
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) reset_coeff, &p);
+  else
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) poisson_mixed_coeff, &p);
   gfs_domain_face_traverse (domain, FTT_XYZ, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) poisson_coeff, &p);
@@ -884,7 +967,7 @@ static void get_from_below_2D (FttCell * cell, const GfsVariable * v)
 static void relax_loop (GfsDomain * domain, 
 			GfsVariable * dp, GfsVariable * u, 
 			RelaxParams * q, guint nrelax,
-			guint dimension)
+			FttCellTraverseFunc relaxfunc)
 {
   guint n;
 
@@ -894,11 +977,10 @@ static void relax_loop (GfsDomain * domain,
   for (n = 0; n < nrelax - 1; n++)
     gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
 				     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
-				     (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q,
-				     dp, u);
+				     relaxfunc, q, dp, u);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q->maxlevel,
-			    (FttCellTraverseFunc) (dimension == 2 ? relax2D : relax), q);
+			    relaxfunc, q);
 }
 
 /**
@@ -946,8 +1028,9 @@ void gfs_poisson_cycle (GfsDomain * domain,
   /* compute residual on non-leafs cells */
   gfs_domain_cell_traverse (domain, 
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			    p->dimension == 2 ? (FttCellTraverseFunc) get_from_below_2D : 
-			    (FttCellTraverseFunc) get_from_below_3D,
+			    (FttCellTraverseFunc) (p->dimension == 2 ? 
+						   get_from_below_2D : 
+						   get_from_below_3D),
 			    res);
 
   /* relax top level */
@@ -965,7 +1048,9 @@ void gfs_poisson_cycle (GfsDomain * domain,
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q.maxlevel,
 			    (FttCellTraverseFunc) gfs_cell_reset, dp);
-  relax_loop (domain, dp, u, &q, nrelax, p->dimension);
+  FttCellTraverseFunc relaxfunc = (FttCellTraverseFunc)
+    (u->centered ? (p->dimension == 2 ? relax2D : relax) : relax_dirichlet);
+  relax_loop (domain, dp, u, &q, nrelax, relaxfunc);
   nrelax /= p->erelax;
 
   /* relax from top to bottom */
@@ -975,7 +1060,7 @@ void gfs_poisson_cycle (GfsDomain * domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_NON_LEAFS, 
 			      q.maxlevel - 1,
 			      (FttCellTraverseFunc) get_from_above, dp);
-    relax_loop (domain, dp, u, &q, nrelax, p->dimension);
+    relax_loop (domain, dp, u, &q, nrelax, relaxfunc);
   }
   /* correct on leaf cells */
   data[0] = u;
@@ -1131,7 +1216,7 @@ static void diffusion_coef (FttCellFace * face, DiffusionCoeff * c)
 
 static void diffusion_mixed_coef (FttCell * cell, DiffusionCoeff * c)
 {
-  reset_coeff (cell);
+  reset_coeff (cell, NULL);
   if (GFS_IS_MIXED (cell))
     GFS_STATE (cell)->solid->v = 
       c->dt*gfs_domain_solid_metric (c->domain, cell)*gfs_source_diffusion_cell (c->d, cell);
@@ -1397,24 +1482,6 @@ void gfs_diffusion_residual (GfsDomain * domain,
 			    (FttCellTraverseFunc) diffusion_residual, &p);
 }
 
-static void diffusion_relax_loop (GfsDomain * domain, 
-				  GfsVariable * dp, GfsVariable * u,
-				  RelaxParams * p, guint nrelax)
-{
-  guint n;
-  gfs_domain_homogeneous_bc (domain, 
-			     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
-			     dp, u);
-  for (n = 0; n < nrelax - 1; n++)
-    gfs_traverse_and_homogeneous_bc (domain, FTT_PRE_ORDER, 
-				     FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
-				     (FttCellTraverseFunc) diffusion_relax, p,
-				     dp, u);
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
-			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, p->maxlevel,
-			    (FttCellTraverseFunc) diffusion_relax, p);
-}
-
 /**
  * gfs_diffusion_cycle:
  * @domain: the domain on which to solve the diffusion equation.
@@ -1476,7 +1543,7 @@ void gfs_diffusion_cycle (GfsDomain * domain,
   gfs_domain_cell_traverse (domain, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, levelmin,
 			    (FttCellTraverseFunc) gfs_cell_reset, dp);
-  diffusion_relax_loop (domain, dp, u, &p, 10*nrelax);
+  relax_loop (domain, dp, u, &p, 10*nrelax, (FttCellTraverseFunc) diffusion_relax);
   /* relax from top to bottom */
   for (p.maxlevel = levelmin + 1; p.maxlevel <= depth; p.maxlevel++) {
     /* get initial guess from coarser grid */ 
@@ -1484,7 +1551,7 @@ void gfs_diffusion_cycle (GfsDomain * domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_NON_LEAFS,
 			      p.maxlevel - 1,
 			      (FttCellTraverseFunc) get_from_above, dp);
-    diffusion_relax_loop (domain, dp, u, &p, nrelax);
+    relax_loop (domain, dp, u, &p, nrelax, (FttCellTraverseFunc) diffusion_relax);
   }
   /* correct on leaf cells */
   data[0] = u;

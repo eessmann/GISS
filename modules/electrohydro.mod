@@ -277,7 +277,7 @@ static void poisson_electric (GfsElectroHydro * elec)
 
   dive = gfs_temporary_variable (domain);
   correct_div (domain, elec->rhoe, dive);
-  gfs_poisson_coefficients (domain, elec->perm, TRUE);
+  gfs_poisson_coefficients (domain, elec->perm, TRUE, TRUE);
   res1e = gfs_temporary_variable (domain);
   diae = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
@@ -654,7 +654,8 @@ static gboolean gfs_source_charge_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_source_charge_class ())->parent_class)->event)
       (event, sim)) {
-    gfs_poisson_coefficients (GFS_DOMAIN (sim), GFS_SOURCE_CHARGE (event)->conductivity, FALSE);
+    gfs_poisson_coefficients (GFS_DOMAIN (sim), GFS_SOURCE_CHARGE (event)->conductivity, 
+			      FALSE, FALSE);
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) source_charge, event);
     return TRUE;

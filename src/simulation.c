@@ -1860,8 +1860,8 @@ static void rescale_div (FttCell * cell, gpointer * data)
   GtsRange * vol = data[2];
   gdouble size = ftt_cell_size (cell);
 
-  GFS_VARIABLE (cell, div->i) = GFS_VARIABLE (cell, divu->i)*size*size*(GFS_IS_MIXED (cell) ?
-									GFS_STATE (cell)->solid->a : 1.);
+  GFS_VALUE (cell, div) = GFS_VALUE (cell, divu)*size*size*(GFS_IS_MIXED (cell) ?
+							    GFS_STATE (cell)->solid->a : 1.);
   if (GFS_IS_MIXED (cell))
     gts_range_add_value (vol, size*size*GFS_STATE (cell)->solid->a);
   else
@@ -1875,12 +1875,13 @@ static void add_ddiv (FttCell * cell, gpointer * data)
   gdouble size = ftt_cell_size (cell);
 
   if (GFS_IS_MIXED (cell))
-    GFS_VARIABLE (cell, div->i) += size*size*GFS_STATE (cell)->solid->a*(*ddiv);
+    GFS_VALUE (cell, div) += size*size*GFS_STATE (cell)->solid->a*(*ddiv);
   else
-    GFS_VARIABLE (cell, div->i) += size*size*(*ddiv);
+    GFS_VALUE (cell, div) += size*size*(*ddiv);
 }
 
-static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * div)
+static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * div,
+			 gboolean dirichlet)
 {
   gpointer data[3];
   GtsRange vol;
@@ -1892,20 +1893,29 @@ static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * d
   data[2] = &vol;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) rescale_div, data);
-  gts_range_update (&vol);
 
-  ddiv = - gfs_domain_stats_variable (domain, div, 
-				      FTT_TRAVERSE_LEAFS, -1, 
-				      NULL, NULL).mean/vol.mean;
-  data[2] = &ddiv;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) add_ddiv, data);
+  if (!dirichlet) {
+    gts_range_update (&vol);
+    
+    ddiv = - gfs_domain_stats_variable (domain, div, 
+					FTT_TRAVERSE_LEAFS, -1, 
+					NULL, NULL).mean/vol.mean;
+    data[2] = &ddiv;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) add_ddiv, data);
+  }
 }
 
 static void copy_res (FttCell * cell, gpointer * data)
 {
   GfsVariable * res = data[0], * res1 = data[1];
-  GFS_VARIABLE (cell, res->i) = GFS_VARIABLE (cell, res1->i);
+  GFS_VALUE (cell, res) = GFS_VALUE (cell, res1);
+}
+
+static void has_dirichlet (FttCell * cell, GfsVariable * p)
+{
+  if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
+    p->centered = FALSE;
 }
 
 static void poisson_run (GfsSimulation * sim)
@@ -1917,7 +1927,6 @@ static void poisson_run (GfsSimulation * sim)
 
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);
-
   i = domain->variables;
   while (i) {
     if (GFS_IS_VARIABLE_RESIDUAL (i->data))
@@ -1926,9 +1935,13 @@ static void poisson_run (GfsSimulation * sim)
   }
 
   p = gfs_variable_from_name (domain->variables, "P");
+  gfs_domain_surface_bc (domain, p);
+  gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			     (FttCellTraverseFunc) has_dirichlet, p);
+
   div = gfs_temporary_variable (domain);
-  correct_div (domain, gfs_variable_from_name (domain->variables, "Div"), div);
-  gfs_poisson_coefficients (domain, NULL, TRUE);
+  correct_div (domain, gfs_variable_from_name (domain->variables, "Div"), div, !p->centered);
+  gfs_poisson_coefficients (domain, NULL, TRUE, p->centered);
   res1 = gfs_temporary_variable (domain);
   dia = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
