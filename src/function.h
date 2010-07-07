@@ -79,4 +79,73 @@ static double distance (double xo, double yo, double zo)
   return sqrt (min)*_sim->physical_params.L;
 }
 
+static gboolean is_velocity (GfsVariable * v, GfsDomain * domain)
+{
+  FttComponent c;
+  GfsVariable ** u = gfs_domain_velocity (domain);
+
+  for (c = 0; c < FTT_DIMENSION; c++)
+    if (v == u[c])
+      return TRUE;
+  return FALSE;
+}
+
+static void dirichlet_bc (FttCell * cell)
+{
+  cell->flags |= GFS_FLAG_DIRICHLET;
+  GFS_STATE (cell)->solid->fv = 0.;
+}
+
+static double dsd (const gchar * name, FttComponent c)
+{
+  g_return_val_if_fail (_cell != NULL, NODATA);
+  if (!GFS_IS_MIXED (_cell))
+    return NODATA;
+  GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (_sim)->variables, name);
+  if (v == NULL)
+    return NODATA;
+  if (v->surface_bc)
+    (* GFS_SURFACE_GENERIC_BC_CLASS (GTS_OBJECT (v->surface_bc)->klass)->bc) (_cell, v->surface_bc);
+  else if (is_velocity (v, GFS_DOMAIN (_sim)))
+    dirichlet_bc (_cell);
+  else /* Neumann */
+    return 0.;
+  if ((_cell->flags & GFS_FLAG_DIRICHLET) == 0)
+    return NODATA;
+  FttVector g;
+  gfs_cell_dirichlet_gradient (_cell, v->i, -1, GFS_STATE (_cell)->solid->fv, &g);
+  return gfs_dimensional_value (v, (&g.x)[c]/(_sim->physical_params.L*ftt_cell_size (_cell)));
+}
+
+static double dsx (const gchar * name) { return dsd (name, FTT_X); }
+static double dsy (const gchar * name) { return dsd (name, FTT_Y); }
+#if !FTT_2D
+static double dsz (const gchar * name) { return dsd (name, FTT_Z); }
+#endif /* 3D */
+
+static double flux (const gchar * name)
+{
+  g_return_val_if_fail (_cell != NULL, NODATA);
+  if (!GFS_IS_MIXED (_cell))
+    return 0.;
+  GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (_sim)->variables, name);
+  if (v == NULL)
+    return 0.;
+  if (v->surface_bc)
+    (* GFS_SURFACE_GENERIC_BC_CLASS (GTS_OBJECT (v->surface_bc)->klass)->bc) (_cell, v->surface_bc);
+  else if (is_velocity (v, GFS_DOMAIN (_sim)))
+    dirichlet_bc (_cell);
+  else /* Neumann */
+    return 0.;
+  gdouble flux;
+  if ((_cell->flags & GFS_FLAG_DIRICHLET) == 0)
+    flux = GFS_STATE (_cell)->solid->fv;
+  else {
+    GFS_STATE (_cell)->solid->v = 1.;
+    flux = gfs_cell_dirichlet_gradient_flux (_cell, v->i, -1, GFS_STATE (_cell)->solid->fv);
+  }
+  return gfs_dimensional_value (v, flux*pow (_sim->physical_params.L*ftt_cell_size (_cell), 
+					     FTT_DIMENSION - 2.));
+}
+
 #endif /* __FUNCTION_H__ */

@@ -744,11 +744,12 @@ static gdouble cell_fraction (FttCell * cell)
   return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a : 1.;
 }
 
-static gdouble cell_solid_area (FttCell * cell)
+static gdouble cell_solid_area (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 {
   FttVector n;
   gfs_solid_normal (cell, &n);
-  return ftt_vector_norm (&n);
+  return ftt_vector_norm (&n)*pow (ftt_cell_size (cell)*GFS_SIMULATION (domain)->physical_params.L,
+				   FTT_DIMENSION - 1);
 }
 
 static gdouble cell_solid_sr (FttCell * cell)
