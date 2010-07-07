@@ -107,14 +107,16 @@ chypre = Curve()
 for p in Curve('res-7.ref',6,7).l:
     chypre.l.append((p[0] + 0.1, p[1]*1.2))
 if (Curve('res-7-gerris',2,3) - cgerris).max() > 1e-8 or\
-   (Curve('res-7-hypre',2,3) - chypre).max() > 1e-8 or\
-   (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max() > 1e-6 or\
-   (Curve('error-hypre',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
+   (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
     print (Curve('res-7-gerris',2,3) - cgerris).max()
-    print (Curve('res-7-hypre',2,3) - chypre).max()
     print (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max()
-    print (Curve('error-hypre',1,4) - Curve('error.ref',1,4)).max()
     exit(1)
+if "x$ignore_hypre" != "xtrue":
+   if (Curve('res-7-hypre',2,3) - chypre).max() > 1e-8 or\
+      (Curve('error-hypre',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
+      print (Curve('res-7-hypre',2,3) - chypre).max()
+      print (Curve('error-hypre',1,4) - Curve('error.ref',1,4)).max()
+      exit(1)
 EOF
 else
    exit 1
