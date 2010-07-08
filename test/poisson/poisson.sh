@@ -111,7 +111,7 @@ if (Curve('res-7-gerris',2,3) - cgerris).max() > 1e-8 or\
     print (Curve('res-7-gerris',2,3) - cgerris).max()
     print (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max()
     exit(1)
-if "x$ignore_hypre" != "xtrue":
+if "x$ignorehypre" != "xtrue":
    if (Curve('res-7-hypre',2,3) - chypre).max() > 1e-8 or\
       (Curve('error-hypre',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
       print (Curve('res-7-hypre',2,3) - chypre).max()
