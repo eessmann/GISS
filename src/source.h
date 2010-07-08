@@ -168,6 +168,7 @@ struct _GfsSourceControlField {
   GfsVariable * s;
 
   /*< public >*/
+  gdouble tau;
   gint level;
 };
 
