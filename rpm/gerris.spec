@@ -31,7 +31,7 @@ BuildRequires: netcdf-devel proj-devel gcc-gfortran
 BuildRequires: libnetcdf-devel libproj-devel gcc-fortran python
 %endif
 # For both distros
-Requires: pkgconfig gcc sed gawk m4
+Requires: pkgconfig gcc sed gawk m4 gerris-snapshot-devel
 BuildRequires: glibc-devel automake libtool gsl-devel gts-snapshot-devel >= %{gts_version}
 BuildRequires: openmpi openmpi-devel
 
