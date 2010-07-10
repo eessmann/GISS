@@ -39,9 +39,9 @@
 /* LocateArray */
 
 typedef struct {
-  GtsObject ** root;
+  GSList ** root;
   gdouble h, min[FTT_DIMENSION], max[FTT_DIMENSION];
-  gint n[FTT_DIMENSION];
+  gint n[FTT_DIMENSION], size;
 } LocateArray;
 
 static void locate_index (FttVector * p, LocateArray * a, gint i[FTT_DIMENSION])
@@ -89,7 +89,8 @@ static void box_index (GfsBox * b, LocateArray * a)
   ftt_cell_pos (b->root, &p);
   gint i = locate_linear_index (&p, a);
   g_assert (i >= 0);
-  a->root[i] = GTS_OBJECT (b);
+  g_assert (!a->root[i]);
+  a->root[i] = g_slist_prepend (NULL, b);
   FttDirection d;
   for (d = 0; d < FTT_NEIGHBORS; d++)
     if (GFS_IS_BOUNDARY (b->neighbor[d])) {
@@ -97,7 +98,7 @@ static void box_index (GfsBox * b, LocateArray * a)
       ftt_cell_pos (boundary->root, &p);
       gint i = locate_linear_index (&p, a);
       g_assert (i >= 0);
-      a->root[i] = GTS_OBJECT (boundary);
+      a->root[i] = g_slist_prepend (a->root[i], boundary);
     }
 }
 
@@ -121,12 +122,13 @@ static LocateArray * locate_array_new (GfsDomain * domain)
     a->n[i] = ceil ((a->max[i] - a->min[i])/a->h - 0.5);
     size *= a->n[i];
   }
-  a->root = g_malloc0 (size*sizeof (GtsObject *));
+  a->root = g_malloc0 (size*sizeof (GSList *));
+  a->size = size;
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_index, a);
   return a;
 }
 
-static GtsObject * locate_array_locate (LocateArray * a, FttVector * p)
+static GSList * locate_array_locate (LocateArray * a, FttVector * p)
 {
   gint i = locate_linear_index (p, a);
   return i < 0 ? NULL : a->root[i];
@@ -135,6 +137,9 @@ static GtsObject * locate_array_locate (LocateArray * a, FttVector * p)
 static void locate_array_destroy (LocateArray * a)
 {
   if (a) {
+    gint i;
+    for (i = 0; i < a->size; i++)
+      g_slist_free (a->root[i]);
     g_free (a->root);
     g_free (a);
   }
@@ -2449,11 +2454,11 @@ FttCell * gfs_domain_locate (GfsDomain * domain,
 			     gint max_depth,
 			     GfsBox ** where)
 {
-  GtsObject * b = locate_array_locate (domain->array, &target);
-  if (GFS_IS_BOX (b)) {
+  GSList * b = locate_array_locate (domain->array, &target);
+  if (b && GFS_IS_BOX (b->data)) {
     if (where)
-      *where = GFS_BOX (b);
-    return ftt_cell_locate (GFS_BOX (b)->root, target, max_depth);
+      *where = b->data;
+    return ftt_cell_locate (GFS_BOX (b->data)->root, target, max_depth);
   }
   return NULL;
 }
@@ -2479,15 +2484,25 @@ FttCell * gfs_domain_boundary_locate (GfsDomain * domain,
 				      gint max_depth,
 				      GtsObject ** where)
 {
-  GtsObject * b = locate_array_locate (domain->array, &target);
-  if (where)
-    *where = b;
-  if (GFS_IS_BOX (b))
-    return ftt_cell_locate (GFS_BOX (b)->root, target, max_depth);
-  else if (GFS_IS_BOUNDARY (b)) {
-    FttCell * cell = ftt_cell_locate (GFS_BOUNDARY (b)->root, target, max_depth);
-    return cell && GFS_CELL_IS_BOUNDARY (cell) ? cell : NULL;
+  GSList * b = locate_array_locate (domain->array, &target);
+  if (!b)
+    return NULL;
+  if (GFS_IS_BOX (b->data)) {
+    if (where)
+      *where = b->data;
+    return ftt_cell_locate (GFS_BOX (b->data)->root, target, max_depth);
   }
+  else
+    while (b) {
+      g_assert (GFS_IS_BOUNDARY (b->data));
+      FttCell * cell = ftt_cell_locate (GFS_BOUNDARY (b->data)->root, target, max_depth);
+      if (cell && GFS_CELL_IS_BOUNDARY (cell)) {
+	if (where)
+	  *where = b->data;
+	return cell;
+      }
+      b = b->next;
+    }
   return NULL;
 }
 
