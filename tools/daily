@@ -290,6 +290,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	   redate < ChangeLog | source-highlight -f html -s changelog -d -T "GTS ChangeLog" > $HOME/local/src/gts-www/publish/ChangeLog.html && \
 	   cd $wdir/$gerris && rm -f ChangeLog && make ChangeLog && \
 	   redate < ChangeLog | source-highlight -f html -s changelog -d -T "Gerris ChangeLog" > $localgerrisweb/gerris-ChangeLog.html && \
+	   cp -f $wdir/$gerris/doc/examples/gfs.php $localgerrisweb/mediawiki-1.6.6/extensions/SyntaxHighlight_GeSHi/geshi/geshi/ && \
 	   cd $wdir/$gfsview && rm -f ChangeLog && make ChangeLog && \
 	   redate < ChangeLog | source-highlight -f html -s changelog -d -T "GfsView ChangeLog" > $localgerrisweb/gfsview-ChangeLog.html && \
 	   cd $HOME/local/src/gerris-www && make publish_local sync && \
