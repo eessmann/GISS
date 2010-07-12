@@ -267,6 +267,12 @@ static void minus_gradient (FttCell * cell, gpointer * data)
     GFS_VALUE (cell, g[c]) = - gfs_center_gradient (cell, c, v->i)/size;
 }
 
+static void has_dirichlet (FttCell * cell, GfsVariable * p)
+{
+  if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
+    p->centered = FALSE;
+}
+
 static void poisson_electric (GfsElectroHydro * elec)
 {
   GfsMultilevelParams * par = &elec->electric_projection_params;
@@ -275,11 +281,18 @@ static void poisson_electric (GfsElectroHydro * elec)
   GfsVariable * phi = elec->phi; 
   GfsVariable ** e = elec->E;
 
+  gfs_domain_surface_bc (domain, phi);
+  gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			     (FttCellTraverseFunc) has_dirichlet, phi);
+
+
   dive = gfs_temporary_variable (domain);
   correct_div (domain, elec->rhoe, dive);
-  gfs_poisson_coefficients (domain, elec->perm, TRUE, TRUE);
+  gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered);
   res1e = gfs_temporary_variable (domain);
   diae = gfs_temporary_variable (domain);
+
+
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, diae);
   par->poisson_solve (domain, par, phi, dive, res1e, diae, 1.);
