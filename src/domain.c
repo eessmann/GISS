@@ -467,7 +467,8 @@ static void free_pair (gpointer key, gpointer value)
 
 static void cleanup_each_box (GfsBox * box, GfsDomain * domain)
 {
-  if (GFS_IS_BOX (box)) { /* this is a necessary check when using graph partitioning */
+  /* this is a necessary check when using graph partitioning */
+  if (g_slist_length (GTS_SLIST_CONTAINEE (box)->containers) == 1) {
     ftt_cell_traverse (box->root, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 		       (FttCellTraverseFunc) gfs_cell_cleanup, domain);
     FttDirection d;
