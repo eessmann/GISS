@@ -277,7 +277,6 @@ int main (int argc, char * argv[])
     guint np = bubble ? npart : pow (2., npart);
     gfloat imbalance = 0.0;
     GSList * partition, * i;
-    gint pid = 0;
 
     if (verbose)
       gts_graph_print_stats (GTS_GRAPH (simulation), stderr);
@@ -299,13 +298,25 @@ int main (int argc, char * argv[])
 						 npart, 
 						 ntry, mmax, nmin, imbalance);
 
+    gint pid = 0;
     i = partition;
     while (i) {
-      gts_container_foreach (GTS_CONTAINER (i->data), 
-			     (GtsFunc) set_box_pid, &pid);
+      if (gts_container_size (GTS_CONTAINER (i->data)) == 0) {
+	fprintf (stderr, "gerris: partitioning failed: empty partition\n");
+	if (!bubble)
+	  fprintf (stderr, 
+		   "Try using the '-b' option\n"
+		   "Try `gerris --help' for more information.\n");
+	return 1;
+      }
+      gts_container_foreach (GTS_CONTAINER (i->data), (GtsFunc) set_box_pid, &pid);
       pid++;
       i = i->next;
     }
+
+    if (pid != np)
+      fprintf (stderr, "gerris: warning: only %d partitions were created\n", pid);
+
     if (verbose)
       gts_graph_partition_print_stats (partition, stderr);
     gts_graph_partition_destroy (partition);
