@@ -1241,6 +1241,8 @@ static gboolean gfs_output_location_event (GfsEvent * event,
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsOutputLocation * location = GFS_OUTPUT_LOCATION (event);
     FILE * fp = GFS_OUTPUT (event)->file->fp;
+    FILE * fpp = ((domain->pid < 0 || GFS_OUTPUT (event)->parallel) ? fp:
+		   gfs_union_open (GFS_OUTPUT (event)->file->fp, domain->pid));
     guint i;
 
     if (GFS_OUTPUT (event)->first_call) {
@@ -1267,22 +1269,27 @@ static gboolean gfs_output_location_event (GfsEvent * event,
       if (cell != NULL) {
 	GSList * i = domain->variables;
 	
-	fprintf (fp, pformat, sim->time.t, p.x, p.y, p.z);
+	fprintf (fpp, pformat, sim->time.t, p.x, p.y, p.z);
 	while (i) {
 	  GfsVariable * v = i->data;
 	  if (v->name)
-	    fprintf (fp, vformat, gfs_dimensional_value (v, 
-							 location->interpolate ? 
-							 gfs_interpolate (cell, pm, v) :
-							 GFS_VALUE (cell, v)));
+	    fprintf (fpp, vformat, gfs_dimensional_value (v, 
+							  location->interpolate ? 
+							  gfs_interpolate (cell, pm, v) :
+							  GFS_VALUE (cell, v)));
 	  i = i->next;
 	}
-	fputc ('\n', fp);
+	fputc ('\n', fpp);
       }
     }
+
     g_free (pformat);
     g_free (vformat);
     fflush (fp);
+    if (!(domain->pid < 0 || GFS_OUTPUT (event)->parallel)) {
+      fflush (fpp);
+      gfs_union_close (GFS_OUTPUT (event)->file->fp, domain->pid, fpp);
+    }
     return TRUE;
   }
   return FALSE;
