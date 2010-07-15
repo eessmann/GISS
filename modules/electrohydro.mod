@@ -260,11 +260,22 @@ static void minus_gradient (FttCell * cell, gpointer * data)
 {
   GfsVariable * v = data[0];
   GfsVariable ** g = data[1];
-  FttComponent c;
   gdouble size = ftt_cell_size (cell);
+  FttComponent c;
 
-  for (c = 0; c < FTT_DIMENSION; c++)
-    GFS_VALUE (cell, g[c]) = - gfs_center_gradient (cell, c, v->i)/size;
+  if (GFS_IS_MIXED (cell)) {
+      FttVector gs;
+      gfs_mixed_cell_gradient (cell, v, &gs);
+      GFS_VALUE (cell, g[0]) =- gs.x/size;
+      GFS_VALUE (cell, g[1]) =- gs.y/size;
+#if (!FTT_2D)
+      GFS_VALUE (cell, g[2]) =- gs.z/size; 
+#endif
+   } 
+   else  
+     for (c = 0; c < FTT_DIMENSION; c++) 
+       GFS_VALUE (cell, g[c]) =  - gfs_center_gradient (cell, c, v->i)/size;
+   
 }
 
 static void has_dirichlet (FttCell * cell, GfsVariable * p)
