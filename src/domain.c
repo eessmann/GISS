@@ -338,6 +338,7 @@ static void removed_list (GfsBox * box, gpointer * data)
 
     for (d = 0; d < FTT_NEIGHBORS; d++)
       if (GFS_IS_BOUNDARY_PERIODIC (box->neighbor[d]) &&
+	  !GFS_IS_BOUNDARY_MPI (box->neighbor[d]) &&
 	  (matching = GFS_BOUNDARY_PERIODIC (box->neighbor[d])->matching)->pid != domain->pid) {
 	gts_object_destroy (GTS_OBJECT (box->neighbor[d]));
 	gfs_boundary_mpi_new (gfs_boundary_mpi_class (), box, d, matching->pid, matching->id);

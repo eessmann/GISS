@@ -1707,12 +1707,12 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
   gboolean class_changed = FALSE;
   FttVector pos = {0., 0., 0.};
   GtsFileVariable var[] = {
-    {GTS_UINT,   "id",     TRUE},
-    {GTS_INT,    "pid",    TRUE},
-    {GTS_UINT,   "size",   TRUE},
-    {GTS_DOUBLE, "x",      TRUE},
-    {GTS_DOUBLE, "y",      TRUE},
-    {GTS_DOUBLE, "z",      TRUE},
+    {GTS_UINT,   "id",     TRUE, &b->id},
+    {GTS_INT,    "pid",    TRUE, &b->pid},
+    {GTS_UINT,   "size",   TRUE, &b->size},
+    {GTS_DOUBLE, "x",      TRUE, &pos.x},
+    {GTS_DOUBLE, "y",      TRUE, &pos.y},
+    {GTS_DOUBLE, "z",      TRUE, &pos.z},
     {GTS_FILE,   "right",  TRUE},
     {GTS_FILE,   "left",   TRUE},
     {GTS_FILE,   "top",    TRUE},
@@ -1761,12 +1761,6 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
   b->root = ftt_cell_new ((FttCellInitFunc) gfs_cell_init, domain);
 
   weight = gts_gnode_weight (GTS_GNODE (b));
-  var[0].data = &b->id;
-  var[1].data = &b->pid;
-  var[2].data = &b->size;
-  var[3].data = &pos.x;
-  var[4].data = &pos.y;
-  var[5].data = &pos.z;
   gts_file_assign_start (fp, var);
   if (fp->type == GTS_ERROR)
     return;
@@ -1792,25 +1786,41 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
     }
   
   if (fp->type == '{') {
-    FttDirection d;
+    FttCell * root;
 
-    ftt_cell_destroy (b->root, (FttCellCleanupFunc) gfs_cell_cleanup, domain);
     fp->scope_max++;
     if (domain->binary) {
       if (gts_file_getc (fp) != '\n') {
       	gts_file_error (fp, "expecting a newline");
       	return;
       }
-      b->root = ftt_cell_read_binary (fp, (FttCellReadFunc) gfs_cell_read_binary, domain);
+      root = ftt_cell_read_binary (fp, (FttCellReadFunc) gfs_cell_read_binary, domain);
       if (fp->type == GTS_ERROR)
 	return;
       gts_file_next_token (fp);
     }
     else {
       gts_file_first_token_after (fp, '\n');
-      b->root = ftt_cell_read (fp, (FttCellReadFunc) gfs_cell_read, domain);
+      root = ftt_cell_read (fp, (FttCellReadFunc) gfs_cell_read, domain);
     }
     fp->scope_max--;
+
+    if (domain->pid >= 0 && b->pid != domain->pid)
+      /* ignore data of boxes belonging to other PEs */
+      ftt_cell_destroy (root, (FttCellCleanupFunc) gfs_cell_cleanup, domain);
+    else {
+      ftt_cell_destroy (b->root, (FttCellCleanupFunc) gfs_cell_cleanup, domain);
+      b->root = root;
+      FttDirection d;
+      for (d = 0; d < FTT_NEIGHBORS; d++)
+	if (GFS_IS_BOUNDARY (b->neighbor[d])) {
+	  GfsBoundary * boundary = GFS_BOUNDARY (b->neighbor[d]);
+	  
+	  ftt_cell_set_neighbor_match (boundary->root, b->root, boundary->d, 
+				       (FttCellInitFunc) gfs_cell_init, domain);
+	}
+    }
+	
     if (fp->type == GTS_ERROR)
       return;
     if (fp->type != '}') {
@@ -1818,14 +1828,6 @@ static void gfs_box_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     gts_file_next_token (fp);
-
-    for (d = 0; d < FTT_NEIGHBORS; d++)
-      if (GFS_IS_BOUNDARY (b->neighbor[d])) {
-	GfsBoundary * boundary = GFS_BOUNDARY (b->neighbor[d]);
-
-	ftt_cell_set_neighbor_match (boundary->root, b->root, boundary->d, 
-				     (FttCellInitFunc) gfs_cell_init, domain);
-      }
   }
 
   FTT_ROOT_CELL (b->root)->parent = b;
