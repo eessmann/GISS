@@ -1,0 +1,44 @@
+# Title: Planar capacitor
+#
+# Description:
+#
+#
+# Author: J.M. L\'opez-Herrera and S. Popinet
+# Command: sh planar.sh
+# Version: 
+# Required files: planar.gfs planar.sh
+# Running time: 
+# Generated files: 
+#
+
+GModule electrohydro
+
+1 0 GfsElectroHydro GfsBox GfsGEdge {} {
+    Global {
+      #define R1 -0.2
+      #define R2 0.3
+      #define DEN (R2-R1)
+    }
+    Refine LEVEL 
+    GfsSolid (-y+R2)
+    GfsSolid ( y-R1)
+
+    Init{} {Phi = (y-R1)/DEN }
+    SurfaceBc Phi Dirichlet (y>0 ? 1.0 : 0.0)
+
+    Time { iend = 1 dtmax=1.0 }
+    OutputTime { istep = 1 } stderr
+    GfsOutputSimulation { istep = 1 } result-LEVEL.gfs 
+    GfsOutputLocation {start = end} {awk ' 
+           BEGIN {R1=-0.2 ; R2=0.3 ; DEN = (R2-R1) }  
+          { if ($1 != "#") print  $3, $9, ($3-R1)/DEN, $9-($3-R1)/DEN, $12 ;}' > xplanar}  yprofile 
+
+   GfsOutputErrorNorm poterr-LEVEL {v=Phi} {s= (y-R1)/DEN }
+
+#    GfsSourceElectric
+} {
+    # Electric parameters
+    perm = 1.0
+    GfsElectricProjectionParams { tolerance = 1e-7 }
+}
+GfsBox{}
