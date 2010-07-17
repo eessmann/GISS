@@ -715,7 +715,12 @@ static void box_match (GfsBox * box)
       g_assert (GFS_BOUNDARY_CLASS (box->neighbor[d]->klass)->match);
       boundary->type = GFS_BOUNDARY_MATCH_VARIABLE;
       (* GFS_BOUNDARY_CLASS (box->neighbor[d]->klass)->match) (boundary);
-      gfs_boundary_send (boundary);
+      if (!boundary->root) {
+	gts_object_destroy (GTS_OBJECT (boundary));
+	box->neighbor[d] = NULL;
+      }
+      else
+	gfs_boundary_send (boundary);
     }
 }
 

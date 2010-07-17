@@ -513,10 +513,10 @@ static void match (FttCell * cell, GfsBoundary * boundary)
   if (parent && GFS_CELL_IS_GRADIENT_BOUNDARY (parent))
     cell->flags |= GFS_FLAG_GRADIENT_BOUNDARY;
   if (neighbor == NULL || ftt_cell_level (neighbor) < level) {
-    if (FTT_CELL_IS_ROOT (cell))
-      g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
-	     "root cell is entirely outside of the fluid domain\n"
-	     "the solid surface orientation may be incorrect");
+    if (FTT_CELL_IS_ROOT (cell)) {
+      g_assert (cell == boundary->root);
+      boundary->root = NULL;
+    }
     ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup, gfs_box_domain (boundary->box));
     boundary->changed = TRUE;
     return;
@@ -525,10 +525,10 @@ static void match (FttCell * cell, GfsBoundary * boundary)
     GfsSolidVector * s = GFS_STATE (neighbor)->solid;
 
     if (s && s->s[FTT_OPPOSITE_DIRECTION (boundary->d)] == 0.) {
-      if (FTT_CELL_IS_ROOT (cell))
-	g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR,
-	       "root cell is entirely outside of the fluid domain\n"
-	       "the solid surface orientation may be incorrect");
+      if (FTT_CELL_IS_ROOT (cell)) {
+	g_assert (cell == boundary->root);
+	boundary->root = NULL;
+      }
       ftt_cell_destroy (cell, (FttCellCleanupFunc) gfs_cell_cleanup,
 			gfs_box_domain (boundary->box));
       boundary->changed = TRUE;
@@ -603,13 +603,13 @@ static void boundary_match (GfsBoundary * boundary)
   
   boundary->changed = FALSE;
   boundary->depth = l;
-  while (l <= boundary->depth) {
+  while (boundary->root && l <= boundary->depth) {
     ftt_cell_traverse_boundary (boundary->root, boundary->d,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
 				(FttCellTraverseFunc) match, boundary);
     l++;
   }
-  if (boundary->changed)
+  if (boundary->root && boundary->changed)
     ftt_cell_flatten (boundary->root, boundary->d, (FttCellCleanupFunc) gfs_cell_cleanup, 
 		      gfs_box_domain (boundary->box));
 }
