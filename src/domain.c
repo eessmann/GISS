@@ -3205,23 +3205,27 @@ GfsVariable * gfs_domain_get_or_add_variable (GfsDomain * domain,
   return v;
 }
 
-static void add_pressure_force (FttCell * cell, gpointer * data)
+typedef struct {
+  gdouble * f, * m;
+  GfsVariable * v;
+  GfsFunction * weight;
+  GfsSourceDiffusion * d;
+} Force;
+
+static void add_pressure_force (FttCell * cell, Force * f)
 {
-  gdouble weight = data[3] ? gfs_function_value (data[3], cell) : 1.;
+  gdouble weight = f->weight ? gfs_function_value (f->weight, cell) : 1.;
 
   if (weight != 0.) {
-    gdouble * f = data[0];
-    gdouble * m = data[1];
     gdouble * r = &GFS_STATE (cell)->solid->ca.x;
-    GfsVariable * p = data[2];
     FttVector ff, mm;
     FttComponent c;
     
-    gfs_pressure_force (cell, p, &ff);
+    gfs_pressure_force (cell, f->v, &ff);
     gts_vector_cross (&mm.x, r, &ff.x);
     for (c = 0; c < 3; c++) {
-      f[c] += weight*(&ff.x)[c];
-      m[c] += weight*(&mm.x)[c];
+      f->f[c] += weight*(&ff.x)[c];
+      f->m[c] += weight*(&mm.x)[c];
     }
   }
 }
@@ -3242,15 +3246,11 @@ static GfsSourceDiffusion * source_diffusion (GfsVariable * v)
   return NULL;
 }
 
-static void add_viscous_force (FttCell * cell, gpointer * data)
+static void add_viscous_force (FttCell * cell, Force * f)
 {
-  gdouble weight = data[4] ? gfs_function_value (data[4], cell) : 1.;
+  gdouble weight = f->weight ? gfs_function_value (f->weight, cell) : 1.;
 
   if (weight != 0.) {
-    gdouble * f = data[0];
-    gdouble * m = data[1];
-    GfsVariable * v = data[2];
-    GfsSourceDiffusion * d = data[3];
     gdouble D;
     GfsSolidVector * s = GFS_STATE (cell)->solid;
     gdouble * r = &s->ca.x;
@@ -3258,14 +3258,14 @@ static void add_viscous_force (FttCell * cell, gpointer * data)
     FttComponent c;
     
     g_assert (((cell)->flags & GFS_FLAG_DIRICHLET) != 0);
-    gfs_cell_dirichlet_gradient (cell, v->i, -1, s->fv, &g);
+    gfs_cell_dirichlet_gradient (cell, f->v->i, -1, s->fv, &g);
     
-    D = - gfs_source_diffusion_cell (d, cell);
+    D = - gfs_source_diffusion_cell (f->d, cell);
     n.x = s->s[1] - s->s[0];
     n.y = s->s[3] - s->s[2];
 #if FTT_2D
     ff.z = 0.;
-    switch (v->component) {
+    switch (f->v->component) {
     case FTT_X:
       ff.x = D*(2.*g.x*n.x + g.y*n.y);
       ff.y = D*g.y*n.x;
@@ -3280,7 +3280,7 @@ static void add_viscous_force (FttCell * cell, gpointer * data)
 #else /* 3D */
     n.z = s->s[5] - s->s[4];
     D *= ftt_cell_size (cell);
-    switch (v->component) {
+    switch (f->v->component) {
     case FTT_X:
       ff.x = D*(2.*g.x*n.x + g.y*n.y + g.z*n.z);
       ff.y = D*g.y*n.x;
@@ -3302,8 +3302,8 @@ static void add_viscous_force (FttCell * cell, gpointer * data)
 #endif /* 3D */
     gts_vector_cross (&mm.x, r, &ff.x);
     for (c = 0; c < 3; c++) {
-      f[c] += weight*(&ff.x)[c];
-      m[c] += weight*(&mm.x)[c];
+      f->f[c] += weight*(&ff.x)[c];
+      f->m[c] += weight*(&mm.x)[c];
     }
   }
 }
@@ -3333,7 +3333,6 @@ void gfs_domain_solid_force (GfsDomain * domain,
 {
   FttComponent c;
   GfsVariable ** v;
-  gpointer data[4];
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (pf != NULL);
@@ -3346,14 +3345,15 @@ void gfs_domain_solid_force (GfsDomain * domain,
 
   pf->x = pf->y = pf->z = 0.;
   pm->x = pm->y = pm->z = 0.;
-  data[0] = pf;
-  data[1] = pm;
-  data[2] = gfs_variable_from_name (domain->variables, "P");
-  data[3] = weight;
+  Force f;
+  f.f = (gdouble *) pf;
+  f.m = (gdouble *) pm;
+  f.v = gfs_variable_from_name (domain->variables, "P");
+  f.weight = weight;
   if (weight)
     gfs_catch_floating_point_exceptions ();
   gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			     (FttCellTraverseFunc) add_pressure_force, data);
+			     (FttCellTraverseFunc) add_pressure_force, &f);
   if (weight)
     gfs_restore_fpe_for_function (weight);
   vf->x = vf->y = vf->z = 0.;
@@ -3363,21 +3363,26 @@ void gfs_domain_solid_force (GfsDomain * domain,
     GfsSourceDiffusion * D = source_diffusion (v[c]);
 
     if (D) {
-      gpointer data[5];
-
       gfs_domain_surface_bc (domain, v[c]);
-      data[0] = vf;
-      data[1] = vm;
-      data[2] = v[c];
-      data[3] = D;
-      data[4] = weight;
+      f.f = (gdouble *) vf;
+      f.m = (gdouble *) vm;
+      f.v = v[c];
+      f.d = D;
+      f.weight = weight;
       if (weight)
 	gfs_catch_floating_point_exceptions ();
       gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-				 (FttCellTraverseFunc) add_viscous_force, data);
+				 (FttCellTraverseFunc) add_viscous_force, &f);
       if (weight)
 	gfs_restore_fpe_for_function (weight);
     }
+  }
+
+  for (c = 0; c < 3; c++) {
+    gfs_all_reduce (domain, (&pf->x)[c], MPI_DOUBLE, MPI_SUM);
+    gfs_all_reduce (domain, (&vf->x)[c], MPI_DOUBLE, MPI_SUM);
+    gfs_all_reduce (domain, (&pm->x)[c], MPI_DOUBLE, MPI_SUM);
+    gfs_all_reduce (domain, (&vm->x)[c], MPI_DOUBLE, MPI_SUM);
   }
 }
 
