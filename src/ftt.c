@@ -1814,8 +1814,10 @@ static gboolean cell_read (FttCell * cell,
   }
   flags = atoi (fp->token->str);
   if (FTT_CELL_ID (cell) != (flags & FTT_FLAG_ID)) {
-    gts_file_error (fp, "FTT_CELL_ID (cell) `%d' != (flags & FTT_FLAG_ID) `%d'",
-		    FTT_CELL_ID (cell), (flags & FTT_FLAG_ID));
+    gts_file_error (fp, 
+		    "FTT_CELL_ID (cell) `%d' != (flags & FTT_FLAG_ID) `%d'\n"
+		    "Make sure the file has %d spatial dimensions",
+		    FTT_CELL_ID (cell), (flags & FTT_FLAG_ID), FTT_DIMENSION);
     return FALSE;
   }
   cell->flags = flags;
@@ -1917,8 +1919,10 @@ static gboolean cell_read_binary (FttCell * cell,
     return FALSE;
   }
   if (FTT_CELL_ID (cell) != (flags & FTT_FLAG_ID)) {
-    gts_file_error (fp, "FTT_CELL_ID (cell) `%d' != (flags & FTT_FLAG_ID) `%d'",
-		    FTT_CELL_ID (cell), (flags & FTT_FLAG_ID));
+    gts_file_error (fp, 
+		    "FTT_CELL_ID (cell) `%d' != (flags & FTT_FLAG_ID) `%d'\n"
+		    "Make sure the file has %d spatial dimensions",
+		    FTT_CELL_ID (cell), (flags & FTT_FLAG_ID), FTT_DIMENSION);
     return FALSE;
   }
   cell->flags = flags;
