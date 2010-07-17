@@ -1589,8 +1589,15 @@ void gfs_gedge_link_boxes (GfsGEdge * edge)
     g_return_if_fail (b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] == NULL);
     
     GtsObject * periodic = GTS_OBJECT (b1);
-    while (periodic && GFS_IS_BOX (periodic) && GFS_BOX (periodic) != b2)
-      periodic = GFS_BOX (periodic)->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)];
+    gdouble * p1 = &FTT_ROOT_CELL (b1->root)->pos.x;
+    gdouble * p2 = &FTT_ROOT_CELL (b2->root)->pos.x;
+    gdouble sign = edge->d % 2 ? 1. : -1.;
+    FttComponent c = edge->d/2;
+    if (p1[c] != G_MAXDOUBLE && p2[c] != G_MAXDOUBLE && sign*(p2[c] - p1[c]) > 0.)
+      periodic = GTS_OBJECT (b2);
+    else
+      while (periodic && GFS_IS_BOX (periodic) && GFS_BOX (periodic) != b2)
+	periodic = GFS_BOX (periodic)->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)];
     
     if (GFS_BOX (periodic) == b2) {
       gfs_boundary_periodic_new (gfs_boundary_periodic_class (), b1, edge->d, b2);
