@@ -35,84 +35,12 @@
 
 /* GfsOutput: object */
 
-typedef struct _Format Format;
-
-typedef enum {
-  ITER,
-  TIME,
-  PID,
-  NONE
-} FormatType;
-
-struct _Format {
-  gchar * s;
-  FormatType t;
-};
-
-static Format * format_new (gchar * s, guint len, 
-			    FormatType t)
-{
-  Format * f = g_malloc (sizeof (Format));
-  
-  f->s = g_strndup (s, len);
-  f->t = t;
-
-  return f;
-}
-
-static void format_destroy (Format * f)
-{
-  g_free (f->s);
-  g_free (f);
-}
-
-static gchar * format_string (GSList * list, 
-			      gint pid, 
-			      guint niter,
-			      gdouble time)
-{
-  gchar * s = g_strdup ("");
-
-  while (list) {
-    Format * f = list->data;
-    gchar * s1, * s2 = NULL;
-
-    switch (f->t) {
-    case NONE:
-      s2 = g_strconcat (s, f->s, NULL);
-      break;
-    case PID:
-      s1 = g_strdup_printf (f->s, pid);
-      s2 = g_strconcat (s, s1, NULL);
-      g_free (s1);
-      break;
-    case ITER:
-      s1 = g_strdup_printf (f->s, niter);
-      s2 = g_strconcat (s, s1, NULL);
-      g_free (s1);
-      break;
-    case TIME:
-      s1 = g_strdup_printf (f->s, time);
-      s2 = g_strconcat (s, s1, NULL);
-      g_free (s1);
-      break;
-    default:
-      g_assert_not_reached ();
-    }
-    g_free (s);
-    s = s2;
-    list = list->next;
-  }
-
-  return s;
-}
-
 static void output_free (GfsOutput * output)
 {
   if (output->format)
     g_free (output->format);
   output->format = NULL;
-  g_slist_foreach (output->formats, (GFunc) format_destroy, NULL);
+  g_slist_foreach (output->formats, (GFunc) gfs_format_destroy, NULL);
   g_slist_free (output->formats);
   output->formats = NULL;
 }
@@ -163,7 +91,7 @@ static gboolean gfs_output_event (GfsEvent * event, GfsSimulation * sim)
 	  output->format[len - 1] = '}';
 	}
 	else { /* standard file */
-	  fname = format_string (output->formats,
+	  fname = gfs_format_string (output->formats,
 				 GFS_DOMAIN (sim)->pid,
 				 sim->time.i,
 				 sim->time.t);
@@ -180,7 +108,7 @@ static gboolean gfs_output_event (GfsEvent * event, GfsSimulation * sim)
 
     if (output->file)
       gfs_output_file_close (output->file);
-    fname = format_string (output->formats, 
+    fname = gfs_format_string (output->formats, 
 			   GFS_DOMAIN (sim)->pid,
 			   sim->time.i,
 			   sim->time.t);
@@ -259,7 +187,7 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
 	len = startf - start;
 	if (len > 0)
 	  output->formats = g_slist_prepend (output->formats,
-					     format_new (start, len, NONE));
+					     gfs_format_new (start, len, NONE));
 	
 	len = 1;
 	c++;
@@ -271,22 +199,22 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
 	len++;
 	if (*c == '%')
 	  output->formats = g_slist_prepend (output->formats,
-					     format_new ("%", 1, NONE));
+					     gfs_format_new ("%", 1, NONE));
 	else if (gfs_char_in_string (*c, "diouxXc")) {
 	  if (*prev == 'l') {
 	    output->formats = g_slist_prepend (output->formats,
-					       format_new (startf, len, ITER));
+					       gfs_format_new (startf, len, ITER));
 	    output->dynamic = TRUE;
 	  }
 	  else {
 	    output->formats = g_slist_prepend (output->formats,
-					       format_new (startf, len, PID));
+					       gfs_format_new (startf, len, PID));
 	    output->parallel = TRUE;
 	  }
 	}
 	else if (gfs_char_in_string (*c, "eEfFgGaA")) {
 	  output->formats = g_slist_prepend (output->formats,
-					     format_new (startf, len, TIME));
+					     gfs_format_new (startf, len, TIME));
 	  output->dynamic = TRUE;
 	}
 	else {
@@ -304,11 +232,11 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
     len = c - start;
     if (len > 0)
       output->formats = g_slist_prepend (output->formats,
-					 format_new (start, len, NONE));
+					 gfs_format_new (start, len, NONE));
     output->formats = g_slist_reverse (output->formats);
 
     if (output->parallel || domain->pid <= 0) {
-      gchar * fname = format_string (output->formats, domain->pid, 0, 0.);
+      gchar * fname = gfs_format_string (output->formats, domain->pid, 0, 0.);
       gchar * fnamebak = g_strconcat (fname, "~", NULL);
       g_free (fname);
       FILE * fptr = fopen (fnamebak, "w");

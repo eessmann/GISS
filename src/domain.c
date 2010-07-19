@@ -431,7 +431,9 @@ static void domain_post_read (GfsDomain * domain, GtsFile * fp)
 #ifdef HAVE_MPI
     int comm_size;
     MPI_Comm_size (MPI_COMM_WORLD, &comm_size);
-    if (np + 1 != comm_size) {
+    gint npmax = 0;
+    MPI_Allreduce (&np, &npmax, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+    if (npmax + 1 != comm_size) {
       g_slist_free (removed);
       gts_file_error (fp, "it would be valid if one or %d PE were used", np + 1);
       return;

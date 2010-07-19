@@ -1687,3 +1687,87 @@ void gfs_union_close (FILE * fp, int rank, FILE * fpp)
     fclose (fpp);
   }
 }
+
+/**
+ * gfs_format_new:
+ * @s: a string.
+ * @len: an integer.
+ * @t: a GfsFormatType.
+ *
+ * Creates a new GfsFormat that contains the @len first bytes of @s.
+ */
+GfsFormat * gfs_format_new (gchar * s, guint len, 
+			    GfsFormatType t)
+{
+  GfsFormat * f = g_malloc (sizeof (GfsFormat));
+  
+  f->s = g_strndup (s, len);
+  f->t = t;
+  
+  return f;
+}
+
+/**
+ * gfs_format_new:
+ * @f: a GfsFormat.
+ *
+ * Destroys the GfsFormat @f.
+ */
+void gfs_format_destroy (GfsFormat * f)
+{
+  g_free (f->s);
+  g_free (f);
+}
+
+/**
+ * gfs_format_new:
+ * @list: a GSList.
+ * @pid: an integer (PID).
+ * @niter: an integer (number of iterations done in the simulation).
+ * @time: a gdouble (simulation time).
+ *
+ * Returns a string (file name) built from the GfsFormat contained in GSList.
+ * It typically includes informations on the PID, the time and/or the number
+ * of interations done in the simulation.
+ */
+gchar * gfs_format_string (GSList * list, 
+			   gint pid, 
+			   guint niter,
+			   gdouble time)
+{
+  gchar * s = g_strdup ("");
+
+  while (list) {
+    GfsFormat * f = list->data;
+    gchar * s1, * s2 = NULL;
+
+    switch (f->t) {
+    case NONE:
+      s2 = g_strconcat (s, f->s, NULL);
+      break;
+    case PID:
+      s1 = g_strdup_printf (f->s, pid);
+      s2 = g_strconcat (s, s1, NULL);
+      g_free (s1);
+      break;
+    case ITER:
+      s1 = g_strdup_printf (f->s, niter);
+      s2 = g_strconcat (s, s1, NULL);
+      g_free (s1);
+      break;
+    case TIME:
+      s1 = g_strdup_printf (f->s, time);
+      s2 = g_strconcat (s, s1, NULL);
+      g_free (s1);
+      break;
+    default:
+      g_assert_not_reached ();
+    }
+    g_free (s);
+    s = s2;
+
+    list = list->next;
+  }
+
+  return s;
+}

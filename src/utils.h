@@ -189,6 +189,33 @@ void               gfs_union_close          (FILE * fp,
 					     int rank, 
 					     FILE * fpp);
 
+/* GfsFormat: Header */
+
+typedef struct _GfsFormat GfsFormat;
+
+typedef enum {
+  ITER,
+  TIME,
+  PID,
+  NONE
+} GfsFormatType;
+
+struct _GfsFormat {
+  gchar * s;
+  GfsFormatType t;
+};
+
+GfsFormat *        gfs_format_new          (gchar * s,
+			                    guint len, 
+					    GfsFormatType t);
+
+void               gfs_format_destroy      (GfsFormat * f);
+
+gchar *            gfs_format_string       (GSList * list, 
+					    gint pid, 
+					    guint niter,
+					    gdouble time);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
