@@ -12,7 +12,8 @@ EXAMPLES = \
 	dam \
 	hump \
 	cyclone \
-	plateau
+	plateau \
+	atomisation
 
 EXTRA_DIST = \
 	template.tex \

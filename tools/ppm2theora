@@ -5,7 +5,7 @@ if test -z "`which ffmpeg`"; then
     exit 1
 fi
 
-command="ffmpeg -f image2pipe -vcodec ppm -i - -vcodec libtheora -vb 1024k -f ogg"
+command="ffmpeg -f image2pipe -vcodec ppm -i - -vcodec libtheora -vb 2048k -f ogg"
 while test $# -gt 0; do
     command="$command $1"
     shift
