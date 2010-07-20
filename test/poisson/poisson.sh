@@ -102,10 +102,10 @@ from check import *
 from sys import *
 cgerris = Curve()
 for p in Curve('res-7.ref',2,3).l:
-    cgerris.l.append((p[0] + 0.1, p[1]*1.2))
+    cgerris.l.append((p[0] + 0.2, p[1]*2.))
 chypre = Curve()
 for p in Curve('res-7.ref',6,7).l:
-    chypre.l.append((p[0] + 0.1, p[1]*1.2))
+    chypre.l.append((p[0] + 0.2, p[1]*2.))
 if (Curve('res-7-gerris',2,3) - cgerris).max() > 1e-8 or\
    (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
     print (Curve('res-7-gerris',2,3) - cgerris).max()
