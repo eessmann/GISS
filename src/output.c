@@ -40,8 +40,7 @@ static void output_free (GfsOutput * output)
   if (output->format)
     g_free (output->format);
   output->format = NULL;
-  g_slist_foreach (output->formats, (GFunc) gfs_format_destroy, NULL);
-  g_slist_free (output->formats);
+  gfs_format_destroy (output->formats);
   output->formats = NULL;
 }
 
@@ -163,8 +162,6 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
   }
   else {
     GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (output));
-    gchar * c, * start;
-    guint len;
 
     output->format = g_strdup (fp->token->str);
     gts_file_next_token (fp);
@@ -179,61 +176,11 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     
-    start = c = output->format;
-    while (*c != '\0') {
-      if (*c == '%') {
-	gchar * startf = c, * prev = c;
-	
-	len = startf - start;
-	if (len > 0)
-	  output->formats = g_slist_prepend (output->formats,
-					     gfs_format_new (start, len, NONE));
-	
-	len = 1;
-	c++;
-	while (*c != '\0' && !gfs_char_in_string (*c, "diouxXeEfFgGaAcsCSpn%")) {
-	  prev = c;
-	  c++;
-	  len++;
-	}
-	len++;
-	if (*c == '%')
-	  output->formats = g_slist_prepend (output->formats,
-					     gfs_format_new ("%", 1, NONE));
-	else if (gfs_char_in_string (*c, "diouxXc")) {
-	  if (*prev == 'l') {
-	    output->formats = g_slist_prepend (output->formats,
-					       gfs_format_new (startf, len, ITER));
-	    output->dynamic = TRUE;
-	  }
-	  else {
-	    output->formats = g_slist_prepend (output->formats,
-					       gfs_format_new (startf, len, PID));
-	    output->parallel = TRUE;
-	  }
-	}
-	else if (gfs_char_in_string (*c, "eEfFgGaA")) {
-	  output->formats = g_slist_prepend (output->formats,
-					     gfs_format_new (startf, len, TIME));
-	  output->dynamic = TRUE;
-	}
-	else {
-	  gts_file_error (fp, 
-			  "unknown conversion specifier `%c' of format `%s'",
-			  *c, output->format);
-	  output_free (output);
-	  return;
-	}
-	start = c;
-	start++;
-      }
-      c++;
+    output->formats = gfs_format_new (output->format, fp, &output->dynamic, &output->parallel);
+    if (fp->type == GTS_ERROR) {
+      output_free (output);
+      return;
     }
-    len = c - start;
-    if (len > 0)
-      output->formats = g_slist_prepend (output->formats,
-					 gfs_format_new (start, len, NONE));
-    output->formats = g_slist_reverse (output->formats);
 
     if (output->parallel || domain->pid <= 0) {
       gchar * fname = gfs_format_string (output->formats, domain->pid, 0, 0.);

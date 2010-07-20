@@ -194,10 +194,10 @@ void               gfs_union_close          (FILE * fp,
 typedef struct _GfsFormat GfsFormat;
 
 typedef enum {
-  ITER,
-  TIME,
-  PID,
-  NONE
+  GFS_ITER_FORMAT,
+  GFS_TIME_FORMAT,
+  GFS_PID_FORMAT,
+  GFS_NONE_FORMAT
 } GfsFormatType;
 
 struct _GfsFormat {
@@ -205,16 +205,17 @@ struct _GfsFormat {
   GfsFormatType t;
 };
 
-GfsFormat *        gfs_format_new          (gchar * s,
-			                    guint len, 
-					    GfsFormatType t);
-
-void               gfs_format_destroy      (GfsFormat * f);
-
-gchar *            gfs_format_string       (GSList * list, 
-					    gint pid, 
-					    guint niter,
-					    gdouble time);
+GSList *           gfs_format_new        (const gchar * format,
+				          GtsFile * fp,
+				          gboolean * dynamic,
+				          gboolean * parallel);
+void               gfs_format_destroy    (GSList * f);
+gchar *            gfs_format_string     (GSList * format,
+				          gint pid, 
+				          guint niter,
+				          gdouble time);
+gdouble            gfs_format_time_value (GSList * format, 
+					  const gchar * string);
 
 #ifdef __cplusplus
 }

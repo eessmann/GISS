@@ -69,9 +69,6 @@ GfsOutputFile * gfs_output_file_open    (const gchar * name,
 					 const gchar * mode);
 void            gfs_output_file_close   (GfsOutputFile * file);
 
-FILE *          gfs_open_parallel_files (gint pid,
-					 gchar * fname);
-
 /* GfsOutputTime: Header */
 
 typedef struct _GfsOutputTime         GfsOutputTime;

@@ -64,70 +64,6 @@ static gboolean set_macros ()
   return 0;
 }
 
-static FILE * open_parallel_files (gint pid, gchar * fname)
-{
-  GSList * formats = NULL;
-  FILE * file;
-  gchar * c, * start;
-  guint len;
-  
-  start = c = fname;
-  while (*c != '\0') {
-    if (*c == '%') {
-      gchar * startf = c, * prev = c;
-      
-      len = startf - start;
-      if (len > 0)
-	formats = g_slist_prepend (formats,
-				   gfs_format_new (start, len, NONE));
-      
-      len = 1;
-      c++;
-      while (*c != '\0' && !gfs_char_in_string (*c, "d%")) {
-	prev = c;
-	c++;
-	len++;
-      }
-      len++;
-      if (gfs_char_in_string (*c, "d")) {
-	formats = g_slist_prepend (formats,
-				   gfs_format_new (startf, len, PID));
-      }
-      else {
-	gfs_error (0, "unknown conversion specifier `%c' of format `%s'",
-		   *c, fname);
-	g_assert_not_reached ();
-      }
-      start = c;
-      start++;
-    }
-    c++;
-  }
-  
-  len = c - start;
-  if (len > 0)
-    formats = g_slist_prepend (formats,
-			       gfs_format_new (start, len, NONE));
-  formats = g_slist_reverse (formats);
-  
-  /* Standard start */
-  if (start == fname) {
-    file = fopen (fname, "r");
-    if (file == NULL)
-      g_warning ("could not open file `%s'", fname);
-    return file;
-  }
-  
-  /* Parallel restart */
-  gchar * fpname = gfs_format_string (formats, pid, 0, 0.);
-  file = fopen (fpname, "r");
-  if (file == NULL)
-    g_warning ("could not open file `%s'", fpname);
-  g_free (fpname);
-
-  return file;
-}
-
 int main (int argc, char * argv[])
 {
   GfsSimulation * simulation;
@@ -316,7 +252,20 @@ int main (int argc, char * argv[])
       if (size > 1)
 	MPI_Comm_rank (MPI_COMM_WORLD, &pid);
       
-      fptr = open_parallel_files (pid, argv[optind]);
+      gboolean dynamic = FALSE, parallel = FALSE;
+      GSList * format = gfs_format_new (argv[optind], NULL, &dynamic, &parallel);
+      if (dynamic) {
+	gfs_error (-1, "gerris: simulation file cannot be time-dependent\n");
+	return 1;
+      }
+      if (parallel) {
+	gchar * fpname = gfs_format_string (format, pid, 0, 0.);
+	fptr = fopen (fpname, "r");
+	g_free (fpname);
+      }
+      else
+	fptr = fopen (argv[optind], "r");
+      gfs_format_destroy (format);
 #else
       fptr = fopen (argv[optind], "r");
 #endif

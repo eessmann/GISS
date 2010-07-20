@@ -1688,16 +1688,9 @@ void gfs_union_close (FILE * fp, int rank, FILE * fpp)
   }
 }
 
-/**
- * gfs_format_new:
- * @s: a string.
- * @len: an integer.
- * @t: a GfsFormatType.
- *
- * Creates a new GfsFormat that contains the @len first bytes of @s.
- */
-GfsFormat * gfs_format_new (gchar * s, guint len, 
-			    GfsFormatType t)
+static GfsFormat * format_new (const gchar * s, 
+			       guint len, 
+			       GfsFormatType t)
 {
   GfsFormat * f = g_malloc (sizeof (GfsFormat));
   
@@ -1707,13 +1700,7 @@ GfsFormat * gfs_format_new (gchar * s, guint len,
   return f;
 }
 
-/**
- * gfs_format_new:
- * @f: a GfsFormat.
- *
- * Destroys the GfsFormat @f.
- */
-void gfs_format_destroy (GfsFormat * f)
+static void format_destroy (GfsFormat * f)
 {
   g_free (f->s);
   g_free (f);
@@ -1721,41 +1708,133 @@ void gfs_format_destroy (GfsFormat * f)
 
 /**
  * gfs_format_new:
- * @list: a GSList.
- * @pid: an integer (PID).
- * @niter: an integer (number of iterations done in the simulation).
- * @time: a gdouble (simulation time).
+ * @format: a string.
+ * @fp: a #GtsFile or %NULL.
+ * @dynamic: set to %TRUE if the format is time-dependent.
+ * @parallel: set to %TRUE if the format is PID-dependent.
  *
- * Returns a string (file name) built from the GfsFormat contained in GSList.
- * It typically includes informations on the PID, the time and/or the number
- * of interations done in the simulation.
+ * If @fp is not %NULL and and error occurs, an error message is set
+ * in @fp.
+ *
+ * Returns: a list of #GfsFormat composing @format.
  */
-gchar * gfs_format_string (GSList * list, 
+GSList * gfs_format_new (const gchar * format,
+			 GtsFile * fp,
+			 gboolean * dynamic,
+			 gboolean * parallel)
+{
+  g_return_val_if_fail (format != NULL, NULL);
+
+  GSList * formats = NULL;
+  const gchar * c, * start;
+  guint len;
+
+  start = c = format;
+  while (*c != '\0') {
+    if (*c == '%') {
+      const gchar * startf = c, * prev = c;
+	
+      len = startf - start;
+      if (len > 0)
+	formats = g_slist_prepend (formats, format_new (start, len, GFS_NONE_FORMAT));
+	
+      len = 1;
+      c++;
+      while (*c != '\0' && !gfs_char_in_string (*c, "diouxXeEfFgGaAcsCSpn%")) {
+	prev = c;
+	c++;
+	len++;
+      }
+      len++;
+      if (*c == '%')
+	formats = g_slist_prepend (formats, format_new ("%", 1, GFS_NONE_FORMAT));
+      else if (gfs_char_in_string (*c, "diouxXc")) {
+	if (*prev == 'l') {
+	  formats = g_slist_prepend (formats, format_new (startf, len, GFS_ITER_FORMAT));
+	  if (dynamic)
+	    *dynamic = TRUE;
+	}
+	else {
+	  formats = g_slist_prepend (formats, format_new (startf, len, GFS_PID_FORMAT));
+	  if (parallel)
+	    *parallel = TRUE;
+	}
+      }
+      else if (gfs_char_in_string (*c, "eEfFgGaA")) {
+	formats = g_slist_prepend (formats, format_new (startf, len, GFS_TIME_FORMAT));
+	if (dynamic)
+	  *dynamic = TRUE;
+      }
+      else {
+	if (fp)
+	  gts_file_error (fp, 
+			  "unknown conversion specifier `%c' of format `%s'",
+			  *c, format);
+	return NULL;
+      }
+      start = c;
+      start++;
+    }
+    c++;
+  }
+  len = c - start;
+  if (len > 0)
+    formats = g_slist_prepend (formats, format_new (start, len, GFS_NONE_FORMAT));
+  formats = g_slist_reverse (formats);
+  
+  return formats;
+}
+
+/**
+ * gfs_format_destroy:
+ * @f: a list of #GfsFormat.
+ *
+ * Frees all memory allocated for @f.
+ */
+void gfs_format_destroy (GSList * f)
+{
+  g_slist_foreach (f, (GFunc) format_destroy, NULL);
+  g_slist_free (f);
+}
+
+/**
+ * gfs_format_string:
+ * @list: a GSList of #GfsFormat.
+ * @pid: the PID.
+ * @niter: number of iterations done in the simulation.
+ * @time: simulation time.
+ *
+ * Returns: a newly-allocated string (file name) built from the
+ * GfsFormat contained in GSList.  It typically includes informations
+ * on the PID, the time and/or the number of iterations done in the
+ * simulation.
+ */
+gchar * gfs_format_string (GSList * format, 
 			   gint pid, 
 			   guint niter,
 			   gdouble time)
 {
   gchar * s = g_strdup ("");
 
-  while (list) {
-    GfsFormat * f = list->data;
+  while (format) {
+    GfsFormat * f = format->data;
     gchar * s1, * s2 = NULL;
 
     switch (f->t) {
-    case NONE:
+    case GFS_NONE_FORMAT:
       s2 = g_strconcat (s, f->s, NULL);
       break;
-    case PID:
+    case GFS_PID_FORMAT:
       s1 = g_strdup_printf (f->s, pid);
       s2 = g_strconcat (s, s1, NULL);
       g_free (s1);
       break;
-    case ITER:
+    case GFS_ITER_FORMAT:
       s1 = g_strdup_printf (f->s, niter);
       s2 = g_strconcat (s, s1, NULL);
       g_free (s1);
       break;
-    case TIME:
+    case GFS_TIME_FORMAT:
       s1 = g_strdup_printf (f->s, time);
       s2 = g_strconcat (s, s1, NULL);
       g_free (s1);
@@ -1766,8 +1845,66 @@ gchar * gfs_format_string (GSList * list,
     g_free (s);
     s = s2;
 
-    list = list->next;
+    format = format->next;
   }
 
   return s;
+}
+
+/**
+ * gfs_format_time_value:
+ * @format: a list of #GfsFormat.
+ * @string: a string formatted according to @format.
+ *
+ * Returns: the value of the time or iteration contained in @s or
+ * %G_MAXDOUBLE if @s is not formatted according to @format.
+ *
+ */
+gdouble gfs_format_time_value (GSList * format, const gchar * string)
+{
+  gdouble val = G_MAXDOUBLE, tmp;
+
+  g_return_val_if_fail (string != NULL, val);
+
+  gchar * copy = g_strdup (string), * s = copy;
+  while (format) {
+    GfsFormat * f = format->data;
+    gchar * c, c1;
+
+    switch (f->t) {
+    case GFS_NONE_FORMAT:
+      c = f->s;
+      while (*c != '\0' && *c == *s) { c++; s++; }
+      if (*c != '\0') {
+	g_free (copy);
+	return val;
+      }
+      break;
+    case GFS_ITER_FORMAT:
+      c = s;
+      while (gfs_char_in_string (*s, "0123456789")) s++;
+      c1 = *s; *s = '\0'; tmp = atoi (c); *s = c1;
+      if (val != G_MAXDOUBLE && tmp != val) {
+	g_free (copy);
+	return G_MAXDOUBLE;
+      }
+      val = tmp;
+      break;
+    case GFS_TIME_FORMAT:
+      c = s;
+      while (gfs_char_in_string (*s, "0123456789eE-+.")) s++;
+      c1 = *s; *s = '\0'; tmp = atof (c); *s = c1;
+      if (val != G_MAXDOUBLE && tmp != val) {
+	g_free (copy);
+	return G_MAXDOUBLE;
+      }
+      val = tmp;
+      break;
+    default:
+      g_assert_not_reached ();
+    }
+    format = format->next;
+  }
+  g_free (copy);
+  return val;
 }
