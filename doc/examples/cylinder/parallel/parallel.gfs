@@ -78,13 +78,11 @@
   # Writes info about the convergence of the Poisson solver on standard error
   OutputProjectionStats { istep = 10 } stderr
 
-  # Outputs the simulation to standard output every 0.05 time unit
-  OutputSimulation { step = 0.05 } stdout
-  
-  # Sends a command to gfsview on standard output to save PPM images
-  EventScript { step = 0.05 } {
-      echo "Save stdout { width = 1600 height = 200 }" 
-  }
+  # Save MPEG movie using GfsView module
+  GModule gfsview
+  OutputView { step = 0.05 } { 
+      ppm2mpeg -s 800x100 > pid.mpg 
+  } { width = 1600 height = 200 } pid.gfv
 
   # Outputs profiling information at the end of the simulation to standard error
   OutputTiming { start = end } stderr
@@ -93,7 +91,7 @@
   OutputSimulation { start = end } end.gfs
   EventScript { start = end } {
       echo "Save pid.eps { format = EPS width = 800 height = 100 line_width = 0.2 }" | \
-	  gfsview-batch2D end.gfs pid.gfv
+	  gfsview-batch2D pid.gfv end.gfs
       awk '{
         if ($1 == "step:")
           t = $4;

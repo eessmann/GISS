@@ -8,4 +8,4 @@ gerris2D -p 2 parallel-s2.gfs > parallel-p2.gfs
 
 # run the parallel simulation on 4 processors, pipe the output to
 # gfsview and ppm2mpeg to generate the pid movie
-mpirun -np 4 gerris2D parallel-p2.gfs | gfsview-batch2D pid.gfv | ppm2mpeg -s 800x100 > pid.mpg
+mpirun -np 4 gerris2D parallel-p2.gfs
