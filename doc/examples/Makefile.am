@@ -46,8 +46,8 @@ CLEANFILES = $(BUILT_SOURCES) Makefile.deps
 pkglib_DATA = gfs2tex.py
 pkgdata_DATA = gfs.lang gerris.dic gfs-keywords.el gfs-mode.el gfs.sty gfs.hva kaltura.sh gfs.php
 
-gerris.dic: classes modulesyms.sh $(top_srcdir)/modules/Makefile.am
-	($(srcdir)/classes && sh $(srcdir)/modulesyms.sh $(top_srcdir)/modules) | sort > gerris.dic
+gerris.dic: classes modulesyms.sh $(top_srcdir)/modules/Makefile.am modules.list
+	($(srcdir)/classes && sh $(srcdir)/modulesyms.sh $(top_srcdir)/modules $(pkglibdir)) | sort > gerris.dic
 
 gfs.lang: gerris.dic
 	echo "# Language file for source-highlight" > gfs.lang
@@ -58,7 +58,7 @@ gfs.lang: gerris.dic
 	echo "redef preproc = \"C preprocessor command is not compatible with the use of # as comment character in GTS\"" >> gfs.lang
 
 modules.list: modules $(top_srcdir)/modules/Makefile.am
-	$(srcdir)/modules $(top_srcdir)/modules/*.la | sort | uniq > modules.list
+	$(srcdir)/modules $(top_srcdir)/modules/*.la $(pkglibdir)/*.so | sort | uniq > modules.list
 
 gfs-keywords.el: gerris.dic modules.list
 	echo "(defvar gfs-abbrevs '(" > gfs-keywords.el
