@@ -160,6 +160,27 @@ GfsGenericInitClass * gfs_init_vorticity_class  (void);
 
 #endif /* FTT_2D */
 
+/* GfsEventSpatialSum: Header */
+
+typedef struct _GfsEventSpatialSum         GfsEventSpatialSum;
+
+struct _GfsEventSpatialSum {
+  GfsEvent parent;
+
+  GfsFunction * v;
+  GfsConstant * mv;
+  FttCellTraverseFunc add;
+  gdouble sum, vol;
+};
+
+#define GFS_EVENT_SPATIALSUM(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsEventSpatialSum,\
+					         gfs_event_spatialsum_class ())
+#define GFS_IS_EVENT_SPATIALSUM(obj)         (gts_object_is_from_class (obj,\
+						 gfs_event_spatialsum_class ()))
+
+GfsEventClass * gfs_event_spatialsum_class  (void);
+
 /* GfsEventSum: Header */
 
 typedef struct _GfsEventSum         GfsEventSum;
