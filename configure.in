@@ -483,6 +483,7 @@ src/gerris3D.pc
 tools/Makefile
 modules/Makefile
 modules/RStarTree/Makefile
+modules/kdt/Makefile
 modules/fes2004/Makefile
 modules/wavewatch/Makefile
 test/Makefile

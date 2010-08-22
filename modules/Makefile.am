@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = RStarTree fes2004 wavewatch
+SUBDIRS = RStarTree kdt fes2004 wavewatch
 
 AM_CPPFLAGS = -DGFS_MODULES_DIR=\"$(libdir)/gerris\"
 
@@ -85,14 +85,17 @@ libmap2D_la_SOURCES = map.c
 libmap2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 libmap2D_la_LIBADD = -lproj
 
+KDTLIBS = -LRStarTree -lcSmRST -Lkdt -lkdt
+KDTDEPS = RStarTree/libcSmRST.la kdt/libkdt.la
+
 libterrain3D_la_SOURCES = terrain.c rsurface.c rsurface.h
-libterrain3D_la_LIBADD = -LRStarTree -lcSmRST
-libterrain3D_la_DEPENDENCIES = RStarTree/libcSmRST.la
+libterrain3D_la_LIBADD = $(KDTLIBS)
+libterrain3D_la_DEPENDENCIES = $(KDTDEPS)
 
 libterrain2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 libterrain2D_la_SOURCES = terrain.c rsurface.c rsurface.h
-libterrain2D_la_LIBADD = -LRStarTree -lcSmRST
-libterrain2D_la_DEPENDENCIES = RStarTree/libcSmRST.la
+libterrain2D_la_LIBADD = $(KDTLIBS)
+libterrain2D_la_DEPENDENCIES = $(KDTDEPS)
 
 libtide3D_la_SOURCES = tide.c
 libtide3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
@@ -121,24 +124,24 @@ libode2D_la_CFLAGS = $(AM_CFLAGS) $(ODE_CFLAGS) -DFTT_2D=1
 libode2D_la_LIBADD = $(ODE_LIBS)
 
 xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c rsurface.h
-xyz2rsurface_LDADD = -LRStarTree -lcSmRST
+xyz2rsurface_LDADD = $(KDTLIBS)
 xyz2rsurface_CFLAGS = $(AM_CFLAGS)
-xyz2rsurface_DEPENDENCIES = RStarTree/libcSmRST.la
+xyz2rsurface_DEPENDENCIES = $(KDTDEPS)
 
 rsurfacequery_SOURCES = rsurfacequery.c rsurface.c rsurface.h
-rsurfacequery_LDADD = -LRStarTree -lcSmRST
+rsurfacequery_LDADD = -LRStarTree -lcSmRST -Lkdt -lkdt
 rsurfacequery_CFLAGS = $(AM_CFLAGS)
-rsurfacequery_DEPENDENCIES = RStarTree/libcSmRST.la
+rsurfacequery_DEPENDENCIES = $(KDTDEPS)
 
 rsurfacedraw_SOURCES = rsurfacedraw.c rsurface.c rsurface.h
-rsurfacedraw_LDADD = -LRStarTree -lcSmRST
+rsurfacedraw_LDADD = $(KDTLIBS)
 rsurfacedraw_CFLAGS = $(AM_CFLAGS)
-rsurfacedraw_DEPENDENCIES = RStarTree/libcSmRST.la
+rsurfacedraw_DEPENDENCIES = $(KDTDEPS)
 
 rsurfaceinfo_SOURCES = rsurfaceinfo.c rsurface.c rsurface.h
-rsurfaceinfo_LDADD = -LRStarTree -lcSmRST
+rsurfaceinfo_LDADD = $(KDTLIBS)
 rsurfaceinfo_CFLAGS = $(AM_CFLAGS)
-rsurfaceinfo_DEPENDENCIES = RStarTree/libcSmRST.la
+rsurfaceinfo_DEPENDENCIES = $(KDTDEPS)
 
 libparticulates3D_la_SOURCES = particulates.c
 libparticulates3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)

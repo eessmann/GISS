@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include "RStarTree/RStarTree.h"
+#include "kdt/kdt.h"
 #include "rsurface.h"
 
 /* RSurface */
@@ -8,6 +10,7 @@
 struct _RSurface {
   RSTREE t;
   char * name;
+  Kdt * kdt;
 };
 
 RSurface * r_surface_new (const char * fname, int size, FILE * fp)
@@ -18,6 +21,8 @@ RSurface * r_surface_new (const char * fname, int size, FILE * fp)
 RSurface * r_surface_open (const char * fname, const char * mode, int size)
 {
   RSurface * rt = malloc (sizeof (RSurface));
+  rt->t = NULL;
+  rt->kdt = NULL;
   if (!strcmp (mode, "w")) {
     RemoveRST (fname);
     if (!CreateRST (fname, size, FALSE)) {
@@ -25,10 +30,14 @@ RSurface * r_surface_open (const char * fname, const char * mode, int size)
       return NULL;
     }
   }
-  rt->t = NULL;
-  if (!OpenRST (&rt->t, fname, !strcmp (mode, "w") ? "rw" : "r")) {
-    free (rt);
-    return NULL;
+  rt->kdt = kdt_new ();
+  if (kdt_open (rt->kdt, fname)) {
+    kdt_destroy (rt->kdt);
+    rt->kdt = NULL;
+    if (!OpenRST (&rt->t, fname, !strcmp (mode, "w") ? "rw" : "r")) {
+      free (rt);
+      return NULL;
+    }
   }
   rt->name = malloc (sizeof (char)*(strlen (fname) + 1));
   strcpy (rt->name, fname);
@@ -36,8 +45,12 @@ RSurface * r_surface_open (const char * fname, const char * mode, int size)
 }
 
 int r_surface_close (RSurface * rt)
-{ 
-  int status = CloseRST (&rt->t);
+{
+  int status = 1;
+  if (rt->kdt)
+    kdt_destroy (rt->kdt);
+  else
+    status = CloseRST (&rt->t);
   free (rt->name);
   free (rt);
   return status;
@@ -45,6 +58,7 @@ int r_surface_close (RSurface * rt)
 
 int r_surface_insert  (RSurface * rt, double p[3], int id)
 {
+  assert (!rt->kdt); /* not implemented */
   typrect rect;
   typinfo info;
   boolean inserted;
@@ -98,13 +112,14 @@ void r_surface_query_region (RSurface * rt,
 			     double min[2], double max[2],
 			     RSurfaceQuery q, void * user_data)
 {
+  assert (!rt->kdt); /* not implemented */
   typrect rect, unused;
   rect[0].l = min[0]; rect[0].h = max[0];
   rect[1].l = min[1]; rect[1].h = max[1];
   void * data[2];
   data[0] = q;
   data[1] = user_data;
-  RegionQuery (rt->t, rect, unused, Intersects, Intersects, ManageQuery, data);
+  RegionQuery (rt->t, rect, unused, Intersects, Intersects, (QueryManageProc) ManageQuery, data);
 }
 
 void r_surface_sum_init (RSurfaceSum * sum)
@@ -128,8 +143,12 @@ void r_surface_query_region_sum (RSurface * rt,
 				 RSurfaceRect rect,
 				 RSurfaceSum * sum)
 {
-  RegionQueryInfo (rt->t, (Check) includes, (Check) intersects, data, (typinterval *) rect,
-		   (typdirinfo *) sum);
+  if (rt->kdt)
+    kdt_query_sum (rt->kdt, (KdtCheck) includes, (KdtCheck) intersects, data, 
+		   (KdtInterval *) rect, (KdtSum *) sum);
+  else
+    RegionQueryInfo (rt->t, (Check) includes, (Check) intersects, data, 
+		     (typinterval *) rect, (typdirinfo *) sum);
 }
 
 const char * r_surface_name (RSurface * rt)
@@ -139,11 +158,13 @@ const char * r_surface_name (RSurface * rt)
 
 void r_surface_update (RSurface * rt)
 {
+  assert (!rt->kdt); /* not implemented */
   Update (rt->t);
 }
 
 int r_surface_depth (RSurface * rt)
 {
+  assert (!rt->kdt); /* not implemented */
   int height = -1;
   GetHeight (rt->t, &height);
   return height;
@@ -151,6 +172,7 @@ int r_surface_depth (RSurface * rt)
 
 void r_surface_info (RSurface * rt)
 {
+  assert (!rt->kdt); /* not implemented */
   char name[100];
   int numbofdim, sizedirentry, sizedataentry, sizeinfo;
   int maxdirfanout, maxdatafanout, pagesize, numbofdirpages;
@@ -223,6 +245,7 @@ static int compare_double (const void * p1, const void * p2)
 
 RSurfaceStats * r_surface_stats_new (RSurface * rt, int level)
 {
+  assert (!rt->kdt); /* not implemented */
   char name[100];
   int numbofdim, sizedirentry, sizedataentry, sizeinfo;
   int maxdirfanout, maxdatafanout, pagesize, numbofdirpages;
