@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -37,13 +38,7 @@
    mergesort */
 #define LENMIN 1000000
 
-typedef struct {
-  KdtPoint * p;
-  long len, i, end;
-  int fd;
-} Heap;
-
-static void heap_create (Heap * h, int fd, long len)
+void kdt_heap_create (KdtHeap * h, int fd, long len)
 {
   h->fd = fd;
   h->len = len;
@@ -54,7 +49,7 @@ static void heap_create (Heap * h, int fd, long len)
   h->end /= sizeof (KdtPoint);
 }
 
-static int heap_get (Heap * h, KdtPoint * p)
+int kdt_heap_get (KdtHeap * h, KdtPoint * p)
 {
   if (h->i < h->end) {
     *p = h->p[h->i++];
@@ -66,10 +61,10 @@ static int heap_get (Heap * h, KdtPoint * p)
   assert (h->end >= 0);
   h->end /= sizeof (KdtPoint);
   h->i = 0;
-  return heap_get (h, p);
+  return kdt_heap_get (h, p);
 }
 
-static void heap_put (Heap * h, KdtPoint * p)
+void kdt_heap_put (KdtHeap * h, KdtPoint * p)
 {
   if (h->i == h->len) {
     assert (write (h->fd, h->p, h->len*sizeof (KdtPoint)) == h->len*sizeof (KdtPoint));
@@ -78,21 +73,21 @@ static void heap_put (Heap * h, KdtPoint * p)
   h->p[h->i++] = *p;
 }
 
-static void heap_flush (Heap * h)
+void kdt_heap_flush (KdtHeap * h)
 {
   if (h->i > 0)
     assert (write (h->fd, h->p, h->i*sizeof (KdtPoint)) == h->i*sizeof (KdtPoint));
 }
 
-static void heap_free (Heap * h)
+void kdt_heap_free (KdtHeap * h)
 {
   free (h->p);
 }
 
-static int put (Heap * h, KdtPoint * p, Heap * merged)
+static int put (KdtHeap * h, KdtPoint * p, KdtHeap * merged)
 {
-  heap_put (merged, p);
-  return heap_get (h, p);
+  kdt_heap_put (merged, p);
+  return kdt_heap_get (h, p);
 }
 
 static int fdtemp (void)
@@ -106,16 +101,16 @@ static int fdtemp (void)
 
 static int merge (int fd1, int fd2, int (*compar) (const void *, const void *), long len)
 {
-  Heap h1, h2, hm;
+  KdtHeap h1, h2, hm;
   assert (lseek (fd1, 0, SEEK_SET) == 0);
-  heap_create (&h1, fd1, LENMIN/3);
+  kdt_heap_create (&h1, fd1, LENMIN/3);
   assert (lseek (fd2, 0, SEEK_SET) == 0);
-  heap_create (&h2, fd2, LENMIN/3);
+  kdt_heap_create (&h2, fd2, LENMIN/3);
   int merged = fdtemp ();
-  heap_create (&hm, merged, LENMIN/3);
+  kdt_heap_create (&hm, merged, LENMIN/3);
   KdtPoint p1, p2;
-  int r1 = heap_get (&h1, &p1);
-  int r2 = heap_get (&h2, &p2);
+  int r1 = kdt_heap_get (&h1, &p1);
+  int r2 = kdt_heap_get (&h2, &p2);
   while (r1 && r2) {
     if ((* compar) (&p2, &p1))
       r1 = put (&h1, &p1, &hm);
@@ -126,12 +121,12 @@ static int merge (int fd1, int fd2, int (*compar) (const void *, const void *), 
     r1 = put (&h1, &p1, &hm);
   while (r2)
     r2 = put (&h2, &p2, &hm);
-  heap_free (&h1);
-  heap_free (&h2);
+  kdt_heap_free (&h1);
+  kdt_heap_free (&h2);
   close (fd1);
   close (fd2);
-  heap_flush (&hm);
-  heap_free (&hm);
+  kdt_heap_flush (&hm);
+  kdt_heap_free (&hm);
   return merged;
 }
 
@@ -148,8 +143,19 @@ static int half (int fd, long len)
   return fd2;
 }
 
-static int sort (int fd, long len, int (*compar) (const void *, const void *))
+#if TIMING
+static double elapsed (const struct timeval * start, const struct timeval * end)
 {
+  return (double) (end->tv_usec - start->tv_usec) + 1e6*(double) (end->tv_sec - start->tv_sec);
+}
+#endif
+
+static int sort (int fd, long len, 
+		 int  (*compar)   (const void *, const void *),
+		 void (*progress) (void *), void * data)
+{
+  struct timeval start;
+  gettimeofday (&start, NULL);
   assert (lseek (fd, 0, SEEK_SET) == 0);
   if (len <= LENMIN) {
     KdtPoint * a = malloc (len*sizeof (KdtPoint));
@@ -158,12 +164,27 @@ static int sort (int fd, long len, int (*compar) (const void *, const void *))
     assert (lseek (fd, 0, SEEK_SET) == 0);
     assert (write (fd, a, len*sizeof (KdtPoint)) == len*sizeof (KdtPoint));
     free (a);
+#if TIMING
+    struct timeval end;
+    gettimeofday (&end, NULL);
+    fprintf (stderr, "sort %ld %g\n", len, elapsed (&start, &end));
+#endif
+    if (progress)
+      (* progress) (data);
     return fd;
   }
   else {
     long len1 = len/2, len2 = len - len1;
     int fd2 = half (fd, len);
-    return merge (sort (fd, len1, compar), sort (fd2, len2, compar), compar, len);
+    int fd3 = merge (sort (fd, len1, compar, progress, data), 
+		     sort (fd2, len2, compar, progress, data), 
+		     compar, len);
+#if TIMING
+    struct timeval end;
+    gettimeofday (&end, NULL);
+    fprintf (stderr, "sort %ld %g\n", len, elapsed (&start, &end));
+#endif
+    return fd3;
   }
 }
 
@@ -182,6 +203,10 @@ struct _Kdt {
   Header h;
   FILE * nodes, * sums, * leaves;
   KdtPoint * buffer;
+  /* progress stuff */
+  void (* progress) (float complete, void * data);
+  void * data;
+  int i, m;
 };
 
 #define KDTSIZE(len) (((len) - 1)*sizeof (Node) + (len)*sizeof (KdtPoint))
@@ -321,10 +346,12 @@ static void update_sum (const KdtRect rect, KdtSum * n, KdtPoint * a, long len)
     sum_add_point (rect, n, a);
 }
 
+#define PADDING 1e100
+
 static void split (KdtPoint * a, KdtRect bound, long len, int index, Kdt * kdt)
 {
   if (len > kdt->h.np) {
-    fprintf (stderr, " splitting: %ld       \r", len);
+    //    fprintf (stderr, " splitting: %ld       \r", len);
     qsort (a, len, sizeof (KdtPoint), index == 0 ? sort_x : sort_y);
     long len1 = len/2;
     long len2 = len - len1;
@@ -348,7 +375,7 @@ static void split (KdtPoint * a, KdtRect bound, long len, int index, Kdt * kdt)
   else if (len > 0) {
     fwrite (a, sizeof (KdtPoint), len, kdt->leaves);
     /* padding */
-    KdtPoint dummy = { 1e100, 1e100, 1e100 };
+    KdtPoint dummy = { PADDING, PADDING, PADDING };
     int np = kdt->h.np;
     while (np-- > len)
       fwrite (&dummy, sizeof (KdtPoint), 1, kdt->leaves);
@@ -357,32 +384,51 @@ static void split (KdtPoint * a, KdtRect bound, long len, int index, Kdt * kdt)
 
 static void file_update_sum (const KdtRect rect, KdtSum * n, int fd, long len)
 {
-  Heap h;
-  heap_create (&h, fd, LENMIN);
+  KdtHeap h;
+  kdt_heap_create (&h, fd, LENMIN);
   kdt_sum_init (n);
   long i;
   for (i = 0; i < len; i++) {
     KdtPoint p;
-    assert (heap_get (&h, &p));
+    assert (kdt_heap_get (&h, &p));
     sum_add_point (rect, n, &p);
   }
-  heap_free (&h);
+  kdt_heap_free (&h);
+}
+
+static void progress (void * data)
+{
+  Kdt * kdt = data;
+  if (kdt->progress)
+    (* kdt->progress) (++kdt->i/(float) kdt->m, kdt->data);
 }
 
 static void splitfile (int fd, KdtRect bound, long len, int index, Kdt * kdt)
 {
+#if TIMING
+  struct timeval start;
+  gettimeofday (&start, NULL);
   assert (lseek (fd, 0, SEEK_SET) == 0);
+#endif
   if (len > LENMIN) {
-    fprintf (stderr, " splitting: %ld      \r", len);
+    //    fprintf (stderr, " splitting: %ld      \r", len);
     KdtSum s;
     file_update_sum (bound, &s, fd, len);
     fwrite (&s, sizeof (KdtSum), 1, kdt->sums);
 
     long len1 = len/2;
     long len2 = len - len1;
-    fd = sort (fd, len,  index == 0 ? sort_x : sort_y);
+    fd = sort (fd, len,  index == 0 ? sort_x : sort_y, progress, kdt);
+#if TIMING
+    struct timeval s1;
+    gettimeofday (&s1, NULL);
+#endif
     int fd2 = half (fd, len);
-
+#if TIMING
+    struct timeval end;
+    gettimeofday (&end, NULL);
+    fprintf (stderr, "half %ld %g\n", len, elapsed (&s1, &end));
+#endif
     KdtPoint p;
     assert (lseek (fd2, 0, SEEK_SET) == 0);
     assert (read (fd2, &p, sizeof (KdtPoint)) == sizeof (KdtPoint));
@@ -410,6 +456,11 @@ static void splitfile (int fd, KdtRect bound, long len, int index, Kdt * kdt)
     split (a, bound, len, index, kdt);
     free (a);
   }
+#if TIMING
+  struct timeval end;
+  gettimeofday (&end, NULL);
+  fprintf (stderr, "splitfile %ld %g\n", len, elapsed (&start, &end));
+#endif
 }
 
 Kdt * kdt_new (void)
@@ -476,21 +527,23 @@ int kdt_create (Kdt * kdt, const char * name, int blksize,
 }
 
 int kdt_create_from_file (Kdt * kdt, const char * name, int blksize,
-			  int fd)
+			  int fd,
+			  void (* progress) (float complete, void * data),
+			  void * data)
 {
-  Heap h;
-  heap_create (&h, fd, LENMIN);
+  KdtHeap h;
+  kdt_heap_create (&h, fd, LENMIN);
   long len = 0;
   KdtPoint p;
   KdtRect bound = {{ 1e30, -1e30}, {1e30, -1e30}};
-  while (heap_get (&h, &p)) {
+  while (kdt_heap_get (&h, &p)) {
     if (p.x > bound[0].h) bound[0].h = p.x;
     if (p.x < bound[0].l) bound[0].l = p.x;
     if (p.y > bound[1].h) bound[1].h = p.y;
     if (p.y < bound[1].l) bound[1].l = p.y;
     len++;
   }
-  heap_free (&h);
+  kdt_heap_free (&h);
 
   int npmax = blksize/sizeof (KdtPoint);
   if (kdt_init (kdt, name, npmax, len))
@@ -499,6 +552,16 @@ int kdt_create_from_file (Kdt * kdt, const char * name, int blksize,
   kdt->h.bound[1].l = bound[1].l; kdt->h.bound[1].h = bound[1].h;
   
   fwrite (&kdt->h, sizeof (Header), 1, kdt->nodes);
+  kdt->m = kdt->i = 0;
+  int m2 = 1;
+  while (len > LENMIN) {
+    kdt->m++;
+    len /= 2;
+    m2 *= 2;
+  }
+  kdt->m = kdt->m*m2;
+  kdt->progress = progress;
+  kdt->data = data;
   splitfile (fd, kdt->h.bound, kdt->h.len, 0, kdt);
 
   return 0;

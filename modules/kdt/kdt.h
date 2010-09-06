@@ -65,7 +65,9 @@ int  kdt_create     (Kdt * kdt,
 int  kdt_create_from_file (Kdt * kdt, 
 			   const char * name, 
 			   int blksize,
-			   int fd);
+			   int fd,
+			   void (* progress) (float complete, void * data),
+			   void * data);
 int  kdt_open       (Kdt * kdt, const char * name);
 void kdt_destroy    (Kdt * kdt);
 long kdt_query      (const Kdt * kdt, const KdtRect rect);
@@ -76,3 +78,15 @@ int  kdt_size       (const Kdt * kdt, long len);
 void kdt_sizes      (const Kdt * kdt, long len, 
 		     long * nodes, long * sums, long * leaves);
 void kdt_sum_init   (KdtSum * s);
+
+typedef struct {
+  KdtPoint * p;
+  long len, i, end;
+  int fd;
+} KdtHeap;
+
+void kdt_heap_create (KdtHeap * h, int fd, long len);
+int  kdt_heap_get    (KdtHeap * h, KdtPoint * p);
+void kdt_heap_put    (KdtHeap * h, KdtPoint * p);
+void kdt_heap_flush  (KdtHeap * h);
+void kdt_heap_free   (KdtHeap * h);
