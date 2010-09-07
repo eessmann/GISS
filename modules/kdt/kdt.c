@@ -408,8 +408,8 @@ static void splitfile (int fd, KdtRect bound, long len, int index, Kdt * kdt)
 #if TIMING
   struct timeval start;
   gettimeofday (&start, NULL);
-  assert (lseek (fd, 0, SEEK_SET) == 0);
 #endif
+  assert (lseek (fd, 0, SEEK_SET) == 0);
   if (len > LENMIN) {
     //    fprintf (stderr, " splitting: %ld      \r", len);
     KdtSum s;
