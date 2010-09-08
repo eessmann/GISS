@@ -33,6 +33,11 @@
 
 #include "kdt.h"
 
+static int includes_true (KdtRect rect)
+{
+  return 1;
+}
+
 static void progress (float complete, void * data)
 {
 #if 0 /* this doesn't work yet */
@@ -128,10 +133,24 @@ int main (int argc, char * argv[])
   Kdt * kdt = kdt_new ();
   kdt_create_from_file (kdt, argv[optind], pagesize, fd,
 			verbose ? progress : NULL, &start);
-  if (verbose)
-    fprintf (stderr, "\n");
   kdt_destroy (kdt);
   close (fd);
+
+  if (verbose) {
+    Kdt * kdt = kdt_new ();
+    KdtRect rect = {{-0.5,-0.5},{0.5,0.5}};
+    KdtSum sum;
+
+    kdt_sum_init (&sum);
+    assert (!kdt_open (kdt, argv[optind]));
+    long n = kdt_query_sum (kdt, 
+			    (KdtCheck) includes_true, (KdtCheck) includes_true, NULL,
+			    rect, &sum);
+    fprintf (stderr,
+	     "\n%ld points Height min: %g average: %g max: %g\n", 
+	     n, sum.Hmin, sum.H0/sum.n, sum.Hmax);
+    kdt_destroy (kdt);
+  }
 
   return 0;
 }
