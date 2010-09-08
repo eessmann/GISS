@@ -26,10 +26,16 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include "config.h"
+#ifdef HAVE_GETOPT_H
+#  include <getopt.h>
+#endif /* HAVE_GETOPT_H */
+
 #include "kdt.h"
 
 static void progress (float complete, void * data)
 {
+#if 0 /* this doesn't work yet */
   struct timeval * start = data, now;
   gettimeofday (&now, NULL);
   double remaining = ((double) (now.tv_usec - start->tv_usec) + 
@@ -40,13 +46,65 @@ static void progress (float complete, void * data)
   fprintf (stderr, "\rxyz2kdt: %3.0f%% complete %02d:%02d:%02d remaining", 
 	   complete*100.,
 	   hours, mins, secs);
+#else
+  fprintf (stderr, "\rxyz2kdt: %3.0f%% complete    ", 
+	   complete*100.);
+#endif
 }
 
 int main (int argc, char * argv[])
 {
-  if (argc != 3) {
-    fprintf (stderr, "usage: xyz2kdt basename blksize\n");
-    return 1;
+  int c = 0, pagesize = 4096;
+  int verbose = 0;
+
+  /* parse options using getopt */
+  while (c != EOF) {
+#ifdef HAVE_GETOPT_LONG
+    static struct option long_options[] = {
+      {"pagesize", required_argument, NULL, 'p'},
+      {"verbose", no_argument, NULL, 'v'},
+      {"help", no_argument, NULL, 'h'},
+      { NULL }
+    };
+    int option_index = 0;
+    switch ((c = getopt_long (argc, argv, "p:hv",
+			      long_options, &option_index))) {
+#else /* not HAVE_GETOPT_LONG */
+    switch ((c = getopt (argc, argv, "p:hv"))) {
+#endif /* not HAVE_GETOPT_LONG */
+    case 'v': /* verbose */
+      verbose = 1;
+      break;
+    case 'p': /* pagesize */
+      pagesize = atoi (optarg);
+      break;
+    case 'h': /* help */
+      fprintf (stderr,
+	       "Usage: xyz2kdt [OPTION] BASENAME\n"
+	       "\n"
+	       "Converts the x, y and z coordinates on standard input to a\n"
+	       "2D-tree-indexed database suitable for use with the\n"
+	       "terrain module of Gerris.\n"
+	       "\n"
+	       "  -p N  --pagesize=N  sets the pagesize in bytes (default is 4096)\n"
+	       "  -v    --verbose     display progress bar\n"
+	       "  -h    --help        display this help and exit\n"
+	       "\n"
+	       "Report bugs to %s\n",
+	       "popinet@users.sf.net");
+      return 0; /* success */
+      break;
+    case '?': /* wrong options */
+      fprintf (stderr, "Try `xyz2kdt -h' for more information.\n");
+      return 1; /* failure */
+    }
+  }
+
+  if (optind >= argc) { /* missing BASENAME */
+    fprintf (stderr, 
+	     "xyz2kdt: missing BASENAME\n"
+	     "Try `xyz2kdt -h' for more information.\n");
+    return 1; /* failure */
   }
 
   char name[] = "XXXXXX";
@@ -54,10 +112,10 @@ int main (int argc, char * argv[])
   assert (fd >= 0);
   assert (unlink (name) == 0);
 
-  fprintf (stderr, "xyz2kdt: reading points...");
-  int blksize = atoi (argv[2]);
+  if (verbose)
+    fprintf (stderr, "xyz2kdt: reading points...");
   KdtHeap h;
-  kdt_heap_create (&h, fd, blksize/sizeof (KdtPoint));
+  kdt_heap_create (&h, fd, pagesize/sizeof (KdtPoint));
   KdtPoint p;
   while (scanf ("%lf %lf %lf", &p.x, &p.y, &p.z) == 3)
     kdt_heap_put (&h, &p);
@@ -68,9 +126,10 @@ int main (int argc, char * argv[])
   struct timeval start;
   gettimeofday (&start, NULL);
   Kdt * kdt = kdt_new ();
-  kdt_create_from_file (kdt, argv[1], blksize, fd,
-			progress, &start);
-  fprintf (stderr, "\n");
+  kdt_create_from_file (kdt, argv[optind], pagesize, fd,
+			verbose ? progress : NULL, &start);
+  if (verbose)
+    fprintf (stderr, "\n");
   kdt_destroy (kdt);
   close (fd);
 

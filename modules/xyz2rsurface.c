@@ -36,6 +36,9 @@ static int includes_true (RSurfaceRect RSTrect)
 
 int main (int argc, char** argv)
 {
+  fprintf (stderr, "ERROR: xyz2rsurface is obsolete, please use xyz2kdt instead\n");
+  return 1; /* failure */
+
   int c = 0, pagesize = 2048;
   int randomize = 0, verbose = 0;
 
