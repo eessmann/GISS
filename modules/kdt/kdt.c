@@ -194,9 +194,17 @@ typedef struct {
   double split;
 } Node;
 
+#define SYSTEM_32_BITS (!defined (__LP64__) && !defined (__64BIT__) && \
+                        !defined (_LP64) && !(__WORDSIZE == 64))
+
 typedef struct {
   KdtRect bound;
-  long len, np;
+  long len;
+  PADDING_32_BITS;
+  long np;
+#if SYSTEM_32_BITS
+  int padding1;
+#endif
 } Header;
 
 struct _Kdt {
@@ -208,6 +216,18 @@ struct _Kdt {
   void * data;
   int i, m;
 };
+
+static int check_32_bits (const Kdt * kdt)
+{
+#if SYSTEM_32_BITS
+  long maxlen = (1 << 31)/sizeof (KdtPoint);
+  if (kdt->h.len > maxlen) {
+    fprintf (stderr, "kdt: 32-bits systems are limited to %ld data points\n", maxlen);
+    return 1;
+  }
+#endif
+  return 0;
+}
 
 #define KDTSIZE(len) (((len) - 1)*sizeof (Node) + (len)*sizeof (KdtPoint))
 
@@ -501,6 +521,9 @@ static int kdt_init (Kdt * kdt, const char * name, int npmax, long len)
   kdt->h.np++;
   kdt->h.bound[0].l = kdt->h.bound[1].l =  1e30;
   kdt->h.bound[0].h = kdt->h.bound[1].h = -1e30;
+
+  if (check_32_bits (kdt))
+    return -1;
   
   return 0;
 }
@@ -585,6 +608,9 @@ int kdt_open (Kdt * kdt, const char * name)
     return -1;
 
   kdt->buffer = malloc (sizeof (KdtPoint)*kdt->h.np);
+
+  if (check_32_bits (kdt))
+    return -1;
 
   return 0;
 }
