@@ -322,17 +322,33 @@ static void variable_tracer_read (GtsObject ** o, GtsFile * fp)
 
   if (fp->type == '{')
     gfs_advection_params_read (&GFS_VARIABLE_TRACER (*o)->advection, fp);
-  if (fp->type != GTS_ERROR && fp->type == '{')
-    g_warning ("%d:%d: specifying diffusion parameters is not done here anymore!",
-	       fp->line, fp->pos);
+  
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_DOUBLE, "vx", TRUE, &GFS_VARIABLE_TRACER (*o)->advection.sink[0]},
+      {GTS_DOUBLE, "vy", TRUE, &GFS_VARIABLE_TRACER (*o)->advection.sink[1]},
+      {GTS_DOUBLE, "vz", TRUE, &GFS_VARIABLE_TRACER (*o)->advection.sink[2]},
+      {GTS_NONE}
+    };
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;   
+  }
 }
 
 static void variable_tracer_write (GtsObject * o, FILE * fp)
 {
+  GfsVariableTracer * tracer = GFS_VARIABLE_TRACER (o);
+
   (* GTS_OBJECT_CLASS (gfs_variable_tracer_class ())->parent_class->write) (o, fp);
 
   fputc (' ', fp);
-  gfs_advection_params_write (&GFS_VARIABLE_TRACER (o)->advection, fp);
+  gfs_advection_params_write (&tracer->advection, fp);
+
+  fprintf(fp, " { vx = %g vy = %g vz = %g } ",
+	  tracer->advection.sink[0],
+	  tracer->advection.sink[1],
+	  tracer->advection.sink[2]);
 }
 
 static void variable_tracer_class_init (GtsObjectClass * klass)
@@ -348,6 +364,9 @@ static void variable_tracer_init (GfsVariableTracer * v)
   v->advection.flux = gfs_face_advection_flux;
   v->advection.v = GFS_VARIABLE1 (v);
   v->advection.fv = NULL;
+  v->advection.sink[0] = 0.;
+  v->advection.sink[1] = 0.;
+  v->advection.sink[2] = 0.;
   GFS_VARIABLE1 (v)->description = g_strdup ("Tracer");
 }
 

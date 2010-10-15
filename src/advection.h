@@ -57,6 +57,7 @@ struct _GfsAdvectionParams {
   gboolean average, gc;
   GfsMergedTraverseFunc update;
   guint moving_order;
+  double sink[3];
 };
 
 void         gfs_advection_params_init        (GfsAdvectionParams * par);
