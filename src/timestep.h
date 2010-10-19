@@ -81,6 +81,10 @@ void          gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 							 GfsVariable ** gmac,
 							 GfsVariable ** g,
 							 GfsFunction * alpha);
+void          gfs_add_sinking_velocity        (GfsDomain * domain, 
+					       GtsVector sinking);
+void          gfs_remove_sinking_velocity     (GfsDomain * domain, 
+					       GtsVector sinking);
 void          gfs_tracer_advection_diffusion  (GfsDomain * domain,
 					       GfsAdvectionParams * par);
 

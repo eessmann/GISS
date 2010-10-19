@@ -508,7 +508,24 @@ static void simulation_run (GfsSimulation * sim)
 
 static gdouble simulation_cfl (GfsSimulation * sim)
 {
-  return gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
+  GSList * i = GFS_DOMAIN (sim)->variables;
+  gdouble cflmin = G_MAXDOUBLE;
+  
+  while (i) {
+    GfsVariable * v = i->data;
+
+    if (GFS_IS_VARIABLE_TRACER (v) && 
+	GFS_VARIABLE_TRACER (v)->advection.scheme != GFS_NONE &&
+	gts_vector_norm (GFS_VARIABLE_TRACER (v)->advection.sink) > 0.) {
+      gfs_add_sinking_velocity (GFS_DOMAIN (sim), GFS_VARIABLE_TRACER (v)->advection.sink);
+      gdouble cfl = gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
+      gfs_remove_sinking_velocity (GFS_DOMAIN (sim), GFS_VARIABLE_TRACER (v)->advection.sink);
+      if (cfl < cflmin)
+	cflmin = cfl;
+    }
+    i = i->next;
+  }
+  return cflmin < G_MAXDOUBLE ? cflmin : gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
 }
 
 static void gfs_simulation_class_init (GfsSimulationClass * klass)

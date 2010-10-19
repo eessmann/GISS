@@ -906,6 +906,8 @@ void gfs_advection_params_write (GfsAdvectionParams * par, FILE * fp)
   }
   if (par->moving_order != 1)
     fputs ("  moving_order = 2\n", fp);
+  if (gts_vector_norm (par->sink) > 0.)
+    fprintf (fp, "  vx = %g vy = %g vz = %g\n", par->sink[0], par->sink[1], par->sink[2]);
   fputc ('}', fp);
 }
 
@@ -926,6 +928,7 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->gc = FALSE;
   par->update = (GfsMergedTraverseFunc) gfs_advection_update;
   par->moving_order = 1;
+  par->sink[0] = par->sink[1] = par->sink[2] = 0.;
 }
 
 static gdouble none (FttCell * cell, FttComponent c, guint v)
@@ -935,28 +938,23 @@ static gdouble none (FttCell * cell, FttComponent c, guint v)
 
 void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
 {
-  GtsFileVariable var[] = {
-    {GTS_DOUBLE, "cfl",          TRUE},
-    {GTS_STRING, "gradient",     TRUE},
-    {GTS_STRING, "flux",         TRUE},
-    {GTS_STRING, "scheme",       TRUE},
-    {GTS_INT,    "average",      TRUE},
-    {GTS_INT,    "gc",           TRUE},
-    {GTS_UINT,   "moving_order", TRUE},
-    {GTS_NONE}
-  };
-  gchar * gradient = NULL, * flux = NULL, * scheme = NULL;
-
   g_return_if_fail (par != NULL);
   g_return_if_fail (fp != NULL);
 
-  var[0].data = &par->cfl;
-  var[1].data = &gradient;
-  var[2].data = &flux;
-  var[3].data = &scheme;
-  var[4].data = &par->average;
-  var[5].data = &par->gc;
-  var[6].data = &par->moving_order;
+  gchar * gradient = NULL, * flux = NULL, * scheme = NULL;
+  GtsFileVariable var[] = {
+    {GTS_DOUBLE, "cfl",          TRUE, &par->cfl},
+    {GTS_STRING, "gradient",     TRUE, &gradient},
+    {GTS_STRING, "flux",         TRUE, &flux},
+    {GTS_STRING, "scheme",       TRUE, &scheme},
+    {GTS_INT,    "average",      TRUE, &par->average},
+    {GTS_INT,    "gc",           TRUE, &par->gc},
+    {GTS_UINT,   "moving_order", TRUE, &par->moving_order},
+    {GTS_DOUBLE, "vx",           TRUE, &par->sink[0]},
+    {GTS_DOUBLE, "vy",           TRUE, &par->sink[1]},
+    {GTS_DOUBLE, "vz",           TRUE, &par->sink[2]},
+    {GTS_NONE}
+  };
 
   gts_file_assign_variables (fp, var);
 
