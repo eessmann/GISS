@@ -21,6 +21,145 @@
 #include "particle.h"
 #include "source.h"
 
+/* Adaptive 4/5 Runge-Kutta method */
+/* Headers */
+
+#define SAFETY 0.9
+#define PGROW -0.2
+#define PSHRNK -0.25
+#define ERRCON 1.89e-4
+
+typedef void      (* RKFunc)            ( gdouble t, gdouble *y, gdouble *dydt, gpointer data);
+
+typedef struct _GfsAdaptiveRK    GfsAdaptiveRK;
+
+struct _GfsAdaptiveRK {
+    gdouble t, dtgoal, dtmax; //independent variable t, interval to be integrated, max dt
+    gdouble * y;  // goal function
+    gdouble * yc; // characteristic values for nondimensionalization
+    guint n;      // number of elements in y 
+    gpointer data;// additional data required in f
+};
+/*Object*/
+
+static void rkck ( gdouble *dttry, gdouble *errmax, gdouble *yerr, 
+                   gdouble *ytmp, gdouble *ak1, GfsAdaptiveRK *RKdata,
+                   RKFunc derivatives) {
+
+    gint i;
+    gdouble A2=0.2,A3=0.3,A4=0.6,A5=1.0,A6=0.875;
+    gdouble b21 = 0.2;
+    gdouble b31 = 3.0/40.0, b32 = 9.0/40.0;
+    gdouble b41 = 0.3, b42 = -0.9, b43 = 1.2;
+    gdouble b51 = -11.0/54.0, b52 = 2.5, b53 = -70.0/27.0, b54 = 35./27.;
+    gdouble b61 = 1631.0/55296.0, b62 = 175.0/512.0, b63 = 575./13824.;
+    gdouble b64 = 44275./110592., b65 = 253./4096.;
+    gdouble c1 = 37./378., c3 = 250./621., c4 = 125.0/594.0, c6 = 512.0/1771.;
+    gdouble dc1 = c1-2825.0/27648.0,dc3=c3-18575.0/48384.,dc4 = c4 - 13525.0/55296.0, dc5 = -277.0/14336.0, dc6 = c6 - 0.25;
+
+    gdouble *ak2,*ak3,*ak4,*ak5,*ak6;
+     
+    ak2 = g_malloc(RKdata->n*sizeof(gdouble));
+    ak3 = g_malloc(RKdata->n*sizeof(gdouble));
+    ak4 = g_malloc(RKdata->n*sizeof(gdouble));
+    ak5 = g_malloc(RKdata->n*sizeof(gdouble));
+    ak6 = g_malloc(RKdata->n*sizeof(gdouble));
+
+    /* First Step */
+    for (i=0;i<RKdata->n;i++)   
+        ytmp[i] = RKdata->y[i] + (*dttry)*b21*ak1[i];
+
+    derivatives(RKdata->t+A2*(*dttry), ytmp, ak2, RKdata->data);
+    
+    for (i=0;i<RKdata->n;i++) 
+        ytmp[i] = RKdata->y[i] + (*dttry)*(b31*ak1[i]+b32*ak2[i]);
+        
+    derivatives(RKdata->t+A3*(*dttry), ytmp, ak3, RKdata->data);
+
+    for (i=0;i<RKdata->n;i++) 
+        ytmp[i] = RKdata->y[i] + (*dttry)*(b41*ak1[i]+b42*ak2[i]+b43*ak3[i]);
+
+    derivatives(RKdata->t+A4*(*dttry), ytmp, ak4, RKdata->data);
+    
+    for (i=0;i<RKdata->n;i++) 
+        ytmp[i] = RKdata->y[i] + (*dttry)*(b51*ak1[i]+b52*ak2[i]+b53*ak3[i]
+                                  +b54*ak4[i]);
+    
+    derivatives(RKdata->t+A5*(*dttry), ytmp, ak5, RKdata->data);
+    
+    for (i=0;i<RKdata->n;i++) 
+        ytmp[i] = RKdata->y[i] + (*dttry)*(b61*ak1[i]+b62*ak2[i]+b63*ak3[i]
+                                  +b64*ak4[i]+b65*ak5[i]);
+
+    derivatives(RKdata->t+A6*(*dttry), ytmp, ak6, RKdata->data);
+    
+    for (i=0;i<RKdata->n;i++) 
+        ytmp[i] = RKdata->y[i] + (*dttry)*(c1*ak1[i]+c3*ak3[i]
+                                  +c4*ak4[i]+c6*ak6[i]);
+    
+    for (i=0;i<RKdata->n;i++) 
+        yerr[i] = (*dttry)*(dc1*ak1[i]+dc3*ak3[i]
+                +   dc4*ak4[i]+dc5*ak5[i]+dc6*ak6[i]);
+    
+    g_free(ak2);g_free(ak3);g_free(ak4);g_free(ak5);g_free(ak6);
+}
+
+/* Adaptive RK method
+It integrates a function df/dt=f(t,...)
+f(t,y,dydt,data) is RKFunc whose arguments are:
+    t: independent variable
+    y: function
+    dydt: derivative of the function
+    data: extra data
+RKdata contains the info of the temporal integration 
+*/
+static void rkqs ( GfsAdaptiveRK *RKdata, RKFunc derivatives ) {
+
+    guint i;
+    gdouble eps=1.e-4,dtnext,errmax;
+    gdouble dt,dttmp,tnew,*yerr,*ytmp;
+    gdouble *ak1;
+     
+    ak1 = g_malloc(RKdata->n*sizeof(gdouble));
+    yerr = g_malloc (RKdata->n*sizeof (gdouble));     
+    ytmp = g_malloc (RKdata->n*sizeof (gdouble));     
+
+    
+    dt=MIN(RKdata->dtgoal,RKdata->dtmax); //step size to the trial value
+
+    
+    while (dt > 0.) {
+
+    derivatives(RKdata->t, RKdata->y, ak1, RKdata->data);
+    for (;;) {
+        errmax=0.;
+        rkck( &dt,&errmax, yerr, ytmp, ak1, RKdata, derivatives);
+        for (i=0;i<RKdata->n;i++) errmax=MAX(errmax,fabs(yerr[i]/RKdata->yc[i]));
+        errmax /= eps;
+        if (errmax <= 1. ) break;
+        dttmp = SAFETY*dt*pow(errmax,PSHRNK);
+        dt = MAX(dttmp,0.1*dt);
+        tnew = RKdata->t + dt;
+        if (tnew == RKdata->t) g_error("Time step in RK equal 0");
+    }
+
+    if (errmax > ERRCON) dtnext = SAFETY*dt*pow(errmax,PGROW);
+    else dtnext = 5.0*dt;
+
+    RKdata->t += dt;
+    for (i=0;i<RKdata->n;i++) RKdata->y[i]=ytmp[i];
+    printf("%g %g %g \n", RKdata->t, RKdata->y[0], RKdata->dtgoal);
+    RKdata->dtgoal -= dt;
+   
+    dt=MIN(MIN(dtnext,RKdata->dtgoal),RKdata->dtmax);
+
+    }
+
+    g_free(ak1); g_free(yerr); g_free(ytmp);
+
+}
+
+
 /* GfsParticulate: Header */
 
 typedef struct _GfsParticulate GfsParticulate;
