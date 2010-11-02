@@ -148,7 +148,6 @@ static void rkqs ( GfsAdaptiveRK *RKdata, RKFunc derivatives ) {
 
     RKdata->t += dt;
     for (i=0;i<RKdata->n;i++) RKdata->y[i]=ytmp[i];
-    printf("%g %g %g \n", RKdata->t, RKdata->y[0], RKdata->dtgoal);
     RKdata->dtgoal -= dt;
    
     dt=MIN(MIN(dtnext,RKdata->dtgoal),RKdata->dtmax);
@@ -1291,6 +1290,168 @@ GfsEventClass * gfs_droplet_to_particle_class (void)
   return klass;
 }
 
+/* GfsBubble: Header */
+
+typedef struct _GfsBubble GfsBubble;
+
+struct _GfsBubble {
+  GfsParticulate parent;
+  gdouble velR,p0,R0;
+};
+
+#define GFS_BUBBLE(obj)            GTS_OBJECT_CAST (obj,GfsBubble, gfs_bubble_class ())
+#define GFS_IS_BUBBLE(obj)         (gts_object_is_from_class (obj, gfs_bubble_class ()))
+
+static GfsEventClass * gfs_bubble_class  (void);
+
+/* GfsBubble: Object */
+/* The radius of each bubble varies according to the Rayleigh-Plesset equation */
+
+static gboolean RP_equation () {
+
+  return TRUE;
+}
+
+void static bubble_derivs ( gdouble t, gdouble *y, gdouble *dydt, gpointer * data ) {
+
+  //dVbdt
+  gdouble Rb = pow(y[0]*3./(4.*M_PI),1./3.);
+  dydt[0]=4.*M_PI*pow(Rb,2)*y[1];
+
+  //interface acceleration
+    gdouble * liqpres = data[0];
+    gdouble * liqdens = data[2];
+    GfsBubble * bubble = data[1];
+    gdouble pbubble   = bubble->p0*pow(bubble->R0/Rb,3.*1.4);
+
+    //incompressible RP equation
+    dydt[1]=((pbubble - *liqpres)/(*liqdens)-3./2.*pow(y[1],2))/Rb;
+  return;
+}
+
+static gboolean gfs_bubble_event (GfsEvent * event, 
+				       GfsSimulation * sim)
+{
+  GfsParticle * p = GFS_PARTICLE (event);
+  GfsParticulate * particulate = GFS_PARTICULATE (event);
+  GfsBubble * bubble = GFS_BUBBLE (event);
+  GfsDomain * domain = GFS_DOMAIN (sim);
+
+  GfsVariable * liqpres = gfs_variable_from_name (domain->variables, "P");
+  
+  FttCell * cell = gfs_domain_locate (domain, p->pos, -1, NULL);
+  if (cell == NULL) return TRUE;
+  gdouble liq_rho = sim->physical_params.alpha ? 1./
+    gfs_function_value (sim->physical_params.alpha, cell) : 1.;
+
+  FttVector pos = p->pos;
+  gfs_simulation_map (sim, &pos);
+
+  gdouble point_pres = gfs_interpolate (cell, p->pos, liqpres);
+
+ gdouble * y = g_malloc(2*sizeof (gdouble)); 
+ y[0] = particulate->volume;
+ y[1] = bubble->velR;
+ gdouble *yc = g_malloc(2*sizeof(gdouble)); 
+ yc[0] = particulate->volume;               //characteristic distance
+ yc[1] = 0.01*sqrt(bubble->p0/liq_rho); //characteristic velocity
+
+ gpointer data[3];
+
+ data[0] = &point_pres;
+ data[1] = bubble;
+ data[2] = &liq_rho;
+ 
+ GfsAdaptiveRK RKdata;
+ RKdata.t = sim->time.t;
+ RKdata.dtgoal = sim->advection_params.dt;
+ RKdata.dtmax = yc[1]*0.001;
+ RKdata.y = y;
+ RKdata.yc = yc;
+ RKdata.n = 2;
+ RKdata.data = &data;
+
+ rkqs ( &RKdata, (RKFunc) bubble_derivs );
+
+ bubble->velR = y[1];
+ particulate->volume = y[0];
+
+
+ g_free(y);g_free(yc);
+  
+  
+  return TRUE;
+} 
+
+static void gfs_bubble_read (GtsObject ** o, GtsFile * fp)
+{
+  if (GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class->read) 
+      (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  GfsBubble * p = GFS_BUBBLE (*o);
+  GfsParticulate * part = GFS_PARTICULATE (*o);
+
+  p->R0 = pow(part->volume*3./(4.*M_PI),1./3.);
+
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (radial velocity)");
+    return;
+  }
+  p->velR = atof (fp->token->str);
+  gts_file_next_token (fp);
+  
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (reference pressure)");
+    return;
+  }
+  p->p0 = atof (fp->token->str);
+  gts_file_next_token (fp);
+
+}
+
+static void gfs_bubble_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class->write) (o, fp);
+ 
+ GfsBubble * p = GFS_BUBBLE (o);
+  fprintf (fp, " %g %g", p->velR, p->p0);
+}
+
+static void gfs_bubble_init (GfsBubble * bubble) {
+
+    
+    return;
+}
+
+static void gfs_bubble_class_init (GfsEventClass * klass)
+{
+  klass->event = gfs_bubble_event;
+  GTS_OBJECT_CLASS (klass)->read = gfs_bubble_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_bubble_write;
+}
+
+GfsEventClass * gfs_bubble_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_bubble_info = {
+      "GfsBubble",
+      sizeof (GfsBubble),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_bubble_class_init,
+      (GtsObjectInitFunc) gfs_bubble_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_particulate_class ()),
+				  &gfs_bubble_info);
+  }
+  return klass;
+}
+
 /* Initialize module */
 
 const gchar gfs_module_name[] = "particulates";
@@ -1304,6 +1465,7 @@ const gchar * g_module_check_init (void)
   gfs_force_drag_class ();
   gfs_force_buoy_class ();
   gfs_particle_force_class ();
+  gfs_bubble_class ();
 
   gfs_droplet_to_particle_class ();
   return NULL; 
