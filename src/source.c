@@ -1042,13 +1042,45 @@ gdouble gfs_source_diffusion_cell (GfsSourceDiffusion * d, FttCell * cell)
 
 static void explicit_diffusion (FttCell * cell, GfsSourceGeneric * s)
 {
-  GFS_VARIABLE (cell, GFS_SOURCE_DIFFUSION_EXPLICIT (s)->s->i) = 
-    source_diffusion_value (s, cell, GFS_SOURCE_SCALAR (s)->v);
+  /* see also poisson.c:diffusion_rhs() */
+  GfsVariable * v = GFS_SOURCE_DIFFUSION_EXPLICIT (s)->v;
+  gdouble f, h, val;
+  FttCellNeighbors neighbor;
+  FttCellFace face;
+  
+  if (GFS_IS_MIXED (cell)) {
+    if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
+      f = gfs_cell_dirichlet_gradient_flux (cell, v->i, -1, GFS_STATE (cell)->solid->fv);
+    else
+      f = GFS_STATE (cell)->solid->fv;
+  }
+  else
+    f = 0.; /* Neumann condition by default */
+  h = ftt_cell_size (cell);
+  val = GFS_VALUE (cell, v);
+  face.cell = cell;
+  ftt_cell_neighbors (cell, &neighbor);
+  for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++) {
+    GfsGradient g;
+
+    face.neighbor = neighbor.c[face.d];
+    gfs_face_gradient_flux (&face, &g, v->i, -1);
+    if (face.d/2 == v->component) {
+      g.a *= 2.;
+      g.b *= 2.;
+    }
+    f += g.b - g.a*val;
+  }
+  GFS_VALUE (cell, GFS_SOURCE_DIFFUSION_EXPLICIT (s)->s) = 
+    f/(h*h*gfs_domain_cell_fraction (v->domain, cell));
 }
 
 static gboolean gfs_source_diffusion_explicit_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_source_diffusion_explicit_class ())->parent_class)->event) (event, sim)) {
+    gfs_diffusion_coefficients (GFS_DOMAIN (sim), GFS_SOURCE_DIFFUSION (event), 1., 
+				NULL, NULL, NULL, 1.);
+    gfs_domain_surface_bc (GFS_DOMAIN (sim), GFS_SOURCE_DIFFUSION_EXPLICIT (event)->v);
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) explicit_diffusion, event);
     return TRUE;
@@ -1064,8 +1096,30 @@ static void gfs_source_diffusion_explicit_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  GFS_SOURCE_DIFFUSION_EXPLICIT (*o)->s = 
-    gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
+  GfsSourceDiffusionExplicit * s = GFS_SOURCE_DIFFUSION_EXPLICIT (*o);
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (s));
+  if (fp->type != GTS_STRING)
+    s->v = GFS_SOURCE_SCALAR (s)->v;
+  else {
+    s->v = gfs_variable_from_name (domain->variables, fp->token->str);
+    if (!s->v) {
+      gts_file_error (fp, "unknown variable '%s'", fp->token->str);
+      return;
+    }
+    gts_file_next_token (fp);
+    gfs_function_set_units (GFS_SOURCE_DIFFUSION (s)->D->val, 
+			    2. + GFS_SOURCE_SCALAR (s)->v->units - s->v->units);
+  }
+  
+  s->s = gfs_temporary_variable (domain);
+}
+
+static void gfs_source_diffusion_explicit_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_diffusion_explicit_class ())->parent_class->write) (o, fp);
+  GfsSourceDiffusionExplicit * s = GFS_SOURCE_DIFFUSION_EXPLICIT (o);
+  if (s->v != GFS_SOURCE_SCALAR (s)->v)
+    fprintf (fp, " %s", s->v->name);
 }
 
 static void gfs_source_diffusion_explicit_destroy (GtsObject * o)
@@ -1080,7 +1134,7 @@ static gdouble source_diffusion_explicit_value (GfsSourceGeneric * s,
 					     FttCell * cell,
 					     GfsVariable * v)
 {
-  return GFS_VARIABLE (cell, GFS_SOURCE_DIFFUSION_EXPLICIT (s)->s->i);
+  return GFS_VALUE (cell, GFS_SOURCE_DIFFUSION_EXPLICIT (s)->s);
 }
 
 typedef struct {
@@ -1125,8 +1179,11 @@ static gdouble source_diffusion_stability (GfsSourceGeneric * s,
   par.s = s;
   par.dtmax = G_MAXDOUBLE;
   par.alpha = NULL;
-  gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) cell_diffusion_stability, &par);
+  if (GFS_SOURCE_SCALAR (s)->v == GFS_SOURCE_DIFFUSION_EXPLICIT (s)->v)
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) cell_diffusion_stability, &par);
+  /* else
+     fixme: what is the stability condition in that case? */
   return par.dtmax;
 }
 
@@ -1134,6 +1191,7 @@ static void gfs_source_diffusion_explicit_class_init (GfsSourceGenericClass * kl
 {
   GFS_EVENT_CLASS (klass)->event = gfs_source_diffusion_explicit_event;
   GTS_OBJECT_CLASS (klass)->read = gfs_source_diffusion_explicit_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_source_diffusion_explicit_write;
   GTS_OBJECT_CLASS (klass)->destroy = gfs_source_diffusion_explicit_destroy;
   klass->stability = source_diffusion_stability;
 }
