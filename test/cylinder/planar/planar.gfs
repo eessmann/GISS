@@ -63,7 +63,13 @@ GModule electrohydro
        awk 'BEGIN { rhoinic = 0.5 ; R0 = 0.1 ; Q = rhoinic*R0*R0*3.141592654 }
             { print $3,$5,100*sqrt((1.-$5/Q)*(1.-$5/Q)); fflush(stdout); }' > rhoe-LEVEL
     } { v = Rhoe}
-    OutputLocation { start = end } prof-LEVEL yprofile
+    OutputSimulation { start = end } {
+	awk '{ if ($1 != "#") 
+                 print sqrt($2*$2+$1*$1),sqrt($4*$4+$5*$5); }' > prof-LEVEL
+    } { 
+	format = text 
+	variables = Ex,Ey 
+    }
     OutputErrorNorm { start = end } norms-LEVEL { v = sqrt(Ex*Ex + Ey*Ey) } {
 	s = {
 	  double r = sqrt (x*x + y*y);

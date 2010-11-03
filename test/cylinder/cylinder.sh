@@ -1,5 +1,4 @@
 if test x$donotrun != xtrue; then
-    awk 'BEGIN{for (x = 0./100.; x <= 0.5; x += 1./100.) print 0,x,0;}' > yprofile
     for level in 5 6 7 8; do
 	if gerris2D -DLEVEL=$level $1; then :
 	else
@@ -28,11 +27,12 @@ perm=1.
 R0=0.1
 rhoinic=0.5
 rho(x)= x<R0 ?  0. : 0.5*R0*R0*rhoinic/perm/x
-plot \
-          'prof-5' u 3:12 t 'R_{o}/h_{min} = 3.2', \
-          'prof-6' u 3:12 t 'R_{o}/h_{min} = 6.4', \
-          'prof-7' u 3:12 t 'R_{o}/h_{min} = 12.8', \
-          'prof-8' u 3:12 t 'R_{o}/h_{min} = 25.6', \
+set samples 1000
+plot [0:1]\
+          'prof-5' t 'R_{o}/h_{min} = 3.2', \
+          'prof-6' t 'R_{o}/h_{min} = 6.4', \
+          'prof-7' t 'R_{o}/h_{min} = 12.8', \
+          'prof-8' t 'R_{o}/h_{min} = 25.6', \
           rho(x) t 'Analytical solution'
 
 #

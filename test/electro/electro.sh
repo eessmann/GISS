@@ -44,6 +44,7 @@ vtt(x)=(x < 1. ? 3.*A/2.*x*(1.-5./3.*x**2)*sin(2.*theta) : \
 set xlabel 'r/R_{0}'
 set ylabel 'v/v_{c}'
 set key bottom right
+set samples 1000
 plot \
           'fprof-10' u 1:2 t '', \
           'fprof-10' u 1:3 t '', \
