@@ -8,7 +8,7 @@
 # Author: St\'ephane Popinet
 # Command: gerris2D hydrostatic.gfs
 # Version: 1.1.3
-# Required files: hydrostatic.gfs
+# Required files:
 1 0 GfsSimulation GfsBox GfsGEdge {} {
     Refine 3
     Source V -1

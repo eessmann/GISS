@@ -32,6 +32,7 @@ TESTDIRS = \
 	parabola \
 	lonlat \
 	cosine \
+	planar \
 	bump \
 	cylinder \
 	electro
