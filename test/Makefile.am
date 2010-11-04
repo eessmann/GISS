@@ -6,6 +6,7 @@ TESTDIRS = \
 	dumbell \
 	advection \
 	shear \
+	diffusion \
 	reynolds \
 	periodic \
 	merging \
