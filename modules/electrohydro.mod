@@ -281,11 +281,6 @@ static void poisson_electric (GfsElectroHydro * elec)
   GfsVariable * phi = elec->phi; 
   GfsVariable ** e = elec->E;
 
-  gfs_domain_surface_bc (domain, phi);
-  gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
-			     (FttCellTraverseFunc) has_dirichlet, phi);
-
-
   dive = gfs_temporary_variable (domain);
   correct_div (domain, elec->rhoe, dive);
   gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered);
@@ -344,6 +339,15 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
   gfs_variable_set_vector (g, FTT_DIMENSION);
 
   gfs_simulation_refine (sim);
+  gfs_domain_surface_bc (domain, elec->phi);
+  gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			     (FttCellTraverseFunc) has_dirichlet, elec->phi);
+  if (!elec->phi->centered) {
+    guint nf = gfs_check_solid_fractions (domain);
+    if (nf > 0)
+      g_warning ("the solid surface cuts %d boundary cells,\n"
+		 "this may cause errors for the potential solution\n", nf);
+  }
   gfs_simulation_init (sim);
 
   i = domain->variables;

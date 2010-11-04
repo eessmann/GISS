@@ -1048,6 +1048,24 @@ static void check_solid_fractions (GfsBox * box, guint * nf)
 				(FttFaceTraverseFunc) check_face, nf);
 }
 
+/**
+ * gfs_check_solid_fractions:
+ * @domain: a #GfsDomain.
+ *
+ * Checks consistency of solid fractions.
+ *
+ * Returns: the number of partial fluid faces which do not have two
+ * neighbors.
+ */
+guint gfs_check_solid_fractions (GfsDomain * domain)
+{
+  g_return_val_if_fail (domain != NULL, 0);
+
+  guint nf = 0;
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) check_solid_fractions, &nf);
+  return nf;
+}
+
 static void is_diffusion (GfsSource * s, gboolean * diffusion)
 {
   *diffusion = (GFS_IS_SOURCE_DIFFUSION (s) != NULL);
@@ -1088,7 +1106,7 @@ GSList * gfs_simulation_get_solids (GfsSimulation * sim)
 void gfs_simulation_refine (GfsSimulation * sim)
 {
   GSList * i;
-  guint depth, nf = 0;
+  guint depth;
   gint l;
   GfsDomain * domain;
 
@@ -1129,7 +1147,8 @@ void gfs_simulation_refine (GfsSimulation * sim)
 			       (FttCellTraverseFunc) set_permanent, NULL);
     gfs_domain_timer_stop (domain, "solid_fractions");
   }
-  gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) check_solid_fractions, &nf);
+
+  guint nf = gfs_check_solid_fractions (domain);
   if (nf > 0) {
     GSList * i = domain->variables;
     gboolean diffusion = FALSE;
@@ -1955,6 +1974,12 @@ static void poisson_run (GfsSimulation * sim)
   gfs_domain_surface_bc (domain, p);
   gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
 			     (FttCellTraverseFunc) has_dirichlet, p);
+  if (!p->centered) {
+    guint nf = gfs_check_solid_fractions (domain);
+    if (nf > 0)
+      g_warning ("the solid surface cuts %d boundary cells,\n"
+		 "this may cause errors for the Poisson solution\n", nf);
+  }
 
   div = gfs_temporary_variable (domain);
   correct_div (domain, gfs_variable_from_name (domain->variables, "Div"), div, !p->centered);

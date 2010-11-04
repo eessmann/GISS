@@ -110,6 +110,7 @@ void                 gfs_simulation_union_write  (GfsSimulation * sim,
 						  FILE * fp);
 GfsSimulation *      gfs_simulation_read         (GtsFile * fp);
 GSList *             gfs_simulation_get_solids   (GfsSimulation * sim);
+guint                gfs_check_solid_fractions   (GfsDomain * domain);
 void                 gfs_simulation_refine       (GfsSimulation * sim);
 void                 gfs_simulation_set_timestep (GfsSimulation * sim);
 void                 gfs_simulation_map          (GfsSimulation * sim, 
