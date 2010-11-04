@@ -1069,7 +1069,7 @@ static void add_diffusion_explicit_flux (FttCell * cell, FluxPar * p)
     GfsGradient g;
 
     face.neighbor = neighbor.c[face.d];
-    gfs_face_gradient_flux (&face, &g, p->v->i, -1);
+    gfs_face_cm_weighted_gradient (&face, &g, p->v->i, -1);
     if (face.d/2 == p->v->component) {
       g.a *= 2.;
       g.b *= 2.;
@@ -1418,7 +1418,7 @@ static void add_viscosity_explicit_flux (FttCell * cell, FluxPar * p)
     GfsGradient e;
 
     f.neighbor = n.c[f.d];
-    gfs_face_gradient_flux (&f, &e, p->v->i, -1);
+    gfs_face_cm_weighted_gradient (&f, &e, p->v->i, -1);
 #ifndef NOTRANSVERSE
     if (f.d/2 == p->v->component) {
       e.a *= 2.;

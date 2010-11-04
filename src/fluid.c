@@ -758,7 +758,7 @@ gdouble gfs_center_regular_2nd_derivative (FttCell * cell,
  * boundary are consistent.
  *
  * The value of the gradient (normalised by the size of @face->cell)
- * is given by: @g->b - @g->a*GFS_VARIABLE (@face->cell, @v).
+ * is given by: @g->b - @g->a*GFS_VALUE (@face->cell, @v).
  */
 void gfs_face_gradient (const FttCellFace * face,
 			GfsGradient * g,
@@ -1309,33 +1309,19 @@ static gboolean mixed_face_gradient (const FttCellFace * face,
   return TRUE;
 }
 
-/**
- * gfs_face_gradient_flux:
- * @face: a #FttCellFace.
- * @g: the #GfsGradient.
- * @v: a #GfsVariable index.
- * @max_level: the maximum cell level to consider (-1 means no restriction).
- *
- * Set the value of @g as the gradient of variable @v on the @face
- * weighted by the value of the @v field of the face state vector of
- * the corresponding cell. Variable @v is defined at the center of
- * mass of its cell. Linear interpolation is used to evaluate the
- * gradient in the vicinity of cut cells.
- */
-void gfs_face_gradient_flux (const FttCellFace * face,
-			     GfsGradient * g,
-			     guint v,
-			     gint max_level)
+static void face_cm_gradient (const FttCellFace * face,
+			      GfsGradient * g,
+			      guint v,
+			      gint max_level,
+			      gboolean weighted)
 {
   guint level;
   Gradient gcf;
-  gdouble w;
-
-  g_return_if_fail (face != NULL);
-  g_return_if_fail (g != NULL);
+  gdouble w = weighted ? GFS_STATE (face->cell)->f[face->d].v : 1.;
 
   g->a = g->b = 0.;
-  if (face->neighbor == NULL || (w = GFS_STATE (face->cell)->f[face->d].v) == 0.)
+  
+  if (face->neighbor == NULL || w == 0.)
     return;
 
   level = ftt_cell_level (face->cell);
@@ -1377,7 +1363,7 @@ void gfs_face_gradient_flux (const FttCellFace * face,
       f.neighbor = face->cell;
       for (i = 0; i < n; i++) 
 	if ((f.cell = children.c[i])) {
-	  w = GFS_STATE (f.cell)->f[f.d].v;
+	  w = weighted ? GFS_STATE (f.cell)->f[f.d].v : 1.;
 	  if (GFS_IS_MIXED (f.cell) || GFS_IS_MIXED (f.neighbor)) {
 	    if (!mixed_face_gradient (&f, &gcf, v, max_level))
 	      gcf = gradient_fine_coarse (&f, v);
@@ -1389,6 +1375,53 @@ void gfs_face_gradient_flux (const FttCellFace * face,
 	}
     }
   }
+}
+
+/**
+ * gfs_face_cm_gradient:
+ * @face: a #FttCellFace.
+ * @g: the #GfsGradient.
+ * @v: a #GfsVariable index.
+ * @max_level: the maximum cell level to consider (-1 means no restriction).
+ *
+ * Set the value of @g as the gradient of variable @v on the
+ * @face. Variable @v is defined at the center of mass of its
+ * cell. Linear interpolation is used to evaluate the gradient in the
+ * vicinity of cut cells.
+ */
+void gfs_face_cm_gradient (const FttCellFace * face,
+			   GfsGradient * g,
+			   guint v,
+			   gint max_level)
+{
+  g_return_if_fail (face != NULL);
+  g_return_if_fail (g != NULL);
+
+  face_cm_gradient (face, g, v, max_level, FALSE);
+}
+
+/**
+ * gfs_face_cm_weighted_gradient:
+ * @face: a #FttCellFace.
+ * @g: the #GfsGradient.
+ * @v: a #GfsVariable index.
+ * @max_level: the maximum cell level to consider (-1 means no restriction).
+ *
+ * Set the value of @g as the gradient of variable @v on the @face
+ * weighted by the value of the @v field of the face state vector of
+ * the corresponding cell. Variable @v is defined at the center of
+ * mass of its cell. Linear interpolation is used to evaluate the
+ * gradient in the vicinity of cut cells.
+ */
+void gfs_face_cm_weighted_gradient (const FttCellFace * face,
+				    GfsGradient * g,
+				    guint v,
+				    gint max_level)
+{
+  g_return_if_fail (face != NULL);
+  g_return_if_fail (g != NULL);
+
+  face_cm_gradient (face, g, v, max_level, TRUE);
 }
 
 static gboolean cell_bilinear (FttCell * cell,
@@ -3144,92 +3177,46 @@ void gfs_face_weighted_gradient_stencil (const FttCellFace * face,
 {
   face_weighted_gradient_stencil (face, g, max_level, FTT_DIMENSION, id, stencil);
 }
+
 /**
  * gfs_cm_gradient:
  * @cell: a #FttCell.
- * @c: a component.
- * @v: a #GfsVariable index.
+ * @v: a #GfsVariable.
+ *
+ * Fills @g with the components of the gradient of @v at the center of
+ * mass of @cell.
  *
  * The gradient is normalized by the size of the cell.
- *
- * Returns: the value of the @c component of the gradient of variable @v
- * at the center of mass of the fluid cell.  
  */
-gdouble gfs_cm_gradient (FttCell * cell,
-	        	 FttComponent c,
-			 GfsVariable * v)
+void gfs_cm_gradient (FttCell * cell,
+		      GfsVariable * v,
+		      FttVector * g)
 {
-  FttDirection d = 2*c;
-  FttCellFace f1;
-  gdouble v0;
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (v != NULL);
+  g_return_if_fail (g != NULL);
 
-  g_return_val_if_fail (cell != NULL, 0.);
-  g_return_val_if_fail (c < FTT_DIMENSION, 0.);
-
-  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
-  v0 = GFS_VALUE (cell, v);
-  if (f1.neighbor) {
-    FttCellFace f2 = gfs_cell_face (cell, d);
-    gdouble x1 = 1., v1;
-   
-    if(GFS_IS_MIXED(f1.neighbor)){
-       FttVector p1;
-       FttVector cmf1;
-   
-       ftt_cell_pos(f1.neighbor, &p1);
-       gfs_cell_cm(f1.neighbor, &cmf1);
-       x1=1.-((&cmf1.x)[c]-(&p1.x)[c])/ftt_cell_size(cell);
-       (&p1.x)[c]=(&cmf1.x)[c];
-       v1 = gfs_mixed_cell_interpolate (f1.neighbor,p1,v);    
-    } 
-    else
-      v1 = neighbor_value (&f1, v->i, &x1);
-  
-    if (f2.neighbor) {
-      /* two neighbors: second-order differencing (parabola) */
-      gdouble x2 = 1., v2;
-
-    if(GFS_IS_MIXED(f2.neighbor)){
-       FttVector p2;
-       FttVector cmf2;
-   
-       ftt_cell_pos(f2.neighbor, &p2);
-       gfs_cell_cm(f2.neighbor, &cmf2);
-       x2 = 1.+((&cmf2.x)[c]-(&p2.x)[c])/ftt_cell_size(cell);
-       (&p2.x)[c]=(&cmf2.x)[c];
-       v2 = gfs_mixed_cell_interpolate (f2.neighbor,p2,v);    
-       return (x1*x1*(v2 - v0) + x2*x2*(v0 - v1))/(x1*x2*(x2 + x1));
-    }      
-
-    v2 = neighbor_value (&f2, v->i, &x2);
-    return (x1*x1*(v2 - v0) + x2*x2*(v0 - v1))/(x1*x2*(x2 + x1));
-    
-    }
-    else
-      /* one neighbor: first-order differencing */
-      return (v0 - v1)/x1;
+  if (v->centered) {
+    FttComponent c;
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&g->x)[c] = gfs_center_gradient (cell, c, v->i);
   }
+  else if (GFS_IS_MIXED (cell))
+    gfs_mixed_cell_gradient (cell, v, g);
   else {
-    FttCellFace f2 = gfs_cell_face (cell, d);
-
-    if (f2.neighbor) {
-      gdouble x2 = 1.;
-
-    if(GFS_IS_MIXED(f2.neighbor)){
-       FttVector p2;
-       FttVector cmf2;
-   
-       ftt_cell_pos(f2.neighbor, &p2);
-       gfs_cell_cm(f2.neighbor, &cmf2);
-       x2=1.+((&cmf2.x)[c]-(&p2.x)[c])/ftt_cell_size(cell);
-       (&p2.x)[c]=(&cmf2.x)[c];
-       return (gfs_mixed_cell_interpolate (f2.neighbor, p2, v)-v0)/x2;
-    }      
-      
-      /* one neighbor: first-order differencing */
-      return (neighbor_value (&f2, v->i, &x2) - v0)/x2;
+    FttComponent c;
+    GfsGradient g1, g2;
+    FttCellFace f;
+    FttCellNeighbors n;
+    gdouble val = GFS_VALUE (cell, v);
+    ftt_cell_neighbors (cell, &n);
+    f.cell = cell;
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      f.d = 2*c; f.neighbor = n.c[f.d];
+      gfs_face_cm_gradient (&f, &g1, v->i, -1);
+      f.d = 2*c + 1; f.neighbor = n.c[f.d];
+      gfs_face_cm_gradient (&f, &g2, v->i, -1);
+      (&g->x)[c] = (g1.b - g2.b + (g2.a - g1.a)*val)/2.;
     }
   }
-  /* no neighbors */
-  return 0.;
 }

@@ -492,7 +492,7 @@ static void relax_dirichlet (FttCell * cell, RelaxParams * p)
   ftt_cell_neighbors (cell, &neighbor);
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
-    gfs_face_gradient_flux (&f, &ng, p->u, p->maxlevel);
+ gfs_face_cm_weighted_gradient (&f, &ng, p->u, p->maxlevel);
     g.a += ng.a;
     g.b += ng.b;
   }
@@ -610,7 +610,7 @@ static void residual_set_dirichlet (FttCell * cell, RelaxParams * p)
   ftt_cell_neighbors (cell, &neighbor);
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
-    gfs_face_gradient_flux (&f, &ng, p->u, p->maxlevel);
+    gfs_face_cm_weighted_gradient (&f, &ng, p->u, p->maxlevel);
     g.a += ng.a;
     g.b += ng.b;
   }
@@ -1315,7 +1315,7 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
     GfsGradient g;
 
     face.neighbor = neighbor.c[face.d];
-    gfs_face_gradient_flux (&face, &g, p->u, -1);
+    gfs_face_cm_weighted_gradient (&face, &g, p->u, -1);
     if (face.d/2 == p->component) {
       g.a *= 2.;
       g.b *= 2.;
@@ -1383,7 +1383,7 @@ static void diffusion_relax (FttCell * cell, RelaxParams * p)
     GfsGradient ng;
 
     face.neighbor = neighbor.c[face.d];
-    gfs_face_gradient_flux (&face, &ng, p->u, p->maxlevel);
+    gfs_face_cm_weighted_gradient (&face, &ng, p->u, p->maxlevel);
     if (face.d/2 == p->component) {
       ng.a *= 2.;
       ng.b *= 2.;
@@ -1424,7 +1424,7 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
     GfsGradient ng;
 
     face.neighbor = neighbor.c[face.d];
-    gfs_face_gradient_flux (&face, &ng, p->u, -1);
+    gfs_face_cm_weighted_gradient (&face, &ng, p->u, -1);
     if (face.d/2 == p->component) {
       ng.a *= 2.;
       ng.b *= 2.;
