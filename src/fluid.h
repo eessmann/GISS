@@ -112,6 +112,9 @@ typedef gdouble    (* GfsCenterGradient)            (FttCell * cell,
 gdouble               gfs_center_gradient           (FttCell * cell,
 						     FttComponent c,
 						     guint v);
+gdouble               gfs_cm_gradient               (FttCell * cell,
+						     FttComponent c,
+						     GfsVariable* v);
 void                  gfs_center_gradient_stencil   (FttCell * cell,
 						     FttComponent c,
 						     guint v);

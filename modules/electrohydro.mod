@@ -274,7 +274,7 @@ static void minus_gradient (FttCell * cell, gpointer * data)
    } 
    else  
      for (c = 0; c < FTT_DIMENSION; c++) 
-       GFS_VALUE (cell, g[c]) =  - gfs_center_gradient (cell, c, v->i)/size;
+       GFS_VALUE (cell, g[c]) =  - gfs_cm_gradient (cell, c, v)/size;
    
 }
 

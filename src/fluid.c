@@ -3144,3 +3144,92 @@ void gfs_face_weighted_gradient_stencil (const FttCellFace * face,
 {
   face_weighted_gradient_stencil (face, g, max_level, FTT_DIMENSION, id, stencil);
 }
+/**
+ * gfs_cm_gradient:
+ * @cell: a #FttCell.
+ * @c: a component.
+ * @v: a #GfsVariable index.
+ *
+ * The gradient is normalized by the size of the cell.
+ *
+ * Returns: the value of the @c component of the gradient of variable @v
+ * at the center of mass of the fluid cell.  
+ */
+gdouble gfs_cm_gradient (FttCell * cell,
+	        	 FttComponent c,
+			 GfsVariable * v)
+{
+  FttDirection d = 2*c;
+  FttCellFace f1;
+  gdouble v0;
+
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (c < FTT_DIMENSION, 0.);
+
+  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+  v0 = GFS_VALUE (cell, v);
+  if (f1.neighbor) {
+    FttCellFace f2 = gfs_cell_face (cell, d);
+    gdouble x1 = 1., v1;
+   
+    if(GFS_IS_MIXED(f1.neighbor)){
+       FttVector p1;
+       FttVector cmf1;
+   
+       ftt_cell_pos(f1.neighbor, &p1);
+       gfs_cell_cm(f1.neighbor, &cmf1);
+       x1=1.-((&cmf1.x)[c]-(&p1.x)[c])/ftt_cell_size(cell);
+       (&p1.x)[c]=(&cmf1.x)[c];
+       v1 = gfs_mixed_cell_interpolate (f1.neighbor,p1,v);    
+    } 
+    else
+      v1 = neighbor_value (&f1, v->i, &x1);
+  
+    if (f2.neighbor) {
+      /* two neighbors: second-order differencing (parabola) */
+      gdouble x2 = 1., v2;
+
+    if(GFS_IS_MIXED(f2.neighbor)){
+       FttVector p2;
+       FttVector cmf2;
+   
+       ftt_cell_pos(f2.neighbor, &p2);
+       gfs_cell_cm(f2.neighbor, &cmf2);
+       x2 = 1.+((&cmf2.x)[c]-(&p2.x)[c])/ftt_cell_size(cell);
+       (&p2.x)[c]=(&cmf2.x)[c];
+       v2 = gfs_mixed_cell_interpolate (f2.neighbor,p2,v);    
+       return (x1*x1*(v2 - v0) + x2*x2*(v0 - v1))/(x1*x2*(x2 + x1));
+    }      
+
+    v2 = neighbor_value (&f2, v->i, &x2);
+    return (x1*x1*(v2 - v0) + x2*x2*(v0 - v1))/(x1*x2*(x2 + x1));
+    
+    }
+    else
+      /* one neighbor: first-order differencing */
+      return (v0 - v1)/x1;
+  }
+  else {
+    FttCellFace f2 = gfs_cell_face (cell, d);
+
+    if (f2.neighbor) {
+      gdouble x2 = 1.;
+
+    if(GFS_IS_MIXED(f2.neighbor)){
+       FttVector p2;
+       FttVector cmf2;
+   
+       ftt_cell_pos(f2.neighbor, &p2);
+       gfs_cell_cm(f2.neighbor, &cmf2);
+       x2=1.+((&cmf2.x)[c]-(&p2.x)[c])/ftt_cell_size(cell);
+       (&p2.x)[c]=(&cmf2.x)[c];
+       return (gfs_mixed_cell_interpolate (f2.neighbor, p2, v)-v0)/x2;
+    }      
+      
+      /* one neighbor: first-order differencing */
+      return (neighbor_value (&f2, v->i, &x2) - v0)/x2;
+    }
+  }
+  /* no neighbors */
+  return 0.;
+}
