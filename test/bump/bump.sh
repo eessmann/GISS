@@ -1,5 +1,4 @@
 if test x$donotrun != xtrue; then
-    awk 'BEGIN{for (x = -0.5 ; x <= 0.5; x += 0.01) print x,0,0;}' >  xprofile
     if gerris2D bump.gfs; then :
     else
 	exit 1
@@ -30,7 +29,7 @@ plot \
 # 
 
 set output 'figure.eps'
-set xlabel 'x'
+set xlabel 'r'
 set ylabel '{/Symbol r}_{e}'
 time0=0
 time2=2
@@ -41,7 +40,7 @@ rho0(x)=(rhoinic*exp(-0.5*x*x/a/a)*exp(-time0*K/perm))
 rho2(x)=(rhoinic*exp(-0.5*x*x/a/a)*exp(-time2*K/perm))
 rho4(x)=(rhoinic*exp(-0.5*x*x/a/a)*exp(-time4*K/perm))
 rho6(x)=(rhoinic*exp(-0.5*x*x/a/a)*exp(-time6*K/perm))
-plot \
+plot [0:0.2]\
           't_0' u 1:2 t '' lt 1, \
           't_2' u 1:2 t '' lt 2, \
           't_4' u 1:2 t '' lt 3, \

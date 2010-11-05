@@ -25,7 +25,7 @@
 #
 # \begin{figure}[htbp] 
 # \caption{\label{profile} Spatial distribution of charge density
-# along the x axis (times equal 0, 2, 4 and 6 are shown). (continuous)
+# along the radial axis (times equal 0, 2, 4 and 6 are shown). (continuous)
 # analytical solution, (symbols) present simulation.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{figure.eps}
@@ -70,9 +70,19 @@ GModule electrohydro
 #    OutputScalarNorm { istep = 5 } stderr { v = Rhoe }
     SourceDiffusionExplicit Rhoe 1 Phi
 
-    OutputLocation { step = 2 } {
-	awk 'BEGIN{ name = "t_" }{ if ($1 != "#") print $2, $10 > (name $1); }'
-    } xprofile
+    OutputSimulation { start = 0 } {
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$9 > "t_0"; }'
+    } { format = text }
+    OutputSimulation { start = 2 } {
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$9 > "t_2"; }'
+    } { format = text }
+    OutputSimulation { start = 4 } {
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$9 > "t_4"; }'
+    } { format = text }
+    OutputSimulation { start = 6 } {
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$9 > "t_6"; }'
+    } { format = text }
+
     OutputErrorNorm { istep = 10 } norms { v = Rhoe } { s = gaussbell(x,y,t) }
     OutputLocation { istep = 10 } { 
         awk '
