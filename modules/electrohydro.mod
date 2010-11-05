@@ -634,6 +634,8 @@ static void gfs_source_charge_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
+  g_warning ("GfsSourceCharge is obsolete. Use GfsSourceDiffusionExplicit instead.\n");
+
   GfsSourceCharge * s = GFS_SOURCE_CHARGE (*o);
   s->conductivity = gfs_function_new (gfs_function_class(), 0.);
   gfs_function_set_units (s->conductivity, -1.);

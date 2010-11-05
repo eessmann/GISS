@@ -1084,9 +1084,10 @@ static void source_diffusion_explicit_flux (GfsSourceGeneric * s,
 					    GfsVariable * v, GfsVariable * sv, 
 					    gdouble dt)
 {
+  GfsVariable * phi = GFS_SOURCE_DIFFUSION_EXPLICIT (s)->phi;
   gfs_diffusion_coefficients (domain, GFS_SOURCE_DIFFUSION (s), dt, NULL, NULL, NULL, 1.);
-  gfs_domain_surface_bc (domain, v);
-  FluxPar p = { s, v, sv };
+  gfs_domain_surface_bc (domain, phi);
+  FluxPar p = { s, phi, sv };
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_diffusion_explicit_flux, &p);
 }
 
@@ -1101,35 +1102,25 @@ static void gfs_source_diffusion_explicit_read (GtsObject ** o, GtsFile * fp)
   GfsSourceDiffusionExplicit * s = GFS_SOURCE_DIFFUSION_EXPLICIT (*o);
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (s));
   if (fp->type != GTS_STRING)
-    s->v = GFS_SOURCE_SCALAR (s)->v;
+    s->phi = GFS_SOURCE_SCALAR (s)->v;
   else {
-    s->v = gfs_variable_from_name (domain->variables, fp->token->str);
-    if (!s->v) {
+    s->phi = gfs_variable_from_name (domain->variables, fp->token->str);
+    if (!s->phi) {
       gts_file_error (fp, "unknown variable '%s'", fp->token->str);
       return;
     }
     gts_file_next_token (fp);
     gfs_function_set_units (GFS_SOURCE_DIFFUSION (s)->D->val, 
-			    2. + GFS_SOURCE_SCALAR (s)->v->units - s->v->units);
+			    2. + GFS_SOURCE_SCALAR (s)->v->units - s->phi->units);
   }
-  
-  s->s = gfs_temporary_variable (domain);
 }
 
 static void gfs_source_diffusion_explicit_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_source_diffusion_explicit_class ())->parent_class->write) (o, fp);
   GfsSourceDiffusionExplicit * s = GFS_SOURCE_DIFFUSION_EXPLICIT (o);
-  if (s->v != GFS_SOURCE_SCALAR (s)->v)
-    fprintf (fp, " %s", s->v->name);
-}
-
-static void gfs_source_diffusion_explicit_destroy (GtsObject * o)
-{
-  if (GFS_SOURCE_DIFFUSION_EXPLICIT (o)->s)
-    gts_object_destroy (GTS_OBJECT (GFS_SOURCE_DIFFUSION_EXPLICIT (o)->s));
-
-  (* GTS_OBJECT_CLASS (gfs_source_diffusion_explicit_class ())->parent_class->destroy) (o);
+  if (s->phi != GFS_SOURCE_SCALAR (s)->v)
+    fprintf (fp, " %s", s->phi->name);
 }
 
 typedef struct {
@@ -1176,7 +1167,7 @@ static gdouble source_diffusion_stability (GfsSourceGeneric * s,
   par.s = s;
   par.dtmax = G_MAXDOUBLE;
   par.alpha = NULL;
-  if (GFS_SOURCE_SCALAR (s)->v == GFS_SOURCE_DIFFUSION_EXPLICIT (s)->v)
+  if (GFS_SOURCE_SCALAR (s)->v == GFS_SOURCE_DIFFUSION_EXPLICIT (s)->phi)
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) cell_diffusion_stability, &par);
   /* else
@@ -1188,7 +1179,6 @@ static void gfs_source_diffusion_explicit_class_init (GfsSourceGenericClass * kl
 {
   GTS_OBJECT_CLASS (klass)->read = gfs_source_diffusion_explicit_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_source_diffusion_explicit_write;
-  GTS_OBJECT_CLASS (klass)->destroy = gfs_source_diffusion_explicit_destroy;
   klass->stability = source_diffusion_stability;
 }
 

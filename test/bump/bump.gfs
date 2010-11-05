@@ -66,8 +66,9 @@ GModule electrohydro
     PhysicalParams{ L = 1 }
     Init {} { Rhoe = gaussbell(x,y,0) }
 
-    OutputTime { istep = 5 } stderr
-    SourceCharge Rhoe 1
+#    OutputTime { istep = 5 } stderr
+#    OutputScalarNorm { istep = 5 } stderr { v = Rhoe }
+    SourceDiffusionExplicit Rhoe 1 Phi
 
     OutputLocation { step = 2 } {
 	awk 'BEGIN{ name = "t_" }{ if ($1 != "#") print $2, $10 > (name $1); }'

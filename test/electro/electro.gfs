@@ -70,7 +70,7 @@ GModule electrohydro
     AdaptError { istep = 1 } { cmax = 2e-4 maxlevel = 7 } V
 
     SourceElectric
-    SourceCharge Rhoe F*((1. - T)+ R*T)
+    SourceDiffusionExplicit Rhoe F*((1. - T)+ R*T) Phi
 
     Init {} { Phi = Ef*x }
 

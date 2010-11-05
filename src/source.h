@@ -272,7 +272,7 @@ struct _GfsSourceDiffusionExplicit {
   GfsSourceDiffusion parent;
 
   /*< public >*/
-  GfsVariable * s, * v;
+  GfsVariable * phi;
 };
 
 #define GFS_SOURCE_DIFFUSION_EXPLICIT(obj)            GTS_OBJECT_CAST (obj,\

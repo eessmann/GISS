@@ -64,7 +64,7 @@ GModule electrohydro
  
     EventStop { istep = 10 } Ex 0.001
 
-    SourceCharge Rhoe K*T
+    SourceDiffusionExplicit Rhoe K*T Phi
 
 #    OutputTime { istep = 1 } stderr
     OutputScalarSum { step = 1 } {
