@@ -71,10 +71,8 @@ static gboolean gfs_output_event (GfsEvent * event, GfsSimulation * sim)
     }
 
     if (!output->dynamic) {
-      if (output->file) {
-	fflush (output->file->fp);
+      if (output->file)
 	output->first_call = FALSE;
-      }
       else {
 	if (output->format[0] == '{') { /* script */
 	  guint len = strlen (output->format);
@@ -118,6 +116,13 @@ static gboolean gfs_output_event (GfsEvent * event, GfsSimulation * sim)
     return (output->file != NULL);
   }
   return FALSE;
+}
+
+static void gfs_output_post_event (GfsEvent * event, GfsSimulation * sim)
+{
+  GfsOutput * output = GFS_OUTPUT (event);
+  if (!output->dynamic && output->file)
+    fflush (output->file->fp);
 }
 
 static void gfs_output_write (GtsObject * o, FILE * fp)
@@ -204,6 +209,7 @@ static void gfs_output_read (GtsObject ** o, GtsFile * fp)
 static void gfs_output_class_init (GfsOutputClass * klass)
 {
   GFS_EVENT_CLASS (klass)->event = gfs_output_event;
+  GFS_EVENT_CLASS (klass)->post_event = gfs_output_post_event;
 
   GTS_OBJECT_CLASS (klass)->write = gfs_output_write;
   GTS_OBJECT_CLASS (klass)->read = gfs_output_read;
@@ -1330,7 +1336,6 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
     domain->variables_io = NULL;
     domain->binary =       TRUE;
     sim->output_solid   =  TRUE;
-    fflush (GFS_OUTPUT (event)->file->fp);
     return TRUE;
   }
   return FALSE;
@@ -1495,7 +1500,6 @@ static gboolean output_boundaries_event (GfsEvent * event, GfsSimulation * sim)
     gfs_draw_refined_boundaries (domain, fp);
     gfs_draw_solid_boundaries (domain, fp);
     gfs_draw_boundary_conditions (domain, fp);
-    fflush (fp);
     return TRUE;
   }
   return FALSE;
@@ -1761,11 +1765,13 @@ static void gfs_output_scalar_post_event (GfsEvent * event,
 					  GfsSimulation * sim)
 {
   GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
-
   if (output->v != gfs_function_get_variable (output->f)) {
     gts_object_destroy (GTS_OBJECT (output->v));
     output->v = NULL;
   }
+
+  (* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_scalar_class ())->parent_class)->post_event) 
+    (event, sim);
 }
 
 static void gfs_output_scalar_class_init (GfsOutputClass * klass)
@@ -2267,8 +2273,6 @@ static gboolean gfs_output_scalar_histogram_event (GfsEvent * event,
 	    fprintf (output->file->fp, " %g", h->y[i]/h->w[i]);
 	  fputc ('\n', output->file->fp);
 	}
-      if (output->file && !output->dynamic)
-	fflush (output->file->fp);
     }
     h->last = sim->time.t;
     return TRUE;
@@ -2640,7 +2644,7 @@ static gboolean gfs_output_error_norm_event (GfsEvent * event,
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
     GfsOutputErrorNorm * enorm = GFS_OUTPUT_ERROR_NORM (event);
     GfsVariable * v = enorm->v;
-    GfsNorm norm, snorm;
+    GfsNorm norm, snorm = { 0., 0., 0., 0. };
 
     if (v == NULL)
       enorm->v = gfs_temporary_variable (domain);
@@ -2847,7 +2851,6 @@ static gboolean gfs_output_squares_event (GfsEvent * event, GfsSimulation * sim)
 		       FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL,
 		       output->maxlevel, NULL, 
 		       GFS_OUTPUT (event)->file->fp);
-    fflush (GFS_OUTPUT (event)->file->fp);
     return TRUE;
   }
   return FALSE;
@@ -2939,7 +2942,6 @@ static gboolean gfs_output_streamline_event (GfsEvent * event,
 					 NULL, NULL);
     /* fixme: mapping is not taken into account */
     gfs_streamline_write (stream, GFS_OUTPUT (event)->file->fp);
-    fflush (GFS_OUTPUT (event)->file->fp);
     gfs_streamline_destroy (stream);
     return TRUE;
   }
@@ -2991,7 +2993,6 @@ static gboolean gfs_output_particle_event (GfsEvent * event,
       FttVector p = g_array_index (location->p, FttVector, i);
       fprintf (fp, "%d %g %g %g %g\n", i, sim->time.t, p.x, p.y, p.z);
     }
-    fflush (fp);
     ret = TRUE;
   }
   
@@ -3068,7 +3069,6 @@ static gboolean gfs_output_ppm_event (GfsEvent * event, GfsSimulation * sim)
 		   FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
 		   GFS_OUTPUT (event)->file->fp,
 		   GFS_OUTPUT (event)->parallel);
-    fflush (GFS_OUTPUT (event)->file->fp);
     return TRUE;
   }
   return FALSE;
@@ -3122,7 +3122,6 @@ static gboolean gfs_output_grd_event (GfsEvent * event, GfsSimulation * sim)
 		   FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
 		   GFS_OUTPUT (event)->file->fp,
 		   GFS_OUTPUT (event)->parallel);
-    fflush (GFS_OUTPUT (event)->file->fp);
     return TRUE;
   }
   return FALSE;
