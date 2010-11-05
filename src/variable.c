@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include "variable.h"
 #include "vof.h"
+#include "init.h"
 
 /* GfsVariable: Object */
 
@@ -1032,6 +1033,84 @@ GfsEventClass * gfs_constant_class (void)
       (GtsArgGetFunc) NULL
     };
     klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()), &gfs_constant_info);
+  }
+
+  return klass;
+}
+
+/* GfsSpatialSum: Object */
+
+static void gfs_spatial_sum_destroy (GtsObject * o)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_SPATIAL_SUM (o)->v));
+  (* GTS_OBJECT_CLASS (gfs_spatial_sum_class ())->parent_class->destroy) (o);
+}
+
+static void gfs_spatial_sum_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_spatial_sum_class ())->parent_class->write) (o, fp);
+  gfs_function_write (GFS_SPATIAL_SUM (o)->v, fp);
+}
+
+static void gfs_spatial_sum_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_spatial_sum_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR) 
+    return;
+  gfs_function_read (GFS_SPATIAL_SUM (*o)->v, GFS_DOMAIN (gfs_object_simulation (*o)), fp);
+}
+
+static void add (FttCell * cell, GfsSpatialSum * s)
+{
+  GFS_CONSTANT (s)->val += gfs_cell_volume (cell, GFS_DOMAIN (gfs_object_simulation (s)))*
+    gfs_function_value (s->v, cell);
+}
+
+static gboolean gfs_spatial_sum_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_spatial_sum_class ())->parent_class)->event) 
+      (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
+
+    GFS_CONSTANT (event)->val = 0.;
+    gfs_catch_floating_point_exceptions ();
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add, event);
+    gfs_restore_fpe_for_function (GFS_SPATIAL_SUM (event)->v);
+    gfs_all_reduce (domain, GFS_CONSTANT (event)->val, MPI_DOUBLE, MPI_SUM);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_spatial_sum_class_init (GtsObjectClass * klass)
+{
+  klass->read = gfs_spatial_sum_read;
+  klass->write = gfs_spatial_sum_write;
+  klass->destroy = gfs_spatial_sum_destroy;
+  GFS_EVENT_CLASS (klass)->event = gfs_spatial_sum_event;
+}
+
+static void gfs_spatial_sum_init (GfsSpatialSum * object)
+{
+  object->v = gfs_function_new (gfs_function_class (), 0.);
+}
+
+GfsEventClass * gfs_spatial_sum_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_spatial_sum_info = {
+      "GfsSpatialSum",
+      sizeof (GfsSpatialSum),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_spatial_sum_class_init,
+      (GtsObjectInitFunc) gfs_spatial_sum_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_constant_class ()),
+				  &gfs_spatial_sum_info);
   }
 
   return klass;

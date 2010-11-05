@@ -227,6 +227,26 @@ struct _GfsConstant {
 
 GfsEventClass *     gfs_constant_class            (void);
 
+/* GfsSpatialSum: Header */
+
+typedef struct _GfsSpatialSum         GfsSpatialSum;
+
+struct _GfsSpatialSum {
+  /*< private >*/
+  GfsConstant parent;
+
+  /*< public >*/
+  GfsFunction * v;
+};
+
+#define GFS_SPATIAL_SUM(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSpatialSum,\
+					         gfs_spatial_sum_class ())
+#define GFS_IS_SPATIAL_SUM(obj)         (gts_object_is_from_class (obj,\
+						 gfs_spatial_sum_class ()))
+
+GfsEventClass * gfs_spatial_sum_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
