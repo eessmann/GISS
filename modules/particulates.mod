@@ -22,7 +22,7 @@
 #include "source.h"
 
 /* Adaptive 4/5 Runge-Kutta method */
-/* Headers */
+/* Header */
 
 #define SAFETY 0.9
 #define PGROW -0.2
@@ -34,128 +34,131 @@ typedef void      (* RKFunc)            ( gdouble t, gdouble *y, gdouble *dydt, 
 typedef struct _GfsAdaptiveRK    GfsAdaptiveRK;
 
 struct _GfsAdaptiveRK {
-    gdouble t, dtgoal, dtmax; //independent variable t, interval to be integrated, max dt
-    gdouble * y;  // goal function
-    gdouble * yc; // characteristic values for nondimensionalization
-    guint n;      // number of elements in y 
-    gpointer data;// additional data required in f
+  gdouble t, dtgoal, dtmax; /* independent variable t, interval to be integrated, max dt */
+  gdouble * y;  /* goal function */
+  gdouble * yc; /* characteristic values for nondimensionalization */
+  guint n;      /* number of elements in y */ 
+  gpointer data;/* user data required for f */
 };
-/*Object*/
 
-static void rkck ( gdouble *dttry, gdouble *errmax, gdouble *yerr, 
-                   gdouble *ytmp, gdouble *ak1, GfsAdaptiveRK *RKdata,
-                   RKFunc derivatives) {
+/* Object */
 
-    gint i;
-    gdouble A2=0.2,A3=0.3,A4=0.6,A5=1.0,A6=0.875;
-    gdouble b21 = 0.2;
-    gdouble b31 = 3.0/40.0, b32 = 9.0/40.0;
-    gdouble b41 = 0.3, b42 = -0.9, b43 = 1.2;
-    gdouble b51 = -11.0/54.0, b52 = 2.5, b53 = -70.0/27.0, b54 = 35./27.;
-    gdouble b61 = 1631.0/55296.0, b62 = 175.0/512.0, b63 = 575./13824.;
-    gdouble b64 = 44275./110592., b65 = 253./4096.;
-    gdouble c1 = 37./378., c3 = 250./621., c4 = 125.0/594.0, c6 = 512.0/1771.;
-    gdouble dc1 = c1-2825.0/27648.0,dc3=c3-18575.0/48384.,dc4 = c4 - 13525.0/55296.0, dc5 = -277.0/14336.0, dc6 = c6 - 0.25;
+static void rkck (gdouble *dttry, gdouble *errmax, gdouble *yerr, 
+                  gdouble *ytmp, gdouble *ak1, GfsAdaptiveRK *RKdata,
+		  RKFunc derivatives)
+{
+  gint i;
+  gdouble A2 = 0.2, A3 = 0.3, A4 = 0.6, A5 = 1.0, A6 = 0.875;
+  gdouble b21 = 0.2;
+  gdouble b31 = 3.0/40.0, b32 = 9.0/40.0;
+  gdouble b41 = 0.3, b42 = -0.9, b43 = 1.2;
+  gdouble b51 = -11.0/54.0, b52 = 2.5, b53 = -70.0/27.0, b54 = 35./27.;
+  gdouble b61 = 1631.0/55296.0, b62 = 175.0/512.0, b63 = 575./13824.;
+  gdouble b64 = 44275./110592., b65 = 253./4096.;
+  gdouble c1 = 37./378., c3 = 250./621., c4 = 125.0/594.0, c6 = 512.0/1771.;
+  gdouble dc1 = c1-2825.0/27648.0, dc3 = c3-18575.0/48384.;
+  gdouble dc4 = c4 - 13525.0/55296.0, dc5 = -277.0/14336.0, dc6 = c6 - 0.25;
 
-    gdouble *ak2,*ak3,*ak4,*ak5,*ak6;
+  gdouble *ak2, *ak3, *ak4, *ak5, *ak6;
      
-    ak2 = g_malloc(RKdata->n*sizeof(gdouble));
-    ak3 = g_malloc(RKdata->n*sizeof(gdouble));
-    ak4 = g_malloc(RKdata->n*sizeof(gdouble));
-    ak5 = g_malloc(RKdata->n*sizeof(gdouble));
-    ak6 = g_malloc(RKdata->n*sizeof(gdouble));
+  ak2 = g_malloc (RKdata->n*sizeof (gdouble));
+  ak3 = g_malloc (RKdata->n*sizeof (gdouble));
+  ak4 = g_malloc (RKdata->n*sizeof (gdouble));
+  ak5 = g_malloc (RKdata->n*sizeof (gdouble));
+  ak6 = g_malloc (RKdata->n*sizeof (gdouble));
 
-    /* First Step */
-    for (i=0;i<RKdata->n;i++)   
-        ytmp[i] = RKdata->y[i] + (*dttry)*b21*ak1[i];
+  /* First Step */
+  for (i = 0; i < RKdata->n; i++)   
+    ytmp[i] = RKdata->y[i] + (*dttry)*b21*ak1[i];
 
-    derivatives(RKdata->t+A2*(*dttry), ytmp, ak2, RKdata->data);
+  derivatives (RKdata->t + A2*(*dttry), ytmp, ak2, RKdata->data);
     
-    for (i=0;i<RKdata->n;i++) 
-        ytmp[i] = RKdata->y[i] + (*dttry)*(b31*ak1[i]+b32*ak2[i]);
+  for (i = 0; i < RKdata->n; i++) 
+    ytmp[i] = RKdata->y[i] + (*dttry)*(b31*ak1[i] + b32*ak2[i]);
         
-    derivatives(RKdata->t+A3*(*dttry), ytmp, ak3, RKdata->data);
+  derivatives (RKdata->t + A3*(*dttry), ytmp, ak3, RKdata->data);
 
-    for (i=0;i<RKdata->n;i++) 
-        ytmp[i] = RKdata->y[i] + (*dttry)*(b41*ak1[i]+b42*ak2[i]+b43*ak3[i]);
+  for (i = 0; i < RKdata->n; i++) 
+    ytmp[i] = RKdata->y[i] + (*dttry)*(b41*ak1[i] + b42*ak2[i] + b43*ak3[i]);
 
-    derivatives(RKdata->t+A4*(*dttry), ytmp, ak4, RKdata->data);
+  derivatives (RKdata->t + A4*(*dttry), ytmp, ak4, RKdata->data);
     
-    for (i=0;i<RKdata->n;i++) 
-        ytmp[i] = RKdata->y[i] + (*dttry)*(b51*ak1[i]+b52*ak2[i]+b53*ak3[i]
-                                  +b54*ak4[i]);
+  for (i = 0; i < RKdata->n; i++) 
+    ytmp[i] = RKdata->y[i] + (*dttry)*(b51*ak1[i] + b52*ak2[i] + b53*ak3[i]
+				       + b54*ak4[i]);
     
-    derivatives(RKdata->t+A5*(*dttry), ytmp, ak5, RKdata->data);
+  derivatives (RKdata->t + A5*(*dttry), ytmp, ak5, RKdata->data);
     
-    for (i=0;i<RKdata->n;i++) 
-        ytmp[i] = RKdata->y[i] + (*dttry)*(b61*ak1[i]+b62*ak2[i]+b63*ak3[i]
-                                  +b64*ak4[i]+b65*ak5[i]);
+  for (i = 0; i < RKdata->n; i++) 
+    ytmp[i] = RKdata->y[i] + (*dttry)*(b61*ak1[i] + b62*ak2[i] + b63*ak3[i]
+				       + b64*ak4[i] + b65*ak5[i]);
 
-    derivatives(RKdata->t+A6*(*dttry), ytmp, ak6, RKdata->data);
+  derivatives (RKdata->t + A6*(*dttry), ytmp, ak6, RKdata->data);
     
-    for (i=0;i<RKdata->n;i++) 
-        ytmp[i] = RKdata->y[i] + (*dttry)*(c1*ak1[i]+c3*ak3[i]
-                                  +c4*ak4[i]+c6*ak6[i]);
+  for (i = 0; i < RKdata->n; i++) 
+    ytmp[i] = RKdata->y[i] + (*dttry)*(c1*ak1[i] + c3*ak3[i]
+				       + c4*ak4[i] + c6*ak6[i]);
     
-    for (i=0;i<RKdata->n;i++) 
-        yerr[i] = (*dttry)*(dc1*ak1[i]+dc3*ak3[i]
-                +   dc4*ak4[i]+dc5*ak5[i]+dc6*ak6[i]);
+  for (i = 0; i < RKdata->n; i++) 
+    yerr[i] = (*dttry)*(dc1*ak1[i] + dc3*ak3[i]
+			+ dc4*ak4[i] + dc5*ak5[i] + dc6*ak6[i]);
     
-    g_free(ak2);g_free(ak3);g_free(ak4);g_free(ak5);g_free(ak6);
+  g_free (ak2); g_free (ak3); g_free (ak4); g_free (ak5); g_free (ak6);
 }
 
 /* Adaptive RK method
-It integrates a function df/dt=f(t,...)
-f(t,y,dydt,data) is RKFunc whose arguments are:
-    t: independent variable
-    y: function
-    dydt: derivative of the function
-    data: extra data
-RKdata contains the info of the temporal integration 
+   It integrates a function df/dt=f(t,...)
+   f(t,y,dydt,data) is RKFunc whose arguments are:
+   t: independent variable
+   y: function
+   dydt: derivative of the function
+   data: extra data
+   RKdata contains the info of the temporal integration 
 */
-static void rkqs ( GfsAdaptiveRK *RKdata, RKFunc derivatives ) {
-
-    guint i;
-    gdouble eps=1.e-4,dtnext,errmax;
-    gdouble dt,dttmp,tnew,*yerr,*ytmp;
-    gdouble *ak1;
+static void rkqs (GfsAdaptiveRK * RKdata, RKFunc derivatives)
+{
+  guint i;
+  gdouble eps = 1.e-4, dtnext, errmax;
+  gdouble dt, dttmp, tnew, *yerr, *ytmp;
+  gdouble *ak1;
      
-    ak1 = g_malloc(RKdata->n*sizeof(gdouble));
-    yerr = g_malloc (RKdata->n*sizeof (gdouble));     
-    ytmp = g_malloc (RKdata->n*sizeof (gdouble));     
-
+  ak1 = g_malloc (RKdata->n*sizeof (gdouble));
+  yerr = g_malloc (RKdata->n*sizeof (gdouble));     
+  ytmp = g_malloc (RKdata->n*sizeof (gdouble));     
     
-    dt=MIN(RKdata->dtgoal,RKdata->dtmax); //step size to the trial value
-
+  dt = MIN (RKdata->dtgoal, RKdata->dtmax); //step size to the trial value
     
-    while (dt > 0.) {
-
-    derivatives(RKdata->t, RKdata->y, ak1, RKdata->data);
+  while (dt > 0.) {
+    derivatives (RKdata->t, RKdata->y, ak1, RKdata->data);
     for (;;) {
-        errmax=0.;
-        rkck( &dt,&errmax, yerr, ytmp, ak1, RKdata, derivatives);
-        for (i=0;i<RKdata->n;i++) errmax=MAX(errmax,fabs(yerr[i]/RKdata->yc[i]));
-        errmax /= eps;
-        if (errmax <= 1. ) break;
-        dttmp = SAFETY*dt*pow(errmax,PSHRNK);
-        dt = MAX(dttmp,0.1*dt);
-        tnew = RKdata->t + dt;
-        if (tnew == RKdata->t) g_error("Time step in RK equal 0");
+      errmax = 0.;
+      rkck (&dt, &errmax, yerr, ytmp, ak1, RKdata, derivatives);
+      for (i = 0; i < RKdata->n; i++) 
+	errmax = MAX (errmax, fabs (yerr[i]/RKdata->yc[i]));
+      errmax /= eps;
+      if (errmax <= 1.)
+	break;
+      dttmp = SAFETY*dt*pow(errmax,PSHRNK);
+      dt = MAX (dttmp, 0.1*dt);
+      tnew = RKdata->t + dt;
+      if (tnew == RKdata->t)
+	g_error ("Time step in RK equal 0");
     }
 
-    if (errmax > ERRCON) dtnext = SAFETY*dt*pow(errmax,PGROW);
-    else dtnext = 5.0*dt;
+    if (errmax > ERRCON) 
+      dtnext = SAFETY*dt*pow (errmax, PGROW);
+    else 
+      dtnext = 5.0*dt;
 
     RKdata->t += dt;
-    for (i=0;i<RKdata->n;i++) RKdata->y[i]=ytmp[i];
+    for (i = 0; i < RKdata->n; i++) 
+      RKdata->y[i] = ytmp[i];
     RKdata->dtgoal -= dt;
    
-    dt=MIN(MIN(dtnext,RKdata->dtgoal),RKdata->dtmax);
+    dt = MIN (MIN (dtnext, RKdata->dtgoal), RKdata->dtmax);
+  }
 
-    }
-
-    g_free(ak1); g_free(yerr); g_free(ytmp);
-
+  g_free (ak1); g_free (yerr); g_free (ytmp);
 }
 
 
@@ -1295,11 +1298,14 @@ GfsEventClass * gfs_droplet_to_particle_class (void)
 typedef struct _GfsBubble GfsBubble;
 
 struct _GfsBubble {
+  /*< private >*/
   GfsParticulate parent;
-  gdouble velR,p0,R0;
+  
+  /*< public >*/
+  gdouble velR, p0, R0;
 };
 
-#define GFS_BUBBLE(obj)            GTS_OBJECT_CAST (obj,GfsBubble, gfs_bubble_class ())
+#define GFS_BUBBLE(obj)            GTS_OBJECT_CAST (obj, GfsBubble, gfs_bubble_class ())
 #define GFS_IS_BUBBLE(obj)         (gts_object_is_from_class (obj, gfs_bubble_class ()))
 
 static GfsEventClass * gfs_bubble_class  (void);
@@ -1307,80 +1313,72 @@ static GfsEventClass * gfs_bubble_class  (void);
 /* GfsBubble: Object */
 /* The radius of each bubble varies according to the Rayleigh-Plesset equation */
 
-static gboolean RP_equation () {
+typedef struct {
+  gdouble liqpres, liqdens;
+  GfsBubble * bubble;
+} RPData;
 
-  return TRUE;
-}
+void static bubble_derivs (gdouble t, gdouble * y, gdouble * dydt, RPData * rp)
+{
+  /* dVbdt */
+  gdouble Rb = pow (y[0]*3./(4.*M_PI), 1./3.);
+  dydt[0] = 4.*M_PI*pow (Rb, 2)*y[1];
 
-void static bubble_derivs ( gdouble t, gdouble *y, gdouble *dydt, gpointer * data ) {
-
-  //dVbdt
-  gdouble Rb = pow(y[0]*3./(4.*M_PI),1./3.);
-  dydt[0]=4.*M_PI*pow(Rb,2)*y[1];
-
-  //interface acceleration
-    gdouble * liqpres = data[0];
-    gdouble * liqdens = data[2];
-    GfsBubble * bubble = data[1];
-    gdouble pbubble   = bubble->p0*pow(bubble->R0/Rb,3.*1.4);
-
-    //incompressible RP equation
-    dydt[1]=((pbubble - *liqpres)/(*liqdens)-3./2.*pow(y[1],2))/Rb;
-  return;
+  /* interface acceleration */
+  gdouble pbubble = rp->bubble->p0*pow (rp->bubble->R0/Rb, 3.*1.4);
+  
+  /* incompressible RP equation */
+  dydt[1] = ((pbubble - rp->liqpres)/rp->liqdens - 3./2.*pow (y[1], 2))/Rb;
 }
 
 static gboolean gfs_bubble_event (GfsEvent * event, 
-				       GfsSimulation * sim)
+				  GfsSimulation * sim)
 {
-  GfsParticle * p = GFS_PARTICLE (event);
-  GfsParticulate * particulate = GFS_PARTICULATE (event);
-  GfsBubble * bubble = GFS_BUBBLE (event);
-  GfsDomain * domain = GFS_DOMAIN (sim);
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class)->event) 
+      (event, sim)) {
+    GfsParticle * p = GFS_PARTICLE (event);
+    GfsParticulate * particulate = GFS_PARTICULATE (event);
+    GfsBubble * bubble = GFS_BUBBLE (event);
+    GfsDomain * domain = GFS_DOMAIN (sim);
 
-  GfsVariable * liqpres = gfs_variable_from_name (domain->variables, "P");
+    GfsVariable * liqpres = gfs_variable_from_name (domain->variables, "P");
   
-  FttCell * cell = gfs_domain_locate (domain, p->pos, -1, NULL);
-  if (cell == NULL) return TRUE;
-  gdouble liq_rho = sim->physical_params.alpha ? 1./
-    gfs_function_value (sim->physical_params.alpha, cell) : 1.;
+    FttCell * cell = gfs_domain_locate (domain, p->pos, -1, NULL);
+    if (cell == NULL) 
+      return TRUE;
+    gdouble liq_rho = sim->physical_params.alpha ? 1./
+      gfs_function_value (sim->physical_params.alpha, cell) : 1.;
 
-  FttVector pos = p->pos;
-  gfs_simulation_map (sim, &pos);
+    FttVector pos = p->pos;
+    gfs_simulation_map (sim, &pos);
 
-  gdouble point_pres = gfs_interpolate (cell, p->pos, liqpres);
+    gdouble point_pres = gfs_interpolate (cell, p->pos, liqpres);
 
- gdouble * y = g_malloc(2*sizeof (gdouble)); 
- y[0] = particulate->volume;
- y[1] = bubble->velR;
- gdouble *yc = g_malloc(2*sizeof(gdouble)); 
- yc[0] = particulate->volume;               //characteristic distance
- yc[1] = 0.01*sqrt(bubble->p0/liq_rho); //characteristic velocity
+    gdouble y[2];
+    y[0] = particulate->volume;
+    y[1] = bubble->velR;
+    gdouble yc[2];
+    yc[0] = particulate->volume;           /* characteristic distance */
+    yc[1] = 0.01*sqrt(bubble->p0/liq_rho); /* characteristic velocity */
 
- gpointer data[3];
+    RPData rp = { point_pres, liq_rho, bubble };
+    GfsAdaptiveRK RKdata;
+    RKdata.t = sim->time.t;
+    RKdata.dtgoal = sim->advection_params.dt;
+    RKdata.dtmax = yc[1]*0.001;
+    RKdata.y = y;
+    RKdata.yc = yc;
+    RKdata.n = 2;
+    RKdata.data = &rp;
 
- data[0] = &point_pres;
- data[1] = bubble;
- data[2] = &liq_rho;
- 
- GfsAdaptiveRK RKdata;
- RKdata.t = sim->time.t;
- RKdata.dtgoal = sim->advection_params.dt;
- RKdata.dtmax = yc[1]*0.001;
- RKdata.y = y;
- RKdata.yc = yc;
- RKdata.n = 2;
- RKdata.data = &data;
+    rkqs (&RKdata, (RKFunc) bubble_derivs);
 
- rkqs ( &RKdata, (RKFunc) bubble_derivs );
+    bubble->velR = y[1];
+    particulate->volume = y[0];
 
- bubble->velR = y[1];
- particulate->volume = y[0];
-
-
- g_free(y);g_free(yc);
-  
-  
-  return TRUE;
+    return TRUE;
+  }
+  return FALSE;
 } 
 
 static void gfs_bubble_read (GtsObject ** o, GtsFile * fp)
@@ -1393,7 +1391,7 @@ static void gfs_bubble_read (GtsObject ** o, GtsFile * fp)
   GfsBubble * p = GFS_BUBBLE (*o);
   GfsParticulate * part = GFS_PARTICULATE (*o);
 
-  p->R0 = pow(part->volume*3./(4.*M_PI),1./3.);
+  p->R0 = pow (part->volume*3./(4.*M_PI), 1./3.);
 
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
     gts_file_error (fp, "expecting a number (radial velocity)");
@@ -1408,21 +1406,13 @@ static void gfs_bubble_read (GtsObject ** o, GtsFile * fp)
   }
   p->p0 = atof (fp->token->str);
   gts_file_next_token (fp);
-
 }
 
 static void gfs_bubble_write (GtsObject * o, FILE * fp)
 {
-  (* GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class->write) (o, fp);
- 
- GfsBubble * p = GFS_BUBBLE (o);
+  (* GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class->write) (o, fp); 
+  GfsBubble * p = GFS_BUBBLE (o);
   fprintf (fp, " %g %g", p->velR, p->p0);
-}
-
-static void gfs_bubble_init (GfsBubble * bubble) {
-
-    
-    return;
 }
 
 static void gfs_bubble_class_init (GfsEventClass * klass)
@@ -1442,7 +1432,7 @@ GfsEventClass * gfs_bubble_class (void)
       sizeof (GfsBubble),
       sizeof (GfsEventClass),
       (GtsObjectClassInitFunc) gfs_bubble_class_init,
-      (GtsObjectInitFunc) gfs_bubble_init,
+      (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -1460,12 +1450,12 @@ const gchar * g_module_check_init (void);
 const gchar * g_module_check_init (void)
 { 
   gfs_particulate_class ();
+    gfs_bubble_class ();
   gfs_particle_list_class ();
   gfs_force_lift_class ();
   gfs_force_drag_class ();
   gfs_force_buoy_class ();
   gfs_particle_force_class ();
-  gfs_bubble_class ();
 
   gfs_droplet_to_particle_class ();
   return NULL; 
