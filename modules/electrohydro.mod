@@ -179,6 +179,7 @@ static void gfs_electro_hydro_init (GfsElectroHydro * object)
   FttComponent c;  
 
   object->phi = gfs_domain_add_variable (domain, "Phi", "Electric potential");
+  object->phi->centered = TRUE;
   object->rhoe = gfs_variable_new (gfs_variable_tracer_class(), domain,
 				   "Rhoe", "Volumetric charge density");
   object->rhoe->units = -3.;
