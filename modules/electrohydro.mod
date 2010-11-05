@@ -21,6 +21,7 @@
 #include "source.h"
 #include "adaptive.h"
 #include "output.h"
+#include "solid.h"
 
 /* GfsElectroHydro: Header */
 
@@ -525,8 +526,8 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
     gdouble permf = gfs_function_face_value (perm, &f);
     gdouble emod = 0.;
     GfsGradient g;
-    /* fixme: should we use gfs_face_weighted_gradient? */
-    gfs_face_gradient (&f, &g, phi->i, -1);
+    /* fixme: should we use gfs_face_cm_weighted_gradient? */
+    gfs_face_cm_gradient (&f, &g, phi->i, -1);
     gdouble en = (- g.b + g.a*GFS_VALUE (cell, phi))/h;
     gdouble sign = (FTT_FACE_DIRECT (&f) ? 1 : -1);
 
@@ -537,6 +538,29 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
       fe[c] += permf*es*en*radf;
     }
     fe[f.d/2] -= sign*emod*permf*radc/2.;
+  }
+
+  if (GFS_IS_MIXED (cell)) {
+    if (((cell)->flags & GFS_FLAG_DIRICHLET) == 0)
+      /* Neumann conditions for Phi */
+      g_assert_not_implemented ();
+
+    gdouble rs = gfs_domain_solid_metric (GFS_DOMAIN (elec), cell);
+    gdouble permc = gfs_function_value (perm, cell);
+    gdouble emod = 0., en = 0., a;
+    GfsSolidVector * s = GFS_STATE (cell)->solid;
+    FttVector g, n;
+    gfs_cell_dirichlet_gradient (cell, phi->i, -1, s->fv, &g);
+    gfs_solid_normal (cell, &n);
+    a = ftt_vector_norm (&n);
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      (&n.x)[c] /= a;
+      (&g.x)[c] /= h;
+      emod += (&g.x)[c]*(&g.x)[c];
+      en   += (&g.x)[c]*(&n.x)[c];
+    }
+    for (c = 0; c < FTT_DIMENSION; c++) 
+      fe[c] += a*((&g.x)[c]*en*rs - emod/2.*(&n.x)[c]*radc)*permc;
   }
 
   /* fixme: we need to rescale, not entirely clear why... */
