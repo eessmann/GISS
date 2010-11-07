@@ -18,102 +18,8 @@
  */
 
 #include <stdlib.h>
-#include "particle.h"
-#include "source.h"
-#include <stdio.h>
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_odeiv.h>
 
-/* GfsParticulate: Header */
-
-typedef struct _GfsParticulate GfsParticulate;
-
-struct _GfsParticulate {
-  GfsParticle parent;
-  FttVector vel;
-  gdouble mass, volume;
-  FttVector force;
-  GtsSListContainer * forces;
-};
-
-#define GFS_PARTICULATE(obj)            GTS_OBJECT_CAST (obj,		\
-							 GfsParticulate, gfs_particulate_class ())
-#define GFS_IS_PARTICULATE(obj)         (gts_object_is_from_class (obj, gfs_particulate_class ()))
-
-static GfsEventClass * gfs_particulate_class  (void);
-
-/* GfsParticleList: Header */
-
-typedef struct _GfsParticleList GfsParticleList;
-
-struct _GfsParticleList {
-  GfsEventList parent;
-  gint idlast;
-  GtsSListContainer * forces;
-};
-
-#define GFS_PARTICLE_LIST(obj)            GTS_OBJECT_CAST (obj,		\
-							   GfsParticleList, \
-							   gfs_particle_list_class ())
-
-#define GFS_IS_PARTICLE_LIST(obj)         (gts_object_is_from_class (obj, \
-								     gfs_particle_list_class ()))
-
-static GfsEventClass * gfs_particle_list_class  (void);
-
-/* GfsParticleForce: header */
-
-typedef struct _GfsParticleForce GfsParticleForce;
-
-struct _GfsParticleForce{
-  GtsSListContainee parent;
-  FttVector (* force) (GfsParticle *p, GfsParticleForce *force);
-};
-
-#define GFS_PARTICLE_FORCE(obj)            GTS_OBJECT_CAST (obj,		\
-							GfsParticleForce, \
-							gfs_particle_force_class ())
-#define GFS_IS_PARTICLE_FORCE(obj)         (gts_object_is_from_class (obj, \
-								      gfs_particle_force_class ()))
-
-static GtsSListContaineeClass * gfs_particle_force_class  (void);
-
-/* GfsForceCoeff: header */
-
-typedef struct _GfsForceCoeff GfsForceCoeff;
-
-struct _GfsForceCoeff{
-  GfsParticleForce parent;
-  GfsFunction * coefficient;
-  GfsVariable *re_p, *u_rel, *v_rel, *w_rel, *pdia;
-  GfsParticulate *p;
-};
-
-#define FORCE_COEFF(obj)            GTS_OBJECT_CAST (obj,		\
-						    GfsForceCoeff,		\
-						    gfs_force_coeff_class ())
-#define GFS_IS_FORCE_COEFF(obj)         (gts_object_is_from_class (obj,	\
-								  gfs_force_coeff_class ()))
-static GtsSListContaineeClass * gfs_force_coeff_class  (void);
-
-/* GfsForceLift: header */
-
-#define GFS_IS_FORCE_LIFT(obj)         (gts_object_is_from_class (obj,	\
-								  gfs_force_lift_class ()))
-static GtsSListContaineeClass * gfs_force_lift_class  (void);
-
-/* GfsForceDrag: header */
-
-#define GFS_IS_FORCE_DRAG(obj)         (gts_object_is_from_class (obj,	\
-								  gfs_force_drag_class ()))
-static GtsSListContaineeClass * gfs_force_drag_class  (void);
-
-/* GfsForceBuoy: header */
-
-#define GFS_IS_FORCE_BUOY(obj)         (gts_object_is_from_class (obj,	\
-								  gfs_force_buoy_class ()))
-static GtsSListContaineeClass * gfs_force_buoy_class  (void);
+#include "particulates.h"
 
 /* Forces on the Particle */
 
@@ -420,7 +326,7 @@ static void gfs_force_drag_init (GfsParticleForce * force)
   force->force = compute_drag_force;
 }
 
-static GtsSListContaineeClass * gfs_force_drag_class (void)
+GtsSListContaineeClass * gfs_force_drag_class (void)
 {
   static GtsSListContaineeClass * klass = NULL;
   
@@ -487,7 +393,7 @@ static void gfs_force_buoy_init (GfsParticleForce * force)
   force->force = compute_buoyancy_force;
 }
 
-static GtsSListContaineeClass * gfs_force_buoy_class (void)
+GtsSListContaineeClass * gfs_force_buoy_class (void)
 {
   static GtsSListContaineeClass * klass = NULL;
   
@@ -845,32 +751,6 @@ GfsEventClass * gfs_particle_list_class (void)
   return klass;
 }
 
-/* GfsDropletToParticle: header */
-
-typedef struct _GfsDropletToParticle GfsDropletToParticle;
-
-struct _GfsDropletToParticle{
-  /*< private >*/
-  GfsParticleList parent;
-  GfsVariable * v;
-  
-  /*< public >*/
-  GfsFunction * fc;
-  GfsVariable * c;
-  gint min;
-  gdouble resetwith;
-  gdouble density;
-};
-
-#define DROPLET_TO_PARTICLE(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsDropletToParticle,\
-					         gfs_droplet_to_particle_class ())
-
-#define IS_DROPLET_TO_PARTICLE(obj)         (gts_object_is_from_class (obj,\
-						 gfs_droplet_to_particle_class ()))
-
-static GfsEventClass * gfs_droplet_to_particle_class  (void);
-
 typedef struct {
   FttVector pos, vel;
   gdouble volume;
@@ -1156,182 +1036,6 @@ GfsEventClass * gfs_droplet_to_particle_class (void)
   return klass;
 }
 
-/* GfsBubble: Header */
-
-typedef struct _GfsBubble GfsBubble;
-
-struct _GfsBubble {
-  /*< private >*/
-  GfsParticulate parent;
-  
-  /*< public >*/
-  gdouble velR, p0, R0;
-};
-
-#define GFS_BUBBLE(obj)            GTS_OBJECT_CAST (obj, GfsBubble, gfs_bubble_class ())
-#define GFS_IS_BUBBLE(obj)         (gts_object_is_from_class (obj, gfs_bubble_class ()))
-
-static GfsEventClass * gfs_bubble_class  (void);
-
-/* GfsBubble: Object */
-/* The radius of each bubble varies according to the Rayleigh-Plesset equation */
-
-typedef struct {
-  gdouble liqpres, liqdens;
-  GfsBubble * bubble;
-} RPData;
-
-int static func (double t, const double y[], double f[],
-        void *params)
-{
-    RPData *rp = (RPData *)params;
-    f[0] = y[1];
-    /* interface acceleration- incompressible RP equation */
-    gdouble pbubble = rp->bubble->p0*pow (rp->bubble->R0/y[0], 3.*1.4);
-    f[1] = ((pbubble - rp->liqpres)/rp->liqdens - 3./2.*pow (y[1], 2))/y[0];
-
-    return GSL_SUCCESS;
-}
-/*jacobian matrix*/
-int static jac (double t, const double y[], double *dfdy, 
-        double dfdt[], void *params)
-{
-    RPData *rp = (RPData *)params;
-    gdouble pbubble = rp->bubble->p0*pow (rp->bubble->R0/y[0], 3.*1.4);
-    gdouble dddRdR  = 2.*rp->liqpres-2.*(1.+3.*1.4)*pbubble+3.*rp->liqdens*pow(y[1],2);
-    dddRdR  /= 2.*pow(y[0],2)*rp->liqdens;
-    gsl_matrix_view dfdy_mat 
-        = gsl_matrix_view_array (dfdy, 2, 2);
-    gsl_matrix * m = &dfdy_mat.matrix; 
-    gsl_matrix_set (m, 0, 0, 0.0);
-    gsl_matrix_set (m, 0, 1, 1.0);
-    gsl_matrix_set (m, 1, 0, dddRdR);
-    gsl_matrix_set (m, 1, 1, - 3.*y[1]/y[0]);
-    dfdt[0] = 0.0;
-    dfdt[1] = 0.0;
-    return GSL_SUCCESS;
-}
-
-static gboolean gfs_bubble_event (GfsEvent * event, 
-				  GfsSimulation * sim)
-{
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class)->event) 
-      (event, sim)) {
-    GfsParticle * p = GFS_PARTICLE (event);
-    GfsParticulate * particulate = GFS_PARTICULATE (event);
-    GfsBubble * bubble = GFS_BUBBLE (event);
-    GfsDomain * domain = GFS_DOMAIN (sim);
-
-    GfsVariable * liqpres = gfs_variable_from_name (domain->variables, "P");
-  
-    FttCell * cell = gfs_domain_locate (domain, p->pos, -1, NULL);
-    if (cell == NULL) 
-      return TRUE;
-    gdouble liq_rho = sim->physical_params.alpha ? 1./
-      gfs_function_value (sim->physical_params.alpha, cell) : 1.;
-
-    FttVector pos = p->pos;
-    gfs_simulation_map (sim, &pos);
-
-    gdouble point_pres = gfs_interpolate (cell, p->pos, liqpres);
-
-    RPData rp = { point_pres, liq_rho, bubble };
-
-    const gsl_odeiv_step_type * T = gsl_odeiv_step_rk8pd;
-
-    gsl_odeiv_step * s    = gsl_odeiv_step_alloc (T, 2);
-    gsl_odeiv_control * c = gsl_odeiv_control_y_new (1e-6, 0.0);
-    gsl_odeiv_evolve * e  = gsl_odeiv_evolve_alloc (2);
-
-    gsl_odeiv_system sys = {func, jac, 2, &rp};
-
-    gdouble t = sim->time.t;
-    gdouble t1 = t + sim->advection_params.dt;
-    gdouble h = 1e-6; /*better criterium??*/
-    /*variables R, dot{R}*/
-    gdouble y[2] = { pow(3./(4.*M_PI)*particulate->volume,1./3.) , bubble->velR };
-
-    while (t < t1)
-    {
-        int status = gsl_odeiv_evolve_apply (e, c, s,
-                &sys, &t, t1, &h, y);
-
-        if (status != GSL_SUCCESS) g_error ("Error in the RK method");
-    }
-
-    gsl_odeiv_evolve_free (e);
-    gsl_odeiv_control_free (c);
-    gsl_odeiv_step_free (s);
-
-    bubble->velR = y[1];
-    particulate->volume = 4./3.*M_PI*pow(y[0],3);
-
-    return TRUE;
-  }
-  return FALSE;
-} 
-
-static void gfs_bubble_read (GtsObject ** o, GtsFile * fp)
-{
-  if (GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class->read)
-    (* GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class->read) 
-      (o, fp);
-  if (fp->type == GTS_ERROR)
-    return;
-  GfsBubble * p = GFS_BUBBLE (*o);
-  GfsParticulate * part = GFS_PARTICULATE (*o);
-
-  p->R0 = pow (part->volume*3./(4.*M_PI), 1./3.);
-
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (radial velocity)");
-    return;
-  }
-  p->velR = atof (fp->token->str);
-  gts_file_next_token (fp);
-  
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (reference pressure)");
-    return;
-  }
-  p->p0 = atof (fp->token->str);
-  gts_file_next_token (fp);
-}
-
-static void gfs_bubble_write (GtsObject * o, FILE * fp)
-{
-  (* GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class->write) (o, fp); 
-  GfsBubble * p = GFS_BUBBLE (o);
-  fprintf (fp, " %g %g", p->velR, p->p0);
-}
-
-static void gfs_bubble_class_init (GfsEventClass * klass)
-{
-  klass->event = gfs_bubble_event;
-  GTS_OBJECT_CLASS (klass)->read = gfs_bubble_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_bubble_write;
-}
-
-GfsEventClass * gfs_bubble_class (void)
-{
-  static GfsEventClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_bubble_info = {
-      "GfsBubble",
-      sizeof (GfsBubble),
-      sizeof (GfsEventClass),
-      (GtsObjectClassInitFunc) gfs_bubble_class_init,
-      (GtsObjectInitFunc) NULL,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_particulate_class ()),
-				  &gfs_bubble_info);
-  }
-  return klass;
-}
-
 /* Initialize module */
 
 const gchar gfs_module_name[] = "particulates";
@@ -1340,7 +1044,6 @@ const gchar * g_module_check_init (void);
 const gchar * g_module_check_init (void)
 { 
   gfs_particulate_class ();
-    gfs_bubble_class ();
   gfs_particle_list_class ();
   gfs_force_lift_class ();
   gfs_force_drag_class ();

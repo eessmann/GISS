@@ -25,6 +25,9 @@ endif
 if BUILD_ODE
 ODE = libode2D.la libode3D.la
 endif
+if HAS_GSL
+BUBBLES = libbubbles2D.la libbubbles3D.la
+endif
 
 pkglib_LTLIBRARIES = \
 	$(MAP) \
@@ -41,7 +44,8 @@ pkglib_LTLIBRARIES = \
 	$(STOKES) \
 	$(WAVEWATCH) \
 	$(HYPRE) \
-	$(ODE)
+	$(ODE) \
+        $(BUBBLES)
 
 bin_PROGRAMS = \
 	xyz2rsurface \
@@ -56,6 +60,7 @@ EXTRA_DIST = \
 	stokes.mod \
 	wavewatch.mod \
 	particulates.mod \
+	bubbles.mod \
 	df3.mod \
 	electrohydro.mod \
 	okada.mod \
@@ -69,6 +74,7 @@ BUILT_SOURCES = \
 	stokes.c \
 	wavewatch.c \
 	particulates.c \
+	bubbles.c \
 	df3.c \
 	electrohydro.c \
 	okada.c \
@@ -143,10 +149,17 @@ rsurfaceinfo_LDADD = $(KDTLIBS)
 rsurfaceinfo_CFLAGS = $(AM_CFLAGS)
 rsurfaceinfo_DEPENDENCIES = $(KDTDEPS)
 
-libparticulates3D_la_SOURCES = particulates.c
-libparticulates3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
-libparticulates2D_la_SOURCES = particulates.c
-libparticulates2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
+libparticulates3D_la_SOURCES = particulates.c particulates.h
+libparticulates3D_la_CFLAGS = $(AM_CFLAGS)
+libparticulates2D_la_SOURCES = particulates.c particulates.h
+libparticulates2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+
+libbubbles3D_la_SOURCES = bubbles.c
+libbubbles3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
+libbubbles3D_la_LIBADD = $(GSL_LIBS)
+libbubbles2D_la_SOURCES = bubbles.c
+libbubbles2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
+libbubbles2D_la_LIBADD = $(GSL_LIBS)
 
 libhypre3D_la_SOURCES = hypre.c
 libhypre3D_la_CFLAGS = $(AM_CFLAGS)

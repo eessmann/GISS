@@ -296,6 +296,7 @@ AM_CONDITIONAL(HAS_LIBPROJ, test x$proj = xtrue)
 
 # checks for GNU Scientific Library
 AM_PATH_GSL
+AM_CONDITIONAL(HAS_GSL, test x$no_gsl != xtrue)
 
 # checks for netCDF
 AC_CHECK_LIB(netcdf, nc_open, netcdf="true", netcdf="false", [-lm])
