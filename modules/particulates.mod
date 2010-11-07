@@ -20,147 +20,10 @@
 #include <stdlib.h>
 #include "particle.h"
 #include "source.h"
-
-/* Adaptive 4/5 Runge-Kutta method */
-/* Header */
-
-#define SAFETY 0.9
-#define PGROW -0.2
-#define PSHRNK -0.25
-#define ERRCON 1.89e-4
-
-typedef void      (* RKFunc)            ( gdouble t, gdouble *y, gdouble *dydt, gpointer data);
-
-typedef struct _GfsAdaptiveRK    GfsAdaptiveRK;
-
-struct _GfsAdaptiveRK {
-  gdouble t, dtgoal, dtmax; /* independent variable t, interval to be integrated, max dt */
-  gdouble * y;  /* goal function */
-  gdouble * yc; /* characteristic values for nondimensionalization */
-  guint n;      /* number of elements in y */ 
-  gpointer data;/* user data required for f */
-};
-
-/* Object */
-
-static void rkck (gdouble *dttry, gdouble *errmax, gdouble *yerr, 
-                  gdouble *ytmp, gdouble *ak1, GfsAdaptiveRK *RKdata,
-		  RKFunc derivatives)
-{
-  gint i;
-  gdouble A2 = 0.2, A3 = 0.3, A4 = 0.6, A5 = 1.0, A6 = 0.875;
-  gdouble b21 = 0.2;
-  gdouble b31 = 3.0/40.0, b32 = 9.0/40.0;
-  gdouble b41 = 0.3, b42 = -0.9, b43 = 1.2;
-  gdouble b51 = -11.0/54.0, b52 = 2.5, b53 = -70.0/27.0, b54 = 35./27.;
-  gdouble b61 = 1631.0/55296.0, b62 = 175.0/512.0, b63 = 575./13824.;
-  gdouble b64 = 44275./110592., b65 = 253./4096.;
-  gdouble c1 = 37./378., c3 = 250./621., c4 = 125.0/594.0, c6 = 512.0/1771.;
-  gdouble dc1 = c1-2825.0/27648.0, dc3 = c3-18575.0/48384.;
-  gdouble dc4 = c4 - 13525.0/55296.0, dc5 = -277.0/14336.0, dc6 = c6 - 0.25;
-
-  gdouble *ak2, *ak3, *ak4, *ak5, *ak6;
-     
-  ak2 = g_malloc (RKdata->n*sizeof (gdouble));
-  ak3 = g_malloc (RKdata->n*sizeof (gdouble));
-  ak4 = g_malloc (RKdata->n*sizeof (gdouble));
-  ak5 = g_malloc (RKdata->n*sizeof (gdouble));
-  ak6 = g_malloc (RKdata->n*sizeof (gdouble));
-
-  /* First Step */
-  for (i = 0; i < RKdata->n; i++)   
-    ytmp[i] = RKdata->y[i] + (*dttry)*b21*ak1[i];
-
-  derivatives (RKdata->t + A2*(*dttry), ytmp, ak2, RKdata->data);
-    
-  for (i = 0; i < RKdata->n; i++) 
-    ytmp[i] = RKdata->y[i] + (*dttry)*(b31*ak1[i] + b32*ak2[i]);
-        
-  derivatives (RKdata->t + A3*(*dttry), ytmp, ak3, RKdata->data);
-
-  for (i = 0; i < RKdata->n; i++) 
-    ytmp[i] = RKdata->y[i] + (*dttry)*(b41*ak1[i] + b42*ak2[i] + b43*ak3[i]);
-
-  derivatives (RKdata->t + A4*(*dttry), ytmp, ak4, RKdata->data);
-    
-  for (i = 0; i < RKdata->n; i++) 
-    ytmp[i] = RKdata->y[i] + (*dttry)*(b51*ak1[i] + b52*ak2[i] + b53*ak3[i]
-				       + b54*ak4[i]);
-    
-  derivatives (RKdata->t + A5*(*dttry), ytmp, ak5, RKdata->data);
-    
-  for (i = 0; i < RKdata->n; i++) 
-    ytmp[i] = RKdata->y[i] + (*dttry)*(b61*ak1[i] + b62*ak2[i] + b63*ak3[i]
-				       + b64*ak4[i] + b65*ak5[i]);
-
-  derivatives (RKdata->t + A6*(*dttry), ytmp, ak6, RKdata->data);
-    
-  for (i = 0; i < RKdata->n; i++) 
-    ytmp[i] = RKdata->y[i] + (*dttry)*(c1*ak1[i] + c3*ak3[i]
-				       + c4*ak4[i] + c6*ak6[i]);
-    
-  for (i = 0; i < RKdata->n; i++) 
-    yerr[i] = (*dttry)*(dc1*ak1[i] + dc3*ak3[i]
-			+ dc4*ak4[i] + dc5*ak5[i] + dc6*ak6[i]);
-    
-  g_free (ak2); g_free (ak3); g_free (ak4); g_free (ak5); g_free (ak6);
-}
-
-/* Adaptive RK method
-   It integrates a function df/dt=f(t,...)
-   f(t,y,dydt,data) is RKFunc whose arguments are:
-   t: independent variable
-   y: function
-   dydt: derivative of the function
-   data: extra data
-   RKdata contains the info of the temporal integration 
-*/
-static void rkqs (GfsAdaptiveRK * RKdata, RKFunc derivatives)
-{
-  guint i;
-  gdouble eps = 1.e-4, dtnext, errmax;
-  gdouble dt, dttmp, tnew, *yerr, *ytmp;
-  gdouble *ak1;
-     
-  ak1 = g_malloc (RKdata->n*sizeof (gdouble));
-  yerr = g_malloc (RKdata->n*sizeof (gdouble));     
-  ytmp = g_malloc (RKdata->n*sizeof (gdouble));     
-    
-  dt = MIN (RKdata->dtgoal, RKdata->dtmax); //step size to the trial value
-    
-  while (dt > 0.) {
-    derivatives (RKdata->t, RKdata->y, ak1, RKdata->data);
-    for (;;) {
-      errmax = 0.;
-      rkck (&dt, &errmax, yerr, ytmp, ak1, RKdata, derivatives);
-      for (i = 0; i < RKdata->n; i++) 
-	errmax = MAX (errmax, fabs (yerr[i]/RKdata->yc[i]));
-      errmax /= eps;
-      if (errmax <= 1.)
-	break;
-      dttmp = SAFETY*dt*pow(errmax,PSHRNK);
-      dt = MAX (dttmp, 0.1*dt);
-      tnew = RKdata->t + dt;
-      if (tnew == RKdata->t)
-	g_error ("Time step in RK equal 0");
-    }
-
-    if (errmax > ERRCON) 
-      dtnext = SAFETY*dt*pow (errmax, PGROW);
-    else 
-      dtnext = 5.0*dt;
-
-    RKdata->t += dt;
-    for (i = 0; i < RKdata->n; i++) 
-      RKdata->y[i] = ytmp[i];
-    RKdata->dtgoal -= dt;
-   
-    dt = MIN (MIN (dtnext, RKdata->dtgoal), RKdata->dtmax);
-  }
-
-  g_free (ak1); g_free (yerr); g_free (ytmp);
-}
-
+#include <stdio.h>
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_odeiv.h>
 
 /* GfsParticulate: Header */
 
@@ -1318,17 +1181,35 @@ typedef struct {
   GfsBubble * bubble;
 } RPData;
 
-void static bubble_derivs (gdouble t, gdouble * y, gdouble * dydt, RPData * rp)
+int static func (double t, const double y[], double f[],
+        void *params)
 {
-  /* dVbdt */
-  gdouble Rb = pow (y[0]*3./(4.*M_PI), 1./3.);
-  dydt[0] = 4.*M_PI*pow (Rb, 2)*y[1];
+    RPData *rp = (RPData *)params;
+    f[0] = y[1];
+    /* interface acceleration- incompressible RP equation */
+    gdouble pbubble = rp->bubble->p0*pow (rp->bubble->R0/y[0], 3.*1.4);
+    f[1] = ((pbubble - rp->liqpres)/rp->liqdens - 3./2.*pow (y[1], 2))/y[0];
 
-  /* interface acceleration */
-  gdouble pbubble = rp->bubble->p0*pow (rp->bubble->R0/Rb, 3.*1.4);
-  
-  /* incompressible RP equation */
-  dydt[1] = ((pbubble - rp->liqpres)/rp->liqdens - 3./2.*pow (y[1], 2))/Rb;
+    return GSL_SUCCESS;
+}
+/*jacobian matrix*/
+int static jac (double t, const double y[], double *dfdy, 
+        double dfdt[], void *params)
+{
+    RPData *rp = (RPData *)params;
+    gdouble pbubble = rp->bubble->p0*pow (rp->bubble->R0/y[0], 3.*1.4);
+    gdouble dddRdR  = 2.*rp->liqpres-2.*(1.+3.*1.4)*pbubble+3.*rp->liqdens*pow(y[1],2);
+    dddRdR  /= 2.*pow(y[0],2)*rp->liqdens;
+    gsl_matrix_view dfdy_mat 
+        = gsl_matrix_view_array (dfdy, 2, 2);
+    gsl_matrix * m = &dfdy_mat.matrix; 
+    gsl_matrix_set (m, 0, 0, 0.0);
+    gsl_matrix_set (m, 0, 1, 1.0);
+    gsl_matrix_set (m, 1, 0, dddRdR);
+    gsl_matrix_set (m, 1, 1, - 3.*y[1]/y[0]);
+    dfdt[0] = 0.0;
+    dfdt[1] = 0.0;
+    return GSL_SUCCESS;
 }
 
 static gboolean gfs_bubble_event (GfsEvent * event, 
@@ -1354,27 +1235,36 @@ static gboolean gfs_bubble_event (GfsEvent * event,
 
     gdouble point_pres = gfs_interpolate (cell, p->pos, liqpres);
 
-    gdouble y[2];
-    y[0] = particulate->volume;
-    y[1] = bubble->velR;
-    gdouble yc[2];
-    yc[0] = particulate->volume;           /* characteristic distance */
-    yc[1] = 0.01*sqrt(bubble->p0/liq_rho); /* characteristic velocity */
-
     RPData rp = { point_pres, liq_rho, bubble };
-    GfsAdaptiveRK RKdata;
-    RKdata.t = sim->time.t;
-    RKdata.dtgoal = sim->advection_params.dt;
-    RKdata.dtmax = yc[1]*0.001;
-    RKdata.y = y;
-    RKdata.yc = yc;
-    RKdata.n = 2;
-    RKdata.data = &rp;
 
-    rkqs (&RKdata, (RKFunc) bubble_derivs);
+    const gsl_odeiv_step_type * T = gsl_odeiv_step_rk8pd;
+
+    gsl_odeiv_step * s    = gsl_odeiv_step_alloc (T, 2);
+    gsl_odeiv_control * c = gsl_odeiv_control_y_new (1e-6, 0.0);
+    gsl_odeiv_evolve * e  = gsl_odeiv_evolve_alloc (2);
+
+    gsl_odeiv_system sys = {func, jac, 2, &rp};
+
+    gdouble t = sim->time.t;
+    gdouble t1 = t + sim->advection_params.dt;
+    gdouble h = 1e-6; /*better criterium??*/
+    /*variables R, dot{R}*/
+    gdouble y[2] = { pow(3./(4.*M_PI)*particulate->volume,1./3.) , bubble->velR };
+
+    while (t < t1)
+    {
+        int status = gsl_odeiv_evolve_apply (e, c, s,
+                &sys, &t, t1, &h, y);
+
+        if (status != GSL_SUCCESS) g_error ("Error in the RK method");
+    }
+
+    gsl_odeiv_evolve_free (e);
+    gsl_odeiv_control_free (c);
+    gsl_odeiv_step_free (s);
 
     bubble->velR = y[1];
-    particulate->volume = y[0];
+    particulate->volume = 4./3.*M_PI*pow(y[0],3);
 
     return TRUE;
   }
