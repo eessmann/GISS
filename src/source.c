@@ -797,7 +797,7 @@ static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
 
   if (gfs_function_get_constant_value (d->val) == G_MAXDOUBLE) {
     if (d->mu == NULL && (d->mu = gfs_function_get_variable (d->val)) == NULL)
-      d->mu = gfs_temporary_variable (GFS_DOMAIN (sim));
+      d->mu = gfs_domain_add_variable (GFS_DOMAIN (sim), NULL, NULL);
     if (d->mu != gfs_function_get_variable (d->val)) {
       gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
