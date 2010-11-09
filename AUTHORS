@@ -4,7 +4,8 @@ Stéphane Popinet   <popinet@users.sf.net>
 Sébastien Delaux   <s.delaux@niwa.co.nz> : Moving solid boundaries
 Gaurav Tomar       <gaurav.tomar03@gmail.com> : particulates module
 Andris Rudzītis    <andrisrudzitis@gmail.com> : df3 povray module
-Jose M. López-Herrera Sánchez <jose.lopez.herrera.s@gmail.com> : electro_hydro module
+Jose M. López-Herrera Sánchez <jose.lopez.herrera.s@gmail.com> : electrohydro module
+Kristján Gudmundsson <kristjang@gmail.com> : GfsSpatialSum
 
 Contributors
 ------------
