@@ -14,9 +14,7 @@ License: GPLv2
 # SuSE should have this macro set. If doubt specify in ~/.rpmmacros
 %if 0%{?suse_version}
 Group: Productivity/Scientific/Other
-%endif
-# For Fedora you must specify fedora_version in your ~/.rpmmacros file
-%if 0%{?fedora_version}
+%else
 Group: Applications/Engineering
 %endif
 URL: http://gfs.sourceforge.net
@@ -84,8 +82,7 @@ else
 	--mandir=%{_mandir} \
 	--disable-static
 fi
-%endif
-%if 0%{?fedora_version}
+%else
 if [ -x ./configure ]; then
     CFLAGS="$RPM_OPT_FLAGS" \
     CPPFLAGS="-I%{_includedir}/netcdf-3" ./configure \
