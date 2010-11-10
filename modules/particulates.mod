@@ -1036,6 +1036,146 @@ GfsEventClass * gfs_droplet_to_particle_class (void)
   return klass;
 }
 
+/* GfsParticulateField: header */
+
+typedef struct _GfsParticulateField                GfsParticulateField;
+
+struct _GfsParticulateField {
+  /*< private >*/
+  GfsVariable parent;
+
+  /*< public >*/
+  GfsParticleList * plist;
+};
+
+#define GFS_PARTICULATE_FIELD(obj)            GTS_OBJECT_CAST (obj,\
+                                                   GfsParticulateField,\
+                                                   gfs_particulate_field_class ())
+#define GFS_IS_PARTICULATE_FIELD(obj)         (gts_object_is_from_class (obj,\
+                                                   gfs_particulate_field_class ()))
+
+GfsVariableClass * gfs_particulate_field_class  (void);
+
+/* GfsParticulateField: object */
+typedef struct {
+    GfsDomain * domain;
+    GfsVariable * v;
+    GfsParticle * p;
+    GfsParticulate * part; 
+    FttCell * cellpart;
+} fielddata;
+ 
+static void voidfraction_from_particles (FttCell * cell, fielddata * data)
+{
+    GFS_VARIABLE (cell, data->v->i) += data->part->volume/ftt_cell_volume (cell);
+    return;
+}
+
+static gboolean is_inside_kernel (FttCell * cell, fielddata * data)
+{
+    guint l = ftt_cell_level (cell);
+    FttCell * cellpart = gfs_domain_locate (data->domain, data->p->pos, l, NULL);
+    if (cellpart == cell) return TRUE;
+    return FALSE;
+}
+
+static gboolean particulate_field_event (GfsEvent * event, 
+                                           GfsSimulation * sim) 
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_particulate_field_class ())->parent_class)->event)
+      (event, sim)) {
+
+    GfsVariable * v = GFS_VARIABLE1 (event);
+    GfsDomain * domain = GFS_DOMAIN (sim);
+
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+                              (FttCellTraverseFunc) gfs_cell_reset, v);
+
+    GfsParticulateField * pfield = GFS_PARTICULATE_FIELD (event); 
+    GfsEventList * l = GFS_EVENT_LIST (pfield->plist);
+    fielddata data;
+    data.domain = domain;
+    data.v = v;
+    
+    /*Loop over the list of particles in the selected object*/
+    GSList * i = l->list->items;
+    while (i) {
+        data.part = GFS_PARTICULATE (i->data);
+        data.p = GFS_PARTICLE (i->data);
+        FttVector pos = data.p->pos;
+        gfs_simulation_map (sim, &pos); //Is it required?
+        gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,-1,
+                                        (FttCellTraverseFunc) voidfraction_from_particles, &data,
+                                        is_inside_kernel, &data);
+        i = i->next;
+    }
+    
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void variable_particulatefield_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_particulate_field_class ())->parent_class->read) (o, fp); 
+  if (fp->type == GTS_ERROR)
+    return;
+
+    if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (object name)");
+    return;
+  }
+  GfsParticulateField * pfield = GFS_PARTICULATE_FIELD (*o);
+  GtsObject * object = gfs_object_from_name (GFS_DOMAIN (gfs_object_simulation (*o)), fp->token->str);
+
+  if (object == NULL)
+    gts_file_error (fp, "unknown object '%s'", fp->token->str);
+  else 
+    gts_file_next_token (fp);
+  
+  pfield->plist = GFS_PARTICLE_LIST (object);
+
+}
+
+static void variable_particulatefield_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_particulate_field_class ())->parent_class->write) (o, fp); 
+
+  GfsParticulateField * pfield = GFS_PARTICULATE_FIELD (o);
+  GfsEvent * event = GFS_EVENT (pfield->plist);
+  fprintf (fp, " %s\n", event->name );
+
+}
+
+static void particulate_field_class_init (GtsObjectClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = particulate_field_event;
+  klass->read =  variable_particulatefield_read;
+  klass->write = variable_particulatefield_write;
+}
+
+GfsVariableClass * gfs_particulate_field_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_particulate_field_info = {
+      "GfsParticulateField",
+      sizeof (GfsParticulateField),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) particulate_field_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()),
+                                  &gfs_particulate_field_info);
+  }
+
+  return klass;
+}
+
+
 /* Initialize module */
 
 const gchar gfs_module_name[] = "particulates";
@@ -1043,6 +1183,7 @@ const gchar * g_module_check_init (void);
 
 const gchar * g_module_check_init (void)
 { 
+  gfs_particulate_field_class ();
   gfs_particulate_class ();
   gfs_particle_list_class ();
   gfs_force_lift_class ();
