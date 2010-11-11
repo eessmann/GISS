@@ -57,7 +57,10 @@ Define LENGTH (150./180.*M_PI)
     Init {} { P = 0.2 + 1.8*P/LENGTH }
     Time { end = 0.9 }
     OutputTime { istep = 10 } stderr
-    OutputSimulation { step = 0.3 } sim-%g.gfs
+    GModule gfsview
+    OutputView { start = 0.3 step = 0.3 } isolines-%g.eps { 
+	format = EPS line_width = 0.5 
+    } isolines.gfv
     OutputSimulation { step = 0.3 } sim-%g.txt { variables = U,V,P format = text }
     OutputScalarSum { istep = 1 } sp { v = P }
 #    OutputSimulation { istep = 10 } stdout
@@ -107,8 +110,6 @@ set output 'p-$i.eps'
 plot [0:90][0:0.75]'sim-$i.txt' u (rdist(\$1,\$2)):6 ps 0.25 pt 6 t '', 'prof-$i.txt' w l lw 2 t ''
 EOF
 
-	    echo "Save stdout { format = EPS line_width = 0.5 }" | \
-		gfsview-batch2D sim-$i.gfs isolines.gfv > isolines-$i.eps
 	done
 	exit $status
     }

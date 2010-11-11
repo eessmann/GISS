@@ -38,15 +38,12 @@ Define LENGTH (150./180.*M_PI)
     Time { end = 1.4 }
     SourceCoriolis 10.*sin(y*M_PI/180.)
     OutputTime { istep = 10 } stderr
-    OutputSimulation { step = 0.4 } sim-%g.gfs
+    GModule gfsview
+    OutputView { start = 0.4 step = 0.4 } isolines-%g.eps { 
+	format = EPS line_width = 0.5 
+    } isolines.gfv
     OutputSimulation { step = 0.4 } sim-%g.txt { variables = U,V,P format = text }
 #    OutputSimulation { istep = 10 } stdout
-    EventScript { start = end } {
-	for i in 0.4 0.8 1.2; do
-	    echo "Save stdout { format = EPS line_width = 0.5 }" | \
-		gfsview-batch2D sim-$i.gfs isolines.gfv > isolines-$i.eps
-	done
-    }
 }
 GfsBox {
     right = Boundary { BcNeumann U 0 }
