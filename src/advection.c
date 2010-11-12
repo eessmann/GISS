@@ -908,6 +908,8 @@ void gfs_advection_params_write (GfsAdvectionParams * par, FILE * fp)
     fputs ("  moving_order = 2\n", fp);
   if (gts_vector_norm (par->sink) > 0.)
     fprintf (fp, "  vx = %g vy = %g vz = %g\n", par->sink[0], par->sink[1], par->sink[2]);
+  if (par->linear)
+    fputs ("  linear = 1\n", fp);
   fputc ('}', fp);
 }
 
@@ -929,6 +931,7 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->update = (GfsMergedTraverseFunc) gfs_advection_update;
   par->moving_order = 1;
   par->sink[0] = par->sink[1] = par->sink[2] = 0.;
+  par->linear = FALSE;
 }
 
 static gdouble none (FttCell * cell, FttComponent c, guint v)
@@ -953,6 +956,7 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
     {GTS_DOUBLE, "vx",           TRUE, &par->sink[0]},
     {GTS_DOUBLE, "vy",           TRUE, &par->sink[1]},
     {GTS_DOUBLE, "vz",           TRUE, &par->sink[2]},
+    {GTS_INT,    "linear",       TRUE, &par->linear},
     {GTS_NONE}
   };
 

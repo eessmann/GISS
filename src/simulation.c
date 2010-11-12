@@ -300,6 +300,20 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       gfs_advection_params_read (&sim->advection_params, fp);
       if (fp->type == GTS_ERROR)
 	return;
+      if (sim->advection_params.linear) {
+	sim->u0[0] = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), 
+						     "U0", "x-component of the base velocity");
+	sim->u0[0]->units = 1.;
+	sim->u0[1] = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), 
+						     "V0", "y-component of the base velocity");
+	sim->u0[1]->units = 1.;
+#if (!FTT_2D)
+	sim->u0[2] = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), 
+						     "W0", "z-component of the base velocity");
+	sim->u0[2]->units = 1.;
+#endif /* FTT_3D */
+	gfs_variable_set_vector (sim->u0, FTT_DIMENSION);
+      }
     }
 
     /* ------------ GtsObject ------------ */
@@ -447,8 +461,19 @@ static void simulation_run (GfsSimulation * sim)
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
-    gfs_predicted_face_velocities (domain, FTT_DIMENSION, &sim->advection_params);
-    
+    if (sim->advection_params.linear) {
+      /* linearised advection */
+      gfs_domain_face_traverse (domain, FTT_XYZ,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
+      gfs_domain_face_traverse (domain, FTT_XYZ,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity,
+				sim->u0);
+    }
+    else
+      gfs_predicted_face_velocities (domain, FTT_DIMENSION, &sim->advection_params);
+      
     gfs_variables_swap (p, pmac);
     gfs_mac_projection (domain,
     			&sim->projection_params, 

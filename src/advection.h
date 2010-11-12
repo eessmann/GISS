@@ -58,6 +58,7 @@ struct _GfsAdvectionParams {
   GfsMergedTraverseFunc update;
   guint moving_order;
   GtsVector sink;
+  gboolean linear;
 };
 
 void         gfs_advection_params_init        (GfsAdvectionParams * par);

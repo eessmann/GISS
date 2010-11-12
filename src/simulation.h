@@ -79,6 +79,8 @@ struct _GfsSimulation {
   gboolean deferred_compilation;
 
   gdouble tnext;
+
+  GfsVariable * u0[FTT_DIMENSION];
 };
 
 struct _GfsSimulationClass {
