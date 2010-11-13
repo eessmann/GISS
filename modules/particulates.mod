@@ -1046,6 +1046,8 @@ struct _GfsParticulateField {
 
   /*< public >*/
   GfsParticleList * plist;
+  void * voidfraction_func;
+  gboolean * condition_func;
 };
 
 #define GFS_PARTICULATE_FIELD(obj)            GTS_OBJECT_CAST (obj,\
@@ -1105,8 +1107,8 @@ static gboolean particulate_field_event (GfsEvent * event,
         FttVector pos = data.p->pos;
         gfs_simulation_map (sim, &pos); //Is it required?
         gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,-1,
-                                        (FttCellTraverseFunc) voidfraction_from_particles, &data,
-                                        is_inside_kernel, &data);
+                                        (FttCellTraverseFunc) pfield->voidfraction_func, &data,
+                                        pfield->condition_func, &data);
         i = i->next;
     }
     
@@ -1154,6 +1156,14 @@ static void particulate_field_class_init (GtsObjectClass * klass)
   klass->write = variable_particulatefield_write;
 }
 
+static void particulate_field_init (GtsObject *o)
+{
+    GfsParticulateField * pfield = GFS_PARTICULATE_FIELD(o);
+    pfield->voidfraction_func = &voidfraction_from_particles;
+    pfield->condition_func = &is_inside_kernel;
+
+}
+
 GfsVariableClass * gfs_particulate_field_class (void)
 {
   static GfsVariableClass * klass = NULL;
@@ -1164,7 +1174,7 @@ GfsVariableClass * gfs_particulate_field_class (void)
       sizeof (GfsParticulateField),
       sizeof (GfsVariableClass),
       (GtsObjectClassInitFunc) particulate_field_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) particulate_field_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
