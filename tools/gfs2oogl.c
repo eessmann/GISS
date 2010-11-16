@@ -1088,9 +1088,11 @@ int main (int argc, char * argv[])
 
       if (var)
 	while (fscanf (profile, "%lf %lf %lf", &p.x, &p.y, &p.z) == 3) {
-	  FttCell * cell = gfs_domain_locate (domain, p, -1, NULL);
+	  FttVector pm = p;
+	  gfs_simulation_map (simulation, &pm);
+	  FttCell * cell = gfs_domain_locate (domain, pm, -1, NULL);
 	  if (cell)
-	    printf ("%g %g %g %g\n", p.x, p.y, p.z, gfs_interpolate (cell, p, var));
+	    printf ("%g %g %g %g\n", p.x, p.y, p.z, gfs_dimensional_value (var, gfs_interpolate (cell, pm, var)));
 	}
       else {
 	GSList * j;
@@ -1105,13 +1107,15 @@ int main (int argc, char * argv[])
 	}
 	printf ("\n");
 	while (fscanf (profile, "%lf %lf %lf", &p.x, &p.y, &p.z) == 3) {
-	  FttCell * cell = gfs_domain_locate (domain, p, -1, NULL);
+	   FttVector pm = p;
+	  gfs_simulation_map (simulation, &pm);
+	  FttCell * cell = gfs_domain_locate (domain, pm, -1, NULL);
 	  if (cell) {
 	    printf ("%g %g %g ", p.x, p.y, p.z);
 	    j = domain->variables;
 	    while (j) {
 	      GfsVariable * v = j->data;
-	      printf ("%g ", gfs_interpolate (cell, p, v));
+	      printf ("%g ", gfs_dimensional_value (v, gfs_interpolate (cell, pm, v)));
 	      j = j->next;
 	    }
 	    printf ("\n");
