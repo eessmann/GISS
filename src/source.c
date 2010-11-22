@@ -1044,6 +1044,7 @@ typedef struct {
   GfsSourceGeneric * s;
   GfsVariable * v, * sv, * tv;
   gdouble dt;
+  GfsDomain * domain;
 } FluxPar;
 
 static void add_diffusion_explicit_flux (FttCell * cell, FluxPar * p)
@@ -1055,7 +1056,7 @@ static void add_diffusion_explicit_flux (FttCell * cell, FluxPar * p)
   
   if (GFS_IS_MIXED (cell)) {
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-      f = gfs_cell_dirichlet_gradient_flux (cell, p->v->i, -1, GFS_STATE (cell)->solid->fv);
+      f = gfs_cell_dirichlet_gradient_flux (cell, p->v->i, -1, GFS_STATE (cell)->solid->fv, p->domain);
     else
       f = GFS_STATE (cell)->solid->fv;
   }
@@ -1086,8 +1087,11 @@ static void source_diffusion_explicit_flux (GfsSourceGeneric * s,
 {
   GfsVariable * phi = GFS_SOURCE_DIFFUSION_EXPLICIT (s)->phi;
   gfs_diffusion_coefficients (domain, GFS_SOURCE_DIFFUSION (s), dt, NULL, NULL, NULL, 1.);
+
   gfs_domain_surface_bc (domain, phi);
   FluxPar p = { s, phi, sv };
+  p.domain = domain;
+
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_diffusion_explicit_flux, &p);
 }
 
@@ -1258,6 +1262,7 @@ static void source_viscosity_transverse_flux (GfsSourceGeneric * s,
   p.sv = sv;
   p.dt = dt;
   p.tv = gfs_temporary_variable (domain);
+  p.domain = domain;
   gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 		       (FttCellTraverseFunc) compute_transverse, &p,
 		       p.tv, p.tv);
@@ -1408,7 +1413,7 @@ static void add_viscosity_explicit_flux (FttCell * cell, FluxPar * p)
 
   if (GFS_IS_MIXED (cell)) {
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-      g.b = gfs_cell_dirichlet_gradient_flux (cell, p->v->i, -1., 0.);
+      g.b = gfs_cell_dirichlet_gradient_flux (cell, p->v->i, -1., 0., p->domain);
   }
 
   v0 = GFS_VARIABLE (cell, p->v->i);
@@ -1476,6 +1481,7 @@ static void source_viscosity_explicit_flux (GfsSourceGeneric * s,
   p.sv = sv;
   p.dt = dt;
   p.tv = gfs_temporary_variable (domain);
+  p.domain = domain;
   gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 		       (FttCellTraverseFunc) compute_transverse, &p,
 		       p.tv, p.tv);

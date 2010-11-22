@@ -174,7 +174,8 @@ void                  gfs_mixed_cell_gradient        (FttCell * cell,
 gdouble               gfs_cell_dirichlet_gradient_flux (FttCell * cell,
 							guint v,
 							gint max_level,
-							gdouble v0);
+							gdouble v0,
+							GfsDomain * domain);
 gdouble               gfs_cell_dirichlet_value         (FttCell * cell,
 							GfsVariable * v,
 							gint max_level);
@@ -284,17 +285,28 @@ struct _GfsStencil {
   GArray * id;    /* ints */
 };
 
-GfsStencil *    gfs_stencil_new                       (void);
-void            gfs_stencil_add_element               (GfsStencil * stencil,
-						       gint id,
-						       gdouble coeff);
-void            gfs_stencil_destroy                   (GfsStencil * stencil);
-void            gfs_face_weighted_gradient_stencil    (const FttCellFace * face,
-						       GfsGradient * g,
-						       gint max_level,
-						       GfsVariable * id,
-						       GfsStencil * stencil);
-
+GfsStencil *  gfs_stencil_new                       (void);
+void          gfs_stencil_add_element               (GfsStencil * stencil,
+						     gint id,
+						     gdouble coeff);
+void          gfs_stencil_destroy                   (GfsStencil * stencil);
+void          gfs_face_weighted_gradient_stencil    (const FttCellFace * face,
+						     GfsGradient * g,
+						     gint max_level,
+						     GfsVariable * id,
+						     GfsStencil * stencil);
+void          gfs_face_cm_weighted_gradient_stencil (const FttCellFace * face,
+						     GfsGradient * g,
+						     gint max_level,
+						     GfsVariable * id,
+						     GfsStencil * stencil);
+gdouble       gfs_cell_dirichlet_gradient_flux_stencil (FttCell * cell,
+							gint max_level,
+							gdouble v0,
+							GfsDomain * domain,
+							GfsVariable * id,
+							GfsStencil * stencil);
+  
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
