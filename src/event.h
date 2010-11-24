@@ -135,8 +135,6 @@ GfsGenericInitClass * gfs_init_mask_class  (void);
 
 GfsEventClass * gfs_init_flow_constant_class  (void);
 
-#if FTT_2D
-
 /* GfsInitVorticity: Header */
 
 typedef struct _GfsInitVorticity         GfsInitVorticity;
@@ -144,10 +142,18 @@ typedef struct _GfsInitVorticity         GfsInitVorticity;
 struct _GfsInitVorticity {
   /*< private >*/
   GfsGenericInit parent;
-  GfsVariable * vort, * stream, ** u;
+  GfsVariable * vort, ** u;
+#if FTT_2D
+  GfsVariable * stream;
+#else
+  GfsVariable * stream[3];
+#endif
 
   /*< public >*/
   GfsFunction * f;
+#if !FTT_2D
+  GfsFunction * fv[3];
+#endif
 };
 
 #define GFS_INIT_VORTICITY(obj)            GTS_OBJECT_CAST (obj,\
@@ -157,8 +163,6 @@ struct _GfsInitVorticity {
 						 gfs_init_vorticity_class ()))
 
 GfsGenericInitClass * gfs_init_vorticity_class  (void);
-
-#endif /* FTT_2D */
 
 /* GfsEventSum: Header */
 

@@ -178,9 +178,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_init_mask_class (),
     gfs_init_flow_constant_class (),
     gfs_init_fraction_class (),
-#if FTT_2D
     gfs_init_vorticity_class (),
-#endif /* FTT_2D */
     gfs_init_wave_class (),
 
     gfs_metric_lon_lat_class (),

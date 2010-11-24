@@ -842,8 +842,6 @@ GfsEventClass * gfs_init_flow_constant_class (void)
   return klass;
 }
 
-#if FTT_2D
-
 /* GfsInitVorticity: Object */
 
 static void gfs_init_vorticity_read (GtsObject ** o, GtsFile * fp)
@@ -853,18 +851,37 @@ static void gfs_init_vorticity_read (GtsObject ** o, GtsFile * fp)
       (o, fp);
   if (fp->type == GTS_ERROR)
     return;
+#if FTT_2D
   gfs_function_read (GFS_INIT_VORTICITY (*o)->f, gfs_object_simulation (*o), fp);
+#else /* 3D */
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    gfs_function_read (GFS_INIT_VORTICITY (*o)->fv[c], gfs_object_simulation (*o), fp);
+#endif /* 3D */
 }
 
 static void gfs_init_vorticity_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class->write) (o, fp);
+#if FTT_2D
   gfs_function_write (GFS_INIT_VORTICITY (o)->f, fp);
+#else /* 3D */
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    gfs_function_write (GFS_INIT_VORTICITY (o)->fv[c], fp);
+#endif /* 3D */
 }
 
 static void gfs_init_vorticity_destroy (GtsObject * object)
 {
+#if FTT_2D
   gts_object_destroy (GTS_OBJECT (GFS_INIT_VORTICITY (object)->f));
+#else /* 3D */
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    gts_object_destroy (GTS_OBJECT (GFS_INIT_VORTICITY (object)->fv[c]));
+#endif /* 3D */
+
   (* GTS_OBJECT_CLASS (gfs_init_vorticity_class ())->parent_class->destroy) (object);
 }
 
@@ -948,9 +965,17 @@ static void stream_from_vorticity (GfsDomain * domain,
 static void init_from_streamfunction (FttCell * cell, GfsInitVorticity * init)
 {
   gdouble size = ftt_cell_size (cell);
-
-  GFS_VARIABLE (cell, init->u[0]->i) = - gfs_center_gradient (cell, FTT_Y, init->stream->i)/size;
-  GFS_VARIABLE (cell, init->u[1]->i) = gfs_center_gradient (cell, FTT_X, init->stream->i)/size;
+#if FTT_2D
+  GFS_VALUE (cell, init->u[0]) = - gfs_center_gradient (cell, FTT_Y, init->stream->i)/size;
+  GFS_VALUE (cell, init->u[1]) = gfs_center_gradient (cell, FTT_X, init->stream->i)/size;
+#else /* 3D */
+  GFS_VALUE (cell, init->u[0]) = (gfs_center_gradient (cell, FTT_Z, init->stream[1]->i) -
+				  gfs_center_gradient (cell, FTT_Y, init->stream[2]->i))/size;
+  GFS_VALUE (cell, init->u[1]) = (gfs_center_gradient (cell, FTT_X, init->stream[2]->i) -
+				  gfs_center_gradient (cell, FTT_Z, init->stream[0]->i))/size;
+  GFS_VALUE (cell, init->u[2]) = (gfs_center_gradient (cell, FTT_Y, init->stream[0]->i) -
+				  gfs_center_gradient (cell, FTT_X, init->stream[1]->i))/size;
+#endif /* 3D */
 }
 
 static void compute_vorticity (FttCell * cell, GfsInitVorticity * init)
@@ -968,6 +993,7 @@ static gboolean gfs_init_vorticity_event (GfsEvent * event,
     GfsInitVorticity * init = GFS_INIT_VORTICITY (event);
     GfsDomain * domain = GFS_DOMAIN (sim);
 
+#if FTT_2D
     init->vort = gfs_temporary_variable (domain);
     init->stream = gfs_temporary_variable (domain);
     gfs_catch_floating_point_exceptions ();
@@ -981,6 +1007,26 @@ static gboolean gfs_init_vorticity_event (GfsEvent * event,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) init_from_streamfunction, init);
     gts_object_destroy (GTS_OBJECT (init->stream));
+#else /* 3D */
+    FttComponent c;
+    init->vort = gfs_temporary_variable (domain);
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      init->stream[c] = gfs_temporary_variable (domain);
+      gfs_catch_floating_point_exceptions ();
+      init->f = init->fv[c];
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) compute_vorticity, event);
+      gfs_restore_fpe_for_function (init->f);
+      stream_from_vorticity (domain, init->stream[c], init->vort, 1e-9);
+    }
+    gts_object_destroy (GTS_OBJECT (init->vort));
+    init->u = gfs_domain_velocity (domain);
+    gfs_domain_cell_traverse (domain, 
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) init_from_streamfunction, init);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      gts_object_destroy (GTS_OBJECT (init->stream[c]));
+#endif /* 3D */
     return TRUE;
   }
   return FALSE;
@@ -996,7 +1042,13 @@ static void gfs_init_vorticity_class_init (GtsObjectClass * klass)
 
 static void gfs_init_vorticity_init (GfsInitVorticity * init)
 {
+#if FTT_2D
   init->f = gfs_function_new (gfs_function_class (), 0.);
+#else /* 3D */
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    init->fv[c] = gfs_function_new (gfs_function_class (), 0.);
+#endif /* 3D */
 }
 
 GfsGenericInitClass * gfs_init_vorticity_class (void)
@@ -1019,8 +1071,6 @@ GfsGenericInitClass * gfs_init_vorticity_class (void)
 
   return klass;
 }
-
-#endif /* FTT_2D */
 
 /* GfsEventSum: Object */
 
