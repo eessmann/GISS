@@ -44,7 +44,7 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: ignorehypre=true sh ../poisson.sh dirichlet.gfs
+# Command: sh ../poisson.sh dirichlet.gfs
 # Version: 100707
 # Required files: res-7.ref error.ref order.ref
 # Generated files: residual.eps rate.eps error.eps order.eps
