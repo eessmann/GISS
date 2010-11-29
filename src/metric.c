@@ -318,17 +318,116 @@ static void gfs_map_cubed_class_init (GfsMapClass * klass)
   GTS_OBJECT_CLASS (klass)->write = gfs_map_cubed_write;
 }
 
+/* Returns the number of the face of the cube of */
+/* the point of coordinates X,Y,Z */
+static int face_num (gdouble X, gdouble Y, gdouble Z)
+{
+  if (fabs(X) < Z && fabs(Y) < Z)
+    return 1;
+  else if (fabs(X) > fabs(Y) && X > fabs(Z))
+    return 2;
+  else if (fabs(X) < fabs(Y) && Y > fabs(Z))
+    return 3;
+  else if (-fabs(X) > Z && -fabs(Y) > Z)
+    return 4;
+  else if (fabs(X) > fabs(Y) && -X > fabs(Z))
+    return 5;
+  else
+    return 6;
+}
+
 static void map_cubed_transform (GfsMap * map, const FttVector * src, FttVector * dest)
 {
   GfsSimulation * sim = gfs_object_simulation (map);
-  double lon = src->x*M_PI/180., lat = src->y*M_PI/180.;
-  double X = cos (lat)*sin (lon), Y = sin (lat), Z = sqrt (1. - X*X - Y*Y);
+  double lon = (src->x*M_PI)/180., lat = src->y*M_PI/180.;
+  double X = cos (lat)*sin (lon), Y = sin (lat), Z = cos(lat)*cos(lon);
   double x, y;
-  /* fixme: only works for face 1 */
-  fmap_XYZ2xy (X, Y, Z, &x, &y);
-  dest->x = x/2.*sim->physical_params.L;
-  dest->y = y/2.*sim->physical_params.L;
-  dest->z = src->z;
+
+  /* Maybe not the most elegant but works */
+  switch (face_num(X,Y,Z)) {
+  case 1:
+    fmap_XYZ2xy (X, Y, fabs(Z), &x, &y);
+    dest->x = x/2.*sim->physical_params.L;
+    dest->y = y/2.*sim->physical_params.L;
+    dest->z = src->z;
+    break;
+  case 2:
+    lon = ((src->x-90.)*M_PI)/180.;
+    X = cos (lat)*sin (lon);
+    Z = sqrt (1. - X*X - Y*Y);
+    fmap_XYZ2xy (X, Y, Z, &x, &y);
+    dest->x = (1+x/2.)*sim->physical_params.L;
+    dest->y = y/2.*sim->physical_params.L;
+    dest->z = src->z;
+    break;
+  case 3:
+    if ((45 < fabs(src->x) && fabs(src->x) < 135)) {
+      lon = ((src->x-90)*M_PI)/180.;
+      lat = (src->y)*M_PI/180.;
+      Y = sin (lat);
+      X = cos (lat)*sin (lon);
+      Z = sqrt (1. - X*X - Y*Y);
+      fmap_XYZ2xy (X, Y, Z, &x, &y);
+      dest->x = (1+x/2.)*sim->physical_params.L;
+      if (src->x < 0)
+	dest->y = (1+y/2.)*sim->physical_params.L;
+      else
+	dest->y = (1-y/2.)*sim->physical_params.L;
+      dest->z = src->z;
+    }
+    else {
+      fmap_XYZ2xy (X, Y, fabs(Z), &x, &y);
+      if (src->x > -135 && src->x < 135)
+	dest->x = (1-y/2.)*sim->physical_params.L;
+      else
+	dest->x = (1+y/2.)*sim->physical_params.L;
+      dest->y = (1-x/2.)*sim->physical_params.L;
+      dest->z = src->z;
+    }
+    break;
+  case 4:
+    fmap_XYZ2xy (X, Y, fabs(Z), &x, &y);
+    dest->x = (2-y/2.)*sim->physical_params.L;
+    dest->y = (1-x/2.)*sim->physical_params.L;
+    dest->z = src->z;
+    break;
+  case 5:
+    lon = ((src->x+90.)*M_PI)/180.;
+    X = cos (lat)*sin (lon);
+    Z = sqrt (1. - X*X - Y*Y);
+    fmap_XYZ2xy (X, Y, Z, &x, &y);
+    dest->x = (2-y/2.)*sim->physical_params.L;
+    dest->y = (2+x/2.)*sim->physical_params.L;
+    dest->z = src->z;
+    break;
+  case 6:
+    if ((45 < fabs(src->x) && fabs(src->x) < 135)) {
+      lon = ((src->x-90)*M_PI)/180.;
+      lat = (src->y)*M_PI/180.;
+      Y = sin (lat);
+      X = cos (lat)*sin (lon);
+      Z = sqrt (1. - X*X - Y*Y);
+      fmap_XYZ2xy (X, Y, Z, &x, &y);
+      dest->y = (2-x/2.)*sim->physical_params.L;
+      if (src->x < 0)
+	dest->x = (3+y/2.)*sim->physical_params.L;
+      else
+	dest->x = (3-y/2.)*sim->physical_params.L;
+      dest->z = src->z;
+    }
+    else {
+      fmap_XYZ2xy (X, Y, fabs(Z), &x, &y);
+      if (src->x > -135 && src->x < 135)
+	dest->y = (2-y/2.)*sim->physical_params.L;
+      else
+	dest->y = (2+y/2.)*sim->physical_params.L;
+      dest->x = (3+x/2.)*sim->physical_params.L;
+      dest->z = src->z;
+    }
+    break;
+  default:
+    g_assert_not_reached ();
+  }
 }
 
 static void map_cubed_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
