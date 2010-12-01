@@ -1036,82 +1036,50 @@ GfsEventClass * gfs_droplet_to_particle_class (void)
   return klass;
 }
 
-/* GfsParticulateField: header */
-
-typedef struct _GfsParticulateField                GfsParticulateField;
-
-struct _GfsParticulateField {
-  /*< private >*/
-  GfsVariable parent;
-
-  /*< public >*/
-  GfsParticleList * plist;
-  void * voidfraction_func;
-  gboolean * condition_func;
-};
-
-#define GFS_PARTICULATE_FIELD(obj)            GTS_OBJECT_CAST (obj,\
-                                                   GfsParticulateField,\
-                                                   gfs_particulate_field_class ())
-#define GFS_IS_PARTICULATE_FIELD(obj)         (gts_object_is_from_class (obj,\
-                                                   gfs_particulate_field_class ()))
-
-GfsVariableClass * gfs_particulate_field_class  (void);
-
 /* GfsParticulateField: object */
-typedef struct {
-    GfsDomain * domain;
-    GfsVariable * v;
-    GfsParticle * p;
-    GfsParticulate * part; 
-    FttCell * cellpart;
-} fielddata;
- 
-static void voidfraction_from_particles (FttCell * cell, fielddata * data)
+static void voidfraction_from_particles (FttCell * cell, GfsVariable * v, GfsParticulate * part )
 {
-    GFS_VARIABLE (cell, data->v->i) += data->part->volume/ftt_cell_volume (cell);
+    GFS_VARIABLE (cell, v->i) += part->volume/ftt_cell_volume (cell);
     return;
 }
 
-static gboolean is_inside_kernel (FttCell * cell, fielddata * data)
-{
-    guint l = ftt_cell_level (cell);
-    FttCell * cellpart = gfs_domain_locate (data->domain, data->p->pos, l, NULL);
-    if (cellpart == cell) return TRUE;
-    return FALSE;
-}
+static void gfs_update_variable_from_part ( GfsDomain * domain, GfsParticulateField * pfield, GfsVariable * v) {
+    
+    /* Reset variable*/
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+                              (FttCellTraverseFunc) gfs_cell_reset, v);
+    /*Loop over the list of particles in the selected object*/
+    GfsEventList * l = GFS_EVENT_LIST (pfield->plist);
+    GSList * i = l->list->items;
+    while (i) {
+        GfsParticle * p = GFS_PARTICLE (i->data);
+        FttCell * cellpart = gfs_domain_locate (domain, p->pos, -1, NULL); //NOTE, what does it mean -2?
+        
+        GfsParticulate * part = GFS_PARTICULATE (i->data);
+        pfield->voidfraction_func (cellpart,v,part);
+        while (!FTT_CELL_IS_ROOT(cellpart)) {
+            FttCell * parent = ftt_cell_parent (cellpart);
+            pfield->voidfraction_func (parent,v,part);
+            cellpart=parent;
+        }
+        i = i->next;
+    }
 
+    return;
+}
+ 
 static gboolean particulate_field_event (GfsEvent * event, 
                                            GfsSimulation * sim) 
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_particulate_field_class ())->parent_class)->event)
       (event, sim)) {
 
-    GfsVariable * v = GFS_VARIABLE1 (event);
     GfsDomain * domain = GFS_DOMAIN (sim);
-
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-                              (FttCellTraverseFunc) gfs_cell_reset, v);
-
+    GfsVariable * v = GFS_VARIABLE1 (event);
     GfsParticulateField * pfield = GFS_PARTICULATE_FIELD (event); 
-    GfsEventList * l = GFS_EVENT_LIST (pfield->plist);
-    fielddata data;
-    data.domain = domain;
-    data.v = v;
-    
-    /*Loop over the list of particles in the selected object*/
-    GSList * i = l->list->items;
-    while (i) {
-        data.part = GFS_PARTICULATE (i->data);
-        data.p = GFS_PARTICLE (i->data);
-        FttVector pos = data.p->pos;
-        gfs_simulation_map (sim, &pos); //Is it required?
-        gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL,-1,
-                                        (FttCellTraverseFunc) pfield->voidfraction_func, &data,
-                                        pfield->condition_func, &data);
-        i = i->next;
-    }
-    
+   
+    gfs_update_variable_from_part(domain,pfield,v); 
+   
     return TRUE;
   }
   return FALSE;
@@ -1126,7 +1094,7 @@ static void variable_particulatefield_read (GtsObject ** o, GtsFile * fp)
     if (fp->type != GTS_STRING) {
     gts_file_error (fp, "expecting a string (object name)");
     return;
-  }
+    }
   GfsParticulateField * pfield = GFS_PARTICULATE_FIELD (*o);
   GtsObject * object = gfs_object_from_name (GFS_DOMAIN (gfs_object_simulation (*o)), fp->token->str);
 
@@ -1160,7 +1128,6 @@ static void particulate_field_init (GtsObject *o)
 {
     GfsParticulateField * pfield = GFS_PARTICULATE_FIELD(o);
     pfield->voidfraction_func = &voidfraction_from_particles;
-    pfield->condition_func = &is_inside_kernel;
 
 }
 

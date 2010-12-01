@@ -135,3 +135,25 @@ struct _GfsDropletToParticle{
 						 gfs_droplet_to_particle_class ()))
 
 GfsEventClass * gfs_droplet_to_particle_class  (void);
+
+/* GfsParticulateField: header */
+
+typedef struct _GfsParticulateField                GfsParticulateField;
+
+struct _GfsParticulateField {
+  /*< private >*/
+  GfsVariable parent;
+
+  /*< public >*/
+  GfsParticleList * plist;
+  void (* voidfraction_func) (FttCell *, GfsVariable *, GfsParticulate *);
+};
+ 
+#define GFS_PARTICULATE_FIELD(obj)            GTS_OBJECT_CAST (obj,\
+                                                   GfsParticulateField,\
+                                                   gfs_particulate_field_class ())
+#define GFS_IS_PARTICULATE_FIELD(obj)         (gts_object_is_from_class (obj,\
+                                                   gfs_particulate_field_class ()))
+
+GfsVariableClass * gfs_particulate_field_class  (void);
+
