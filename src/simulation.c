@@ -1210,22 +1210,14 @@ GfsSimulation * gfs_simulation_read (GtsFile * fp)
   while (fp->type == '\n')
      gts_file_next_token (fp);
 
-  while (fp->type == GTS_STRING)
-    while (!strcmp (fp->token->str, "GModule")){  
-    if (!strcmp (fp->token->str, "GModule")) { /* preloaded module */
-      GModule * module = load_module (fp, NULL);
-      if (module == NULL)
-	return NULL;
-      ml = g_slist_prepend (ml, module);
-    }
-    else {
-      gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
+  while (fp->type == GTS_STRING && !strcmp (fp->token->str, "GModule")) { /* preloaded module */
+    GModule * module = load_module (fp, NULL);
+    if (module == NULL)
       return NULL;
-    }
-
-  while (fp->type == '\n')
-     gts_file_next_token (fp);
-    }
+    ml = g_slist_prepend (ml, module);
+    while (fp->type == '\n')
+      gts_file_next_token (fp);
+  }
       
   d = gfs_domain_read (fp);
   if (d != NULL && !GFS_IS_SIMULATION (d)) {
