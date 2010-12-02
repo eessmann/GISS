@@ -543,7 +543,8 @@ static gboolean diffusion_stats_event (GfsEvent * event, GfsSimulation * sim)
 	while (j) {
 	  GtsObject * o = j->data;
       
-	  if (GFS_IS_SOURCE_DIFFUSION (o) && !g_slist_find (l, o)) {
+	  if (GFS_IS_SOURCE_DIFFUSION (o) && GFS_SOURCE_DIFFUSION (o)->D->par.niter > 0 &&
+	      !g_slist_find (l, o)) {
 	    l = g_slist_prepend (l, o);
 	    fprintf (fp, "%s diffusion\n", v->name);
 	    gfs_multilevel_params_stats_write (&GFS_SOURCE_DIFFUSION (o)->D->par, fp);
