@@ -2002,7 +2002,7 @@ static void poisson_run (GfsSimulation * sim)
 
   div = gfs_temporary_variable (domain);
   correct_div (domain, gfs_variable_from_name (domain->variables, "Div"), div, !p->centered);
-  gfs_poisson_coefficients (domain, NULL, TRUE, p->centered);
+  gfs_poisson_coefficients (domain, sim->physical_params.alpha, FALSE, p->centered);
   res1 = gfs_temporary_variable (domain);
   dia = gfs_temporary_variable (domain);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
