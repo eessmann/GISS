@@ -83,7 +83,7 @@ BUILT_SOURCES = \
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
-	-release $(LT_RELEASE) -export-dynamic
+	-release $(LT_RELEASE) -export-dynamic -module
 
 libmap3D_la_SOURCES = map.c
 libmap3D_la_LIBADD = -lproj
