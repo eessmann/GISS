@@ -675,13 +675,8 @@ static void map_lonlat_transform (GfsMap * map, const FttVector * src, FttVector
 static void map_lonlat_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
 {
   double x = src->x*180./(M_PI*GFS_MAP_LONLAT (map)->r);
-  if ( x < -180.)
-    dest->x = x + 360.;
-  else if ( x > 180.)
-    dest->x = x - 360.;
-  else
-    dest->x = x;
 
+  dest->x = x < -180. ? x + 360. : x > 180. ? x - 360. : x;
   dest->y = src->y*180./(M_PI*GFS_MAP_LONLAT (map)->r);
   dest->z = src->z;
 }
@@ -690,6 +685,7 @@ static void map_lonlat_inverse_cell (GfsMap * map, const FttVector * src, FttVec
 {
   gint i;
   FttVector q;
+
   q.x = (src[0].x + src[1].x)/2.;
   q.y = (src[0].y + src[2].y)/2.;
   q.z = 0.;
@@ -697,16 +693,16 @@ static void map_lonlat_inverse_cell (GfsMap * map, const FttVector * src, FttVec
   for (i = 0; i < 4; i++)
     (* map->inverse) (map, &(src[i]), &(dest[i]));
   
-  /* Fix for cells that contains the -180/180 degrees longitude line */
+  /* Fix for cells that contain the -180/180 degrees longitude line */
   if (dest[0].x < dest[1].x)  {
     (* map->inverse) (map, &q, &q);
-    if ( q.x > dest[0].x) {
-      dest[0].x = 2*q.x - dest[1].x;
+    if (q.x > dest[0].x) {
+      dest[0].x = 2.*q.x - dest[1].x;
       dest[3].x = dest[0].x;
     }
     else {
-      dest[1].x = 2*q.x - dest[0].x;
-      dest[2].x =  dest[1].x;
+      dest[1].x = 2.*q.x - dest[0].x;
+      dest[2].x = dest[1].x;
     }
   }
 }
