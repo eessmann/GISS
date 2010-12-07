@@ -146,7 +146,9 @@ struct _GfsParticulateField {
 
   /*< public >*/
   GfsParticleList * plist;
-  void (* voidfraction_func) (FttCell *, GfsVariable *, GfsParticulate *);
+  void (* voidfraction_func) (FttCell *, 
+			      GfsVariable *, 
+			      GfsParticulate *);
 };
  
 #define GFS_PARTICULATE_FIELD(obj)            GTS_OBJECT_CAST (obj,\
@@ -156,4 +158,3 @@ struct _GfsParticulateField {
                                                    gfs_particulate_field_class ()))
 
 GfsVariableClass * gfs_particulate_field_class  (void);
-
