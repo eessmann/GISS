@@ -448,7 +448,7 @@ static void simulation_run (GfsSimulation * sim)
     gfs_approximate_projection (domain,
 				&sim->approx_projection_params,
 				&sim->advection_params,
-				p, sim->physical_params.alpha, res, g, NULL);
+				p, sim->physical_params.alpha, res, g, sim->divergence_hook);
     gfs_simulation_set_timestep (sim);
     gfs_advance_tracers (domain, sim->advection_params.dt/2.);
   }
@@ -478,7 +478,7 @@ static void simulation_run (GfsSimulation * sim)
     gfs_mac_projection (domain,
     			&sim->projection_params, 
     			&sim->advection_params,
-			p, sim->physical_params.alpha, gmac, NULL);
+			p, sim->physical_params.alpha, gmac, sim->divergence_hook);
     gfs_variables_swap (p, pmac);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
@@ -508,7 +508,7 @@ static void simulation_run (GfsSimulation * sim)
     gfs_approximate_projection (domain,
    				&sim->approx_projection_params, 
     				&sim->advection_params, 
-				p, sim->physical_params.alpha, res, g, NULL);
+				p, sim->physical_params.alpha, res, g, sim->divergence_hook);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
