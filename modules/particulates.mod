@@ -534,42 +534,43 @@ static void gfs_particulate_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a number (volume)");
     return;
   }
-  p->volume = atof (fp->token->str);
+  gdouble L = gfs_object_simulation (*o)->physical_params.L;
+  p->volume = atof (fp->token->str)/pow(L, FTT_DIMENSION);
   gts_file_next_token (fp);
 
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
     gts_file_error (fp, "expecting a number (v.x)");
     return;
   }
-  p->vel.x = atof (fp->token->str);
+  p->vel.x = atof (fp->token->str)/L;
   gts_file_next_token (fp);
   
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
     gts_file_error (fp, "expecting a number (v.y)");
     return;
   }
-  p->vel.y = atof (fp->token->str);
+  p->vel.y = atof (fp->token->str)/L;
   gts_file_next_token (fp);
   
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
     gts_file_error (fp, "expecting a number (v.z)");
     return;
   }
-  p->vel.z = atof (fp->token->str);
+  p->vel.z = atof (fp->token->str)/L;
   gts_file_next_token (fp);
 
   if (fp->type == GTS_INT || fp->type == GTS_FLOAT) {
-    p->force.x = atof (fp->token->str);
+    p->force.x = atof (fp->token->str)/L;
     gts_file_next_token (fp);
   }
   
   if (fp->type == GTS_INT || fp->type == GTS_FLOAT) {
-    p->force.y = atof (fp->token->str);
+    p->force.y = atof (fp->token->str)/L;
     gts_file_next_token (fp);
   }
   
   if (fp->type == GTS_INT || fp->type == GTS_FLOAT) {
-    p->force.z = atof (fp->token->str);
+    p->force.z = atof (fp->token->str)/L;
     gts_file_next_token (fp);
   }
 }
@@ -579,8 +580,10 @@ static void gfs_particulate_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_particulate_class ())->parent_class->write) (o, fp);
  
  GfsParticulate * p = GFS_PARTICULATE (o);
-  fprintf (fp, " %g %g %g %g %g", p->mass, p->volume, p->vel.x, p->vel.y, p->vel.z);
-  fprintf (fp, " %g %g %g", p->force.x, p->force.y, p->force.z);
+  gdouble L = gfs_object_simulation (o)->physical_params.L;
+  fprintf (fp, " %g %g %g %g %g", p->mass, p->volume*pow(L, FTT_DIMENSION), 
+               p->vel.x*L, p->vel.y*L, p->vel.z*L);
+  fprintf (fp, " %g %g %g", p->force.x*L, p->force.y*L, p->force.z*L);
 }
 
 static void gfs_particulate_class_init (GfsEventClass * klass)
@@ -1040,7 +1043,7 @@ GfsEventClass * gfs_droplet_to_particle_class (void)
 
 static void voidfraction_from_particles (FttCell * cell, GfsVariable * v, GfsParticulate * part)
 {
-  GFS_VALUE (cell, v) += part->volume/ftt_cell_volume (cell);
+  GFS_VALUE (cell, v) += part->volume/( ftt_cell_volume (cell));
 }
 
 static gboolean particulate_field_event (GfsEvent * event, 

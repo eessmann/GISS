@@ -17,12 +17,19 @@
  * 02111-1307, USA.  
  */
 
+#include "simulation.h"
+#include "source.h"
+#include "adaptive.h"
+#include "output.h"
+#include "solid.h"
+#include "particulates.h"
+#include "ftt.h"
+
 #include <stdlib.h>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv.h>
 
-#include "particulates.h"
 
 /* GfsBubble: Header */
 
@@ -145,6 +152,7 @@ static void gfs_bubble_read (GtsObject ** o, GtsFile * fp)
     return;
   GfsBubble * p = GFS_BUBBLE (*o);
   GfsParticulate * part = GFS_PARTICULATE (*o);
+  gdouble L = gfs_object_simulation (*o)->physical_params.L;
 
   p->R0 = pow (part->volume*3./(4.*M_PI), 1./3.);
 
@@ -152,14 +160,14 @@ static void gfs_bubble_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a number (radial velocity)");
     return;
   }
-  p->velR = atof (fp->token->str);
+  p->velR = atof (fp->token->str)/L;
   gts_file_next_token (fp);
   
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
     gts_file_error (fp, "expecting a number (reference pressure)");
     return;
   }
-  p->p0 = atof (fp->token->str);
+  p->p0 = atof (fp->token->str)*L;
   gts_file_next_token (fp);
 }
 
@@ -167,7 +175,8 @@ static void gfs_bubble_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_bubble_class ())->parent_class->write) (o, fp); 
   GfsBubble * p = GFS_BUBBLE (o);
-  fprintf (fp, " %g %g", p->velR, p->p0);
+  gdouble L = gfs_object_simulation (o)->physical_params.L;
+  fprintf (fp, " %g %g", p->velR*L, p->p0/L);
 }
 
 static void gfs_bubble_class_init (GfsEventClass * klass)
@@ -176,6 +185,7 @@ static void gfs_bubble_class_init (GfsEventClass * klass)
   GTS_OBJECT_CLASS (klass)->read = gfs_bubble_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_bubble_write;
 }
+
 
 static GfsEventClass * gfs_bubble_class (void)
 {

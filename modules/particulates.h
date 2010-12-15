@@ -19,6 +19,7 @@
 
 #include "particle.h"
 #include "source.h"
+#include "ftt.h"
 
 /* GfsParticulate: Header */
 
@@ -151,6 +152,7 @@ struct _GfsParticulateField {
 			      GfsParticulate *);
 };
  
+
 #define GFS_PARTICULATE_FIELD(obj)            GTS_OBJECT_CAST (obj,\
                                                    GfsParticulateField,\
                                                    gfs_particulate_field_class ())
@@ -158,3 +160,4 @@ struct _GfsParticulateField {
                                                    gfs_particulate_field_class ()))
 
 GfsVariableClass * gfs_particulate_field_class  (void);
+
