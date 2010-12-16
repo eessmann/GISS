@@ -121,7 +121,7 @@ static gboolean gfs_output_event (GfsEvent * event, GfsSimulation * sim)
 static void gfs_output_post_event (GfsEvent * event, GfsSimulation * sim)
 {
   GfsOutput * output = GFS_OUTPUT (event);
-  if (!output->dynamic && output->file)
+  if (output->file)
     fflush (output->file->fp);
 }
 
