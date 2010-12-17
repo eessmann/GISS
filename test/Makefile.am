@@ -10,6 +10,7 @@ TESTDIRS = \
 	reynolds \
 	periodic \
 	merging \
+	source \
 	axi \
 	axiadvection \
 	lid \
@@ -35,8 +36,7 @@ TESTDIRS = \
 	planar \
 	bump \
 	cylinder \
-	electro \
-	source
+	electro
 
 EXTRA_DIST = \
 	template.tex \
