@@ -1,0 +1,103 @@
+# Title: Flow created by a cilindrical volume source
+#
+# Description:
+#
+# The flow created by a cilindrical volume source is compared
+# against the analitical solution.
+#
+#$$
+# u_r = { s r \over 2 } \; \; if \; \;  r \le R_c
+#$$
+#$$
+# u_r = { s R_c^2 \over 2 r} \; \; if \; \;  r > R_c
+#$$
+#
+# \begin{figure}[htbp]
+# \caption{\label{Velocity Norm} Velocity field.}
+# \begin{center}
+# \includegraphics[width=\hsize]{velfield.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{Error Norms} Error Norms.}
+# \begin{center}
+# \includegraphics[width=\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{Relative Local Error} Local error at level 13. Color scale [-5e-4:5e-4].}
+# \begin{center}
+# \includegraphics[width=\hsize]{localerror.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: Daniel Fuster
+# Command: sh source.sh source.gfs
+# Version: 1.3.2
+# Required files: source.sh source.gfv error.gfv
+# Generated files: velfield.eps error.eps localerror.eps
+#
+
+
+1 0 GfsSimulation GfsBox GfsGEdge { } { 
+
+    GModule sourcevolume
+        Global {
+            #define R0 (0.05)
+            double sol (double x, double y) {
+            double r = sqrt(x*x+y*y);
+            if ( r < 5.*R0 )     
+                return r >= R0 ? R0*R0*0.5/r : r*0.5;
+            else
+                return 0.;
+            }
+        }
+
+
+    Time { end = 0.05 }
+
+    Refine (LEVEL - 4*pow((x*x+y*y)/0.25,0.25))
+
+    GfsSourceVolume ( sqrt(x*x+y*y) < R0 ? 1 : 0)
+    PhysicalParams { L = 2 }
+
+    GfsOutputTime { istep = 1 } stderr
+
+    Init {} { T = sol(x,y) }
+
+    AdaptGradient { istep = 1 } { maxlevel = LEVEL cmax = 1.e-3 } T
+
+    OutputErrorNorm { start = end } { awk '{ print LEVEL,$5,$7}' > error-LEVEL } { v = ( sqrt(x*x+y*y) < (5.*R0) ? sqrt(U*U+V*V) : 0 ) } {
+            s = sol(x,y)
+            v = E
+            relative = 1
+    }
+    
+    GfsOutputSimulation { start = end } end.gfs
+
+    EventScript { start = end } {
+     # check mass conservation
+      if awk '
+        BEGIN { max = 0.1; }{ 
+          if ($2 > max) max = $2; 
+        }
+        END {
+          if (max - 0.1 != 0.)
+            exit (1);
+        }' < error-LEVEL; then
+      exit 0
+      else
+      exit $GFS_STOP
+      fi
+    }
+
+} 
+GfsBox {
+    left  = GfsBoundaryOutflow
+    right  = GfsBoundaryOutflow
+    top    = GfsBoundaryOutflow
+    bottom = GfsBoundaryOutflow
+}
+

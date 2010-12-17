@@ -35,7 +35,8 @@ TESTDIRS = \
 	planar \
 	bump \
 	cylinder \
-	electro
+	electro \
+	source
 
 EXTRA_DIST = \
 	template.tex \
