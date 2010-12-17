@@ -17,11 +17,6 @@
  * 02111-1307, USA.  
  */
 
-#include "simulation.h"
-#include "source.h"
-#include "adaptive.h"
-#include "output.h"
-#include "solid.h"
 #include "particulates.h"
 #include "ftt.h"
 
@@ -29,7 +24,6 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv.h>
-
 
 /* GfsBubble: Header */
 

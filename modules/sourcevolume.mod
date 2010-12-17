@@ -25,21 +25,17 @@
 
 #include <stdlib.h>
 
-/* GfsSourcevolume: Header */
+/* GfsSourceVolume: Header */
 
 typedef struct _GfsSourceVolume         GfsSourceVolume;
 
 struct _GfsSourceVolume {
   /*< private >*/
-  GfsSourceVelocity parent;
+  GfsSourceGeneric parent;
 
   /*< public >*/
   GfsFunction * intensity;
 };
-
-typedef struct {                                                              
-  GfsVariable * v, * div;                                                      
-} SourceVolumePar;   
 
 #define GFS_SOURCE_VOLUME(obj)            GTS_OBJECT_CAST (obj,\
 					         GfsSourceVolume,\
@@ -58,6 +54,10 @@ static void gfs_source_volume_destroy (GtsObject * o)
   (* GTS_OBJECT_CLASS (gfs_source_volume_class ())->parent_class->destroy) (o) ;
 }
 
+typedef struct {                                                              
+  GfsVariable * v, * div;                                                      
+} SourceVolumePar;   
+
 static void source_divergence_mac (FttCell * cell, SourceVolumePar * p)
 {
   gdouble sum = 0.;                                                            
@@ -71,7 +71,7 @@ static void source_divergence_mac (FttCell * cell, SourceVolumePar * p)
     i = i->next;                                                              
   }                                                                           
 
-  //div*h^2 (units source m^3/s/vol)
+  /* div*h^2 (units source m^3/s/vol) */
   GFS_VALUE (cell, p->div) -= sum*ftt_cell_volume (cell);
 }
 
@@ -86,8 +86,8 @@ static void divergence_source (GfsDomain * domain, GfsAdvectionParams * apar, Gf
 }
 
 static gdouble source_volume_value (GfsSourceGeneric * s,
-                                  FttCell * cell,
-                                  GfsVariable * v)
+				    FttCell * cell,
+				    GfsVariable * v)
 {
   return gfs_function_value (GFS_SOURCE_VOLUME (s)->intensity, cell);
 }
@@ -98,32 +98,29 @@ static void gfs_source_volume_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
   
-  GfsSourceVolume * s = GFS_SOURCE_VOLUME (*o);
-  GfsSimulation * sim = gfs_object_simulation (s);
+  GfsSourceVolume * sv = GFS_SOURCE_VOLUME (*o);
+  GfsSimulation * sim = gfs_object_simulation (sv);
   
-  sim->divergence_hook = divergence_source ;
+  gfs_function_read (sv->intensity, sim, fp);
+  if (fp->type == GTS_ERROR)
+    return;
 
-  gfs_function_read (s->intensity, gfs_object_simulation (*o), fp);
-  if (fp->type != GTS_ERROR) {
-    GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
-    s->mac_value = s->centered_value = source_volume_value;
-    s->face_value = NULL;
-  }
+  GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
+  s->mac_value = s->centered_value = source_volume_value;
+  s->face_value = NULL;
+  sim->divergence_hook = divergence_source;
 
-  GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN(sim)->variables, "P");
+  GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (sim)->variables, "P");
+  g_assert (v);
   if (v->sources == NULL)
     v->sources = gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
-  gts_container_add (v->sources, GTS_CONTAINEE (s));
-  
+  gts_container_add (v->sources, GTS_CONTAINEE (s));  
 }
 
 static void gfs_source_volume_write (GtsObject * o, FILE * fp)
 {
-  if (GTS_OBJECT_CLASS (gfs_source_volume_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_source_volume_class ())->parent_class->write) 
-      (o, fp); 
-  GfsSourceVolume * s = GFS_SOURCE_VOLUME (o);
-  gfs_function_write (s->intensity, fp); 
+  (* GTS_OBJECT_CLASS (gfs_source_volume_class ())->parent_class->write) (o, fp); 
+  gfs_function_write (GFS_SOURCE_VOLUME (o)->intensity, fp); 
 }
 
 static void gfs_source_volume_class_init (GfsSourceGenericClass * klass)
@@ -135,8 +132,7 @@ static void gfs_source_volume_class_init (GfsSourceGenericClass * klass)
 
 static void gfs_source_volume_init ( GfsSourceVolume *s )
 {
-  s->intensity = gfs_function_new (gfs_function_class (), 0.);  
-  gfs_function_set_units (s->intensity, 0.); //check units (s^(-1)) Is it really required? Is it not divergence automatically rescaled?
+  s->intensity = gfs_function_new (gfs_function_class (), 0.);
 }
 
 GfsSourceGenericClass * gfs_source_volume_class (void)

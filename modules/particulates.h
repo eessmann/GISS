@@ -18,8 +18,6 @@
  */
 
 #include "particle.h"
-#include "source.h"
-#include "ftt.h"
 
 /* GfsParticulate: Header */
 
