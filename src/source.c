@@ -334,6 +334,36 @@ static gdouble source_face_value (GfsSourceGeneric * s,
   return gfs_function_face_value (GFS_SOURCE (s)->intensity, face);
 }
 
+typedef struct {                                                              
+  GfsVariable * v, * div;                                                      
+} SourceVolumePar;   
+
+static void cell_volume_source (FttCell * cell, SourceVolumePar * p)
+{
+  gdouble sum = 0.;                                                            
+  GSList * i = GTS_SLIST_CONTAINER (p->v->sources)->items;                    
+                                                                              
+  while (i) {                                                                 
+    GfsSourceGeneric * s = i->data;                                           
+                                                                              
+    if (s->centered_value)                                                    
+      sum += (* s->centered_value) (s, cell, p->v);                           
+    i = i->next;                                                              
+  }                                                                           
+
+  /* div*h^2 (units source m^3/s/vol) */
+  GFS_VALUE (cell, p->div) -= sum*ftt_cell_volume (cell);
+}
+
+static void volume_source (GfsDomain * domain, GfsAdvectionParams * apar, GfsVariable * div) 
+{
+  SourceVolumePar p;
+  p.div = div;
+  p.v = gfs_variable_from_name (domain->variables, "P");
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+                            (FttCellTraverseFunc) cell_volume_source, &p); 
+}
+
 static void source_read (GtsObject ** o, GtsFile * fp)
 {
   if (GTS_OBJECT_CLASS (gfs_source_class ())->parent_class->read)
@@ -343,7 +373,10 @@ static void source_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GFS_SOURCE (*o)->intensity = gfs_function_new (gfs_function_class (), 0.);
-  gfs_function_set_units (GFS_SOURCE (*o)->intensity, GFS_SOURCE_SCALAR (*o)->v->units);
+  if (!strcmp (GFS_SOURCE_SCALAR (*o)->v->name, "P"))
+    gfs_object_simulation (*o)->divergence_hook = volume_source;
+  else
+    gfs_function_set_units (GFS_SOURCE (*o)->intensity, GFS_SOURCE_SCALAR (*o)->v->units);
   gfs_function_read (GFS_SOURCE (*o)->intensity, gfs_object_simulation (*o), fp);
   if (fp->type != GTS_ERROR) {
     GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);

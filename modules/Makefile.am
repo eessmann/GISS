@@ -28,7 +28,6 @@ endif
 if HAS_GSL
 BUBBLES = libbubbles2D.la libbubbles3D.la
 endif
-SOURCEVOLUME = libsourcevolume2D.la libsourcevolume3D.la
 
 pkglib_LTLIBRARIES = \
 	$(MAP) \
@@ -46,8 +45,7 @@ pkglib_LTLIBRARIES = \
 	$(WAVEWATCH) \
 	$(HYPRE) \
 	$(ODE) \
-        $(BUBBLES) \
-	$(SOURCEVOLUME)
+        $(BUBBLES)
 
 bin_PROGRAMS = \
 	xyz2rsurface \
@@ -63,7 +61,6 @@ EXTRA_DIST = \
 	wavewatch.mod \
 	particulates.mod \
 	bubbles.mod \
-	sourcevolume.mod \
 	df3.mod \
 	electrohydro.mod \
 	okada.mod \
@@ -78,7 +75,6 @@ BUILT_SOURCES = \
 	wavewatch.c \
 	particulates.c \
 	bubbles.c \
-	sourcevolume.c \
 	df3.c \
 	electrohydro.c \
 	okada.c \
@@ -164,11 +160,6 @@ libbubbles3D_la_LIBADD = $(GSL_LIBS)
 libbubbles2D_la_SOURCES = bubbles.c
 libbubbles2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
 libbubbles2D_la_LIBADD = $(GSL_LIBS)
-
-libsourcevolume3D_la_SOURCES = sourcevolume.c
-libsourcevolume3D_la_CFLAGS = $(AM_CFLAGS) 
-libsourcevolume2D_la_SOURCES = sourcevolume.c
-libsourcevolume2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
 libhypre3D_la_SOURCES = hypre.c
 libhypre3D_la_CFLAGS = $(AM_CFLAGS)

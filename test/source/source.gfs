@@ -41,7 +41,6 @@
 #
 1 0 GfsSimulation GfsBox GfsGEdge { } {
 
-    GModule sourcevolume
     Global {
         #define R0 (0.05)
         double sol (double x, double y) {
@@ -57,7 +56,7 @@
 
     Variable F
     InitFraction F (R0*R0 - x*x - y*y)
-    SourceVolume F
+    Source P F
     PhysicalParams { L = 2 }
 
     OutputTime { istep = 1 } stderr
