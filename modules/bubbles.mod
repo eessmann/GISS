@@ -201,6 +201,58 @@ static GfsEventClass * gfs_bubble_class (void)
   return klass;
 }
 
+/* GfsBubbles2Field: header */
+typedef struct _GfsBubbles2Field                GfsBubbles2Field;
+
+struct _GfsBubbles2Field {
+  /*< private >*/
+  GfsParticulateField parent;
+
+};
+
+#define GFS_BUBBLES2_FIELD(obj)            GTS_OBJECT_CAST (obj, GfsBubbles2Field, gfs_bubbles2_field_class ())
+#define GFS_IS_BUBBLES2_FIELD(obj)         (gts_object_is_from_class (obj, gfs_bubbles2_field_class ()))
+
+GfsVariableClass * gfs_bubbles2_field_class  (void);
+
+/* GfsBubbles2Field: object */
+
+static void dVpdt_from_particles (FttCell * cell, GfsVariable * v, GfsParticulate * part )
+{
+    GfsBubble * bubble = GFS_BUBBLE(part);
+    gdouble rad=pow(3.0*part->volume/(4.0*M_PI),1./3.);
+    GFS_VARIABLE (cell, v->i) += 3.0*part->volume*bubble->velR/
+                                (ftt_cell_volume (cell)*rad);
+    return;
+}
+
+static void bubbles2_field_init (GtsObject *o)
+{
+  GFS_PARTICULATE_FIELD (o)->voidfraction_func = dVpdt_from_particles;
+}
+
+GfsVariableClass * gfs_bubbles2_field_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_bubbles2_field_info = {
+      "GfsBubbles2Field",
+      sizeof (GfsBubbles2Field),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectInitFunc) bubbles2_field_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS ( gfs_particulate_field_class ()),
+                                  &gfs_bubbles2_field_info);
+  }
+
+  return klass;
+}
+
+ 
 /* Initialize module */
 
 const gchar gfs_module_name[] = "bubbles";
@@ -209,5 +261,6 @@ const gchar * g_module_check_init (void);
 const gchar * g_module_check_init (void)
 { 
   gfs_bubble_class ();
+  gfs_bubbles2_field_class ();
   return NULL; 
 }
