@@ -295,6 +295,38 @@ void gfs_update_gradients (GfsDomain * domain,
   gfs_scale_gradients (domain, FTT_DIMENSION, g);
 }
 
+typedef struct {
+  GfsVariable * v, * div;
+  gdouble L2;
+} SourceVolumePar;   
+
+static void cell_volume_source (FttCell * cell, SourceVolumePar * p)
+{
+  gdouble sum = 0.;
+  GSList * i = GTS_SLIST_CONTAINER (p->v->sources)->items;
+
+  while (i) {
+    GfsSourceGeneric * s = i->data;
+    if (s->centered_value)
+      sum += (* s->centered_value) (s, cell, p->v);
+    i = i->next;
+  }
+
+  /* div*h^2 (units source m^3/s/vol) */
+  GFS_VALUE (cell, p->div) -= sum*p->L2*ftt_cell_volume (cell);
+}
+
+static void volume_sources (GfsDomain * domain, GfsVariable * p, GfsVariable * div) 
+{
+  SourceVolumePar par;
+  par.div = div;
+  par.v = p;
+  par.L2 = GFS_SIMULATION (domain)->physical_params.L;
+  par.L2 *= par.L2;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+                            (FttCellTraverseFunc) cell_volume_source, &par);
+}
+
 static void mac_projection (GfsDomain * domain,
 			    GfsMultilevelParams * par,
 			    GfsAdvectionParams * apar,
@@ -329,6 +361,10 @@ static void mac_projection (GfsDomain * domain,
   /* Divergence hook */
   if (divergence_hook)
     (* divergence_hook) (domain, apar, div);
+
+  /* add volume sources (if any) */
+  if (p->sources)
+    volume_sources (domain, p, div);
 
   /* Scale divergence */
   gpointer data[2];

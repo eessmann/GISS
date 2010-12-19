@@ -81,11 +81,6 @@ struct _GfsSimulation {
   gdouble tnext;
 
   GfsVariable * u0[FTT_DIMENSION];
-
-  void (* divergence_hook) (GfsDomain * domain, 
-                            GfsAdvectionParams * apar, 
-                            GfsVariable * div);
-
 };
 
 struct _GfsSimulationClass {
