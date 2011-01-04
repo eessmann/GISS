@@ -18,9 +18,6 @@
 // standard multithread include //
 //#include <pthread.h>
 
-// netcdf include //
-#include <netcdf.h>
-
 // Gnu Scientific library include //
 //    www.gnu.org/software/gsl/   //
 #include <gsl/gsl_cblas.h>

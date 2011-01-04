@@ -1,3 +1,4 @@
+#include <netcdf.h>
 #include "fes2004_lib.h"
 
 //#define H_THREAD
