@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# Clones an ubuntu 'universe' package in openSUSE's builservice
+
+project=home:popinet
+distro=maverick
+repo=xUbuntu_10.10
+
+package=$1
+if test -z "$package"; then
+    echo "usage: cloneubuntu PACKAGE"
+    exit 1
+fi
+
+url=http://packages.ubuntu.com/$distro/$package
+
+dsc=`wget -O - $url | grep \.dsc | cut -d\" -f2`
+protocol=`echo $dsc | cut -d/ -f 1 | cut -d: -f 1`
+if test $protocol != "http"; then
+    echo "do not know how to handle protocol for $url"
+    exit 1
+fi
+
+host=`echo $dsc | cut -d/ -f 3`
+path=/`echo $dsc | awk 'BEGIN{FS="/"}{ for (i = 4; i < NF; i++) printf ("%s/", $i);}'`
+files=`echo $dsc | awk 'BEGIN{FS="/"}{ print $NF }'`" "
+
+tmp=`mktemp`
+if wget -O $tmp $dsc; then :
+else
+    exit 1
+fi
+
+files="$files "`awk 'BEGIN{files = 0}{
+  if ($1 == "Files:") files = 1; 
+  else if (NF == 0) files = 0;
+  else if (files && NF == 3) print $3;
+}' < $tmp`
+rm -f $tmp
+
+cd $project
+if cat <<EOF | osc meta pkg -F - $project $package-$distro; then :
+<package project="$project" name="$package-$distro">
+  <title>$package-$distro</title>
+  <description>Clone of $url</description>
+  <build>
+    <enable repository="$repo"/>
+  </build>
+  <publish>
+    <disable/>
+  </publish>
+</package>
+EOF
+else
+    exit 1
+fi
+
+if osc update && cd $package-$distro; then :
+else
+    exit 1
+fi
+
+echo "<services>" > _service
+for f in $files; do
+    cat <<EOF >> _service
+  <service name="download_url">
+    <param name="host">$host</param>
+    <param name="protocol">$protocol</param>
+    <param name="path">$path$f</param>
+  </service>
+EOF
+done
+echo "</services>" >> _service
+
+if osc add _service; then :
+else
+    exit 1
+fi
+
+if osc commit -m "initial cloning"; then :
+else
+    exit 1
+fi
