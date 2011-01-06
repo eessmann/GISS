@@ -6,6 +6,7 @@ EXAMPLES = \
 	boussinesq \
 	tangaroa \
 	logo \
+	column \
 	tides \
 	ship \
 	garden \
@@ -17,6 +18,7 @@ EXAMPLES = \
 
 EXTRA_DIST = \
 	template.tex \
+	examples.bib \
 	gfs2tex.py \
 	gfs2tex \
 	depend.py \
@@ -101,8 +103,9 @@ examples: examples.dvi crossref.sh
 	sh ./crossref.sh --url=http://gfs.sourceforge.net/examples/examples $(EXAMPLES)
 	mv references examples
 
-examples.dvi: examples.tex
+examples.dvi: examples.tex examples.bib
 	latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
+	bibtex examples
 	latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode examples.tex
 
