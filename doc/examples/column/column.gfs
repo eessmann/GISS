@@ -97,10 +97,7 @@ Define LEVEL 10
 } {
     PhysicalParams { L = LDOMAIN }
 
-    Time {
-	end = 5.8
-	dtmax = 1e-2
-    }
+    Time { end = 5.8 dtmax = 1e-2 }
 
     # We need to tune the solver
     AdvectionParams { gc = 1 }
