@@ -1946,32 +1946,28 @@ static void rescale_div (FttCell * cell, gpointer * data)
   GfsVariable * divu = data[0];
   GfsVariable * div = data[1];
   GtsRange * vol = data[2];
+  GfsDomain * domain = data[3];
   gdouble size = ftt_cell_size (cell);
 
-  GFS_VALUE (cell, div) = GFS_VALUE (cell, divu)*size*size*(GFS_IS_MIXED (cell) ?
-							    GFS_STATE (cell)->solid->a : 1.);
-  if (GFS_IS_MIXED (cell))
-    gts_range_add_value (vol, size*size*GFS_STATE (cell)->solid->a);
-  else
-    gts_range_add_value (vol, size*size);
+  GFS_VALUE (cell, div) = GFS_VALUE (cell, divu)*size*size*gfs_domain_cell_fraction (domain, cell);
+
+  gts_range_add_value (vol, size*size*gfs_domain_cell_fraction (domain, cell));
 }
 
 static void add_ddiv (FttCell * cell, gpointer * data)
 {
   GfsVariable * div = data[1];
   gdouble * ddiv = data[2];
+  GfsDomain * domain = data[3];
   gdouble size = ftt_cell_size (cell);
 
-  if (GFS_IS_MIXED (cell))
-    GFS_VALUE (cell, div) += size*size*GFS_STATE (cell)->solid->a*(*ddiv);
-  else
-    GFS_VALUE (cell, div) += size*size*(*ddiv);
+  GFS_VALUE (cell, div) += size*size*(*ddiv)*gfs_domain_cell_fraction (domain, cell);
 }
 
 static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * div,
 			 gboolean dirichlet)
 {
-  gpointer data[3];
+  gpointer data[4];
   GtsRange vol;
   gdouble ddiv;
 
@@ -1979,6 +1975,7 @@ static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * d
   data[0] = divu;
   data[1] = div;
   data[2] = &vol;
+  data[3] = domain;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) rescale_div, data);
 

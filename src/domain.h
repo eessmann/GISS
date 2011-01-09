@@ -80,6 +80,7 @@ struct _GfsDomain {
   gdouble (* cell_metric)  (const GfsDomain *, const FttCell *);
   gdouble (* solid_metric) (const GfsDomain *, const FttCell *);
   gdouble (* scale_metric) (const GfsDomain *, const FttCell *, FttComponent);
+  gdouble (* face_scale_metric) (const GfsDomain *, const FttCellFace *);
 
   /* Object hash table for (optional) object IDs */
   GHashTable * objects;
@@ -421,6 +422,39 @@ gdouble gfs_domain_solid_metric (const GfsDomain * domain, const FttCell * cell)
 {
   if (domain->solid_metric)
     return (* domain->solid_metric) (domain, cell);
+  return 1.;
+}
+
+/**
+ * gfs_domain_scale_metric:
+ * @domain; a #GfsDomain.
+ * @cell: a #FttCell.
+ * @c: a FttComponent, the direction of the scale factor.
+ *
+ * Returns: the scale factor of the metric at the center the cell
+ * @cell.
+ */
+static inline
+gdouble gfs_domain_scale_metric (const GfsDomain * domain, const FttCell * cell, const FttComponent c)
+{
+  if (domain->scale_metric)
+    return (* domain->scale_metric) (domain, cell, c);
+  return 1.;
+}
+
+/**
+ * gfs_domain_scale_metric:
+ * @domain; a #GfsDomain.
+ * @face: a #FttCellFace.
+ *
+ * Returns: the scale factor of the metric at the center the face
+ * @face.
+ */
+static inline
+gdouble gfs_domain_face_scale_metric (const GfsDomain * domain, const FttCellFace * face)
+{
+  if (domain->face_scale_metric)
+    return (* domain->face_scale_metric) (domain, face);
   return 1.;
 }
 

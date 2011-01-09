@@ -496,6 +496,13 @@ static gdouble cubed_scale_metric (const GfsDomain * domain, const FttCell * cel
 	  GFS_VALUE (cell, GFS_METRIC_CUBED (domain->metric_data)->h[2*d + 1]))/2.;
 }
 
+static gdouble cubed_face_scale_metric (const GfsDomain * domain, const FttCellFace * face)
+{
+  if (face->d/2 > FTT_Y)
+    return 1.;
+  return GFS_VALUE (face->cell, GFS_METRIC_CUBED (domain->metric_data)->h[face->d]);
+}
+
 static void none (FttCell * parent, GfsVariable * v)
 {
 }
@@ -697,6 +704,7 @@ static void metric_cubed_read (GtsObject ** o, GtsFile * fp)
   domain->cell_metric  = cubed_cell_metric;
   domain->solid_metric = cubed_solid_metric;
   domain->scale_metric = cubed_scale_metric;
+  domain->face_scale_metric = cubed_face_scale_metric;
 }
 
 static void metric_cubed_class_init (GtsObjectClass * klass)
@@ -870,6 +878,15 @@ static gdouble lon_lat_scale_metric (const GfsDomain * domain, const FttCell * c
   return GFS_VALUE (cell, GFS_VARIABLE1 (domain->metric_data));
 }
 
+static gdouble lon_lat_face_scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
+{
+  g_assert_not_implemented ();
+
+  if (c != FTT_X)
+    return 1.;
+  return GFS_VALUE (cell, GFS_VARIABLE1 (domain->metric_data));
+}
+
 static void lonlat_coarse_fine (FttCell * parent, GfsVariable * a)
 {
   if (GFS_CELL_IS_BOUNDARY (parent))
@@ -962,6 +979,7 @@ static void metric_lon_lat_read (GtsObject ** o, GtsFile * fp)
   domain->cell_metric  = lon_lat_cell_metric;
   domain->solid_metric = lon_lat_solid_metric;
   domain->scale_metric = lon_lat_scale_metric;
+  domain->face_scale_metric = lon_lat_face_scale_metric;
 }
 
 static void metric_lon_lat_class_init (GtsObjectClass * klass)
