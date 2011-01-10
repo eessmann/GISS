@@ -75,6 +75,26 @@ struct _GfsMetricLonLat {
 
 GfsVariableClass * gfs_metric_lon_lat_class  (void);
 
+/* GfsMetricStretch: Header */
+
+typedef struct _GfsMetricStretch GfsMetricStretch;
+
+struct _GfsMetricStretch {
+  /*< private >*/
+  GfsVariable parent;
+
+  /*< public >*/
+  gdouble sx, sy, sz;
+};
+
+#define GFS_METRIC_STRETCH(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsMetricStretch,\
+					           gfs_metric_stretch_class ())
+#define GFS_IS_METRIC_STRETCH(obj)         (gts_object_is_from_class (obj,\
+						   gfs_metric_stretch_class ()))
+
+GfsVariableClass * gfs_metric_stretch_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

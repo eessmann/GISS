@@ -1018,3 +1018,240 @@ GfsVariableClass * gfs_metric_lon_lat_class (void)
 
   return klass;
 }
+
+/* GfsMapStretch: Header */
+
+typedef struct _GfsMapStretch         GfsMapStretch;
+
+struct _GfsMapStretch {
+  /*< private >*/
+  GfsMap parent;
+
+  /*< public >*/
+  gdouble sx, sy, sz;
+};
+
+#define GFS_MAP_STRETCH(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsMapStretch,\
+					         gfs_map_stretch_class ())
+#define GFS_IS_MAP_STRETCH(obj)         (gts_object_is_from_class (obj,\
+						 gfs_map_stretch_class ()))
+
+static GfsMapClass * gfs_map_stretch_class      (void);
+
+/* GfsMapStretch: Object */
+
+static void gfs_map_stretch_read (GtsObject ** o, GtsFile * fp)
+{
+  /* this mapping cannot be used independently from GfsMetricStretch */
+}
+
+static void gfs_map_stretch_write (GtsObject * o, FILE * fp)
+{
+  /* this mapping cannot be used independently from GfsMetricStretch */
+}
+
+static void gfs_map_stretch_class_init (GfsMapClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = gfs_map_stretch_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_map_stretch_write;
+}
+
+static void map_stretch_transform (GfsMap * map, const FttVector * src, FttVector * dest)
+{
+  dest->x = src->x/GFS_MAP_STRETCH (map)->sx;
+  dest->y = src->y/GFS_MAP_STRETCH (map)->sy;
+#if !FTT_2D
+  dest->z = src->z/GFS_MAP_STRETCH (map)->sz;
+#endif
+}
+
+static void map_stretch_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
+{
+  dest->x = src->x*GFS_MAP_STRETCH (map)->sx;
+  dest->y = src->y*GFS_MAP_STRETCH (map)->sy;
+#if !FTT_2D
+  dest->z = src->z*GFS_MAP_STRETCH (map)->sz;
+#endif
+}
+
+static void gfs_map_stretch_init (GfsMap * map)
+{
+  map->transform = map_stretch_transform;
+  map->inverse =   map_stretch_inverse;
+
+  GfsMapStretch * stretch = GFS_MAP_STRETCH (map);
+  stretch->sx = 1.;
+  stretch->sy = 1.;
+#if !FTT_2D
+  stretch->sz = 1.;
+#endif
+}
+
+static GfsMapClass * gfs_map_stretch_class (void)
+{
+  static GfsMapClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_map_stretch_info = {
+      "GfsMapStretch",
+      sizeof (GfsMapStretch),
+      sizeof (GfsMapClass),
+      (GtsObjectClassInitFunc) gfs_map_stretch_class_init,
+      (GtsObjectInitFunc) gfs_map_stretch_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_map_class ()), &gfs_map_stretch_info);
+  }
+
+  return klass;
+}
+
+/* GfsMetricStretch: Object */
+
+static void metric_stretch_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_metric_stretch_class ())->parent_class->write) (o, fp);
+
+  fprintf (fp, " { sx = %g sy = %g sz = %g }",
+	   GFS_METRIC_STRETCH (o)->sx, 
+	   GFS_METRIC_STRETCH (o)->sy,
+	   GFS_METRIC_STRETCH (o)->sz);
+}
+
+static gdouble stretch_face_metric (const GfsDomain * domain, const FttCellFace * face)
+{ 
+  GfsMetricStretch * s = GFS_METRIC_STRETCH (domain->metric_data);
+  switch (face->d/2) {
+#if FTT_2D
+  case FTT_X: return s->sy;
+  case FTT_Y: return s->sx;
+#else
+  case FTT_X: return s->sy*s->sz;
+  case FTT_Y: return s->sx*s->sz;
+  case FTT_Z: return s->sx*s->sy;
+#endif
+  default: g_assert_not_reached ();
+  }
+}
+
+static gdouble stretch_cell_metric (const GfsDomain * domain, const FttCell * cell)
+{
+  GfsMetricStretch * s = GFS_METRIC_STRETCH (domain->metric_data);
+#if FTT_2D
+  return s->sx*s->sy;
+#else
+  return s->sx*s->sy*s->sz;
+#endif
+}
+
+static gdouble stretch_solid_metric (const GfsDomain * domain, const FttCell * cell)
+{
+  g_assert_not_implemented ();
+  return 1;
+}
+
+static gdouble stretch_scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
+{
+  GfsMetricStretch * s = GFS_METRIC_STRETCH (domain->metric_data);
+  switch (c) {
+  case FTT_X: return (s->sx);
+  case FTT_Y: return (s->sy);
+#if !FTT_2D
+  case FTT_Z: return (s->sz);
+#endif 
+  default: g_assert_not_reached ();
+  }
+}
+
+static gdouble stretch_face_scale_metric (const GfsDomain * domain, const FttCellFace * face)
+{
+  GfsMetricStretch * s = GFS_METRIC_STRETCH (domain->metric_data);
+  switch (face->d/2) {
+  case FTT_X: return (s->sx);
+  case FTT_Y: return (s->sy);
+#if !FTT_2D
+  case FTT_Z: return (s->sz);
+#endif 
+  default: g_assert_not_reached ();
+  }
+}
+
+static void metric_stretch_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_metric_stretch_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  if (domain->metric_data || domain->face_metric || domain->cell_metric || domain->solid_metric) {
+    gts_file_error (fp, "cannot use multiple metrics (yet)");
+    return;
+  }
+
+  GfsMetricStretch * s = GFS_METRIC_STRETCH (*o);
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_DOUBLE, "sx", TRUE, &s->sx},
+      {GTS_DOUBLE, "sy", TRUE, &s->sy},
+      {GTS_DOUBLE, "sz", TRUE, &s->sz},
+      {GTS_NONE}
+    };
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;
+    if (s->sx <= 0. || s->sy <= 0. || s->sz <= 0.) {
+      gts_file_error (fp, "stretching factors must be strictly positive");
+      return;
+    }
+  }
+
+  GtsObject * map = gts_object_new (GTS_OBJECT_CLASS (gfs_map_stretch_class ()));
+  gfs_object_simulation_set (map, domain);
+  gts_container_add (GTS_CONTAINER (GFS_SIMULATION (domain)->maps), GTS_CONTAINEE (map));
+  GFS_MAP_STRETCH (map)->sx = s->sx;
+  GFS_MAP_STRETCH (map)->sy = s->sy;
+#if !FTT_2D
+  GFS_MAP_STRETCH (map)->sz = s->sz;
+#endif
+
+  domain->metric_data = *o;
+  domain->face_metric  = stretch_face_metric;
+  domain->cell_metric  = stretch_cell_metric;
+  domain->solid_metric = stretch_solid_metric;
+  domain->scale_metric = stretch_scale_metric;
+  domain->face_scale_metric = stretch_face_scale_metric;
+}
+
+static void metric_stretch_class_init (GtsObjectClass * klass)
+{
+  klass->read = metric_stretch_read;
+  klass->write = metric_stretch_write;
+}
+
+static void metric_stretch_init (GfsMetricStretch * m)
+{
+  m->sx = m->sy = m->sz = 1.;
+}
+
+GfsVariableClass * gfs_metric_stretch_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_metric_stretch_info = {
+      "GfsMetricStretch",
+      sizeof (GfsMetricStretch),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) metric_stretch_class_init,
+      (GtsObjectInitFunc) metric_stretch_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_metric_class ()),
+				  &gfs_metric_stretch_info);
+  }
+
+  return klass;
+}

@@ -183,6 +183,7 @@ GtsObjectClass ** gfs_classes (void)
 
     gfs_metric_lon_lat_class (),
     gfs_metric_cubed_class (),
+    gfs_metric_stretch_class (),
 
     gfs_adapt_class (),
       gfs_adapt_vorticity_class (),
