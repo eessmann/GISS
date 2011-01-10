@@ -41,7 +41,9 @@ TESTDIRS = \
 	planar \
 	bump \
 	cylinder \
-	electro
+	electro \
+	harmonic \
+	gaussian
 
 EXTRA_DIST = \
 	template.tex \
