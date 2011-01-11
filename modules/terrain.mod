@@ -34,7 +34,7 @@ static gchar * default_path = ".";
 typedef struct {
   RSurface ** rs;
   guint nrs; 
-  gchar * path, * basename;  
+  gchar * path, * basename, * weight;  
 } RSurfaces;
 
 static void rsurfaces_destroy (RSurfaces * rs)
@@ -55,11 +55,13 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
   if (fp->type == '{') {
     GtsFileVariable var[] = {
       {GTS_STRING, "basename", TRUE},
-      {GTS_STRING, "path",      TRUE},
+      {GTS_STRING, "path",     TRUE},
+      {GTS_STRING, "weight",   TRUE},
       {GTS_NONE}
     };
     var[0].data = &rs->basename;
     var[1].data = &rs->path;
+    var[2].data = &rs->weight;
     gts_file_assign_variables (fp, var);
     if (fp->type == GTS_ERROR)
       return;
@@ -89,6 +91,7 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
 	g_free (path);
 	return;
       }
+      rs->rs[rs->nrs]->weight = 1.;
       rs->nrs++;
     }
     globfree (&pglob);
@@ -96,6 +99,10 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
   else { /* basename is of the form: set1,set2,set3... */
     gchar ** names = g_strsplit (rs->basename, ",", 0);
     gchar ** s = names;
+    gchar ** weights = NULL;
+    if (rs->weight)
+      weights = g_strsplit (rs->weight, ",", 0);
+    gchar ** w = weights;
     while (*s) {
       rs->rs = g_realloc (rs->rs, (rs->nrs + 1)*sizeof (RSurface *));
       if (path) {
@@ -120,6 +127,16 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
 	g_free (path);
 	return;
       }
+      if (weights) {
+	if (!*w)
+	  gts_file_error (fp, "weight missing for some of the terrain databases");
+	else {
+	  rs->rs[rs->nrs]->weight = strtod(*w, NULL );
+	  w++;
+	}
+      }
+      else
+	rs->rs[rs->nrs]->weight = 1.;
       rs->nrs++;
       s++;
     }
@@ -136,6 +153,8 @@ static void rsurfaces_write (RSurfaces * rs, FILE * fp)
       fprintf (fp, "  path = %s\n", rs->path);
     if (rs->basename)
       fprintf (fp, "  basename = %s\n", rs->basename);
+    if (rs->weight)
+      fprintf (fp, "  weight = %s\n", rs->weight);
     fputc ('}', fp);
   }
 }
@@ -484,6 +503,43 @@ static void projection_matrix (Polygon * poly, double m[2][2])
   m[1][1] = (y[0] + y[1] - y[3] - y[2])/4.;
 }
 
+static void add_weighted_r_surface_sum  (RSurfaceSum * s, RSurfaceSum * stmp, double w)
+{
+  s->m01 += w*stmp->m01;
+  s->m02 += w*stmp->m02;
+  s->m03 += w*stmp->m03;
+
+  s->m11 += w*stmp->m11;
+  s->m13 += w*stmp->m13;
+
+  s->m22 += w*stmp->m22;
+  s->m23 += w*stmp->m23;
+  s->m33 += w*stmp->m33;
+
+  s->m44 += w*stmp->m44;
+  s->m55 += w*stmp->m55;
+  s->m66 += w*stmp->m66;
+  s->m77 += w*stmp->m77;
+
+  s->m67 += w*stmp->m67;
+  s->m76 += w*stmp->m76;
+
+  s->H0 += w*stmp->H0;
+  s->H1 += w*stmp->H1;
+  s->H2 += w*stmp->H2;
+  s->H3 += w*stmp->H3;
+  s->H4 += w*stmp->H4;
+  s->H5 += w*stmp->H5;
+  s->H6 += w*stmp->H6;
+
+  if (stmp->Hmax > s->Hmax)
+    s->Hmax = stmp->Hmax;
+  
+  if (stmp->Hmin < s->Hmin)
+    s->Hmin = stmp->Hmin;
+  s->n += w*stmp->n;
+}
+
 static void update_terrain_rms (GfsRefineTerrain * t, Polygon * poly, gboolean relative, RMS * rms)
 {
   rms_init (t, rms, poly, relative);
@@ -493,12 +549,16 @@ static void update_terrain_rms (GfsRefineTerrain * t, Polygon * poly, gboolean r
   RSurfaceRect rect;
   rect[0].l = poly->c.x - poly->h/2.; rect[0].h = poly->c.x + poly->h/2.; 
   rect[1].l = poly->c.y - poly->h/2.; rect[1].h = poly->c.y + poly->h/2.; 
-  for (i = 0; i < poly->rs->nrs; i++)
+  for (i = 0; i < poly->rs->nrs; i++) {
+    RSurfaceSum stmp;
+    r_surface_sum_init (&stmp);
     r_surface_query_region_sum (poly->rs->rs[i],
 				(RSurfaceCheck) polygon_includes,
 				(RSurfaceCheck) polygon_intersects, poly, 
-				rect, &s);
-
+				rect, &stmp);
+    add_weighted_r_surface_sum (&s, &stmp, poly->rs->rs[i]->weight);
+  }
+  
   rms->m[0][0] = s.n;
   if (s.n > 0) {
     RSurfaceSum sp;
@@ -1468,11 +1528,15 @@ static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
       r_surface_sum_init (&s);
       rect[0].l = poly.c.x - poly.h/2.; rect[0].h = poly.c.x + poly.h/2.; 
       rect[1].l = poly.c.y - poly.h/2.; rect[1].h = poly.c.y + poly.h/2.; 
-      for (i = 0; i < poly.rs->nrs; i++)
+      for (i = 0; i < poly.rs->nrs; i++) {
+	RSurfaceSum stmp;
+	r_surface_sum_init (&stmp);
 	r_surface_query_region_sum (poly.rs->rs[i],
 				    (RSurfaceCheck) polygon_includes,
 				    (RSurfaceCheck) polygon_intersects, &poly, 
-				    rect, &s);
+				    rect, &stmp);
+	add_weighted_r_surface_sum (&s, &stmp, poly.rs->rs[i]->weight);
+      }
       GFS_VALUE (child.c[n], t->n) = s.n;
       if (s.n > 0) {
 	GFS_VALUE (child.c[n], v) = s.H0/s.n/sim->physical_params.L;

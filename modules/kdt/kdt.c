@@ -269,7 +269,7 @@ static void sum_add_point (const KdtRect parent, KdtSum * sum, const KdtPoint * 
   p[0] = (a->x - o[0])/h; p[1] = (a->y - o[1])/h; p[2] = a->z;
 #if AVG_TERRAIN
   sum->H0 += p[2];
-  sum->n++;
+  sum->n += 1.;
   if (p[2] < sum->Hmin) sum->Hmin = p[2];
   if (p[2] > sum->Hmax) sum->Hmax = p[2];
 #else
@@ -294,7 +294,7 @@ static void sum_add_point (const KdtRect parent, KdtSum * sum, const KdtPoint * 
   sum->H4 += p[2]*p[2];
   sum->H5 += p[0]*p[0]*p[2];
   sum->H6 += p[1]*p[1]*p[2];
-  sum->n++;
+  sum->n += 1.;
   if (p[2] < sum->Hmin) sum->Hmin = p[2];
   if (p[2] > sum->Hmax) sum->Hmax = p[2];
 #endif

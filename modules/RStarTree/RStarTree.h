@@ -100,7 +100,7 @@ typedef struct {
   double H0, H1, H2, H3, H4;
   double H5, H6;
   float Hmin, Hmax;
-  int n;
+  double n;
   PADDING_32_BITS;
 } typdirinfo;
 

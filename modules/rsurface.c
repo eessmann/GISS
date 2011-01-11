@@ -1,17 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include "RStarTree/RStarTree.h"
-#include "kdt/kdt.h"
 #include "rsurface.h"
 
 /* RSurface */
-
-struct _RSurface {
-  RSTREE t;
-  char * name;
-  Kdt * kdt;
-};
 
 RSurface * r_surface_new (const char * fname, int size, FILE * fp)
 {

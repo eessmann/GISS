@@ -39,7 +39,7 @@ typedef struct { /* needs to be identical to RSurfaceSum in rsurface.h */
 #if AVG_TERRAIN
   double H0;
   float Hmin, Hmax;
-  int n;
+  double n;
 #else
   double m01, m02, m03;
   double m11, m13;
@@ -49,7 +49,7 @@ typedef struct { /* needs to be identical to RSurfaceSum in rsurface.h */
   double H0, H1, H2, H3, H4;
   double H5, H6;
   float Hmin, Hmax;
-  int n;
+  double n;
   PADDING_32_BITS;
 #endif
 } KdtSum;
