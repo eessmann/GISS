@@ -440,7 +440,7 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
   /* Creates stencils on the fly */
   RelaxStencilParams p = { lp, dia, maxlevel };
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
-			    maxlevel, (FttCellTraverseFunc) (rhs->centered ? relax_stencil:
+			    maxlevel, (FttCellTraverseFunc) (v->centered ? relax_stencil:
 							     relax_dirichlet_stencil), &p);
 
   gfs_domain_homogeneous_bc_stencil (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
