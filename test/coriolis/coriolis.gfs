@@ -73,13 +73,15 @@ Define Usol0 (A0*cos(2*Omega*t)+B0*sin(2*Omega*t))
 Define Vsol0 (-A0*sin(Phi)*sin(2*Omega*t) + B0*sin(Phi)*cos(2*Omega*t) + C0)
 Define Wsol0 (A0*cos(Phi)*sin(2*Omega*t) - B0*cos(Phi)*cos(2*Omega*t) + D0)
 
-1 3 GfsSimulation GfsBox GfsGEdge { ly = 2 lz = 4 } {
+1 3 GfsSimulation GfsBox GfsGEdge {} {
   Time { end = 30000  }
 
   Refine 2
   
   # The reference length is set to 60 m
   PhysicalParams { L = 60 }
+
+  GfsMetricStretch Stretch { sy = 0.5 sz = 0.25 }
   
   # Initialisation of the velocity field
   Init {} {
