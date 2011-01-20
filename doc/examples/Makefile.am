@@ -13,6 +13,7 @@ EXAMPLES = \
 	dam \
 	hump \
 	monai \
+	tsunami \
 	cyclone \
 	plateau \
 	atomisation
