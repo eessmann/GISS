@@ -1,7 +1,5 @@
 ## Process this file with automake to produce Makefile.in
 
-# new test cases need to be added to this list in the order in which
-# they appear in template.tex
 TESTDIRS = \
 	poisson \
 	circle \
@@ -52,14 +50,8 @@ EXTRA_DIST = \
 	gfs2tex \
 	Makefile.deps
 
-TESTS = test.sh
-
-test.sh: $(TESTDIRS)
-	@echo "python -u test.py $(TESTDIRS)" > test.sh
-	@chmod +x test.sh
-
 clean-generic:
-	$(RM) *.dvi *.aux *.log *.toc *.out tests.tex *.pyc test.sh *.bbl *.blg Makefile.deps
+	$(RM) *.dvi *.aux *.log *.toc *.out tests.tex *.pyc *.bbl *.blg $(TESTS) Makefile.deps
 
 DOC = tests
 
@@ -97,10 +89,10 @@ tests.tex: template.tex Makefile.deps
 	python gfs2tex $(TESTDIRS)
 	cp -f template.tex tests.tex
 
-Makefile.deps: Makefile depend.py
+Makefile.deps: depend.py
 	python depend.py $(TESTDIRS) > Makefile.deps
 
--include Makefile.deps
+include Makefile.deps
 
 tests.tar.gz: tests $(DOCS)
 	tar czf tests.tar.gz tests $(DOCS)
