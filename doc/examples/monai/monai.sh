@@ -22,7 +22,13 @@ awk 'FNR>1 && NF == 2 { printf ("%s ",$1) }' Benchmark_2_input.txt >> input.cgd
 awk 'FNR>1 && NF == 2 { print $2 }' Benchmark_2_input.txt >> input.cgd
 
 # run the simulation
-if gerris2D -m monai.gfs | gfsview2D 3D.gfv; then :
+if xdpyinfo > /dev/null 2>&1; then 
+    GFSVIEW=gfsview2D
+else 
+    GFSVIEW=gfsview-batch2D
+fi
+
+if gerris2D -m monai.gfs | $GFSVIEW 3D.gfv; then :
 else
     exit 1
 fi
