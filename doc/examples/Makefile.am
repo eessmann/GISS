@@ -12,6 +12,7 @@ EXAMPLES = \
 	garden \
 	dam \
 	hump \
+	monai \
 	cyclone \
 	plateau \
 	atomisation
