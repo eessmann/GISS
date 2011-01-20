@@ -114,7 +114,7 @@
 # Required files: monai.sh 3D.gfv leveque.gfv mesh.gfv overhead.gfv probe.gfv
 # Version: 110107
 # Running time: 50 minutes
-# Generated files: monai.mpg monai.eps fig4-10.eps mesh-10.eps fig4-12.eps mesh-12.eps fig4-14.eps mesh-14.eps fig4-16.eps mesh-16.eps fig4-18.eps mesh-18.eps fig4-20.eps mesh-20.eps p5.eps p7.eps p9.eps overhead.mp4 comparison.eps comparison.mp4
+# Generated files: monai.mpg monai.eps fig4-10.eps mesh-10.eps fig4-12.eps mesh-12.eps fig4-14.eps mesh-14.eps fig4-16.eps mesh-16.eps fig4-18.eps mesh-18.eps fig4-20.eps mesh-20.eps p5.eps p7.eps p9.eps comparison.eps comparison.mp4
 
 # below this depth the flow is considered "dry"
 Define DRY 1e-4

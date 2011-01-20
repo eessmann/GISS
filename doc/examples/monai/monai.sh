@@ -1,14 +1,18 @@
 # get bathymetry data
-wget http://isec.nacse.org/workshop/2004_cornell/data/Benchmark_2_Bathymetry.txt
+if test ! -f Benchmark_2_Bathymetry.txt; then
+    wget http://isec.nacse.org/workshop/2004_cornell/data/Benchmark_2_Bathymetry.txt
+fi
 
 # number of lines in the file (ignoring the first line which is a header)
 np=`awk 'FNR>1 && NF == 3' Benchmark_2_Bathymetry.txt | wc -l`
 
 # triangulate the data points
-(echo "$np 0 0" && awk 'FNR>1 && NF == 3' Benchmark_2_Bathymetry.txt) | delaunay -r -v > bathy.gts
+(echo "$np 0 0" && awk 'FNR>1 && NF == 3 { print $1,$2,-$3 }' Benchmark_2_Bathymetry.txt) | delaunay -r -v > bathy.gts
 
 # get input data
-wget http://isec.nacse.org/workshop/2004_cornell/data/Benchmark_2_input.txt
+if test ! -f Benchmark_2_input.txt; then
+    wget http://isec.nacse.org/workshop/2004_cornell/data/Benchmark_2_input.txt
+fi
 
 # number of lines in the file (ignoring the first line which is a header)
 np=`awk 'FNR>1 && NF == 2' Benchmark_2_input.txt | wc -l`
@@ -49,7 +53,9 @@ echo "Save stdout { width = 1280 height = 960 }" | \
     gfsview-batch2D sim-18.gfs.gz 3D.gfv | convert ppm:- eps2:monai.eps
 
 # get experimental probe data
-wget http://isec.nacse.org/workshop/2004_cornell/data/benchmark2/output_ch5-7-9.xls
+if test ! -f output_ch5-7-9.xls; then
+    wget http://isec.nacse.org/workshop/2004_cornell/data/benchmark2/output_ch5-7-9.xls
+fi
 
 # convert excel crap to plain text (requires catdoc, install with 'sudo apt-get install catdoc')
 xls2csv -c' ' output_ch5-7-9.xls | sed 's/"//g' | awk 'FNR>1' > output_ch5-7-9.txt
@@ -71,7 +77,9 @@ EOF
 # this link is broken
 # wget http://isec.nacse.org/workshop/2004_cornell/data/benchmark2/overhead.avi
 # use this one instead
-wget -O experiment.mpg http://www.amath.washington.edu/~rjl/catalina04/overhead.mpg
+if test ! -f experiment.mpg; then
+    wget -O experiment.mpg http://www.amath.washington.edu/~rjl/catalina04/overhead.mpg
+fi
 
 # extract individual frames and change contrast of experimental movie
 ffmpeg -i experiment.mpg frame-%03d.png
