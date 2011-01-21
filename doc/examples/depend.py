@@ -22,7 +22,7 @@ for start in sys.argv[1:]:
                     dists += "\\\n\t" + example.path + "/" + f
             for f in example.generated:
                 depends += "\\\n\t" + example.path + "/" + f
-                if f[-4:] == ".mpg" or f[-4:] == ".ogv" or f[-4:] == ".png":
+                if f[-4:] == ".mpg" or f[-4:] == ".ogv" or f[-4:] == ".png" or f[-4:] == ".mp4":
                     docs += "\\\n\t" + example.path + "/" + f
 
 print "DOCS = " + docs + dists
