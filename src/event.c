@@ -653,14 +653,18 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) init_vf, vf);
       gfs_restore_fpe_for_function (vf->f);
+      if (vf->v->component == FTT_DIMENSION)
+	gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v);
       i = i->next;
     }
-    /* boundary conditions need to be called in a separate loop so
-       that they are correctly applied for vector quantities */
+    /* boundary conditions for vector quantities need to be called in
+       a separate loop so that they are correctly applied for weird
+       topologies (e.g. cubed sphere) */
     i = GFS_INIT (event)->f;
     while (i) {
       VarFunc * vf = i->data;
-      gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v);
+      if (vf->v->component < FTT_DIMENSION)
+	gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v);
       i = i->next;
     }
     return TRUE;
