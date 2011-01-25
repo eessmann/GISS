@@ -295,6 +295,21 @@ int main (int argc, char * argv[])
     if (fptr != stdin)
       fclose (fptr);
 
+  domain = GFS_DOMAIN (simulation);
+  if (split) {
+    gfs_clock_start (domain->timer);
+    gfs_simulation_refine (simulation);
+    gfs_clock_stop (domain->timer);
+    while (split) {
+      gfs_domain_split (domain, one_box_per_pe);
+      split--;
+    }
+    if (npart == 0) {
+      gfs_simulation_write (simulation, maxlevel, stdout);
+      return 0;
+    }
+  }
+
   if (npart > 0) {
     guint nmin = 1000;
     guint mmax = 10000;
@@ -345,19 +360,6 @@ int main (int argc, char * argv[])
     if (verbose)
       gts_graph_partition_print_stats (partition, stderr);
     gts_graph_partition_destroy (partition);
-    gfs_simulation_write (simulation, maxlevel, stdout);
-    return 0;
-  }
-
-  domain = GFS_DOMAIN (simulation);
-  if (split) {
-    gfs_clock_start (domain->timer);
-    gfs_simulation_refine (simulation);
-    gfs_clock_stop (domain->timer);
-    while (split) {
-      gfs_domain_split (domain, one_box_per_pe);
-      split--;
-    }
     gfs_simulation_write (simulation, maxlevel, stdout);
     return 0;
   }
