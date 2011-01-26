@@ -293,6 +293,12 @@ static gboolean gfs_event_balance_event (GfsEvent * event, GfsSimulation * sim)
 	gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) update_box_pid, pid);
 	g_array_free (pid, TRUE);
 	gfs_domain_reshape (domain, gfs_domain_depth (domain));
+	/* applies BCs again in case a BC on one variable depends on another variable */
+	GSList * i = domain->variables;
+	while (i) {
+	  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
+	  i = i->next;
+	}
       }
 #else /* not HAVE_MPI */
       g_assert_not_reached ();
