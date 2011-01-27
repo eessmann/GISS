@@ -81,6 +81,7 @@ struct _GfsSimulation {
   gdouble tnext;
 
   GfsVariable * u0[FTT_DIMENSION];
+  GHashTable * function_cache;
 };
 
 struct _GfsSimulationClass {

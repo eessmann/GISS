@@ -183,13 +183,22 @@ GtsObjectClass * gfs_global_class (void)
   return klass;
 }
 
-/* GfsFunction: Object */
+/* GfsModule: Header */
+
+typedef struct {
+  GModule * module;
+  gchar * expression;
+  guint refcount;
+  GfsFunctionFunc f;
+} GfsModule;
+
+/* GfsFunction: Header */
 
 struct _GfsFunction {
   GtsObject parent;
   GString * expr;
   gboolean isexpr;
-  GModule * module;
+  GfsModule * module;
   GfsFunctionFunc f;
   gchar * sname;
   GtsSurface * s;
@@ -202,6 +211,66 @@ struct _GfsFunction {
   GtsFile fpd;
   gdouble units;
 };
+
+/* GfsModule: Object */
+
+static GfsModule * gfs_module_new (GtsFile * fp, const gchar * mname,
+				   GHashTable * cache, const gchar * finname)
+{
+  GModule * module;
+  GfsFunctionFunc f;
+  gchar * path = g_module_build_path (GFS_MODULES_DIR, mname);
+  module = g_module_open (path, 0);
+  g_free (path);
+  if (module == NULL)
+    module = g_module_open (mname, 0);
+  if (module == NULL) {
+    gts_file_error (fp, "cannot load module: %s", g_module_error ());
+    return NULL;
+  }
+  if (!g_module_symbol (module, "f", (gpointer) &f)) {
+    gts_file_error (fp, "module `%s' does not export function `f'", mname);
+    g_module_close (module);
+    return NULL;
+  }
+  GfsModule * m = g_malloc (sizeof (GfsModule));
+  m->module = module;
+  m->f = f;
+  m->refcount = 0;
+
+  g_assert (g_file_get_contents (finname, &m->expression, NULL, NULL));
+  g_hash_table_insert (cache, m->expression, m);
+
+  return m;
+}
+
+static void gfs_module_ref (GfsModule * m, GfsFunction * f)
+{
+  if (f->constant) {
+    f->val = (* m->f) (NULL, NULL, NULL);
+    f->f = NULL;
+    if (f->expr) g_string_free (f->expr, TRUE);
+    f->expr = NULL;
+  }
+  else
+    f->f = m->f;
+  f->module = m;
+  m->refcount++;
+}
+
+static void gfs_module_unref (GfsModule * m, GHashTable * cache)
+{
+  m->refcount--;
+  if (m->refcount == 0) {
+    if (!g_module_close (m->module))
+      g_warning ("%s: %s", g_module_name (m->module), g_module_error ());
+    g_assert (g_hash_table_remove (cache, m->expression));
+    g_free (m->expression);
+    g_free (m);
+  }
+}
+
+/* GfsFunction: Object */
 
 static GtsSurface * read_surface (gchar * name, GtsFile * fp)
 {
@@ -305,35 +374,6 @@ static gdouble interpolated_cgd (GfsFunction * f, FttVector * p)
   if (!gfs_cartesian_grid_interpolate (f->g, vector, &val))
     return 0.;
   return val;
-}
-
-static gboolean load_module (GfsFunction * f, GtsFile * fp, gchar * mname)
-{
-  gchar * path;
-  
-  path = g_module_build_path (GFS_MODULES_DIR, mname);
-  f->module = g_module_open (path, 0);
-  g_free (path);
-  if (f->module == NULL)
-    f->module = g_module_open (mname, 0);
-  if (f->module == NULL) {
-    gts_file_error (fp, "cannot load module: %s", g_module_error ());
-    return FALSE;
-  }
-  if (!g_module_symbol (f->module, "f", (gpointer) &f->f)) {
-    gts_file_error (fp, "module `%s' does not export function `f'", mname);
-    g_module_close (f->module);
-    return FALSE;
-  }
-  if (f->constant) {
-    f->val = (* f->f) (NULL, NULL, NULL);
-    f->f = NULL;
-    g_module_close (f->module);
-    f->module = NULL;
-    if (f->expr) g_string_free (f->expr, TRUE);
-    f->expr = NULL;
-  }
-  return TRUE;
 }
 
 /**
@@ -464,6 +504,21 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
   }
 }
 
+static gboolean lookup_function (GfsFunction * f, const gchar * finname)
+{
+  GHashTable * function_cache = gfs_object_simulation (f)->function_cache;
+  gchar * contents;
+  if (!g_file_get_contents (finname, &contents, NULL, NULL))
+    return FALSE;
+  GfsModule * module = g_hash_table_lookup (function_cache, contents);
+  g_free (contents);
+  if (module) {
+    gfs_module_ref (module, f);
+    return TRUE;
+  }
+  return FALSE;
+}
+
 static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
 {
   gchar foutname[] = "/tmp/gfsXXXXXX";
@@ -472,14 +527,6 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
   gint foutd, ferrd, ftmpd;
   gchar * cc;
   gint status;
-  gchar cccommand[] = "gcc `pkg-config "
-#if FTT_2D
-    "gerris2D"
-#else /* 3D */
-    "gerris3D"
-#endif
-    " --cflags --libs` -O -Wall -Wno-unused -Werror "
-    MODULES_FLAGS;
   
   foutd = mkstemp (foutname);
   ferrd = mkstemp (ferrname);
@@ -488,6 +535,16 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
     gts_file_error (fp, "cannot create temporary file");
     return SIGABRT;
   }
+  gchar * cccommand = g_strdup_printf ("gcc `pkg-config "
+#if FTT_2D
+				       "gerris2D"
+#else /* 3D */
+				       "gerris3D"
+#endif
+				       " --cflags --libs` -O -Wall -Wno-unused -Werror "
+				       " -D_GFSLINE_=%d "
+				       MODULES_FLAGS,
+				       fp->line);
   cc = g_strjoin (" ",
 		  cccommand, ftmpname, 
 		  "-o", foutname,
@@ -503,6 +560,7 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
 		  "   } else print $0 > \"/dev/stderr\";"
 		  "}' 2>", ftmpname, "` 2>",
 		  ferrname, NULL);
+  g_free (cccommand);
   status = system (cc);
   g_free (cc);
   close (ftmpd);
@@ -525,8 +583,12 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
     status = SIGABRT;
   }
   else {
-    if (load_module (f, fp, foutname))
+    GfsModule * module = gfs_module_new (fp, foutname, 
+					 gfs_object_simulation (f)->function_cache, finname);
+    if (module) {
+      gfs_module_ref (module, f);
       status = SIGCONT;
+    }
     else
       status = SIGABRT;
   }
@@ -563,7 +625,7 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
     GfsSimulation * sim = gfs_object_simulation (f);
     GfsDomain * domain = GFS_DOMAIN (sim);
     gchar finname[] = "/tmp/gfsXXXXXX";
-    gint find, status;
+    gint find;
     FILE * fin;
     GSList * lv = NULL, * ldv = NULL, * i;
 
@@ -667,7 +729,7 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 	}
       }
     }
-    fprintf (fin, "#line %d \"GfsFunction\"\n", fp->line);
+    fputs ("#line _GFSLINE_ \"GfsFunction\"\n", fin);
 
     if (f->isexpr)
       fprintf (fin, "return %s;\n}\n", f->expr->str);
@@ -682,13 +744,12 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
     fclose (fin);
     close (find);
 
-    status = compile (fp, f, finname);
-    remove (finname);
-    switch (status) {
-    case SIGQUIT: exit (0);
-    case SIGABRT: return;
+    if (!lookup_function (f, finname)) {
+      gint status = compile (fp, f, finname);
+      g_assert (status != SIGQUIT);
     }
-  }  
+    remove (finname);
+  }
 }
 
 #define DEFERRED_COMPILATION ((GfsFunctionFunc) 0x1)
@@ -787,7 +848,7 @@ static void function_write (GtsObject * o, FILE * fp)
   if (f->expr)
     fprintf (fp, " %s", f->expr->str);
   else if (f->module)
-    fprintf (fp, " %s", g_module_name (f->module));
+    fprintf (fp, " %s", g_module_name (f->module->module));
   else if (f->v)
     fprintf (fp, " %s", f->v->name);
   else if (f->s || f->g)
@@ -800,8 +861,8 @@ static void function_destroy (GtsObject * object)
 {
   GfsFunction * f = GFS_FUNCTION (object);
 
-  if (f->module && !g_module_close (f->module))
-    g_warning ("%s: %s", g_module_name (f->module), g_module_error ());
+  if (f->module)
+    gfs_module_unref (f->module, gfs_object_simulation (f)->function_cache);
   if (f->expr) g_string_free (f->expr, TRUE);
   if (f->s) {
     gts_object_destroy (GTS_OBJECT (f->s));

@@ -64,6 +64,8 @@ static void simulation_destroy (GtsObject * object)
   g_slist_foreach (sim->preloaded_modules, (GFunc) module_close, NULL);
   g_slist_free (sim->preloaded_modules);
 
+  g_hash_table_destroy (sim->function_cache);
+
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->destroy) (object);
 }
 
@@ -959,6 +961,8 @@ static void simulation_init (GfsSimulation * object)
   object->deferred_compilation = FALSE;
   
   object->tnext = 0.;
+
+  object->function_cache = g_hash_table_new (g_str_hash, g_str_equal);
 }
 
 GfsSimulationClass * gfs_simulation_class (void)
