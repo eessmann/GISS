@@ -350,16 +350,18 @@ static void river_run (GfsSimulation * sim)
 
   gfs_simulation_set_timestep (sim);
 
+  domain_traverse_all_leaves (domain, (FttCellTraverseFunc) cell_H, r);
+
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
     gdouble tstart = gfs_clock_elapsed (domain->timer);
 
-    /* update H */
-    domain_traverse_all_leaves (domain, (FttCellTraverseFunc) cell_H, r);
-    
     /* events */
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
+    /* update H */
+    domain_traverse_all_leaves (domain, (FttCellTraverseFunc) cell_H, r);
+    
     /* gradients */
     gfs_domain_timer_start (domain, "gradients");
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) cell_gradients, r);
@@ -385,6 +387,9 @@ static void river_run (GfsSimulation * sim)
     gfs_domain_timer_start (domain, "corrector");
     advance (r, sim->advection_params.dt);
     gfs_domain_timer_stop (domain, "corrector");
+
+    /* update H */
+    domain_traverse_all_leaves (domain, (FttCellTraverseFunc) cell_H, r);
 
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
