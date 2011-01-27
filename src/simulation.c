@@ -1120,6 +1120,25 @@ GSList * gfs_simulation_get_solids (GfsSimulation * sim)
   return solids;
 }
 
+static gboolean coarsen_cell (void)
+{
+  return TRUE;
+}
+
+static void refine_leaf_boxes (GfsBox * box, GfsDomain * domain)
+{
+  /* refine then coarsen boxes which are also leaf cells: this is the
+   * simplest way to initialise the values of "automatic" GfsVariables
+   * e.g. VariableTerrain, VariableMetric etc... */
+  if (FTT_CELL_IS_LEAF (box->root)) {
+    ftt_cell_refine_single (box->root, domain->cell_init, domain->cell_init_data);
+    gfs_cell_coarse_init (box->root, domain);
+    ftt_cell_coarsen (box->root, 
+		      (FttCellCoarsenFunc) coarsen_cell, NULL,
+		      (FttCellCleanupFunc) gfs_cell_cleanup, domain);
+  }
+}
+
 /**
  * gfs_simulation_refine:
  * @sim: a #GfsSimulation.
@@ -1149,6 +1168,8 @@ void gfs_simulation_refine (GfsSimulation * sim)
     (* GFS_REFINE_CLASS (GTS_OBJECT (refine)->klass)->refine) (refine, sim);
     i = next;
   }
+
+  gts_container_foreach (GTS_CONTAINER (sim), (GtsFunc) refine_leaf_boxes, sim);
 
   depth = gfs_domain_depth (domain);
   for (l = depth - 2; l >= 0; l--)
