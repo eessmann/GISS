@@ -64,9 +64,15 @@ Source code, doc, faq and demos files for The Gerris Flow Solver (development sn
 
 %prep
 %setup -q -n %{name}
-
-
+ 
 %build
+
+# if we have centos or rhel, set mpi-selector
+%if 0%{?rhel_version} || 0%{?centos_version}
+mpi-selector --set $(mpi-selector --list)
+source /etc/profile.d/mpi-selector.sh
+%endif
+
 RPM_OPT_FLAGS="$RPM_OPT_FLAGS -fPIC -DPIC"
 %if 0%{?suse_version}
 if [ -x ./configure ]; then
@@ -86,19 +92,17 @@ fi
 if [ -x ./configure ]; then
     CFLAGS="$RPM_OPT_FLAGS" \
     CPPFLAGS="-I%{_includedir}/netcdf-3" ./configure \
-	--prefix=%{_prefix} \
-	--libdir=%{_prefix}/%_lib \
-	--mandir=%{_mandir} \
-	--disable-mpi \
-	--disable-static
+    --prefix=%{_prefix} \
+    --libdir=%{_prefix}/%_lib \
+    --mandir=%{_mandir} \
+    --disable-static
 else
     CFLAGS="$RPM_OPT_FLAGS" \
     CPPFLAGS="-I%{_includedir}/netcdf-3" sh autogen.sh \
-	--prefix=%{_prefix} \
-	--libdir=%{_prefix}/%_lib \
-	--mandir=%{_mandir} \
-	--disable-mpi \
-	--disable-static
+    --prefix=%{_prefix} \
+    --libdir=%{_prefix}/%_lib \
+    --mandir=%{_mandir} \
+    --disable-static
 fi
 %endif
 
