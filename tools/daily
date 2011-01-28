@@ -24,6 +24,7 @@ export https_proxy=http://www-proxy.niwa.co.nz:80
 export PATH=$wdir/local/bin:$PATH:/usr/local/bin
 export LD_LIBRARY_PATH=$wdir/local/lib:$LD_LIBRARY_PATH:/usr/local/lib
 export PKG_CONFIG_PATH=$wdir/local/lib/pkgconfig:$PKG_CONFIG_PATH
+export GFS_TERRAIN_PATH=$HOME/terrain:.
 ulimit -c unlimited
 
 # debian build looks for shlibs and symbols file in locally compiled
