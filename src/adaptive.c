@@ -600,6 +600,7 @@ static gboolean gfs_adapt_error_event (GfsEvent * event,
     GfsAdaptError * a = GFS_ADAPT_ERROR (event);
     GfsDomain * domain = GFS_DOMAIN (sim);
 
+    gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1,  GFS_ADAPT_GRADIENT (a)->v);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, a->v);
     a->dv = gfs_temporary_variable (domain);
