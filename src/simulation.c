@@ -64,9 +64,13 @@ static void simulation_destroy (GtsObject * object)
   g_slist_foreach (sim->preloaded_modules, (GFunc) module_close, NULL);
   g_slist_free (sim->preloaded_modules);
 
-  g_hash_table_destroy (sim->function_cache);
+  GHashTable * function_cache = sim->function_cache;
 
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->destroy) (object);
+
+  /* it is now safe to destroy the function cache (all the functions
+     used in GfsBoxes etc.. have been destroyed) */
+  g_hash_table_destroy (function_cache);
 }
 
 static void simulation_write (GtsObject * object, FILE * fp)
