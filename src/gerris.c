@@ -394,6 +394,7 @@ int main (int argc, char * argv[])
       rewind (fptr);
       fp = gts_file_new (fptr);
       simulation = gfs_simulation_read (fp);
+      domain = GFS_DOMAIN (simulation);
       /* cleanup */
       gts_file_destroy (fp);
       fclose (fptr);
