@@ -325,13 +325,21 @@ static void set_ref_pos (GfsBox * box, FttVector * pos)
     box_set_pos (box, pos, FTT_RIGHT);
 }
 
-static void removed_list (GfsBox * box, gpointer * data)
+static void pid_max (GfsBox * box, gint * np)
 {
-  GfsDomain * domain = data[0];
-  GSList ** removed = data[1];
-  guint * np = data[2];
-  if (box->pid != domain->pid)
-    *removed = g_slist_prepend (*removed, box);
+  if (box->pid > *np)
+    *np = box->pid;  
+}
+
+typedef struct {
+  GSList * removed;
+  gint pid;
+} RemovedData;
+
+static void removed_list (GfsBox * box, RemovedData * p)
+{
+  if (box->pid != p->pid)
+    p->removed = g_slist_prepend (p->removed, box);
   else {
     FttDirection d;
     GfsBox * matching;
@@ -339,13 +347,11 @@ static void removed_list (GfsBox * box, gpointer * data)
     for (d = 0; d < FTT_NEIGHBORS; d++)
       if (GFS_IS_BOUNDARY_PERIODIC (box->neighbor[d]) &&
 	  !GFS_IS_BOUNDARY_MPI (box->neighbor[d]) &&
-	  (matching = GFS_BOUNDARY_PERIODIC (box->neighbor[d])->matching)->pid != domain->pid) {
+	  (matching = GFS_BOUNDARY_PERIODIC (box->neighbor[d])->matching)->pid != p->pid) {
 	gts_object_destroy (GTS_OBJECT (box->neighbor[d]));
 	gfs_boundary_mpi_new (gfs_boundary_mpi_class (), box, d, matching->pid, matching->id);
       }
   }
-  if (box->pid > *np)
-    *np = box->pid;
 }
 
 static void mpi_links (GfsBox * box, GfsDomain * domain)
@@ -418,29 +424,35 @@ static void domain_post_read (GfsDomain * domain, GtsFile * fp)
 {
   gts_graph_foreach_edge (GTS_GRAPH (domain), (GtsFunc) gfs_gedge_link_boxes, NULL);
 
-  if (domain->pid >= 0) { /* Multiple PEs */
-    GSList * removed = NULL;
-    guint np = 0;
-    gpointer data[3];
+  domain->np = 0;
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) pid_max, &domain->np);
+#ifdef HAVE_MPI
+  if (domain->pid >= 0) { 
+    /* Multiple PEs, make sure we have the max pid over all the boxes,
+       in case each process loads a different file */
+    int npmax;
+    MPI_Allreduce (&domain->np, &npmax, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+    domain->np = npmax;
+  }
+#endif /* HAVE_MPI */
+  domain->np++; /* number of PEs according to pids */
+
+  if (domain->np > 1 && domain->pid >= 0) { /* Multiple PEs */
+    RemovedData p = { NULL, domain->pid };
     
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) set_ref_pos, &domain->refpos);
-    data[0] = domain;
-    data[1] = &removed;
-    data[2] = &np;
-    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) removed_list, data);
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) removed_list, &p);
 #ifdef HAVE_MPI
     int comm_size;
     MPI_Comm_size (MPI_COMM_WORLD, &comm_size);
-    gint npmax = 0;
-    MPI_Allreduce (&np, &npmax, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-    if (npmax + 1 != comm_size) {
-      g_slist_free (removed);
-      gts_file_error (fp, "it would be valid if one or %d PE were used", npmax + 1);
+    if (domain->np != comm_size) {
+      g_slist_free (p.removed);
+      gts_file_error (fp, "it would be valid if one or %d PE were used", domain->np);
       return;
     }
 #endif /* HAVE_MPI */
-    g_slist_foreach (removed, (GFunc) mpi_links, domain);
-    g_slist_free (removed);
+    g_slist_foreach (p.removed, (GFunc) mpi_links, domain);
+    g_slist_free (p.removed);
   }
   else { /* Single PE */
     /* Create array for fast linking of ids to GfsBox pointers */
@@ -599,6 +611,8 @@ static void domain_init (GfsDomain * domain)
   domain->overlap = TRUE;
 
   domain->objects = g_hash_table_new (g_str_hash, g_str_equal);
+
+  domain->np = 1;
 }
 
 GfsDomainClass * gfs_domain_class (void)

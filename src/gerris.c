@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -296,7 +296,27 @@ int main (int argc, char * argv[])
       fclose (fptr);
 
   domain = GFS_DOMAIN (simulation);
+
+#ifdef HAVE_MPI
+  if (domain->pid >= 0) {
+    int size;
+    MPI_Comm_size (MPI_COMM_WORLD, &size);
+    if (size > 1 && domain->np < size) {
+      if (npart != 0) {
+	gfs_error (0, "gerris: manual partitioning is not a valid option in parallel\n");
+	return 1;
+      }
+      /* automatic bubble partitioning if the simulation is not
+	 partitioned correctly (or at all) */
+      npart = size;
+      bubble = TRUE;
+    }
+  }
+#endif /* HAVE_MPI */
+
   if (split) {
+    int pid = domain->pid;
+    domain->pid = -1; /* force serial */
     gfs_clock_start (domain->timer);
     gfs_simulation_refine (simulation);
     gfs_clock_stop (domain->timer);
@@ -308,9 +328,10 @@ int main (int argc, char * argv[])
       gfs_simulation_write (simulation, maxlevel, stdout);
       return 0;
     }
+    domain->pid = pid;
   }
 
-  if (npart > 0) {
+  if (npart > 1) {
     guint nmin = 1000;
     guint mmax = 10000;
     guint ntry = 10000;
@@ -318,14 +339,14 @@ int main (int argc, char * argv[])
     gfloat imbalance = 0.0;
     GSList * partition, * i;
 
-    if (verbose)
+    if (verbose && domain->pid <= 0)
       gts_graph_print_stats (GTS_GRAPH (simulation), stderr);
     if (gts_container_size (GTS_CONTAINER (simulation)) < np) {
-      fprintf (stderr,
-	       "gerris: the number of boxes in the domain to partition should be >= %d\n"
-	       "Use option '-s' to split the domain first\n"
-	       "Try `gerris --help' for more information.\n",
-	       np);
+      gfs_error (0,
+		 "gerris: the number of boxes in the domain to partition should be >= %d\n"
+		 "Use option '-s' to split the domain first\n"
+		 "Try `gerris --help' for more information.\n",
+		 np);
       return 1;
     }
     if (bubble)
@@ -357,11 +378,32 @@ int main (int argc, char * argv[])
     if (pid != np)
       fprintf (stderr, "gerris: warning: only %d partitions were created\n", pid);
 
-    if (verbose)
+    if (verbose && domain->pid <= 0)
       gts_graph_partition_print_stats (partition, stderr);
     gts_graph_partition_destroy (partition);
-    gfs_simulation_write (simulation, maxlevel, stdout);
-    return 0;
+      
+    if (domain->pid >= 0) { /* we are running a parallel job */
+      /* write partitioned simulation in a temporary file */
+      gchar partname[] = "/tmp/gfspartXXXXXX";
+      gint fd = mkstemp (partname);
+      remove (partname);
+      FILE * fptr = fdopen (fd, "w+");
+      gfs_simulation_write (simulation, maxlevel, fptr);
+      gts_object_destroy (GTS_OBJECT (simulation));
+      /* replace the simulation with its partitioned version */
+      rewind (fptr);
+      fp = gts_file_new (fptr);
+      simulation = gfs_simulation_read (fp);
+      /* cleanup */
+      gts_file_destroy (fp);
+      fclose (fptr);
+      close (fd);
+      g_assert (simulation);
+    }
+    else { /* just a serial job */
+      gfs_simulation_write (simulation, maxlevel, stdout);
+      return 0;
+    }
   }
 
   if (events->len > 0) {
@@ -421,6 +463,8 @@ int main (int argc, char * argv[])
   domain->profile_bc = profile;
 
   gfs_simulation_run (simulation);
+
+  gts_object_destroy (GTS_OBJECT (simulation));
 
   return 0;
 }

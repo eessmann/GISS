@@ -83,6 +83,9 @@ struct _GfsDomain {
 
   /* Object hash table for (optional) object IDs */
   GHashTable * objects;
+
+  /* total number of parallel processes */
+  int np;
 };
 
 struct _GfsDomainClass {
