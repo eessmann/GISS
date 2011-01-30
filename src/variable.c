@@ -1015,6 +1015,7 @@ static void gfs_constant_class_init (GtsObjectClass * klass)
 
 static void gfs_constant_init (GfsEvent * event)
 {
+  event->start = -1;
   event->istep = 1;
 }
 
