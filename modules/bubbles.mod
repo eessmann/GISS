@@ -34,7 +34,7 @@ struct _GfsBubble {
   GfsParticulate parent;
   
   /*< public >*/
-  gdouble velR, p0, R0;
+  gdouble velR, p0, R0, vol_liq;
 };
 
 #define GFS_BUBBLE(obj)            GTS_OBJECT_CAST (obj, GfsBubble, gfs_bubble_class ())
@@ -147,7 +147,8 @@ static void gfs_bubble_read (GtsObject ** o, GtsFile * fp)
   GfsBubble * p = GFS_BUBBLE (*o);
   GfsParticulate * part = GFS_PARTICULATE (*o);
   gdouble L = gfs_object_simulation (*o)->physical_params.L;
-
+    
+  p->vol_liq = 0;
   p->R0 = pow (part->volume*3./(4.*M_PI), 1./3.);
 
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
@@ -201,12 +202,178 @@ static GfsEventClass * gfs_bubble_class (void)
   return klass;
 }
 
+/* GfsBubbleField: header */
+
+typedef struct _GfsBubbleField                GfsBubbleField;
+
+struct _GfsBubbleField {
+  /*< private >*/
+  GfsVariable parent;
+
+  /*< public >*/
+  gdouble rliq;
+  GfsParticleList * plist;
+  void (* voidfraction_func) (FttCell *,  
+                              gpointer); 
+
+};
+ 
+
+#define GFS_BUBBLE_FIELD(obj)            GTS_OBJECT_CAST (obj,\
+                                                   GfsBubbleField,\
+                                                   gfs_bubble_field_class ())
+#define GFS_IS_BUBBLE_FIELD(obj)         (gts_object_is_from_class (obj,\
+                                                   gfs_bubble_field_class ()))
+
+GfsVariableClass * gfs_bubble_field_class  (void);
+
+typedef struct {
+ FttVector * pos;
+ gdouble distance;
+ GfsBubble * bubble;
+ GfsVariable * v;
+} BubbleData;
+
+/* GfsBubbleField: object */
+
+static void voidfraction_from_bubbles (FttCell * cell, gpointer data)
+{
+    BubbleData * p = data;
+    GFS_VALUE (cell, p->v) +=  GFS_PARTICULATE(p->bubble)->volume/p->bubble->vol_liq;
+    return;
+}
+
+static void kernel_volume (FttCell * cell, gpointer data)
+{
+    BubbleData * p = data;
+    p->bubble->vol_liq += ftt_cell_volume (cell);
+    return;
+}
+
+static gboolean cond_bubble (FttCell * cell, gpointer data)
+{
+    BubbleData * p = data;
+    FttVector pos;
+    ftt_cell_pos (cell, &pos);
+    return (ftt_vector_dist (&pos, p->pos) <= p->distance);
+}
+
+static gboolean bubble_field_event (GfsEvent * event, 
+					 GfsSimulation * sim) 
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_bubble_field_class ())->parent_class)->event)
+      (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    GfsVariable * v = GFS_VARIABLE1 (event);
+    GfsBubbleField * pfield = GFS_BUBBLE_FIELD (v);
+
+    /* Reset variable */
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, v);
+    /* Loop over the list of particles in the selected object */
+    GSList * i = GFS_EVENT_LIST (pfield->plist)->list->items;
+    while (i) {
+      GfsBubble * bubble = GFS_BUBBLE (i->data);
+      bubble->vol_liq = 0;
+      BubbleData p = {  &GFS_PARTICLE (i->data)->pos,
+                    pow(GFS_PARTICULATE(i->data)->volume*3./(4.*M_PI), 1./3.)*pfield->rliq,
+                    bubble, v };
+      gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+                                          (FttCellTraverseFunc) kernel_volume, &p,
+                                          cond_bubble, &p);          
+      gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+                                          (FttCellTraverseFunc) pfield->voidfraction_func, &p,
+                                          cond_bubble, &p);          
+      i = i->next;
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void bubble_field_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_bubble_field_class ())->parent_class->read) (o, fp); 
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (object name)");
+    return;
+  }
+  GFS_VARIABLE1(*o)->units=-FTT_DIMENSION;
+  GfsBubbleField * pfield = GFS_BUBBLE_FIELD (*o);
+  GtsObject * object = gfs_object_from_name (GFS_DOMAIN (gfs_object_simulation (*o)), 
+					     fp->token->str);
+  if (object == NULL) {
+    gts_file_error (fp, "unknown object '%s'", fp->token->str);
+    return;
+  }
+  if (!GFS_IS_PARTICLE_LIST (object)) {
+    gts_file_error (fp, "object '%s' is not a GfsParticleList", fp->token->str);
+    return;  
+  }
+  pfield->plist = GFS_PARTICLE_LIST (object);
+  
+  gts_file_next_token (fp);
+
+  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
+    gts_file_error (fp, "expecting a number (nondimensional radius of influence of the bubble)");
+    return;
+  }
+  pfield->rliq = atof (fp->token->str);
+  gts_file_next_token (fp);
+
+}
+
+static void bubble_field_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_bubble_field_class ())->parent_class->write) (o, fp); 
+  fprintf (fp, " %s", GFS_EVENT (GFS_BUBBLE_FIELD (o)->plist)->name);
+  GfsBubbleField * pfield = GFS_BUBBLE_FIELD (o);
+  fprintf (fp, " %g", pfield->rliq);
+}
+static void bubble_field_init (GtsObject *o)
+{
+  GFS_BUBBLE_FIELD (o)->voidfraction_func = voidfraction_from_bubbles;
+}
+
+static void bubble_field_class_init (GtsObjectClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = bubble_field_event;
+  klass->read =  bubble_field_read;
+  klass->write = bubble_field_write;
+}
+
+
+GfsVariableClass * gfs_bubble_field_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_bubble_field_info = {
+      "GfsBubbleField",
+      sizeof (GfsBubbleField),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) bubble_field_class_init,
+      (GtsObjectInitFunc) bubble_field_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()),
+                                  &gfs_bubble_field_info);
+  }
+
+  return klass;
+}
+
+
 /* GfsBubbles2Field: header */
 typedef struct _GfsBubbles2Field                GfsBubbles2Field;
 
 struct _GfsBubbles2Field {
   /*< private >*/
-  GfsParticulateField parent;
+  GfsBubbleField parent;
 
 };
 
@@ -217,12 +384,12 @@ GfsVariableClass * gfs_bubbles2_field_class  (void);
 
 /* GfsBubbles2Field: object */
 
-static void dVpdt_from_particles (FttCell * cell, GfsVariable * v, GfsParticulate * part )
+static void dVpdt_from_particles (FttCell * cell, gpointer data )
 {
-    GfsBubble * bubble = GFS_BUBBLE(part);
-    gdouble rad=pow(3.0*part->volume/(4.0*M_PI),1./3.);
-    GFS_VARIABLE (cell, v->i) += 3.0*part->volume*bubble->velR/
-                                (ftt_cell_volume (cell)*rad);
+    BubbleData * p = data;
+    gdouble rad=pow(3.0*GFS_PARTICULATE(p->bubble)->volume/(4.0*M_PI),1./3.);
+    GFS_VALUE (cell, p->v) += 3.0*GFS_PARTICULATE(p->bubble)->volume*p->bubble->velR/
+                                (p->bubble->vol_liq*rad);
     return;
 }
 
@@ -245,12 +412,13 @@ GfsVariableClass * gfs_bubbles2_field_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS ( gfs_particulate_field_class ()),
+    klass = gts_object_class_new (GTS_OBJECT_CLASS ( gfs_bubble_field_class ()),
                                   &gfs_bubbles2_field_info);
   }
 
   return klass;
 }
+
 
  
 /* Initialize module */
@@ -261,6 +429,7 @@ const gchar * g_module_check_init (void);
 const gchar * g_module_check_init (void)
 { 
   gfs_bubble_class ();
+  gfs_bubble_field_class ();
   gfs_bubbles2_field_class ();
   return NULL; 
 }

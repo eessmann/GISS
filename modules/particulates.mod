@@ -1082,7 +1082,7 @@ static void particulate_field_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (object name)");
     return;
   }
-  GFS_VARIABLE1(*o)->units=-3;
+  GFS_VARIABLE1(*o)->units=-FTT_DIMENSION;
   GfsParticulateField * pfield = GFS_PARTICULATE_FIELD (*o);
   GtsObject * object = gfs_object_from_name (GFS_DOMAIN (gfs_object_simulation (*o)), 
 					     fp->token->str);
