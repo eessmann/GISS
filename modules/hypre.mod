@@ -75,7 +75,7 @@ struct _HypreProblem {
   HYPRE_ParVector par_x;
 };
 
-static HYPRE_PtrToParSolverFcn HYPRE_precond_solver ()
+static HYPRE_PtrToParSolverFcn HYPRE_precond_solver (void)
 {
 
   if (proj_hp.precond_type == HYPRE_AMG_PRECOND)
@@ -88,11 +88,14 @@ static HYPRE_PtrToParSolverFcn HYPRE_precond_solver ()
     return HYPRE_ParCSRPilutSolve;
   else if (proj_hp.precond_type == HYPRE_AMS_PRECOND)
     return HYPRE_AMSSolve;
+  else
+    g_assert_not_reached ();
+  return 0;
 }
 
-static HYPRE_PtrToParSolverFcn HYPRE_precond_setup ()
+static HYPRE_PtrToParSolverFcn HYPRE_precond_setup (void)
 {
-   if (proj_hp.precond_type == HYPRE_AMG_PRECOND)
+  if (proj_hp.precond_type == HYPRE_AMG_PRECOND)
     return HYPRE_BoomerAMGSetup;
   else if (proj_hp.precond_type == HYPRE_PARASAILS_PRECOND)
     return HYPRE_ParaSailsSetup;
@@ -102,6 +105,9 @@ static HYPRE_PtrToParSolverFcn HYPRE_precond_setup ()
     return HYPRE_ParCSRPilutSetup;
   else if (proj_hp.precond_type == HYPRE_AMS_PRECOND)
     return HYPRE_AMSSetup;
+  else
+    g_assert_not_reached ();
+  return 0;
 }
 
 static void ParaSails_precond (HYPRE_Solver * precond)
@@ -739,7 +745,6 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
 {
   HypreProblem hp;
   gdouble tolerance = par->tolerance, res0 = 0.;
-  gdouble size = ftt_level_size (gfs_domain_depth (domain));
   gint i, len = lp->rhs->len;
 
   for (i=0;i< lp->rhs->len;i++)
