@@ -7,6 +7,7 @@ TESTDIRS = \
 	advection \
 	shear \
 	diffusion \
+	conservation \
 	reynolds \
 	periodic \
 	merging \

@@ -866,7 +866,6 @@ static void face_weighted_gradient (const FttCellFace * face,
 	  g->b += w*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
 	}
       if (dimension > 2) {
-	/* fixme??? */
 	g->a /= n/2.;
 	g->b /= n/2.;
       }
@@ -887,6 +886,7 @@ static void face_weighted_gradient (const FttCellFace * face,
  * space and conservative, in the sense that values at a coarse/fine
  * cell boundary are consistent.  
  */
+
 void gfs_face_weighted_gradient (const FttCellFace * face,
 				 GfsGradient * g,
 				 guint v,
@@ -1373,6 +1373,10 @@ static void face_cm_gradient (const FttCellFace * face,
 	  g->a += w*gcf.b;
 	  g->b += w*(gcf.a*GFS_VARIABLE (f.cell, v) - gcf.c);
 	}
+#if !FTT_2D
+      g->a /= n/2.;
+      g->b /= n/2.;
+#endif
     }
   }
 }
