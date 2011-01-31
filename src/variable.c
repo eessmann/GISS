@@ -1078,7 +1078,7 @@ static gboolean gfs_spatial_sum_event (GfsEvent * event, GfsSimulation * sim)
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add, event);
     gfs_restore_fpe_for_function (GFS_SPATIAL_SUM (event)->v);
     gfs_all_reduce (domain, GFS_CONSTANT (event)->val, MPI_DOUBLE, MPI_SUM);
-    GFS_CONSTANT (event)->val *= pow(GFS_SIMULATION (domain)->physical_params.L,FTT_DIMENSION);
+    GFS_CONSTANT (event)->val *= pow (sim->physical_params.L, FTT_DIMENSION);
     return TRUE;
   }
   return FALSE;
