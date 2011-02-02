@@ -1616,8 +1616,7 @@ gdouble gfs_mixed_cell_interpolate (FttCell * cell,
 gdouble gfs_cell_dirichlet_gradient_flux (FttCell * cell,
 					  guint v,
 					  gint max_level,
-					  gdouble v0,
-					  GfsDomain * domain)
+					  gdouble v0)
 {
   g_return_val_if_fail (cell != NULL, 0.);
 
@@ -1628,7 +1627,6 @@ gdouble gfs_cell_dirichlet_gradient_flux (FttCell * cell,
     FttVector g;
     
     gfs_cell_dirichlet_gradient (cell, v, max_level, v0, &g);
-
 
     return (g.x*(s->s[1] - s->s[0]) + g.y*(s->s[3] - s->s[2])
 #if (!FTT_2D)
@@ -1646,12 +1644,7 @@ static void gfs_cell_dirichlet_gradient_stencil (FttCell * cell,
 						 GfsStencil * stencil,
 						 FttVector * weight)
 {
-  g_return_if_fail (cell != NULL);
-  g_return_if_fail (grad != NULL);
-
-  if (!GFS_IS_MIXED (cell))
-    return;
-  else {
+  if (GFS_IS_MIXED (cell)) {
     FttCell * n[N_CELLS];
     gdouble m[N_CELLS - 1][N_CELLS - 1];
     guint i, c;
@@ -1672,15 +1665,14 @@ static void gfs_cell_dirichlet_gradient_stencil (FttCell * cell,
 gdouble gfs_cell_dirichlet_gradient_flux_stencil (FttCell * cell,
 						  gint max_level,
 						  gdouble v0,
-						  GfsDomain * domain,
 						  GfsVariable * id,
 						  GfsStencil * stencil)
 {
   g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (id != NULL, 0.);
+  g_return_val_if_fail (stencil != NULL, 0.);
 
-  if (!GFS_IS_MIXED (cell))
-    return 0.;
-  else {
+  if (GFS_IS_MIXED (cell)) {
     GfsSolidVector * s = GFS_STATE (cell)->solid;
     FttVector g;
     FttVector w;
@@ -1701,6 +1693,7 @@ gdouble gfs_cell_dirichlet_gradient_flux_stencil (FttCell * cell,
 #endif
 	    )*s->v;
   }
+  return 0.;
 }
 
 /**
@@ -3408,6 +3401,8 @@ void gfs_face_cm_weighted_gradient_stencil (const FttCellFace * face,
 {
   g_return_if_fail (face != NULL);
   g_return_if_fail (g != NULL);
+  g_return_if_fail (id != NULL);
+  g_return_if_fail (stencil != NULL);
 
   face_cm_gradient_stencil (face, g, max_level, TRUE, id, stencil);
 }

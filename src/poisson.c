@@ -235,7 +235,6 @@ typedef struct {
   GfsLinearProblem * lp;
   GfsVariable * dia;
   gint maxlevel;
-  GfsDomain * domain;
 } RelaxStencilParams;
 
 static void relax_stencil (FttCell * cell, RelaxStencilParams * p)
@@ -278,32 +277,33 @@ static void relax_dirichlet_stencil (FttCell * cell, RelaxStencilParams * p)
   FttCellNeighbors neighbor;
   FttCellFace f;
   GfsGradient ng;
+  GfsVariable * id = p->lp->id;
 
   GfsStencil * stencil = gfs_stencil_new ();
   
-  gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, p->lp->id), 0.);
+  gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, id), 0.);
 
   g.a = GFS_VALUE (cell, p->dia);
   if (GFS_IS_MIXED (cell) && ((cell)->flags & GFS_FLAG_DIRICHLET) != 0) {
-    g.b = gfs_cell_dirichlet_gradient_flux_stencil (cell, p->maxlevel, 0., p->domain, p->lp->id, stencil);
+    g.b = gfs_cell_dirichlet_gradient_flux_stencil (cell, p->maxlevel, 0., id, stencil);
     /* Dirichlet contribution */
-    g_array_index (p->lp->lhs, gdouble, (gint) GFS_VALUE (cell, p->lp->id)) -= g.b;
+    g_array_index (p->lp->lhs, gdouble, (gint) GFS_VALUE (cell, id)) -= g.b;
   }
 
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
     f.neighbor = neighbor.c[f.d];
-    gfs_face_cm_weighted_gradient_stencil (&f, &ng, p->maxlevel, p->lp->id, stencil);
+    gfs_face_cm_weighted_gradient_stencil (&f, &ng, p->maxlevel, id, stencil);
     g.a += ng.a;
   }
   if (g.a > 0.)
-    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, p->lp->id),  -g.a);
+    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, id),  -g.a);
   else {
     gfs_stencil_destroy (stencil);
     stencil = gfs_stencil_new ();
-    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, p->lp->id), 1.);
-    g_array_index (p->lp->rhs, gdouble, (gint) GFS_VALUE (cell, p->lp->id)) = 0.;
+    gfs_stencil_add_element (stencil, (gint) GFS_VALUE (cell, id), 1.);
+    g_array_index (p->lp->rhs, gdouble, (gint) GFS_VALUE (cell, id)) = 0.;
   }
 
   gfs_linear_problem_add_stencil (p->lp, stencil);
@@ -438,7 +438,7 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
 #endif /* HAVE_MPI */
  
   /* Creates stencils on the fly */
-  RelaxStencilParams p = { lp, dia, maxlevel, domain};
+  RelaxStencilParams p = { lp, dia, maxlevel };
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 			    maxlevel, (FttCellTraverseFunc) (rhs->centered ? relax_stencil:
 							     relax_dirichlet_stencil), &p);
@@ -457,7 +457,6 @@ typedef struct {
   gdouble beta, omega;
   FttComponent component;
   guint axi;
-  GfsDomain * domain;
 } RelaxParams;
 
 /* relax_stencil() needs to be updated whenever this
@@ -524,7 +523,7 @@ static void relax_dirichlet (FttCell * cell, RelaxParams * p)
 
   g.a = GFS_VARIABLE (cell, p->dia);
   if (GFS_IS_MIXED (cell) && ((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-    g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, 0., p->domain);
+    g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, 0.);
   else
     g.b = 0.;
 
@@ -578,7 +577,6 @@ void gfs_relax (GfsDomain * domain,
   p.dia = dia->i;
   p.maxlevel = max_depth;
   p.omega = omega;
-  p.domain = domain;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, 
 			    FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
 			    max_depth,
@@ -643,7 +641,7 @@ static void residual_set_dirichlet (FttCell * cell, RelaxParams * p)
 
   g.a = GFS_VARIABLE (cell, p->dia);
   if (GFS_IS_MIXED (cell) && ((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-    g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, GFS_STATE (cell)->solid->fv, p->domain);
+    g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, GFS_STATE (cell)->solid->fv);
   else
     g.b = 0.;
 
@@ -696,7 +694,6 @@ void gfs_residual (GfsDomain * domain,
   p.dia = dia->i;
   p.res = res->i;
   p.maxlevel = max_depth;
-  p.domain = domain;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth,
 			    (FttCellTraverseFunc) (u->centered ? 
 						   (d == 2 ? residual_set2D : residual_set) :
@@ -1086,7 +1083,6 @@ void gfs_poisson_cycle (GfsDomain * domain,
   q.dia = dia->i;
   q.maxlevel = minlevel;
   q.omega = p->omega;
-  q.domain = domain;
   
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, q.maxlevel,
@@ -1344,7 +1340,7 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
   
   if (GFS_IS_MIXED (cell)) {
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-      f = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, GFS_STATE (cell)->solid->fv, p->domain);
+      f = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, GFS_STATE (cell)->solid->fv);
     else
       f = GFS_STATE (cell)->solid->fv;
   }
@@ -1404,7 +1400,6 @@ void gfs_diffusion_rhs (GfsDomain * domain,
   p.beta = (1. - beta)/beta;
   p.component = GFS_IS_AXI (domain) ? v->component : FTT_DIMENSION;
   p.axi = axi ? axi->i : FALSE;
-  p.domain = domain;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) diffusion_rhs, &p);
 }
@@ -1419,7 +1414,7 @@ static void diffusion_relax (FttCell * cell, RelaxParams * p)
 
   a = GFS_VARIABLE (cell, p->dia);
   if (GFS_IS_MIXED (cell) && ((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-    g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, 0., p->domain) ;
+    g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, 0.) ;
 
   face.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
@@ -1457,7 +1452,7 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
   a = GFS_VARIABLE (cell, p->dia);
   if (GFS_IS_MIXED (cell)) {
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-      g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, GFS_STATE (cell)->solid->fv, p->domain);
+      g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, GFS_STATE (cell)->solid->fv);
     else
       g.b = GFS_STATE (cell)->solid->fv;
   }
@@ -1522,7 +1517,6 @@ void gfs_diffusion_residual (GfsDomain * domain,
   p.res = res->i;
   p.component = GFS_IS_AXI (domain) ? u->component : FTT_DIMENSION;
   p.axi = axi ? axi->i : FALSE;
-  p.domain = domain;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) diffusion_residual, &p);
 }
@@ -1584,7 +1578,6 @@ void gfs_diffusion_cycle (GfsDomain * domain,
   p.dia = rhoc->i;
   p.component = GFS_IS_AXI (domain) ? u->component : FTT_DIMENSION;
   p.axi = axi ? axi->i : FALSE;
-  p.domain = domain;
 
   gfs_domain_cell_traverse (domain, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, levelmin,

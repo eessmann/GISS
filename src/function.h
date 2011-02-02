@@ -142,7 +142,7 @@ static double flux (const gchar * name)
     flux = GFS_STATE (_cell)->solid->fv;
   else {
     GFS_STATE (_cell)->solid->v = 1.;
-    flux = gfs_cell_dirichlet_gradient_flux (_cell, v->i, -1, GFS_STATE (_cell)->solid->fv,GFS_DOMAIN (_sim));
+    flux = gfs_cell_dirichlet_gradient_flux (_cell, v->i, -1, GFS_STATE (_cell)->solid->fv);
   }
   return gfs_dimensional_value (v, flux*pow (_sim->physical_params.L*ftt_cell_size (_cell), 
 					     FTT_DIMENSION - 2.));
