@@ -2378,8 +2378,9 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
  * @cell: a #FttCell.
  * @t: a #GfsVariableTracerVOF.
  *
- * An implementation of the criterion of Cerne et al (2002), to
- * measure how well an interface is represented by a local VOF field.
+ * An implementation of the criterion of Cerne, Petelin, Tiselj
+ * (2002), to measure how well an interface is represented by a local
+ * VOF field.
  *
  * Returns: the "correctness" of the interface representation.
  */

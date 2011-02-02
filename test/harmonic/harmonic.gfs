@@ -134,7 +134,7 @@
   }
 
   EventScript { start = end } {
-      cat <<EOF | gnuplot
+      gnuplot <<EOF
 
       set term pos enhanced eps color solid 20 lw 2
       set out 'harmonic-profile-0-SOLVER.eps'

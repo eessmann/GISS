@@ -1,5 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
+# new test cases need to be added to this list in the order in which
+# they appear in template.tex
 TESTDIRS = \
 	poisson \
 	circle \
@@ -34,12 +36,12 @@ TESTDIRS = \
 	parabola \
 	lonlat \
 	cosine \
+	harmonic \
+	gaussian \
 	planar \
 	bump \
 	cylinder \
-	electro \
-	harmonic \
-	gaussian
+	electro
 
 EXTRA_DIST = \
 	template.tex \

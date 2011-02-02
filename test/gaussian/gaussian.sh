@@ -9,7 +9,6 @@ else
     exit 1
 fi
 
-
 if cat <<EOF | python ; then :
 from check import *
 from sys import *

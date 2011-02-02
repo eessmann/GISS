@@ -60,8 +60,7 @@
   OutputProjectionStats { istep = 1 } stderr
 
   EventScript { start = end } {
-      cat <<EOF | gnuplot
-
+      gnuplot <<EOF
       set term pos enhanced eps color solid 20 lw 3 
       set out 'profile.eps'
 

@@ -1,10 +1,14 @@
 if test x$donotrun != xtrue; then
     rm -f error
 
-    awk 'BEGIN{ for (i=0; i < 100; i++) printf("%6.5f %6.5f %6.5f\n",0., -90+i/99*180,0.)}' > harmonic-profile-0
-    awk 'BEGIN{ for (i=0; i < 100; i++) printf("%6.5f %6.5f %6.5f\n",90., -90+i/99*180,0.)}' > harmonic-profile-90
-    awk 'BEGIN{ for (i=0; i < 100; i++) printf("%6.5f %6.5f %6.5f\n",-90., -90+i/99*180,0.)}' > harmonic-profile--90
-    awk 'BEGIN{ for (i=0; i < 100; i++) printf("%6.5f %6.5f %6.5f\n",180., -90+i/99*180,0.)}' > harmonic-profile-180
+    awk 'BEGIN{ for (i=0; i < 100; i++) 
+                  printf("%6.5f %6.5f %6.5f\n",0., -90+i/99*180,0.)}' > harmonic-profile-0
+    awk 'BEGIN{ for (i=0; i < 100; i++) 
+                  printf("%6.5f %6.5f %6.5f\n",90., -90+i/99*180,0.)}' > harmonic-profile-90
+    awk 'BEGIN{ for (i=0; i < 100; i++) 
+                  printf("%6.5f %6.5f %6.5f\n",-90., -90+i/99*180,0.)}' > harmonic-profile--90
+    awk 'BEGIN{ for (i=0; i < 100; i++) 
+                  printf("%6.5f %6.5f %6.5f\n",180., -90+i/99*180,0.)}' > harmonic-profile-180
 
     for solver in hypre gerris; do
 	rm -f time proj
@@ -55,7 +59,7 @@ else
     exit 1
 fi
 
-if cat <<EOF | gnuplot ; then :
+if gnuplot <<EOF ; then :
     set term postscript eps color lw 3 solid 20
     set output 'residual.eps'
     set xlabel 'CPU time'
