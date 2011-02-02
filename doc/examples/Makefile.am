@@ -9,6 +9,7 @@ EXAMPLES = \
 	column \
 	tides \
 	ship \
+	forcedturbulence \
 	garden \
 	dam \
 	hump \
