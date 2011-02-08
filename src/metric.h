@@ -81,7 +81,7 @@ typedef struct _GfsMetricStretch GfsMetricStretch;
 
 struct _GfsMetricStretch {
   /*< private >*/
-  GfsVariable parent;
+  GfsEvent parent;
 
   /*< public >*/
   gdouble sx, sy, sz;
@@ -93,7 +93,7 @@ struct _GfsMetricStretch {
 #define GFS_IS_METRIC_STRETCH(obj)         (gts_object_is_from_class (obj,\
 						   gfs_metric_stretch_class ()))
 
-GfsVariableClass * gfs_metric_stretch_class  (void);
+GfsEventClass * gfs_metric_stretch_class  (void);
 
 #ifdef __cplusplus
 }

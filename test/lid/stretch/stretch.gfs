@@ -55,7 +55,7 @@
   Refine 6
 
   # The mesh is stretched by a factor 0.5 (compressed) in the y direction.
-  MetricStretch M { sy = 0.5 }
+  MetricStretch { sy = 0.5 }
 
   # Set a viscosity source term on the velocity vector with x-component U
   # The Reynolds number is Re = L*U/Nu = 1*1/1e-3 = 1000

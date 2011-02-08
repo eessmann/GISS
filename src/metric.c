@@ -1220,21 +1220,21 @@ static void metric_stretch_init (GfsMetricStretch * m)
   m->sx = m->sy = m->sz = 1.;
 }
 
-GfsVariableClass * gfs_metric_stretch_class (void)
+GfsEventClass * gfs_metric_stretch_class (void)
 {
-  static GfsVariableClass * klass = NULL;
+  static GfsEventClass * klass = NULL;
 
   if (klass == NULL) {
     GtsObjectClassInfo gfs_metric_stretch_info = {
       "GfsMetricStretch",
       sizeof (GfsMetricStretch),
-      sizeof (GfsVariableClass),
+      sizeof (GfsEventClass),
       (GtsObjectClassInitFunc) metric_stretch_class_init,
       (GtsObjectInitFunc) metric_stretch_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_metric_class ()),
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
 				  &gfs_metric_stretch_info);
   }
 
