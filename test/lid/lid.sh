@@ -5,7 +5,7 @@ if test x$donotrun != xtrue; then
     fi
 fi
 
-if cat <<EOF | python ; then :
+if python <<EOF ; then :
 from check import *
 from sys import *
 if (Curve('xprof',3,7) - Curve('xprof.ghia',1,2)).normi() > 2e-2 or \

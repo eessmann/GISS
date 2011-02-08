@@ -1,18 +1,17 @@
-# Title: Lid-driven cavity at Re=1000 on an anisotropic mesh
+# Title: Lid-driven cavity on an anisotropic mesh
 #
 # Description:
 #
-# This is the same test as the lid driven cavity test of the Navier-Stokes
-# section except that the domain is made of two boxes instead of one. The
-# stretch metric is used to make to transform the rectangular domain into
-# a square one.
+# Same test case except that the domain is made of two boxes instead
+# of one. The stretch metric is used to transform the rectangular
+# domain into a square one.
 #
 # The stationary solution obtained is illustrated on Figure \ref{velocity}.
 #
 # \begin{figure}[htbp]
 # \caption{\label{velocity}Norm of the velocity for the stationary regime.}
 # \begin{center}
-# \includegraphics[width=0.4\hsize]{velocity.eps}
+# \includegraphics[width=0.6\hsize]{velocity.eps}
 # \end{center}
 # \end{figure}
 #
@@ -37,14 +36,17 @@
 # \end{figure}
 #
 # Author: S\'ebastien Delaux
-# Command: sh stretchlid.sh stretchlid.gfs
-# Version: 0.6.4
-# Required files: stretchlid.sh stretchlid.gfs xprof.ghia yprof.ghia
-# Running time: 70 minutes
+# Command: sh ../lid.sh stretch.gfs
+# Version: 100208
+# Required files: xprofile yprofile xprof.ghia yprof.ghia
+# Running time: 10 minutes
 # Generated files: xprof yprof xprof.eps yprof.eps velocity.eps
 #
 # The simulation domain has 1 GfsBox
-2 1 GfsSimulation GfsBox GfsGEdge { } {
+2 1 GfsSimulation GfsBox GfsGEdge {
+  # we need to shift the origin of the reference box to (0,0.5)
+  y = 0.5
+} {
 
   # Stop the simulation at t = 300 if convergence has not been reached before
   Time { end = 300 }
@@ -52,8 +54,8 @@
   # Use an initial refinement of 6 levels (i.e. 2^6=64x64)
   Refine 6
 
-  #The mesh is stretched by a factor 0.5 (compressed) in the y direction.
-  GfsMetricStretch Stretch { sy = 0.5 }
+  # The mesh is stretched by a factor 0.5 (compressed) in the y direction.
+  MetricStretch M { sy = 0.5 }
 
   # Set a viscosity source term on the velocity vector with x-component U
   # The Reynolds number is Re = L*U/Nu = 1*1/1e-3 = 1000
@@ -66,30 +68,51 @@
   #
   # Stores this difference in the DU field (this can be used for
   # monitoring the convergence of the simulation).
-  EventStop { istep = 10 } U 1.e-4 DU
+  EventStop { istep = 10 } U 1e-4 DU
 
   OutputScalarNorm { istep = 10 } du { v = DU }
 
   # Pipes a bitmap PPM image representation of the velocity field at the end of the simulation
   # into the ImageMagick converter "convert" to create the
   # corresponding EPS file
-  OutputPPM { start = end } { convert -colors 256 ppm:- velocity.eps } {
+  OutputPPM { start = end } { convert -colors 256 ppm:- -resize 128x128! velocity.eps } {
     v = Velocity
   }
 
   # At the end of the simulation, computes the values of the variables
   # at the locations defined in files xprofile, yprofile and stores the
-  OutputLocation { start = end } {awk '{if (NR > 1) {print $3+0.25" "$7}}' > xprof} xprofile
-  OutputLocation { start = end } {awk '{if (NR > 1) {print $2" "$8}}' > yprof} yprofile
+  # results in files xprof, yprof
+  OutputLocation { start = end } xprof xprofile
+  OutputLocation { start = end } yprof yprofile
 
+  OutputSimulation { start = end } end.gfs
+
+  # At the end of the simulation calls the script generating the EPS
+  # files using gnuplot and files: xprof, yprof, xprof.ghia, yprof.ghia
+  EventScript { start = end } {
+    gnuplot <<EOF
+    set term postscript eps lw 3 solid 20
+    set output 'xprof.eps'
+    set xlabel 'Y'
+    set ylabel 'U'
+    plot [-0.5:0.5]'xprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'xprof' u 3:7 w l title "Gerris"
+    set output 'yprof.eps'
+    set xlabel 'X'
+    set ylabel 'V'
+    plot [-0.5:0.5]'yprof.ghia' u 1:2 title "Ghia et al." w p ps 2 pt 9, 'yprof' u 2:8 w l title "Gerris"
+EOF
+  }
 }
 GfsBox {
+
+  # Dirichlet boundary conditions for both components of the velocity on all sides:
+  # - non-slip (U = V = 0) on right, left and bottom boundaries
+  # - tangential velocity equal to 1 (U = 1) on top boundary
 
   top = Boundary {
     BcDirichlet U 1
     BcDirichlet V 0
   }
- 
   right = Boundary {
     BcDirichlet U 0
     BcDirichlet V 0
@@ -100,7 +123,7 @@ GfsBox {
   }
 }
 GfsBox {
-     bottom = Boundary {
+  bottom = Boundary {
     BcDirichlet U 0
     BcDirichlet V 0
   }

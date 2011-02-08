@@ -12,7 +12,7 @@
 # \begin{figure}[htbp]
 # \caption{\label{velocity}Norm of the velocity for the stationary regime.}
 # \begin{center}
-# \includegraphics[width=0.8\hsize]{velocity.eps}
+# \includegraphics[width=0.6\hsize]{velocity.eps}
 # \end{center}
 # \end{figure}
 #
@@ -40,7 +40,7 @@
 # Command: sh lid.sh lid.gfs
 # Version: 0.6.4
 # Required files: lid.sh xprofile yprofile xprof.ghia yprof.ghia
-# Running time: 70 minutes
+# Running time: 6 minutes
 # Generated files: xprof yprof xprof.eps yprof.eps velocity.eps
 #
 # The simulation domain has 1 GfsBox
@@ -80,10 +80,12 @@
   OutputLocation { start = end } xprof xprofile
   OutputLocation { start = end } yprof yprofile
 
+  OutputSimulation { start = end } end.gfs
+
   # At the end of the simulation calls the script generating the EPS
   # files using gnuplot and files: xprof, yprof, xprof.ghia, yprof.ghia
   EventScript { start = end } {
-    cat <<EOF | gnuplot
+    gnuplot <<EOF
     set term postscript eps lw 3 solid 20
     set output 'xprof.eps'
     set xlabel 'Y'
