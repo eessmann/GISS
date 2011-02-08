@@ -432,7 +432,7 @@ static void dirinfo_add_data (typrect parent, typdirinfo * info, typrect rect, r
   info->H4 += p[2]*p[2];
   info->H5 += p[0]*p[0]*p[2];
   info->H6 += p[1]*p[1]*p[2];
-  info->n += 1.;
+  info->n++;
   if (p[2] < info->Hmin) info->Hmin = p[2];
   if (p[2] > info->Hmax) info->Hmax = p[2];
 }
