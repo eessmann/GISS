@@ -1,16 +1,6 @@
 if test x$donotrun != xtrue; then
     rm -f error
-
-    awk 'BEGIN{ for (i=0; i < 100; i++) 
-                  printf("%6.5f %6.5f %6.5f\n",0., -90+i/99*180,0.)}' > harmonic-profile-0
-    awk 'BEGIN{ for (i=0; i < 100; i++) 
-                  printf("%6.5f %6.5f %6.5f\n",90., -90+i/99*180,0.)}' > harmonic-profile-90
-    awk 'BEGIN{ for (i=0; i < 100; i++) 
-                  printf("%6.5f %6.5f %6.5f\n",-90., -90+i/99*180,0.)}' > harmonic-profile--90
-    awk 'BEGIN{ for (i=0; i < 100; i++) 
-                  printf("%6.5f %6.5f %6.5f\n",180., -90+i/99*180,0.)}' > harmonic-profile-180
-
-    for solver in hypre gerris; do
+    for solver in gerris; do
 	rm -f time proj
 
 	if test x$solver = xhypre; then
@@ -54,7 +44,7 @@ if test x$donotrun != xtrue; then
     done
 fi
 
-if echo "Save gerris.eps { format = EPS }" | gfsview-batch2D end-gerris.gfs gerris.gfv; then :
+if echo "Save gerris.eps { format = EPS }" | gfsview-batch2D end-gerris-8.gfs gerris.gfv; then :
 else
     exit 1
 fi
@@ -66,29 +56,24 @@ if gnuplot <<EOF ; then :
     set ylabel 'Maximum residual'
     set logscale y
     plot 'res-7.ref' u 2:3 t 'Ref' w lp, \
-	'res-7-gerris' u 2:3 t 'Gerris' w lp, \
-	'res-7-hypre' u 2:3 t 'Hypre' w lp
+	'res-7-gerris' u 2:3 t 'Gerris' w lp
     set output 'rate.eps'
     set xlabel 'V-cycle'
     set ylabel 'Cumulative residual reduction factor'
     unset logscale
     plot 'res-7.ref' u 1:4 t 'Ref' w lp, \
-	'res-7-gerris' u 1:4 t 'Gerris' w lp, \
-	'res-7-hypre' u 1:4 t 'Hypre' w lp
+	'res-7-gerris' u 1:4 t 'Gerris' w lp
     set output 'error.eps'
     set xlabel 'Level'
     set ylabel 'Error norms'
     set key
     set logscale y
-    plot 'error.ref' u 1:2 t '1 (ref)' w lp, \
+    plot [][:1]'error.ref' u 1:2 t '1 (ref)' w lp, \
          'error.ref' u 1:3 t '2 (ref)' w lp, \
          'error.ref' u 1:4 t 'max (ref)' w lp, \
          'error-gerris' u 1:2 t '1 Gerris' w lp, \
          'error-gerris' u 1:3 t '2 Gerris' w lp, \
-         'error-gerris' u 1:4 t 'max Gerris' w lp, \
-         'error-hypre' u 1:2 t '1 Hypre' w lp, \
-         'error-hypre' u 1:3 t '2 Hypre' w lp, \
-         'error-hypre' u 1:4 t 'max Hypre' w lp
+         'error-gerris' u 1:4 t 'max Gerris' w lp
     set output 'order.eps'
     set xlabel 'Level'
     set ylabel 'Order'
@@ -102,29 +87,23 @@ if gnuplot <<EOF ; then :
                  'order.ref' u 1:4 t 'max (ref)' w lp, \
                  'order-gerris' u 1:2 t '1 Gerris' w lp, \
                  'order-gerris' u 1:3 t '2 Gerris' w lp, \
-                 'order-gerris' u 1:4 t 'max Gerris' w lp, \
-                 'order-hypre' u 1:2 t '1 Hypre' w lp, \
-                 'order-hypre' u 1:3 t '2 Hypre' w lp, \
-                 'order-hypre' u 1:4 t 'max Hypre' w lp
+                 'order-gerris' u 1:4 t 'max Gerris' w lp
 EOF
 else
     exit 1
 fi
 
-rm -f  harmonic-profile-0 harmonic-profile-90 harmonic-profile--90 harmonic-profile-180
-
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-if (Curve('harmonic-profile-90.dat',3,5) - Curve('harmonic-profile-90.dat',3,15)).max() > 2.7e-3 or\
-   (Curve('harmonic-profile--90.dat',3,5) - Curve('harmonic-profile--90.dat',3,15)).max() > 2.7e-3 or\
-   (Curve('harmonic-profile-180.dat',3,5) - Curve('harmonic-profile-180.dat',3,15)).max() > 2.7e-3 or\
-   (Curve('harmonic-profile-0.dat',3,5) - Curve('harmonic-profile-0.dat',3,15)).max() > 2.7e-3:
-   print (Curve('harmonic-profile-90.dat',3,5) - Curve('harmonic-profile-90.dat',3,15)).max()
-   print (Curve('harmonic-profile-0.dat',3,5) - Curve('harmonic-profile-0.dat',3,15)).max()
-   print (Curve('harmonic-profile--90.dat',3,5) - Curve('harmonic-profile--90.dat',3,15)).max()
-   print (Curve('harmonic-profile-180.dat',3,5) - Curve('harmonic-profile-180.dat',3,15)).max()
-   exit(1)
+cgerris = Curve()
+for p in Curve('res-7.ref',2,3).l:
+    cgerris.l.append((p[0] + 0.2, p[1]*2.))
+if (Curve('res-7-gerris',2,3) - cgerris).max() > 1e-8 or\
+   (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max() > 1e-6:
+    print (Curve('res-7-gerris',2,3) - cgerris).max()
+    print (Curve('error-gerris',1,4) - Curve('error.ref',1,4)).max()
+    exit(1)
 EOF
 else
    exit 1

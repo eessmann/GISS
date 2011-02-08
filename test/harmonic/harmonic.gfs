@@ -2,8 +2,8 @@
 #
 # Description:
 #
-# The spherical harmonics are by definition a family of functions which satisfy the
-# Laplace equation on the sphere
+# The spherical harmonics are by definition a family of functions
+# which satisfy the Laplace equation on the sphere
 #
 # $$
 #  \nabla^2 f = \frac{1}{r^2}  \frac{\partial}{\partial r}  \left( r^2 
@@ -13,9 +13,9 @@
 #  f}{\partial \varphi^2} = 0.
 # $$
 #
-# If we look for solutions of the form $f (r, \theta, \varphi) = R (r) Y (\theta,
-# \varphi)$, then two differential equations result. If we consider only the
-# equation for the angles, we get
+# If we look for solutions of the form $f (r, \theta, \varphi) = R (r)
+# Y (\theta, \varphi)$, then two differential equations result. If we
+# consider only the equation for the angles, we get
 #
 # $$
 # \frac{1}{Y}  \frac{1}{\sin \theta}  \frac{\partial}{\partial \theta}  \left(
@@ -23,8 +23,8 @@
 #  \frac{1}{\sin^2 \theta}  \frac{\partial^2 Y}{\partial \varphi^2} = - \lambda
 # $$
 #
-# were $\lambda$ is a constant. This equation has a whole range of solutions
-# noted $Y^m_l (\theta, \varphi)$ so that
+# were $\lambda$ is a constant. This equation has a whole range of
+# solutions noted $Y^m_l (\theta, \varphi)$ so that
 #
 # $$
 #  \nabla Y_l^m (\theta, \varphi) = - l (l + 1) Y_l^m (\theta, \varphi) .
@@ -42,38 +42,54 @@
 # For this test we used $l = 4 $ and $m = 2$.
 #
 # \begin{figure}[htbp]
-#   \caption{\label{harmonic}Solution to the Poisson problem with a pure spherical harmonic
-#   solution. The analytical solution is on the left, the solution predicted by
-#   Gerris is on the right.}
+#   \caption{\label{harmonic}Solution to the Poisson problem with a
+#    pure spherical harmonic solution, as represented on the
+#    "developed cubed sphere".}
 #   \begin{center}
-#   \begin{tabular}{c}
 #     \includegraphics[width=0.7\hsize]{gerris.eps}
-#   \end{tabular}
 #   \end{center}
+# \end{figure}
+#
+# Figure \ref{residual} illustrates the evolution of the maximum
+# residual as a function of CPU time. Figure \ref{rate}
+# illustrates the average residual reduction factor (per V-cycle). The
+# evolution of the norms of the error of the final solution as a
+# function of resolution is illustrated on Figure \ref{error}. The
+# corresponding order of convergence is given on Figure \ref{order}.
+#
+# \begin{figure}[htbp]
+# \caption{\label{residual}Evolution of the residual.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{residual.eps}
+# \end{center}
 # \end{figure}
 #
 # \begin{figure}[htbp]
-#   \caption{Cross-sections of the solution of the Poisson problem for a pure
-#   spherical harmonic solution for 4 different longitudes (-90, 0, 90 and
-#   180).}
-#   \begin{center}
-#   \begin{tabular}{cc}
-#     \includegraphics[width=0.45\hsize]{harmonic-profile--90-gerris.eps} &
-#     \includegraphics[width=0.45\hsize]{harmonic-profile-0.eps}\\
-#     -90 & 0\\
-#     \includegraphics[width=0.45\hsize]{harmonic-profile-90-gerris.eps} &
-#     \includegraphics[width=0.45\hsize]{harmonic-profile-180-gerris.eps}\\
-#     90 & 180
-#   \end{tabular}
-#   \end{center}
+# \caption{\label{rate}Average reduction factor.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{rate.eps}
+# \end{center}
 # \end{figure}
 #
+# \begin{figure}[htbp]
+# \caption{\label{error}Evolution of the error as a function of resolution.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{error.eps}
+# \end{center}
+# \end{figure}
+#
+# \begin{figure}[htbp]
+# \caption{\label{order}Corresponding convergence order.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{order.eps}
+# \end{center}
+# \end{figure}
 #
 # Author: S\'ebastien Delaux
 # Command: sh harmonic.sh harmonic.gfs
-# Version: 100325
-# Required files: harmonic.sh gerris.gfv analytic.gfv
-# Generated files: gerris.eps analytic.eps error.eps harmonic-profile--90-gerris.eps harmonic-profile-0-gerris.eps harmonic-profile-90-gerris.eps harmonic-profile-180-gerris.eps
+# Version: 110208
+# Required files: harmonic.sh gerris.gfv res-7.ref error.ref order.ref
+# Generated files: gerris.eps residual.eps rate.eps error.eps order.eps
 #
 6 12 GfsPoisson GfsBox GfsGEdge {} {
   Time { iend = 1 }
@@ -109,17 +125,11 @@
       }
   }
 
-
   Init { } { 
       Div = -4*(4+1)*spherical_harmonic_re (4, 2, x, y) 
       Sol = spherical_harmonic_re (4, 2, x, y)
   }
 
-  OutputSimulation { start = end} end-SOLVER.gfs
-  OutputLocation { start = end} harmonic-profile-0.dat harmonic-profile-0
-  OutputLocation { start = end} harmonic-profile-90.dat harmonic-profile-90
-  OutputLocation { start = end} harmonic-profile--90.dat harmonic-profile--90
-  OutputLocation { start = end} harmonic-profile-180.dat harmonic-profile-180
   OutputTime { istep = 1 } {
     awk '{if ($2 == 1) print CYCLE, $8;}' >> time
   }
@@ -130,38 +140,10 @@
     awk '{print LEVEL, $5, $7, $9}' >> error 
   } { v = P } {
     s = Sol
+    v = E
     unbiased = 1
   }
-
-  EventScript { start = end } {
-      gnuplot <<EOF
-
-      set term pos enhanced eps color solid 20 lw 2
-      set out 'harmonic-profile-0-SOLVER.eps'
-
-      set xl "Latitude"
-      set yl "{/Symbol F}"
-
-      set key bottom right
-      plot 'harmonic-profile-0.dat' u 3:5 ps 2 t "Gerris",\
-           'harmonic-profile-0.dat'u 3:15 w l t "Analytical solution"
-
-      set key top right
-      set out 'harmonic-profile-90-SOLVER.eps'
-      plot 'harmonic-profile-90.dat' u 3:5 ps 2 t "Gerris",\
-           'harmonic-profile-90.dat'u 3:15 w l t "Analytical solution"
-
-      set out 'harmonic-profile--90-SOLVER.eps'
-      plot 'harmonic-profile--90.dat' u 3:5 ps 2 t "Gerris",\
-           'harmonic-profile--90.dat'u 3:15 w l t "Analytical solution"
-
-      set key bottom right
-      set out 'harmonic-profile-180-SOLVER.eps'
-      plot 'harmonic-profile-180.dat' u 3:5 ps 2 t "Gerris",\
-           'harmonic-profile-180.dat'u 3:15 w l t "Analytical solution"
-EOF
-  }
-
+  OutputSimulation { start = end } end-SOLVER-LEVEL.gfs
 }
 GfsBox {}
 GfsBox {}
