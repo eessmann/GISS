@@ -232,6 +232,9 @@ static void domain_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
+  if (var[4].set || var[5].set || var[6].set)
+    g_warning ("the (lx,ly,lz) parameters are obsolete, please use GfsMetricStretch instead");
+
 #if FTT_2D
   if (var[3].set) {
     gts_file_variable_error (fp, var, "z", "unknown identifier `z'");

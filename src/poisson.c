@@ -1238,7 +1238,7 @@ static void diffusion_coef (FttCellFace * face, DiffusionCoeff * c)
     c->lambda2[face->d/2]*c->dt*
     gfs_source_diffusion_face (c->d, face)*
     gfs_domain_face_fraction (c->domain, face)/
-    gfs_domain_face_scale_metric (c->domain, face);
+    gfs_domain_face_scale_metric (c->domain, face, face->d/2);
 
   GFS_STATE (face->cell)->f[face->d].v = v;
 

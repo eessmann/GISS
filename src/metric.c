@@ -1154,28 +1154,13 @@ static gdouble stretch_solid_metric (const GfsDomain * domain, const FttCell * c
 
 static gdouble stretch_scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
 {
-  GfsMetricStretch * s = GFS_METRIC_STRETCH (domain->metric_data);
-  switch (c) {
-  case FTT_X: return (s->sx);
-  case FTT_Y: return (s->sy);
-#if !FTT_2D
-  case FTT_Z: return (s->sz);
-#endif 
-  default: g_assert_not_reached ();
-  }
+  return (&GFS_METRIC_STRETCH (domain->metric_data)->sx)[c];
 }
 
-static gdouble stretch_face_scale_metric (const GfsDomain * domain, const FttCellFace * face)
+static gdouble stretch_face_scale_metric (const GfsDomain * domain, const FttCellFace * face,
+					  FttComponent c)
 {
-  GfsMetricStretch * s = GFS_METRIC_STRETCH (domain->metric_data);
-  switch (face->d/2) {
-  case FTT_X: return (s->sx);
-  case FTT_Y: return (s->sy);
-#if !FTT_2D
-  case FTT_Z: return (s->sz);
-#endif 
-  default: g_assert_not_reached ();
-  }
+  return (&GFS_METRIC_STRETCH (domain->metric_data)->sx)[c];
 }
 
 static void metric_stretch_read (GtsObject ** o, GtsFile * fp)
