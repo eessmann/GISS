@@ -184,6 +184,8 @@ static void cmap_xy2XYZ (double x, double y, double * X, double * Y, double * Z)
 {
   x *= 2.; y *= 2.;
 
+  g_assert (x >= -1. && x <= 7. && y >= -1. && y <= 5.);
+
   /* symmetries: see doc/figures/cubed.fig */
   double tmp;
   if (y <= 1. && x <= 3.) {
@@ -470,7 +472,7 @@ static GfsMapClass * gfs_map_cubed_class (void)
 
 static gdouble cubed_face_metric (const GfsDomain * domain, const FttCellFace * face)
 {
-  if (face->d/2 > 1)
+  if (face->d/2 > FTT_Y)
     return 1.;
   return GFS_VALUE (face->cell, GFS_METRIC_CUBED (domain->metric_data)->h[face->d]);
 }
@@ -496,10 +498,14 @@ static gdouble cubed_scale_metric (const GfsDomain * domain, const FttCell * cel
 	  GFS_VALUE (cell, GFS_METRIC_CUBED (domain->metric_data)->h[2*d + 1]))/2.;
 }
 
-static gdouble cubed_face_scale_metric (const GfsDomain * domain, const FttCellFace * face)
+static gdouble cubed_face_scale_metric (const GfsDomain * domain, const FttCellFace * face,
+					FttComponent c)
 {
-  if (face->d/2 > FTT_Y)
+  if (c > FTT_Y)
     return 1.;
+  /* fixme: here we assume that the metric is perfectly isotropic:
+     this is not strictly the case numerically (0.08% difference), but
+     is it the case theoretically? */
   return GFS_VALUE (face->cell, GFS_METRIC_CUBED (domain->metric_data)->h[face->d]);
 }
 
@@ -684,7 +690,7 @@ static void metric_cubed_read (GtsObject ** o, GtsFile * fp)
   }
 
   FttDirection d;
-  for (d = 0; d < FTT_NEIGHBORS; d++) {
+  for (d = 0; d < 4; d++) {
     gchar * name = g_strdup_printf ("%sh%d", a->name, d);
     cubed->h[d] = gfs_domain_get_or_add_variable (domain, name, "Cubed face metric");
     cubed->h[d]->fine_coarse = cubed->h[d]->coarse_fine = none;
@@ -878,13 +884,12 @@ static gdouble lon_lat_scale_metric (const GfsDomain * domain, const FttCell * c
   return GFS_VALUE (cell, GFS_VARIABLE1 (domain->metric_data));
 }
 
-static gdouble lon_lat_face_scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
+static gdouble lon_lat_face_scale_metric (const GfsDomain * domain, const FttCellFace * face, 
+					  FttComponent c)
 {
-  g_assert_not_implemented ();
-
   if (c != FTT_X)
     return 1.;
-  return GFS_VALUE (cell, GFS_VARIABLE1 (domain->metric_data));
+  return gfs_face_interpolated_value (face, GFS_VARIABLE1 (domain->metric_data)->i);
 }
 
 static void lonlat_coarse_fine (FttCell * parent, GfsVariable * a)

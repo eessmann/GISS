@@ -722,8 +722,7 @@ static void poisson_coeff (FttCellFace * face,
 {
   gdouble alpha = p->alpha ? gfs_function_face_value (p->alpha, face) : 1.;
   gdouble v = p->lambda2[face->d/2]*alpha*gfs_domain_face_fraction (p->domain, face)/
-    gfs_domain_face_scale_metric (p->domain, face);
-
+    gfs_domain_face_scale_metric (p->domain, face, face->d/2);
 
   if (alpha <= 0. && p->positive) {
     FttVector p;

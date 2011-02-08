@@ -42,7 +42,7 @@ struct _GfsMetricCubed {
   GfsVariable parent;
 
   /*< public >*/
-  GfsVariable * h[FTT_NEIGHBORS];
+  GfsVariable * h[4];
   gint level;
 };
 

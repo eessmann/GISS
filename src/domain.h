@@ -76,11 +76,11 @@ struct _GfsDomain {
 
   /* coordinate metrics */
   gpointer metric_data;
-  gdouble (* face_metric)  (const GfsDomain *, const FttCellFace *);
-  gdouble (* cell_metric)  (const GfsDomain *, const FttCell *);
-  gdouble (* solid_metric) (const GfsDomain *, const FttCell *);
-  gdouble (* scale_metric) (const GfsDomain *, const FttCell *, FttComponent);
-  gdouble (* face_scale_metric) (const GfsDomain *, const FttCellFace *);
+  gdouble (* face_metric)       (const GfsDomain *, const FttCellFace *);
+  gdouble (* cell_metric)       (const GfsDomain *, const FttCell *);
+  gdouble (* solid_metric)      (const GfsDomain *, const FttCell *);
+  gdouble (* scale_metric)      (const GfsDomain *, const FttCell *, FttComponent);
+  gdouble (* face_scale_metric) (const GfsDomain *, const FttCellFace *, FttComponent);
 
   /* Object hash table for (optional) object IDs */
   GHashTable * objects;
@@ -426,35 +426,21 @@ gdouble gfs_domain_solid_metric (const GfsDomain * domain, const FttCell * cell)
 }
 
 /**
- * gfs_domain_scale_metric:
- * @domain; a #GfsDomain.
- * @cell: a #FttCell.
- * @c: a FttComponent, the direction of the scale factor.
- *
- * Returns: the scale factor of the metric at the center the cell
- * @cell.
- */
-static inline
-gdouble gfs_domain_scale_metric (const GfsDomain * domain, const FttCell * cell, const FttComponent c)
-{
-  if (domain->scale_metric)
-    return (* domain->scale_metric) (domain, cell, c);
-  return 1.;
-}
-
-/**
- * gfs_domain_scale_metric:
+ * gfs_domain_face_scale_metric:
  * @domain; a #GfsDomain.
  * @face: a #FttCellFace.
+ * @c: a #FttComponent.
  *
- * Returns: the scale factor of the metric at the center the face
- * @face.
+ * Returns: the @c component of the scale factor of the metric at the
+ * center the face.
  */
 static inline
-gdouble gfs_domain_face_scale_metric (const GfsDomain * domain, const FttCellFace * face)
+gdouble gfs_domain_face_scale_metric (const GfsDomain * domain, 
+				      const FttCellFace * face, 
+				      FttComponent c)
 {
   if (domain->face_scale_metric)
-    return (* domain->face_scale_metric) (domain, face);
+    return (* domain->face_scale_metric) (domain, face, c);
   return 1.;
 }
 
