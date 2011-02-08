@@ -6,7 +6,7 @@
 # solution for the Poisson equation on a sphere forced by a Gaussian term on
 # the north pole. The equation is of the form
 # $$
-#  \Delta^2 \Phi = \exp(-2 \epsilon^2 (1-cos(\theta+\frac{\pi}{2}))) - cste
+#  \nabla^2 \Phi = \exp(-2 \epsilon^2 (1-cos(\theta+\frac{\pi}{2}))) - cste
 # $$
 # The problem is axisymmetric and has for solution:
 # $$
@@ -33,10 +33,10 @@
 # \end{figure}
 #
 # Author: S\'ebastien Delaux
-# Command: sh gaussian.sh gaussian.gfs
-# Version: 110104
-# Required files: gaussian.sh 
-# Generated files: profile.eps residual.eps rate.eps error.eps order.eps
+# Command: sh gaussian.sh gaussian.gfs 2e-5
+# Version: 110208
+# Required files: gaussian.sh prof.ref
+# Generated files: profile.eps
 #
 6 12 GfsPoisson GfsBox GfsGEdge {} {
   PhysicalParams { L = 2.*M_PI/4. }
@@ -44,17 +44,12 @@
   Time { iend = 1 }
   Refine LEVEL
 
-  ProjectionParams { tolerance = 1e-12}
-  ApproxProjectionParams { tolerance = 1e-12}
+  ProjectionParams { tolerance = 1e-12 }
+  ApproxProjectionParams { tolerance = 1e-12 }
 
-  Global {
-      double source (double x, double y) {
-	  return exp(-2*5*5*(1-cos((y+90)/180*M_PI)));
-      }
-  }
-  Init {} { Div = source(x,y) }
+  Init {} { Div = exp(-2.*5.*5.*(1.-cos((y + 90.)/180.*M_PI))) }
 
-  OutputLocation { start = end } prof.dat  profile
+  OutputLocation { start = end } prof.dat profile
 
   OutputSimulation { start = end } end.gfs
   OutputProjectionStats { istep = 1 } stderr
