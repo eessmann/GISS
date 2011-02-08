@@ -1869,7 +1869,7 @@ static void advection_run (GfsSimulation * sim)
   while (i && !streamfunction) {
     streamfunction = (GFS_IS_VARIABLE_STREAM_FUNCTION (i->data) != NULL);
     i = i->next;
-  }  
+  }
 #endif /* 2D */
 
   gfs_simulation_refine (sim);
@@ -1941,53 +1941,42 @@ GfsSimulationClass * gfs_advection_class (void)
 
 /* GfsPoisson: Object */
 
-static void rescale_div (FttCell * cell, gpointer * data)
+typedef struct {
+  GfsVariable * divu, * div;
+  gdouble ddiv;
+  GtsRange vol;
+} DivData;
+
+static void rescale_div (FttCell * cell, DivData * p)
 {
-  GfsVariable * divu = data[0];
-  GfsVariable * div = data[1];
-  GtsRange * vol = data[2];
-  GfsDomain * domain = data[3];
   gdouble size = ftt_cell_size (cell);
-
-  GFS_VALUE (cell, div) = GFS_VALUE (cell, divu)*size*size*gfs_domain_cell_fraction (domain, cell);
-
-  gts_range_add_value (vol, size*size*gfs_domain_cell_fraction (domain, cell));
+  gdouble a = size*size*gfs_domain_cell_fraction (p->div->domain, cell);
+  GFS_VALUE (cell, p->div) = GFS_VALUE (cell, p->divu)*a;
+  gts_range_add_value (&p->vol, a);
 }
 
-static void add_ddiv (FttCell * cell, gpointer * data)
+static void add_ddiv (FttCell * cell, DivData * p)
 {
-  GfsVariable * div = data[1];
-  gdouble * ddiv = data[2];
-  GfsDomain * domain = data[3];
   gdouble size = ftt_cell_size (cell);
-
-  GFS_VALUE (cell, div) += size*size*(*ddiv)*gfs_domain_cell_fraction (domain, cell);
+  GFS_VALUE (cell, p->div) += size*size*p->ddiv*gfs_domain_cell_fraction (p->div->domain, cell);
 }
 
 static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * div,
 			 gboolean dirichlet)
 {
-  gpointer data[4];
-  GtsRange vol;
-  gdouble ddiv;
-
-  gts_range_init (&vol);
-  data[0] = divu;
-  data[1] = div;
-  data[2] = &vol;
-  data[3] = domain;
+  DivData p = { divu, div };
+  gts_range_init (&p.vol);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) rescale_div, data);
+			    (FttCellTraverseFunc) rescale_div, &p);
 
   if (!dirichlet) {
-    gts_range_update (&vol);
+    gts_range_update (&p.vol);
     
-    ddiv = - gfs_domain_stats_variable (domain, div, 
-					FTT_TRAVERSE_LEAFS, -1, 
-					NULL, NULL).mean/vol.mean;
-    data[2] = &ddiv;
+    p.ddiv = - gfs_domain_stats_variable (domain, div, 
+					  FTT_TRAVERSE_LEAFS, -1, 
+					  NULL, NULL).mean/p.vol.mean;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) add_ddiv, data);
+			      (FttCellTraverseFunc) add_ddiv, &p);
   }
 }
 
