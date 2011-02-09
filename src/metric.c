@@ -1021,19 +1021,6 @@ GfsVariableClass * gfs_metric_lon_lat_class (void)
 
 /* GfsMapStretch: Header */
 
-typedef struct _GfsMapStretch         GfsMapStretch;
-
-struct _GfsMapStretch {
-  /*< private >*/
-  GfsMap parent;
-
-  /*< public >*/
-  gdouble sx, sy, sz;
-};
-
-#define GFS_MAP_STRETCH(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsMapStretch,\
-					         gfs_map_stretch_class ())
 #define GFS_IS_MAP_STRETCH(obj)         (gts_object_is_from_class (obj,\
 						 gfs_map_stretch_class ()))
 
@@ -1059,19 +1046,21 @@ static void gfs_map_stretch_class_init (GfsMapClass * klass)
 
 static void map_stretch_transform (GfsMap * map, const FttVector * src, FttVector * dest)
 {
-  dest->x = src->x/GFS_MAP_STRETCH (map)->sx;
-  dest->y = src->y/GFS_MAP_STRETCH (map)->sy;
+  GfsMetricStretch * m = GFS_DOMAIN (gfs_object_simulation (map))->metric_data;
+  dest->x = src->x/m->sx;
+  dest->y = src->y/m->sy;
 #if !FTT_2D
-  dest->z = src->z/GFS_MAP_STRETCH (map)->sz;
+  dest->z = src->z/m->sz;
 #endif
 }
 
 static void map_stretch_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
 {
-  dest->x = src->x*GFS_MAP_STRETCH (map)->sx;
-  dest->y = src->y*GFS_MAP_STRETCH (map)->sy;
+  GfsMetricStretch * m = GFS_DOMAIN (gfs_object_simulation (map))->metric_data;
+  dest->x = src->x*m->sx;
+  dest->y = src->y*m->sy;
 #if !FTT_2D
-  dest->z = src->z*GFS_MAP_STRETCH (map)->sz;
+  dest->z = src->z*m->sz;
 #endif
 }
 
@@ -1079,13 +1068,6 @@ static void gfs_map_stretch_init (GfsMap * map)
 {
   map->transform = map_stretch_transform;
   map->inverse =   map_stretch_inverse;
-
-  GfsMapStretch * stretch = GFS_MAP_STRETCH (map);
-  stretch->sx = 1.;
-  stretch->sy = 1.;
-#if !FTT_2D
-  stretch->sz = 1.;
-#endif
 }
 
 static GfsMapClass * gfs_map_stretch_class (void)
@@ -1095,7 +1077,7 @@ static GfsMapClass * gfs_map_stretch_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo gfs_map_stretch_info = {
       "GfsMapStretch",
-      sizeof (GfsMapStretch),
+      sizeof (GfsMap),
       sizeof (GfsMapClass),
       (GtsObjectClassInitFunc) gfs_map_stretch_class_init,
       (GtsObjectInitFunc) gfs_map_stretch_init,
@@ -1195,11 +1177,6 @@ static void metric_stretch_read (GtsObject ** o, GtsFile * fp)
   GtsObject * map = gts_object_new (GTS_OBJECT_CLASS (gfs_map_stretch_class ()));
   gfs_object_simulation_set (map, domain);
   gts_container_add (GTS_CONTAINER (GFS_SIMULATION (domain)->maps), GTS_CONTAINEE (map));
-  GFS_MAP_STRETCH (map)->sx = s->sx;
-  GFS_MAP_STRETCH (map)->sy = s->sy;
-#if !FTT_2D
-  GFS_MAP_STRETCH (map)->sz = s->sz;
-#endif
 
   domain->metric_data = *o;
   domain->face_metric  = stretch_face_metric;
@@ -1217,6 +1194,7 @@ static void metric_stretch_class_init (GtsObjectClass * klass)
 
 static void metric_stretch_init (GfsMetricStretch * m)
 {
+  GFS_EVENT (m)->istep = 1;
   m->sx = m->sy = m->sz = 1.;
 }
 
