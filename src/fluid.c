@@ -1229,6 +1229,9 @@ static gboolean face_bilinear (const FttCellFace * face,
   return TRUE;
 }
 
+/* mixed_face_gradient_stencil needs to be updated whenever 
+ * this function is modified
+ */
 /* grad(v) = -a*v(cell) + b*v(neighbor) + c */
 static gboolean mixed_face_gradient (const FttCellFace * face,
 				     Gradient * g,
@@ -1309,6 +1312,9 @@ static gboolean mixed_face_gradient (const FttCellFace * face,
   return TRUE;
 }
 
+/* face_cm_gradient_stencil needs to be updated whenever 
+ * this function is modified
+ */
 static void face_cm_gradient (const FttCellFace * face,
 			      GfsGradient * g,
 			      guint v,
@@ -1417,6 +1423,9 @@ void gfs_face_cm_gradient (const FttCellFace * face,
  * mass of its cell. Linear interpolation is used to evaluate the
  * gradient in the vicinity of cut cells.
  */
+/* gfs_face_cm_weighted_gradient_stencil needs to be updated whenever 
+ * this function is modified
+ */
 void gfs_face_cm_weighted_gradient (const FttCellFace * face,
 				    GfsGradient * g,
 				    guint v,
@@ -1465,6 +1474,8 @@ static gboolean cell_bilinear (FttCell * cell,
  * interpolated at the center of area of the solid boundary contained
  * in @cell. The gradient is scaled by the size of the cell.
  */
+/* gfs_cell_dirichlet_gradient_stencil needs to be updated whenever 
+   this function is modified  */
 void gfs_cell_dirichlet_gradient (FttCell * cell,
 				  guint v,
 				  gint max_level,
@@ -1613,6 +1624,8 @@ gdouble gfs_mixed_cell_interpolate (FttCell * cell,
  * Returns: the flux of the gradient of variable @v through the solid
  * boundary contained in @cell.
  */
+/* gfs_cell_dirichlet_gradient_flux_stencil needs to be updated whenever 
+   this function is modified  */
 gdouble gfs_cell_dirichlet_gradient_flux (FttCell * cell,
 					  guint v,
 					  gint max_level,
@@ -1662,6 +1675,19 @@ static void gfs_cell_dirichlet_gradient_stencil (FttCell * cell,
   }
 }
 
+/**
+ * gfs_cell_dirichlet_gradient_flux_stencil:
+ * @cell: a #FttCell.
+ * @max_level: the maximum cell level to consider (-1 means no restriction).
+ * @v0: the Dirichlet value on the boundary.
+ * @id: a GfsVariable containing the id of the cells.
+ * @stencil: a GfsStencil.
+ *
+ * Returns the stencil accounting for the flux of the gradient of
+ * a given variable through the solid boundary contained in @cell.
+ * Returns the stencil equivalent to the action of
+ * gfs_cell_dirichlet_gradient_flux.
+ */
 gdouble gfs_cell_dirichlet_gradient_flux_stencil (FttCell * cell,
 						  gint max_level,
 						  gdouble v0,
@@ -3393,6 +3419,21 @@ static void face_cm_gradient_stencil (const FttCellFace * face,
   }
 }
 
+/**
+ * gfs_face_cm_weighted_gradient_stencil:
+ * @face: a #FttCellFace.
+ * @g: a GfsGradient.
+ * @max_level: the maximum cell level to consider (-1 means no restriction).
+ * @id: the cells' ids.
+ * @stencil: a stencil.
+ *
+ * Fills @stencil with the stencil corresponding to the
+ * weighted gradient on @face. The weights are defined at
+ * the center of mass of the cell. Linear interpolation is used
+ * to evaluate the gradient in the vicinity of cut cells.
+ * This function returns the stencil equivalent to the action
+ * gfs_face_cm_weighted_gradient.
+ */
 void gfs_face_cm_weighted_gradient_stencil (const FttCellFace * face,
 					    GfsGradient * g,
 					    gint max_level,
