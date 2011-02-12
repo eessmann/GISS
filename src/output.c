@@ -357,25 +357,12 @@ void gfs_output_file_close (GfsOutputFile * file)
 
 /* GfsOutputTime: Object */
 
-static void time_destroy (GtsObject * o)
-{
-  gfs_clock_destroy (GFS_OUTPUT_TIME (o)->clock);
-  g_timer_destroy (GFS_OUTPUT_TIME (o)->timer);
-
-  (* GTS_OBJECT_CLASS (gfs_output_time_class ())->parent_class->destroy) (o);  
-}
-
 static gboolean time_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (gfs_output_class())->event) (event, sim)) {
-    GfsOutputTime * t = GFS_OUTPUT_TIME (event);
-    if (!t->clock->started) {
-      gfs_clock_start (t->clock);
-      g_timer_start (t->timer);
-    }
-    gdouble cpu = gfs_clock_elapsed (t->clock);
-#ifdef HAVE_MPI
     GfsDomain * domain = GFS_DOMAIN (sim);
+    gdouble cpu = gfs_clock_elapsed (domain->timer);
+#ifdef HAVE_MPI
     if (domain->pid >= 0) {
       gfs_all_reduce (domain, cpu, MPI_DOUBLE, MPI_SUM);
       int size;
@@ -388,7 +375,7 @@ static gboolean time_event (GfsEvent * event, GfsSimulation * sim)
 	     sim->time.i, sim->time.t, 
 	     sim->advection_params.dt,
 	     cpu,
-	     g_timer_elapsed (t->timer, NULL));
+	     g_timer_elapsed (domain->clock, NULL));
     return TRUE;
   }
   return FALSE;
@@ -396,14 +383,7 @@ static gboolean time_event (GfsEvent * event, GfsSimulation * sim)
 
 static void gfs_output_time_class_init (GfsEventClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->destroy = time_destroy;
   klass->event = time_event;
-}
-
-static void gfs_output_time_init (GfsOutputTime * time)
-{
-  time->clock = gfs_clock_new ();
-  time->timer = g_timer_new ();
 }
 
 GfsOutputClass * gfs_output_time_class (void)
@@ -413,10 +393,10 @@ GfsOutputClass * gfs_output_time_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo gfs_output_time_info = {
       "GfsOutputTime",
-      sizeof (GfsOutputTime),
+      sizeof (GfsOutput),
       sizeof (GfsOutputClass),
       (GtsObjectClassInitFunc) gfs_output_time_class_init,
-      (GtsObjectInitFunc) gfs_output_time_init,
+      (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };

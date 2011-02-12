@@ -87,6 +87,9 @@ struct _GfsDomain {
 
   /* total number of parallel processes */
   int np;
+
+  /* real time */
+  GTimer * clock;
 };
 
 struct _GfsDomainClass {

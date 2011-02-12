@@ -1741,10 +1741,13 @@ void gfs_simulation_run (GfsSimulation * sim)
 
   guint id = g_log_set_handler ("Gfs", G_LOG_LEVEL_ERROR | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION,
 				error_handler, sim);
-  gfs_clock_start (GFS_DOMAIN (sim)->timer);
-  gts_range_init (&GFS_DOMAIN (sim)->mpi_wait);
+  GfsDomain * domain = GFS_DOMAIN (sim);
+  g_timer_start (domain->clock);
+  gfs_clock_start (domain->timer);
+  gts_range_init (&domain->mpi_wait);
   (* GFS_SIMULATION_CLASS (GTS_OBJECT (sim)->klass)->run) (sim);
-  gfs_clock_stop (GFS_DOMAIN (sim)->timer);
+  gfs_clock_stop (domain->timer);
+  g_timer_stop (domain->clock);
   g_log_remove_handler ("Gfs", id);
 }
 

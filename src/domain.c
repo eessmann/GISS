@@ -504,6 +504,7 @@ static void domain_destroy (GtsObject * o)
   GSList * i;
 
   gfs_clock_destroy (domain->timer);
+  g_timer_destroy (domain->clock);
 
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) cleanup_each_box, domain);
 
@@ -586,6 +587,7 @@ static void domain_init (GfsDomain * domain)
     MPI_Comm_rank (MPI_COMM_WORLD, &domain->pid);
 #endif /* HAVE_MPI */
 
+  domain->clock = g_timer_new ();
   domain->timer = gfs_clock_new ();
   domain->timers = g_hash_table_new (g_str_hash, g_str_equal);
 
