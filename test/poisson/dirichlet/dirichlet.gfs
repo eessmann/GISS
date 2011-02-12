@@ -12,9 +12,6 @@
 # $$\Phi=r^4\cos(3\theta)$$
 # which is used as boundary condition.
 #
-# Note that Dirichlet conditions are not supported by the Hypre module
-# (yet), which explains the strange results for Hypre.
-#
 # \begin{figure}[htbp]
 # \caption{\label{residual}Evolution of the residual.}
 # \begin{center}
