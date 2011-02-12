@@ -45,20 +45,15 @@ static void symmetry (FttCellFace * f, GfsBc * b)
     GFS_VARIABLE (f->cell, b->v->i) =   GFS_VARIABLE (f->neighbor, b->v->i);
 }
 
+static void set_stencil_neighbor (FttCellFace * f, GfsBc * b, gdouble w)
+{
+  GFS_DOUBLE_TO_POINTER (GFS_VALUE (f->cell, b->lp->neighbor)) = f->neighbor;
+  GFS_VALUE (f->cell, b->lp->neighborw) = w;
+}
+
 static void symmetry_stencil (FttCellFace * f, GfsBc * b)
 {
-  if (b->v->component == f->d/2) {
-    GfsStencil * stencil = gfs_stencil_new ();
-    gfs_stencil_add_element (stencil, GFS_VALUE (f->cell, b->lp->id), 1.);
-    gfs_stencil_add_element (stencil, GFS_VALUE (f->neighbor, b->lp->id), 1.);
-    gfs_linear_problem_add_stencil (b->lp, stencil);
-  }
-  else {
-    GfsStencil * stencil = gfs_stencil_new ();
-    gfs_stencil_add_element (stencil, GFS_VALUE (f->cell, b->lp->id), 1.);
-    gfs_stencil_add_element (stencil, GFS_VALUE (f->neighbor, b->lp->id), -1.);
-    gfs_linear_problem_add_stencil (b->lp, stencil);
-  }
+  set_stencil_neighbor (f, b, (b->v->component == f->d/2) ? -1. : 1.);
 }
 
 static void face_symmetry (FttCellFace * f, GfsBc * b)
@@ -259,10 +254,7 @@ static void homogeneous_dirichlet (FttCellFace * f, GfsBc * b)
 
 static void homogeneous_dirichlet_stencil (FttCellFace * f, GfsBc * b)
 {
-  GfsStencil * stencil = gfs_stencil_new ();
-  gfs_stencil_add_element (stencil, GFS_VALUE (f->cell, b->lp->id), 1.);
-  gfs_stencil_add_element (stencil, GFS_VALUE (f->neighbor, b->lp->id), 1.);
-  gfs_linear_problem_add_stencil (b->lp, stencil);
+  set_stencil_neighbor (f, b, -1.);
 }
 
 static void face_dirichlet (FttCellFace * f, GfsBc * b)
@@ -340,10 +332,7 @@ static void homogeneous_neumann (FttCellFace * f, GfsBc * b)
 
 static void homogeneous_neumann_stencil (FttCellFace * f, GfsBc * b)
 {
-  GfsStencil * stencil = gfs_stencil_new ();
-  gfs_stencil_add_element (stencil, GFS_VALUE (f->cell, b->lp->id), -1.);
-  gfs_stencil_add_element (stencil, GFS_VALUE (f->neighbor, b->lp->id), 1.);
-  gfs_linear_problem_add_stencil (b->lp, stencil);
+  set_stencil_neighbor (f, b, 1.);
 }
 
 static void face_neumann (FttCellFace * f, GfsBc * b)

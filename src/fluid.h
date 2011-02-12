@@ -284,27 +284,30 @@ struct _GfsStencil {
   GArray * id;    /* ints */
 };
 
-GfsStencil *  gfs_stencil_new                       (void);
+GfsStencil *  gfs_stencil_new                       (FttCell * cell, 
+						     GfsLinearProblem * lp,
+						     gdouble coeff);
 void          gfs_stencil_add_element               (GfsStencil * stencil,
-						     gint id,
+						     FttCell * cell,
+						     GfsLinearProblem * lp,
 						     gdouble coeff);
 void          gfs_stencil_destroy                   (GfsStencil * stencil);
 void          gfs_face_weighted_gradient_stencil    (const FttCellFace * face,
 						     GfsGradient * g,
 						     gint max_level,
-						     GfsVariable * id,
+						     GfsLinearProblem * lp,
 						     GfsStencil * stencil);
 void          gfs_face_cm_weighted_gradient_stencil (const FttCellFace * face,
 						     GfsGradient * g,
 						     gint max_level,
-						     GfsVariable * id,
+						     GfsLinearProblem * lp,
 						     GfsStencil * stencil);
 gdouble       gfs_cell_dirichlet_gradient_flux_stencil (FttCell * cell,
 							gint max_level,
 							gdouble v0,
-							GfsVariable * id,
+							GfsLinearProblem * lp,
 							GfsStencil * stencil);
-  
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

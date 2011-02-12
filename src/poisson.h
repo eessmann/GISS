@@ -128,7 +128,7 @@ void                  gfs_diffusion_cycle            (GfsDomain * domain,
 struct _GfsLinearProblem {
   GPtrArray * LP;
   GArray * rhs, * lhs;
-  GfsVariable * id;
+  GfsVariable * id, * neighbor, * neighborw;
   gint istart;
 };
 
