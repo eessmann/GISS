@@ -899,20 +899,10 @@ END TYPE InnerData
              flop=flop+dble(4*N)
           END DO
           !
-          IF( resid > tol ) THEN
-             IF (IRANK <= 0) THEN
-                WRITE(iout,'()')
-                WRITE(iout,950) iter
-                WRITE(iout,951)
-                WRITE(iout,'()')
-             END IF
-             iter=-iter
-          ELSE
-             IF (wff) THEN
-                WRITE(iout,952) iter
-                WRITE(iout,'()')
-             END IF
-         END IF
+          IF (wff) THEN
+             WRITE(iout,952) iter
+             WRITE(iout,'()')
+          END IF
           !
           kstat(3,1)=ABS(iter)
           !
@@ -923,8 +913,6 @@ END TYPE InnerData
 940       FORMAT(i3,                                                     &
                '*SOLUTION: flexible conjugate gradient iterations (FCG(1))')
 946       FORMAT(  '****          (with',i2,' SGS smoothing step per cycle)')
-950       FORMAT('**** !!!   WARNING   !!!',I5,' ITERATIONS WERE')
-951       FORMAT('**** INSUFFICIENT TO ACHIEVE THE DESIRED ACCURACY')
 952       FORMAT('****  - Convergence reached in',I5,' iterations -')
           !
         END SUBROUTINE dagmg_FlexCG
@@ -1181,19 +1169,9 @@ END TYPE InnerData
           END IF
           !
           RESID=SQRT(RESID2/BNORM2)
-          IF( resid > tol ) THEN
-             IF (IRANK <= 0) THEN
-                WRITE(iout,'()')
-                WRITE(iout,950) iter
-                WRITE(iout,951)
-                WRITE(iout,'()')
-            END IF
-             iter=-iter
-          ELSE
-             IF (wff) THEN
-                WRITE(iout,952) iter
-                WRITE(iout,'()')
-            END IF
+          IF (wff) THEN
+             WRITE(iout,952) iter
+             WRITE(iout,'()')
           END IF
           !
           kstat(3,1)=ABS(iter)
@@ -1205,8 +1183,6 @@ END TYPE InnerData
                '        Relat. res.=',e9.2)
 938       FORMAT(i3,'*SOLUTION: GCR iterations (GCR(',i2,'))')
 946       FORMAT(  '****          (with',i2,' SGS smoothing step per cycle)')
-950       FORMAT('**** !!!   WARNING   !!!',I5,' ITERATIONS WERE')
-951       FORMAT('**** INSUFFICIENT TO ACHIEVE THE DESIRED ACCURACY')
 952       FORMAT('****  - Convergence reached in',I5,' iterations -')
           !
         END SUBROUTINE dagmg_GCR
