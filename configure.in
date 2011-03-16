@@ -349,6 +349,16 @@ if test "x$use_mpicc" = "xyes" ; then # HYPRE needs MPI
 fi
 AM_CONDITIONAL(BUILD_HYPRE, test x$hypre = xtrue)
 
+# Build lis module if lis is installed
+AC_CHECK_LIB(lis, lis_initialize, lis="true", lis="false", [-lgfortran -lm])
+if test x$lis = xtrue; then
+   AC_CHECK_HEADERS(lis.h, lis="true", lis="false")
+fi
+if test x$lis = xfalse; then
+   AC_MSG_WARN([lis not found. lis Module won't be available.])
+fi
+AM_CONDITIONAL(BUILD_LIS, test x$lis = xtrue)
+
 dnl header file checks
 AC_CHECK_HEADERS(fenv.h, AC_DEFINE(HAVE_FENV_H))
 AC_CHECK_HEADERS(unistd.h, AC_DEFINE(HAVE_UNISTD_H))

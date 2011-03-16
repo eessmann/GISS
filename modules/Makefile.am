@@ -22,6 +22,9 @@ endif
 if BUILD_HYPRE
 HYPRE = libhypre2D.la libhypre3D.la
 endif
+if BUILD_LIS
+LIS = liblis2D.la liblis3D.la
+endif
 if BUILD_ODE
 ODE = libode2D.la libode3D.la
 endif
@@ -44,6 +47,7 @@ pkglib_LTLIBRARIES = \
 	$(STOKES) \
 	$(WAVEWATCH) \
 	$(HYPRE) \
+	$(LIS) \
 	$(ODE) \
         $(BUBBLES)
 
@@ -65,6 +69,7 @@ EXTRA_DIST = \
 	electrohydro.mod \
 	okada.mod \
 	hypre.mod \
+	lis.mod \
 	ode.mod
 
 BUILT_SOURCES = \
@@ -79,6 +84,7 @@ BUILT_SOURCES = \
 	electrohydro.c \
 	okada.c \
 	hypre.c \
+	lis.c \
 	ode.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
@@ -167,6 +173,13 @@ libhypre3D_la_LIBADD = -lHYPRE -lm
 libhypre2D_la_SOURCES = hypre.c
 libhypre2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 libhypre2D_la_LIBADD = -lHYPRE -lm
+
+liblis3D_la_SOURCES = lis.c
+liblis3D_la_CFLAGS = $(AM_CFLAGS)
+liblis3D_la_LIBADD = -llis -lgfortran -lm
+liblis2D_la_SOURCES = lis.c
+liblis2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+liblis2D_la_LIBADD = -llis -lgfortran -lm
 
 libokada3D_la_SOURCES = okada.c
 libokada3D_la_CFLAGS = $(AM_CFLAGS)
