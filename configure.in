@@ -313,6 +313,11 @@ AM_CONDITIONAL(BUILD_TIDE, test x$netcdf = xtrue -a x$no_gsl = x)
 AC_PROG_F77
 AM_CONDITIONAL(BUILD_STOKES, test x$F77 != x)
 
+# AGMG module requires the gfortran compiler and lapack/blas
+AC_PROG_FC([gfortran f90 xlf90],90)
+AC_CHECK_LIB(lapack, sorg2l_, lapack="true", lapack="false", [-lblas -lm])
+AM_CONDITIONAL(BUILD_AGMG, test x$FC = xgfortran -a x$lapack = xtrue)
+
 # Build wavewatch module if wavewatch is installed
 AM_CONDITIONAL(BUILD_WAVEWATCH, test -r $HOME/.wwatch3.env)
 if test -r $HOME/.wwatch3.env; then
