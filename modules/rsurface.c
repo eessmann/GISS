@@ -38,6 +38,10 @@ RSurface * r_surface_open (const char * fname, const char * mode, int size)
       free (rt);
       return NULL;
     }
+    else
+      fprintf (stderr, 
+	       "\nWARNING: you are using a terrain database with an obsolete format\n"
+	       "please convert to the new KDT format\n");
   }
   rt->name = malloc (sizeof (char)*(strlen (fname) + 1));
   strcpy (rt->name, fname);
