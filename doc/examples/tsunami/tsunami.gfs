@@ -47,7 +47,8 @@
 #
 # Finally Figure \ref{data} gives a comparison of the observed (using
 # tide gauges) and modelled timeseries at specific locations in the
-# Indian Ocean.
+# Indian Ocean. Figure \ref{jason} gives a comparison of the modelled wave
+# profile with the profile observed by the Jason-1 satellite altimeter.
 #
 # \begin{figure}[htbp]
 # \caption{\label{data}Observed and modelled time-series of wave
@@ -67,15 +68,22 @@
 # \end{center}
 # \end{figure}
 #
+# \begin{figure}[htbp]
+# \caption{\label{jason}Observed (Jason-1 satellite altimeter) and modelled wave profiles.}
+# \begin{center}
+# \includegraphics[width=0.8\hsize]{jason.eps}
+# \end{center}
+# \end{figure}
+#
 # More details on this simulation and the method used is given in
 # \cite{popinet2011}.
 #
 # Author: St\'ephane Popinet
 # Command: gerris2D -m tsunami.gfs | gfsview2D tsunami.gfv
-# Required files: output.gfs tsunami.gfv h.gfv level.gfv hmax.gfv hmax-detail.gfv hanires.txt diegres.txt maleres.txt colores.txt ganares.txt
+# Required files: output.gfs tsunami.gfv h.gfv level.gfv hmax.gfv hmax-detail.gfv hanires.txt diegres.txt maleres.txt colores.txt ganares.txt jason.xy jasonres.txt
 # Version: 110107
 # Running time: 
-# Generated files: h.eps level.eps h.mpg level.mpg hmax.eps hmax-detail.eps hani.eps dieg.eps male.eps colo.eps gana.eps
+# Generated files: h.eps level.eps h.mpg level.mpg hmax.eps hmax-detail.eps hani.eps dieg.eps male.eps colo.eps gana.eps jason.eps
 
 # the radius of the Earth (in meters) 
 Define RADIUS 6371220.
@@ -261,6 +269,9 @@ Define LEVEL (fabs (rx) < 0.46 && fabs (ry) < 0.46 ? MAXLEVEL : 5)
     # include a list of locations for which to output timeseries
     Include output.gfs
 
+    # Jason profiles
+    OutputLocation { start = 6900 } jason.txt jason.xy
+
     OutputTime { istep = 1 } stderr
     OutputBalance { istep = 1 } stderr
     OutputTiming { istep = 100 } stderr
@@ -342,6 +353,12 @@ plot [3:5]'diegres.txt' u 1:(\$2/100.) w lp t 'observed' ps 2, \
 set output 'colo.eps'
 plot [2.5:4.5]'colores.txt' u 1:(\$2/100.) w lp t 'observed' ps 2, \
            'colo.txt' u (\$3/3600.):7 w l t 'modelled'
+
+set output 'jason.eps'
+set xlabel 'Latitude (deg)'
+set ylabel 'Elevation (m)'
+plot [-6:20][-1:1]'jasonres.txt' u 2:4 w l t 'observed', \
+           'jason.txt' u 3:(\$3 > 19.2 ? 0 : \$8) w l t 'modelled'
 EOF
     }
 } {
