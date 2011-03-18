@@ -8,8 +8,13 @@ import gfs2tex
 dists = ""
 depends = ""
 docs = ""
-
+tests = ""
 for start in sys.argv[1:]:
+    tests += "\\\n\t" + start + ".sh"
+    f = open(start + ".sh", "w")
+    f.write("python -u test.py " + start + "\n")
+    f.close()
+    os.chmod(start + ".sh",0755)
     for root, dirs, files in os.walk(start,topdown=True):
         if not ".xvpics" in root:
             example = gfs2tex.Example(root)
@@ -28,5 +33,7 @@ for start in sys.argv[1:]:
 print "DOCS = " + docs + dists
 print ""
 print "EXTRA_DIST += " + dists
+print ""
+print "TESTS = " + tests
 print ""
 print "examples.tex: " + depends

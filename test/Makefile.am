@@ -1,5 +1,10 @@
 ## Process this file with automake to produce Makefile.in
 
+AUTOMAKE_OPTIONS = parallel-tests
+
+# new test cases need to be added to this list in the order in which
+# they appear in template.tex
+
 TESTDIRS = \
 	poisson \
 	circle \
@@ -48,6 +53,7 @@ EXTRA_DIST = \
 	test.py \
 	check.py \
 	gfs2tex \
+	summary.sh \
 	Makefile.deps
 
 clean-generic:
@@ -74,9 +80,9 @@ tests: tests.dvi
 	mv references tests
 
 tests.dvi: tests.tex tests.bib
-	TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
+	- TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
 	bibtex tests
-	TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
+	- TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
 	TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex
 
 tests.pdf: tests.dvi
@@ -92,7 +98,14 @@ tests.tex: template.tex Makefile.deps
 Makefile.deps: depend.py
 	python depend.py $(TESTDIRS) > Makefile.deps
 
-include Makefile.deps
+-include Makefile.deps
 
 tests.tar.gz: tests $(DOCS)
 	tar czf tests.tar.gz tests $(DOCS)
+
+publish: tests.tar.gz
+	cp tests.tar.gz $(WEBROOT)/tests
+	cd $(WEBROOT)/tests && tar xzf tests.tar.gz && rm -f tests.tar.gz
+
+check:
+	sh summary.sh $(TESTDIRS) > summary.tex

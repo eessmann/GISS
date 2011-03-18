@@ -1,5 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
+AUTOMAKE_OPTIONS = parallel-tests
+
 EXAMPLES = \
 	cylinder \
 	rt \
@@ -33,12 +35,6 @@ EXTRA_DIST = \
 	modulesyms.sh \
 	gfs.sty gfs.hva kaltura.sh \
 	gfs.php.sh
-
-TESTS = test.sh
-
-test.sh: $(EXAMPLES)
-	@echo "python test.py $(EXAMPLES)" > test.sh
-	@chmod +x test.sh
 
 bin_SCRIPTS = \
 	gfs2doc gfs-highlight gfsxref
@@ -107,9 +103,9 @@ examples: examples.dvi crossref.sh
 	mv references examples
 
 examples.dvi: examples.tex examples.bib
-	latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
+	- latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
 	bibtex examples
-	latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
+	- latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode examples.tex
 
 examples.pdf: examples.dvi
@@ -122,7 +118,7 @@ examples.tex: template.tex Makefile.deps gfs2tex gfs2tex.py
 	python gfs2tex $(EXAMPLES)
 	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < template.tex | sed 's/\\today/'"`date +\"%B %e, %Y\"`/g" > examples.tex
 
-Makefile.deps: Makefile depend.py
+Makefile.deps: depend.py Makefile.am
 	python depend.py $(EXAMPLES) > Makefile.deps
 
 -include Makefile.deps
