@@ -67,7 +67,7 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: sh spurious.sh spurious.gfs 1e-11
+# Command: sh spurious.sh spurious.gfs 4e-10
 # Version: 1.1.2
 # Required files: spurious.sh convergence.ref kconvergence.ref
 # Generated files: laplace.eps curvature.eps convergence.eps kconvergence.eps
@@ -88,8 +88,7 @@ Define MU sqrt(0.8/LAPLACE)
   VariableTracerVOF T
   VariableCurvature K T
   SourceTension T 1 K
-  SourceDiffusion U MU
-  SourceDiffusion V MU
+  SourceViscosity MU
 
   InitFraction T CIRCLE
   Init {} { Tref = T }

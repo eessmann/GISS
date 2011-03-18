@@ -64,7 +64,7 @@ else
 fi
 
 for f in La-120-5 La-1200-5 La-12000-5; do
-    if awk -v tolerance=$2 '{ last = $2; }END{if (last > tolerance) exit (1);}' < $f; then :
+    if tail -n 1 < $f | awk -v tolerance=$2 '{if ($2 > tolerance) exit (1);}'; then :
     else
 	exit 1
     fi
