@@ -46,6 +46,8 @@ TESTDIRS = \
 	cylinder \
 	electro
 
+WEBROOT = /var/www/gerris
+
 EXTRA_DIST = \
 	template.tex \
 	tests.bib \
@@ -76,7 +78,7 @@ tests: tests.dvi
 	sh ../doc/share/fixnav.sh $(DOC)
 	cp -f ../doc/share/contents.png ../doc/share/next.png ../doc/share/prev.png $(DOC)
 	rm -f *_motif.gif $(DOC).h{tml,aux,ind,toc} $(DOC).image.tex $(DOC).css
-	sh ../doc/examples/crossref.sh --url=http://gfs.sourceforge.net/tests/tests $(TESTDIRS)
+	sh ../doc/examples/crossref.sh --url=http://gerris.dalembert.upmc.fr/gerris/tests/tests $(TESTDIRS)
 	mv references tests
 
 tests.dvi: tests.tex tests.bib

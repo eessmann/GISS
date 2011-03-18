@@ -21,6 +21,8 @@ EXAMPLES = \
 	plateau \
 	atomisation
 
+WEBROOT = /var/www/gerris
+
 EXTRA_DIST = \
 	template.tex \
 	examples.bib \
@@ -138,3 +140,7 @@ classes: classes.c $(top_srcdir)/src/init.c
 modules: modules.c
 	$(LIBTOOL) --mode=link $(CC) $(AM_CFLAGS) $(INCLUDES) -DFTT_2D=1 \
 	modules.c -o modules $(GFS2D_LIBS)
+
+publish: examples.tar.gz
+	cp examples.tar.gz $(WEBROOT)/examples
+	cd $(WEBROOT)/examples && tar xzf examples.tar.gz && rm -f examples.tar.gz
