@@ -208,14 +208,14 @@ libelectrohydro2D_la_SOURCES = electrohydro.c
 libelectrohydro2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
 if HAVE_MODULES
-%.c : %.mod
+.mod.c:
 	@echo "/* $@" > $@
 	@echo " * This is a generated file.  Please modify \`$<'" >> $@
 	@echo " */" >> $@
 	@echo "#line 1 \""$<"\"" >> $@
 	@cat $< >> $@
 else
-%.c : %.mod
+.mod.c:
 	@echo "/* $@" > $@
 	@echo " * This is a generated file.  Please modify \`$<'" >> $@
 	@echo " */" >> $@

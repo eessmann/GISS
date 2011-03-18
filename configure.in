@@ -289,10 +289,10 @@ AC_SUBST(CPPFLAGS)
 AC_SUBST(LDFLAGS)
 
 # checks for libproj
-AC_CHECK_LIB(proj, pj_fwd, proj="true",
+AC_CHECK_LIB(proj, pj_fwd, proj="yes",
   AC_MSG_WARN([libproj not found. Map module will not be available.]), [-lm])
-AC_CHECK_HEADERS(proj_api.h, proj="true", proj="false")
-AM_CONDITIONAL(HAS_LIBPROJ, test x$proj = xtrue)
+AC_CHECK_HEADERS(proj_api.h, proj="yes", proj="no")
+AM_CONDITIONAL(HAS_LIBPROJ, test x$proj = xyes)
 
 # checks for GNU Scientific Library
 AM_PATH_GSL
@@ -306,6 +306,9 @@ AM_CONDITIONAL(HAS_NETCDF, test x$netcdf = xtrue)
 # Tide module requires both netCDF and GSL
 if test x$netcdf = xfalse -o x$no_gsl = xyes; then
    AC_MSG_WARN([GSL and/or netCDF not found. Tide module will not be available.])
+   tide=no
+else
+   tide=yes
 fi
 AM_CONDITIONAL(BUILD_TIDE, test x$netcdf = xtrue -a x$no_gsl = x)
 
@@ -313,10 +316,18 @@ AM_CONDITIONAL(BUILD_TIDE, test x$netcdf = xtrue -a x$no_gsl = x)
 AC_PROG_F77
 AM_CONDITIONAL(BUILD_STOKES, test x$F77 != x)
 
+# Enable the AGMG module (disabled by default due to non-free license)
+AC_ARG_ENABLE(agmg,
+	      [  --enable-agmg enable the AGMG module (beware of non-free license)],
+	      [with_agmg=$enableval],
+	      [with_agmg="no"])
+
 # AGMG module requires the gfortran compiler and lapack/blas
-AC_PROG_FC([gfortran f90 xlf90],90)
-AC_CHECK_LIB(lapack, sorg2l_, lapack="true", lapack="false", [-lblas -lm])
-AM_CONDITIONAL(BUILD_AGMG, test x$FC = xgfortran -a x$lapack = xtrue)
+if test x$with_agmg != xno; then
+   AC_PROG_FC([gfortran f90 xlf90],90)
+   AC_CHECK_LIB(lapack, sorg2l_, lapack="true", lapack="false", [-lblas -lm])
+fi
+AM_CONDITIONAL(BUILD_AGMG, test x$FC = xgfortran -a x$lapack = xtrue -a x$with_agmg != xno)
 
 # Build wavewatch module if wavewatch is installed
 AM_CONDITIONAL(BUILD_WAVEWATCH, test -r $HOME/.wwatch3.env)
@@ -331,8 +342,8 @@ if test -r $HOME/.wwatch3.env; then
 fi
 
 # Build ode module if ODE is installed
-AC_CHECK_PROG(ode, ode-config, true, false)
-if test x$ode = xtrue; then
+AC_CHECK_PROG(ode, ode-config, yes, no)
+if test x$ode = xyes; then
   ODE_CFLAGS=`ode-config --cflags`
   ODE_LIBS="`ode-config --libs` -lstdc++"
   AC_SUBST(ODE_CFLAGS)
@@ -340,29 +351,29 @@ if test x$ode = xtrue; then
 else
   AC_MSG_WARN([ODE not found. ode module will not be available.])
 fi
-AM_CONDITIONAL(BUILD_ODE, test x$ode = xtrue)
+AM_CONDITIONAL(BUILD_ODE, test x$ode = xyes)
 
 # Build hypre module if HYPRE is installed
 if test "x$use_mpicc" = "xyes" ; then # HYPRE needs MPI
-   AC_CHECK_LIB(HYPRE, HYPRE_IJMatrixCreate, hypre="true", hypre="false", [-lm])
-   if test x$hypre = xtrue; then
-      AC_CHECK_HEADERS(HYPRE.h, hypre="true", hypre="false")
+   AC_CHECK_LIB(HYPRE, HYPRE_IJMatrixCreate, hypre="yes", hypre="no", [-lm])
+   if test x$hypre = xyes; then
+      AC_CHECK_HEADERS(HYPRE.h, hypre="yes", hypre="no")
    fi
-   if test x$hypre = xfalse; then
+   if test x$hypre = xno; then
       AC_MSG_WARN([HYPRE not found. hypre Module won't be available.])
    fi
 fi
-AM_CONDITIONAL(BUILD_HYPRE, test x$hypre = xtrue)
+AM_CONDITIONAL(BUILD_HYPRE, test x$hypre = xyes)
 
 # Build lis module if lis is installed
-AC_CHECK_LIB(lis, lis_initialize, lis="true", lis="false", [-lgfortran -lm])
-if test x$lis = xtrue; then
-   AC_CHECK_HEADERS(lis.h, lis="true", lis="false")
+AC_CHECK_LIB(lis, lis_initialize, lis="yes", lis="no", [-lgfortran -lm])
+if test x$lis = xyes; then
+   AC_CHECK_HEADERS(lis.h, lis="yes", lis="no")
 fi
-if test x$lis = xfalse; then
+if test x$lis = xno; then
    AC_MSG_WARN([lis not found. lis Module won't be available.])
 fi
-AM_CONDITIONAL(BUILD_LIS, test x$lis = xtrue)
+AM_CONDITIONAL(BUILD_LIS, test x$lis = xyes)
 
 dnl header file checks
 AC_CHECK_HEADERS(fenv.h, AC_DEFINE(HAVE_FENV_H))
@@ -490,7 +501,7 @@ AC_SUBST(GFS3D_LIBS)
 
 AM_CONDITIONAL(DARCS_CONTROLLED, test -d _darcs)
 
-AC_OUTPUT([
+AC_CONFIG_FILES([
 Makefile
 src/Makefile
 src/gfs-config
@@ -513,3 +524,48 @@ doc/examples/crossref.sh
 desktop/Makefile
 debian/Makefile
 ])
+
+
+AC_OUTPUT()
+
+echo
+echo "Configuration summary"
+echo
+echo "  System            = $build"
+echo "  C   Compiler      = $CC"
+echo "  C   Flags         = $CFLAGS"
+echo "  MPI enabled       = $use_mpicc"
+echo "  GModule support   = $have_gmodule"
+echo "  pkg-config        = $have_pkg_config"
+echo "  gawk              = $have_awk"
+echo "  m4                = $have_m4"
+echo
+echo "Modules"
+echo
+echo "  map               = $proj"
+echo "  tide              = $tide"
+if test x$F77 != x; then
+echo "  stokes            = yes"
+else
+echo "  stokes            = no"
+fi
+if test -r $HOME/.wwatch3.env; then
+echo "  wavewatch         = yes"
+echo "  wavewatch version = $ww3_version"
+else
+echo "  wavewatch         = no"
+fi
+echo "  hypre             = $hypre"
+echo "  lis               = $lis"
+if test x$FC = xgfortran -a x$lapack = xtrue -a x$with_agmg != xno; then
+echo "  agmg              = yes"
+else
+echo "  agmg              = no"
+fi
+echo "  ode               = $ode"
+if test x$no_gsl != xyes; then
+echo "  bubbles           = yes"
+else
+echo "  bubbles           = no"
+fi
+echo

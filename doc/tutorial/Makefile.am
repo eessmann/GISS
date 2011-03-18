@@ -37,41 +37,41 @@ tutorial.pdf: tutorial1.dvi
 	ps2pdf -sPAPERSIZE=a4 -dMaxSubsetPct=100 -dCompatibilityLevel=1.2 -dSubsetFonts=true -dEmbedAllFonts=true tutorial1.ps tutorial.pdf
 	rm -f tutorial1.ps
 
-%.eps: %.xmgr
+.xmgr.eps:
 	/usr/local/grace/bin/xmgrace -noask -hardcopy -hdevice EPS -printfile $@ $<
 
-%.eps: %.agr
+.agr.eps:
 	/usr/local/grace/bin/xmgrace -noask -hardcopy -hdevice EPS -printfile $@ $<
 
-%.eps: %.fig
+.fig.eps:
 	fig2dev -L ps $< > $@ ; sh epsbbox.sh $@ 
 
-%.eps: %.jpeg
+.jpeg.eps:
 	convert $< $@.gif
 	convert $@.gif EPS:$@
 	- rm -f $@.gif
 
-%.eps: %.jpg
+.jpg.eps:
 	convert $< $@.gif
 	convert $@.gif EPS:$@
 	- rm -f $@.gif
 
-%.eps: %.gif
+.gif.eps:
 	convert $< EPS:$@
 
-%.eps: %.png
+.png.eps:
 	convert $< EPS:$@
 
-%.pdf: %.jpg
+.jpg.pdf:
 	convert $< EPDF:$@
 
-%.pdf: %.png
+.png.pdf:
 	convert $< EPDF:$@
 
-%.pdf: %.epsf
+.epsf.pdf:
 	epstopdf $<
 
-%.pdf: %.eps
+.eps.pdf:
 	epstopdf $<
 
 -include Makefile.deps
