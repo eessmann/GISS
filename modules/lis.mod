@@ -60,7 +60,8 @@ static void solve_poisson_problem_using_lis (GfsDomain * domain,
   lis_solver_create (&solver);
 
   gchar * opt = g_strdup_printf ("%s-maxiter %d -tol %g", 
-				 options->str, par->nitermax, par->tolerance);
+				 options->str, par->nitermax, 
+				 MIN (par->tolerance/par->residual.infty, 0.99));
   lis_solver_set_option (opt, solver);
   g_free (opt);
 

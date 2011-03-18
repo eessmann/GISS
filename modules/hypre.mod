@@ -723,21 +723,8 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
 					       GfsMultilevelParams * par)
 {
   HypreProblem hp;
-  gdouble tolerance = par->tolerance, res0 = 0.;
-  gint i, len = lp->rhs->len;
-
-  for (i=0;i< lp->rhs->len;i++)
-    res0 += pow(g_array_index (lp->rhs, gdouble, i),2.);
-  res0 = sqrt(res0);
-
-  if (domain->pid >= 0) {
-    gfs_all_reduce (domain, res0, MPI_DOUBLE, MPI_SUM);
-    gfs_all_reduce (domain, len, MPI_INT, MPI_SUM);
-  }
-
-  /* Tolerance has to be rescaled to account for the different of method */
-  /* used by Hypre to computed the norm of the residual */
-  par->tolerance *= sqrt(((gdouble) len))/res0;
+  gdouble tolerance = par->tolerance;
+  par->tolerance = MIN (0.1*tolerance/par->residual.infty, 0.99);
  
   hypre_problem_new (&hp, domain, lp->rhs->len, lp->istart);
   hypre_problem_init (&hp, lp, domain);
@@ -787,7 +774,7 @@ static void hypre_poisson_solve (GfsDomain * domain,
   par->residual_before = par->residual = 
     gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
 
-  if (par->nitermax > 0) {
+  if (par->nitermax > 0 && par->residual.infty > 0.) {
     GfsVariable * dp = gfs_temporary_variable (domain);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, dp);

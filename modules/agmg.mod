@@ -60,7 +60,7 @@ static void solve_poisson_problem_using_agmg (GfsDomain * domain,
 
   /* solve */
   int iter = par->nitermax;
-  double tol = par->tolerance;
+  double tol = MIN (par->tolerance/par->residual.infty, 0.99);
   int iprint = verbose ? 6 : -1;
   dagmg_ (&n, (double *) a->data, (int *) ja->data, (int *) ia->data, 
 	  (double *) lp->rhs->data, (double *) lp->lhs->data, 
