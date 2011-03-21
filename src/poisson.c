@@ -383,6 +383,25 @@ static void leaves_renumbering (FttCell * cell, NumberingParams * p)
 
 #endif /* HAVE_MPI */
 
+typedef struct {
+  GfsVariable * lhs;
+  gboolean dirichlet;
+} CompatPar;
+
+static void check_box_dirichlet (GfsBox * box, CompatPar * p)
+{
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, p->lhs);
+      if (GFS_IS_BC_DIRICHLET (bc)) {
+	p->dirichlet = TRUE;
+	return;
+      }	
+    }
+}
+
 /**
  * gfs_get_poisson_problem:
  * @domain: the domain over which the poisson problem is defined
@@ -392,16 +411,9 @@ static void leaves_renumbering (FttCell * cell, NumberingParams * p)
  * @maxlevel: the maximum level to consider (or -1).
  * @v: a #GfsVariable of which @lhs is an homogeneous version.
  *
- * Extracts the poisson problem associated with @lhs, @rhs and the
- * boundary conditions defined in the parameter file.
+ * Extracts the poisson problem associated with @lhs and @rhs.
  *
- * First cells are numbered. Then stencils are built on the fly using
- * modified versions of the functions of the native gerris poisson
- * solver.
- *
- * Returns: a #GfsLinearProblem containing two #GArray which store the
- * rhs and lhs values and a #GPtrArray which stores the matrix of the
- * poisson problem. The matrix is stored as an array of #GfsStencil.
+ * Returns: a #GfsLinearProblem.
  */
 GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
 					    GfsVariable * rhs, GfsVariable * lhs,
@@ -446,6 +458,36 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
 			    maxlevel, (FttCellTraverseFunc) (v->centered ? relax_stencil:
 							     relax_dirichlet_stencil), &p);
 
+  /* If Neumann conditions are applied everywhere, the solution is
+     defined to within a constant so we need to remove one degree of
+     freedom to make the solution unique, assuming that the domain is
+     simply connected... */
+  if (v->centered) {
+    /* check whether any boundary has a Dirichlet condition on @v */
+    CompatPar p = { v, FALSE };
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) check_box_dirichlet, &p);
+    gfs_all_reduce (domain, p.dirichlet, MPI_INT, MPI_MAX);
+    if (!p.dirichlet) {
+      /* impose P = 0 for one unknown of the system */
+      int i;
+      for (i = 0; i < lp->rhs->len; i++) {
+	GfsStencil * stencil = g_ptr_array_index (lp->LP, i);
+	if (g_array_index (stencil->id, int, 0) == 0) {
+	  stencil->id->len = 1;
+	  stencil->coeff->len = 1;
+	  g_array_index (stencil->coeff, double, 0) = -1.;
+	  g_array_index (lp->rhs, double, i) = 0.;
+	}
+	else {
+	  int j, ncols = stencil->id->len;
+	  for (j = 0; j < ncols; j++)
+	    if (g_array_index (stencil->id, int, j) == 0)
+	      g_array_index (stencil->coeff, double, j) = 0.;
+	}
+      }
+    }
+  }
+  
   gfs_domain_timer_stop (domain, "get_poisson_problem");
 
   return lp;
@@ -514,6 +556,8 @@ static void relax2D (FttCell * cell, RelaxParams * p)
     GFS_VARIABLE (cell, p->u) = 0.;
 }
 
+/* relax_dirichlet_stencil() needs to be updated whenever this
+   function is modified */
 static void relax_dirichlet (FttCell * cell, RelaxParams * p)
 {
   GfsGradient g;
@@ -1115,25 +1159,6 @@ void gfs_poisson_cycle (GfsDomain * domain,
   gts_object_destroy (GTS_OBJECT (dp));
 }
 
-typedef struct {
-  GfsVariable * lhs;
-  gboolean dirichlet;
-} CompatPar;
-
-static void check_box_dirichlet (GfsBox * box, CompatPar * p)
-{
-  FttDirection d;
-  for (d = 0; d < FTT_NEIGHBORS; d++)
-    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
-      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
-      GfsBc * bc = gfs_boundary_lookup_bc (b, p->lhs);
-      if (GFS_IS_BC_DIRICHLET (bc)) {
-	p->dirichlet = TRUE;
-	return;
-      }	
-    }
-}
-
 /**
  * gfs_poisson_compatibility:
  * @domain: the domain over which the poisson problem is solved.
@@ -1157,6 +1182,7 @@ gdouble gfs_poisson_compatibility (GfsDomain * domain,
   /* check whether any boundary has a Dirichlet condition on @lhs */
   CompatPar p = { lhs, FALSE };
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) check_box_dirichlet, &p);
+  gfs_all_reduce (domain, p.dirichlet, MPI_INT, MPI_MAX);
   if (p.dirichlet)
     /* Assumes that the domain is simply connected in which case compatibility is guaranteed */
     return 0.;
