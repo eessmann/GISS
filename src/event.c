@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief GfsEvents.
+ */
 
 #include <stdlib.h>
 #include <sys/wait.h>
@@ -28,6 +31,11 @@
 #include "solid.h"
 #include "output.h"
 #include "init.h"
+
+/**
+ * Any action to be performed at a given time.
+ * \beginobject{GfsEvent}
+ */
 
 /**
  * gfs_event_next:
@@ -493,7 +501,12 @@ void gfs_event_redo (GfsEvent * event, GfsSimulation * sim)
     (* klass->post_event) (event, sim);
 }
 
-/* GfsGenericInit: Object */
+/** \endobject{GfsEvent} */
+
+/**
+ * Abstract class for initialisation events.
+ * \beginobject{GfsGenericInit}
+ */
 
 static void gfs_generic_init_init (GfsEvent * event)
 {
@@ -521,7 +534,12 @@ GfsEventClass * gfs_generic_init_class (void)
   return klass;
 }
 
-/* GfsInit: Object */
+/** \endobject{GfsGenericInit} */
+
+/**
+ * Initialising variables.
+ * \beginobject{GfsInit}
+ */
 
 typedef struct {
   GfsVariable * v;
@@ -701,7 +719,12 @@ GfsGenericInitClass * gfs_init_class (void)
   return klass;
 }
 
-/* GfsInitMask: Object */
+/** \endobject{GfsInit} */
+
+/**
+ * "Masking out" part of the mesh.
+ * \beginobject{GfsInitMask}
+ */
 
 static void gfs_init_mask_read (GtsObject ** o, GtsFile * fp)
 {
@@ -807,6 +830,8 @@ GfsGenericInitClass * gfs_init_mask_class (void)
   return klass;
 }
 
+/** \endobject{GfsInitMask} */
+
 /* GfsInitFlowConstant: Object: fixme: deprecated */
 
 static void gfs_init_flow_constant_read (GtsObject ** o, GtsFile * fp)
@@ -846,7 +871,10 @@ GfsEventClass * gfs_init_flow_constant_class (void)
   return klass;
 }
 
-/* GfsInitVorticity: Object */
+/**
+ * Initialising a vorticity field.
+ * \beginobject{GfsInitVorticity}
+ */
 
 static void gfs_init_vorticity_read (GtsObject ** o, GtsFile * fp)
 {
@@ -1076,7 +1104,12 @@ GfsGenericInitClass * gfs_init_vorticity_class (void)
   return klass;
 }
 
-/* GfsEventSum: Object */
+/** \endobject{GfsInitVorticity} */
+
+/**
+ * Time-integral of a variable or function.
+ * \beginobject{GfsEventSum}
+ */
 
 static void gfs_event_sum_destroy (GtsObject * o)
 {
@@ -1186,7 +1219,12 @@ GfsEventClass * gfs_event_sum_class (void)
   return klass;
 }
 
-/* GfsEventSumDirection: Object */
+/** \endobject{GfsEventSum} */
+
+/**
+ *
+ * \beginobject{GfsEventSumDirection}
+ */
 
 static void gfs_event_sum_direction_write (GtsObject * o, FILE * fp)
 {
@@ -1258,7 +1296,12 @@ GfsEventClass * gfs_event_sum_direction_class (void)
   return klass;
 }
 
-/* GfsEventHarmonic: Object */
+/** \endobject{GfsEventSumDirection} */
+
+/**
+ * Harmonic decomposition of a variable.
+ * \beginobject{GfsEventHarmonic}
+ */
 
 static void gfs_event_harmonic_destroy (GtsObject * o)
 {
@@ -1612,7 +1655,12 @@ GfsEventClass * gfs_event_harmonic_class (void)
   return klass;
 }
 
-/* GfsEventStop: Object */
+/** \endobject{GfsEventHarmonic} */
+
+/**
+ * Stopping when steady-state is reached.
+ * \beginobject{GfsEventStop}
+ */
 
 static void gfs_event_stop_write (GtsObject * o, FILE * fp)
 {
@@ -1771,7 +1819,12 @@ GfsEventClass * gfs_event_stop_class (void)
   return klass;
 }
 
-/* GfsEventScript: Object */
+/** \endobject{GfsEventStop} */
+
+/**
+ * Executing a shell-script at given times.
+ * \beginobject{GfsEventScript}
+ */
 
 static void gfs_event_script_destroy (GtsObject * o)
 {
@@ -1909,7 +1962,12 @@ GfsEventClass * gfs_event_script_class (void)
   return klass;
 }
 
-/* GfsInitFraction: Object */
+/** \endobject{GfsEventScript} */
+
+/**
+ * Initialising volume fractions from interface shapes.
+ * \beginobject{GfsInitFraction}
+ */
 
 static void gfs_init_fraction_destroy (GtsObject * object)
 {
@@ -2004,7 +2062,12 @@ GfsInitFractionClass * gfs_init_fraction_class (void)
   return klass;
 }
 
-/* GfsRemoveDroplets: Object */
+/** \endobject{GfsInitFraction} */
+
+/**
+ * Controlling the topology of interfaces.
+ * \beginobject{GfsRemoveDroplets}
+ */
 
 static void gfs_remove_droplets_destroy (GtsObject * object)
 {
@@ -2115,7 +2178,12 @@ GfsEventClass * gfs_remove_droplets_class (void)
   return klass;
 }
 
-/* GfsRemovePonds: Object */
+/** \endobject{GfsRemoveDroplets} */
+
+/**
+ * Controlling the domain topology.
+ * \beginobject{GfsRemovePonds}
+ */
 
 static gboolean gfs_remove_ponds_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -2179,7 +2247,12 @@ GfsEventClass * gfs_remove_ponds_class (void)
   return klass;
 }
 
-/* GfsEventFilter: Object */
+/** \endobject{GfsRemovePonds} */
+
+/**
+ * Exponential filtering of variables.
+ * \beginobject{GfsEventFilter}
+ */
 
 static void filter (FttCell * cell, GfsEventFilter * f)
 {
@@ -2293,7 +2366,12 @@ GfsEventClass * gfs_event_filter_class (void)
   return klass;
 }
 
-/* GfsEventList: Object */
+/** \endobject{GfsEventFilter} */
+
+/**
+ * A list of events.
+ * \beginobject{GfsEventList}
+ */
 
 static gboolean gfs_event_list_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -2434,3 +2512,4 @@ GfsEventClass * gfs_event_list_class (void)
   return klass;
 }
 
+/** \endobject{GfsEventList} */

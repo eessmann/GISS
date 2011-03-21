@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Boundary conditions.
+ */
 
 #include <stdlib.h>
 #include <math.h>
@@ -35,7 +38,10 @@ static FttVector rpos[FTT_NEIGHBORS] = {
 #endif /* FTT_3D */
 };
 
-/* GfsBc: Object */
+/**
+ * Default symmetry boundary condition.
+ * \beginobject{GfsBc}
+ */
 
 static void symmetry (FttCellFace * f, GfsBc * b)
 {
@@ -156,7 +162,12 @@ GfsBc * gfs_bc_new (GfsBcClass * k, GfsVariable * v, gboolean extra)
   return b;
 }
 
-/* GfsBcValue: Object */
+/** \endobject{GfsBc} */
+
+/**
+ * Generic class for a boundary condition taking a parameter.
+ * \beginobject{GfsBcValue}
+ */
 
 static void bc_value_write (GtsObject * o, FILE * fp)
 {
@@ -233,7 +244,12 @@ static GfsBc * gfs_bc_value_new (GfsBcClass * k,
   return GFS_BC (bc);
 }
 
-/* GfsBcDirichlet: Object */
+/** \endobject{GfsBcValue} */
+
+/**
+ * Dirichlet boundary condition.
+ * \beginobject{GfsBcDirichlet}
+ */
 
 static void dirichlet (FttCellFace * f, GfsBc * b)
 {
@@ -315,7 +331,12 @@ GfsBcClass * gfs_bc_dirichlet_class (void)
   return klass;
 }
 
-/* GfsBcNeumann: Object */
+/** \endobject{GfsBcDirichlet} */
+
+/**
+ * Neumann boundary condition.
+ * \beginobject{GfsBcNeumann}
+ */
 
 static void neumann (FttCellFace * f, GfsBc * b)
 {
@@ -389,7 +410,12 @@ GfsBcClass * gfs_bc_neumann_class (void)
   return klass;
 }
 
-/* GfsBcNavier: Object */
+/** \endobject{GfsBcNeumann} */
+
+/**
+ * Navier boundary condition.
+ * \beginobject{GfsBcNavier}
+ */
 
 static void navier (FttCellFace * f, GfsBc * b)
 {
@@ -463,7 +489,12 @@ GfsBcClass * gfs_bc_navier_class (void)
   return klass;
 }
 
-/* GfsBoundary: Object */
+/** \endobject{GfsBcNavier} */
+
+/**
+ * One of the boundaries of a #GfsBox.
+ * \beginobject{GfsBoundary}
+ */
 
 static void destroy_bc (GfsVariable * v, GtsObject * o)
 {
@@ -926,7 +957,12 @@ void gfs_boundary_add_bc (GfsBoundary * b, GfsBc * bc)
     gts_object_destroy (GTS_OBJECT (bc));
 }
 
-/* GfsBoundaryInflowConstant: Object */
+/** \endobject{GfsBoundary} */
+
+/**
+ * Constant inflow boundary.
+ * \beginobject{GfsBoundaryInflowConstant}
+ */
 
 static GtsColor inflow_color (GtsObject * o)
 {
@@ -1003,7 +1039,12 @@ GfsBoundaryInflowConstantClass * gfs_boundary_inflow_constant_class (void)
   return klass;
 }
 
-/* GfsBoundaryOutflow: Object */
+/** \endobject{GfsBoundaryInflowConstant} */
+
+/**
+ * Outflow boundary.
+ * \beginobject{GfsBoundaryOutflow}
+ */
 
 static GtsColor outflow_color (GtsObject * o)
 {
@@ -1061,7 +1102,12 @@ GfsBoundaryOutflowClass * gfs_boundary_outflow_class (void)
   return klass;
 }
 
-/* GfsBoundaryGradient: Object */
+/** \endobject{GfsBoundaryOutflow} */
+
+/**
+ * 
+ * \beginobject{GfsBoundaryGradient}
+ */
 
 static GtsColor gradient_color (GtsObject * o)
 {
@@ -1116,7 +1162,12 @@ GfsBoundaryClass * gfs_boundary_gradient_class (void)
   return klass;
 }
 
-/* GfsBoundaryPeriodic: object */
+/** \endobject{GfsBoundaryGradient} */
+
+/**
+ * Periodic boundary.
+ * \beginobject{GfsBoundaryPeriodic}
+ */
 
 static void boundary_periodic_destroy (GtsObject * object)
 {
@@ -1478,7 +1529,12 @@ GfsBoundaryPeriodic * gfs_boundary_periodic_rotate_new (GfsBoundaryClass * klass
   return boundary;
 }
 
-/* GfsGEdge: Object */
+/** \endobject{GfsBoundaryPeriodic} */
+
+/**
+ * Link between #GfsBox.
+ * \beginobject{GfsGEdge}
+ */
 
 static void gfs_gedge_write (GtsObject * object, FILE * fp)
 {
@@ -1632,7 +1688,12 @@ GfsGEdge * gfs_gedge_new (GfsGEdgeClass * klass,
   return edge;
 }
 
-/* GfsBox: Object */
+/** \endobject{GfsGEdge} */
+
+/**
+ * The box making up a #GfsDomain.
+ * \beginobject{GfsBox}
+ */
 
 static void gfs_box_destroy (GtsObject * object)
 {
@@ -1923,3 +1984,4 @@ GfsBox * gfs_box_new (GfsBoxClass * klass)
   return object;
 }
 
+/** \endobject{GfsBox} */

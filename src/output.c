@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Various outputs.
+ */
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -33,7 +36,10 @@
 #include "unstructured.h"
 #include "init.h"
 
-/* GfsOutput: object */
+/**
+ * Writing simulation data.
+ * \beginobject{GfsOutput}
+ */
 
 static void output_free (GfsOutput * output)
 {
@@ -355,7 +361,12 @@ void gfs_output_file_close (GfsOutputFile * file)
   }
 }
 
-/* GfsOutputTime: Object */
+/** \endobject{GfsOutput} */
+
+/**
+ * Model time, timestep and computing times.
+ * \beginobject{GfsOutputTime}
+ */
 
 static gboolean time_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -407,7 +418,12 @@ GfsOutputClass * gfs_output_time_class (void)
   return klass;
 }
 
-/* GfsOutputProgress: Object */
+/** \endobject{GfsOutputTime} */
+
+/**
+ *
+ * \beginobject{GfsOutputProgress}
+ */
 
 static gboolean progress_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -461,7 +477,12 @@ GfsOutputClass * gfs_output_progress_class (void)
   return klass;
 }
 
-/* GfsOutputProjectionStats: Object */
+/** \endobject{GfsOutputProgress} */
+
+/**
+ * 
+ * \beginobject{GfsOutputProjectionStats}
+ */
 
 static gboolean projection_stats_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -505,7 +526,12 @@ GfsOutputClass * gfs_output_projection_stats_class (void)
   return klass;
 }
 
-/* GfsOutputDiffusionStats: Object */
+/** \endobject{GfsOutputProjectionStats} */
+
+/**
+ *
+ * \beginobject{GfsOutputDiffusionStats}
+ */
 
 static gboolean diffusion_stats_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -566,7 +592,12 @@ GfsOutputClass * gfs_output_diffusion_stats_class (void)
   return klass;
 }
 
-/* GfsOutputSolidStats: Object */
+/** \endobject{GfsOutputDiffusionStats} */
+
+/**
+ * 
+ * \beginobject{GfsOutputSolidStats}
+ */
 
 static gboolean gfs_output_solid_stats_event (GfsEvent * event, 
 					     GfsSimulation * sim)
@@ -620,7 +651,12 @@ GfsOutputClass * gfs_output_solid_stats_class (void)
   return klass;
 }
 
-/* GfsOutputAdaptStats: Object */
+/** \endobject{GfsOutputSolidStats} */
+
+/**
+ * Information about the mesh adaptation.
+ * \beginobject{GfsOutputAdaptStats}
+ */
 
 static gboolean gfs_output_adapt_stats_event (GfsEvent * event, 
 					      GfsSimulation * sim)
@@ -682,7 +718,12 @@ GfsOutputClass * gfs_output_adapt_stats_class (void)
   return klass;
 }
 
-/* GfsOutputTiming: Object */
+/** \endobject{GfsOutputAdaptStats} */
+
+/**
+ *
+ * \beginobject{GfsOutputTiming}
+ */
 
 typedef struct {
   GfsTimer * t;
@@ -793,7 +834,12 @@ GfsOutputClass * gfs_output_timing_class (void)
   return klass;
 }
 
-/* GfsOutputBalance: Object */
+/** \endobject{GfsOutputTiming} */
+
+/**
+ * Writing simulation size statistics.
+ * \beginobject{GfsOutputBalance}
+ */
 
 static gboolean gfs_output_balance_event (GfsEvent * event, 
 					  GfsSimulation * sim)
@@ -850,7 +896,12 @@ GfsOutputClass * gfs_output_balance_class (void)
   return klass;
 }
 
-/* GfsOutputSolidForce: Object */
+/** \endobject{GfsOutputBalance} */
+
+/**
+ * orces and moments on the embedded solid boundaries.
+ * \beginobject{GfsOutputSolidForce}
+ */
 
 static void gfs_output_solid_force_destroy (GtsObject * object)
 {
@@ -939,7 +990,12 @@ GfsOutputClass * gfs_output_solid_force_class (void)
   return klass;
 }
 
-/* GfsOutputLocation: Object */
+/** \endobject{GfsOutputSolidForce} */
+
+/**
+ * Writing the values of variables at specified locations.
+ * \beginobject{GfsOutputLocation}
+ */
 
 static gchar default_precision[] = "%g";
 
@@ -1193,7 +1249,74 @@ GfsOutputClass * gfs_output_location_class (void)
   return klass;
 }
 
-/* GfsOutputSimulation: Object */
+/** \endobject{GfsOutputLocation} */
+
+/**
+ * Tracking Lagrangian particles.
+ * \beginobject{GfsOutputParticle}
+ */
+
+static gboolean gfs_output_particle_event (GfsEvent * event, 
+					   GfsSimulation * sim)
+{
+  GfsOutputLocation * location = GFS_OUTPUT_LOCATION (event);
+  gboolean ret = FALSE;
+  guint i;
+
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_location_class ())->parent_class)->event)
+      (event,sim)) {
+    FILE * fp = GFS_OUTPUT (event)->file->fp;
+
+    for (i = 0; i < location->p->len; i++) {
+      FttVector p = g_array_index (location->p, FttVector, i);
+      fprintf (fp, "%d %g %g %g %g\n", i, sim->time.t, p.x, p.y, p.z);
+    }
+    ret = TRUE;
+  }
+  
+  for (i = 0; i < location->p->len; i++) {
+    FttVector p = g_array_index (location->p, FttVector, i);
+    gfs_simulation_map (sim, &p);
+    gfs_domain_advect_point (GFS_DOMAIN (sim), &p, sim->advection_params.dt);
+    gfs_simulation_map_inverse (sim, &p);
+    g_array_index (location->p, FttVector, i) = p;
+  }
+
+  return ret;
+}
+
+static void gfs_output_particle_class_init (GfsOutputClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = gfs_output_particle_event;
+}
+
+GfsOutputClass * gfs_output_particle_class (void)
+{
+  static GfsOutputClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_output_particle_info = {
+      "GfsOutputParticle",
+      sizeof (GfsOutputLocation),
+      sizeof (GfsOutputClass),
+      (GtsObjectClassInitFunc) gfs_output_particle_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_output_location_class ()),
+				  &gfs_output_particle_info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsOutputParticle} */
+
+/**
+ * Writing the whole simulation.
+ * \beginobject{GfsOutputSimulation}
+ */
 
 static void output_simulation_destroy (GtsObject * object)
 {
@@ -1470,7 +1593,12 @@ GfsOutputClass * gfs_output_simulation_class (void)
   return klass;
 }
 
-/* GfsOutputBoundaries: Object */
+/** \endobject{GfsOutputSimulation} */
+
+/**
+ *
+ * \beginobject{GfsOutputBoundaries}
+ */
 
 static gboolean output_boundaries_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -1512,7 +1640,12 @@ GfsOutputClass * gfs_output_boundaries_class (void)
   return klass;
 }
 
-/* GfsOutputScalar: Object */
+/** \endobject{GfsOutputBoundaries} */
+
+/**
+ * Generic output of scalar fields.
+ * \beginobject{GfsOutputScalar}
+ */
 
 static void gfs_output_scalar_destroy (GtsObject * o)
 {
@@ -1795,7 +1928,12 @@ GfsOutputClass * gfs_output_scalar_class (void)
   return klass;
 }
 
-/* GfsOutputScalarNorm: Object */
+/** \endobject{GfsOutputScalar} */
+
+/**
+ * Computing the norms of a scalar field.
+ * \beginobject{GfsOutputScalarNorm}
+ */
 
 static gboolean gfs_output_scalar_norm_event (GfsEvent * event, 
 					      GfsSimulation * sim)
@@ -1845,7 +1983,12 @@ GfsOutputClass * gfs_output_scalar_norm_class (void)
   return klass;
 }
 
-/* GfsOutputScalarStats: Object */
+/** \endobject{GfsOutputScalarNorm} */
+
+/**
+ * Computing simple statistics for a scalar field.
+ * \beginobject{GfsOutputScalarStats}
+ */
 
 static gboolean gfs_output_scalar_stats_event (GfsEvent * event, 
 					     GfsSimulation * sim)
@@ -1894,7 +2037,12 @@ GfsOutputClass * gfs_output_scalar_stats_class (void)
   return klass;
 }
 
-/* GfsOutputScalarSum: Object */
+/** \endobject{GfsOutputScalarStats} */
+
+/**
+ * Computing the sum of a scalar field.
+ * \beginobject{GfsOutputScalarSum}
+ */
 
 typedef struct {
   GfsVariable * v;
@@ -1957,7 +2105,12 @@ GfsOutputClass * gfs_output_scalar_sum_class (void)
   return klass;
 }
 
-/* GfsOutputScalarMaxima: Object */
+/** \endobject{GfsOutputScalarSum} */
+
+/**
+ *
+ * \beginobject{GfsOutputScalarMaxima}
+ */
 
 static void gfs_output_scalar_maxima_destroy (GtsObject * o)
 {
@@ -2072,7 +2225,12 @@ GfsOutputClass * gfs_output_scalar_maxima_class (void)
   return klass;
 }
 
-/* GfsOutputScalarHistogram: Object */
+/** \endobject{GfsOutputScalarMaxima} */
+
+/**
+ * Computing histograms.
+ * \beginobject{GfsOutputScalarHistogram}
+ */
 
 static void gfs_output_scalar_histogram_destroy (GtsObject * o)
 {
@@ -2300,7 +2458,12 @@ GfsOutputClass * gfs_output_scalar_histogram_class (void)
   return klass;
 }
 
-/* GfsOutputDropletSums: Object */
+/** \endobject{GfsOutputScalarHistogram} */
+
+/**
+ * Computing sums for each droplet.
+ * \beginobject{GfsOutputDropletSums}
+ */
 
 static void gfs_output_droplet_sums_destroy (GtsObject * object)
 {
@@ -2456,7 +2619,12 @@ GfsOutputClass * gfs_output_droplet_sums_class (void)
   return klass;
 }
 
-/* GfsOutputErrorNorm: Object */
+/** \endobject{GfsOutputDropletSums} */
+
+/**
+ * Computing differences to a reference solution.
+ * \beginobject{GfsOutputErrorNorm}
+ */
 
 static void output_error_norm_destroy (GtsObject * o)
 {
@@ -2727,7 +2895,12 @@ GfsOutputClass * gfs_output_error_norm_class (void)
   return klass;
 }
 
-/* GfsOutputCorrelation: Object */
+/** \endobject{GfsOutputErrorNorm} */
+
+/**
+ * 
+ * \beginobject{GfsOutputCorrelation}
+ */
 
 static void compute_correlation (FttCell * cell, gpointer * data)
 {
@@ -2819,7 +2992,12 @@ GfsOutputClass * gfs_output_correlation_class (void)
   return klass;
 }
 
-/* GfsOutputSquares: Object */
+/** \endobject{GfsOutputCorrelation} */
+
+/**
+ *
+ * \beginobject{GfsOutputSquares}
+ */
 
 static gboolean gfs_output_squares_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -2863,7 +3041,12 @@ GfsOutputClass * gfs_output_squares_class (void)
   return klass;
 }
 
-/* GfsOutputStreamline: Object */
+/** \endobject{GfsOutputSquares} */
+
+/**
+ *
+ * \beginobject{GfsOutputStreamline}
+ */
 
 static void gfs_output_streamline_read (GtsObject ** o, GtsFile * fp)
 {
@@ -2957,64 +3140,12 @@ GfsOutputClass * gfs_output_streamline_class (void)
   return klass;
 }
 
-/* GfsOutputParticle: Object */
+/** \endobject{GfsOutputStreamline} */
 
-static gboolean gfs_output_particle_event (GfsEvent * event, 
-					   GfsSimulation * sim)
-{
-  GfsOutputLocation * location = GFS_OUTPUT_LOCATION (event);
-  gboolean ret = FALSE;
-  guint i;
-
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_location_class ())->parent_class)->event)
-      (event,sim)) {
-    FILE * fp = GFS_OUTPUT (event)->file->fp;
-
-    for (i = 0; i < location->p->len; i++) {
-      FttVector p = g_array_index (location->p, FttVector, i);
-      fprintf (fp, "%d %g %g %g %g\n", i, sim->time.t, p.x, p.y, p.z);
-    }
-    ret = TRUE;
-  }
-  
-  for (i = 0; i < location->p->len; i++) {
-    FttVector p = g_array_index (location->p, FttVector, i);
-    gfs_simulation_map (sim, &p);
-    gfs_domain_advect_point (GFS_DOMAIN (sim), &p, sim->advection_params.dt);
-    gfs_simulation_map_inverse (sim, &p);
-    g_array_index (location->p, FttVector, i) = p;
-  }
-
-  return ret;
-}
-
-static void gfs_output_particle_class_init (GfsOutputClass * klass)
-{
-  GFS_EVENT_CLASS (klass)->event = gfs_output_particle_event;
-}
-
-GfsOutputClass * gfs_output_particle_class (void)
-{
-  static GfsOutputClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_output_particle_info = {
-      "GfsOutputParticle",
-      sizeof (GfsOutputLocation),
-      sizeof (GfsOutputClass),
-      (GtsObjectClassInitFunc) gfs_output_particle_class_init,
-      (GtsObjectInitFunc) NULL,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_output_location_class ()),
-				  &gfs_output_particle_info);
-  }
-
-  return klass;
-}
-
-/* GfsOutputPPM: Object */
+/**
+ * Writing 2D images.
+ * \beginobject{GfsOutputPPM}
+ */
 
 static void gfs_output_ppm_read (GtsObject ** o, GtsFile * fp)
 {
@@ -3082,7 +3213,12 @@ GfsOutputClass * gfs_output_ppm_class (void)
   return klass;
 }
 
-/* GfsOutputGRD: Object */
+/** \endobject{GfsOutputPPM} */
+
+/**
+ * Writing 2D ESRI raster files.
+ * \beginobject{GfsOutputGRD}
+ */
 
 static gboolean gfs_output_grd_event (GfsEvent * event, GfsSimulation * sim)
 {
@@ -3134,7 +3270,12 @@ GfsOutputClass * gfs_output_grd_class (void)
   return klass;
 }
 
-/* GfsOutputObject: Object */
+/** \endobject{GfsOutputGRD} */
+
+/**
+ * Calling the write method of a given object.
+ * \beginobject{GfsOutputObject}
+ */
 
 static void output_object_read (GtsObject ** o, GtsFile * fp)
 {
@@ -3204,3 +3345,5 @@ GfsOutputClass * gfs_output_object_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsOutputObject} */

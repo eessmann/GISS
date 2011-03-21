@@ -2,44 +2,32 @@
 
 SUBDIRS = tutorial examples manpages
 
-# The name of the module.
-DOC_MODULE=gfs
+WEBROOT = /var/www/gerris
 
-# The top-level SGML file.
-DOC_MAIN_SGML_FILE=gfs-docs.sgml
+EXTRA_DIST = figures share doxy.conf
 
-# The directory containing the source code (if it contains documentation).
-DOC_SOURCE_DIR=../src
+noinst_PROGRAMS = autoclass
 
-TARGET_DIR=html/$(DOC_MODULE)
+INCLUDES = -I$(top_srcdir)/src -I$(includedir) -DG_LOG_DOMAIN=\"Gfs-tools\"\
+            $(GTS_CFLAGS)
 
-EXTRA_DIST=figures share
+autoclass: autoclass.c $(top_srcdir)/src/init.c
+	$(LIBTOOL) --mode=link $(CC) $(AM_CFLAGS) $(INCLUDES) -DFTT_2D=1 \
+	autoclass.c -o autoclass $(GFS2D_LIBS)
 
-scan:
-	gtkdoc-scan --module=$(DOC_MODULE) --source-dir=$(DOC_SOURCE_DIR) --ignore-headers=""
+reference: Makefile.am autoclass share/autoclass.sh share/doxfilter share/renamemodules doxy.conf
+	sh share/autoclass.sh | sort -k2,3 | ./autoclass > hierarchy.c
+	@chmod +x share/doxfilter
+	doxygen doxy.conf 2>&1 | grep -v 'explicit link request to .* could not be resolved' > doxy.log
+	cd reference && sh ../share/renamemodules
+	if grep [wW]arning doxy.log; then exit 1; fi
 
-templates: scan
-	gtkdoc-mktmpl --module=$(DOC_MODULE)
-	sort -f $(DOC_MODULE)-unused.txt > /tmp/toto; mv -f /tmp/toto $(DOC_MODULE)-unused.txt
+publish: reference
+	tar czf reference.tgz reference
+	mv -f reference.tgz $(WEBROOT)
+	cd $(WEBROOT) && tar xzf reference.tgz && rm -f reference.tgz
 
-sgml: templates
-	gtkdoc-mkdb --module=$(DOC_MODULE) --source-dir=$(DOC_SOURCE_DIR)
-	sort -f $(DOC_MODULE)-undocumented.txt > /tmp/toto; mv -f /tmp/toto $(DOC_MODULE)-undocumented.txt
+Makefile.deps: Makefile.am ../src/Makefile.am
+	ls ../src/*.[ch] | awk 'BEGIN{print "reference: \\"}{ print "\t" $$1 " \\"}' > Makefile.deps
 
-html: sgml
-	if ! test -d html ; then mkdir html ; fi
-	-cd html && gtkdoc-mkhtml $(DOC_MODULE) ../$(DOC_MAIN_SGML_FILE)
-
-clean-local:
-	rm -f *~ *.bak *.hierarchy *.signals *.args *-unused.txt
-
-maintainer-clean-local: clean
-	rm -rf sgml html $(DOC_MODULE)-decl-list.txt $(DOC_MODULE)-decl.txt 
-
-## install-data-local:
-##	install -d -m 0755 $(TARGET_DIR)
-##	install -m 0644 html/*.html $(TARGET_DIR)
-##	install -m 0644 html/index.sgml $(TARGET_DIR)
-##	gtkdoc-fixxref --module=$(DOC_MODULE) --html-dir=$(HTML_DIR)
-
-.PHONY : html sgml templates scan
+-include Makefile.deps

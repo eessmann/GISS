@@ -17,6 +17,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief The linearised shallow-water solver.
+ */
 
 #include <stdlib.h>
 
@@ -28,6 +31,11 @@
 #include "graphic.h"
 
 #include "solid.h"
+
+/**
+ * The linearised shallow-water solver.
+ * \beginobject{GfsOcean}
+ */
 
 static void reset_gradients (FttCell * cell, gpointer * data)
 {
@@ -253,8 +261,6 @@ static void gfs_free_surface_pressure (GfsDomain * toplayer,
 
 #if FTT_2D
 
-/* GfsOcean: Object */
-
 static void normal_velocities (GfsDomain * domain, GfsVariable ** u)
 {
   g_return_if_fail (domain != NULL);
@@ -391,8 +397,6 @@ GfsSimulationClass * gfs_ocean_class (void)
 }
 
 #else /* 3D */
-
-/* GfsOcean: Object */
 
 #define MAC 0
 
@@ -924,6 +928,8 @@ void gfs_hydrostatic_pressure (GfsDomain * domain,
 				     (FttCellTraverseFunc) hydrostatic_pressure, data);
 }
 
+/** \endobject{GfsOcean} */
+
 /* GfsSourceHydrostatic: Object */
 
 static void gfs_source_hydrostatic_destroy (GtsObject * o)
@@ -1069,7 +1075,10 @@ GfsSourceGenericClass * gfs_source_hydrostatic_class (void)
 
 #endif /* 3D */
 
-/* GfsSourceFriction: Object */
+/**
+ *
+ * \beginobject{GfsSourceFriction}
+ */
 
 static void gfs_source_friction_destroy (GtsObject * o)
 {
@@ -1181,7 +1190,12 @@ GfsSourceGenericClass * gfs_source_friction_class (void)
   return klass;
 }
 
-/* GfsBcFlather: Object */
+/** \endobject{GfsSourceFriction} */
+
+/**
+ * Flather boundary conditions.
+ * \beginobject{GfsBcFlather}
+ */
 
 /* Also check whether modules/tide.mod needs upgrading when modyifing this class */
 
@@ -1337,3 +1351,5 @@ GfsBcClass * gfs_bc_flather_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsBcFlather} */

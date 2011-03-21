@@ -16,10 +16,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Coordinates transformations.
+ */
 
 #include "map.h"
 
-/* GfsMap: Object */
+/**
+ * Coordinates transformations.
+ * \beginobject{GfsMap}
+ */
 
 static void gfs_map_read (GtsObject ** o, GtsFile * fp)
 {
@@ -99,7 +105,12 @@ GfsMapClass * gfs_map_class (void)
   return klass;
 }
 
-/* GfsMapFunction: Object */
+/** \endobject{GfsMap} */
+
+/**
+ *
+ * \beginobject{GfsMapFunction}
+ */
 
 static void gfs_map_function_read (GtsObject ** o, GtsFile * fp)
 {
@@ -251,7 +262,12 @@ GfsMapClass * gfs_map_function_class (void)
   return klass;
 }
 
-/* GfsMapTransform: Object */
+/** \endobject{GfsMapFunction} */
+
+/**
+ * Isometric coordinates transformations.
+ * \beginobject{GfsMapTransform}
+ */
 
 static void gfs_map_transform_read (GtsObject ** o, GtsFile * fp)
 {
@@ -331,3 +347,6 @@ GfsMapClass * gfs_map_transform_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsMapTransform} */
+

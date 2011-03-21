@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Solid boundaries.
+ */
 
 #include <math.h>
 #include <stdlib.h>
@@ -1508,7 +1511,10 @@ void gfs_solid_coarse_fine (FttCell * parent, GfsDomain * domain)
 #endif /* 3D */
 }
 
-/* GfsSolid: Object */
+/**
+ * Solid boundaries.
+ * \beginobject{GfsSolid}
+ */
 
 static void gfs_solid_read (GtsObject ** o, GtsFile * fp)
 {
@@ -1568,3 +1574,5 @@ GfsEventClass * gfs_solid_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsSolid} */

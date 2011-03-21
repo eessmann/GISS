@@ -16,11 +16,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.
  */
+/*! \file
+ * \brief Lagrangian particles.
+ */
 
 #include <stdlib.h>
 #include "particle.h"
 
-/* GfsParticle: Object */
+/**
+ * Lagrangian particules.
+ * \beginobject{GfsParticle}
+ */
 
 static gboolean gfs_particle_event (GfsEvent * event, 
 				    GfsSimulation * sim)
@@ -102,3 +108,5 @@ GfsEventClass * gfs_particle_class (void)
   }
   return klass;
 }
+
+/** \endobject{GfsParticle} */

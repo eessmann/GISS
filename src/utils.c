@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief GfsFunction and various utility functions.
+ */
 
 #include <stdlib.h>
 #include <ctype.h>
@@ -106,7 +109,10 @@ static GfsDerivedVariable * lookup_derived_variable (const gchar * name,
   return NULL;
 }
 
-/* GfsGlobal: Object */
+/**
+ * Global functions.
+ * \beginobject{GfsGlobal}
+ */
 
 struct _GfsGlobal {
   /*< private >*/
@@ -212,7 +218,9 @@ struct _GfsFunction {
   gdouble units;
 };
 
-/* GfsModule: Object */
+/** \endobject{GfsGlobal} */
+
+/* GfsModule: object */
 
 static GfsModule * gfs_module_new (GtsFile * fp, const gchar * mname,
 				   GHashTable * cache, const gchar * finname)
@@ -270,7 +278,10 @@ static void gfs_module_unref (GfsModule * m, GHashTable * cache)
   }
 }
 
-/* GfsFunction: Object */
+/**
+ * Numerical constants and expressions.
+ * \beginobject{GfsFunction}
+ */
 
 static GtsSurface * read_surface (gchar * name, GtsFile * fp)
 {
@@ -1170,7 +1181,12 @@ void gfs_function_write (GfsFunction * f, FILE * fp)
   (* GTS_OBJECT (f)->klass->write) (GTS_OBJECT (f), fp);
 }
 
-/* GfsFunctionSpatial: object */
+/** \endobject{GfsFunction} */
+
+/**
+ * Functions of (x,y,z,t).
+ * \beginobject{GfsFunctionSpatial}
+ */
 
 static void gfs_function_spatial_init (GfsFunction * f)
 {
@@ -1238,7 +1254,12 @@ GfsFunction * gfs_function_spatial_new (GfsFunctionClass * klass,
   return object;
 }
 
-/* GfsFunctionMap: object */
+/** \endobject{GfsFunctionSpatial} */
+
+/**
+ * Abstract class for coordinate transformations.
+ * \beginobject{GfsFunctionMap}
+ */
 
 static void gfs_function_map_init (GfsFunction * f)
 {
@@ -1266,7 +1287,12 @@ GfsFunctionClass * gfs_function_map_class (void)
   return klass;
 }
 
-/* GfsFunctionConstant: object */
+/** \endobject{GfsFunctionMap} */
+
+/**
+ * Symbolic constants.
+ * \beginobject{GfsFunctionConstant}
+ */
 
 static void gfs_function_constant_init (GfsFunction * f)
 {
@@ -1319,6 +1345,8 @@ gdouble gfs_read_constant (GtsFile * fp, gpointer domain)
     gts_file_error (fp, "expecting a constant");
   return val;
 }
+
+/** \endobject{GfsFunctionConstant} */
 
 /**
  * gfs_object_class_from_name:
@@ -1860,7 +1888,7 @@ void gfs_format_destroy (GSList * f)
 
 /**
  * gfs_format_string:
- * @list: a GSList of #GfsFormat.
+ * @format: a GSList of #GfsFormat.
  * @pid: the PID.
  * @niter: number of iterations done in the simulation.
  * @time: simulation time.

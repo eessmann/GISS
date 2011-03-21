@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Low-level discrete operators.
+ */
 
 #include <math.h>
 
@@ -1680,7 +1683,7 @@ static void gfs_cell_dirichlet_gradient_stencil (FttCell * cell,
  * @cell: a #FttCell.
  * @max_level: the maximum cell level to consider (-1 means no restriction).
  * @v0: the Dirichlet value on the boundary.
- * @id: a GfsVariable containing the id of the cells.
+ * @lp: the #GfsLinearProblem.
  * @stencil: a GfsStencil.
  *
  * Returns the stencil accounting for the flux of the gradient of
@@ -3026,10 +3029,11 @@ GfsStencil * gfs_stencil_new (FttCell * cell, GfsLinearProblem * lp, gdouble coe
 /**
  * gfs_stencil_add_element:
  * @stencil: the stencil
+ * @cell: a #FttCell.
  * @lp: the linear problem
  * @coeff: the cell coefficient.
  *
- * Adds the contribution of a cell to a stencil.
+ * Adds the contribution of a @cell to @stencil.
  */
 void gfs_stencil_add_element (GfsStencil * stencil, 
 			      FttCell * cell,
@@ -3446,7 +3450,7 @@ static void face_cm_gradient_stencil (const FttCellFace * face,
  * @face: a #FttCellFace.
  * @g: a GfsGradient.
  * @max_level: the maximum cell level to consider (-1 means no restriction).
- * @id: the cells' ids.
+ * @lp: the linear problem.
  * @stencil: a stencil.
  *
  * Fills @stencil with the stencil corresponding to the
@@ -3474,6 +3478,7 @@ void gfs_face_cm_weighted_gradient_stencil (const FttCellFace * face,
  * gfs_cm_gradient:
  * @cell: a #FttCell.
  * @v: a #GfsVariable.
+ * @g: a #FttVector.
  *
  * Fills @g with the components of the gradient of @v at the center of
  * mass of @cell.

@@ -16,12 +16,18 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief GfsVariableDistance.
+ */
 
 #include <stdlib.h>
 #include "levelset.h"
 #include "vof.h"
 
-/* GfsVariableDistance: object */
+/**
+ * Signed distance to a VOF interface.
+ * \beginobject{GfsVariableDistance}
+ */
 
 static void variable_distance_read (GtsObject ** o, GtsFile * fp)
 {
@@ -218,3 +224,4 @@ GfsVariableClass * gfs_variable_distance_class (void)
   return klass;
 }
 
+/** \endobject{GfsVariableDistance} */

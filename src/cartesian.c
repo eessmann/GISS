@@ -16,11 +16,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Data defined on Cartesian grids.
+ */
 
 #include <stdlib.h>
 #include "cartesian.h"
 
-/* GfsCartesianGrid: Object */
+/**
+ * Storage for Cartesian grid data.
+ * \beginobject{GfsCartesianGrid}
+ */
 
 static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
 {
@@ -244,3 +250,5 @@ gboolean gfs_cartesian_grid_interpolate (GfsCartesianGrid * g, gdouble * p, gdou
   *val = v1 + (v2 - v1)*(p[0] - g->x[0][i])/(g->x[0][i + 1] -  g->x[0][i]);
   return TRUE;
 }
+
+/** \endobject{GfsCartesianGrid} */

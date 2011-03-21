@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Static mesh refinement.
+ */
 
 #include <stdlib.h>
 #include "refine.h"
@@ -23,7 +26,10 @@
 #include "adaptive.h"
 #include "init.h"
 
-/* GfsRefine: Object */
+/**
+ * Simple definition of the refinement levels.
+ * \beginobject{GfsRefine}
+ */
 
 static gboolean refine_maxlevel (FttCell * cell, GfsFunction * maxlevel)
 {
@@ -137,7 +143,12 @@ GfsRefine * gfs_refine_new (GfsRefineClass * klass)
   return object;
 }
 
-/* GfsRefineSolid: Object */
+/** \endobject{GfsRefine} */
+
+/**
+ * Refine embedded solid surfaces.
+ * \beginobject{GfsRefineSolid}
+ */
 
 typedef struct _GfsRefineSolid           GfsRefineSolid;
 
@@ -273,7 +284,12 @@ GfsRefineClass * gfs_refine_solid_class (void)
   return klass;
 }
 
-/* GfsRefineSurface: Object */
+/** \endobject{GfsRefineSolid} */
+
+/**
+ * Refine cells cut by a surface.
+ * \beginobject{GfsRefineSurface}
+ */
 
 static void refine_surface_destroy (GtsObject * object)
 {
@@ -361,7 +377,12 @@ GfsRefineClass * gfs_refine_surface_class (void)
   return klass;
 }
 
-/* GfsRefineDistance: Object */
+/** \endobject{GfsRefineSurface} */
+
+/**
+ * Refine cells as a function of the distance from a surface.
+ * \beginobject{GfsRefineDistance}
+ */
 
 static void refine_distance_destroy (GtsObject * object)
 {
@@ -443,7 +464,12 @@ GfsRefineClass * gfs_refine_distance_class (void)
   return klass;
 }
 
-/* GfsRefineHeight: Object */
+/** \endobject{GfsRefineDistance} */
+
+/**
+ *
+ * \beginobject{GfsRefineHeight}
+ */
 
 static void refine_height_destroy (GtsObject * object)
 {
@@ -526,3 +552,5 @@ GfsRefineClass * gfs_refine_height_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsRefineHeight} */

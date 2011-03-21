@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief GfsSimulation, GfsPoisson, GfsAdvection models.
+ */
 
 #include <stdlib.h>
 #include <math.h>
@@ -33,7 +36,10 @@
 #include "map.h"
 #include "version.h"
 
-/* GfsSimulation: object */
+/**
+ * The incompressible Euler solver.
+ * \beginobject{GfsSimulation}
+ */
 
 static void module_close (GModule *module)
 {
@@ -386,6 +392,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 /**
  * gfs_advance_tracers:
  * @domain: a #GfsDomain.
+ * @dt: the timestep.
  *
  * Performs advection/difussion of tracers associated with @domain.
  */
@@ -1860,7 +1867,12 @@ gboolean gfs_variable_is_dimensional (GfsVariable * v)
   return TRUE;
 }
 
-/* GfsAdvection: Object */
+/** \endobject{GfsSimulation} */
+
+/**
+ * The advection solver.
+ * \beginobject{GfsAdvection}
+ */
 
 static void advection_run (GfsSimulation * sim)
 {
@@ -1942,7 +1954,12 @@ GfsSimulationClass * gfs_advection_class (void)
   return klass;
 }
 
-/* GfsPoisson: Object */
+/** \endobject{GfsAdvection} */
+
+/**
+ * The Poisson solver.
+ * \beginobject{GfsPoisson}
+ */
 
 typedef struct {
   GfsVariable * divu, * div;
@@ -2098,7 +2115,12 @@ GfsSimulationClass * gfs_poisson_class (void)
   return klass;
 }
 
-/* GfsAxi: Object */
+/** \endobject{GfsPoisson} */
+
+/**
+ * The axisymmetric Euler solver.
+ * \beginobject{GfsAxi}
+ */
 
 static void axi_read (GtsObject ** object, GtsFile * fp)
 {
@@ -2160,3 +2182,5 @@ GfsSimulationClass * gfs_axi_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsAxi} */

@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief GfsWave spectral wave model.
+ */
 
 #include <stdlib.h>
 #include "wave.h"
@@ -23,7 +26,10 @@
 #include "solid.h"
 #include "init.h"
 
-/* GfsWave: Object */
+/**
+ * Spectral wave model.
+ * \beginobject{GfsWave}
+ */
 
 static double frequency (int ik)
 {
@@ -385,7 +391,12 @@ GfsSimulationClass * gfs_wave_class (void)
   return klass;
 }
 
-/* GfsInitWave: Object */
+/** \endobject{GfsWave} */
+
+/**
+ * Initial wave spectrum for wave model.
+ * \beginobject{GfsInitWave}
+ */
 
 static void gfs_init_wave_read (GtsObject ** o, GtsFile * fp)
 {
@@ -495,3 +506,4 @@ GfsGenericInitClass * gfs_init_wave_class (void)
   return klass;
 }
 
+/** \endobject{GfsInitWave} */

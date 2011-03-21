@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Timestepping.
+ */
 
 #include <math.h>
 #include <stdlib.h>
@@ -950,7 +953,10 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
   gfs_domain_timer_stop (domain, "tracer_advection_diffusion");
 }
 
-/* GfsSurfaceGenericBc: Object */
+/**
+ * Generic Surface boundary condition.
+ * \beginobject{GfsSurfaceGenericBc}
+ */
 
 static void gfs_surface_generic_bc_destroy (GtsObject * o)
 {
@@ -1037,7 +1043,12 @@ GfsSurfaceGenericBcClass * gfs_surface_generic_bc_class (void)
   return klass;
 }
 
-/* GfsSurfaceBc: Object */
+/** \endobject{GfsSurfaceGenericBc} */
+
+/**
+ * Boundary conditions for diffusion and Poisson equations.
+ * \beginobject{GfsSurfaceBc}
+ */
 
 static void gfs_surface_bc_destroy (GtsObject * object)
 {
@@ -1135,3 +1146,5 @@ GfsSurfaceGenericBcClass * gfs_surface_bc_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsSurfaceBc} */

@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Orthogonal curvilinear metric.
+ */
 
 #include <stdlib.h>
 #include "metric.h"
@@ -23,8 +26,10 @@
 #include "map.h"
 #include "solid.h"
 
-/* GfsVariableMetric */
-
+/**
+ * A generic class for metrics which require storage.
+ * \beginobject{GfsVariableMetric}
+ */
 GfsVariableClass * gfs_variable_metric_class (void)
 {
   static GfsVariableClass * klass = NULL;
@@ -45,6 +50,8 @@ GfsVariableClass * gfs_variable_metric_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsVariableMetric} */
 
 /* "Expanded spherical cube" metric */
 
@@ -468,7 +475,10 @@ static GfsMapClass * gfs_map_cubed_class (void)
   return klass;
 }
 
-/* GfsMetricCubed: Object */
+/**
+ * The 'cubed sphere' metric.
+ * \beginobject{GfsMetricCubed}
+ */
 
 static gdouble cubed_face_metric (const GfsDomain * domain, const FttCellFace * face)
 {
@@ -740,6 +750,8 @@ GfsVariableClass * gfs_metric_cubed_class (void)
   return klass;
 }
 
+/** \endobject{GfsMetricCubed} */
+
 /* GfsMapLonLat: Header */
 
 typedef struct _GfsMapLonLat         GfsMapLonLat;
@@ -759,8 +771,6 @@ struct _GfsMapLonLat {
 						 gfs_map_lonlat_class ()))
 
 static GfsMapClass * gfs_map_lonlat_class      (void);
-
-/* GfsMapLonLat: Object */
 
 static void gfs_map_lonlat_read (GtsObject ** o, GtsFile * fp)
 {
@@ -848,7 +858,10 @@ static GfsMapClass * gfs_map_lonlat_class (void)
   return klass;
 }
 
-/* GfsMetricLonLat: Object */
+/**
+ * The longitude/latitude metric.
+ * \beginobject{GfsMetricLonLat}
+ */
 
 static void metric_lon_lat_write (GtsObject * o, FILE * fp)
 {
@@ -1019,14 +1032,14 @@ GfsVariableClass * gfs_metric_lon_lat_class (void)
   return klass;
 }
 
+/** \endobject{GfsMetricLonLat} */
+
 /* GfsMapStretch: Header */
 
 #define GFS_IS_MAP_STRETCH(obj)         (gts_object_is_from_class (obj,\
 						 gfs_map_stretch_class ()))
 
 static GfsMapClass * gfs_map_stretch_class      (void);
-
-/* GfsMapStretch: Object */
 
 static void gfs_map_stretch_read (GtsObject ** o, GtsFile * fp)
 {
@@ -1090,7 +1103,10 @@ static GfsMapClass * gfs_map_stretch_class (void)
   return klass;
 }
 
-/* GfsMetricStretch: Object */
+/**
+ * The "stretch" metric.
+ * \beginobject{GfsMetricStretch}
+ */
 
 static void metric_stretch_write (GtsObject * o, FILE * fp)
 {
@@ -1218,3 +1234,5 @@ GfsEventClass * gfs_metric_stretch_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsMetricStretch} */

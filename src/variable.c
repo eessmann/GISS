@@ -16,13 +16,19 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/** \file
+ * \brief GfsVariable and its descendants.
+ */
 
 #include <stdlib.h>
 #include "variable.h"
 #include "vof.h"
 #include "init.h"
 
-/* GfsVariable: Object */
+/**
+ * Base class for scalar fields.
+ * \beginobject{GfsVariable}
+ */
 
 static void variable_init_domain (GfsVariable * v, GfsDomain * domain)
 {
@@ -253,10 +259,15 @@ void gfs_variable_set_vector (GfsVariable ** v, guint n)
     v[i]->component = i;
     for (j = 0; j < n; j++)
       v[i]->vector[j] = v[j];
-  }    
+  }
 }
 
-/* GfsVariableBoolean: object */
+/** \endobject{GfsVariable} */
+
+/**
+ * Boolean value consistent with adaptive refinement.
+ * \beginobject{GfsVariableBoolean}
+ */
 
 static void boolean_fine_coarse (FttCell * parent, GfsVariable * v)
 {
@@ -313,7 +324,12 @@ GfsVariableClass * gfs_variable_boolean_class (void)
   return klass;
 }
 
-/* GfsVariableTracer: object */
+/** \endobject{GfsVariableBoolean} */
+
+/**
+ * Advected scalar fields.
+ * \beginobject{GfsVariableTracer}
+ */
 
 static void variable_tracer_read (GtsObject ** o, GtsFile * fp)
 {
@@ -374,7 +390,11 @@ GfsVariableClass * gfs_variable_tracer_class (void)
   return klass;
 }
 
-/* GfsVariableResidual: Object */
+/** \endobject{GfsVariableTracer} */
+
+/**
+ * \beginobject{GfsVariableResidual}
+ */
 
 static void scale_residual (FttCell * cell, GfsVariable * res)
 {
@@ -424,7 +444,12 @@ GfsVariableClass * gfs_variable_residual_class (void)
   return klass;
 }
 
-/* GfsVariableFiltered: object */
+/** \endobject{GfsVariableResidual} */
+
+/**
+ * Spatial filtering .
+ * \beginobject{GfsVariableFiltered}
+ */
 
 static void variable_filtered_read (GtsObject ** o, GtsFile * fp)
 {
@@ -531,7 +556,11 @@ GfsVariableClass * gfs_variable_filtered_class (void)
   return klass;
 }
 
-/* GfsVariableDiagonal: object */
+/** \endobject{GfsVariableFiltered} */
+
+/**
+ * \beginobject{GfsVariableDiagonal}
+ */
 
 static void unity (FttCell * cell, GfsVariable * v)
 {
@@ -614,7 +643,12 @@ GfsVariableClass * gfs_variable_diagonal_class (void)
   return klass;
 }
 
-/* GfsVariableFunction: Object */
+/** \endobject{GfsVariableDiagonal} */
+
+/**
+ * Optimising function evaluations .
+ * \beginobject{GfsVariableFunction}
+ */
 
 static void variable_function_destroy (GtsObject * o)
 {
@@ -689,9 +723,14 @@ GfsVariableClass * gfs_variable_function_class (void)
   return klass;
 }
 
+/** \endobject{GfsVariableFunction} */
+
 #if FTT_2D
 
-/* GfsVariableStreamFunction: Object */
+/**
+ * Maintaining a velocity field defined by a stream function.
+ * \beginobject{GfsVariableStreamFunction}
+ */
 
 static gdouble face_metric (FttCell * cell, FttDirection d, GfsDomain * domain)
 {
@@ -847,9 +886,14 @@ GfsVariableClass * gfs_variable_stream_function_class (void)
   return klass;
 }
 
+/** \endobject{GfsVariableStreamFunction} */
+
 #endif /* FTT_2D */
 
-/* GfsVariableAge: object */
+/**
+ * How old is this cell?.
+ * \beginobject{GfsVariableAge}
+ */
 
 static void increment_age (FttCell * cell, GfsVariable * v)
 {
@@ -904,63 +948,12 @@ GfsVariableClass * gfs_variable_age_class (void)
   return klass;
 }
 
-/* GfsDerivedVariable: object */
-
-static void gfs_derived_variable_destroy (GtsObject * object)
-{
-  g_free (GFS_DERIVED_VARIABLE (object)->name);
-  g_free (GFS_DERIVED_VARIABLE (object)->description);
-
-  (* GTS_OBJECT_CLASS (gfs_derived_variable_class ())->parent_class->destroy) (object);
-}
-
-static void gfs_derived_variable_class_init (GtsObjectClass * klass)
-{
-  klass->destroy = gfs_derived_variable_destroy;
-}
-
-GtsObjectClass * gfs_derived_variable_class (void)
-{
-  static GtsObjectClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_derived_variable_info = {
-      "GfsDerivedVariable",
-      sizeof (GfsDerivedVariable),
-      sizeof (GtsObjectClass),
-      (GtsObjectClassInitFunc) gfs_derived_variable_class_init,
-      (GtsObjectInitFunc) NULL,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_object_class ()), 
-				  &gfs_derived_variable_info);
-  }
-
-  return klass;
-}
+/** \endobject{GfsVariableAge} */
 
 /**
- * gfs_derived_variable_from_name:
- * @i: a list of #GfsDerivedVariable.
- * @name: a name.
- *
- * Returns: the #GfsDerivedVariable @name of @list or %NULL.
+ * Spatially-constant but time-dependent variables.
+ * \beginobject{GfsConstant}
  */
-GfsDerivedVariable * gfs_derived_variable_from_name (GSList * i, const gchar * name)
-{
-  g_return_val_if_fail (name != NULL, NULL);
-
-  while (i) {
-    GfsDerivedVariable * v = i->data;
-    if (!strcmp (v->name, name))
-      return v;
-    i = i->next;
-  }
-  return NULL;
-}
-
-/* GfsConstant: object */
 
 static void gfs_constant_destroy (GtsObject * object)
 {
@@ -1039,7 +1032,12 @@ GfsEventClass * gfs_constant_class (void)
   return klass;
 }
 
-/* GfsSpatialSum: Object */
+/** \endobject{GfsConstant} */
+
+/**
+ * Compute the spatial sum of a GfsFunction.
+ * \beginobject{GfsSpatialSum}
+ */
 
 static void gfs_spatial_sum_destroy (GtsObject * o)
 {
@@ -1117,3 +1115,66 @@ GfsEventClass * gfs_spatial_sum_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsSpatialSum} */
+
+/**
+ * Derived variables.
+ * \beginobject{GfsDerivedVariable}
+ */
+
+static void gfs_derived_variable_destroy (GtsObject * object)
+{
+  g_free (GFS_DERIVED_VARIABLE (object)->name);
+  g_free (GFS_DERIVED_VARIABLE (object)->description);
+
+  (* GTS_OBJECT_CLASS (gfs_derived_variable_class ())->parent_class->destroy) (object);
+}
+
+static void gfs_derived_variable_class_init (GtsObjectClass * klass)
+{
+  klass->destroy = gfs_derived_variable_destroy;
+}
+
+GtsObjectClass * gfs_derived_variable_class (void)
+{
+  static GtsObjectClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_derived_variable_info = {
+      "GfsDerivedVariable",
+      sizeof (GfsDerivedVariable),
+      sizeof (GtsObjectClass),
+      (GtsObjectClassInitFunc) gfs_derived_variable_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_object_class ()), 
+				  &gfs_derived_variable_info);
+  }
+
+  return klass;
+}
+
+/**
+ * gfs_derived_variable_from_name:
+ * @i: a list of #GfsDerivedVariable.
+ * @name: a name.
+ *
+ * Returns: the #GfsDerivedVariable @name of @list or %NULL.
+ */
+GfsDerivedVariable * gfs_derived_variable_from_name (GSList * i, const gchar * name)
+{
+  g_return_val_if_fail (name != NULL, NULL);
+
+  while (i) {
+    GfsDerivedVariable * v = i->data;
+    if (!strcmp (v->name, name))
+      return v;
+    i = i->next;
+  }
+  return NULL;
+}
+
+/** \endobject{GfsDerivedVariable} */

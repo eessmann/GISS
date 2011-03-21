@@ -16,12 +16,18 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Parallel load-balancing.
+ */
 
 #include "balance.h"
 #include "mpi_boundary.h"
 #include "adaptive.h"
 
-/* GfsEventBalance: Object */
+/**
+ * Dynamic load-balancing.
+ * \beginobject{GfsEventBalance}
+ */
 
 #ifdef HAVE_MPI
 
@@ -336,3 +342,5 @@ GfsEventClass * gfs_event_balance_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsEventBalance} */

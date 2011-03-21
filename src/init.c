@@ -16,6 +16,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/** \file
+ * \brief Initialisation.
+ */
+
+/** \mainpage Programming API Reference
+ *
+ * - <a href=modules.html>Class hierarchy</a>
+ * - <a href=globals.html>Function index</a>
+ * - <a href=classes.html>Data structure index</a>
+ */
 
 #include "config.h"
 
@@ -55,6 +65,7 @@
 #include "map.h"
 #include "metric.h"
 #include "particle.h"
+#include "cartesian.h"
 
 #include "modules.h"
 
@@ -220,6 +231,8 @@ GtsObjectClass ** gfs_classes (void)
     gfs_remove_ponds_class (),
     gfs_event_filter_class (),
     gfs_event_list_class (),
+
+    gfs_diffusion_class (),
    
     gfs_output_class (),
       gfs_output_time_class (),
@@ -256,6 +269,18 @@ GtsObjectClass ** gfs_classes (void)
     gfs_map_transform_class (),
 
   gfs_particle_class (),
+
+  gfs_cartesian_grid_class (),
+
+  gfs_derived_variable_class (),
+
+  gfs_generic_surface_class (),
+    gfs_surface_class (),
+
+  gfs_function_class (),
+    gfs_function_constant_class (),
+    gfs_function_spatial_class (),
+      gfs_function_map_class (),
 
   NULL};
 

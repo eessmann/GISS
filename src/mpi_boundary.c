@@ -16,11 +16,19 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Parallel boundary conditions.
+ */
 
 #include <stdlib.h>
 #include "domain.h"
 #include "mpi_boundary.h"
 #include "adaptive.h"
+
+/**
+ * Parallel boundary.
+ * \beginobject{GfsBoundaryMpi}
+ */
 
 static void boundary_mpi_write (GtsObject * o, FILE * fp)
 {
@@ -301,3 +309,5 @@ GfsBoundaryMpi * gfs_boundary_mpi_new (GfsBoundaryClass * klass,
 
   return boundary;
 }
+
+/** \endobject{GfsBoundaryMpi} */

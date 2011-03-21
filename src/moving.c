@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Moving solid boundaries.
+ */
 
 #include <stdlib.h>
 #include <math.h>
@@ -83,7 +86,10 @@ GtsVertexClass * gfs_numbered_vertex_class (void)
   return klass;
 }
 
-/* GfsSolidMoving: Object */
+/**
+ * Moving solid boundaries.
+ * \beginobject{GfsSolidMoving}
+ */
 
 typedef struct {
   GfsSimulation * sim;
@@ -824,9 +830,14 @@ GfsEventClass * gfs_solid_moving_class (void)
   return klass;
 }
 
-/* GfsMovingRun: Object */
+/** \endobject{GfsSolidMoving} */
 
 #define MOVING_CFL 0.45
+
+/**
+ * Euler solver with moving solid boundaries.
+ * \beginobject{GfsSimulationMoving}
+ */
 
 static void set_dtmax (FttCell * cell, SolidInfo * p)
 {
@@ -1238,3 +1249,5 @@ GfsSimulationClass * gfs_simulation_moving_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsSimulationMoving} */

@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Spatial domain.
+ */
 
 #include <math.h>
 #include <stdlib.h>
@@ -145,7 +148,10 @@ static void locate_array_destroy (LocateArray * a)
   }
 }
 
-/* GfsDomain: Object */
+/**
+ * Spatial domain.
+ * \beginobject{GfsDomain}
+ */
 
 static void domain_write (GtsObject * o, FILE * fp)
 {
@@ -4505,3 +4511,5 @@ GtsObject * gfs_object_from_name (GfsDomain * domain, const gchar * name)
 
   return g_hash_table_lookup (domain->objects, name);
 }
+
+/** \endobject{GfsDomain} */

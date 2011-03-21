@@ -210,13 +210,14 @@ GfsDerivedVariable * gfs_derived_variable_from_name        (GSList * i,
 
 typedef struct _GfsConstant GfsConstant;
 
+/** \instance{GfsConstant} */
 struct _GfsConstant {
   /*< private >*/
   GfsEvent parent;
   GfsDerivedVariable * derived;
 
   /*< public >*/
-  gdouble val;
+  gdouble val; /**< the value of the constant */
 };
 
 #define GFS_CONSTANT(obj)            GTS_OBJECT_CAST (obj,\
@@ -231,12 +232,13 @@ GfsEventClass *     gfs_constant_class            (void);
 
 typedef struct _GfsSpatialSum         GfsSpatialSum;
 
+/** \instance{GfsSpatialSum} */
 struct _GfsSpatialSum {
   /*< private >*/
   GfsConstant parent;
 
   /*< public >*/
-  GfsFunction * v;
+  GfsFunction * v; /**< the function to sum */
 };
 
 #define GFS_SPATIAL_SUM(obj)            GTS_OBJECT_CAST (obj,\

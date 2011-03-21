@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Source terms.
+ */
 
 #include <stdlib.h>
 #include <math.h>
@@ -138,7 +141,10 @@ GfsVariable * gfs_domain_variable_fluxes (GfsDomain * domain,
   return sv;
 }
 
-/* GfsSourceGeneric: Object */
+/**
+ * Abstract class for source terms.
+ * \beginobject{GfsSourceGeneric}
+ */
 
 static void source_generic_init (GfsSourceGeneric * s)
 {
@@ -193,7 +199,12 @@ GfsSourceGeneric * gfs_source_find (GfsVariable * v, GfsSourceGenericClass * kla
   return NULL;
 }
 
-/* GfsSourceScalar: Object */
+/** \endobject{GfsSourceGeneric} */
+
+/**
+ * Source terms for scalar variables.
+ * \beginobject{GfsSourceScalar}
+ */
 
 static void source_scalar_write (GtsObject * o, FILE * fp)
 {
@@ -263,7 +274,12 @@ GfsSourceGenericClass * gfs_source_scalar_class (void)
   return klass;
 }
 
-/* GfsSourceVelocity: Object */
+/** \endobject{GfsSourceScalar} */
+
+/**
+ * Source terms for velocity.
+ * \beginobject{GfsSourceVelocity}
+ */
 
 static void source_velocity_read (GtsObject ** o, GtsFile * fp)
 {
@@ -302,7 +318,7 @@ GfsSourceGenericClass * gfs_source_velocity_class (void)
 
   if (klass == NULL) {
     GtsObjectClassInfo source_info = {
-      "GfsSourceGeneric",
+      "GfsSourceVelocity",
       sizeof (GfsSourceVelocity),
       sizeof (GfsSourceGenericClass),
       (GtsObjectClassInitFunc) source_velocity_class_init,
@@ -317,7 +333,12 @@ GfsSourceGenericClass * gfs_source_velocity_class (void)
   return klass;
 }
 
-/* GfsSource: Object */
+/** \endobject{GfsSourceVelocity} */
+
+/**
+ * Source defined by a function.
+ * \beginobject{GfsSource}
+ */
 
 static void source_destroy (GtsObject * o)
 {
@@ -403,7 +424,12 @@ GfsSourceGenericClass * gfs_source_class (void)
   return klass;
 }
 
-/* GfsSourceControl: Object */
+/** \endobject{GfsSource} */
+
+/**
+ * Controlling the spatially-averaged value of a scalar.
+ * \beginobject{GfsSourceControl}
+ */
 
 static void source_control_destroy (GtsObject * o)
 {
@@ -499,7 +525,12 @@ GfsSourceGenericClass * gfs_source_control_class (void)
   return klass;
 }
 
-/* GfsSourceControlField: Object */
+/** \endobject{GfsSourceControl} */
+
+/**
+ * Controlling the value of a scalar averaged at a given spatial scale.
+ * \beginobject{GfsSourceControlField}
+ */
 
 static void source_control_field_destroy (GtsObject * o)
 {
@@ -652,7 +683,12 @@ GfsSourceGenericClass * gfs_source_control_field_class (void)
   return klass;
 }
 
-/* GfsSourceFlux: Object */
+/** \endobject{GfsSourceControlField} */
+
+/**
+ * Adding a flux on a given area or volume.
+ * \beginobject{GfsSourceFlux}
+ */
 
 static void source_flux_destroy (GtsObject * o)
 {
@@ -750,7 +786,12 @@ GfsSourceGenericClass * gfs_source_flux_class (void)
   return klass;
 }
 
-/* GfsDiffusion: Object */
+/** \endobject{SourceFlux} */
+
+/**
+ * Diffusion coefficient.
+ * \beginobject{GfsDiffusion}
+ */
 
 static void diffusion_destroy (GtsObject * o)
 {
@@ -876,7 +917,12 @@ gdouble gfs_diffusion_cell (GfsDiffusion * d, FttCell * cell)
   return (* GFS_DIFFUSION_CLASS (GTS_OBJECT (d)->klass)->cell) (d, cell);
 }
 
-/* GfsSourceDiffusion: Object */
+/** \endobject{GfsDiffusion} */
+
+/**
+ * Scalar diffusion.
+ * \beginobject{GfsSourceDiffusion}
+ */
 
 static void source_diffusion_destroy (GtsObject * o)
 {
@@ -1038,7 +1084,12 @@ gdouble gfs_source_diffusion_cell (GfsSourceDiffusion * d, FttCell * cell)
   return gfs_diffusion_cell (d->D, cell);
 }
 
-/* GfsSourceDiffusionExplicit: Object */
+/** \endobject{GfsSourceDiffusionExplicit} */
+
+/**
+ * Time-explicit scalar diffusion.
+ * \beginobject{GfsSourceDiffusionExplicit}
+ */
 
 typedef struct {
   GfsSourceGeneric * s;
@@ -1209,7 +1260,12 @@ GfsSourceGenericClass * gfs_source_diffusion_explicit_class (void)
   return klass;
 }
 
-/* GfsSourceViscosity: Object */
+/** \endobject{GfsSourceDiffusionExplicit} */
+
+/**
+ * Viscous terms.
+ * \beginobject{GfsSourceViscosity}
+ */
 
 static void add_viscosity_transverse_flux (FttCell * cell, FluxPar * p)
 {
@@ -1372,7 +1428,12 @@ GfsSourceGenericClass * gfs_source_viscosity_class (void)
   return klass;
 }
 
-/* GfsSourceViscosityExplicit: Object */
+/** \endobject{GfsSourceViscosity} */
+
+/**
+ *
+ * \beginobject{GfsSourceViscosityExplicit}
+ */
 
 static gdouble source_viscosity_stability (GfsSourceGeneric * s,
 					   GfsSimulation * sim)
@@ -1513,7 +1574,12 @@ GfsSourceGenericClass * gfs_source_viscosity_explicit_class (void)
   return klass;
 }
 
-/* GfsSourceCoriolis: Object */
+/** \endobject{GfsSourceViscosityExplicit} */
+
+/**
+ * Coriolis acceleration and linear friction.
+ * \beginobject{GfsSourceCoriolis}
+ */
 
 static void source_coriolis_destroy (GtsObject * o)
 {
@@ -1836,3 +1902,5 @@ void gfs_source_coriolis_implicit (GfsDomain * domain,
     sim->advection_params.dt = olddt;
   }
 }
+
+/** \endobject{GfsSourceCoriolis} */

@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Volume-Of-Fluid tracers.
+ */
 
 #include <math.h>
 #include <stdlib.h>
@@ -780,7 +783,10 @@ gdouble gfs_vof_interpolate (FttCell * cell,
   }
 }
 
-/* GfsVariableTracerVOF: object */
+/**
+ * Volume-Of-Fluid advection.
+ * \beginobject{GfsVariableTracerVOF}
+ */
 
 #if FTT_2D
 # define F(x,y,z) f[x][y]
@@ -2206,7 +2212,7 @@ static void fit_from_fractions (FttCell * cell, GfsVariable * v, ParabolaFit * f
 /**
  * gfs_fit_curvature:
  * @cell: a #FttCell containing an interface.
- * @v: a #GfsVariableTracerVOF.
+ * @t: a #GfsVariableTracerVOF.
  * @kmax: a pointer or %NULL. 
  *
  * Computes an approximation of the curvature of the interface
@@ -2299,7 +2305,7 @@ static guint independent_positions (GtsVector * interface, guint n)
 /**
  * gfs_height_curvature:
  * @cell: a #FttCell containing an interface.
- * @v: a #GfsVariableTracerVOF.
+ * @t: a #GfsVariableTracerVOF.
  * @kmax: a pointer or %NULL.
  *
  * An implementation of the Height-Function (HF) method generalised to
@@ -2413,3 +2419,5 @@ gdouble gfs_vof_correctness (FttCell * cell, GfsVariableTracerVOF * t)
   return sqrt ((dx*dx + dy*dy + dz*dz)/27.);
 #endif
 }
+
+/** \endobject{GfsVariableTracerVOF} */

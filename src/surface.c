@@ -16,11 +16,18 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Surfaces.
+ */
 
 #include "simulation.h"
 #include "surface.h"
 
-/* GfsGenericSurface: Object */
+/**
+ * Abstract class for surfaces (an oriented surface (in 3D) or an
+ * oriented curve (in 2D)).
+ * \beginobject{GfsGenericSurface}
+ */
 
 GfsGenericSurfaceClass * gfs_generic_surface_class (void)
 {
@@ -260,7 +267,12 @@ gint gfs_surface_point_is_inside (GfsGenericSurface * s,
   return (* GFS_GENERIC_SURFACE_CLASS (GTS_OBJECT (s)->klass)->point_is_inside) (s, p);
 }
 
-/* GfsSurface: Object */
+/** \endobject{GfsGenericSurface} */
+
+/**
+ * A GfsSurface is an oriented surface (in 3D) or an oriented curve (in 2D).
+ * \beginobject{GfsSurface}
+ */
 
 /**
  * gfs_surface_transformation:
@@ -268,7 +280,6 @@ gint gfs_surface_point_is_inside (GfsGenericSurface * s,
  * @rotate: a #GtsVector
  * @translate: a #GtsVector 
  * @scale: a #GtsVector
- * @s: a #gdouble
  * @flip: a #gboolean
  * @matrix: a pointer on a #GtsMatrix
  * 
@@ -836,3 +847,5 @@ gdouble gfs_surface_implicit_value (GfsSurface * s, GtsPoint p)
     return gts_point_is_inside_surface (&p, s->bbtree, TRUE) ? d2 : - d2;
   }
 }
+
+/** \endobject{GfsSurface} */

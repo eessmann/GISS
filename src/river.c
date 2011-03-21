@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief GfsRiver model.
+ */
 
 #include <stdlib.h>
 #include "river.h"
@@ -23,7 +26,10 @@
 #include "source.h"
 #include "init.h"
 
-/* GfsRiver: Object */
+/**
+ * Solves the Saint-Venant equations.
+ * \beginobject{GfsRiver}
+ */
 
 static void flux (const gdouble * u, gdouble g, gdouble * f)
 {
@@ -612,7 +618,12 @@ GfsSimulationClass * gfs_river_class (void)
   return klass;
 }
 
-/* GfsBcSubcritical: Object */
+/** \endobject{GfsRiver} */
+
+/**
+ * 
+ * \beginobject{GfsBcSubcritical}
+ */
 
 static void subcritical (FttCellFace * f, GfsBc * b)
 {
@@ -673,7 +684,12 @@ GfsBcClass * gfs_bc_subcritical_class (void)
   return klass;
 }
 
-/* GfsDischargeElevation: Object */
+/** \endobject{GfsBcSubcritical} */
+
+/**
+ *
+ * \beginobject{GfsDischargeElevation}
+ */
 
 static void discharge_elevation_destroy (GtsObject * o)
 {
@@ -845,3 +861,5 @@ GfsEventClass * gfs_discharge_elevation_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsDischargeElevation} */

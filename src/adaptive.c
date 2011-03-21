@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Adaptive mesh refinement.
+ */
 
 #include <stdlib.h>
 #include <math.h>
@@ -53,7 +56,10 @@ void gfs_cell_coarse_init (FttCell * cell, GfsDomain * domain)
   }
 }
 
-/* GfsAdapt: Object */
+/**
+ * Base class for adaptive refinement criteria.
+ * \beginobject{GfsAdapt}
+ */
 
 typedef struct {
   GfsSimulation * sim;
@@ -302,7 +308,10 @@ GfsEventClass * gfs_adapt_class (void)
   return klass;
 }
 
-/* GfsAdaptVorticity: Object */
+/**
+ * Adapting cells depending on the local vorticity.
+ * \beginobject{GfsAdaptVorticity}
+ */
 
 static gboolean gfs_adapt_vorticity_event (GfsEvent * event, 
 					   GfsSimulation * sim)
@@ -356,7 +365,12 @@ GfsEventClass * gfs_adapt_vorticity_class (void)
   return klass;
 }
 
-/* GfsAdaptStreamlineCurvature: Object */
+/** \endobject{GfsAdaptVorticity} */
+
+/**
+ *
+ * \beginobject{GfsAdaptStreamlineCurvature}
+ */
 
 static void gfs_adapt_streamline_curvature_init (GfsAdapt * object)
 {
@@ -384,7 +398,12 @@ GfsEventClass * gfs_adapt_streamline_curvature_class (void)
   return klass;
 }
 
-/* GfsAdaptFunction: Object */
+/** \endobject{GfsAdaptStreamlineCurvature} */
+
+/**
+ * Adapting cells depending on the value of a function.
+ * \beginobject{GfsAdaptFunction}
+ */
 
 static void gfs_adapt_function_destroy (GtsObject * o)
 {
@@ -447,7 +466,12 @@ GfsEventClass * gfs_adapt_function_class (void)
   return klass;
 }
 
-/* GfsAdaptGradient: Object */
+/** \endobject{GfsAdaptFunction} */
+
+/**
+ * Adapting cells depending on the local gradient of a variable.
+ * \beginobject{GfsAdaptGradient}
+ */
 
 static void gfs_adapt_gradient_destroy (GtsObject * o)
 {
@@ -545,7 +569,12 @@ GfsEventClass * gfs_adapt_gradient_class (void)
   return klass;
 }
 
-/* GfsAdaptError: Object */
+/** \endobject{GfsAdaptGradient} */
+
+/**
+ * Adapting using an a posteriori error estimate.
+ * \beginobject{GfsAdaptError}
+ */
 
 static void gfs_adapt_error_destroy (GtsObject * o)
 {
@@ -657,6 +686,8 @@ GfsEventClass * gfs_adapt_error_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsAdaptError} */
 
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {
@@ -1102,7 +1133,6 @@ static gboolean adapt_local (GfsSimulation * sim, guint * depth, GfsAdaptStats *
 /**
  * gfs_simulation_adapt:
  * @simulation: a #GfsSimulation.
- * @s: where to put statistics (or %NULL).
  *
  * Checks if any mesh adaptation is necessary and adapts the mesh
  * using an OR combination of all the regular criteria defined in
@@ -1196,3 +1226,5 @@ void gfs_adapt_stats_update (GfsAdaptStats * s)
   gts_range_update (&s->cmax);
   gts_range_update (&s->ncells);
 }
+
+/** \endobject{GfsAdapt} */

@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Poisson and diffusion solvers.
+ */
 
 #include <math.h>
 #include <stdlib.h>
@@ -380,7 +383,6 @@ static void leaves_renumbering (FttCell * cell, NumberingParams * p)
 /**
  * gfs_get_poisson_problem:
  * @domain: the domain over which the poisson problem is defined
- * @par: the GfsMultilevelParams
  * @rhs: the variable to use as right-hand side
  * @lhs: the variable to use as left-hand side
  * @dia: the diagonal weight
@@ -541,6 +543,7 @@ static void relax_dirichlet (FttCell * cell, RelaxParams * p)
  * @domain: the domain to relax.
  * @d: number of dimensions (2 or 3).
  * @max_depth: the maximum depth of the domain to relax.
+ * @omega: the over-relaxation parameter.
  * @u: the variable to use as left-hand side.
  * @rhs: the variable to use as right-hand side.
  * @dia: the diagonal weight.
@@ -795,7 +798,7 @@ static void face_coeff_from_below (FttCell * cell)
  * @centered: %TRUE if solving for a centered variable.
  *
  * Initializes the face coefficients for the Poisson equation
- * $\nabla\cdot\alpha\nabla p=\dots$.
+ * \f$\nabla\cdot\alpha\nabla p=\dots\f$.
  *
  * If @alpha is %NULL, it is taken to be unity.
  */

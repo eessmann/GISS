@@ -16,6 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+/*! \file
+ * \brief Surface tension.
+ */
 
 #include <math.h>
 #include <stdlib.h>
@@ -25,7 +28,10 @@
 #include "levelset.h"
 #include "init.h"
 
-/* GfsSourceTensionGeneric: Object */
+/**
+ * Generic surface tension class.
+ * \beginobject{GfsSourceTensionGeneric}
+ */
 
 static void gfs_source_tension_generic_destroy (GtsObject * o)
 {
@@ -165,7 +171,12 @@ GfsSourceGenericClass * gfs_source_tension_generic_class (void)
   return klass;
 }
 
-/* GfsSourceTensionCSS: Object */
+/** \endobject{GfsSourceTensionGeneric} */
+
+/**
+ * Continuum Surface Stress surface tension formulation.
+ * \beginobject{GfsSourceTensionCSS}
+ */
 
 static void gfs_source_tension_css_read (GtsObject ** o, GtsFile * fp)
 {
@@ -286,7 +297,12 @@ GfsSourceGenericClass * gfs_source_tension_css_class (void)
   return klass;
 }
 
-/* GfsSourceTension: Object */
+/** \endobject{GfsSourceTensionCSS} */
+
+/**
+ * Balanced Continuum Surface Force surface tension formulation.
+ * \beginobject{GfsSourceTension}
+ */
 
 static void gfs_source_tension_read (GtsObject ** o, GtsFile * fp)
 {
@@ -364,7 +380,12 @@ GfsSourceGenericClass * gfs_source_tension_class (void)
   return klass;
 }
 
-/* GfsVariableCurvature: object */
+/** \endobject{GfsSourceTension} */
+
+/**
+ * Curvature of an interface.
+ * \beginobject{GfsVariableCurvature}
+ */
 
 static void variable_curvature_destroy (GtsObject * o)
 {
@@ -753,7 +774,12 @@ GfsVariableClass * gfs_variable_curvature_class (void)
   return klass;
 }
 
-/* GfsVariablePosition: object */
+/** \endobject{GfsVariableCurvature} */
+
+/**
+ * Coordinates of a VOF interface.
+ * \beginobject{GfsVariablePosition}
+ */
 
 static void variable_position_read (GtsObject ** o, GtsFile * fp)
 {
@@ -867,3 +893,5 @@ GfsVariableClass * gfs_variable_position_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsVariablePosition} */
