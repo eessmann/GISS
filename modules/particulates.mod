@@ -1054,7 +1054,7 @@ GfsEventClass * gfs_droplet_to_particle_class (void)
 
 static void voidfraction_from_particles (FttCell * cell, GfsVariable * v, GfsParticulate * part)
 {
-  GFS_VALUE (cell, v) += part->volume/( ftt_cell_volume (cell));
+  GFS_VALUE (cell, v) += part->volume/ftt_cell_volume (cell);
 }
 
 static gboolean particulate_field_event (GfsEvent * event, 
@@ -1092,7 +1092,7 @@ static void particulate_field_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting a string (object name)");
     return;
   }
-  GFS_VARIABLE1(*o)->units=-FTT_DIMENSION;
+
   GfsParticulateField * pfield = GFS_PARTICULATE_FIELD (*o);
   GtsObject * object = gfs_object_from_name (GFS_DOMAIN (gfs_object_simulation (*o)), 
 					     fp->token->str);
@@ -1124,6 +1124,7 @@ static void particulate_field_class_init (GtsObjectClass * klass)
 
 static void particulate_field_init (GtsObject *o)
 {
+  GFS_VARIABLE1 (o)->units = -FTT_DIMENSION;
   GFS_PARTICULATE_FIELD (o)->voidfraction_func = voidfraction_from_particles;
 }
 
