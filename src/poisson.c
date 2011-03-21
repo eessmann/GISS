@@ -233,8 +233,11 @@ void gfs_linear_problem_destroy (GfsLinearProblem * lp)
 
   g_array_free (lp->rhs, TRUE);  
   g_array_free (lp->lhs, TRUE);
-  
-  g_ptr_array_foreach (lp->LP, (GFunc) gfs_stencil_destroy, NULL);
+
+  int i;
+  for (i = 0; i < lp->LP->len; i++)
+    gfs_stencil_destroy (g_ptr_array_index (lp->LP, i));
+
   g_ptr_array_free (lp->LP, TRUE);
 }
 

@@ -655,10 +655,11 @@ static void hypre_problem_init (HypreProblem * hp, GfsLinearProblem * lp,
   rhs_values = (double *) lp->rhs->data;
   x_values = (double *) lp->lhs->data;
   rows = g_malloc (lp->lhs->len*sizeof(int));
-  g_ptr_array_foreach (lp->LP, (GFunc) extract_stencil, hp);
 
-  for (i = 0; i < lp->rhs->len; i++)
+  for (i = 0; i < lp->rhs->len; i++) {
+    extract_stencil (g_ptr_array_index (lp->LP, i), hp);
     rows[i] = lp->istart + i;
+  }
 
   HYPRE_IJVectorSetValues(hp->b, lp->rhs->len, rows, rhs_values );
   HYPRE_IJVectorSetValues(hp->x, lp->lhs->len, rows, x_values);
