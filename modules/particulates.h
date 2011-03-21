@@ -159,3 +159,29 @@ struct _GfsParticulateField {
 
 GfsVariableClass * gfs_particulate_field_class  (void);
 
+/* GfsFeedParticle: header */
+
+typedef struct _GfsFeedParticle GfsFeedParticle;
+
+struct _GfsFeedParticle{
+  /*< private >*/
+  GfsParticleList parent;
+  GfsVariable * v;
+  
+  /*< public >*/
+  guint np;
+  GfsFunction * posx, * posy, * posz;
+  GfsFunction * velx, * vely, * velz;
+  GfsFunction * mass, * vol;
+};
+
+#define GFS_FEED_PARTICLE(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsFeedParticle,\
+					         gfs_feed_particle_class ())
+
+#define IS_FEED_PARTICLE(obj)         (gts_object_is_from_class (obj,\
+					         gfs_feed_particle_class ()))
+
+GfsEventClass * gfs_feed_particle_class  (void);
+
+

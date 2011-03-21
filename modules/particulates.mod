@@ -585,7 +585,9 @@ static void gfs_particulate_write (GtsObject * o, FILE * fp)
  
  GfsParticulate * p = GFS_PARTICULATE (o);
   gdouble L = gfs_object_simulation (o)->physical_params.L;
-  fprintf (fp, " %g %g %g %g %g", p->mass, p->volume*pow(L, FTT_DIMENSION), 
+  //fprintf (fp, " %g %g %g %g %g", p->mass, p->volume*pow(L, FTT_DIMENSION), 
+  //             p->vel.x*L, p->vel.y*L, p->vel.z*L);
+  fprintf (fp, " %g %g %g %g %g", p->mass, p->volume, 
                p->vel.x*L, p->vel.y*L, p->vel.z*L);
   fprintf (fp, " %g %g %g", p->force.x*L, p->force.y*L, p->force.z*L);
 }
@@ -1141,6 +1143,259 @@ GfsVariableClass * gfs_particulate_field_class (void)
   return klass;
 }
 
+/* GfsFeedParticle: object */
+
+static void add_particulate (GfsDomain * domain, 
+			      GfsFeedParticle * feedp, GfsParticleList * plist)
+{
+  GfsSimulation * sim = gfs_object_simulation (plist); 
+  GfsEventList * l = GFS_EVENT_LIST (plist); 
+  guint c;
+  FttVector pos,vel;
+  
+  pos.x = gfs_function_value (feedp->posx, NULL); 
+  pos.y = gfs_function_value (feedp->posy, NULL); 
+  pos.z = gfs_function_value (feedp->posz, NULL); 
+  FttCell * cell = gfs_domain_locate (domain, pos, -1, NULL);    
+  if (cell) {
+    /* Construct an Object */
+    GtsObjectClass * klass = l->klass;
+    if (klass == NULL) {
+      gfs_error (0, "Unknown particle class\n");
+      return;
+    }
+    GtsObject * object = gts_object_new (klass);
+    gfs_object_simulation_set (object, sim);
+    l->list->items = g_slist_reverse (l->list->items);	
+    gts_container_add (GTS_CONTAINER (l->list), GTS_CONTAINEE (object));
+    l->list->items = g_slist_reverse (l->list->items);
+    GfsEvent * list = GFS_EVENT (l);	
+    gfs_event_set (GFS_EVENT (object), 
+                   list->start, list->end, list->step, list->istart, list->iend, list->istep);
+    GfsParticulate * part = GFS_PARTICULATE (object);
+    GfsParticle * p = GFS_PARTICLE (part);
+    
+    vel.x = gfs_function_value (feedp->velx, cell);
+    vel.y = gfs_function_value (feedp->vely, cell);
+    vel.z = gfs_function_value (feedp->velz, cell);
+    part->vel = vel;
+    p->pos = pos;
+    part->volume = gfs_function_value (feedp->vol, cell);
+    p->id = ++plist->idlast;
+    part->mass = gfs_function_value (feedp->mass, cell);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&part->force.x)[c] = 0.;
+  }       
+}
+
+
+static gboolean gfs_feed_particle_event (GfsEvent * event, GfsSimulation * sim)
+{ 
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_feed_particle_class ())->parent_class)->event)
+      (event, sim)) {  
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    GfsParticleList * plist = GFS_PARTICLE_LIST (event);
+    GfsFeedParticle * feedp = GFS_FEED_PARTICLE (event);
+    gint i;
+
+    for (i = 0; i < feedp->np; i++) { 
+        add_particulate (domain, feedp, plist);
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_feed_particle_read (GtsObject ** o, GtsFile * fp)
+{  
+  if (GTS_OBJECT_CLASS (gfs_feed_particle_class ())->parent_class->read)
+    (* GTS_OBJECT_CLASS (gfs_feed_particle_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsFeedParticle * feedp = GFS_FEED_PARTICLE(*o);
+
+
+  if (fp->type != '{') {
+    gts_file_error (fp, "expecting an opening brace");
+    return;
+  }
+  fp->scope_max++;
+  gts_file_next_token (fp);
+
+  while (fp->type != GTS_ERROR && fp->type != '}') {
+    if (fp->type == '\n') {
+      gts_file_next_token (fp);
+      continue;
+    }
+      if (fp->type != GTS_STRING) {
+      gts_file_error (fp, "expecting a keyword");
+      return;
+    }  
+  else if (!strcmp (fp->token->str, "nparts")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+        gts_file_error (fp, "expecting '='");
+        return;
+      }    
+      gts_file_next_token (fp);
+      feedp->np = atoi (fp->token->str);
+    }
+    else if (!strcmp (fp->token->str, "xfeed")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+        gts_file_error (fp, "expecting '='");
+        return;
+      }
+      gts_file_next_token (fp);
+      gfs_function_read (feedp->posx, gfs_object_simulation (*o), fp);    
+    }
+    else if (!strcmp (fp->token->str, "yfeed")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+        gts_file_error (fp, "expecting '='");
+        return;
+      }
+      gts_file_next_token (fp);
+      gfs_function_read (feedp->posy, gfs_object_simulation (*o), fp);    
+    }
+    else if (!strcmp (fp->token->str, "zfeed")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+        gts_file_error (fp, "expecting '='");
+        return;
+      }
+      gts_file_next_token (fp);
+      gfs_function_read (feedp->posz, gfs_object_simulation (*o), fp);    
+    }
+    else if (!strcmp (fp->token->str, "velx")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+        gts_file_error (fp, "expecting '='");
+        return;
+      }
+      gts_file_next_token (fp);
+      gfs_function_read (feedp->velx, gfs_object_simulation (*o), fp);    
+    }
+    else if (!strcmp (fp->token->str, "vely")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+        gts_file_error (fp, "expecting '='");
+        return;
+      }
+      gts_file_next_token (fp);
+      gfs_function_read (feedp->vely, gfs_object_simulation (*o), fp);    
+    }
+    else if (!strcmp (fp->token->str, "velz")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+        gts_file_error (fp, "expecting '='");
+        return;
+      }
+      gts_file_next_token (fp);
+      gfs_function_read (feedp->velz, gfs_object_simulation (*o), fp);    
+    }
+    else if (!strcmp (fp->token->str, "mass")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+        gts_file_error (fp, "expecting '='");
+        return;
+      }
+      gts_file_next_token (fp);
+      gfs_function_read (feedp->mass, gfs_object_simulation (*o), fp);    
+    }
+    else if (!strcmp (fp->token->str, "volume")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+        gts_file_error (fp, "expecting '='");
+        return;
+      }
+      gts_file_next_token (fp);
+      gfs_function_read (feedp->vol, gfs_object_simulation (*o), fp);    
+    }
+    else {
+      gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
+      return;
+    }
+  }
+  if (fp->type == GTS_ERROR)
+    return;
+  if (fp->type != '}') {
+    gts_file_error (fp, "expecting a closing brace");
+    return;
+  }
+  fp->scope_max--;
+  gts_file_next_token (fp);
+
+}
+
+static void gfs_feed_particle_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_feed_particle_class ())->parent_class->write) (o, fp);
+
+  GfsFeedParticle * feedp = GFS_FEED_PARTICLE(o);
+  fprintf (fp, "{ nparts = %u ", feedp->np);
+  fputs (" xfeed =", fp);
+  gfs_function_write (feedp->posx, fp);
+  fputs (" yfeed =", fp);
+  gfs_function_write (feedp->posy, fp);
+  fputs (" zfeed =", fp);
+  gfs_function_write (feedp->posz, fp);
+  fputs (" velx =", fp);
+  gfs_function_write (feedp->velx, fp);
+  fputs (" vely =", fp);
+  gfs_function_write (feedp->vely, fp);
+  fputs (" velz =", fp);
+  gfs_function_write (feedp->velz, fp);
+  fputs (" mass =", fp);
+  gfs_function_write (feedp->mass, fp);
+  fputs (" volume =", fp);
+  gfs_function_write (feedp->vol, fp);
+  fputc ('}', fp);
+}
+
+static void gfs_feed_particle_class_init (GfsEventClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = gfs_feed_particle_event;
+  GTS_OBJECT_CLASS (klass)->read = gfs_feed_particle_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_feed_particle_write;  
+}
+
+static void gfs_feed_particle_init ( GfsFeedParticle * feedp) {
+
+    feedp->np   = 1;
+    feedp->posx = gfs_function_new (gfs_function_class (), 0.);
+    feedp->posy = gfs_function_new (gfs_function_class (), 0.);
+    feedp->posz = gfs_function_new (gfs_function_class (), 0.);
+    feedp->velx = gfs_function_new (gfs_function_class (), 0.);
+    feedp->vely = gfs_function_new (gfs_function_class (), 0.);
+    feedp->velz = gfs_function_new (gfs_function_class (), 0.);
+    feedp->mass = gfs_function_new (gfs_function_class (), 0.);
+    feedp->vol  = gfs_function_new (gfs_function_class (), 0.);
+
+}
+
+GfsEventClass * gfs_feed_particle_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_feed_particle_info = {
+      "GfsFeedParticle",
+      sizeof (GfsFeedParticle),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_feed_particle_class_init,
+      (GtsObjectInitFunc) gfs_feed_particle_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_particle_list_class ()),
+				  &gfs_feed_particle_info);
+  }
+  return klass;
+}
+
+
 /* Initialize module */
 
 const gchar gfs_module_name[] = "particulates";
@@ -1156,6 +1411,7 @@ const gchar * g_module_check_init (void)
   gfs_particle_force_class ();
 
   gfs_droplet_to_particle_class ();
+  gfs_feed_particle_class ();
 
   gfs_particulate_field_class ();
 
