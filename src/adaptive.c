@@ -266,9 +266,23 @@ static gboolean gfs_adapt_event (GfsEvent * event, GfsSimulation * sim)
   return FALSE;
 }
 
+static void save_cost (FttCell * cell, GfsAdapt * a)
+{
+  GFS_VALUE (cell, a->c) = (* a->cost) (cell, a);
+}
+
+static void gfs_adapt_post_event (GfsEvent * event, GfsSimulation * sim)
+{
+  GfsAdapt * a = GFS_ADAPT (event);
+  if (a->active && a->c)
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) save_cost, a);
+}
+
 static void gfs_adapt_class_init (GfsEventClass * klass)
 {
   klass->event = gfs_adapt_event;
+  klass->post_event = gfs_adapt_post_event;
   GTS_OBJECT_CLASS (klass)->destroy = gfs_adapt_destroy;
   GTS_OBJECT_CLASS (klass)->read = gfs_adapt_read;
   GTS_OBJECT_CLASS (klass)->write = gfs_adapt_write;
