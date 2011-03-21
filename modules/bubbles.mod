@@ -255,7 +255,21 @@ static gboolean cond_bubble (FttCell * cell, gpointer data)
     BubbleData * p = data;
     FttVector pos;
     ftt_cell_pos (cell, &pos);
-    return (ftt_vector_dist (&pos, p->pos) <= p->distance);
+    
+    if (ftt_vector_dist (&pos, p->pos) <= p->distance) return TRUE;
+    
+    /* Check also if the bubble is inside the cell*/
+    gdouble size = ftt_cell_size (cell)/2.;
+    if (p->pos->x > pos.x + size || p->pos->x < pos.x - size ||
+        p->pos->y > pos.y + size || p->pos->y < pos.y - size 
+    #if !FTT_2D
+          || p->pos->z > pos.z + size || p->pos->z < pos.z - size 
+    #endif
+          ) { 
+        return FALSE;
+        }
+
+    return TRUE;
 }
 
 static gboolean bubble_field_event (GfsEvent * event, 
@@ -296,7 +310,7 @@ static void bubble_field_read (GtsObject ** o, GtsFile * fp)
   (* GTS_OBJECT_CLASS (gfs_bubble_field_class ())->parent_class->read) (o, fp); 
   if (fp->type == GTS_ERROR)
     return;
-
+// CORRECT!! It gives segmentation fault if the variable has been already used in the simulation file
   if (fp->type != GTS_STRING) {
     gts_file_error (fp, "expecting a string (object name)");
     return;

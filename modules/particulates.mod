@@ -536,7 +536,10 @@ static void gfs_particulate_read (GtsObject ** o, GtsFile * fp)
     return;
   }
   gdouble L = gfs_object_simulation (*o)->physical_params.L;
-  p->volume = atof (fp->token->str)/pow(L, FTT_DIMENSION);
+// L is not correctly initialized. WHY???
+//  printf("L %g \n", L);
+  p->volume = atof (fp->token->str);
+//  p->volume /= pow(L, FTT_DIMENSION);
   gts_file_next_token (fp);
 
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
