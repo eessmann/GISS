@@ -74,6 +74,7 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
   cgd->x = g_malloc0 (cgd->N*sizeof (gdouble *));
   for (i = 0; i < cgd->N; i++) {
     cgd->x[i] = g_malloc (cgd->n[i]*sizeof (gdouble));
+    gdouble last = - G_MAXDOUBLE;
     for (j = 0; j < cgd->n[i]; j++) {
       if (fp->type == '\n')
 	gts_file_next_token (fp);
@@ -82,6 +83,11 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
         return;
       }
       cgd->x[i][j] = atof (fp->token->str);
+      if (cgd->x[i][j] < last) {
+	gts_file_error (fp, "coordinates must be in increasing order", i, j);
+        return;
+      }
+      last = cgd->x[i][j];
       gts_file_next_token (fp);
     }
   }
