@@ -1,3 +1,4 @@
+
 #!/bin/sh
 
 # see ../src/darcsversion.sh
@@ -16,6 +17,37 @@ Updates a SourceForge snapshot using the given darcs repository.
 
 EOF
 	exit $1
+}
+
+transfer()
+{
+    package=$1
+    version=$2
+    login=$3
+    dir=$4
+    if test x$dir = x; then
+	dir=$login
+	if rm -f $dir/tarballs/$package-snapshot-*.tar.gz && \
+	    cp $package-snapshot-$version.tar.gz $dir/tarballs && \
+	    rm -f $dir/$package-snapshot.tar.gz && \
+	    ln -s $dir/tarballs/$package-snapshot-$version.tar.gz $dir/$package-snapshot.tar.gz ; \
+	    then :
+	else
+	    exit 1
+	fi
+    else
+	if cat <<EOF | sftp $login; then :
+     cd $dir/tarballs
+     -rm $package-snapshot-*.tar.gz
+     put $package-snapshot-$version.tar.gz
+     cd $dir
+     -rm $package-snapshot.tar.gz
+     symlink tarballs/$package-snapshot-$version.tar.gz $package-snapshot.tar.gz
+EOF
+	else
+	    exit 1
+	fi
+    fi
 }
 
 if test $# -lt 3; then
@@ -42,14 +74,7 @@ if ( darcs get --partial $repo $package && \
      rm -r -f $package-[0-9].[0-9].[0-9] && tar xzf $package-*.tar.gz && \
      mv $package-[0-9].[0-9].[0-9] $package-snapshot-$version && \
      tar chof - $package-snapshot-$version | gzip --best -c > $package-snapshot-$version.tar.gz && \
-     cat <<EOF | sftp $login
-     cd $dir/tarballs
-     -rm $package-snapshot-*.tar.gz
-     put $package-snapshot-$version.tar.gz
-     cd $dir
-     -rm $package-snapshot.tar.gz
-     symlink tarballs/$package-snapshot-$version.tar.gz $package-snapshot.tar.gz
-EOF
+     transfer $package $version $login "$dir"
 ) > msg 2>&1; then
     rm -f msg
     status=0
