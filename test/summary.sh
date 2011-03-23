@@ -26,7 +26,7 @@ system=`uname -o -n -m | sed 's/_/\\\\_/'`
 path=`which gerris2D`
 version=`gerris2D -V 2>&1 | head -1 | cut -d' ' -f6-`
 
-if test x$fail = x; then
+if test x$fail = x0; then
     status="{\color{OliveGreen}PASS ($pass)}"
 else
     status="{\color{Red}FAIL ($fail/$n)}"

@@ -118,15 +118,16 @@ examples.pdf: examples.dvi
 examples.tex: template.tex Makefile.deps gfs2tex gfs2tex.py
 	rm -r -f examples
 	python gfs2tex $(EXAMPLES)
-	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | awk '{ if ($$5 == "version") print $$6}'`/g" < template.tex | sed 's/\\today/'"`date +\"%B %e, %Y\"`/g" > examples.tex
+	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | head -1 | cut -d' ' -f6-`/g" < template.tex | sed 's/\\today/'"`date +\"%B %e, %Y\"`/g" > examples.tex
 
 Makefile.deps: depend.py Makefile.am
 	python depend.py $(EXAMPLES) > Makefile.deps
 
--include Makefile.deps
+include Makefile.deps
 
 examples.tar.gz: examples.pdf examples $(DOCS)
 	tar czf examples.tar.gz examples $(DOCS)
+	rm -r -f examples
 
 INCLUDES = -I$(top_srcdir)/src -I$(includedir) -DG_LOG_DOMAIN=\"Gfs-tools\"\
             $(GTS_CFLAGS)

@@ -100,10 +100,11 @@ tests.tex: template.tex Makefile.deps
 Makefile.deps: depend.py
 	python depend.py $(TESTDIRS) > Makefile.deps
 
--include Makefile.deps
+include Makefile.deps
 
 tests.tar.gz: tests $(DOCS)
 	tar czf tests.tar.gz tests $(DOCS)
+	rm -r -f tests
 
 publish: tests.tar.gz
 	cp tests.tar.gz $(WEBROOT)/tests
