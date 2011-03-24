@@ -1,11 +1,7 @@
 endstamp=`date +%s`
 end=`date -d@$endstamp +"%a %d %b %H:%M:%S"`
 
-dirs=""
-while test $# -gt 0; do
-    dirs="$dirs $1"
-    shift
-done
+dirs="$TESTS"
 
 status=`for d in $dirs; do find $d -name status; done`
 
@@ -47,7 +43,7 @@ elapsed=`awk "BEGIN{
   printf(\"%02d:%02d\", mins, elapsed);
 }"`
 
-cat <<EOF
+cat <<EOF > summary.tex
 \begin{tabular}{ll}
 {\bf Version} & $version \\\\
 {\bf Path} & $path \\\\

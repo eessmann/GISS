@@ -109,6 +109,3 @@ tests.tar.gz: tests $(DOCS)
 publish: tests.tar.gz
 	cp tests.tar.gz $(WEBROOT)/tests
 	cd $(WEBROOT)/tests && tar xzf tests.tar.gz && rm -f tests.tar.gz
-
-check:
-	sh summary.sh $(TESTDIRS) > summary.tex
