@@ -1122,10 +1122,10 @@ static void particulate_field_class_init (GtsObjectClass * klass)
   klass->write = particulate_field_write;
 }
 
-static void particulate_field_init (GtsObject *o)
+static void particulate_field_init (GfsVariable * v)
 {
-  GFS_VARIABLE1 (o)->units = -FTT_DIMENSION;
-  GFS_PARTICULATE_FIELD (o)->voidfraction_func = voidfraction_from_particles;
+  v->units = -FTT_DIMENSION;
+  GFS_PARTICULATE_FIELD (v)->voidfraction_func = voidfraction_from_particles;
 }
 
 GfsVariableClass * gfs_particulate_field_class (void)

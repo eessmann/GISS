@@ -231,9 +231,9 @@ typedef struct {
 
 /* GfsBubbleFraction: object */
 
-static void voidfraction_from_bubbles (FttCell * cell, GfsVariable * v, GfsParticulate * p)
+static void voidfraction_from_bubbles (FttCell * cell, BubbleData * p)
 {
-  GFS_VALUE (cell, v) += p->volume/GFS_BUBBLE (p)->vol_liq;
+  GFS_VALUE (cell, p->v) += GFS_PARTICULATE (p->bubble)->volume/p->bubble->vol_liq;
 }
 
 static void kernel_volume (FttCell * cell, BubbleData * p)
@@ -243,10 +243,24 @@ static void kernel_volume (FttCell * cell, BubbleData * p)
 
 static gboolean cond_bubble (FttCell * cell, gpointer data)
 {
-    BubbleData * p = data;
-    FttVector pos;
-    ftt_cell_pos (cell, &pos);
-    return (ftt_vector_dist (&pos, p->pos) <= p->distance);
+  BubbleData * p = data;
+  FttVector pos;
+  ftt_cell_pos (cell, &pos);
+    
+  if (ftt_vector_distance (&pos, p->pos) <= p->distance) 
+    return TRUE;
+    
+  /* Check also if the bubble is inside the cell*/
+  gdouble size = ftt_cell_size (cell)/2.;
+  if (p->pos->x > pos.x + size || p->pos->x < pos.x - size ||
+      p->pos->y > pos.y + size || p->pos->y < pos.y - size 
+#if !FTT_2D
+      || p->pos->z > pos.z + size || p->pos->z < pos.z - size 
+#endif
+      )
+    return FALSE;
+
+  return TRUE;
 }
 
 static gboolean bubble_fraction_event (GfsEvent * event, 
@@ -288,27 +302,6 @@ static void bubble_fraction_read (GtsObject ** o, GtsFile * fp)
   (* GTS_OBJECT_CLASS (gfs_bubble_fraction_class ())->parent_class->read) (o, fp); 
   if (fp->type == GTS_ERROR)
     return;
-
-  if (fp->type != GTS_STRING) {
-    gts_file_error (fp, "expecting a string (object name)");
-    return;
-  }
-  GFS_VARIABLE1(*o)->units=-FTT_DIMENSION;
-  GfsBubbleField * pfield = GFS_BUBBLE_FIELD (*o);
-  GtsObject * object = gfs_object_from_name (GFS_DOMAIN (gfs_object_simulation (*o)), 
-					     fp->token->str);
-  if (object == NULL) {
-    gts_file_error (fp, "unknown object '%s'", fp->token->str);
-    return;
-  }
-  if (!GFS_IS_PARTICLE_LIST (object)) {
-    gts_file_error (fp, "object '%s' is not a GfsParticleList", fp->token->str);
-    return;  
-  }
-  pfield->plist = GFS_PARTICLE_LIST (object);
-  
-  gts_file_next_token (fp);
-
   if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
     gts_file_error (fp, "expecting a number (nondimensional radius of influence of the bubble)");
     return;
@@ -323,10 +316,10 @@ static void bubble_fraction_write (GtsObject * o, FILE * fp)
   fprintf (fp, " %g", GFS_BUBBLE_FRACTION (o)->rliq);
 }
 
-static void bubble_fraction_init (GtsObject *o)
+static void bubble_fraction_init (GfsVariable * v)
 {
-  GFS_VARIABLE1 (*o)->units = 0.;
-  GFS_PARTICULATE_FIELD (o)->voidfraction_func = voidfraction_from_bubbles;
+  v->units = 0.;
+  GFS_PARTICULATE_FIELD (v)->voidfraction_func = voidfraction_from_bubbles;
 }
 
 static void bubble_fraction_class_init (GtsObjectClass * klass)
@@ -366,10 +359,11 @@ GfsVariableClass * gfs_bubble_fraction_dt_class (void);
 
 /* GfsBubbleFractionDt: object */
 
-static void dVpdt_from_particles (FttCell * cell, GfsVariable * v, GfsParticulate * p)
+static void dVpdt_from_particles (FttCell * cell, BubbleData * p)
 {
-  gdouble rad = pow (3.0*p->volume/(4.0*M_PI), 1./3.);
-  GFS_VALUE (cell, v) += 3.0*p->volume*GFS_BUBBLE (p)->velR/(GFS_BUBBLE (p)->vol_liq*rad);
+  gdouble rad = pow (3.0*GFS_PARTICULATE (p->bubble)->volume/(4.0*M_PI), 1./3.);
+  GFS_VALUE (cell, p->v) += 3.0*GFS_PARTICULATE (p->bubble)->volume
+    *p->bubble->velR/(p->bubble->vol_liq*rad);
 }
 
 static void bubble_fraction_dt_init (GtsObject * o)
