@@ -1,6 +1,10 @@
 #!/bin/sh
 # Run this to generate all the initial makefiles, etc.
 
+# a fix for missing Makefile.deps
+touch -d @0 test/Makefile.deps
+touch -d @0 doc/examples/Makefile.deps
+
 # a fix for older automake/autoconf versions
 if test -e m4; then :
 else
@@ -111,6 +115,21 @@ test -n "$NO_AUTOMAKE" || (aclocal --version) < /dev/null > /dev/null 2>&1 || {
 
 if test "$DIE" -eq 1; then
   exit 1
+fi
+
+# disable some options only for old versions of automake
+# (automake < 1.11)
+version=`automake --version | 
+                       head -n 1 | 
+                       sed -e 's/^\(.*\)([^)]*)\(.*\)$/\1\2/g' \
+			   -e 's/^[^0-9]*\([0-9.][0-9.]*\).*/\1/'`
+majorversion=`echo $version | sed 's/\([^0-9]*\)\..*/\1/'`
+minorversion=`echo $version | sed 's/[^0-9]*\.\([0-9]\).*/\1/'`
+if test $majorversion = 1 -a $minorversion -lt 11 ; then
+    for f in test/Makefile.am doc/examples/Makefile.am; do
+	sed 's/AUTOMAKE_OPTIONS = parallel-tests/AUTOMAKE_OPTIONS = /' < $f > $f.bak
+	mv -f $f.bak $f
+    done
 fi
 
 if test -z "$*"; then
