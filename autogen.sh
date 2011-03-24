@@ -123,8 +123,8 @@ version=`automake --version |
                        head -n 1 | 
                        sed -e 's/^\(.*\)([^)]*)\(.*\)$/\1\2/g' \
 			   -e 's/^[^0-9]*\([0-9.][0-9.]*\).*/\1/'`
-majorversion=`echo $version | sed 's/\([^0-9]*\)\..*/\1/'`
-minorversion=`echo $version | sed 's/[^0-9]*\.\([0-9]\).*/\1/'`
+majorversion=`echo $version | sed 's/\([0-9]*\)\..*/\1/'`
+minorversion=`echo $version | sed 's/[0-9]*\.\([0-9]*\).*/\1/'`
 if test $majorversion = 1 -a $minorversion -lt 11 ; then
     for f in test/Makefile.am doc/examples/Makefile.am; do
 	sed 's/AUTOMAKE_OPTIONS = parallel-tests/AUTOMAKE_OPTIONS = /' < $f > $f.bak
