@@ -32,6 +32,7 @@ typedef struct _GfsBubble GfsBubble;
 struct _GfsBubble {
   /*< private >*/
   GfsParticulate parent;
+  gdouble rliq;
   
   /*< public >*/
   gdouble velR, p0, R0, vol_liq;
@@ -50,12 +51,16 @@ typedef struct {
   GfsBubble * bubble;
 } RPData;
 
+gdouble static p_state_ec (GfsBubble * bubble, gdouble rb) {
+    return bubble->p0*pow (bubble->R0/rb, 3.*1.4);
+}
+
 int static func (double t, const double y[], double f[], void *params)
 {
   RPData *rp = (RPData *)params;
   f[0] = y[1];
   /* interface acceleration- incompressible RP equation */
-  gdouble pbubble = rp->bubble->p0*pow (rp->bubble->R0/y[0], 3.*1.4);
+  gdouble pbubble = p_state_ec(rp->bubble,y[0]);
   f[1] = ((pbubble - rp->liqpres)/rp->liqdens - 3./2.*y[1]*y[1])/y[0];
   return GSL_SUCCESS;
 }
@@ -65,7 +70,7 @@ int static jac (double t, const double y[], double *dfdy,
 		double dfdt[], void *params)
 {
   RPData *rp = (RPData *)params;
-  gdouble pbubble = rp->bubble->p0*pow (rp->bubble->R0/y[0], 3.*1.4);
+  gdouble pbubble = p_state_ec(rp->bubble,y[0]);
   gdouble dddRdR  = 2.*rp->liqpres-2.*(1. + 3.*1.4)*pbubble + 3.*rp->liqdens*y[1]*y[1];
   dddRdR  /= 2.*y[0]*y[0]*rp->liqdens;
   gsl_matrix_view dfdy_mat = gsl_matrix_view_array (dfdy, 2, 2);
@@ -212,6 +217,7 @@ struct _GfsBubbleFraction {
 
   /*< public >*/
   gdouble rliq;
+  GfsFunction * kernel_function;
 };
 
 #define GFS_BUBBLE_FRACTION(obj)            GTS_OBJECT_CAST (obj,		\
@@ -223,35 +229,71 @@ struct _GfsBubbleFraction {
 GfsVariableClass * gfs_bubble_fraction_class  (void);
 
 typedef struct {
-  FttVector * pos;
-  gdouble distance;
+  gdouble correction;
   GfsBubble * bubble;
   GfsVariable * v;
+  GfsBubbleFraction * bf;
 } BubbleData;
 
+typedef struct {
+  FttVector * pos;
+  gdouble distance; 
+} CondData;
+
 /* GfsBubbleFraction: object */
+/* do it more general? */
+static void distance_normalization ( FttVector * pos1, GfsParticulate * p )
+{
+  gdouble rb = pow(3.*p->volume/(4.*M_PI),1./3.);
+  FttVector * pos2 = &(GFS_PARTICLE(p)->pos);
+  pos1->x = (pos1->x - pos2->x)/rb;
+  pos1->y = (pos1->y - pos2->y)/rb;
+  pos1->z = 0.;
+#if !FTT_2D
+  pos1->z = (pos1->z - pos2->z)/rb;
+#endif
+}
 
 static void voidfraction_from_bubbles (FttCell * cell, BubbleData * p)
 {
-  GFS_VALUE (cell, p->v) += GFS_PARTICULATE (p->bubble)->volume/p->bubble->vol_liq;
+  FttVector pos;
+  ftt_cell_pos (cell, &pos);
+  distance_normalization ( &pos, GFS_PARTICULATE(p->bubble));
+  GFS_VALUE (cell, p->v) += GFS_PARTICULATE (p->bubble)->volume*gfs_function_spatial_value (p->bf->kernel_function, &pos)/p->correction;
 }
 
 static void kernel_volume (FttCell * cell, BubbleData * p)
 {
-  p->bubble->vol_liq += gfs_cell_volume (cell, p->v->domain);
+  gdouble cellvol = gfs_cell_volume (cell, p->v->domain);
+
+  p->bubble->vol_liq += cellvol;
+
+  /* correction term to make a discrete conservative kernel */
+  FttVector pos;
+  ftt_cell_pos (cell, &pos);
+  distance_normalization ( &pos, GFS_PARTICULATE(p->bubble));
+  p->correction +=  gfs_function_spatial_value (p->bf->kernel_function, &pos)*cellvol;
 }
 
 static gboolean cond_bubble (FttCell * cell, gpointer data)
 {
-  BubbleData * p = data;
+  CondData * p = data;
   FttVector pos;
   ftt_cell_pos (cell, &pos);
+  gdouble radeq;
+  gdouble size = ftt_cell_size (cell)/2.;
+
+#if FTT_2D
+  radeq = size*sqrt(2.);
+#else
+  radeq = size*sqrt(3.);
+#endif /* 3D */
+
     
-  if (ftt_vector_distance (&pos, p->pos) <= p->distance) 
+  if (ftt_vector_distance (&pos, p->pos)-radeq <= p->distance) 
     return TRUE;
     
   /* Check also if the bubble is inside the cell*/
-  gdouble size = ftt_cell_size (cell)/2.;
   if (p->pos->x > pos.x + size || p->pos->x < pos.x - size ||
       p->pos->y > pos.y + size || p->pos->y < pos.y - size 
 #if !FTT_2D
@@ -271,7 +313,7 @@ static gboolean bubble_fraction_event (GfsEvent * event,
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsVariable * v = GFS_VARIABLE1 (event);
     GfsParticulateField * pfield = GFS_PARTICULATE_FIELD (v);
-    gdouble rliq = GFS_BUBBLE_FRACTION (event)->rliq;
+    GfsBubbleFraction * bf = GFS_BUBBLE_FRACTION (event);
     
     /* Reset variable */
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -281,15 +323,15 @@ static gboolean bubble_fraction_event (GfsEvent * event,
     while (i) {
       GfsBubble * bubble = GFS_BUBBLE (i->data);
       bubble->vol_liq = 0;
-      BubbleData p = { &GFS_PARTICLE (i->data)->pos,
-		       pow(GFS_PARTICULATE(i->data)->volume*3./(4.*M_PI), 1./3.)*rliq,
-		       bubble, v };
+      bubble->rliq = pow(GFS_PARTICULATE(i->data)->volume*3./(4.*M_PI), 1./3.)*bf->rliq;
+      BubbleData p = { 0,bubble, v, bf };
+      CondData cd = { &GFS_PARTICLE (i->data)->pos,bubble->rliq};
       gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
                                           (FttCellTraverseFunc) kernel_volume, &p,
-                                          cond_bubble, &p);          
+                                          cond_bubble, &cd);          
       gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
                                           (FttCellTraverseFunc) pfield->voidfraction_func, &p,
-                                          cond_bubble, &p);          
+                                          cond_bubble, &cd);          
       i = i->next;
     }
     return TRUE;
@@ -299,61 +341,113 @@ static gboolean bubble_fraction_event (GfsEvent * event,
 
 static void bubble_fraction_read (GtsObject ** o, GtsFile * fp)
 {
-  (* GTS_OBJECT_CLASS (gfs_bubble_fraction_class ())->parent_class->read) (o, fp); 
-  if (fp->type == GTS_ERROR)
-    return;
-  if (fp->type != GTS_INT && fp->type != GTS_FLOAT) {
-    gts_file_error (fp, "expecting a number (nondimensional radius of influence of the bubble)");
-    return;
-  }
-  GFS_BUBBLE_FRACTION (*o)->rliq = atof (fp->token->str);
-  gts_file_next_token (fp);
+    (* GTS_OBJECT_CLASS (gfs_bubble_fraction_class ())->parent_class->read) (o, fp); 
+    if (fp->type == GTS_ERROR)
+        return;
+
+    GfsBubbleFraction * b = GFS_BUBBLE_FRACTION(*o);
+
+    if (fp->type != '{') {
+        gts_file_error (fp, "expecting an opening brace");
+        return;
+    }
+    fp->scope_max++;
+    gts_file_next_token (fp);
+
+    while (fp->type != GTS_ERROR && fp->type != '}') {
+        if (fp->type == '\n') {
+            gts_file_next_token (fp);
+            continue;
+        }
+        if (fp->type != GTS_STRING) {
+            gts_file_error (fp, "expecting a keyword");
+            return;
+        }  
+        else if (!strcmp (fp->token->str, "rkernel")) {
+            gts_file_next_token (fp);
+            if (fp->type != '=') {
+                gts_file_error (fp, "expecting '='");
+                return;
+            }    
+            gts_file_next_token (fp);
+            b->rliq = atof (fp->token->str);
+            gts_file_next_token (fp); //Is it normal?
+        }
+        else if (!strcmp (fp->token->str, "kernel")) {
+            gts_file_next_token (fp);
+            if (fp->type != '=') {
+                gts_file_error (fp, "expecting '='");
+                return;
+            }
+            gts_file_next_token (fp);
+            gfs_function_read (b->kernel_function, gfs_object_simulation (*o), fp);    
+        }
+        else {
+            gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
+            return;
+        }
+    }
+    if (fp->type == GTS_ERROR)
+        return;
+    if (fp->type != '}') {
+        gts_file_error (fp, "expecting a closing brace");
+        return;
+    }
+    fp->scope_max--;
+    gts_file_next_token (fp);
+
+
 }
 
 static void bubble_fraction_write (GtsObject * o, FILE * fp)
 {
-  (* GTS_OBJECT_CLASS (gfs_bubble_fraction_class ())->parent_class->write) (o, fp); 
-  fprintf (fp, " %g", GFS_BUBBLE_FRACTION (o)->rliq);
+    (* GTS_OBJECT_CLASS (gfs_bubble_fraction_class ())->parent_class->write) (o, fp); 
+    fprintf (fp, " { rkernel = %g ", GFS_BUBBLE_FRACTION (o)->rliq);
+    fputs (" kernel =", fp);
+    gfs_function_write (GFS_BUBBLE_FRACTION (o)->kernel_function, fp);
+    fputc ('}', fp);
 }
 
 static void bubble_fraction_init (GfsVariable * v)
 {
-  v->units = 0.;
-  GFS_PARTICULATE_FIELD (v)->voidfraction_func = voidfraction_from_bubbles;
+    v->units = 0.;
+
+    GFS_PARTICULATE_FIELD (v)->voidfraction_func = voidfraction_from_bubbles;
+    GFS_BUBBLE_FRACTION (v)->kernel_function=gfs_function_new (gfs_function_spatial_class (), 0.);
 }
 
 static void bubble_fraction_class_init (GtsObjectClass * klass)
 {
-  GFS_EVENT_CLASS (klass)->event = bubble_fraction_event;
-  klass->read =  bubble_fraction_read;
-  klass->write = bubble_fraction_write;
+    GFS_EVENT_CLASS (klass)->event = bubble_fraction_event;
+    klass->read =  bubble_fraction_read;
+    klass->write = bubble_fraction_write;
 }
 
 GfsVariableClass * gfs_bubble_fraction_class (void)
 {
-  static GfsVariableClass * klass = NULL;
+    static GfsVariableClass * klass = NULL;
 
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_bubble_fraction_info = {
-      "GfsBubbleFraction",
-      sizeof (GfsBubbleFraction),
-      sizeof (GfsVariableClass),
-      (GtsObjectClassInitFunc) bubble_fraction_class_init,
-      (GtsObjectInitFunc) bubble_fraction_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_particulate_field_class ()),
-                                  &gfs_bubble_fraction_info);
-  }
+    if (klass == NULL) {
+        GtsObjectClassInfo gfs_bubble_fraction_info = {
+            "GfsBubbleFraction",
+            sizeof (GfsBubbleFraction),
+            sizeof (GfsVariableClass),
+            (GtsObjectClassInitFunc) bubble_fraction_class_init,
+            (GtsObjectInitFunc) bubble_fraction_init,
+            (GtsArgSetFunc) NULL,
+            (GtsArgGetFunc) NULL
+        };
+        klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_particulate_field_class ()),
+                &gfs_bubble_fraction_info);
+    }
 
-  return klass;
+    return klass;
 }
 
 /* GfsBubbleFractionDt: header */
 
 #define GFS_IS_BUBBLE_FRACTION_DT(obj)         (gts_object_is_from_class (obj, \
-						       gfs_bubble_fraction_dt_class ()))
+            gfs_bubble_fraction_dt_class ()))
 
 GfsVariableClass * gfs_bubble_fraction_dt_class (void);
 
@@ -361,33 +455,33 @@ GfsVariableClass * gfs_bubble_fraction_dt_class (void);
 
 static void dVpdt_from_particles (FttCell * cell, BubbleData * p)
 {
-  gdouble rad = pow (3.0*GFS_PARTICULATE (p->bubble)->volume/(4.0*M_PI), 1./3.);
-  GFS_VALUE (cell, p->v) += 3.0*GFS_PARTICULATE (p->bubble)->volume
-    *p->bubble->velR/(p->bubble->vol_liq*rad);
+    gdouble rad = pow (3.0*GFS_PARTICULATE (p->bubble)->volume/(4.0*M_PI), 1./3.);
+    GFS_VALUE (cell, p->v) += 3.0*GFS_PARTICULATE (p->bubble)->volume
+        *p->bubble->velR/(p->bubble->vol_liq*rad);
 }
 
 static void bubble_fraction_dt_init (GtsObject * o)
 {
-  GFS_PARTICULATE_FIELD (o)->voidfraction_func = dVpdt_from_particles;
+    GFS_PARTICULATE_FIELD (o)->voidfraction_func = dVpdt_from_particles;
 }
 
 GfsVariableClass * gfs_bubble_fraction_dt_class (void)
 {
-  static GfsVariableClass * klass = NULL;
+    static GfsVariableClass * klass = NULL;
 
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_bubble_fraction_dt_info = {
-      "GfsBubbleFractionDt",
-      sizeof (GfsBubbleFraction),
-      sizeof (GfsVariableClass),
-      (GtsObjectClassInitFunc) NULL,
-      (GtsObjectInitFunc) bubble_fraction_dt_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS ( gfs_bubble_fraction_class ()),
-                                  &gfs_bubble_fraction_dt_info);
-  }
+    if (klass == NULL) {
+        GtsObjectClassInfo gfs_bubble_fraction_dt_info = {
+            "GfsBubbleFractionDt",
+            sizeof (GfsBubbleFraction),
+            sizeof (GfsVariableClass),
+            (GtsObjectClassInitFunc) NULL,
+            (GtsObjectInitFunc) bubble_fraction_dt_init,
+            (GtsArgSetFunc) NULL,
+            (GtsArgGetFunc) NULL
+        };
+        klass = gts_object_class_new (GTS_OBJECT_CLASS ( gfs_bubble_fraction_class ()),
+                &gfs_bubble_fraction_dt_info);
+    }
 
   return klass;
 }
