@@ -59,7 +59,9 @@ EXTRA_DIST = \
 	Makefile.deps
 
 clean-generic:
+	mv -f summary.sh summary.sh.bak
 	$(RM) *.dvi *.aux *.log *.toc *.out tests.tex *.pyc *.bbl *.blg $(TESTS) Makefile.deps
+	mv -f summary.sh.bak summary.sh
 
 DOC = tests
 
