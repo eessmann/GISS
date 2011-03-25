@@ -462,7 +462,9 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
      defined to within a constant so we need to remove one degree of
      freedom to make the solution unique, assuming that the domain is
      simply connected... */
-  if (v->centered) {
+  if (v->centered &&
+      /* fixme: this seems to reduce the convergence speed for pure Poisson problems */
+      !GFS_IS_POISSON (domain)) {
     /* check whether any boundary has a Dirichlet condition on @v */
     CompatPar p = { v, FALSE };
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) check_box_dirichlet, &p);

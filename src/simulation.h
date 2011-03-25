@@ -146,6 +146,8 @@ GfsSimulationClass * gfs_advection_class          (void);
 
 /* GfsPoisson: Header */
 
+#define GFS_IS_POISSON(obj)      (gts_object_is_from_class (obj, gfs_poisson_class ()))
+
 GfsSimulationClass * gfs_poisson_class            (void);
 
 /* GfsAxi: Header */
