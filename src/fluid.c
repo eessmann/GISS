@@ -419,7 +419,7 @@ static void neighbor_value_stencil (const FttCellFace * face, guint v)
  * Returns: the value of the @c component of the gradient of variable @v
  * at the center of the cell.  
  */
-double gfs_center_gradient (FttCell * cell,
+gdouble gfs_center_gradient (FttCell * cell,
 			     FttComponent c,
 			     guint v)
 {
