@@ -25,6 +25,7 @@ TESTDIRS = \
 	kinetic \
 	hydrostatic \
 	coriolis \
+	lake \
 	boundaries \
 	channel \
 	plate \
