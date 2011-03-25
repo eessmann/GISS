@@ -484,39 +484,39 @@ static void compute_forces (GfsParticleForce * event, GfsParticulate * p)
 static gboolean gfs_particulate_event (GfsEvent * event, 
 				       GfsSimulation * sim)
 {
-    GfsParticle * p = GFS_PARTICLE (event);
-    GfsParticulate * particulate = GFS_PARTICULATE (event);
+  GfsParticle * p = GFS_PARTICLE (event);
+  GfsParticulate * particulate = GFS_PARTICULATE (event);
 
-    if (particulate->forces == NULL) { 
-        (* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_particulate_class ())->parent_class)->event)(event, sim);
+  if (particulate->forces == NULL)
+    (* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_particulate_class ())->parent_class)->event)
+      (event, sim);
+  else {
+    FttVector pos = p->pos;
+    gfs_simulation_map (sim, &pos);
+
+    FttComponent c;
+    /* Velocity Verlet Algorithm */
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      (&pos.x)[c] += (&particulate->force.x)[c]*sim->advection_params.dt*sim->advection_params.dt
+	/particulate->mass/2.+ (&particulate->vel.x)[c]*sim->advection_params.dt;
+      (&particulate->vel.x)[c] += (&particulate->force.x)[c]*sim->advection_params.dt
+	/(2.*particulate->mass);
     }
-    else {
-        FttVector pos = p->pos;
-        gfs_simulation_map (sim, &pos);
 
-        FttComponent c;
-        /* Velocity Verlet Algorithm */
-        for (c = 0; c < FTT_DIMENSION; c++) {
-            (&pos.x)[c] += (&particulate->force.x)[c]*sim->advection_params.dt*sim->advection_params.dt
-                /particulate->mass/2.+ (&particulate->vel.x)[c]*sim->advection_params.dt;
-            (&particulate->vel.x)[c] += (&particulate->force.x)[c]*sim->advection_params.dt
-                /(2.*particulate->mass);
-        }
+    /* Compute forces */
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&particulate->force.x)[c] = 0.;      
+    gts_container_foreach (GTS_CONTAINER (particulate->forces), 
+			   (GtsFunc) compute_forces, particulate);
 
-        /* Compute forces */
-        for (c = 0; c < FTT_DIMENSION; c++)
-            (&particulate->force.x)[c] = 0.;      
-        gts_container_foreach (GTS_CONTAINER (particulate->forces), 
-                (GtsFunc) compute_forces, particulate);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&particulate->vel.x)[c] += 
+	(&particulate->force.x)[c]*sim->advection_params.dt/(2.*particulate->mass);
 
-        for (c = 0; c < FTT_DIMENSION; c++)
-            (&particulate->vel.x)[c] += 
-                (&particulate->force.x)[c]*sim->advection_params.dt/(2.*particulate->mass);
-
-        gfs_simulation_map_inverse (sim, &pos);
-        p->pos = pos;   
-    }
-    return TRUE;
+    gfs_simulation_map_inverse (sim, &pos);
+    p->pos = pos;   
+  }
+  return TRUE;
 } 
 
 static void gfs_particulate_read (GtsObject ** o, GtsFile * fp)
@@ -686,13 +686,12 @@ static void gfs_particle_list_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     fp->scope_max--;
-    gts_file_next_token (fp);
- 
+    gts_file_next_token (fp); 
   }
 
   if (p->forces->items != NULL) {
-      p->forces->items = g_slist_reverse (p->forces->items);
-      gts_container_foreach (GTS_CONTAINER (l->list), (GtsFunc) assign_forces, p->forces);
+    p->forces->items = g_slist_reverse (p->forces->items);
+    gts_container_foreach (GTS_CONTAINER (l->list), (GtsFunc) assign_forces, p->forces);
   }
 
   if(fp->type == GTS_INT){

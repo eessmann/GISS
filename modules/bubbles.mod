@@ -451,6 +451,8 @@ GfsVariableClass * gfs_bubble_fraction_class (void)
   return klass;
 }
 
+/** \endobject{GfsBubbleFraction} */
+
 /* GfsBubbleFractionDt: header */
 
 #define GFS_IS_BUBBLE_FRACTION_DT(obj)         (gts_object_is_from_class (obj, \
@@ -458,7 +460,7 @@ GfsVariableClass * gfs_bubble_fraction_class (void)
 
 GfsVariableClass * gfs_bubble_fraction_dt_class (void);
 
-/* GfsBubbleFractionDt: object */
+/** \beginobject{GfsBubbleFractionDt} */
 
 static void dVpdt_from_particles (FttCell * cell, BubbleData * p)
 {
@@ -492,6 +494,8 @@ GfsVariableClass * gfs_bubble_fraction_dt_class (void)
 
   return klass;
 }
+
+/** \endobject{GfsBubbleFractionDt} */
 
 /* Initialize module */
 
