@@ -28,6 +28,10 @@
 #define union(a,b)        MIN(a, b)
 #define difference(a,b)   MAX(a, -(b))
 
+#define X _x
+#define Y _y
+#define Z _z
+
 static double _x = 0., _y = 0., _z = 0.;
 
 static double ellipse (double xc, double yc, double a, double b)
