@@ -26,6 +26,10 @@
 #include "map.h"
 #include "solid.h"
 
+#if USE_GSL
+# include <gsl/gsl_integration.h>
+#endif
+
 /**
  * A generic class for metrics which require storage.
  * \beginobject{GfsVariableMetric}
@@ -174,6 +178,7 @@ static double rv (FttVector r, GfsMap * map)
 }
 
 /* Returns: \sqrt{(r_u.r_u)} */
+#if USE_GSL
 static double ru_gsl (double u, void * data)
 {
   RuRvData * p = data;
@@ -197,6 +202,7 @@ static gdouble integration (const gsl_function * f, double a, double b)
   //  fprintf (stderr, "neval: %d abserr: %g result: %g\n", neval, abserr, result);
   return result;
 }
+#endif /* USE_GSL */
 
 /* Returns: \int \sqrt{(r_u.r_u)} du */
 static double length_u (GfsMap * map, double u1, double u2, double v)
@@ -253,6 +259,7 @@ static double length_v (GfsMap * map, double v1, double v2, double u)
 }
 
 /* Returns: \sqrt{(r_u.r_u)(r_v.r_v) - (r_u.r_v)^2} */
+#if USE_GSL
 static double ru_rv_gsl (double v, void * data)
 {
   RuRvData * p = data;
@@ -270,12 +277,7 @@ static double ru_rv_dv (double u, void * data)
   p->r->x = u;
   return integration (&f, p->v1, p->v2);
 }
-
-static double ru_rv1 (double u, double v, gpointer data)
-{
-  FttVector r = { u, v, 0. };
-  return ru_rv (r, data);
-}
+#endif /* USE_GSL */
 
 /* Returns: \int\int \sqrt{(r_u.r_u)(r_v.r_v) - (r_u.r_v)^2} du dv */
 static double area (GfsMap * map,
