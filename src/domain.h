@@ -90,6 +90,9 @@ struct _GfsDomain {
 
   /* real time */
   GTimer * clock;
+
+  GPtrArray * sorted; /**< array of sorted boxes */
+  gboolean dirty;     /**< whether the sorted array needs updating */
 };
 
 struct _GfsDomainClass {

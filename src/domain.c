@@ -537,6 +537,8 @@ static void domain_destroy (GtsObject * o)
 
   g_hash_table_destroy (domain->objects);
 
+  g_ptr_array_free (domain->sorted, TRUE);
+
   (* GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class->destroy) (o);
 }
 
@@ -560,14 +562,29 @@ static void domain_foreach (GtsContainer * c,
 			    GtsFunc func, 
 			    gpointer data)
 {
-  GPtrArray * a = g_ptr_array_new ();
-  (* GTS_CONTAINER_CLASS (GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class)->foreach)
-    (c, (GtsFunc) add_item, a);
-  qsort (a->pdata, a->len, sizeof (gpointer), compare_boxes);
+  GPtrArray * a = GFS_DOMAIN (c)->sorted;
+  if (GFS_DOMAIN (c)->dirty) {
+    g_ptr_array_set_size (a, 0);
+    (* GTS_CONTAINER_CLASS (GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class)->foreach)
+      (c, (GtsFunc) add_item, a);
+    qsort (a->pdata, a->len, sizeof (gpointer), compare_boxes);
+    GFS_DOMAIN (c)->dirty = FALSE;
+  }
   guint i;
   for (i = 0; i < a->len; i++)
     (* func) (a->pdata[i], data);
-  g_ptr_array_free (a, TRUE);
+}
+
+static void domain_add (GtsContainer * c, GtsContainee * i)
+{
+  (* GTS_CONTAINER_CLASS (GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class)->add) (c, i);
+  GFS_DOMAIN (c)->dirty = TRUE;
+}
+
+static void domain_remove (GtsContainer * c, GtsContainee * i)
+{
+  (* GTS_CONTAINER_CLASS (GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class)->remove) (c, i);
+  GFS_DOMAIN (c)->dirty = TRUE;
 }
 
 static void domain_class_init (GfsDomainClass * klass)
@@ -577,6 +594,8 @@ static void domain_class_init (GfsDomainClass * klass)
   GTS_OBJECT_CLASS (klass)->destroy = domain_destroy;
 
   GTS_CONTAINER_CLASS (klass)->foreach = domain_foreach;
+  GTS_CONTAINER_CLASS (klass)->add = domain_add;
+  GTS_CONTAINER_CLASS (klass)->remove = domain_remove;
 
   klass->post_read = domain_post_read;
 }
@@ -624,6 +643,9 @@ static void domain_init (GfsDomain * domain)
   domain->objects = g_hash_table_new (g_str_hash, g_str_equal);
 
   domain->np = 1;
+
+  domain->sorted = g_ptr_array_new ();
+  domain->dirty = TRUE;
 }
 
 GfsDomainClass * gfs_domain_class (void)
