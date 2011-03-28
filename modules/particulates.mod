@@ -1148,10 +1148,10 @@ GfsVariableClass * gfs_particulate_field_class (void)
   return klass;
 }
 
-/* GfsFeedParticle: object */
+/** \beginobject{GfsFeedParticle} */
 
 static void add_particulate (GfsDomain * domain, 
-			      GfsFeedParticle * feedp, GfsParticleList * plist)
+			     GfsFeedParticle * feedp, GfsParticleList * plist)
 {
   GfsSimulation * sim = gfs_object_simulation (plist); 
   GfsEventList * l = GFS_EVENT_LIST (plist); 
@@ -1165,10 +1165,7 @@ static void add_particulate (GfsDomain * domain,
   if (cell) {
     /* Construct an Object */
     GtsObjectClass * klass = l->klass;
-    if (klass == NULL) {
-      gfs_error (0, "Unknown particle class\n");
-      return;
-    }
+    g_assert (klass);
     GtsObject * object = gts_object_new (klass);
     gfs_object_simulation_set (object, sim);
     l->list->items = g_slist_reverse (l->list->items);	
@@ -1193,7 +1190,6 @@ static void add_particulate (GfsDomain * domain,
   }       
 }
 
-
 static gboolean gfs_feed_particle_event (GfsEvent * event, GfsSimulation * sim)
 { 
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_feed_particle_class ())->parent_class)->event)
@@ -1203,9 +1199,8 @@ static gboolean gfs_feed_particle_event (GfsEvent * event, GfsSimulation * sim)
     GfsFeedParticle * feedp = GFS_FEED_PARTICLE (event);
     gint i;
 
-    for (i = 0; i < feedp->np; i++) { 
-        add_particulate (domain, feedp, plist);
-    }
+    for (i = 0; i < feedp->np; i++)
+      add_particulate (domain, feedp, plist);
     return TRUE;
   }
   return FALSE;
@@ -1219,7 +1214,6 @@ static void gfs_feed_particle_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GfsFeedParticle * feedp = GFS_FEED_PARTICLE(*o);
-
 
   if (fp->type != '{') {
     gts_file_error (fp, "expecting an opening brace");
@@ -1339,24 +1333,24 @@ static void gfs_feed_particle_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_feed_particle_class ())->parent_class->write) (o, fp);
 
   GfsFeedParticle * feedp = GFS_FEED_PARTICLE(o);
-  fprintf (fp, "{ nparts = %u ", feedp->np);
-  fputs (" xfeed =", fp);
+  fprintf (fp, "{\n  nparts = %u\n", feedp->np);
+  fputs ("  xfeed =", fp);
   gfs_function_write (feedp->posx, fp);
   fputs (" yfeed =", fp);
   gfs_function_write (feedp->posy, fp);
   fputs (" zfeed =", fp);
   gfs_function_write (feedp->posz, fp);
-  fputs (" velx =", fp);
+  fputs ("\n  velx =", fp);
   gfs_function_write (feedp->velx, fp);
   fputs (" vely =", fp);
   gfs_function_write (feedp->vely, fp);
   fputs (" velz =", fp);
   gfs_function_write (feedp->velz, fp);
-  fputs (" mass =", fp);
+  fputs ("\n  mass =", fp);
   gfs_function_write (feedp->mass, fp);
-  fputs (" volume =", fp);
+  fputs ("\n  volume =", fp);
   gfs_function_write (feedp->vol, fp);
-  fputc ('}', fp);
+  fputs ("\n}", fp);
 }
 
 static void gfs_feed_particle_class_init (GfsEventClass * klass)
@@ -1366,18 +1360,17 @@ static void gfs_feed_particle_class_init (GfsEventClass * klass)
   GTS_OBJECT_CLASS (klass)->write = gfs_feed_particle_write;  
 }
 
-static void gfs_feed_particle_init ( GfsFeedParticle * feedp) {
-
-    feedp->np   = 1;
-    feedp->posx = gfs_function_new (gfs_function_class (), 0.);
-    feedp->posy = gfs_function_new (gfs_function_class (), 0.);
-    feedp->posz = gfs_function_new (gfs_function_class (), 0.);
-    feedp->velx = gfs_function_new (gfs_function_class (), 0.);
-    feedp->vely = gfs_function_new (gfs_function_class (), 0.);
-    feedp->velz = gfs_function_new (gfs_function_class (), 0.);
-    feedp->mass = gfs_function_new (gfs_function_class (), 0.);
-    feedp->vol  = gfs_function_new (gfs_function_class (), 0.);
-
+static void gfs_feed_particle_init ( GfsFeedParticle * feedp)
+{
+  feedp->np   = 1;
+  feedp->posx = gfs_function_new (gfs_function_class (), 0.);
+  feedp->posy = gfs_function_new (gfs_function_class (), 0.);
+  feedp->posz = gfs_function_new (gfs_function_class (), 0.);
+  feedp->velx = gfs_function_new (gfs_function_class (), 0.);
+  feedp->vely = gfs_function_new (gfs_function_class (), 0.);
+  feedp->velz = gfs_function_new (gfs_function_class (), 0.);
+  feedp->mass = gfs_function_new (gfs_function_class (), 0.);
+  feedp->vol  = gfs_function_new (gfs_function_class (), 0.);
 }
 
 GfsEventClass * gfs_feed_particle_class (void)
@@ -1400,6 +1393,7 @@ GfsEventClass * gfs_feed_particle_class (void)
   return klass;
 }
 
+/** \endobject{GfsFeedParticle} */
 
 /* Initialize module */
 

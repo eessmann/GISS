@@ -179,7 +179,7 @@ struct _GfsFeedParticle{
 					         GfsFeedParticle,\
 					         gfs_feed_particle_class ())
 
-#define IS_FEED_PARTICLE(obj)         (gts_object_is_from_class (obj,\
+#define GFS_IS_FEED_PARTICLE(obj)         (gts_object_is_from_class (obj,\
 					         gfs_feed_particle_class ()))
 
 GfsEventClass * gfs_feed_particle_class  (void);
