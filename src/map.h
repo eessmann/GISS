@@ -70,7 +70,7 @@ struct _GfsMapFunction {
   GfsMap parent;
 
   /*< public >*/
-  GfsFunction * transform[FTT_DIMENSION], * inverse[FTT_DIMENSION];
+  GfsFunction * x, * y, * z;
 };
 
 #define GFS_MAP_FUNCTION(obj)            GTS_OBJECT_CAST (obj,\

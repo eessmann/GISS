@@ -66,9 +66,9 @@ static void gfs_map_class_init (GfsMapClass * klass)
   GTS_OBJECT_CLASS (klass)->write = gfs_map_write;
 }
 
-static void identity (GfsMap * map, const FttVector * src, FttVector * dest)
+static void not_implemented (GfsMap * map, const FttVector * src, FttVector * dest)
 {
-  *dest = *src;
+  g_assert_not_implemented ();
 }
 
 static void inverse_cell (GfsMap * map, const FttVector * src, FttVector * dest)
@@ -80,7 +80,7 @@ static void inverse_cell (GfsMap * map, const FttVector * src, FttVector * dest)
 
 static void gfs_map_init (GfsMap * map)
 {
-  map->transform = map->inverse = identity;
+  map->transform = map->inverse = not_implemented;
   map->inverse_cell = inverse_cell;
 }
 
@@ -119,90 +119,57 @@ static void gfs_map_function_read (GtsObject ** o, GtsFile * fp)
     return;
 
   if (fp->type != '{') {
-    gts_file_error (fp, "expecting an opening brace");
+    gts_file_error (fp, "expecting a parameter block");
     return;
   }
-  fp->scope_max++;
-  gts_file_next_token (fp);
-  while (fp->type != GTS_ERROR && fp->type != '}') {
-    if (fp->type == '\n') {
-      gts_file_next_token (fp);
-      continue;
-    }
-    if (fp->type != GTS_STRING) {
-      gts_file_error (fp, "expecting a keyword");
-      return;
-    }
-    else {
-      static gchar name[3][3] = { "x:", "y:", "z:" };
-      FttComponent c;
-      for (c = 0; c < FTT_DIMENSION; c++)
-	if (!strcmp (fp->token->str, name[c]))
-	  break;
-      if (c == FTT_DIMENSION) {
-	gts_file_error (fp, "unknown keyword '%s'", fp->token->str);
-	return;
-      }
-      gts_file_next_token (fp);
 
-      GfsMapFunction * map = GFS_MAP_FUNCTION (*o);
-      if (!map->inverse[c])
-	map->inverse[c] = gfs_function_new (gfs_function_map_class (), 0.);
-      gfs_function_read (map->inverse[c], gfs_object_simulation (*o), fp);
-      if (fp->type == GTS_ERROR)
-	return;
-
-      if (fp->type != '\n') {
-	gts_file_error (fp, "expecting new line");
-	return;
-      }
-      while (fp->type == '\n')
-	gts_file_next_token (fp);
-	
-      if (!map->transform[c])
-	map->transform[c] = gfs_function_new (gfs_function_map_class (), 0.);
-      gfs_function_read (map->transform[c], gfs_object_simulation (*o), fp);
-      if (fp->type == GTS_ERROR)
-	return;
+  GfsMapFunction * m = GFS_MAP_FUNCTION (*o);
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (m));
+  GtsFileVariable var[] = {
+    {GTS_OBJ, "x", TRUE, &m->x},
+    {GTS_OBJ, "y", TRUE, &m->y},
+    {GTS_OBJ, "z", TRUE, &m->z},
+    {GTS_NONE}
+  };
+  FttComponent c;
+  for (c = 0; c < 3; c++)
+    gfs_object_simulation_set ((&m->x)[c], domain);
+  
+  gts_file_assign_variables (fp, var);
+  
+  for (c = 0; c < 3; c++)
+    if (!var[c].set) {
+      gts_object_destroy (GTS_OBJECT ((&m->x)[c]));
+      (&m->x)[c] = NULL;
     }
-  }
-  if (fp->type != '}') {
-    gts_file_error (fp, "expecting a closing brace");
+  
+  if (fp->type == GTS_ERROR)
     return;
-  }
-  fp->scope_max--;
-  gts_file_next_token (fp);
 }
 
 static void gfs_map_function_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_map_function_class ())->parent_class->write) (o, fp);
-  fputs (" {\n", fp);
-  GfsMapFunction * map = GFS_MAP_FUNCTION (o);
-  static gchar name[3][5] = { "  x:", "  y:", "  z:" };
+ 
+  GfsMapFunction * m = GFS_MAP_FUNCTION (o);
+  fputs (" {", fp);
   FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    if (map->transform[c]) {
-      fputs (name[c], fp);
-      gfs_function_write (map->inverse[c], fp);
-      fputs ("\n    ", fp);
-      gfs_function_write (map->transform[c], fp);
-      fputc ('\n', fp);
+  static gchar name[3][2] = {"x", "y", "z"};
+  for (c = 0; c < 3; c++)
+    if ((&m->x)[c]) {
+      fprintf (fp, "\n    %s = ", name[c]);
+      gfs_function_write ((&m->x)[c], fp);
     }
-  fputc ('}', fp);
+  fputs ("\n  }", fp);
 }
 
 static void gfs_map_function_destroy (GtsObject * o)
 {
-  GfsMapFunction * map = GFS_MAP_FUNCTION (o);
+  GfsMapFunction * m = GFS_MAP_FUNCTION (o);
   FttComponent c;
-
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    if (map->transform[c])
-      gts_object_destroy (GTS_OBJECT (map->transform[c]));
-    if (map->inverse[c])
-      gts_object_destroy (GTS_OBJECT (map->inverse[c]));
-  }
+  for (c = 0; c < 3; c++)
+    if ((&m->x)[c])
+      gts_object_destroy (GTS_OBJECT ((&m->x)[c]));
 
   (* GTS_OBJECT_CLASS (gfs_map_function_class ())->parent_class->destroy) (o);
 }
@@ -214,32 +181,27 @@ static void gfs_map_function_class_init (GfsMapClass * klass)
   GTS_OBJECT_CLASS (klass)->destroy = gfs_map_function_destroy;
 }
 
-static void map_function_transform (GfsMap * map, const FttVector * src, FttVector * dest)
-{
-  GfsMapFunction * mf = GFS_MAP_FUNCTION (map);
-  FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    if (mf->transform[c])
-      (&dest->x)[c] = gfs_function_spatial_value (mf->transform[c], src);
-    else
-      (&dest->x)[c] = (&src->x)[c];
-}
-
 static void map_function_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
 {
-  GfsMapFunction * mf = GFS_MAP_FUNCTION (map);
+  GfsMapFunction * m = GFS_MAP_FUNCTION (map);
+  gdouble L = gfs_object_simulation (m)->physical_params.L;
+  FttVector src1;
   FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    if (mf->inverse[c])
-      (&dest->x)[c] = gfs_function_spatial_value (mf->inverse[c], src);
+  for (c = 0; c < 3; c++)
+    (&src1.x)[c] = (&src->x)[c]*L;
+  for (c = 0; c < 3; c++)
+    if ((&m->x)[c])
+      (&dest->x)[c] = gfs_function_spatial_value ((&m->x)[c], &src1)/L;
     else
       (&dest->x)[c] = (&src->x)[c];
 }
 
-static void gfs_map_function_init (GfsMap * map)
+static void gfs_map_function_init (GfsMapFunction * m)
 {
-  map->transform = map_function_transform;
-  map->inverse =   map_function_inverse;
+  GFS_MAP (m)->inverse = map_function_inverse;
+  m->x = gfs_function_new (gfs_function_map_class (), 1.);
+  m->y = gfs_function_new (gfs_function_map_class (), 1.);
+  m->z = gfs_function_new (gfs_function_map_class (), 1.);
 }
 
 GfsMapClass * gfs_map_function_class (void)
