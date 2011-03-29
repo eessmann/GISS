@@ -101,7 +101,7 @@ examples: examples.dvi crossref.sh
 	sh ../share/fixnav.sh $(DOC)
 	cp -f ../share/contents.png ../share/next.png ../share/prev.png $(DOC)
 	rm -f *_motif.gif $(DOC).h{tml,aux,ind,toc} $(DOC).image.tex $(DOC).css
-	sh ./crossref.sh --url=http://gfs.sourceforge.net/examples/examples $(EXAMPLES)
+	sh ./crossref.sh --url=http://gerris.dalembert.upmc.fr/gerris/examples/examples $(EXAMPLES)
 	mv references examples
 
 examples.dvi: examples.tex examples.bib
