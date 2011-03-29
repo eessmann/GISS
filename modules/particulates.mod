@@ -1187,6 +1187,7 @@ static void add_particulate (GfsDomain * domain,
     part->mass = gfs_function_value (feedp->mass, cell);
     for (c = 0; c < FTT_DIMENSION; c++)
       (&part->force.x)[c] = 0.;
+    assign_forces ( part , plist->forces);
   }       
 }
 
@@ -1198,12 +1199,28 @@ static gboolean gfs_feed_particle_event (GfsEvent * event, GfsSimulation * sim)
     GfsParticleList * plist = GFS_PARTICLE_LIST (event);
     GfsFeedParticle * feedp = GFS_FEED_PARTICLE (event);
     gint i;
+    guint np = gfs_function_value (feedp->np, NULL);
 
-    for (i = 0; i < feedp->np; i++)
+    for (i = 0; i < np; i++)
       add_particulate (domain, feedp, plist);
     return TRUE;
   }
   return FALSE;
+}
+
+static void gfs_feed_particle_destroy (GtsObject * o)
+{
+  gts_object_destroy (GTS_OBJECT (GFS_FEED_PARTICLE (o)->np));
+  gts_object_destroy (GTS_OBJECT (GFS_FEED_PARTICLE (o)->posx));
+  gts_object_destroy (GTS_OBJECT (GFS_FEED_PARTICLE (o)->posy));
+  gts_object_destroy (GTS_OBJECT (GFS_FEED_PARTICLE (o)->posz));
+  gts_object_destroy (GTS_OBJECT (GFS_FEED_PARTICLE (o)->velx));
+  gts_object_destroy (GTS_OBJECT (GFS_FEED_PARTICLE (o)->vely));
+  gts_object_destroy (GTS_OBJECT (GFS_FEED_PARTICLE (o)->velz));
+  gts_object_destroy (GTS_OBJECT (GFS_FEED_PARTICLE (o)->mass));
+  gts_object_destroy (GTS_OBJECT (GFS_FEED_PARTICLE (o)->vol));
+
+  (* GTS_OBJECT_CLASS (gfs_feed_particle_class ())->parent_class->destroy) (o); 
 }
 
 static void gfs_feed_particle_read (GtsObject ** o, GtsFile * fp)
@@ -1238,7 +1255,7 @@ static void gfs_feed_particle_read (GtsObject ** o, GtsFile * fp)
         return;
       }    
       gts_file_next_token (fp);
-      feedp->np = atoi (fp->token->str);
+      gfs_function_read (feedp->np, gfs_object_simulation (*o), fp);    
     }
     else if (!strcmp (fp->token->str, "xfeed")) {
       gts_file_next_token (fp);
@@ -1333,7 +1350,8 @@ static void gfs_feed_particle_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_feed_particle_class ())->parent_class->write) (o, fp);
 
   GfsFeedParticle * feedp = GFS_FEED_PARTICLE(o);
-  fprintf (fp, "{\n  nparts = %u\n", feedp->np);
+  fputs (" {\n  nparts = ", fp);
+  gfs_function_write (feedp->np, fp);
   fputs ("  xfeed =", fp);
   gfs_function_write (feedp->posx, fp);
   fputs (" yfeed =", fp);
@@ -1355,14 +1373,15 @@ static void gfs_feed_particle_write (GtsObject * o, FILE * fp)
 
 static void gfs_feed_particle_class_init (GfsEventClass * klass)
 {
-  GFS_EVENT_CLASS (klass)->event = gfs_feed_particle_event;
-  GTS_OBJECT_CLASS (klass)->read = gfs_feed_particle_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_feed_particle_write;  
+  GFS_EVENT_CLASS (klass)->event    = gfs_feed_particle_event;
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_feed_particle_destroy;
+  GTS_OBJECT_CLASS (klass)->read    = gfs_feed_particle_read;
+  GTS_OBJECT_CLASS (klass)->write   = gfs_feed_particle_write;  
 }
 
 static void gfs_feed_particle_init ( GfsFeedParticle * feedp)
 {
-  feedp->np   = 1;
+  feedp->np   = gfs_function_new (gfs_function_class (), 0.);
   feedp->posx = gfs_function_new (gfs_function_class (), 0.);
   feedp->posy = gfs_function_new (gfs_function_class (), 0.);
   feedp->posz = gfs_function_new (gfs_function_class (), 0.);

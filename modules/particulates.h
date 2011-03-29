@@ -169,10 +169,9 @@ struct _GfsFeedParticle{
   GfsVariable * v;
   
   /*< public >*/
-  guint np;
   GfsFunction * posx, * posy, * posz;
   GfsFunction * velx, * vely, * velz;
-  GfsFunction * mass, * vol;
+  GfsFunction * np,   * mass, * vol;
 };
 
 #define GFS_FEED_PARTICLE(obj)            GTS_OBJECT_CAST (obj,\
