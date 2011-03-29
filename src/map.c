@@ -322,18 +322,18 @@ static void gfs_map_transform_class_init (GtsObjectClass * klass)
 
 static void map_transform_transform (GfsMap * map, const FttVector * src, FttVector * dest)
 {
-  GtsPoint p;
-  p.x = src->x; p.y = src->y; p.z = src->z;
-  gts_point_transform (&p, GFS_MAP_TRANSFORM (map)->im);
-  dest->x = p.x; dest->y = p.y; dest->z = p.z;
+  GfsMapTransform * mf = GFS_MAP_TRANSFORM (map);
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&dest->x)[c] = (&src->x)[c] - mf->translate[c];
 }
 
 static void map_transform_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
 {
-  GtsPoint p;
-  p.x = src->x; p.y = src->y; p.z = src->z;
-  gts_point_transform (&p, GFS_MAP_TRANSFORM (map)->m);
-  dest->x = p.x; dest->y = p.y; dest->z = p.z;
+  GfsMapTransform * mf = GFS_MAP_TRANSFORM (map);
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&dest->x)[c] = (&src->x)[c] + mf->translate[c];
 }
 
 static void gfs_map_transform_init (GfsMap * map)
