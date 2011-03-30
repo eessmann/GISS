@@ -129,6 +129,7 @@ struct _GfsInitOkada {
   gdouble strike, dip;
   gdouble mu, lambda;
   gdouble length, width, U[3];
+  gdouble R;
 };
 
 #define GFS_INIT_OKADA(obj)            GTS_OBJECT_CAST (obj,\
@@ -175,6 +176,7 @@ static void gfs_init_okada_read (GtsObject ** o, GtsFile * fp)
     {GTS_DOUBLE, "U2",     TRUE, &okada->U[1]},   /* 11 */
     {GTS_DOUBLE, "U3",     TRUE, &okada->U[2]},   /* 12 */ 
     {GTS_DOUBLE, "U",      TRUE, &U},             /* 13 */ 
+    {GTS_DOUBLE, "R",      TRUE, &okada->R},      /* 14 */ 
     {GTS_NONE}
   };
   gts_file_assign_variables (fp, var);
@@ -213,15 +215,21 @@ static void gfs_init_okada_write (GtsObject * o, FILE * fp)
 	   okada->mu, okada->lambda);
 }
 
+static double delta (double theta1, double theta2)
+{
+  double d = theta1 - theta2;
+  if (d > 180.) d -= 180.;
+  return d;
+}
+
 static void init_okada (FttCell * cell, GfsInitOkada * okada)
 {
-  FttVector p, o;
+  FttVector p;
   gfs_cell_cm (cell, &p);
   GfsSimulation * sim = gfs_object_simulation (okada);
-  o.x = okada->x; o.y = okada->y;
-  gfs_simulation_map (sim, &o);
-  gdouble L = sim->physical_params.L;
-  p.x = (p.x - o.x)*L; p.y = (p.y - o.y)*L;
+  gfs_simulation_map_inverse (sim, &p);
+  p.x = okada->R*cos(p.y*M_PI/180.)*delta (p.x, okada->x)*M_PI/180.;
+  p.y = okada->R*delta (p.y, okada->y)*M_PI/180.;
   FttVector q;
   q.x =   okada->cosa*p.x + okada->sina*p.y;
   q.y = - okada->sina*p.x + okada->cosa*p.y;
@@ -263,6 +271,7 @@ static void gfs_init_okada_class_init (GfsEventClass * klass)
 static void gfs_init_okada_init (GfsInitOkada * okada)
 {
   okada->mu = okada->lambda = 1.;
+  okada->R = 6371220.; /* Earth radius (metres) */
 }
 
 static GfsEventClass * gfs_init_okada_class (void)
