@@ -1010,8 +1010,14 @@ void gfs_module_read (GtsFile * fp, GfsSimulation * sim)
     hypre_solver_read (&proj_hp, fp);
   
   /* initialise the poisson cycle hook */
-  sim->approx_projection_params.poisson_solve = hypre_poisson_solve;
-  sim->projection_params.poisson_solve = hypre_poisson_solve;
+  if (fp->type != GTS_ERROR) {
+    if (sim == NULL)
+      gts_file_error (fp, "hypre module must be called within the GfsSimulation parameter block");
+    else {
+      sim->approx_projection_params.poisson_solve = hypre_poisson_solve;
+      sim->projection_params.poisson_solve = hypre_poisson_solve;
+    }
+  }
 }
 
 void gfs_module_write (FILE * fp)
