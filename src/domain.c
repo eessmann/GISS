@@ -4447,6 +4447,23 @@ static void unlink_box (GfsBox * box, gint * dest)
       box->neighbor[d] = NULL;
       gfs_boundary_mpi_new (gfs_boundary_mpi_class (), box, d, nbox->pid, nbox->id);
     }
+    else if (GFS_IS_BOUNDARY_PERIODIC (box->neighbor[d]) && 
+	     !GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
+      GfsBoundaryPeriodic * boundary = GFS_BOUNDARY_PERIODIC (box->neighbor[d]);
+      g_assert (boundary->matching);
+      GfsBoundaryPeriodic * matching = 
+	GFS_BOUNDARY_PERIODIC (boundary->matching->neighbor[boundary->d]);
+      g_assert (GFS_IS_BOUNDARY_PERIODIC (matching));
+      GfsBox * nbox = GFS_BOUNDARY (matching)->box;
+      FttDirection od = FTT_OPPOSITE_DIRECTION (d);
+      g_assert (nbox->neighbor[od] == GTS_OBJECT (matching));
+      gts_object_destroy (GTS_OBJECT (matching));
+      nbox->neighbor[od] = NULL;
+      gfs_boundary_mpi_new (gfs_boundary_mpi_class (), nbox, od, *dest, box->id);
+      gts_object_destroy (GTS_OBJECT (box->neighbor[d]));
+      box->neighbor[d] = NULL;
+      gfs_boundary_mpi_new (gfs_boundary_mpi_class (), box, d, nbox->pid, nbox->id);
+    }
 }
 
 static void setup_binary_IO (GfsDomain * domain)
