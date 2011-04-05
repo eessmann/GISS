@@ -435,8 +435,12 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
 	surface->scale[1] *= scale;
 	surface->scale[2] *= scale;
       }
+      GtsVector translate;
+      gdouble L = gfs_object_simulation (surface)->physical_params.L;
+      for (i = 0; i < FTT_DIMENSION; i++)
+	translate[i] = surface->translate[i]/L;
       gfs_surface_transformation (surface->s, 
-				  surface->rotate, surface->translate, surface->scale,
+				  surface->rotate, translate, surface->scale,
 				  surface->flip, 
 				  &surface->m);
     }
