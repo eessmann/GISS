@@ -562,17 +562,22 @@ static void domain_foreach (GtsContainer * c,
 			    GtsFunc func, 
 			    gpointer data)
 {
-  GPtrArray * a = GFS_DOMAIN (c)->sorted;
-  if (GFS_DOMAIN (c)->dirty) {
-    g_ptr_array_set_size (a, 0);
+  if (gfs_domain_class ()->always_dirty)
     (* GTS_CONTAINER_CLASS (GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class)->foreach)
-      (c, (GtsFunc) add_item, a);
-    qsort (a->pdata, a->len, sizeof (gpointer), compare_boxes);
-    GFS_DOMAIN (c)->dirty = FALSE;
+      (c, func, data);
+  else {
+    GPtrArray * a = GFS_DOMAIN (c)->sorted;
+    if (GFS_DOMAIN (c)->dirty) {
+      g_ptr_array_set_size (a, 0);
+      (* GTS_CONTAINER_CLASS (GTS_OBJECT_CLASS (gfs_domain_class ())->parent_class)->foreach)
+	(c, (GtsFunc) add_item, a);
+      qsort (a->pdata, a->len, sizeof (gpointer), compare_boxes);
+      GFS_DOMAIN (c)->dirty = FALSE;
+    }
+    guint i;
+    for (i = 0; i < a->len; i++)
+      (* func) (a->pdata[i], data);
   }
-  guint i;
-  for (i = 0; i < a->len; i++)
-    (* func) (a->pdata[i], data);
 }
 
 static void domain_add (GtsContainer * c, GtsContainee * i)

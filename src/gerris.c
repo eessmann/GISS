@@ -331,7 +331,7 @@ int main (int argc, char * argv[])
     domain->pid = pid;
   }
 
-  if (npart > 1) {
+  if ((bubble && npart > 1) || (!bubble && npart > 0)) {
     guint nmin = 1000;
     guint mmax = 10000;
     guint ntry = 10000;
@@ -349,6 +349,9 @@ int main (int argc, char * argv[])
 		 np);
       return 1;
     }
+
+    gfs_domain_class ()->always_dirty = TRUE; /* fixme: workaround for partitioning bug */
+
     if (bubble)
       partition = gts_graph_bubble_partition (GTS_GRAPH (simulation), npart, 100, 
 					      verbose ? 
@@ -382,6 +385,8 @@ int main (int argc, char * argv[])
       gts_graph_partition_print_stats (partition, stderr);
     gts_graph_partition_destroy (partition);
       
+    gfs_domain_class ()->always_dirty = FALSE; /* fixme: workaround for partitioning bug */
+
     if (domain->pid >= 0) { /* we are running a parallel job */
       /* write partitioned simulation in a temporary file */
       gchar partname[] = "/tmp/gfspartXXXXXX";

@@ -99,6 +99,7 @@ struct _GfsDomainClass {
   GtsWGraphClass parent_class;
 
   void    (* post_read) (GfsDomain *, GtsFile * fp);
+  gboolean always_dirty; /* fixme: workaround for partitioning bug */
 };
 
 #define GFS_DOMAIN(obj)            GTS_OBJECT_CAST (obj,\
