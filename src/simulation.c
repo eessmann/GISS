@@ -1269,6 +1269,22 @@ GfsSimulation * gfs_simulation_read (GtsFile * fp)
   return GFS_SIMULATION (d);
 }
 
+static void write_preloaded_modules (GfsSimulation * sim, FILE * fp)
+{
+  GSList * i = sim->preloaded_modules;
+  while (i) {
+    void (* module_write) (FILE *);
+    const gchar * name = NULL;
+    fprintf (fp, "GModule %s", 
+	     g_module_symbol (i->data, "gfs_module_name", (gpointer) &name) ? name : 
+	     g_module_name (i->data));
+    if (g_module_symbol (i->data, "gfs_module_write", (gpointer) &module_write))
+      (* module_write) (fp);
+    fputc ('\n', fp);
+    i = i->next;
+  }
+}
+
 /**
  * gfs_simulation_write:
  * @sim: a #GfsSimulation.
@@ -1291,18 +1307,7 @@ void gfs_simulation_write (GfsSimulation * sim,
 
   fprintf (fp, "# Gerris Flow Solver %dD version %s (%s)\n",
 	   FTT_DIMENSION, GFS_VERSION, GFS_BUILD_VERSION);
-  GSList * i = sim->preloaded_modules;
-  while (i) {
-    void (* module_write) (FILE *);
-    const gchar * name = NULL;
-    fprintf (fp, "GModule %s", 
-	     g_module_symbol (i->data, "gfs_module_name", (gpointer) &name) ? name : 
-	     g_module_name (i->data));
-    if (g_module_symbol (i->data, "gfs_module_write", (gpointer) &module_write))
-      (* module_write) (fp);
-    fputc ('\n', fp);
-    i = i->next;
-  }
+  write_preloaded_modules (sim, fp);
   domain = GFS_DOMAIN (sim);
   depth = domain->max_depth_write;
   domain->max_depth_write = max_depth;
@@ -1380,6 +1385,7 @@ void gfs_simulation_union_write (GfsSimulation * sim,
     if (domain->pid == 0) {
       fprintf (fp, "# Gerris Flow Solver %dD version %s (%s)\n",
 	       FTT_DIMENSION, GFS_VERSION, GFS_BUILD_VERSION);
+      write_preloaded_modules (sim, fp);
       guint i, nboxes = 0;
       for (i = 0; i < gsize; i++)
 	nboxes += nbox[i];
