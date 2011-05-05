@@ -563,13 +563,14 @@ int main (int argc, char * argv[])
     s = gfs_domain_stats_variable (GFS_DOMAIN (s1),
 				   var1, FTT_TRAVERSE_LEAFS, -1,
 				   NULL, NULL);
+    gdouble f = pow (s1->physical_params.L, var1->units);
     fprintf (stderr, 
 	     "%s:\n"
 	     "  first: %g second: %g infty: %g w: %g\n"
 	     "  min: %g avg: %g | %g max: %g\n",
 	     fname1, 
-	     norm.first, norm.second, norm.infty, norm.w,
-	     s.min, s.mean, s.stddev, s.max);
+	     norm.first*f, norm.second*f, norm.infty*f, norm.w,
+	     s.min*f, s.mean*f, s.stddev*f, s.max*f);
     norm = gfs_domain_norm_variable (GFS_DOMAIN (s2),
 				     var2, NULL, FTT_TRAVERSE_LEAFS, -1,
 				     NULL, NULL);
@@ -581,8 +582,8 @@ int main (int argc, char * argv[])
 	     "  first: %g second: %g infty: %g w: %g\n"
 	     "  min: %g avg: %g | %g max: %g\n",
 	     fname2, 
-	     norm.first, norm.second, norm.infty, norm.w,
-	     s.min, s.mean, s.stddev, s.max);
+	     norm.first*f, norm.second*f, norm.infty*f, norm.w,
+	     s.min*f, s.mean*f, s.stddev*f, s.max*f);
   }
 
   if (gradient < FTT_DIMENSION) {
@@ -672,17 +673,18 @@ int main (int argc, char * argv[])
 			    (FttCellTraverseFunc) difference, data);
   gfs_norm_update (&norm);
   if (verbose) {
+    gdouble f = pow (s1->physical_params.L, var1->units);
     fprintf (stderr, 
-	  "total err first: %10.3e second: %10.3e infty: %10.3e w: %g\n",
-	     norm.first, norm.second, norm.infty, norm.w);
+	     "total err first: %10.3e second: %10.3e infty: %10.3e w: %g\n",
+	     norm.first*f, norm.second*f, norm.infty*f, norm.w);
     if (refined_error) {
       norm = gfs_domain_norm_variable (GFS_DOMAIN (s1),
 				       e, NULL, FTT_TRAVERSE_LEVEL,
 				       gfs_domain_depth (GFS_DOMAIN (s1)),
 				       NULL, NULL);
       fprintf (stderr, 
-	  "refined err first: %10.3e second: %10.3e infty: %10.3e w: %g\n",
-	       norm.first, norm.second, norm.infty, norm.w);
+	       "refined err first: %10.3e second: %10.3e infty: %10.3e w: %g\n",
+	       norm.first*f, norm.second*f, norm.infty*f, norm.w);
     }
   }
 
