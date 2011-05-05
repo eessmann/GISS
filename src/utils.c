@@ -625,6 +625,8 @@ static gchar * find_identifier (const gchar * s, const gchar * i)
   return NULL;
 }
 
+#define DEFERRED_COMPILATION ((GfsFunctionFunc) 0x1)
+
 static void function_compile (GfsFunction * f, GtsFile * fp)
 {
   if (!HAVE_PKG_CONFIG) {
@@ -757,13 +759,12 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 
     if (!lookup_function (f, finname)) {
       gint status = compile (fp, f, finname);
-      g_assert (status != SIGQUIT);
+      if (status == SIGQUIT)
+	exit (0);
     }
     remove (finname);
   }
 }
-
-#define DEFERRED_COMPILATION ((GfsFunctionFunc) 0x1)
 
 static void check_for_deferred_compilation (GfsFunction * f)
 {
