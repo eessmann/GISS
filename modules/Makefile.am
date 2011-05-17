@@ -46,6 +46,8 @@ pkglib_LTLIBRARIES = \
 	libdf33D.la \
 	libelectrohydro2D.la \
 	libelectrohydro3D.la \
+	libtopics2D.la \
+	libtopics3D.la \
 	$(TIDE) \
 	$(STOKES) \
 	$(WAVEWATCH) \
@@ -75,7 +77,8 @@ EXTRA_DIST = \
 	hypre.mod \
 	lis.mod \
 	agmg.mod \
-	ode.mod
+	ode.mod \
+	topics.mod
 
 BUILT_SOURCES = \
 	map.c \
@@ -91,7 +94,8 @@ BUILT_SOURCES = \
 	hypre.c \
 	lis.c \
 	agmg.c \
-	ode.c
+	ode.c \
+	topics.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -206,6 +210,11 @@ libelectrohydro3D_la_SOURCES = electrohydro.c
 libelectrohydro3D_la_CFLAGS = $(AM_CFLAGS)
 libelectrohydro2D_la_SOURCES = electrohydro.c
 libelectrohydro2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+
+libtopics3D_la_SOURCES = topics.c
+libtopics3D_la_CFLAGS = $(AM_CFLAGS)
+libtopics2D_la_SOURCES = topics.c
+libtopics2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
 if HAVE_MODULES
 .mod.c:
