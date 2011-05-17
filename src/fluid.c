@@ -1918,7 +1918,20 @@ void gfs_cell_coarse_fine (FttCell * parent, GfsVariable * v)
       GFS_VALUE (child.c[2], v) += gx2 + gy2;
       GFS_VALUE (child.c[3], v) += gx1 + gy2;
 #else /* 3D */
-      g_assert_not_implemented ();
+      double gx1 = g.x*(a[0] + a[2])/sa, gx2 = - g.x*(a[1] + a[3])/sa;
+      double gx3 = g.x*(a[4] + a[6])/sa, gx4 = - g.x*(a[5] + a[7])/sa;
+      double gy1 = g.y*(a[2] + a[3])/sa, gy2 = - g.y*(a[0] + a[1])/sa;
+      double gy3 = g.y*(a[6] + a[7])/sa, gy4 = - g.y*(a[4] + a[5])/sa;
+      double gz1 = g.z*(a[2] + a[6])/sa, gz2 = - g.z*(a[0] + a[4])/sa;
+      double gz3 = g.z*(a[3] + a[7])/sa, gz4 = - g.z*(a[1] + a[5])/sa;
+      GFS_VALUE (child.c[0], v) += gx2 + gy1 + gz1;
+      GFS_VALUE (child.c[1], v) += gx1 + gy1 + gz1;
+      GFS_VALUE (child.c[2], v) += gx2 + gy2 + gz1;
+      GFS_VALUE (child.c[3], v) += gx1 + gy2 + gz1;
+      GFS_VALUE (child.c[4], v) += gx2 + gy1 + gz2;
+      GFS_VALUE (child.c[5], v) += gx1 + gy1 + gz2;
+      GFS_VALUE (child.c[6], v) += gx2 + gy2 + gz2;
+      GFS_VALUE (child.c[7], v) += gx1 + gy2 + gz2;
 #endif /* 3D */
     }
     else
