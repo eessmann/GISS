@@ -46,8 +46,6 @@ pkglib_LTLIBRARIES = \
 	libdf33D.la \
 	libelectrohydro2D.la \
 	libelectrohydro3D.la \
-	libtopics2D.la \
-	libtopics3D.la \
 	$(TIDE) \
 	$(STOKES) \
 	$(WAVEWATCH) \
@@ -73,6 +71,7 @@ EXTRA_DIST = \
 	bubbles.mod \
 	df3.mod \
 	electrohydro.mod \
+	skewsymmetric.mod \
 	okada.mod \
 	hypre.mod \
 	lis.mod \
@@ -90,6 +89,7 @@ BUILT_SOURCES = \
 	bubbles.c \
 	df3.c \
 	electrohydro.c \
+	skewsymmetric.c \
 	okada.c \
 	hypre.c \
 	lis.c \
@@ -210,11 +210,6 @@ libelectrohydro3D_la_SOURCES = electrohydro.c
 libelectrohydro3D_la_CFLAGS = $(AM_CFLAGS)
 libelectrohydro2D_la_SOURCES = electrohydro.c
 libelectrohydro2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
-
-libtopics3D_la_SOURCES = topics.c
-libtopics3D_la_CFLAGS = $(AM_CFLAGS)
-libtopics2D_la_SOURCES = topics.c
-libtopics2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
 if HAVE_MODULES
 .mod.c:
