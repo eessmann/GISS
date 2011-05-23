@@ -2148,11 +2148,11 @@ static gdouble parabola_fit_curvature (ParabolaFit * p, gdouble kappamax,
 }
 
 #if FTT_2D
-static void parabola_fit_axi_curvature (const ParabolaFit * p, gdouble r, 
+static void parabola_fit_axi_curvature (const ParabolaFit * p, gdouble r, gdouble h,
 					gdouble * kappa, gdouble * kmax)
 {
   gdouble nr = (p->m[0]*p->a[1] + p->m[1])/sqrt (1. + p->a[1]*p->a[1]);
-  gdouble kaxi = - nr/r;
+  gdouble kaxi = - nr/MAX(r, h); /* limit the minimum radius to the grid size */
   *kappa += kaxi;
   if (kmax)
     *kmax = MAX (*kmax, fabs (kaxi));
@@ -2255,7 +2255,7 @@ gdouble gfs_fit_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble * k
     *kmax /= h;
 #if FTT_2D
   if (GFS_IS_AXI (v->domain))
-    parabola_fit_axi_curvature (&fit, fc.y*h + p.y, &kappa, kmax);
+    parabola_fit_axi_curvature (&fit, fc.y*h + p.y, h, &kappa, kmax);
 #endif
   parabola_fit_destroy (&fit);
   return kappa;
@@ -2373,7 +2373,7 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
     *kmax /= h;
 #if FTT_2D
   if (GFS_IS_AXI (v->domain))
-    parabola_fit_axi_curvature (&fit, fc.y*h + p.y, &kappa, kmax);
+    parabola_fit_axi_curvature (&fit, fc.y*h + p.y, h, &kappa, kmax);
 #endif
   parabola_fit_destroy (&fit);
   return kappa;
