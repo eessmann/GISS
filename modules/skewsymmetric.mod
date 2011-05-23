@@ -169,40 +169,20 @@ static gdouble interpolate_value_skew (FttCell * cellref,FttDirection d, FttDire
   FttCell * cell = ftt_cell_neighbor (cellref, d2);
   guint lref = ftt_cell_level (cellref);
   guint l    = ftt_cell_level (cell);
-  if (l < lref) {
-    FttVector pos1,pos2;
-    FttCellFace face1 = ftt_cell_face(cellref,d2);
-    ftt_face_pos(&face1,&pos1);
-    FttCellFace face2 = ftt_cell_face(cell,d);
-    ftt_face_pos(&face2,&pos2);
-    if (ftt_vector_distance(&pos1,&pos2) > sqrt(3)*ftt_cell_size(cellref))
+  if (l < lref) 
+    /* 0th order approx*/
+    if (d == d2)
       return 0.5*(GFS_VALUE (cell,v[d]) + GFS_VALUE (cell,v[FTT_OPPOSITE_DIRECTION(d)]));
     else
       return GFS_VALUE (cell,v[d]);
-
-    /*
-       ftt_cell_pos(cell,&pos);
-       gdouble vel=0;
-       FttComponent c  = d/2;
-       guint i;
-       for (i = 0; i < 2; i++) {
-       gdouble vel1 = GFS_VALUE (cell,v[2*c+i]);
-       FttCell * neighbor = ftt_cell_neighbor (cell, 2*c+i);
-       if (!FTT_CELL_IS_LEAF (neighbor)) {
-       FttCellChildren child;
-       guint j, n = ftt_cell_children_direction (neighbor, 2*c+i, &child);
-       gdouble dist = 1.e8; //any big number
-       for (j = 0; j < n; j++)
-       if (child.c[j]) {
-       ftt_cell_pos(child.c[j],&pos2);
-       if (ftt_vector_distance(&pos,&pos2) < dist)
-       vel1 = GFS_VALUE (child.c[j],v[FTT_OPPOSITE_DIRECTION(2*c+i)]);
-
-       }
-       }
-       vel += vel1;
-       }
-       return 0.5*vel;*/
+  if (!FTT_CELL_IS_LEAF (cell)) { 
+    FttCellChildren child;
+    guint j, n = ftt_cell_children_direction (cell, FTT_OPPOSITE_DIRECTION(d2), &child);
+    gdouble vel = 0.;
+    for (j = 0; j < n; j++)
+      if (child.c[j])
+        vel += GFS_VALUE (child.c[j],v[d]);
+      return vel/n;
   }
   else 
     return GFS_VALUE (cell,v[d]);
@@ -219,7 +199,8 @@ static gdouble traverse_advection (FttCell * cell,
   gdouble vn, vntop, vnbot, vndiag;
 
   FttCell * cell_next = ftt_cell_neighbor (cell, d);
-  gdouble size_ratio = ftt_cell_size(cell_next)/ftt_cell_size(cell);
+  //gdouble size_ratio = ftt_cell_size(cell_next)/ftt_cell_size(cell);
+  gdouble size_ratio = 1; //0th order approx
 
   vn     = GFS_VALUE (cell, fd->velfaces[2*oc]);
   vntop  = interpolate_value_skew (cell, 2*oc, d, fd->velfaces);
@@ -266,7 +247,7 @@ void advection_term (FttCell * cell, FaceData * fd)
       };
 
       s->f[d].v += traverse_advection (cell,orthogonal[c][0],d,un,fd);
-      s->f[d].v += traverse_advection (cell,orthogonal[c][0],d,un,fd); 
+      s->f[d].v += traverse_advection (cell,orthogonal[c][1],d,un,fd); 
 #endif
     }
     else
@@ -325,15 +306,18 @@ void update_vel (FttCell * cell, FaceData * fd)
   g_return_if_fail (cell != NULL);
 
   GfsStateVector * s = GFS_STATE (cell);
-  gdouble size;
+  gdouble size,size_next;
 
   gdouble aux;
 
   FttComponent d;
   FttComponent c;
   for (d = 0; d < FTT_NEIGHBORS; d++) {
+    size_next  = ftt_cell_size(ftt_cell_neighbor (cell, d));
+//    if (!FTT_CELL_IS_LEAF (ftt_cell_neighbor (cell, d)))
+//      size_next *= 0.5;
     c = d/2;
-    size = 0.5*(ftt_cell_size (cell) + ftt_cell_size (ftt_cell_neighbor (cell, d))); //I need to account for the metric
+    size = 0.5*(ftt_cell_size (cell) + size_next); //I need to account for the metric
     GFS_VALUE (cell, fd->velfaces[d]) = (GFS_VALUE (cell, fd->velfaces[d]) + 0.05*GFS_VALUE (cell, fd->velold[d]))/1.05;
     aux = GFS_VALUE (cell, fd->velfaces[d]);
     GFS_VALUE (cell, fd->velfaces[d]) = (0.10*GFS_VALUE (cell, fd->velfaces[d]) + 0.45*GFS_VALUE (cell, fd->velold[d])- s->f[d].v*(*fd->dt)/size)/0.55;
@@ -370,7 +354,7 @@ void correct_face_velocity (const FttCell * cell, FaceData * fd)
     FttCell * neighbor = ftt_cell_neighbor (cell, d);
     if (!FTT_CELL_IS_LEAF (neighbor)) {
       od = FTT_OPPOSITE_DIRECTION(d);
-      guint i, n = ftt_cell_children_direction (neighbor, d, &child);
+      guint i, n = ftt_cell_children_direction (neighbor, od, &child);
       GFS_VALUE (cell,fd->velfaces[d]) = 0; 
       GFS_VALUE (cell,fd->velold[d])   = 0; 
       for (i = 0; i < n; i++)
@@ -395,7 +379,7 @@ void obtain_face_fluxes (const FttCell * cell)
   for (d = 0; d < FTT_NEIGHBORS; d++) {
     FttCell * neighbor = ftt_cell_neighbor (cell, d);
     if (!FTT_CELL_IS_LEAF (neighbor)) {
-      guint i, n = ftt_cell_children_direction (neighbor, d, &child);
+      guint i, n = ftt_cell_children_direction (neighbor, FTT_OPPOSITE_DIRECTION(d), &child);
       s->f[d].v = 0;
       for (i = 0; i < n; i++)
         if (child.c[i])  
