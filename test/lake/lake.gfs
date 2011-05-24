@@ -5,7 +5,7 @@
 # A simple test of a wind-driven lake with a 1/10 mesh stretching
 # ratio. Due to the anisotropy of stretching, the hypre module needs
 # to be used to solve the Poisson problem efficiently. Further, with
-# Neumman boundary conditions everywhere for the pressure, the
+# Neumann boundary conditions everywhere for the pressure, the
 # resulting linear system is rank-deficient and needs to be "fixed" to
 # avoid drift problems in HYPRE.
 #

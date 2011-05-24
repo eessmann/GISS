@@ -3,8 +3,8 @@
 # Clones an ubuntu 'universe' package in openSUSE's builservice
 
 project=home:popinet
-distro=maverick
-repo=xUbuntu_10.10
+distro=natty
+repo=xUbuntu_11.04
 
 package=$1
 if test -z "$package"; then
