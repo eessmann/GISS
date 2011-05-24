@@ -2090,14 +2090,14 @@ static gboolean gfs_remove_droplets_event (GfsEvent * event, GfsSimulation * sim
     GfsDomain * domain = GFS_DOMAIN (sim);
     d->v = d->fc ? gfs_function_get_variable (d->fc) : d->c;
     if (d->v)
-      gfs_domain_remove_droplets (domain, d->v, d->c, d->min);
+      gfs_domain_remove_droplets (domain, d->v, d->c, d->min, d->val);
     else {
       d->v = gfs_temporary_variable (domain);
       gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 				(FttCellTraverseFunc) compute_v, d);
       gfs_restore_fpe_for_function (d->fc);
-      gfs_domain_remove_droplets (domain, d->v, d->c, d->min);
+      gfs_domain_remove_droplets (domain, d->v, d->c, d->min, d->val);
       gts_object_destroy (GTS_OBJECT (d->v));
     }
     return TRUE;
@@ -2129,12 +2129,16 @@ static void gfs_remove_droplets_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "expecting an integer (min)");
     return;
   }
-  GFS_REMOVE_DROPLETS (*o)->min = atoi (fp->token->str);
+  r->min = atoi (fp->token->str);
   gts_file_next_token (fp);
 
   if (fp->type != '\n') {
     r->fc = gfs_function_new (gfs_function_class (), 0.);
     gfs_function_read (r->fc, gfs_object_simulation (r), fp);
+    if (fp->type == GTS_INT || fp->type == GTS_FLOAT) {
+      r->val = atof (fp->token->str);
+      gts_file_next_token (fp);
+    }
   }
 }
 
@@ -2145,8 +2149,11 @@ static void gfs_remove_droplets_write (GtsObject * o, FILE * fp)
       (o, fp);
   GfsRemoveDroplets * r = GFS_REMOVE_DROPLETS (o);
   fprintf (fp, " %s %d", r->c->name, r->min);
-  if (r->fc)
+  if (r->fc) {
     gfs_function_write (r->fc, fp);
+    if (r->val != 0.)
+      fprintf (fp, " %g", r->val);
+  }
 }
 
 static void gfs_remove_droplets_class_init (GfsEventClass * klass)

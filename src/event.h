@@ -313,6 +313,7 @@ struct _GfsRemoveDroplets {
   GfsFunction * fc;
   GfsVariable * c;
   gint min;
+  gdouble val;
 };
 
 #define GFS_REMOVE_DROPLETS(obj)            GTS_OBJECT_CAST (obj,\

@@ -311,7 +311,8 @@ guint        gfs_domain_tag_droplets          (GfsDomain * domain,
 void         gfs_domain_remove_droplets       (GfsDomain * domain,
 					       GfsVariable * c,
 					       GfsVariable * v,
-					       gint min);
+					       gint min,
+					       gdouble val);
 void         gfs_domain_remove_ponds          (GfsDomain * domain, 
 					       gint min,
 					       FttCellCleanupFunc cleanup,

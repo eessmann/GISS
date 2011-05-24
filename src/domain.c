@@ -3681,6 +3681,7 @@ typedef struct {
   GfsVariable * tag, * c;
   guint * sizes;
   guint n, min;
+  gdouble val;
 } RemoveDropletsPar;
 
 static void compute_droplet_size (FttCell * cell, RemoveDropletsPar * p)
@@ -3694,7 +3695,7 @@ static void reset_small_fraction (FttCell * cell, RemoveDropletsPar * p)
 {
   guint i = GFS_VALUE (cell, p->tag);
   if (i > 0 && p->sizes[i - 1] < p->min)
-    GFS_VALUE (cell, p->c) = 0.;
+    GFS_VALUE (cell, p->c) = p->val;
 }
 
 static int greater (const void * a, const void * b)
@@ -3708,15 +3709,17 @@ static int greater (const void * a, const void * b)
  * @c: a #GfsVariable.
  * @v: a #GfsVariable.
  * @min: the minimum size (in cells) of the droplets.
+ * @val: the value used to reset @v.
  *
- * Resets the @v variable of all the droplets (defined by the @c
- * variable) smaller than @min cells if @min is positive, or all the
- * droplets but the -$min largest ones if @min is negative.
+ * Resets the @v variable (using @val) of all the droplets (defined by
+ * the @c variable) smaller than @min cells if @min is positive, or
+ * all the droplets but the -$min largest ones if @min is negative.
  */
 void gfs_domain_remove_droplets (GfsDomain * domain,
 				 GfsVariable * c,
 				 GfsVariable * v,
-				 gint min)
+				 gint min,
+				 gdouble val)
 {
   RemoveDropletsPar p;
 
@@ -3750,6 +3753,7 @@ void gfs_domain_remove_droplets (GfsDomain * domain,
       g_free (tmp);
     }
     p.c = v;
+    p.val = val;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) reset_small_fraction, &p);
     g_free (p.sizes);
