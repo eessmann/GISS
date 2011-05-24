@@ -2152,7 +2152,7 @@ static void parabola_fit_axi_curvature (const ParabolaFit * p, gdouble r, gdoubl
 					gdouble * kappa, gdouble * kmax)
 {
   gdouble nr = (p->m[0]*p->a[1] + p->m[1])/sqrt (1. + p->a[1]*p->a[1]);
-  gdouble kaxi = - nr/MAX(r, h); /* limit the minimum radius to the grid size */
+  gdouble kaxi = - nr/MAX(r, h/2.); /* limit the minimum radius to half the grid size */
   *kappa += kaxi;
   if (kmax)
     *kmax = MAX (*kmax, fabs (kaxi));
