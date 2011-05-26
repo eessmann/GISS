@@ -739,14 +739,14 @@ static gdouble cell_rz (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 
 static gdouble cell_dV (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
-  gdouble dV = ftt_cell_volume (cell);
+  gdouble dV = gfs_cell_volume (cell, GFS_DOMAIN (sim));
   gdouble L = sim->physical_params.L;
 #if FTT_2D
   dV *= L*L;
 #else
   dV *= L*L*L;
 #endif
-  return GFS_IS_MIXED (cell) ? GFS_STATE (cell)->solid->a*dV : dV;
+  return dV;
 }
 
 static gdouble cell_dL (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
