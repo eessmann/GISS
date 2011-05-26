@@ -44,37 +44,10 @@ static guint face_v[6][4] = {
   {1,5,7,3},/* front */
   {0,4,6,2} /* back */
 };
-/* first index is the edge number, second index is the edge orientation 
-   (0 or 1), third index are the edges which this edge may connect to
-   in order and the corresponding face direction */
-static guint connect[12][2][4] = {
-  {{9, 1, 8, FTT_BOTTOM}, {4, 3, 7, FTT_BACK}},   /* 0 */
-  {{6, 2, 5, FTT_FRONT},  {8, 0, 9, FTT_BOTTOM}}, /* 1 */
-  {{10, 3, 11, FTT_TOP},  {5, 1, 6, FTT_FRONT}},  /* 2 */
-  {{7, 0, 4, FTT_BACK},   {11, 2, 10, FTT_TOP}},  /* 3 */
-  {{3, 7, 0, FTT_BACK},   {8, 5, 11, FTT_LEFT}},  /* 4 */
-  {{11, 4, 8, FTT_LEFT},  {1, 6, 2, FTT_FRONT}},  /* 5 */
-  {{2, 5, 1, FTT_FRONT},  {9, 7, 10, FTT_RIGHT}}, /* 6 */
-  {{10, 6, 9, FTT_RIGHT}, {0, 4, 3, FTT_BACK}},   /* 7 */
-  {{5, 11, 4, FTT_LEFT},  {0, 9, 1, FTT_BOTTOM}}, /* 8 */
-  {{1, 8, 0, FTT_BOTTOM}, {7, 10, 6, FTT_RIGHT}}, /* 9 */
-  {{6, 9, 7, FTT_RIGHT},  {3, 11, 2, FTT_TOP}},   /* 10 */
-  {{2, 10, 3, FTT_TOP},   {4, 8, 5, FTT_LEFT}}    /* 11 */
-};
 static FttVector edge[12][2] = {
   {{0.,0.,0.},{1.,0.,0.}},{{0.,0.,1.},{1.,0.,1.}},{{0.,1.,1.},{1.,1.,1.}},{{0.,1.,0.},{1.,1.,0.}},
   {{0.,0.,0.},{0.,1.,0.}},{{0.,0.,1.},{0.,1.,1.}},{{1.,0.,1.},{1.,1.,1.}},{{1.,0.,0.},{1.,1.,0.}},
   {{0.,0.,0.},{0.,0.,1.}},{{1.,0.,0.},{1.,0.,1.}},{{1.,1.,0.},{1.,1.,1.}},{{0.,1.,0.},{0.,1.,1.}}
-};
-static FttDirection corner[8][3] = {
-  {FTT_LEFT, FTT_BOTTOM, FTT_BACK},
-  {FTT_LEFT, FTT_BOTTOM, FTT_FRONT},
-  {FTT_LEFT, FTT_TOP, FTT_BACK},
-  {FTT_LEFT, FTT_TOP, FTT_FRONT},
-  {FTT_RIGHT, FTT_BOTTOM, FTT_BACK},
-  {FTT_RIGHT, FTT_BOTTOM, FTT_FRONT},
-  {FTT_RIGHT, FTT_TOP, FTT_BACK},
-  {FTT_RIGHT, FTT_TOP, FTT_FRONT}
 };
 static guint connectv[12][2][4] = {
   {{4, 5, 1, 0}, {0, 2, 6, 4}}, /* 0 */
@@ -94,5 +67,41 @@ static FttVector cvertex[8] = {
   {0., 0., 0.}, {0., 0., 1.}, {0., 1., 0.}, {0., 1., 1.},
   {1., 0., 0.}, {1., 0., 1.}, {1., 1., 0.}, {1., 1., 1.}
 };
+
+#if FTT_2D
+# define NCORNERS 4
+static FttDirection corner[4][2] = {
+  {FTT_LEFT, FTT_BOTTOM}, {FTT_RIGHT, FTT_BOTTOM}, {FTT_RIGHT, FTT_TOP}, {FTT_LEFT, FTT_TOP}
+};
+#else /* 3D */
+# define NCORNERS 8
+/* first index is the edge number, second index is the edge orientation 
+   (0 or 1), third index are the edges which this edge may connect to
+   in order and the corresponding face direction */
+static guint connect[12][2][4] = {
+  {{9, 1, 8, FTT_BOTTOM}, {4, 3, 7, FTT_BACK}},   /* 0 */
+  {{6, 2, 5, FTT_FRONT},  {8, 0, 9, FTT_BOTTOM}}, /* 1 */
+  {{10, 3, 11, FTT_TOP},  {5, 1, 6, FTT_FRONT}},  /* 2 */
+  {{7, 0, 4, FTT_BACK},   {11, 2, 10, FTT_TOP}},  /* 3 */
+  {{3, 7, 0, FTT_BACK},   {8, 5, 11, FTT_LEFT}},  /* 4 */
+  {{11, 4, 8, FTT_LEFT},  {1, 6, 2, FTT_FRONT}},  /* 5 */
+  {{2, 5, 1, FTT_FRONT},  {9, 7, 10, FTT_RIGHT}}, /* 6 */
+  {{10, 6, 9, FTT_RIGHT}, {0, 4, 3, FTT_BACK}},   /* 7 */
+  {{5, 11, 4, FTT_LEFT},  {0, 9, 1, FTT_BOTTOM}}, /* 8 */
+  {{1, 8, 0, FTT_BOTTOM}, {7, 10, 6, FTT_RIGHT}}, /* 9 */
+  {{6, 9, 7, FTT_RIGHT},  {3, 11, 2, FTT_TOP}},   /* 10 */
+  {{2, 10, 3, FTT_TOP},   {4, 8, 5, FTT_LEFT}}    /* 11 */
+};
+static FttDirection corner[8][3] = {
+  {FTT_LEFT, FTT_BOTTOM, FTT_BACK},
+  {FTT_LEFT, FTT_BOTTOM, FTT_FRONT},
+  {FTT_LEFT, FTT_TOP, FTT_BACK},
+  {FTT_LEFT, FTT_TOP, FTT_FRONT},
+  {FTT_RIGHT, FTT_BOTTOM, FTT_BACK},
+  {FTT_RIGHT, FTT_BOTTOM, FTT_FRONT},
+  {FTT_RIGHT, FTT_TOP, FTT_BACK},
+  {FTT_RIGHT, FTT_TOP, FTT_FRONT}
+};
+#endif /* 3D */
 
 #define SLIGHTLY_LARGER 1.001
