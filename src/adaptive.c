@@ -505,7 +505,6 @@ static void gfs_adapt_gradient_read (GtsObject ** o, GtsFile * fp)
   a->v = gfs_function_get_variable (GFS_ADAPT_FUNCTION (a)->f);
   if (a->v == NULL)
     a->v = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (a)));
-  a->dimension = pow (gfs_object_simulation (a)->physical_params.L, a->v->units);
 }
 
 static void update_f (FttCell * cell, GfsAdaptFunction * a)
@@ -518,16 +517,17 @@ static gboolean gfs_adapt_gradient_event (GfsEvent * event,
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_adapt_gradient_class ())->parent_class)->event) 
       (event, sim)) {
+    GfsAdaptGradient * a = GFS_ADAPT_GRADIENT (event);
+    a->dimension = pow (sim->physical_params.L, a->v->units);
     if (!gfs_function_get_variable (GFS_ADAPT_FUNCTION (event)->f)) {
       gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttCellTraverseFunc) update_f, event);
       gfs_restore_fpe_for_function (GFS_ADAPT_FUNCTION (event)->f);
-      GfsVariable * v = GFS_ADAPT_GRADIENT (event)->v;
       gfs_domain_cell_traverse (GFS_DOMAIN (sim),
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-				(FttCellTraverseFunc) v->fine_coarse, v);
-      gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, v);
+				(FttCellTraverseFunc) a->v->fine_coarse, a->v);
+      gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, a->v);
     }
     return TRUE;
   }
