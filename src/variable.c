@@ -799,6 +799,33 @@ static void variable_stream_function_coarse_fine (FttCell * parent, GfsVariable 
   }
 }
 
+static void variable_stream_function_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_function_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsVariableFunction * v = GFS_VARIABLE_FUNCTION (*o);
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  if (fp->type == GTS_STRING && gfs_variable_from_name (domain->variables, fp->token->str)) {
+    /* variable */
+    gfs_function_read (v->f, domain, fp);
+    g_assert (gfs_function_get_variable (v->f));
+    if (fp->type == GTS_ERROR)
+      return;
+    /* fixme: what about the equivalent coarse_fine() method? */
+  }
+  else { /* spatial function */
+    gts_object_destroy (GTS_OBJECT (v->f));
+    v->f = gfs_function_new (gfs_function_spatial_class (), 0.);
+    gfs_function_read (v->f, domain, fp);
+    if (fp->type == GTS_ERROR)
+      return;
+    gfs_function_set_units (v->f, GFS_VARIABLE1 (*o)->units);
+    GFS_VARIABLE1 (v)->coarse_fine = variable_stream_function_coarse_fine;
+  }
+}
+
 static void variable_stream_function_fine_coarse (FttCell * cell, GfsVariable * v)
 {
   FttCellChildren child;
@@ -841,10 +868,35 @@ static void init_streamfunction (FttCell * cell, GfsVariable * v)
 				 v->domain, gfs_domain_velocity (v->domain));
 }
 
+static void init_streamfunction_from_variable (FttCell * cell, GfsVariable * v)
+{
+  FttDirection d[FTT_DIMENSION];
+  d[0] = FTT_LEFT; d[1] = FTT_BOTTOM;
+  gdouble psi0 = gfs_cell_corner_value (cell, d, v, -1);
+  d[0] = FTT_RIGHT; d[1] = FTT_BOTTOM;
+  gdouble psi1 = gfs_cell_corner_value (cell, d, v, -1);
+  d[0] = FTT_RIGHT; d[1] = FTT_TOP;
+  gdouble psi2 = gfs_cell_corner_value (cell, d, v, -1);
+  d[0] = FTT_LEFT; d[1] = FTT_TOP;
+  gdouble psi3 = gfs_cell_corner_value (cell, d, v, -1);
+  init_mac_from_stream_function (cell, psi0, psi1, psi2, psi3, ftt_cell_size (cell),
+				 v->domain, gfs_domain_velocity (v->domain));
+}
+
 static gboolean variable_stream_function_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (gfs_variable_function_class ())->event) (event, sim)) {
-    gfs_domain_traverse_leaves (GFS_DOMAIN (sim), (FttCellTraverseFunc) init_streamfunction, event);
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    GfsVariable * v = gfs_function_get_variable (GFS_VARIABLE_FUNCTION (event)->f);
+    if (v)
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) init_streamfunction_from_variable, 
+				  v);
+    else
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) init_streamfunction, event);
+    GfsVariable ** u = gfs_domain_velocity (domain);
+    FttComponent c;
+    for (c = 0; c < FTT_DIMENSION; c++)
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, u[c]);
     return TRUE;
   }
   return FALSE;
@@ -852,16 +904,14 @@ static gboolean variable_stream_function_event (GfsEvent * event, GfsSimulation 
 
 static void variable_stream_function_class_init (GfsEventClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->read = variable_stream_function_read;
   klass->event = variable_stream_function_event;
 }
 
 static void variable_stream_function_init (GfsVariable * v)
 {
   v->units = 2.;
-  v->coarse_fine = variable_stream_function_coarse_fine;
   v->fine_coarse = variable_stream_function_fine_coarse;
-  gts_object_destroy (GTS_OBJECT (GFS_VARIABLE_FUNCTION (v)->f));
-  GFS_VARIABLE_FUNCTION (v)->f = gfs_function_new (gfs_function_spatial_class (), 0.);
   GFS_EVENT (v)->istep = G_MAXINT/2;
 }
 
@@ -889,6 +939,85 @@ GfsVariableClass * gfs_variable_stream_function_class (void)
 /** \endobject{GfsVariableStreamFunction} */
 
 #endif /* FTT_2D */
+
+/**
+ * A variable, solution of a Poisson equation.
+ * \beginobject{GfsVariablePoisson}
+ */
+
+typedef struct {
+  GfsFunction * f;
+  GfsVariable * div;
+} DivData;
+
+static void rescale_div (FttCell * cell, DivData * p)
+{
+  gdouble size = ftt_cell_size (cell);
+  gdouble a = size*size*gfs_domain_cell_fraction (p->div->domain, cell);
+  GFS_VALUE (cell, p->div) = gfs_function_value (p->f, cell)*a;
+}
+
+static gboolean variable_poisson_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (gfs_variable_class ())->event) (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    GfsVariable * dia = gfs_temporary_variable (domain);
+    GfsVariable * div = gfs_temporary_variable (domain);
+    GfsVariable * res = gfs_temporary_variable (domain);
+    GfsVariable * v = GFS_VARIABLE1 (event);
+    GfsMultilevelParams par;
+    gfs_multilevel_params_init (&par);
+
+    gfs_domain_surface_bc (domain, v);
+    DivData p = { GFS_VARIABLE_FUNCTION (event)->f, div };
+    /* fixme: compatibility condition? */
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) rescale_div, &p);
+    gfs_poisson_coefficients (domain, NULL, FALSE, TRUE);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, dia);
+    par.poisson_solve (domain, &par, v, div, res, dia, 1.);
+    //    gfs_multilevel_params_stats_write (&par, stderr);
+
+    gts_object_destroy (GTS_OBJECT (dia));
+    gts_object_destroy (GTS_OBJECT (div));
+    gts_object_destroy (GTS_OBJECT (res));
+    return TRUE;
+  }
+  return FALSE;  
+}
+
+static void variable_poisson_class_init (GtsObjectClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = variable_poisson_event;
+}
+
+static void variable_poisson_init (GfsVariable * v)
+{
+  v->coarse_fine = (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine;
+}
+
+GfsVariableClass * gfs_variable_poisson_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_poisson_info = {
+      "GfsVariablePoisson",
+      sizeof (GfsVariableFunction),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_poisson_class_init,
+      (GtsObjectInitFunc) variable_poisson_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_function_class ()), 
+				  &gfs_variable_poisson_info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsVariablePoisson} */
 
 /**
  * How old is this cell?.

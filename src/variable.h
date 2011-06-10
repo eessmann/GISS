@@ -249,6 +249,10 @@ struct _GfsSpatialSum {
 
 GfsEventClass * gfs_spatial_sum_class  (void);
 
+/* GfsVariablePoisson: Header */
+
+GfsVariableClass * gfs_variable_poisson_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
