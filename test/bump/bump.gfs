@@ -14,6 +14,9 @@
 # $$
 # while preserving the initial geometry (see figure \ref{profile}).
 #
+# A more detailed discussion of this simulation is given in
+# \cite{lopez-herrera2011}.
+#
 # \begin{figure}[htbp]
 # \caption{\label{decay} Temporal decay of the charge density at
 # (0,0). (Continuous) analytical solution, (symbols)

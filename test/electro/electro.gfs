@@ -24,6 +24,9 @@
 # results for the radial and azimuthal components of the velocity
 # along a transect inclined at 45 degrees.
 #
+# A more detailed discussion of this simulation is given in 
+# \cite{lopez-herrera2011}.
+#
 # \begin{figure}[htbp] 
 # \caption{\label{profile}Radial and azimuthal components of the
 # velocity along a 45 degrees transect. The lines show the theoretical

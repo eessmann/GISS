@@ -63,7 +63,7 @@ print (Curve('convergence',1,3) - Curve('convergence.ref',1,3)).max()
 print Curve('rhoe',3,5).max()
 if (Curve('convergence',1,2) - Curve('convergence.ref',1,2)).max() > 1e-6 or\
    (Curve('convergence',1,3) - Curve('convergence.ref',1,3)).max() > 1e-6 or\
-    Curve('rhoe',3,5).max() > 1e-6:
+    Curve('rhoe',3,5).max() > 1e-9:
     exit(1)
 EOF
 else

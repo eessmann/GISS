@@ -13,6 +13,9 @@
 # The outer electric field reaches a steady-state (Figure
 # \ref{efield}).
 #
+# A more detailed discussion of this simulation is given in
+# \cite{lopez-herrera2011}.
+#
 # \begin{figure}[htbp]
 # \caption{\label{charge}Relative error on the
 # charge per unit of length of cylinder as a function of
