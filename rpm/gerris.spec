@@ -23,6 +23,9 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %if 0%{?fedora_version}
 Requires: proj gsl netcdf
+%if %{?fedora_version} > 14
+Requires: hdf5-openmpi
+%endif
 BuildRequires: netcdf-devel proj-devel gcc-gfortran
 %endif
 %if 0%{?suse_version}
