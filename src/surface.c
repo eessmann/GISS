@@ -840,7 +840,7 @@ gdouble gfs_surface_implicit_value (GfsSurface * s, GtsPoint p)
   if (s->f) { /* spatial function */
     if (s->m)
       gts_point_transform (&p, s->m);
-    return (s->flip ? -1. : 1.)*gfs_function_spatial_value (s->f, (FttVector *)&p.x);
+    return (s->flip ? -1. : 1.)*gfs_function_spatial_value (s->f, (FttVector *)&p.x) + 1e-20;
   }
   else { /* bounding-box tree */
     GtsBBox * bbox;
