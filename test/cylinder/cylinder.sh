@@ -70,7 +70,7 @@ else
 fi
 
 # check charge conservation
-for level in 5 6 7 8; do
+for level in 6 7 8; do
     if awk 'BEGIN{ charge = 0. }{
       if (charge == 0.)
         charge = $2;
