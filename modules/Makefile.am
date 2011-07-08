@@ -46,6 +46,10 @@ pkglib_LTLIBRARIES = \
 	libdf33D.la \
 	libelectrohydro2D.la \
 	libelectrohydro3D.la \
+	libskewsymmetric2D.la \
+	libskewsymmetric3D.la \
+	libtopics2D.la \
+	libtopics3D.la \
 	$(TIDE) \
 	$(STOKES) \
 	$(WAVEWATCH) \
@@ -210,6 +214,16 @@ libelectrohydro3D_la_SOURCES = electrohydro.c
 libelectrohydro3D_la_CFLAGS = $(AM_CFLAGS)
 libelectrohydro2D_la_SOURCES = electrohydro.c
 libelectrohydro2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+
+libskewsymmetric3D_la_SOURCES = skewsymmetric.c
+libskewsymmetric3D_la_CFLAGS = $(AM_CFLAGS)
+libskewsymmetric2D_la_SOURCES = skewsymmetric.c
+libskewsymmetric2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+
+libtopics3D_la_SOURCES = topics.c
+libtopics3D_la_CFLAGS = $(AM_CFLAGS)
+libtopics2D_la_SOURCES = topics.c
+libtopics2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 
 if HAVE_MODULES
 .mod.c:

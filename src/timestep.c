@@ -347,8 +347,7 @@ static void mac_projection (GfsDomain * domain,
   velocity_face_sources (domain, gfs_domain_velocity (domain), apar->dt, alpha, g);
 
   GfsVariable * dia = gfs_temporary_variable (domain);
-//  GfsVariable * div = gfs_temporary_variable (domain);
-  GfsVariable * div = gfs_domain_get_or_add_variable (domain, "divmac", "Divergence");
+  GfsVariable * div = gfs_temporary_variable (domain);
   GfsVariable * res1 = res ? res : gfs_temporary_variable (domain);
 
   /* Initialize face coefficients */
@@ -361,7 +360,7 @@ static void mac_projection (GfsDomain * domain,
   /* compute MAC divergence */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) gfs_normal_divergence, div);
-  
+
   /* Divergence hook */
   if (divergence_hook)
     (* divergence_hook) (domain, apar, div);
@@ -393,7 +392,7 @@ static void mac_projection (GfsDomain * domain,
   par->poisson_solve (domain, par, p, div, res1, dia, apar->dt);
 
   gts_object_destroy (GTS_OBJECT (dia));
-//  gts_object_destroy (GTS_OBJECT (div));
+  gts_object_destroy (GTS_OBJECT (div));
   if (!res)
     gts_object_destroy (GTS_OBJECT (res1));
 
