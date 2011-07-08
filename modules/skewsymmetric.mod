@@ -35,16 +35,6 @@ struct _GfsSkewSymmetric {
 
 };
 
-#define GFS_FACE_NORMAL_VALUE(fa)\
-  (GFS_STATE ((fa)->cell)->f[(fa)->d].v)
-#define GFS_FACE_NORMAL_VALUE_RIGHT(fa)\
-  (GFS_STATE ((fa)->neighbor)->f[FTT_OPPOSITE_DIRECTION ((fa)->d)].v)
-
-#define GFS_FACE_NORMAL_OLD_VELOCITY(fa)\
-  (GFS_STATE ((fa)->cell)->f[(fa)->d].unold)
-#define GFS_FACE_NORMAL_OLD_VELOCITY_RIGHT(fa)\
-  (GFS_STATE ((fa)->neighbor)->f[FTT_OPPOSITE_DIRECTION ((fa)->d)].unold)
-
 #define GFS_SKEW_SYMMETRIC(obj)            GTS_OBJECT_CAST (obj,		\
 							 GfsSkewSymmetric,	\
 							 gfs_skew_symmetric_class ())
@@ -336,7 +326,7 @@ static void update_vel (FttCell * cell, FaceData * fd)
   }
 }
 
-/* Same as in source.c used here to obtained viscosity */
+/* Same as in source.c used here to obtain viscosity (make it more general?) */
 static GfsSourceDiffusion * source_diffusion_viscosity (GfsVariable * v)
 {
   if (v->sources) {
