@@ -9,6 +9,7 @@ EXAMPLES = \
 	tangaroa \
 	logo \
 	column \
+	starting \
 	tides \
 	ship \
 	forcedturbulence \
