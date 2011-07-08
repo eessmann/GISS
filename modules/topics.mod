@@ -1,5 +1,6 @@
-/* Gerris - The GNU Flow Solver                       (-*-C-*-)
- * Copyright (C) 2009 National Institute of Water and Atmospheric Research
+/* Gerris - The GNU Flow Solver (-*-C-*-)
+ * Copyright (C) 2011 Sebastien Delaux, National Institute of Water
+ * and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -218,17 +219,23 @@ static void gfs_init_submarine_landslide_read (GtsObject ** o, GtsFile * fp)
 
   /* Checks the validity of the model */
   if ( l->theta > 30 )
-    g_warning ("The incline angle theta >30 degrees: %g. This will make the amplitude inaccurate!", l->theta);
+    g_warning ("The incline angle theta >30 degrees: %g. This will make the amplitude inaccurate!",
+	       l->theta);
   if ( l->depth/l->length < 0.12 )
-    g_warning ("The ratio depth/length <0.12: %g. This will make the amplitude inaccurate!", l->depth/l->length);
+    g_warning ("The ratio depth/length <0.12: %g. This will make the amplitude inaccurate!",
+	       l->depth/l->length);
   if ( l->thick/l->length > 0.2 )
-    g_warning ("The ratio thickness/length > 0.2: %g. This will make the amplitude inaccurate!", l->thick/l->length);
+    g_warning ("The ratio thickness/length > 0.2: %g. This will make the amplitude inaccurate!",
+	       l->thick/l->length);
   if ( l->thick/l->depth > 3.33 )
-    g_warning ("The ratio thickness/depth > 3.33: %g. This will make the amplitude inaccurate!", l->thick/l->depth);
+    g_warning ("The ratio thickness/depth > 3.33: %g. This will make the amplitude inaccurate!",
+	       l->thick/l->depth);
   if ( l->width/l->length < 0.06 )
-    g_warning ("The ratio width/length < 0.06: %g. This will make the amplitude inaccurate!", l->width/l->length);
+    g_warning ("The ratio width/length < 0.06: %g. This will make the amplitude inaccurate!", 
+	       l->width/l->length);
   if ( l->width/l->length > 1.0 )
-    g_warning ("The ratio width/length > 1.0: %g. This will make the amplitude inaccurate!", l->width/l->length);
+    g_warning ("The ratio width/length > 1.0: %g. This will make the amplitude inaccurate!", 
+	       l->width/l->length);
 
   gdouble g = GFS_SIMULATION(domain)->physical_params.g;
   gdouble sint = sin(l->theta*M_PI/180.);
@@ -246,7 +253,8 @@ static void gfs_init_submarine_landslide_read (GtsObject ** o, GtsFile * fp)
 
   gdouble sg = l->so*sint / l->depth;
   if ( sg > 0.35 )
-    g_warning ("The Submergence number is > 0.35: %g. This will make the amplitude inaccurate\n", sg);
+    g_warning ("The Submergence number is > 0.35: %g. This will make the amplitude inaccurate\n", 
+	       sg);
 
   /* Calculate tsunami initial amplitude */
   l->eta = 0.723*l->so * (4.772e-02 - 3.559e-02*sint + 8.13e-03*sint*sint) *
@@ -255,7 +263,8 @@ static void gfs_init_submarine_landslide_read (GtsObject ** o, GtsFile * fp)
 
   gdouble term = l->eta / (l->so * pow(sint, 1.5));
   if ( term > 0.2 )
-    g_warning ("The term (eta/so*sinq^1.5) >0.2 : %g. This will make the amplitude inaccurate!", term);
+    g_warning ("The term (eta/so*sinq^1.5) >0.2 : %g. This will make the amplitude inaccurate!", 
+	       term);
 }
 
 static void gfs_init_submarine_landslide_write (GtsObject * o, FILE * fp)
@@ -378,7 +387,6 @@ static GfsEventClass * gfs_init_submarine_landslide_class (void)
   return klass;
 }
 
-
 /* GfsInitSubmarineSlump: Object */
 
 static void gfs_init_submarine_slump_read (GtsObject ** o, GtsFile * fp)
@@ -424,17 +432,23 @@ static void gfs_init_submarine_slump_read (GtsObject ** o, GtsFile * fp)
   if ( l->depth/l->length < 0.02 )
     g_warning ("The initial depth is too small for the physics!");
   if ( l->theta > 30 )
-    g_warning ("The incline angle theta >30 degrees: %g. This will make the amplitude inaccurate!", l->theta);
+    g_warning ("The incline angle theta >30 degrees: %g. This will make the amplitude inaccurate!",
+	       l->theta);
   if ( l->depth/l->length < 0.12 )
-    g_warning ("The ratio depth/length <0.12: %g. This will make the amplitude inaccurate!", l->depth/l->length);
+    g_warning ("The ratio depth/length <0.12: %g. This will make the amplitude inaccurate!",
+	       l->depth/l->length);
   if ( l->thick/l->length > 0.2 )
-    g_warning ("The ratio thickness/length > 0.2: %g. This will make the amplitude inaccurate!", l->thick/l->length);
+    g_warning ("The ratio thickness/length > 0.2: %g. This will make the amplitude inaccurate!",
+	       l->thick/l->length);
   if ( l->thick/l->depth > 3.33 )
-    g_warning ("The ratio thickness/depth > 3.33: %g. This will make the amplitude inaccurate!", l->thick/l->depth);
+    g_warning ("The ratio thickness/depth > 3.33: %g. This will make the amplitude inaccurate!", 
+	       l->thick/l->depth);
   if ( l->width/l->length < 0.25 )
-    g_warning ("The ratio width/length < 0.25: %g. This will make the amplitude inaccurate!", l->width/l->length);
+    g_warning ("The ratio width/length < 0.25: %g. This will make the amplitude inaccurate!", 
+	       l->width/l->length);
   if ( l->width/l->length > 2.0 )
-    g_warning ("The ratio width/length > 2.0: %g. This will make the amplitude inaccurate!", l->width/l->length);
+    g_warning ("The ratio width/length > 2.0: %g. This will make the amplitude inaccurate!", 
+	       l->width/l->length);
 
   gdouble g = GFS_SIMULATION(domain)->physical_params.g; /* Gravity */
   gdouble gmo = l->gamma - 1.;
@@ -457,7 +471,8 @@ static void gfs_init_submarine_slump_read (GtsObject ** o, GtsFile * fp)
 
   gdouble sg = l->so*sint / l->depth;
   if ( sg > 0.35 )
-    g_warning ("The Submergence number is > 0.35: %g. This will make the amplitude inaccurate\n", sg);
+    g_warning ("The Submergence number is > 0.35: %g. This will make the amplitude inaccurate\n", 
+	       sg);
 
   l->eta = 0.723*l->so*(1.4662*gmo - 0.3454*pow(gmo, 2.))*pow(sint, 0.22) *
     (l->thick / l->length) * pow(l->length / l->depth, 1.25) *
@@ -465,7 +480,8 @@ static void gfs_init_submarine_slump_read (GtsObject ** o, GtsFile * fp)
 
   gdouble term = l->eta / (l->so*pow(sint, 1.5));
   if ( term > 0.2 )
-    g_warning ("The term (eta/so*sinq^1.5) > 0.2: %g. This will make the amplitude inaccurate\n", term);
+    g_warning ("The term (eta/so*sinq^1.5) > 0.2: %g. This will make the amplitude inaccurate\n",
+	       term);
 }
 
 static void gfs_init_submarine_slump_write (GtsObject * o, FILE * fp)
@@ -595,7 +611,6 @@ static GfsEventClass * gfs_init_submarine_slump_class (void)
 
   return klass;
 }
-
 
 /* GfsInitSubaerialLandslide: Object */
 
@@ -792,7 +807,6 @@ static GfsEventClass * gfs_init_subaerial_landslide_class (void)
   return klass;
 }
 
-
 /* GfsInitPyroclastic: Object */
 
 static void gfs_init_pyroclastic_read (GtsObject ** o, GtsFile * fp)
@@ -866,11 +880,13 @@ static void gfs_init_pyroclastic_read (GtsObject ** o, GtsFile * fp)
 
   test = 2.0*l->to*l->ut / (l->so*M_PI);
   if ( test < 0.4 || test > 2.5)
-    g_warning ("Runout length and time differ: %g. This will make the results questionable!\n", test);
+    g_warning ("Runout length and time differ: %g. This will make the results questionable!\n", 
+	       test);
 
   test = l->to / (4.5*sqrt(10.0*sqrt(l->vol / l->width) / g));
   if ( test < 0.3 || test > 3.3)
-    g_warning ("Runout length and time differ: %g. This will make the results questionable!\n", test);
+    g_warning ("Runout length and time differ: %g. This will make the results questionable!\n", 
+	       test);
 
   test = 30.0*pow(l->vol, 1.0 / 3.0) / l->width;
   if ( test < 0.25 || test > 4.0)
