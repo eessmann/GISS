@@ -10,8 +10,8 @@
 # (nearly) stationary in the flow.  \end{quotation} Or in the frame of
 # reference of the aerofoil, it appears to recede behind the wing.
 # The phenomenon is fundamental to the understanding of the generation
-# of lift by aerofoils; see e.g. Glauert (1926, Figure 69, p. 121) or
-# Videler (2006, Figure 1.5, p. 21).
+# of lift by aerofoils; see e.g. \cite{glauert1926} (Figure 69, p. 121) or
+# \cite{videler2006} (Figure 1.5, p. 21).
 #
 # A starting vortex is easily generated in a Gerris simulation, as
 # shown here.  It does not depend for its existence on the viscosity
@@ -25,8 +25,7 @@
 # Airfoil Coordinates Database}.  The coordinates from these files can
 # be converted to a Gerris solid surface using the Gerris command line
 # utility \url{http://gfs.sourceforge.net/wiki/index.php/Shapes}{shapes}.
-# Here we use a classic aerofoil, the NACA 2414 (Jacobs, Ward, \&
-# Pinkerton 1933), from
+# Here we use a classic aerofoil, the NACA 2414 \cite{jacobs1933}, from
 # \url{http://www.ae.illinois.edu/m-selig/ads/coord/n2414.dat}{n2414.dat}.
 #
 # Static refinement around the wing section is necessary to capture
@@ -42,21 +41,6 @@
 # \htmladdnormallinkfoot{\includegraphics[width=0.8\hsize]{starting.eps}}{starting.mpg}
 # \end{center}
 # \end{figure}
-#
-# \bibliography{starting}
-# \subsubsection*{References}
-#
-# \begin{itemize}
-# \item Glauert, H. 1926. \textit{The Elements of Aerofoil and
-# Airscrew Theory}. Cambridge University Press
-# \item Jacobs, E. N., K. E. Ward, \& R. M. Pinkerton 1933. The
-# characteristics of 78 related airfoil sections from tests in the
-# Variable-Density wind
-# tunnel. \url{http://hdl.handle.net/2060/19930091108}{NACA Technical
-# Report 460}
-# \item Videler, J. J. 2006 \textit{Avian Flight}. 
-# Oxford Ornithological Studies. Oxford University Press
-# \end{itemize}
 #
 # Author: G. D. McBain
 # Command: sh starting.sh n2414 6 | gfsview2D starting.gfv

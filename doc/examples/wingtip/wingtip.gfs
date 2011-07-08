@@ -9,7 +9,7 @@
 # trails from the tip of each wing. The cores of vortices spin at very
 # high speed and are regions of very low pressure.\end{quotation}
 #
-# Vortex-lines cannot end in fluid (Milne-Thomson 1973, p. 168); in
+# Vortex-lines cannot end in fluid (Milne-Thomson \cite{milne1973} 1973, p. 168); in
 # three dimensions, the starting vortex shed by the trailing edge on
 # take-off remains joined to the wing by counterrotating wingtip
 # vortices, which are associated with the escape of air from the
@@ -26,20 +26,10 @@
 # As the flow over the wing evolves from start-up to steady-state, the
 # starting vortex recedes and the wing-tip vortices extend back to
 # infinity.  For sketches of this `horseshoe vortex' system (Glauert
-# 1926, p. 130; Milne-Thomson 1973, p. 172), see, e.g. Glauert (1926,
-# Figure 80, p. 131), Hanson (1970, Figure 2, p. 268) or Milne-Thomson
-# (1973, Figure 10-41, p. 186).
-#
-# \begin{itemize}
-# \item Glauert, H. 1926. \textit{The Elements of Aerofoil and
-# Airscrew Theory}. Cambridge University Press
-# \item Hanson, N. R. 1970 A picture theory of theory meaning.  In
-# R. G. Colodny \& G. Maxwell (eds) \textit{The Nature \& Function of
-# Scientific Theories}, Vol.~4 of \textit{Philosophy of Science
-# Series}, University of Pittsburgh Press, pp. 233--273
-# \item Milne-Thomson, L. M. 1973 \textit{Theoretical Aerodynamics}
-# (4th ed.). New York: Dover
-# \end{itemize}
+# \cite{glauert1926} p. 130; Milne-Thompson \cite{milne1973} p. 172),
+# see, e.g. Glauert (\cite{glauert1926} Figure 80, p. 131), Hanson
+# \cite{hanson1970} (1970, Figure 2, p. 268) or Milne-Thomson
+# \cite{milne1973} (1973, Figure 10-41, p. 186).
 #
 # \begin{figure}[htbp]
 # \caption{\label{movie}Wingtip vortices behind a rectangular NACA 2414 wing.}
