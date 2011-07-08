@@ -13,6 +13,7 @@ EXAMPLES = \
 	tides \
 	ship \
 	forcedturbulence \
+	wingtip \
 	garden \
 	dam \
 	hump \
