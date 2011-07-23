@@ -231,7 +231,7 @@ static void add_face_source (FttCellFace * face,
     GFS_VALUE (face->neighbor, f->g[c]) -= dp*GFS_FACE_FRACTION_RIGHT (face);
 }
 
-static void velocity_face_sources (GfsDomain * domain,
+void velocity_face_sources (GfsDomain * domain,
 				   GfsVariable ** u,
 				   gdouble dt,
 				   GfsFunction * alpha,

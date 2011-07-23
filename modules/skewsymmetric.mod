@@ -413,6 +413,8 @@ static void gfs_skew_symmetric_momentum (GfsSimulation * sim, FaceData * fd, Gfs
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) update_vel, fd);
 
+  velocity_face_sources (domain,fd->u, (*fd->dt), sim->physical_params.alpha, gmac);
+
   gfs_domain_face_traverse (domain, FTT_XYZ,
                             FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, 
                             (FttFaceTraverseFunc) reset_face_velocity, NULL);
@@ -497,17 +499,20 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
     
     gdouble tstart = gfs_clock_elapsed (domain->timer);
 
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
+
     gfs_skew_symmetric_momentum (sim, &fd, gmac);
 
 
     /* fixme: the time step is divided by 2 in mac_projection? (CHECK!) */
-    sim->advection_params.dt = sim->advection_params.dt*1.05/0.55*2.;
+//    sim->advection_params.dt = sim->advection_params.dt*1.05/0.55*2.;
     gfs_mac_projection (domain,
 			&sim->projection_params, 
 			&sim->advection_params,
 			p, sim->physical_params.alpha, gmac, NULL);
-    sim->advection_params.dt = sim->advection_params.dt*0.55/1.05/2.;
+//    sim->advection_params.dt = sim->advection_params.dt*0.55/1.05/2.;
 
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim); 
     gfs_domain_cell_traverse (domain, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) get_velfaces, &fd);
@@ -515,8 +520,6 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
     gfs_domain_cell_traverse (domain, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) get_cell_values, &fd);
-
-    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
 
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
