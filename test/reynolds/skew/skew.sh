@@ -1,19 +1,14 @@
 if test x$donotrun != xtrue; then
-    rm -f reynolds
+    tmp=`mktemp -d`
 
     for level in 5 6 7; do
-	if sed "s/LEVEL/$level/g" < $1 | gerris2D - | awk -v m=$2 -v level=$level '{
-          time = $3
-          ke = $5
-          if (time == 0)
-            ke0 = ke;
-          }END{
-            print level " " ke/ke0
-          }' >> reynolds; then :
+	if sed "s/LEVEL/$level/g" < $1 | gerris2D -; then :
+            awk '{print 2**'$level', $0}' error$level.dat >> $tmp/error.dat
 	else
 	    exit 1
 	fi
     done
+    cat $tmp/error.dat > error
 fi
 
 if cat <<EOF | gnuplot ; then :
@@ -28,11 +23,16 @@ if cat <<EOF | gnuplot ; then :
     set output 'kinetic.eps'
     set ylabel 'Kinetic energy'
     plot [0:2]'kinetic5' u 3:5 t "5" w l, 'kinetic6' u 3:5 t "6" w l, 'kinetic7' u 3:5 t "7" w l
-    set output 'reynolds.eps'
-    set xlabel 'Level'
-    set ylabel 'k_e/k_{e,0}'
-    set logscale y
-    plot 'reynolds' u 1:2 t "" w lp, 'reynolds.ref' u 1:2 t "ref" w lp
+    set output 'accuracy.eps'
+    set logscale
+    set ylabel 'Relative error norms'
+    ftitle(a,b) = sprintf("%.0f/x^{%4.2f}", exp(a), -b)
+    f2(x)=a2+b2*x
+    fit f2(x) 'error' u (log(\$1)):(log(\$4)) via a2,b2
+    fm(x)=am+bm*x
+    fit fm(x) 'error' u (log(\$1)):(log(\$5)) via am,bm
+    plot 'error' u (\$1):4 t 'L2' w p ps 2, exp(f2(log(x))) t ftitle(a2,b2), \
+         'error' u (\$1):5 t 'Lmax' w p ps 2, exp(fm(log(x))) t ftitle(am,bm)
 EOF
 else
     exit 1

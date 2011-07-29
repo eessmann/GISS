@@ -2,7 +2,7 @@
 #
 # Description:
 #
-# Same as the previous test but using a vorticity/streamfunction formulation.
+# Same as the previous test but using the skew-symmetric module.
 #
 # \begin{figure}[htbp]
 # \caption{\label{divmax}Evolution of the maximum divergence.}
@@ -26,18 +26,18 @@
 # \end{figure}
 #
 # \begin{figure}[htbp]
-# \caption{\label{reynolds}Equivalent Reynolds number as a function of resolution.}
+# \caption{\label{accuracy}Accuracy of the solution as a function of the level of refinement.}
 # \begin{center}
-# \includegraphics[width=0.8\hsize]{reynolds.eps}
+# \includegraphics[width=0.8\hsize]{accuracy.eps}
 # \end{center}
 # \end{figure}
 #
 # Author: Daniel Fuster
-# Command: sh ../reynolds.sh skew.gfs 1
-# Version: 110610
-# Required files: div5.ref div6.ref div7.ref reynolds.ref
-# Running time: 3 minutes
-# Generated files: divmax.eps reynolds.eps divL2.eps kinetic.eps
+# Command: sh skew.sh skew.gfs 1
+# Version: 110723
+# Required files: skew.sh div5.ref div6.ref div7.ref reynolds.ref
+# Running time: 16 seconds
+# Generated files: divmax.eps divL2.eps kinetic.eps accuracy.eps
 #
 #
 GModule skewsymmetric
@@ -45,14 +45,22 @@ GModule skewsymmetric
   Time { end = 2 }
   Refine LEVEL
   Init {} {
-    U = (- cos (2.*M_PI*x)*sin (2.*M_PI*y))
-    V = (sin (2.*M_PI*x)*cos (2.*M_PI*y))
+    U0 = (- cos (2.*M_PI*x)*sin (2.*M_PI*y))
+    V0 = (sin (2.*M_PI*x)*cos (2.*M_PI*y))
+    U = U0
+    V = V0
   }
+  OutputErrorNorm { start = end } { awk '{ print $3,$5,$7,$9 }' > errorLEVEL.dat } { 
+   v = Velocity 
+   } { 
+        s = sqrt(U0*U0+V0*V0)
+        v = E 
+        relative = 1 
+  }  
   ApproxProjectionParams { tolerance = 1e-6 }
   ProjectionParams { tolerance = 1e-6 }
   OutputScalarNorm { istep = 1 } divLEVEL { v = Divergence }
   OutputScalarSum { istep = 1 } kineticLEVEL { v = Velocity2 }
-  OutputScalarSum { istep = 1 } stdout { v = Velocity2 }
 }
 GfsBox {}
 1 1 right
