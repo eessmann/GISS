@@ -1,5 +1,6 @@
 if test x$donotrun != xtrue; then
     rm -f reynolds
+    tmp=`mktemp -d`
 
     for level in 5 6 7; do
 	if sed "s/LEVEL/$level/g" < $1 | gerris2D - | awk -v m=$2 -v level=$level '{
@@ -12,14 +13,17 @@ if test x$donotrun != xtrue; then
             nu = a/(4.*(2.*m*3.14159265359)^2)
             print level " " 1./nu
           }' >> reynolds; then :
+            awk '{print 2**'$level', $0}' error$level.dat >> $tmp/error.dat
 	else
 	    exit 1
 	fi
     done
+    cat $tmp/error.dat > error
+    rm -rf $tmp
 fi
 
 if cat <<EOF | gnuplot ; then :
-    set term postscript eps color lw 3 solid 20
+    set term postscript eps enhanced color lw 3 solid 20
     set output 'divmax.eps'
     set xlabel 'Time'
     set ylabel 'Divergence Max'
@@ -35,6 +39,18 @@ if cat <<EOF | gnuplot ; then :
     set ylabel 'Effective Reynolds number'
     set logscale y
     plot 'reynolds' u 1:2 t "" w lp, 'reynolds.ref' u 1:2 t "ref" w lp
+    set output 'accuracy.eps'
+    set logscale 
+    set ylabel 'Relative error norms'
+    set xlabel 'Spatial resolution'
+    ftitle(a,b) = sprintf("%.0f/x^{%4.2f}", exp(a), -b)
+    f2(x)=a2+b2*x
+    fit f2(x) 'error' u (log(\$1)):(log(\$4)) via a2,b2
+    fm(x)=am+bm*x
+    fit fm(x) 'error' u (log(\$1)):(log(\$5)) via am,bm
+    set xrange[25:150]
+    plot 'error' u (\$1):4 t 'L2' w p ps 2, exp(f2(log(x))) t ftitle(a2,b2), \
+         'error' u (\$1):5 t 'Lmax' w p ps 2, exp(fm(log(x))) t ftitle(am,bm)
 EOF
 else
     exit 1
