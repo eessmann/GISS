@@ -847,8 +847,13 @@ static void face_weighted_gradient (const FttCellFace * face,
       /* neighbor is at the same level */
       gdouble w = GFS_STATE (face->cell)->f[face->d].v;
 
-      g->a = w;
+      g->a = w*GFS_STATE (face->cell)->f[face->d].aux/GFS_STATE (face->cell)->f[FTT_OPPOSITE_DIRECTION(face->d)].aux;
       g->b = w*GFS_VARIABLE (face->neighbor, v);
+ /*     gdouble rhoavg = (1./GFS_STATE (face->cell)->f[face->d].aux + 1./GFS_STATE (face->cell)->f[FTT_OPPOSITE_DIRECTION(face->d)].aux)/2.;
+      g->a = w/GFS_STATE (face->cell)->f[FTT_OPPOSITE_DIRECTION(face->d)].aux/rhoavg;
+      g->b = w*GFS_VARIABLE (face->neighbor, v)/GFS_STATE (face->cell)->f[face->d].aux/rhoavg;*/
+//      g->a = w;
+//      g->b = w*GFS_VARIABLE (face->neighbor, v);
     }
     else {
       /* neighbor is at a deeper level */

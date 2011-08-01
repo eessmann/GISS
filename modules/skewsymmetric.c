@@ -480,7 +480,7 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
     for (d = 0; d <  FTT_NEIGHBORS; d++) 
       gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, velfaces[d]);
     
-    gfs_advance_tracers (domain, sim->advection_params.dt/2.);
+//    gfs_advance_tracers (domain, sim->advection_params.dt/2.);
   }
 
   /* initialize uold. fixme: If I restart the simulation, I should initialize it properly */
