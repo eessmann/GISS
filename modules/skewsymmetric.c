@@ -422,21 +422,32 @@ static void gfs_skew_symmetric_momentum (GfsSimulation * sim, FaceData * fd, Gfs
 
 static void gfs_skew_symmetric_run (GfsSimulation * sim)
 {
-  GfsVariable * p,  * res = NULL, * gmac[FTT_DIMENSION], 
+  GfsVariable * p, * pmac, * res = NULL, * gmac[FTT_DIMENSION], * g[FTT_DIMENSION],
     * velfaces[FTT_NEIGHBORS], *velold[FTT_NEIGHBORS];
+  GfsVariable ** gc = sim->advection_params.gc ? g : NULL;
   GfsDomain * domain;
   GSList * i;
 
   domain = GFS_DOMAIN (sim);
 
   p = gfs_variable_from_name (domain->variables, "P");
-
   g_assert (p);
+  pmac = gfs_variable_from_name (domain->variables, "Pmac");
+  g_assert (pmac);
+
+
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++) 
     gmac[c] = gfs_temporary_variable (domain);
-
   gfs_variable_set_vector (gmac, FTT_DIMENSION);
+
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    if (sim->advection_params.gc)
+      g[c] = gfs_temporary_variable (domain);
+    else
+      g[c] = gmac[c];
+  }
+  gfs_variable_set_vector (g, FTT_DIMENSION);
 
   FttDirection d;
   for (d = 0; d < FTT_NEIGHBORS; d++) {
@@ -480,7 +491,7 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
     for (d = 0; d <  FTT_NEIGHBORS; d++) 
       gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, velfaces[d]);
     
-//    gfs_advance_tracers (domain, sim->advection_params.dt/2.);
+    gfs_advance_tracers (domain, sim->advection_params.dt/2.);
   }
 
   /* initialize uold. fixme: If I restart the simulation, I should initialize it properly */
@@ -499,28 +510,43 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
 
     gfs_skew_symmetric_momentum (sim, &fd, gmac);
 
+//    gfs_predicted_face_velocities (domain, FTT_DIMENSION, &sim->advection_params);
+
 
     /* fixme: the time step is divided by 2 in mac_projection? (CHECK!) */
-//    sim->advection_params.dt = sim->advection_params.dt*1.05/0.55*2.;
+    gfs_variables_swap (p, pmac);
     gfs_mac_projection (domain,
 			&sim->projection_params, 
 			&sim->advection_params,
 			p, sim->physical_params.alpha, gmac, NULL);
-//    sim->advection_params.dt = sim->advection_params.dt*0.55/1.05/2.;
+    gfs_variables_swap (p, pmac);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim); 
-    gfs_domain_cell_traverse (domain, 
+
+     gfs_centered_velocity_advection_diffusion (domain,
+                                               FTT_DIMENSION,
+                                               &sim->advection_params,
+                                               gmac,
+                                               sim->time.i > 0 || !gc ? gc : gmac,
+                                               sim->physical_params.alpha);
+
+/*    gfs_domain_cell_traverse (domain, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) get_velfaces, &fd);
 
     gfs_domain_cell_traverse (domain, 
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) get_cell_values, &fd);
+			      (FttCellTraverseFunc) get_cell_values, &fd);*/
 
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gfs_simulation_adapt (sim);
+
+    gfs_approximate_projection (domain,
+                              &sim->approx_projection_params,
+                              &sim->advection_params,
+                              p, sim->physical_params.alpha, res, g, NULL);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
@@ -536,8 +562,11 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gts_object_destroy, NULL);
 
-  for (c = 0; c < FTT_DIMENSION; c++) 
+  for (c = 0; c < FTT_DIMENSION; c++) {
     gts_object_destroy (GTS_OBJECT (gmac[c]));
+     if (sim->advection_params.gc)
+      gts_object_destroy (GTS_OBJECT (g[c]));
+}
   
 
   for (d = 0; d < FTT_NEIGHBORS; d++){
