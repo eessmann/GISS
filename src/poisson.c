@@ -62,6 +62,8 @@ void gfs_multilevel_params_write (GfsMultilevelParams * par, FILE * fp)
 	   par->beta);
   if (par->omega != 1.)
     fprintf (fp, "  omega     = %g\n", par->omega);
+  if (par->function)
+    fputs ("  function  = 1\n", fp);
   fputc ('}', fp);
 }
 
@@ -81,6 +83,8 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
   par->beta = 0.5;
   par->omega = 1.;
 
+  par->function = FALSE;
+
   par->poisson_solve = gfs_poisson_solve;
 }
 
@@ -96,6 +100,7 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
     {GTS_INT,    "weighted",  TRUE},
     {GTS_DOUBLE, "beta",      TRUE},
     {GTS_DOUBLE, "omega",     TRUE},
+    {GTS_INT,    "function",  TRUE},
     {GTS_NONE}
   };
 
@@ -111,6 +116,7 @@ void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
   var[6].data = &par->weighted;
   var[7].data = &par->beta;
   var[8].data = &par->omega;
+  var[9].data = &par->function;
 
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR)

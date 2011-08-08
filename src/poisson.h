@@ -45,7 +45,7 @@ struct _GfsMultilevelParams {
   guint dimension;
   guint niter;
   guint depth;
-  gboolean weighted;
+  gboolean weighted, function;
   gdouble beta, omega;
   GfsNorm residual_before, residual;
   GfsPoissonSolverFunc poisson_solve;
