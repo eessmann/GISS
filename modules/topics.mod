@@ -20,12 +20,12 @@
 
 #include "solid.h"
 #include "output.h"
-#include "vof.c"
+#include "vof.h"
 
 /* This implementation of submarine landslide initial condition is directly
-   inpsired from the software TOPICS developped by Dr. P. Watts.
+   inpsired from the software TOPICS developped by P. Watts.
    Sources are that used in the version 1.2 of TOPICS, last modified in
-   August 2009 by Dr. P. Watts.
+   August 2009 P. Watts.
 */
 
 /* GfsInitSubmarineLandslide: Header */

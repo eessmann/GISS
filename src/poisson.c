@@ -90,33 +90,22 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
 
 void gfs_multilevel_params_read (GfsMultilevelParams * par, GtsFile * fp)
 {
-  GtsFileVariable var[] = {
-    {GTS_DOUBLE, "tolerance", TRUE},
-    {GTS_UINT,   "nrelax",    TRUE},
-    {GTS_UINT,   "erelax",    TRUE},
-    {GTS_UINT,   "minlevel",  TRUE},
-    {GTS_UINT,   "nitermax",  TRUE},
-    {GTS_UINT,   "nitermin",  TRUE},
-    {GTS_INT,    "weighted",  TRUE},
-    {GTS_DOUBLE, "beta",      TRUE},
-    {GTS_DOUBLE, "omega",     TRUE},
-    {GTS_INT,    "function",  TRUE},
-    {GTS_NONE}
-  };
-
   g_return_if_fail (par != NULL);
   g_return_if_fail (fp != NULL);
 
-  var[0].data = &par->tolerance;
-  var[1].data = &par->nrelax;
-  var[2].data = &par->erelax;
-  var[3].data = &par->minlevel;
-  var[4].data = &par->nitermax;
-  var[5].data = &par->nitermin;
-  var[6].data = &par->weighted;
-  var[7].data = &par->beta;
-  var[8].data = &par->omega;
-  var[9].data = &par->function;
+  GtsFileVariable var[] = {
+    {GTS_DOUBLE, "tolerance", TRUE, &par->tolerance},
+    {GTS_UINT,   "nrelax",    TRUE, &par->nrelax},
+    {GTS_UINT,   "erelax",    TRUE, &par->erelax},
+    {GTS_UINT,   "minlevel",  TRUE, &par->minlevel},
+    {GTS_UINT,   "nitermax",  TRUE, &par->nitermax},
+    {GTS_UINT,   "nitermin",  TRUE, &par->nitermin},
+    {GTS_INT,    "weighted",  TRUE, &par->weighted},
+    {GTS_DOUBLE, "beta",      TRUE, &par->beta},
+    {GTS_DOUBLE, "omega",     TRUE, &par->omega},
+    {GTS_INT,    "function",  TRUE, &par->function},
+    {GTS_NONE}
+  };
 
   gts_file_assign_variables (fp, var);
   if (fp->type == GTS_ERROR)
