@@ -87,7 +87,7 @@ void          gfs_remove_sinking_velocity     (GfsDomain * domain,
 					       GtsVector sinking);
 void          gfs_tracer_advection_diffusion  (GfsDomain * domain,
 					       GfsAdvectionParams * par);
-void          velocity_face_sources           (GfsDomain * domain,
+void          gfs_velocity_face_sources       (GfsDomain * domain,
                                                GfsVariable ** u,
                                                gdouble dt,
                                                GfsFunction * alpha,

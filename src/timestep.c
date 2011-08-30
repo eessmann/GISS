@@ -231,12 +231,26 @@ static void add_face_source (FttCellFace * face,
     GFS_VALUE (face->neighbor, f->g[c]) -= dp*GFS_FACE_FRACTION_RIGHT (face);
 }
 
-void velocity_face_sources (GfsDomain * domain,
-				   GfsVariable ** u,
-				   gdouble dt,
-				   GfsFunction * alpha,
-				   GfsVariable ** g)
+/**
+ * gfs_velocity_face_sources:
+ * @domain: a #GfsDomain.
+ * @u: the velocity vector.
+ * @dt: the timestep.
+ * @alpha: the specific volume.
+ * @g: the gradient vector.
+ *
+ * Add source terms on the velocity component of each cell faces.
+ */
+void gfs_velocity_face_sources (GfsDomain * domain,
+				GfsVariable ** u,
+				gdouble dt,
+				GfsFunction * alpha,
+				GfsVariable ** g)
 {
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (u != NULL);
+  g_return_if_fail (g != NULL);
+
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++)
     if (u[c]->sources) {
@@ -290,7 +304,7 @@ void gfs_update_gradients (GfsDomain * domain,
 
   /* Add face sources */
   reset_gradients (domain, FTT_DIMENSION, g);
-  velocity_face_sources (domain, gfs_domain_velocity (domain), 0., alpha, g);
+  gfs_velocity_face_sources (domain, gfs_domain_velocity (domain), 0., alpha, g);
   /* Initialize face coefficients */
   gfs_poisson_coefficients (domain, alpha, TRUE, TRUE);
   /* Add pressure gradient */
@@ -344,7 +358,7 @@ static void mac_projection (GfsDomain * domain,
 {
   /* Add face sources */
   reset_gradients (domain, FTT_DIMENSION, g);
-  velocity_face_sources (domain, gfs_domain_velocity (domain), apar->dt, alpha, g);
+  gfs_velocity_face_sources (domain, gfs_domain_velocity (domain), apar->dt, alpha, g);
 
   GfsVariable * dia = gfs_temporary_variable (domain);
   GfsVariable * div = gfs_temporary_variable (domain);
@@ -697,7 +711,9 @@ void gfs_diffusion (GfsDomain * domain,
   }
 
   gts_object_destroy (GTS_OBJECT (res));
-  g_assert (par->residual.infty <= par->tolerance);
+
+  if (par->residual.infty > par->tolerance)
+    g_warning ("gfs_diffusion(): max residual %g > %g", par->residual.infty, par->tolerance);
 }
 
 static GfsSourceDiffusion * source_diffusion (GfsVariable * v)
