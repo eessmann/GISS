@@ -34,6 +34,8 @@ if cat <<EOF | gnuplot ; then :
     fm(x)=am+bm*x
     fit fm(x) 'error' u (log(\$1)):(log(\$5)) via am,bm
     set xrange[25:150]
+    set xtics 32,2,128
+    set key spacing 1.5 top right
     plot 'error' u (\$1):4 t 'L2' w p ps 2, exp(f2(log(x))) t ftitle(a2,b2), \
          'error' u (\$1):5 t 'Lmax' w p ps 2, exp(fm(log(x))) t ftitle(am,bm)
 EOF

@@ -49,6 +49,8 @@ if cat <<EOF | gnuplot ; then :
     fm(x)=am+bm*x
     fit fm(x) 'error' u (log(\$1)):(log(\$5)) via am,bm
     set xrange[25:150]
+    set xtics 32,2,128
+    set key spacing 1.5 top right
     plot 'error' u (\$1):4 t 'L2' w p ps 2, exp(f2(log(x))) t ftitle(a2,b2), \
          'error' u (\$1):5 t 'Lmax' w p ps 2, exp(fm(log(x))) t ftitle(am,bm)
 EOF
@@ -62,6 +64,8 @@ from sys import *
 for div in ['div5','div6','div7']:
   if (Curve(div,3,9) - Curve(div+'.ref',3,9)).max() > 0.01*Curve(div+'.ref',3,9).mean() or\
      (Curve(div,3,7) - Curve(div+'.ref',3,7)).max() > 0.01*Curve(div+'.ref',3,7).mean():
+    print (Curve(div,3,9) - Curve(div+'.ref',3,9)).max(), 0.01*Curve(div+'.ref',3,9).mean()
+    print (Curve(div,3,7) - Curve(div+'.ref',3,7)).max(), 0.01*Curve(div+'.ref',3,7).mean()
     exit(1)
 EOF
 else

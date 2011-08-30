@@ -59,29 +59,29 @@
 # Version: 0.6.4
 # Required files: reynolds.sh div5.ref div6.ref div7.ref reynolds.ref
 # Running time: 3 minutes
-# Generated files: divmax.eps reynolds.eps divL2.eps kinetic.eps accuracy.gfs
+# Generated files: divmax.eps reynolds.eps divL2.eps kinetic.eps accuracy.eps
 #
 1 2 GfsSimulation GfsBox GfsGEdge {} {
   Time { end = 2 }
   Refine LEVEL
   Init {} {
-    U0 = (- cos (2.*M_PI*x)*sin (2.*M_PI*y))
-    V0 = (sin (2.*M_PI*x)*cos (2.*M_PI*y))
-    U = U0
-    V = V0
+      U0 = (- cos (2.*M_PI*x)*sin (2.*M_PI*y))
+      V0 = (sin (2.*M_PI*x)*cos (2.*M_PI*y))
+      U = U0
+      V = V0
   }
-  OutputErrorNorm { start = end } { awk '{ print $3,$5,$7,$9 }' > errorLEVEL.dat } { 
-   v = Velocity 
-   } { 
-        s = sqrt(U0*U0+V0*V0)
-        v = E 
-        relative = 1 
-  }  
   ApproxProjectionParams { tolerance = 1e-6 }
   ProjectionParams { tolerance = 1e-6 }
   OutputScalarNorm { istep = 1 } divLEVEL { v = Divergence }
   OutputScalarSum { istep = 1 } kineticLEVEL { v = Velocity2 }
   OutputScalarSum { istep = 1 } stdout { v = Velocity2 }
+  OutputErrorNorm { start = end } { awk '{ print $3,$5,$7,$9 }' > errorLEVEL.dat } {
+      v = Velocity
+  } { 
+      s = sqrt(U0*U0+V0*V0)
+      v = E
+      relative = 1
+  }
 }
 GfsBox {}
 1 1 right
