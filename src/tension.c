@@ -777,6 +777,157 @@ GfsVariableClass * gfs_variable_curvature_class (void)
 /** \endobject{GfsVariableCurvature} */
 
 /**
+ * Curvature of an interface (new implementation).
+ * \beginobject{GfsVariableCurvatureNew}
+ */
+
+typedef struct {
+  GfsVariable * f, * h, * o;
+  FttComponent c;
+} HFState;
+
+static gboolean is_interfacial (FttCell * cell, gpointer data)
+{
+  GfsVariable * f = data;
+  return (GFS_VALUE (cell, f) > 0. && GFS_VALUE (cell, f) < 1.);
+}
+
+static void undefined_height (FttCell * cell, HFState * hf)
+{
+  GFS_VALUE (cell, hf->h) = GFS_NODATA;
+  GFS_VALUE (cell, hf->o) = GFS_NODATA;
+}
+
+#define NMAX 3
+
+static gint children_are_full_or_empty (FttCell * cell, FttDirection d, GfsVariable * fv)
+{
+  FttCellChildren child;
+  guint i, n = ftt_cell_children_direction (cell, FTT_OPPOSITE_DIRECTION (d), &child);
+  gint s = 0;
+  for (i = 0; i < n; i++)
+    if (child.c[i]) {
+      gdouble f = GFS_VALUE (child.c[i], fv);
+      if (f > 0. && f < 1.)
+	return 0;
+      s = f > 0.5 ? 1 : -1;
+    }
+  return s;
+}
+
+static gint half_height (FttCell * cell, GfsVariable * fv, FttDirection d,
+			 gdouble * H, gint * n)
+{
+  gint s = 0;
+  *n = 0;
+  guint level = ftt_cell_level (cell);
+  FttCell * neighbor = ftt_cell_neighbor (cell, d);
+  while (*n < NMAX && !s && neighbor) {
+    gdouble f = GFS_VALUE (neighbor, fv);
+    if (f > 0. && f < 1.) { /* interfacial cell */
+      if (ftt_cell_level (neighbor) < level) /* neighbor is coarser */
+	return 0;
+      if (GFS_CELL_IS_BOUNDARY (neighbor))
+	return 2;
+      if (FTT_CELL_IS_LEAF (neighbor) || !(s = children_are_full_or_empty (neighbor, d, fv))) {
+	*H += f;
+	(*n)++;
+      }
+    }
+    else /* full or empty cell */
+      s = f > 0.5 ? 1. : -1.;
+    neighbor = ftt_cell_neighbor (neighbor, d);
+  }
+  return s;
+}
+
+static void height (FttCell * cell, HFState * hf)
+{
+  gdouble H = GFS_VALUE (cell, hf->f);
+
+  /* top part of the column */
+  gint nt, st = half_height (cell, hf->f, 2*hf->c, &H, &nt);
+  if (!st) /* still an interfacial cell (or coarser neighboring cell found) */
+    return;
+
+  /* bottom part of the column */
+  gint nb, sb = half_height (cell, hf->f, 2*hf->c + 1, &H, &nb);
+  if (!sb) /* still an interfacial cell (or coarser neighboring cell found) */
+    return;
+
+  if (sb != 2 && st != 2) {
+    if (st*sb > 0) /* the column does not cross the interface */
+      return;
+    GFS_VALUE (cell, hf->o) = sb;
+  }
+  else { /* column hit a boundary */
+    if (sb != 2)
+      GFS_VALUE (cell, hf->o) = sb > 0 ? 2 : -2;
+    else if (st != 2)
+      GFS_VALUE (cell, hf->o) = st < 0 ? 2 : -2;
+    else
+      g_assert_not_reached (); /* cannot hit a boundary on both sides */
+  }
+
+  GFS_VALUE (cell, hf->h) = H - 0.5 - (GFS_VALUE (cell, hf->o) > 0 ? nb : nt);
+}
+
+static gboolean variable_curvature_new_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_curvature_new_class ())->parent_class)->event)
+      (event, sim)) {
+    if (GFS_IS_VARIABLE_TRACER (GFS_VARIABLE_CURVATURE (event)->f)) {
+      HFState hf;
+      GfsDomain * domain = GFS_DOMAIN (sim);
+      hf.f = GFS_VARIABLE_CURVATURE (event)->f;
+      for (hf.c = 0; hf.c < FTT_DIMENSION; hf.c++) {
+	static gchar hname[3][3] = {"Hx", "Hy", "Hz"};
+	hf.h = gfs_domain_get_or_add_variable (domain, hname[hf.c], "");
+	static gchar oname[3][3] = {"Ox", "Oy", "Oz"};
+	hf.o = gfs_domain_get_or_add_variable (domain, oname[hf.c], "");
+	gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				  (FttCellTraverseFunc) undefined_height, &hf);
+	gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+					    (FttCellTraverseFunc) height, &hf,
+					    is_interfacial, hf.f);
+	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, hf.h);
+	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, hf.o);
+      }
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void variable_curvature_new_class_init (GtsObjectClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = variable_curvature_new_event;
+}
+
+GfsVariableClass * gfs_variable_curvature_new_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_variable_curvature_new_info = {
+      "GfsVariableCurvatureNew",
+      sizeof (GfsVariableCurvature),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_curvature_new_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_curvature_class ()),
+				  &gfs_variable_curvature_new_info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsVariableCurvatureNew} */
+
+/**
  * Coordinates of a VOF interface.
  * \beginobject{GfsVariablePosition}
  */

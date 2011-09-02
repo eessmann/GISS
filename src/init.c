@@ -177,6 +177,7 @@ GtsObjectClass ** gfs_classes (void)
       gfs_variable_age_class (),
       gfs_variable_curvature_class (),
         gfs_variable_position_class (),
+        gfs_variable_curvature_new_class (),
       gfs_variable_distance_class (),
 
     gfs_constant_class (),
