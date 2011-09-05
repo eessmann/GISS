@@ -130,11 +130,11 @@ static void difference_triangulated (GfsVertex * v, gpointer * data)
     g_assert (det != 0.);
     a = (x*y2 - y*x2)/det;
     b = (y*x1 - x*y1)/det;
-    fv1 = GFS_VARIABLE (GFS_VERTEX (v1)->cell, var2->i);
-    fv2 = GFS_VARIABLE (GFS_VERTEX (v2)->cell, var2->i);
-    fv3 = GFS_VARIABLE (GFS_VERTEX (v3)->cell, var2->i);
-    GTS_POINT (v)->z = GFS_VARIABLE (v->cell, e->i) = 
-      GFS_VARIABLE (v->cell, var1->i) -
+    fv1 = GFS_VALUE (GFS_VERTEX (v1)->cell, var2);
+    fv2 = GFS_VALUE (GFS_VERTEX (v2)->cell, var2);
+    fv3 = GFS_VALUE (GFS_VERTEX (v3)->cell, var2);
+    GTS_POINT (v)->z = GFS_VALUE (v->cell, e) = 
+      GFS_VALUE (v->cell, var1) -
       (fv1 + a*(fv2 - fv1) + b*(fv3 - fv1));
   }
 }
@@ -159,7 +159,7 @@ static void inject (FttCell * cell, GfsVariable * e)
     ftt_cell_children (cell, &child);
     for (i = 0; i < FTT_CELLS; i++)
       if (child.c[i]) {
-	GFS_VARIABLE (child.c[i], e->i) = GFS_VARIABLE (cell, e->i);
+	GFS_VALUE (child.c[i], e) = GFS_VALUE (cell, e);
 	inject (child.c[i], e);
       }
   }
@@ -200,8 +200,14 @@ static gboolean difference_tree (FttCell * cell,
 	added = TRUE;
   }
   if (!added) {
-    GFS_VARIABLE (cell, e->i) = (GFS_VARIABLE (cell, v1->i) -
-				 GFS_VARIABLE (locate, v2->i));
+    if (GFS_HAS_DATA (cell, v1) && GFS_HAS_DATA (locate, v2))
+      GFS_VALUE (cell, e) = (GFS_VALUE (cell, v1) - GFS_VALUE (locate, v2));
+    else if (!GFS_HAS_DATA (cell, v1) && GFS_HAS_DATA (locate, v2))
+      GFS_VALUE (cell, e) = GFS_VALUE (locate, v2);
+    else if (GFS_HAS_DATA (cell, v1) && !GFS_HAS_DATA (locate, v2))
+      GFS_VALUE (cell, e) = GFS_VALUE (cell, v1);
+    else
+      GFS_VALUE (cell, e) = GFS_NODATA;
     inject (cell, e);
   }
   return TRUE;
@@ -230,7 +236,7 @@ static void difference_constant (FttCell * cell, gpointer * data)
       (!(*centered) || a >= 0.5)) {
     gdouble w = *weighted ? ftt_cell_volume (cell)*a : 1.;
 
-    *sum += w*GFS_VARIABLE (cell, e->i);
+    *sum += w*GFS_VALUE (cell, e);
     *weight += w;
   }
 }
@@ -252,13 +258,13 @@ static void difference (FttCell * cell, gpointer * data)
        (full == -1 && !GFS_IS_MIXED (cell)) ||
        (full >= 0 && !is_mixed (cell, full))) &&
       (!(*centered) || a >= 0.5)) {
-    gfs_norm_add (norm, GFS_VARIABLE (cell, e->i) - *constant,
+    gfs_norm_add (norm, GFS_VALUE (cell, e) - *constant,
 		  *weighted ? ftt_cell_volume (cell)*a : 1.);
     if (*histogram)
-      printf ("%g %g\n", GFS_VARIABLE (cell, e->i), a);
+      printf ("%g %g\n", GFS_VALUE (cell, e), a);
   }
   else
-    GFS_VARIABLE (cell, e->i) = 0.;
+    GFS_VALUE (cell, e) = 0.;
 }
 
 static void compute_gradient (FttCell * cell, gpointer * data) 
@@ -267,18 +273,18 @@ static void compute_gradient (FttCell * cell, gpointer * data)
   FttComponent * c = data[1];
   GfsVariable * g = data[2];
 
-  GFS_VARIABLE (cell, g->i) = 
+  GFS_VALUE (cell, g) = 
     gfs_center_gradient (cell, *c, v->i)/ftt_cell_size (cell);
 }
 
 static void compute_log (FttCell * cell, GfsVariable * e) 
 {
-  GFS_VARIABLE (cell, e->i) = log10 (fabs (GFS_VARIABLE (cell, e->i)) + 1e-10);
+  GFS_VALUE (cell, e) = log10 (fabs (GFS_VALUE (cell, e)) + 1e-10);
 }
 
 static void compute_absolute (FttCell * cell, GfsVariable * e)
 {
-  GFS_VARIABLE (cell, e->i) =  fabs (GFS_VARIABLE (cell, e->i));
+  GFS_VALUE (cell, e) =  fabs (GFS_VALUE (cell, e));
 }
 
 static void difference_centered (FttCell * cell, gpointer * data)
@@ -296,7 +302,7 @@ static void difference_centered (FttCell * cell, gpointer * data)
     fprintf (stderr, "gfscompare: the files are not comparable\n");
     exit (1);
   }
-  GFS_VARIABLE (cell, e->i) = GFS_VARIABLE (cell, v1->i) - gfs_interpolate (locate, p, v2);
+  GFS_VALUE (cell, e) = GFS_VALUE (cell, v1) - gfs_interpolate (locate, p, v2);
 }
 
 int main (int argc, char * argv[])
