@@ -111,13 +111,6 @@ struct _GfsVariableCurvature {
 
 GfsVariableClass * gfs_variable_curvature_class  (void);
 
-/* GfsVariableCurvatureNew: header */
-
-#define GFS_IS_VARIABLE_CURVATURE_NEW(obj)         (gts_object_is_from_class (obj,	\
-						    gfs_variable_curvature_new_class ()))
-
-GfsVariableClass * gfs_variable_curvature_new_class  (void);
-
 /* GfsVariablePosition: header */
 
 typedef struct _GfsVariablePosition                GfsVariablePosition;

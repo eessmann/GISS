@@ -725,11 +725,197 @@ static void variable_curvature_from_distance (GfsEvent * event, GfsSimulation * 
   variable_curvature_diffuse (GFS_VARIABLE1 (event), NULL, sim, 2);
 }
 
+
+/* Returns: the height @h of the neighboring column in direction @d or
+   GFS_NODATA if it is undefined. Also fills @x with the coordinates
+   of the cell (1 or 3/2 depending on its relative level). */
+static gdouble neighboring_column (FttCell * cell, 
+				   GfsVariable * h, FttComponent c, gdouble orientation,
+				   FttDirection d, gdouble * x)
+{
+  FttCell * n = ftt_cell_neighbor (cell, d);
+  if (!n || !GFS_HAS_DATA (n, h))
+    return GFS_NODATA;
+  if (ftt_cell_level (cell) == ftt_cell_level (n)) {
+    *x = 1.;
+    return GFS_VALUE (n, h);
+  }
+  /* coarser neighbor */
+  FttVector p;
+  ftt_cell_relative_pos (cell, &p);
+  *x = 3./2.;
+  return (GFS_VALUE (n, h) - orientation*(&p.x)[c])*2.;
+}
+
+static gboolean curvature_along_direction (FttCell * cell, 
+					   GfsVariableTracerVOFHeight * t,
+					   FttComponent c,
+					   gdouble * kappa,
+					   gdouble * kmax,
+					   GtsVector * interface,
+					   guint * nb)
+{
+  GfsVariable * hv = NULL;
+  gdouble orientation;
+  if (GFS_HAS_DATA (cell, t->hb[c])) {
+    hv = t->hb[c]; orientation = 1.;
+    if (GFS_HAS_DATA (cell, t->ht[c]) && 
+	fabs (GFS_VALUE (cell, t->ht[c])) < fabs (GFS_VALUE (cell, t->hb[c]))) {
+      hv = t->ht[c]; orientation = -1.;
+    }
+  }
+  else if (GFS_HAS_DATA (cell, t->ht[c])) {
+    hv = t->ht[c]; orientation = -1.;
+  }
+  else
+    return FALSE;
+
+#ifdef FTT_2D
+  gdouble size = ftt_cell_size (cell), H = GFS_VALUE (cell, hv);
+  gdouble x[2], h[2];
+  FttComponent oc = FTT_ORTHOGONAL_COMPONENT (c);
+  h[0] = neighboring_column (cell, hv, c, orientation, 2*oc, &x[0]);
+  if (h[0] == GFS_NODATA)
+    return FALSE;
+  h[1] = neighboring_column (cell, hv, c, orientation, 2*oc + 1, &x[1]);
+  if (h[1] == GFS_NODATA)
+    return FALSE;
+  x[1] = - x[1];
+
+  gdouble det = x[0]*x[1]*(x[0] - x[1]), a = x[1]*(h[0] - H), b = x[0]*(h[1] - H);
+  gdouble hxx = 2.*(a - b)/det;
+  gdouble hx = (x[0]*b - x[1]*a)/det;
+  gdouble dnm = 1. + hx*hx;
+  *kappa = hxx/(size*sqrt (dnm*dnm*dnm));
+  if (kmax)
+    *kmax = fabs (*kappa);
+  if (GFS_IS_AXI (GFS_VARIABLE1 (t)->domain)) {
+    FttVector p;
+    ftt_cell_pos (cell, &p);
+    gdouble nr, r = p.y;
+    if (c == FTT_X)
+      nr = hx;
+    else {
+      r += orientation*H*size;
+      nr = - orientation;
+    }
+    gdouble kaxi = nr/(sqrt(dnm)*r);
+    *kappa += kaxi;
+    if (kmax)
+      *kmax = MAX (*kmax, fabs (kaxi));
+  }
+#else /* 3D */
+  g_assert_not_implemented ();
+#endif /* 3D */
+
+  return TRUE;
+}
+
+#if FTT_2D
+# define NI 3
+#else
+# define NI 9
+#endif
+
+static void orientation (FttVector * m, FttComponent * c)
+{
+  FttComponent i, j;
+  for (i = 0; i < FTT_DIMENSION; i++)
+    c[i] = i;
+  for (i = 0; i < FTT_DIMENSION - 1; i++)
+    for (j = 0; j < FTT_DIMENSION - 1 - i; j++)
+      if (fabs ((&m->x)[c[j + 1]]) > fabs ((&m->x)[c[j]])) {
+	FttComponent tmp = c[j];
+	c[j] = c[j + 1];
+	c[j + 1] = tmp;
+      }
+}
+
+static gdouble gfs_height_curvature_new (FttCell * cell, GfsVariableTracerVOFHeight * t, 
+					 gdouble * kmax)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (t != NULL, 0.);
+
+  GfsVariable * v = GFS_VARIABLE1 (t);
+  gdouble f = GFS_VALUE (cell,  v);
+  g_return_val_if_fail (!GFS_IS_FULL (f), 0.);
+
+  FttVector m;
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&m.x)[c] = GFS_VALUE (cell, GFS_VARIABLE_TRACER_VOF (t)->m[c]);
+
+  FttComponent try[FTT_DIMENSION];
+  orientation (&m, try); /* sort directions according to normal */
+
+  gdouble kappa = 0.;
+  GtsVector interface[FTT_DIMENSION*NI];
+  guint n = 0;
+  for (c = 0; c < FTT_DIMENSION; c++) /* try each direction */
+    if (curvature_along_direction (cell, t, try[c], &kappa, kmax, interface, &n))
+      return kappa;
+  
+  return GFS_NODATA;
+}
+
+static void height_curvature_new (FttCell * cell, GfsVariable * v)
+{
+  GfsVariable * t = GFS_VARIABLE_CURVATURE (v)->f;
+  GfsVariable * kmax = GFS_VARIABLE_CURVATURE (v)->kmax;
+  gdouble f = GFS_VALUE (cell, t);
+
+  if (GFS_IS_FULL (f)) {
+    GFS_VALUE (cell, v) = GFS_NODATA;
+    if (kmax)
+      GFS_VALUE (cell, kmax) = GFS_NODATA;
+  }
+  else {
+    if (kmax) {
+      gdouble k;
+      GFS_VALUE (cell, v) = gfs_height_curvature_new (cell, GFS_VARIABLE_TRACER_VOF_HEIGHT (t), &k);
+      GFS_VALUE (cell, kmax) = k;
+    }
+    else
+      GFS_VALUE (cell, v) = gfs_height_curvature_new (cell, GFS_VARIABLE_TRACER_VOF_HEIGHT (t), 
+						      NULL);
+  }
+}
+
 static gboolean variable_curvature_event (GfsEvent * event, GfsSimulation * sim)
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_curvature_class ())->parent_class)->event)
       (event, sim)) {
-    if (GFS_IS_VARIABLE_TRACER (GFS_VARIABLE_CURVATURE (event)->f))
+    if (GFS_IS_VARIABLE_TRACER_VOF_HEIGHT (GFS_VARIABLE_CURVATURE (event)->f)) {
+      GfsDomain * domain = GFS_DOMAIN (sim);
+      GfsVariable * kmax = GFS_VARIABLE_CURVATURE (event)->kmax;      
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) height_curvature_new, event);
+      gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				(FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+      if (kmax) {
+	gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				  (FttCellTraverseFunc) kmax->fine_coarse, kmax);
+	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, kmax);
+	variable_curvature_diffuse (kmax, GFS_VARIABLE_CURVATURE (event)->f, sim, 1);
+      }
+      variable_curvature_diffuse (GFS_VARIABLE1 (event), NULL, sim, 1);
+
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttCellTraverseFunc) fit_curvature, event);
+      gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				(FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+      if (kmax) {
+	gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				  (FttCellTraverseFunc) kmax->fine_coarse, kmax);
+	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, kmax);
+	variable_curvature_diffuse (kmax, GFS_VARIABLE_CURVATURE (event)->f, sim, 1);
+      }
+      variable_curvature_diffuse (GFS_VARIABLE1 (event), NULL, sim, 1);
+    }
+    else if (GFS_IS_VARIABLE_TRACER (GFS_VARIABLE_CURVATURE (event)->f))
       variable_curvature_from_fraction (event, sim);
     else /* distance */
       variable_curvature_from_distance (event, sim);
@@ -775,157 +961,6 @@ GfsVariableClass * gfs_variable_curvature_class (void)
 }
 
 /** \endobject{GfsVariableCurvature} */
-
-/**
- * Curvature of an interface (new implementation).
- * \beginobject{GfsVariableCurvatureNew}
- */
-
-typedef struct {
-  GfsVariable * f, * h, * o;
-  FttComponent c;
-} HFState;
-
-static gboolean is_interfacial (FttCell * cell, gpointer data)
-{
-  GfsVariable * f = data;
-  return (GFS_VALUE (cell, f) > 0. && GFS_VALUE (cell, f) < 1.);
-}
-
-static void undefined_height (FttCell * cell, HFState * hf)
-{
-  GFS_VALUE (cell, hf->h) = GFS_NODATA;
-  GFS_VALUE (cell, hf->o) = GFS_NODATA;
-}
-
-#define NMAX 3
-
-static gint children_are_full_or_empty (FttCell * cell, FttDirection d, GfsVariable * fv)
-{
-  FttCellChildren child;
-  guint i, n = ftt_cell_children_direction (cell, FTT_OPPOSITE_DIRECTION (d), &child);
-  gint s = 0;
-  for (i = 0; i < n; i++)
-    if (child.c[i]) {
-      gdouble f = GFS_VALUE (child.c[i], fv);
-      if (f > 0. && f < 1.)
-	return 0;
-      s = f > 0.5 ? 1 : -1;
-    }
-  return s;
-}
-
-static gint half_height (FttCell * cell, GfsVariable * fv, FttDirection d,
-			 gdouble * H, gint * n)
-{
-  gint s = 0;
-  *n = 0;
-  guint level = ftt_cell_level (cell);
-  FttCell * neighbor = ftt_cell_neighbor (cell, d);
-  while (*n < NMAX && !s && neighbor) {
-    gdouble f = GFS_VALUE (neighbor, fv);
-    if (f > 0. && f < 1.) { /* interfacial cell */
-      if (ftt_cell_level (neighbor) < level) /* neighbor is coarser */
-	return 0;
-      if (GFS_CELL_IS_BOUNDARY (neighbor))
-	return 2;
-      if (FTT_CELL_IS_LEAF (neighbor) || !(s = children_are_full_or_empty (neighbor, d, fv))) {
-	*H += f;
-	(*n)++;
-      }
-    }
-    else /* full or empty cell */
-      s = f > 0.5 ? 1. : -1.;
-    neighbor = ftt_cell_neighbor (neighbor, d);
-  }
-  return s;
-}
-
-static void height (FttCell * cell, HFState * hf)
-{
-  gdouble H = GFS_VALUE (cell, hf->f);
-
-  /* top part of the column */
-  gint nt, st = half_height (cell, hf->f, 2*hf->c, &H, &nt);
-  if (!st) /* still an interfacial cell (or coarser neighboring cell found) */
-    return;
-
-  /* bottom part of the column */
-  gint nb, sb = half_height (cell, hf->f, 2*hf->c + 1, &H, &nb);
-  if (!sb) /* still an interfacial cell (or coarser neighboring cell found) */
-    return;
-
-  if (sb != 2 && st != 2) {
-    if (st*sb > 0) /* the column does not cross the interface */
-      return;
-    GFS_VALUE (cell, hf->o) = sb;
-  }
-  else { /* column hit a boundary */
-    if (sb != 2)
-      GFS_VALUE (cell, hf->o) = sb > 0 ? 2 : -2;
-    else if (st != 2)
-      GFS_VALUE (cell, hf->o) = st < 0 ? 2 : -2;
-    else
-      g_assert_not_reached (); /* cannot hit a boundary on both sides */
-  }
-
-  GFS_VALUE (cell, hf->h) = H - 0.5 - (GFS_VALUE (cell, hf->o) > 0 ? nb : nt);
-}
-
-static gboolean variable_curvature_new_event (GfsEvent * event, GfsSimulation * sim)
-{
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_curvature_new_class ())->parent_class)->event)
-      (event, sim)) {
-    if (GFS_IS_VARIABLE_TRACER (GFS_VARIABLE_CURVATURE (event)->f)) {
-      HFState hf;
-      GfsDomain * domain = GFS_DOMAIN (sim);
-      hf.f = GFS_VARIABLE_CURVATURE (event)->f;
-      for (hf.c = 0; hf.c < FTT_DIMENSION; hf.c++) {
-	static gchar hname[3][3] = {"Hx", "Hy", "Hz"};
-	hf.h = gfs_domain_get_or_add_variable (domain, hname[hf.c], "");
-	static gchar oname[3][3] = {"Ox", "Oy", "Oz"};
-	hf.o = gfs_domain_get_or_add_variable (domain, oname[hf.c], "");
-	gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				  (FttCellTraverseFunc) undefined_height, &hf);
-	gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-					    (FttCellTraverseFunc) height, &hf,
-					    is_interfacial, hf.f);
-	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, hf.h);
-	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, hf.o);
-      }
-    }
-    return TRUE;
-  }
-  return FALSE;
-}
-
-static void variable_curvature_new_class_init (GtsObjectClass * klass)
-{
-  GFS_EVENT_CLASS (klass)->event = variable_curvature_new_event;
-}
-
-GfsVariableClass * gfs_variable_curvature_new_class (void)
-{
-  static GfsVariableClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_variable_curvature_new_info = {
-      "GfsVariableCurvatureNew",
-      sizeof (GfsVariableCurvature),
-      sizeof (GfsVariableClass),
-      (GtsObjectClassInitFunc) variable_curvature_new_class_init,
-      (GtsObjectInitFunc) NULL,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_curvature_class ()),
-				  &gfs_variable_curvature_new_info);
-  }
-
-  return klass;
-}
-
-/** \endobject{GfsVariableCurvatureNew} */
 
 /**
  * Coordinates of a VOF interface.

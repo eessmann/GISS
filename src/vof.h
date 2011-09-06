@@ -114,6 +114,26 @@ gdouble  gfs_fit_curvature         (FttCell * cell,
 gdouble  gfs_vof_correctness       (FttCell * cell, 
 				    GfsVariableTracerVOF * t);
 
+/* GfsVariableTracerVOFHeight: header */
+
+typedef struct _GfsVariableTracerVOFHeight GfsVariableTracerVOFHeight;
+
+struct _GfsVariableTracerVOFHeight {
+  /*< private >*/
+  GfsVariableTracerVOF parent;
+
+  /*< public >*/
+  GfsVariable * hb[FTT_DIMENSION], * ht[FTT_DIMENSION];
+};
+
+#define GFS_VARIABLE_TRACER_VOF_HEIGHT(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsVariableTracerVOFHeight,\
+					           gfs_variable_tracer_vof_height_class ())
+#define GFS_IS_VARIABLE_TRACER_VOF_HEIGHT(obj)         (gts_object_is_from_class (obj,\
+						   gfs_variable_tracer_vof_height_class ()))
+
+GfsVariableClass * gfs_variable_tracer_vof_height_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

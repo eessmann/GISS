@@ -933,20 +933,6 @@ static void vof_plane (FttCell * cell, GfsVariable * v)
   }
 }
 
-static void variable_tracer_vof_update (GfsVariable * v, GfsDomain * domain)
-{
-  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
-  guint l, depth = gfs_domain_depth (domain);
-  FttComponent c;
-  for (l = 0; l <= depth; l++) {
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
-			      (FttCellTraverseFunc) vof_plane, v);
-    for (c = 0; c < FTT_DIMENSION; c++)
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->m[c]);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->alpha);
-  }
-}
-
 static void no_coarse_fine (FttCell * cell,  GfsVariable * v) {}
 
 static void allocate_normal_alpha (GfsVariableTracerVOF * t)
@@ -976,22 +962,26 @@ static void allocate_normal_alpha (GfsVariableTracerVOF * t)
 static gboolean variable_tracer_vof_event (GfsEvent * event, 
 					   GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_tracer_vof_class ())->parent_class)->event)
-      (event, sim)) {
-    GfsVariable * v = GFS_VARIABLE1 (event);
-    GfsDomain * domain = GFS_DOMAIN (sim);
-    gfs_domain_cell_traverse (domain,
-			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_get_from_below_intensive, v);
-    gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, v);
+  GfsVariable * v = GFS_VARIABLE1 (event);
+  GfsDomain * domain = GFS_DOMAIN (sim);
+  gfs_domain_cell_traverse (domain,
+			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			    (FttCellTraverseFunc) v->fine_coarse, v);
+  gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, v);
 
-    GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
-    if (!t->alpha)
-      allocate_normal_alpha (t);
-    variable_tracer_vof_update (v, domain);
-    return TRUE;
+  /* update normals and alpha */
+  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (event);
+  guint l, depth = gfs_domain_depth (domain);
+  FttComponent c;
+  for (l = 0; l <= depth; l++) {
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
+			      (FttCellTraverseFunc) vof_plane, v);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->m[c]);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->alpha);
   }
-  return FALSE;
+
+  return TRUE;
 }
 
 static void variable_tracer_vof_destroy (GtsObject * o)
@@ -1500,11 +1490,9 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
     gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) par->update, &p.vpar);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
     			      (FttCellTraverseFunc) f_over_dV, &p);
-    gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) par->v->fine_coarse, par->v);
-    gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, par->v);
 
-    variable_tracer_vof_update (p.par->v, domain);
+    /* update VOF data (normals etc...) */
+    gfs_event_do (GFS_EVENT (p.par->v), GFS_SIMULATION (domain));
   }
   cstart = (cstart + 1) % FTT_DIMENSION;
   gts_object_destroy (GTS_OBJECT (par->fv));
@@ -2421,3 +2409,416 @@ gdouble gfs_vof_correctness (FttCell * cell, GfsVariableTracerVOF * t)
 }
 
 /** \endobject{GfsVariableTracerVOF} */
+
+/** \beginobject{GfsVariableTracerVOFHeight} */
+
+typedef struct {
+  GfsVariable * f; /* volume fraction */
+  GfsVariable * hb, * ht; /* heights in either orientation */
+  FttComponent c; /* x, y or z */
+  FttDirection d;
+} HFState;
+
+static gboolean is_interfacial (FttCell * cell, gpointer data)
+{
+  GfsVariable * f = data;
+  return (GFS_VALUE (cell, f) > 0. && GFS_VALUE (cell, f) < 1.);
+}
+
+static void undefined_height (FttCell * cell, HFState * hf)
+{
+  GFS_VALUE (cell, hf->hb) = GFS_NODATA;
+  GFS_VALUE (cell, hf->ht) = GFS_NODATA;
+}
+
+#define NMAX 5
+#define SIGN(x) ((x) > 0. ? 1. : -1.)
+#define BOUNDARY_HIT (2.*NMAX)
+
+static gint children_are_full_or_empty (FttCell * cell, FttDirection d, GfsVariable * fv)
+{
+  FttCellChildren child;
+  guint i, n = ftt_cell_children_direction (cell, FTT_OPPOSITE_DIRECTION (d), &child);
+  gint s = 0;
+  for (i = 0; i < n; i++)
+    if (child.c[i]) {
+      gdouble f = GFS_VALUE (child.c[i], fv);
+      if (f > 0. && f < 1.)
+	return 0;
+      s = SIGN (f - 0.5);
+    }
+  return s;
+}
+
+static gint half_height (FttCell * cell, GfsVariable * fv, FttDirection d,
+			 gdouble * H, gint * n)
+{
+  gint s = 0;
+  *n = 0;
+  guint level = ftt_cell_level (cell);
+  FttCell * neighbor = ftt_cell_neighbor (cell, d);
+  while (*n < NMAX && !s && neighbor) {
+    gdouble f = GFS_VALUE (neighbor, fv);
+    if (f > 0. && f < 1.) { /* interfacial cell */
+      if (ftt_cell_level (neighbor) < level) /* neighbor is coarser */
+	return 0;
+      if (GFS_CELL_IS_BOUNDARY (neighbor))
+	return 2;
+      if (FTT_CELL_IS_LEAF (neighbor) || !(s = children_are_full_or_empty (neighbor, d, fv))) {
+	*H += f;
+	(*n)++;
+      }
+    }
+    else /* full or empty cell */
+      s = SIGN (f - 0.5);
+    neighbor = ftt_cell_neighbor (neighbor, d);
+  }
+  return s;
+}
+
+#define DMAX 2.
+
+static void height_propagation (FttCell * cell, HFState * hf, GfsVariable * h, gdouble orientation)
+{
+  guint level = ftt_cell_level (cell);
+  FttDirection d;
+  for (d = 2*hf->c; d <= 2*hf->c + 1; d++, orientation = - orientation) {
+    gdouble H = GFS_VALUE (cell, h);
+    FttCell * neighbor = ftt_cell_neighbor (cell, d);
+    while (fabs (H) < DMAX && neighbor && !is_interfacial (neighbor, hf->f) && 
+	   ftt_cell_level (neighbor) == level) {
+      H -= orientation;
+      GFS_VALUE (neighbor, h) = H;
+      neighbor = ftt_cell_neighbor (neighbor, d);
+    }
+  }
+}
+
+static void height (FttCell * cell, HFState * hf)
+{
+  gdouble H = GFS_VALUE (cell, hf->f);
+
+  /* top part of the column */
+  gint nt, st = half_height (cell, hf->f, 2*hf->c, &H, &nt);
+  if (!st) /* still an interfacial cell (or coarser neighboring cell found) */
+    return;
+
+  /* bottom part of the column */
+  gint nb, sb = half_height (cell, hf->f, 2*hf->c + 1, &H, &nb);
+  if (!sb) /* still an interfacial cell (or coarser neighboring cell found) */
+    return;
+
+  if (sb != 2 && st != 2) {
+    if (st*sb > 0) /* the column does not cross the interface */
+      return;
+  }
+  else { /* column hit a boundary */
+    g_assert (sb != 2 || st != 2); /* cannot hit a boundary on both sides */
+    if (sb == 2)
+      sb = - SIGN (st);
+    H += BOUNDARY_HIT;
+  }
+
+  if (sb > 0) {
+    GFS_VALUE (cell, hf->hb) = H - 0.5 - nb;
+    height_propagation (cell, hf, hf->hb, 1.);
+  }
+  else {
+    GFS_VALUE (cell, hf->ht) = H - 0.5 - nt;
+    height_propagation (cell, hf, hf->ht, -1.);
+  }
+}
+
+static GfsVariable * boundary_hit (FttCell * cell, HFState * hf)
+{
+  if (GFS_HAS_DATA (cell, hf->hb) && GFS_VALUE (cell, hf->hb) > BOUNDARY_HIT/2.)
+    return hf->hb;
+  if (GFS_HAS_DATA (cell, hf->ht) && GFS_VALUE (cell, hf->ht) > BOUNDARY_HIT/2.)
+    return hf->ht;
+  return NULL;
+}
+
+static void height_periodic_bc (FttCell * cell, HFState * hf)
+{
+  FttCell * neighbor = ftt_cell_neighbor (cell, hf->d);
+  g_assert (GFS_CELL_IS_BOUNDARY (neighbor));
+  GfsVariable * h = boundary_hit (cell, hf);
+  if (h) {
+    /* column hit boundary */
+    GfsVariable * hn = boundary_hit (neighbor, hf);
+    guint level = ftt_cell_level (cell);
+    if (hn == h) {
+      /* the column crosses the interface */
+      /* propagate column height correction from one side (or PE) to the other */
+      gdouble orientation = (hf->d % 2 ? -1 : 1)*(GFS_HAS_DATA (cell, hf->hb) ? 1 : -1);
+      gdouble Hn = GFS_VALUE (neighbor, h) + 0.5 + 
+	(orientation - 1.)/2. -
+	2.*BOUNDARY_HIT;
+      gdouble H = GFS_VALUE (cell, h) + Hn;
+      while (cell && GFS_HAS_DATA (cell, h) && GFS_VALUE (cell, h) > BOUNDARY_HIT/2. &&
+	     ftt_cell_level (cell) == level) {
+	GFS_VALUE (cell, h) += Hn;
+	H += orientation;
+	cell = ftt_cell_neighbor (cell, FTT_OPPOSITE_DIRECTION (hf->d));
+      }
+      /* propagate to non-interfacial cells up to DMAX */
+      H -= orientation;
+      while (fabs (H) < DMAX && cell && !is_interfacial (cell, hf->f) && 
+	     ftt_cell_level (cell) == level) {
+	H += orientation;
+	GFS_VALUE (cell, h) = H;
+	cell = ftt_cell_neighbor (cell, FTT_OPPOSITE_DIRECTION (hf->d));
+      }
+    }
+    else {
+      /* the column does not cross the interface */
+      while (cell && GFS_HAS_DATA (cell, h) && GFS_VALUE (cell, h) > BOUNDARY_HIT/2. &&
+	     ftt_cell_level (cell) == level) {
+	undefined_height (cell, hf);
+	cell = ftt_cell_neighbor (cell, FTT_OPPOSITE_DIRECTION (hf->d));
+      }
+    }
+  }
+  else {
+    /* column did not hit a boundary, propagate height across PE boundary */
+    if (GFS_HAS_DATA (neighbor, hf->hb))
+      height_propagation (neighbor, hf, hf->hb, 1.);
+    if (GFS_HAS_DATA (neighbor, hf->ht))
+      height_propagation (neighbor, hf, hf->ht, -1.);
+  }
+}
+
+static void box_height_bc (GfsBox * box, HFState * hf)
+{
+  for (hf->d = 2*hf->c; hf->d <= 2*hf->c + 1; hf->d++)
+    if (GFS_IS_BOUNDARY_PERIODIC (box->neighbor[hf->d]))
+      ftt_cell_traverse_boundary (box->root, hf->d, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+				  (FttCellTraverseFunc) height_periodic_bc, hf);
+}
+
+/* Returns: the height @h of the neighboring column in direction @d or
+   GFS_NODATA if it is undefined. Also fills @x with the coordinates
+   of the cell (1 or 3/2 depending on its relative level). */
+static gdouble neighboring_column (FttCell * cell, 
+				   GfsVariable * h, FttComponent c, gdouble orientation,
+				   FttDirection d, gdouble * x)
+{
+  FttCell * n = ftt_cell_neighbor (cell, d);
+  if (!n || !GFS_HAS_DATA (n, h))
+    return GFS_NODATA;
+  if (ftt_cell_level (cell) == ftt_cell_level (n)) {
+    *x = 1.;
+    return GFS_VALUE (n, h);
+  }
+  /* coarser neighbor */
+  FttVector p;
+  ftt_cell_relative_pos (cell, &p);
+  *x = 3./2.;
+  return (GFS_VALUE (n, h) - orientation*(&p.x)[c])*2.;
+}
+
+static GfsVariable * smallest_height (FttCell * cell, GfsVariableTracerVOFHeight * t,
+				      FttComponent c,
+				      gdouble * orientation)
+{
+  GfsVariable * hv = NULL;
+  if (GFS_HAS_DATA (cell, t->hb[c])) {
+    hv = t->hb[c]; *orientation = 1.;
+    if (GFS_HAS_DATA (cell, t->ht[c]) && 
+	fabs (GFS_VALUE (cell, t->ht[c])) < fabs (GFS_VALUE (cell, t->hb[c]))) {
+      hv = t->ht[c]; *orientation = -1.;
+    }
+  }
+  else if (GFS_HAS_DATA (cell, t->ht[c])) {
+    hv = t->ht[c]; *orientation = -1.;
+  }
+  return hv;
+}
+
+static gboolean height_normal (FttCell * cell, GfsVariable * v, FttVector * m)
+{
+  GfsVariableTracerVOFHeight * t = GFS_VARIABLE_TRACER_VOF_HEIGHT (v);
+  gdouble slope = G_MAXDOUBLE;
+#ifdef FTT_2D
+  FttComponent c;
+  m->x = 0.;
+  m->y = 1.;
+  for (c = 0; c < 2; c++) {
+    gdouble orientation;
+    GfsVariable * hv = smallest_height (cell, t, c, &orientation);
+    if (hv != NULL) {
+      gdouble H = GFS_VALUE (cell, hv);
+      gdouble x[2], h[2];
+      FttComponent oc = FTT_ORTHOGONAL_COMPONENT (c);
+      h[0] = neighboring_column (cell, hv, c, orientation, 2*oc, &x[0]);
+      if (h[0] == GFS_NODATA)
+	continue;
+      h[1] = neighboring_column (cell, hv, c, orientation, 2*oc + 1, &x[1]);
+      if (h[1] == GFS_NODATA)
+	continue;
+      x[1] = - x[1];
+      
+      gdouble det = x[0]*x[1]*(x[0] - x[1]), a = x[1]*(h[0] - H), b = x[0]*(h[1] - H);
+      gdouble hx = (x[0]*b - x[1]*a)/det;
+      if (fabs (hx) < slope) {
+	slope = fabs (hx);
+	(&m->x)[c] = orientation;
+	(&m->x)[(c + 1) % 2] = - hx;
+      }
+    }
+  }
+#else /* 3D */
+  g_assert_not_implemented ();
+#endif /* 3D */
+  return slope < G_MAXDOUBLE;
+}
+
+static void vof_height_plane (FttCell * cell, GfsVariable * v)
+{
+  if (FTT_CELL_IS_LEAF (cell)) {
+    GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
+    gdouble f = GFS_VALUE (cell, v);
+    FttComponent c;
+
+    THRESHOLD (f);
+    if (GFS_IS_FULL (f)) {
+      for (c = 1; c < FTT_DIMENSION; c++)
+	GFS_VALUE (cell, t->m[c]) = 0.;
+      GFS_VALUE (cell, t->m[0]) = 1.;
+      GFS_VALUE (cell, t->alpha) = f;
+    }
+    else {
+      FttVector m;
+      gdouble n = 0.;
+
+      if (!height_normal (cell, v, &m))
+	myc_normal (cell, v, &m);
+      for (c = 0; c < FTT_DIMENSION; c++)
+	n += fabs ((&m.x)[c]);
+      if (n > 0.)
+	for (c = 0; c < FTT_DIMENSION; c++)
+	  (&m.x)[c] /= n;
+      else /* fixme: this is a small fragment */
+	m.x = 1.;
+      for (c = 0; c < FTT_DIMENSION; c++)
+	GFS_VALUE (cell, t->m[c]) = (&m.x)[c];
+      GFS_VALUE (cell, t->alpha) = gfs_plane_alpha (&m, f);
+    }
+  }
+}
+
+static gboolean variable_tracer_vof_height_event (GfsEvent * event, 
+						  GfsSimulation * sim)
+{
+  GfsVariable * v = GFS_VARIABLE1 (event);
+  GfsDomain * domain = GFS_DOMAIN (sim);
+  gfs_domain_cell_traverse (domain,
+			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			    (FttCellTraverseFunc) v->fine_coarse, v);
+  gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, v);
+
+  /* update height functions */
+  GfsVariableTracerVOFHeight * h = GFS_VARIABLE_TRACER_VOF_HEIGHT (event);
+  HFState hf;
+  hf.f = v;
+  for (hf.c = 0; hf.c < FTT_DIMENSION; hf.c++) {
+    hf.hb = h->hb[hf.c];
+    hf.ht = h->ht[hf.c];
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) undefined_height, &hf);
+    gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+					(FttCellTraverseFunc) height, &hf,
+					is_interfacial, hf.f);
+    
+    gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, hf.hb);
+    gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, hf.ht);
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_height_bc, &hf);
+  }
+
+  /* update normals and alpha */
+  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (event);
+  guint l, depth = gfs_domain_depth (domain);
+  FttComponent c;
+  for (l = 0; l <= depth; l++) {
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
+			      (FttCellTraverseFunc) vof_height_plane, v);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->m[c]);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->alpha);
+  }
+
+  return TRUE;
+}
+
+static void variable_tracer_vof_height_destroy (GtsObject * o)
+{
+  GfsVariableTracerVOF * v = GFS_VARIABLE_TRACER_VOF (o);
+
+  if (v->alpha) {
+    FttComponent c;
+    for (c = 0; c < FTT_DIMENSION; c++) {
+      gts_object_destroy (GTS_OBJECT (GFS_VARIABLE_TRACER_VOF_HEIGHT (v)->hb[c]));
+      gts_object_destroy (GTS_OBJECT (GFS_VARIABLE_TRACER_VOF_HEIGHT (v)->ht[c]));
+    }
+  }
+
+  (* GTS_OBJECT_CLASS (gfs_variable_tracer_vof_height_class ())->parent_class->destroy) (o);
+}
+
+static void variable_tracer_vof_height_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_tracer_vof_height_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsVariable * v = GFS_VARIABLE1 (*o);
+  GfsVariableTracerVOFHeight * t = GFS_VARIABLE_TRACER_VOF_HEIGHT (v);
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    static gchar index[][2] = {"x", "y", "z"};
+    gchar * name = g_strdup_printf ("%s_Hb%s", v->name, index[c]);
+    gchar * description = g_strdup_printf ("%s-component (bottom) of the height function for the interface defined by %s",
+					   index[c], v->name);
+    t->hb[c] = gfs_domain_get_or_add_variable (v->domain, name, description);
+    t->hb[c]->fine_coarse = t->hb[c]->coarse_fine = no_coarse_fine;
+    g_free (name);
+    g_free (description);
+
+    name = g_strdup_printf ("%s_Ht%s", v->name, index[c]);
+    description = g_strdup_printf ("%s-component (top) of the height function for the interface defined by %s",
+				   index[c], v->name);
+    t->ht[c] = gfs_domain_get_or_add_variable (v->domain, name, description);
+    t->ht[c]->fine_coarse = t->ht[c]->coarse_fine = no_coarse_fine;
+    g_free (name);
+    g_free (description);
+  }
+}
+
+static void variable_tracer_vof_height_class_init (GtsObjectClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = variable_tracer_vof_height_event;
+  klass->destroy = variable_tracer_vof_height_destroy;
+  klass->read = variable_tracer_vof_height_read;
+}
+
+GfsVariableClass * gfs_variable_tracer_vof_height_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsVariableTracerVOFHeight",
+      sizeof (GfsVariableTracerVOFHeight),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_tracer_vof_height_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_tracer_vof_class ()), &info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsVariableTracerVOFHeight} */
