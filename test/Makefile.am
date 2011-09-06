@@ -34,6 +34,7 @@ TESTDIRS = \
 	spurious \
 	capwave \
 	oscillation \
+	height \
 	geo \
 	waves \
 	nz \
