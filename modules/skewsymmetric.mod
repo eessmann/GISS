@@ -33,7 +33,7 @@ GfsSimulationClass * gfs_skew_symmetric_class  (void);
 typedef struct {
   GfsVariable ** velfaces , ** velold , ** u; 
   GfsVariable * p;
-  gdouble dt; 
+  gdouble * dt; 
 } FaceData;
 
 typedef struct {
@@ -289,7 +289,7 @@ static void update_vel (FttCell * cell, FaceData * fd)
     GFS_VALUE (cell, fd->velfaces[d]) = (GFS_VALUE (cell, fd->velfaces[d]) + 
 					 0.05*GFS_VALUE (cell, fd->velold[d]))/1.05; 
     s->f[d].un = (0.10*GFS_VALUE (cell, fd->velfaces[d]) + 
-		  0.45*GFS_VALUE (cell, fd->velold[d])- s->f[d].v*fd->dt/size)/0.55;
+		  0.45*GFS_VALUE (cell, fd->velold[d])- s->f[d].v*(*fd->dt)/size)/0.55;
     GFS_VALUE (cell, fd->velold[d]) = GFS_VALUE (cell, fd->velfaces[d]);
   }
 }
@@ -409,7 +409,7 @@ static void gfs_skew_symmetric_momentum (GfsSimulation * sim, FaceData * fd, Gfs
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) update_vel, fd);
 
-  gfs_velocity_face_sources (domain, fd->u, fd->dt, sim->physical_params.alpha, gmac);
+  gfs_velocity_face_sources (domain, fd->u, (*fd->dt), sim->physical_params.alpha, gmac);
 
   gfs_domain_face_traverse (domain, FTT_XYZ,
                             FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, 
@@ -460,7 +460,7 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
   for (d = 0; d <  FTT_NEIGHBORS; d++)
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, velfaces[d]);
 
-  FaceData fd = { velfaces, velold, u, p, sim->advection_params.dt };
+  FaceData fd = { velfaces, velold, u, p, &sim->advection_params.dt };
 
   if (sim->time.i == 0) {
     /* provisional solution to initialize the face velocities at t=0 */
