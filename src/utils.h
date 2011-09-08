@@ -216,7 +216,10 @@ gchar *            gfs_format_string     (GSList * format,
 				          gdouble time);
 gdouble            gfs_format_time_value (GSList * format, 
 					  const gchar * string);
-
+void               gfs_cell_message      (const FttCell * cell, 
+					  const gchar *format,
+					  ...);
+  
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

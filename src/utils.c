@@ -21,6 +21,7 @@
  */
 
 #include <stdlib.h>
+#include <stdarg.h>
 #include <ctype.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -1997,4 +1998,29 @@ gdouble gfs_format_time_value (GSList * format, const gchar * string)
   }
   g_free (copy);
   return val;
+}
+
+/**
+ * @cell: a #FttCell.
+ * @format: a string format.
+ * ...: arguments for format.
+ *
+ * Logs a message preceded by the pointer, position and level of @cell.
+ */
+void gfs_cell_message (const FttCell * cell, 
+		       const gchar * format,
+		       ...)
+{
+  g_return_if_fail (cell != NULL);
+  g_return_if_fail (format != NULL);
+
+  FttVector p;
+  ftt_cell_pos (cell, &p);
+  gchar * s = g_strdup_printf ("%p:(%g,%g,%g):%d", cell, p.x, p.y, p.z, ftt_cell_level (cell));
+  va_list ap;
+  va_start (ap, format);
+  gchar * s1 = g_strdup_vprintf (format, ap);
+  g_message ("%s\n%s", s, s1);
+  g_free (s);
+  g_free (s1);
 }
