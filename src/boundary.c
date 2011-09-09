@@ -413,6 +413,54 @@ GfsBcClass * gfs_bc_neumann_class (void)
 /** \endobject{GfsBcNeumann} */
 
 /**
+ * Contact angle boundary condition.
+ * \beginobject{GfsBcAngle}
+ */
+
+static void bc_angle_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_bc_angle_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (!GFS_IS_VARIABLE_TRACER_VOF_HEIGHT (GFS_BC (*o)->v))
+    gts_file_error (fp, "expecting a GfsVariableTracerVOFHeight");
+}
+
+static void gfs_bc_angle_init (GfsBc * object)
+{
+  /* use zero for Neumann condition for the VOF tracer */
+  object->bc = (FttFaceTraverseFunc) homogeneous_neumann;
+}
+
+static void gfs_bc_angle_class_init (GtsObjectClass * klass)
+{
+  klass->read = bc_angle_read;
+}
+
+GfsBcClass * gfs_bc_angle_class (void)
+{
+  static GfsBcClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsBcAngle",
+      sizeof (GfsBcValue),
+      sizeof (GfsBcClass),
+      (GtsObjectClassInitFunc) gfs_bc_angle_class_init,
+      (GtsObjectInitFunc) gfs_bc_angle_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_bc_neumann_class ()), &info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsBcAngle} */
+
+/**
  * Navier boundary condition.
  * \beginobject{GfsBcNavier}
  */

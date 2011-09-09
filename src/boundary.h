@@ -107,6 +107,13 @@ GfsBcClass * gfs_bc_dirichlet_class  (void);
 
 GfsBcClass * gfs_bc_neumann_class  (void);
 
+/* GfsBcAngle: Header */
+
+#define GFS_IS_BC_ANGLE(obj)         (gts_object_is_from_class (obj,\
+						 gfs_bc_angle_class ()))
+
+GfsBcClass * gfs_bc_angle_class  (void);
+
 /* GfsBcNavier: Header */
 
 typedef struct _GfsBcNavier         GfsBcNavier;

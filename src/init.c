@@ -145,6 +145,7 @@ GtsObjectClass ** gfs_classes (void)
   gfs_bc_dirichlet_class (),
   gfs_bc_subcritical_class (),
   gfs_bc_neumann_class (),
+    gfs_bc_angle_class (),
   gfs_bc_navier_class (),
   gfs_bc_flather_class (),
 
