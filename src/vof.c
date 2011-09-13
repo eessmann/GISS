@@ -2367,6 +2367,197 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
   return kappa;
 }
 
+/* Returns: the height @h of the neighboring column in direction @d or
+   GFS_NODATA if it is undefined. Also fills @x with the coordinates
+   of the cell (1 or 3/2 depending on its relative level). */
+static gdouble neighboring_column (FttCell * cell, 
+				   GfsVariable * h, FttComponent c, gdouble orientation,
+				   FttDirection d, gdouble * x)
+{
+  FttCell * n = ftt_cell_neighbor (cell, d);
+  if (!n || !GFS_HAS_DATA (n, h))
+    return GFS_NODATA;
+  if (ftt_cell_level (cell) == ftt_cell_level (n)) {
+    *x = 1.;
+    return GFS_VALUE (n, h);
+  }
+  /* coarser neighbor */
+  FttVector p;
+  ftt_cell_relative_pos (cell, &p);
+  *x = 3./2.;
+  return (GFS_VALUE (n, h) - orientation*(&p.x)[c])*2.;
+}
+
+static GfsVariable * smallest_height (FttCell * cell, GfsVariableTracerVOFHeight * t,
+				      FttComponent c,
+				      gdouble * orientation)
+{
+  /* picks the height closest to the interface */
+  GfsVariable * hv = NULL;
+  if (cell == NULL)
+    return NULL;
+  if (GFS_HAS_DATA (cell, t->hb[c])) {
+    hv = t->hb[c]; *orientation = 1.;
+    if (GFS_HAS_DATA (cell, t->ht[c]) && 
+	fabs (GFS_VALUE (cell, t->ht[c])) < fabs (GFS_VALUE (cell, t->hb[c]))) {
+      hv = t->ht[c]; *orientation = -1.;
+    }
+  }
+  else if (GFS_HAS_DATA (cell, t->ht[c])) {
+    hv = t->ht[c]; *orientation = -1.;
+  }
+  return hv;
+}
+
+static gboolean curvature_along_direction_new (FttCell * cell, 
+					       GfsVariableTracerVOFHeight * t,
+					       FttComponent c,
+					       gdouble * kappa,
+					       gdouble * kmax,
+					       GtsVector * interface,
+					       guint * nb)
+{
+#ifdef FTT_2D
+  gdouble orientation;
+  GfsVariable * hv = smallest_height (cell, t, c, &orientation);
+  FttComponent oc = FTT_ORTHOGONAL_COMPONENT (c);
+  if (!hv) {
+    /* no data for either directions, look "right" and "left" to
+       collect potential interface positions */
+    hv = smallest_height (ftt_cell_neighbor (cell, 2*oc), t, c, &orientation);
+    if (!hv)
+      hv = smallest_height (ftt_cell_neighbor (cell, 2*oc + 1), t, c, &orientation);
+    if (!hv) /* give up */
+      return FALSE;
+  }
+
+  gdouble x[3], h[3];
+  h[2] = GFS_VALUE (cell, hv); x[2] = 0.;
+  h[0] = neighboring_column (cell, hv, c, orientation, 2*oc, &x[0]);
+  h[1] = neighboring_column (cell, hv, c, orientation, 2*oc + 1, &x[1]);
+  x[1] = - x[1];
+
+  if (h[2] != GFS_NODATA && h[0] != GFS_NODATA && h[1] != GFS_NODATA) {
+    gdouble size = ftt_cell_size (cell);
+    gdouble det = x[0]*x[1]*(x[0] - x[1]), a = x[1]*(h[0] - h[2]), b = x[0]*(h[1] - h[2]);
+    gdouble hxx = 2.*(a - b)/det;
+    gdouble hx = (x[0]*b - x[1]*a)/det;
+    gdouble dnm = 1. + hx*hx;
+    *kappa = hxx/(size*sqrt (dnm*dnm*dnm));
+    if (kmax)
+      *kmax = fabs (*kappa);
+    if (GFS_IS_AXI (GFS_VARIABLE1 (t)->domain)) {
+      FttVector p;
+      ftt_cell_pos (cell, &p);
+      gdouble nr, r = p.y;
+      if (c == FTT_X)
+	nr = hx;
+      else {
+	r += orientation*h[2]*size;
+	nr = - orientation;
+      }
+      gdouble kaxi = nr/(sqrt(dnm)*r);
+      *kappa += kaxi;
+      if (kmax)
+	*kmax = MAX (*kmax, fabs (kaxi));
+    }
+    return TRUE;
+  }
+  else { /* h[2] == GFS_NODATA || h[0] == GFS_NODATA || h[1] == GFS_NODATA */
+    /* collect interface positions (based on height function) */
+    int i;
+    for (i = 0; i < 3; i++)
+      if (h[i] != GFS_NODATA) {
+	interface[*nb][oc] = x[i];
+	interface[(*nb)++][c] = orientation*h[i]; 
+      }
+    return FALSE;
+  }
+#else /* 3D */
+  g_assert_not_implemented ();
+#endif /* 3D */
+
+  return FALSE;
+}
+
+/**
+ * gfs_height_curvature_new:
+ * @cell: a #FttCell containing an interface.
+ * @t: a #GfsVariableTracerVOFHeight.
+ * @kmax: a pointer or %NULL.
+ *
+ * An implementation of the Height-Function (HF) method generalised to
+ * adaptive meshes.
+ *
+ * If @kmax is not %NULL, it is filled with the absolute value of the
+ * maximum surface curvature (note that in 2D this is just the
+ * absolute value of the mean curvature).
+ *
+ * Returns: (double in 3D) the mean curvature of the interface
+ * contained in @cell, or %GFS_NODATA if the HF method could not
+ * compute a consistent curvature.
+ */
+gdouble gfs_height_curvature_new (FttCell * cell, GfsVariableTracerVOFHeight * t, 
+				  gdouble * kmax)
+{
+  g_return_val_if_fail (cell != NULL, 0.);
+  g_return_val_if_fail (t != NULL, 0.);
+
+  GfsVariable * v = GFS_VARIABLE1 (t);
+  gdouble f = GFS_VALUE (cell,  v);
+  g_return_val_if_fail (!GFS_IS_FULL (f), 0.);
+
+  FttVector m;
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&m.x)[c] = GFS_VALUE (cell, GFS_VARIABLE_TRACER_VOF (t)->m[c]);
+
+  FttComponent try[FTT_DIMENSION];
+  orientation (&m, try); /* sort directions according to normal */
+
+  gdouble kappa = 0.;
+  GtsVector interface[FTT_DIMENSION*NI];
+  guint n = 0;
+  for (c = 0; c < FTT_DIMENSION; c++) /* try each direction */
+    if (curvature_along_direction_new (cell, t, try[c], &kappa, kmax, interface, &n))
+      return kappa;
+
+  /* Could not compute curvature from the simple algorithm along any direction:
+   * Try parabola fitting of the collected interface positions */
+
+  if (independent_positions (interface, n) < 3*(FTT_DIMENSION - 1))
+    return GFS_NODATA;
+
+  gdouble h = ftt_cell_size (cell);
+  ParabolaFit fit;
+  guint j;
+  
+  FttVector p, fc;
+  ftt_cell_pos (cell, &p);
+  gdouble area = gfs_vof_center (cell, GFS_VARIABLE_TRACER_VOF (t), &fc);
+  fc.x = (fc.x - p.x)/h;
+  fc.y = (fc.y - p.y)/h;
+  fc.z = (fc.z - p.z)/h;
+  parabola_fit_init (&fit, &fc, &m);
+#if FTT_2D
+  parabola_fit_add (&fit, &fc.x, PARABOLA_FIT_CENTER_WEIGHT);
+#elif !PARABOLA_SIMPLER
+  parabola_fit_add (&fit, &fc.x, area*100.);
+#endif
+  for (j = 0; j < n; j++)
+    parabola_fit_add (&fit, interface[j], 1.);
+  parabola_fit_solve (&fit);
+  kappa = parabola_fit_curvature (&fit, 2., kmax)/h;
+  if (kmax)
+    *kmax /= h;
+#if FTT_2D
+  if (GFS_IS_AXI (v->domain))
+    parabola_fit_axi_curvature (&fit, fc.y*h + p.y, h, &kappa, kmax);
+#endif
+  parabola_fit_destroy (&fit);
+  return kappa;
+}
+
 /**
  * gfs_vof_correctness:
  * @cell: a #FttCell.
@@ -2415,6 +2606,7 @@ gdouble gfs_vof_correctness (FttCell * cell, GfsVariableTracerVOF * t)
 typedef struct {
   GfsVariable * f; /* volume fraction */
   GfsVariable * hb, * ht; /* heights in either orientation */
+  GfsBc * angle; /* contact angle BC */
   FttComponent c; /* x, y or z */
   FttDirection d;
 } HFState;
@@ -2431,9 +2623,9 @@ static void undefined_height (FttCell * cell, HFState * hf)
   GFS_VALUE (cell, hf->ht) = GFS_NODATA;
 }
 
-#define NMAX 5
+#define HMAX 5
 #define SIGN(x) ((x) > 0. ? 1. : -1.)
-#define BOUNDARY_HIT (2.*NMAX)
+#define BOUNDARY_HIT (2.*HMAX)
 
 static gint children_are_full_or_empty (FttCell * cell, FttDirection d, GfsVariable * fv)
 {
@@ -2457,7 +2649,7 @@ static gint half_height (FttCell * cell, GfsVariable * fv, FttDirection d,
   *n = 0;
   guint level = ftt_cell_level (cell);
   FttCell * neighbor = ftt_cell_neighbor (cell, d);
-  while (*n < NMAX && !s && neighbor) {
+  while (*n < HMAX && !s && neighbor) {
     gdouble f = GFS_VALUE (neighbor, fv);
     if (f > 0. && f < 1.) { /* interfacial cell */
       if (ftt_cell_level (neighbor) < level) /* neighbor is coarser */
@@ -2513,7 +2705,8 @@ static void height (FttCell * cell, HFState * hf)
       return;
   }
   else { /* column hit a boundary */
-    g_assert (sb != 2 || st != 2); /* cannot hit a boundary on both sides */
+    if (sb == 2 && st == 2) /* cannot hit a boundary on both sides */
+      return;
     if (sb == 2)
       sb = - SIGN (st);
     H += BOUNDARY_HIT;
@@ -2538,6 +2731,28 @@ static GfsVariable * boundary_hit (FttCell * cell, HFState * hf)
   return NULL;
 }
 
+static void height_propagation_from_boundary (FttCell * cell, HFState * hf, GfsVariable * h)
+{
+  guint level = ftt_cell_level (cell);
+  FttDirection d = FTT_OPPOSITE_DIRECTION (hf->d);
+  gdouble orientation = (hf->d % 2 ? -1 : 1)*(h == hf->hb ? 1 : -1);
+  gdouble H = GFS_VALUE (cell, h);
+  cell = ftt_cell_neighbor (cell, d);
+  while (cell && GFS_HAS_DATA (cell, h) && GFS_VALUE (cell, h) > BOUNDARY_HIT/2. &&
+	 ftt_cell_level (cell) == level) {
+    H += orientation;
+    GFS_VALUE (cell, h) = H;
+    cell = ftt_cell_neighbor (cell, d);
+  }
+  /* propagate to non-interfacial cells up to DMAX */
+  while (fabs (H) < DMAX && cell && !is_interfacial (cell, hf->f) && 
+	 ftt_cell_level (cell) == level) {
+    H += orientation;
+    GFS_VALUE (cell, h) = H;
+    cell = ftt_cell_neighbor (cell, d);
+  }
+}
+
 static void height_periodic_bc (FttCell * cell, HFState * hf)
 {
   FttCell * neighbor = ftt_cell_neighbor (cell, hf->d);
@@ -2546,32 +2761,19 @@ static void height_periodic_bc (FttCell * cell, HFState * hf)
   if (h) {
     /* column hit boundary */
     GfsVariable * hn = boundary_hit (neighbor, hf);
-    guint level = ftt_cell_level (cell);
     if (hn == h) {
       /* the column crosses the interface */
       /* propagate column height correction from one side (or PE) to the other */
-      gdouble orientation = (hf->d % 2 ? -1 : 1)*(GFS_HAS_DATA (cell, hf->hb) ? 1 : -1);
+      gdouble orientation = (hf->d % 2 ? -1 : 1)*(h == hf->hb ? 1 : -1);
       gdouble Hn = GFS_VALUE (neighbor, h) + 0.5 + 
 	(orientation - 1.)/2. -
 	2.*BOUNDARY_HIT;
-      gdouble H = GFS_VALUE (cell, h) + Hn;
-      while (cell && GFS_HAS_DATA (cell, h) && GFS_VALUE (cell, h) > BOUNDARY_HIT/2. &&
-	     ftt_cell_level (cell) == level) {
-	GFS_VALUE (cell, h) += Hn;
-	H += orientation;
-	cell = ftt_cell_neighbor (cell, FTT_OPPOSITE_DIRECTION (hf->d));
-      }
-      /* propagate to non-interfacial cells up to DMAX */
-      H -= orientation;
-      while (fabs (H) < DMAX && cell && !is_interfacial (cell, hf->f) && 
-	     ftt_cell_level (cell) == level) {
-	H += orientation;
-	GFS_VALUE (cell, h) = H;
-	cell = ftt_cell_neighbor (cell, FTT_OPPOSITE_DIRECTION (hf->d));
-      }
+      GFS_VALUE (cell, h) += Hn;
+      height_propagation_from_boundary (cell, hf, h);
     }
     else {
       /* the column does not cross the interface */
+      guint level = ftt_cell_level (cell);
       while (cell && GFS_HAS_DATA (cell, h) && GFS_VALUE (cell, h) > BOUNDARY_HIT/2. &&
 	     ftt_cell_level (cell) == level) {
 	undefined_height (cell, hf);
@@ -2588,58 +2790,153 @@ static void height_periodic_bc (FttCell * cell, HFState * hf)
   }
 }
 
+#define SLOPE_MAX (2.*HMAX/3.)
+#define THETA_MIN (atan(1./SLOPE_MAX))
+
+static gdouble contact_angle_bc (FttCell * cell, HFState * hf)
+{
+  if (hf->angle) {
+    FttCellFace f = ftt_cell_face (cell, hf->d);
+    g_assert (GFS_CELL_IS_BOUNDARY (f.neighbor));
+    return gfs_function_face_value (GFS_BC_VALUE (hf->angle)->val, &f)*M_PI/180.;
+  }
+  else
+    return M_PI/2.;
+}
+
+static void height_contact_normal_bc (FttCell * cell, HFState * hf)
+{
+  GfsVariable * h = boundary_hit (cell, hf);
+  if (h) {
+    /* column hit boundary */
+    FttComponent oc = FTT_ORTHOGONAL_COMPONENT (hf->c);
+    FttDirection nd = 2*oc;
+    FttCell * n1 = ftt_cell_neighbor (cell, nd), * n2 = ftt_cell_neighbor (cell, nd + 1);
+    if (n1 && GFS_HAS_DATA (n1, h) && n2 && GFS_HAS_DATA (n2, h)) {
+      /* columns are defined on either side of @cell => it is not a contact line */
+      /* the boundary is dry or wet i.e. the column height is well defined */
+      /* reset the BOUNDARY_HIT flag on the whole column */
+      GFS_VALUE (cell, h) -= BOUNDARY_HIT;
+      height_propagation_from_boundary (cell, hf, h);
+    }
+    else {
+      GfsVariable * hb, * ht; /* use symmetries */
+      if (hf->d % 2) {
+	hb = hf->hb; ht = hf->ht;
+      }
+      else {
+	hb = hf->ht; ht = hf->hb;
+      }
+      gdouble full_or_empty = (h != hb);
+      if (n1 && GFS_VALUE (n1, hf->f) != full_or_empty) {
+	n1 = n2; nd++;
+      }
+      if (!n1 || GFS_VALUE (n1, hf->f) != full_or_empty) {
+	/* column is not neighbouring a full or empty cell => it is not a contact line */
+	/* the boundary is dry or wet i.e. the column height is well defined */
+	/* reset the BOUNDARY_HIT flag on the whole column */
+	GFS_VALUE (cell, h) -= BOUNDARY_HIT;
+	height_propagation_from_boundary (cell, hf, h);
+      }
+      /* contact line */
+      else {
+	gdouble theta = contact_angle_bc (cell, hf);
+	if ((h == hb && theta < atan (SLOPE_MAX)) || 
+	    (h == ht && theta > M_PI - atan (SLOPE_MAX))) {
+	  gdouble orientation = (h == hb ? 1. : -1.);
+	  FttVector m = { orientation*sin(theta), cos(theta), 0. };
+	  gdouble alpha = gfs_plane_alpha (&m, GFS_VALUE (cell, hf->f));
+	  GFS_VALUE (cell, h) = orientation*((alpha - m.x/2.)/m.y - 0.5);
+	  height_propagation_from_boundary (cell, hf, h);
+	  /* set height of neighbouring (non-interfacial) column */
+	  /* the line below ensures that the interface does not enter
+	     the non-interfacial neighbor */
+	  if (orientation*alpha > orientation*m.x) alpha = m.x;
+	  GFS_VALUE (n1, h) = ftt_cell_level (n1) == ftt_cell_level (cell) ? 
+	    orientation*((alpha - m.x*3./2.)/m.y - 0.5) : /* neighbour at same level */
+	    orientation*((alpha - m.x*2.)/m.y - 1.)/2.;   /* coarser neighbor */
+	  height_propagation_from_boundary (n1, hf, h);
+	}
+      }
+    }
+  }
+}
+
+static void contact_angle_height (FttCell * cell, GfsVariable * h, HFState * hf)
+{
+  if (GFS_HAS_DATA (cell, h)) {
+    FttCell * neighbor = ftt_cell_neighbor (cell, hf->d);
+    g_assert (GFS_CELL_IS_BOUNDARY (neighbor));
+    /* fixme: 
+     * The boundary condition is not evaluated in the cell
+     * containing the contact line.
+     */
+    gdouble theta = contact_angle_bc (cell, hf);
+    /* fixme?: 
+     * The tangential bc saturates at SLOPE_MAX. Curvatures defined
+     * using parabolic interpolation are not consistent when the
+     * ordinates differ too much. This is not a problem if the interface
+     * is well-resolved (because the curvature will then be defined
+     * using the heights in the other direction, which leads to a
+     * well-defined curvature with the correct contact angle condition).
+     *
+     * If the interface is not well-resolved and if the desired contact
+     * angle is smaller than THETA_MIN (or larger than M_PI -
+     * THETA_MIN), the contact angle will saturate at THETA_MIN = atan (1./SLOPE_MAX).
+     */
+    gdouble cotantheta = (theta < THETA_MIN ? SLOPE_MAX : 
+			  theta > M_PI - THETA_MIN ? - SLOPE_MAX :
+			  1./tan(theta));
+    GFS_VALUE (neighbor, h) = GFS_VALUE (cell, h) + cotantheta;
+  }
+}
+
+static void height_contact_tangential_bc (FttCell * cell, HFState * hf)
+{
+  if (is_interfacial (cell, hf->f)) {
+    contact_angle_height (cell, hf->hb, hf);
+    contact_angle_height (cell, hf->ht, hf);
+  }
+}
+
 static void box_height_bc (GfsBox * box, HFState * hf)
 {
   for (hf->d = 2*hf->c; hf->d <= 2*hf->c + 1; hf->d++)
     if (GFS_IS_BOUNDARY_PERIODIC (box->neighbor[hf->d]))
       ftt_cell_traverse_boundary (box->root, hf->d, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 				  (FttCellTraverseFunc) height_periodic_bc, hf);
-}
-
-/* Returns: the height @h of the neighboring column in direction @d or
-   GFS_NODATA if it is undefined. Also fills @x with the coordinates
-   of the cell (1 or 3/2 depending on its relative level). */
-static gdouble neighboring_column (FttCell * cell, 
-				   GfsVariable * h, FttComponent c, gdouble orientation,
-				   FttDirection d, gdouble * x)
-{
-  FttCell * n = ftt_cell_neighbor (cell, d);
-  if (!n || !GFS_HAS_DATA (n, h))
-    return GFS_NODATA;
-  if (ftt_cell_level (cell) == ftt_cell_level (n)) {
-    *x = 1.;
-    return GFS_VALUE (n, h);
-  }
-  /* coarser neighbor */
-  FttVector p;
-  ftt_cell_relative_pos (cell, &p);
-  *x = 3./2.;
-  return (GFS_VALUE (n, h) - orientation*(&p.x)[c])*2.;
-}
-
-static GfsVariable * smallest_height (FttCell * cell, GfsVariableTracerVOFHeight * t,
-				      FttComponent c,
-				      gdouble * orientation)
-{
-  GfsVariable * hv = NULL;
-  if (GFS_HAS_DATA (cell, t->hb[c])) {
-    hv = t->hb[c]; *orientation = 1.;
-    if (GFS_HAS_DATA (cell, t->ht[c]) && 
-	fabs (GFS_VALUE (cell, t->ht[c])) < fabs (GFS_VALUE (cell, t->hb[c]))) {
-      hv = t->ht[c]; *orientation = -1.;
+    else if (GFS_IS_BOUNDARY (box->neighbor[hf->d])) {
+      hf->angle = gfs_boundary_lookup_bc (GFS_BOUNDARY (box->neighbor[hf->d]), hf->f);
+      if (!GFS_IS_BC_ANGLE (hf->angle))
+	hf->angle = NULL; /* symmetry i.e. angle = PI/2 */
+      ftt_cell_traverse_boundary (box->root, hf->d, FTT_POST_ORDER, FTT_TRAVERSE_ALL, -1,
+				  (FttCellTraverseFunc) height_contact_normal_bc, hf);
     }
-  }
-  else if (GFS_HAS_DATA (cell, t->ht[c])) {
-    hv = t->ht[c]; *orientation = -1.;
-  }
-  return hv;
+
+  FttComponent oc = FTT_ORTHOGONAL_COMPONENT (hf->c);
+  for (hf->d = 2*oc; hf->d <= 2*oc + 1; hf->d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[hf->d]) && 
+	!GFS_IS_BOUNDARY_PERIODIC (box->neighbor[hf->d])) {
+      hf->angle = gfs_boundary_lookup_bc (GFS_BOUNDARY (box->neighbor[hf->d]), hf->f);
+      if (!GFS_IS_BC_ANGLE (hf->angle))
+	hf->angle = NULL; /* symmetry i.e. angle = PI/2 */
+      ftt_cell_traverse_boundary (box->root, hf->d, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+				  (FttCellTraverseFunc) height_contact_tangential_bc, hf);
+    }
+}
+
+static void remaining_boundary_height_undefined (FttCell * cell, HFState * hf)
+{
+  GfsVariable * h = boundary_hit (cell, hf);
+  if (h)
+    GFS_VALUE (cell, h) = GFS_NODATA;
 }
 
 static gboolean height_normal (FttCell * cell, GfsVariable * v, FttVector * m)
 {
-  GfsVariableTracerVOFHeight * t = GFS_VARIABLE_TRACER_VOF_HEIGHT (v);
   gdouble slope = G_MAXDOUBLE;
 #ifdef FTT_2D
+  GfsVariableTracerVOFHeight * t = GFS_VARIABLE_TRACER_VOF_HEIGHT (v);
   FttComponent c;
   m->x = 0.;
   m->y = 1.;
@@ -2733,6 +3030,9 @@ static gboolean variable_tracer_vof_height_event (GfsEvent * event,
     gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, hf.hb);
     gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, hf.ht);
     gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_height_bc, &hf);
+
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) remaining_boundary_height_undefined, &hf);
   }
 
   /* update normals and alpha */
