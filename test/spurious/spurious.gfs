@@ -85,7 +85,7 @@ Define MU sqrt(0.8/LAPLACE)
   ProjectionParams { tolerance = 1e-6 }
   AdvectionParams { scheme = none }
 
-  VariableTracerVOF T
+  VariableTracerVOFHeight T
   VariableCurvature K T
   SourceTension T 1 K
   SourceViscosity MU
