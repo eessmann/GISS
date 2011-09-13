@@ -64,7 +64,8 @@ void    gfs_youngs_gradient        (FttCell * cell,
 
 /* GfsVariableTracerVOF: header */
 
-typedef struct _GfsVariableTracerVOF                GfsVariableTracerVOF;
+typedef struct _GfsVariableTracerVOF        GfsVariableTracerVOF;
+typedef struct _GfsVariableTracerVOFClass   GfsVariableTracerVOFClass;
 
 struct _GfsVariableTracerVOF {
   /*< private >*/
@@ -74,13 +75,24 @@ struct _GfsVariableTracerVOF {
   GfsVariable * m[FTT_DIMENSION], * alpha;
 };
 
+struct _GfsVariableTracerVOFClass {
+  /*< private >*/
+  GfsVariableClass parent_class;
+
+  /*< public >*/
+  void (* update) (GfsVariable * v, GfsDomain * domain);
+};
+
 #define GFS_VARIABLE_TRACER_VOF(obj)            GTS_OBJECT_CAST (obj,\
 					           GfsVariableTracerVOF,\
 					           gfs_variable_tracer_vof_class ())
+#define GFS_VARIABLE_TRACER_VOF_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
+						 GfsVariableTracerVOFClass,\
+						 gfs_variable_tracer_vof_class())
 #define GFS_IS_VARIABLE_TRACER_VOF(obj)         (gts_object_is_from_class (obj,\
 						   gfs_variable_tracer_vof_class ()))
 
-GfsVariableClass * gfs_variable_tracer_vof_class  (void);
+GfsVariableTracerVOFClass * gfs_variable_tracer_vof_class  (void);
 
 /* GfsVariableTracerVOFHeight: header */
 
@@ -100,7 +112,7 @@ struct _GfsVariableTracerVOFHeight {
 #define GFS_IS_VARIABLE_TRACER_VOF_HEIGHT(obj)         (gts_object_is_from_class (obj,\
 						   gfs_variable_tracer_vof_height_class ()))
 
-GfsVariableClass * gfs_variable_tracer_vof_height_class  (void);
+GfsVariableTracerVOFClass * gfs_variable_tracer_vof_height_class  (void);
 
 void     gfs_tracer_vof_advection  (GfsDomain * domain,
 				    GfsAdvectionParams * par);

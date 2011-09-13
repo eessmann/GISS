@@ -959,18 +959,15 @@ static void allocate_normal_alpha (GfsVariableTracerVOF * t)
   g_free (description);
 }
 
-static gboolean variable_tracer_vof_event (GfsEvent * event, 
-					   GfsSimulation * sim)
+static void variable_tracer_vof_update (GfsVariable * v, GfsDomain * domain)
 {
-  GfsVariable * v = GFS_VARIABLE1 (event);
-  GfsDomain * domain = GFS_DOMAIN (sim);
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) v->fine_coarse, v);
-  gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, v);
-
+  gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, v);
+    
   /* update normals and alpha */
-  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (event);
+  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
   guint l, depth = gfs_domain_depth (domain);
   FttComponent c;
   for (l = 0; l <= depth; l++) {
@@ -980,8 +977,18 @@ static gboolean variable_tracer_vof_event (GfsEvent * event,
       gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->m[c]);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->alpha);
   }
+}
 
-  return TRUE;
+static gboolean variable_tracer_vof_event (GfsEvent * event, 
+					   GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_tracer_vof_class ())->parent_class)->event)
+      (event, sim)) {
+    (* GFS_VARIABLE_TRACER_VOF_CLASS (GTS_OBJECT (event)->klass)->update) (GFS_VARIABLE1 (event),
+									   GFS_DOMAIN (sim));
+    return TRUE;
+  }
+  return FALSE;
 }
 
 static void variable_tracer_vof_destroy (GtsObject * o)
@@ -1015,6 +1022,7 @@ static void variable_tracer_vof_read (GtsObject ** o, GtsFile * fp)
 
 static void variable_tracer_vof_class_init (GtsObjectClass * klass)
 {
+  GFS_VARIABLE_TRACER_VOF_CLASS (klass)->update = variable_tracer_vof_update;
   GFS_EVENT_CLASS (klass)->event = variable_tracer_vof_event;
   klass->destroy = variable_tracer_vof_destroy;
   klass->read = variable_tracer_vof_read;
@@ -1115,22 +1123,21 @@ static void variable_tracer_vof_init (GfsVariable * v)
   GFS_VARIABLE_TRACER (v)->advection.cfl = 0.5;
 }
 
-GfsVariableClass * gfs_variable_tracer_vof_class (void)
+GfsVariableTracerVOFClass * gfs_variable_tracer_vof_class (void)
 {
-  static GfsVariableClass * klass = NULL;
+  static GfsVariableTracerVOFClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_variable_tracer_vof_info = {
+    GtsObjectClassInfo info = {
       "GfsVariableTracerVOF",
       sizeof (GfsVariableTracerVOF),
-      sizeof (GfsVariableClass),
+      sizeof (GfsVariableTracerVOFClass),
       (GtsObjectClassInitFunc) variable_tracer_vof_class_init,
       (GtsObjectInitFunc) variable_tracer_vof_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_tracer_class ()), 
-				  &gfs_variable_tracer_vof_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_tracer_class ()), &info);
   }
 
   return klass;
@@ -1492,7 +1499,7 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
     			      (FttCellTraverseFunc) f_over_dV, &p);
 
     /* update VOF data (normals etc...) */
-    gfs_event_do (GFS_EVENT (p.par->v), GFS_SIMULATION (domain));
+    (* GFS_VARIABLE_TRACER_VOF_CLASS (GTS_OBJECT (p.par->v)->klass)->update) (p.par->v, domain);
   }
   cstart = (cstart + 1) % FTT_DIMENSION;
   gts_object_destroy (GTS_OBJECT (par->fv));
@@ -2850,7 +2857,7 @@ static void height_contact_normal_bc (FttCell * cell, HFState * hf)
 	  height_propagation_from_boundary (cell, hf, h);
 	  /* set height of neighbouring (non-interfacial) column */
 	  /* the line below ensures that the interface does not enter
-	     the non-interfacial neighbor */
+	     the non-interfacial neighbour */
 	  if (orientation*alpha > orientation*m.x) alpha = m.x;
 	  GFS_VALUE (n1, h) = ftt_cell_level (n1) == ftt_cell_level (cell) ? 
 	    orientation*((alpha - m.x*3./2.)/m.y - 0.5) : /* neighbour at same level */
@@ -2872,22 +2879,26 @@ static void contact_angle_height (FttCell * cell, GfsVariable * h, HFState * hf)
      * containing the contact line.
      */
     gdouble theta = contact_angle_bc (cell, hf);
-    /* fixme?: 
-     * The tangential bc saturates at SLOPE_MAX. Curvatures defined
-     * using parabolic interpolation are not consistent when the
-     * ordinates differ too much. This is not a problem if the interface
-     * is well-resolved (because the curvature will then be defined
-     * using the heights in the other direction, which leads to a
-     * well-defined curvature with the correct contact angle condition).
-     *
-     * If the interface is not well-resolved and if the desired contact
-     * angle is smaller than THETA_MIN (or larger than M_PI -
-     * THETA_MIN), the contact angle will saturate at THETA_MIN = atan (1./SLOPE_MAX).
-     */
-    gdouble cotantheta = (theta < THETA_MIN ? SLOPE_MAX : 
-			  theta > M_PI - THETA_MIN ? - SLOPE_MAX :
-			  1./tan(theta));
-    GFS_VALUE (neighbor, h) = GFS_VALUE (cell, h) + cotantheta;
+    if (theta == M_PI/2.)
+      GFS_VALUE (neighbor, h) = GFS_VALUE (cell, h);
+    else {
+      /* fixme?: 
+       * The tangential bc saturates at SLOPE_MAX. Curvatures defined
+       * using parabolic interpolation are not consistent when the
+       * ordinates differ too much. This is not a problem if the interface
+       * is well-resolved (because the curvature will then be defined
+       * using the heights in the other direction, which leads to a
+       * well-defined curvature with the correct contact angle condition).
+       *
+       * If the interface is not well-resolved and if the desired contact
+       * angle is smaller than THETA_MIN (or larger than M_PI -
+       * THETA_MIN), the contact angle will saturate at THETA_MIN = atan (1./SLOPE_MAX).
+       */
+      gdouble cotantheta = (theta < THETA_MIN ? SLOPE_MAX : 
+			    theta > M_PI - THETA_MIN ? - SLOPE_MAX :
+			    1./tan(theta));
+      GFS_VALUE (neighbor, h) = GFS_VALUE (cell, h) + cotantheta;
+    }
   }
 }
 
@@ -3004,18 +3015,15 @@ static void vof_height_plane (FttCell * cell, GfsVariable * v)
   }
 }
 
-static gboolean variable_tracer_vof_height_event (GfsEvent * event, 
-						  GfsSimulation * sim)
+static void variable_tracer_vof_height_update (GfsVariable * v, GfsDomain * domain)
 {
-  GfsVariable * v = GFS_VARIABLE1 (event);
-  GfsDomain * domain = GFS_DOMAIN (sim);
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) v->fine_coarse, v);
-  gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, v);
-
+  gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, v);
+  
   /* update height functions */
-  GfsVariableTracerVOFHeight * h = GFS_VARIABLE_TRACER_VOF_HEIGHT (event);
+  GfsVariableTracerVOFHeight * h = GFS_VARIABLE_TRACER_VOF_HEIGHT (v);
   HFState hf;
   hf.f = v;
   for (hf.c = 0; hf.c < FTT_DIMENSION; hf.c++) {
@@ -3036,7 +3044,7 @@ static gboolean variable_tracer_vof_height_event (GfsEvent * event,
   }
 
   /* update normals and alpha */
-  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (event);
+  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
   guint l, depth = gfs_domain_depth (domain);
   FttComponent c;
   for (l = 0; l <= depth; l++) {
@@ -3046,8 +3054,6 @@ static gboolean variable_tracer_vof_height_event (GfsEvent * event,
       gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->m[c]);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL, l, t->alpha);
   }
-
-  return TRUE;
 }
 
 static void variable_tracer_vof_height_destroy (GtsObject * o)
@@ -3096,20 +3102,20 @@ static void variable_tracer_vof_height_read (GtsObject ** o, GtsFile * fp)
 
 static void variable_tracer_vof_height_class_init (GtsObjectClass * klass)
 {
-  GFS_EVENT_CLASS (klass)->event = variable_tracer_vof_height_event;
+  GFS_VARIABLE_TRACER_VOF_CLASS (klass)->update = variable_tracer_vof_height_update;
   klass->destroy = variable_tracer_vof_height_destroy;
   klass->read = variable_tracer_vof_height_read;
 }
 
-GfsVariableClass * gfs_variable_tracer_vof_height_class (void)
+GfsVariableTracerVOFClass * gfs_variable_tracer_vof_height_class (void)
 {
-  static GfsVariableClass * klass = NULL;
+  static GfsVariableTracerVOFClass * klass = NULL;
 
   if (klass == NULL) {
     GtsObjectClassInfo info = {
       "GfsVariableTracerVOFHeight",
       sizeof (GfsVariableTracerVOFHeight),
-      sizeof (GfsVariableClass),
+      sizeof (GfsVariableTracerVOFClass),
       (GtsObjectClassInitFunc) variable_tracer_vof_height_class_init,
       (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
