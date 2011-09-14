@@ -2416,13 +2416,17 @@ static GfsVariable * smallest_height (FttCell * cell, GfsVariableTracerVOFHeight
   return hv;
 }
 
-static gboolean curvature_along_direction_new (FttCell * cell, 
-					       GfsVariableTracerVOFHeight * t,
-					       FttComponent c,
-					       gdouble * kappa,
-					       gdouble * kmax,
-					       GtsVector * interface,
-					       guint * nb)
+/* Returns: 
+   2 if the curvature was computed using equally-spaced cells
+   1 if the curvature was computed using non-equally-spaced cells
+   0 if the curvature could not be computed */
+static int curvature_along_direction_new (FttCell * cell, 
+					  GfsVariableTracerVOFHeight * t,
+					  FttComponent c,
+					  gdouble * kappa,
+					  gdouble * kmax,
+					  GtsVector * interface,
+					  guint * nb)
 {
 #ifdef FTT_2D
   gdouble orientation;
@@ -2435,7 +2439,7 @@ static gboolean curvature_along_direction_new (FttCell * cell,
     if (!hv)
       hv = smallest_height (ftt_cell_neighbor (cell, 2*oc + 1), t, c, &orientation);
     if (!hv) /* give up */
-      return FALSE;
+      return 0;
   }
 
   gdouble x[3], h[3];
@@ -2468,7 +2472,7 @@ static gboolean curvature_along_direction_new (FttCell * cell,
       if (kmax)
 	*kmax = MAX (*kmax, fabs (kaxi));
     }
-    return TRUE;
+    return (x[0] == 1. && x[1] == -1.) + 1;
   }
   else { /* h[2] == GFS_NODATA || h[0] == GFS_NODATA || h[1] == GFS_NODATA */
     /* collect interface positions (based on height function) */
@@ -2478,13 +2482,13 @@ static gboolean curvature_along_direction_new (FttCell * cell,
 	interface[*nb][oc] = x[i];
 	interface[(*nb)++][c] = orientation*h[i]; 
       }
-    return FALSE;
+    return 0;
   }
 #else /* 3D */
   g_assert_not_implemented ();
 #endif /* 3D */
 
-  return FALSE;
+  return 0;
 }
 
 /**
@@ -2525,9 +2529,32 @@ gdouble gfs_height_curvature_new (FttCell * cell, GfsVariableTracerVOFHeight * t
   gdouble kappa = 0.;
   GtsVector interface[FTT_DIMENSION*NI];
   guint n = 0;
-  for (c = 0; c < FTT_DIMENSION; c++) /* try each direction */
-    if (curvature_along_direction_new (cell, t, try[c], &kappa, kmax, interface, &n))
+  for (c = 0; c < FTT_DIMENSION; c++) { /* try each direction */
+    int status = curvature_along_direction_new (cell, t, try[c], &kappa, kmax, interface, &n);
+    if (status == 2) /* equally-spaced cells */
       return kappa;
+    else if (status == 1) { /* non-equally-spaced cells */
+      /* look for better (i.e. equally-spaced) curvature for neighbors on the same column */
+      guint level = ftt_cell_level (cell);
+      FttDirection d;
+      for (d = 2*try[c]; d <= 2*try[c] + 1; d++) {
+	FttCell * neighbor = ftt_cell_neighbor (cell, d);
+	if (neighbor && ftt_cell_level (neighbor) == level) {
+	  n = 0;
+	  gdouble kappa1, kmax1;
+	  int s1 = curvature_along_direction_new (neighbor, t, try[c],
+						  &kappa1, &kmax1, interface, &n);
+	  if (s1 == 2) { /* equally-spaced cells */
+	    if (kmax)
+	      *kmax = kmax1;
+	    return kappa1;
+	  }
+	}
+      }
+      /* did not find better neighboring curvatures, return non-equally-spaced value */
+      return kappa;
+    }
+  }
 
   /* Could not compute curvature from the simple algorithm along any direction:
    * Try parabola fitting of the collected interface positions */
