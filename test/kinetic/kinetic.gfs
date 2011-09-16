@@ -36,7 +36,7 @@
     ProjectionParams { tolerance = 1e-6 }
     ApproxProjectionParams { tolerance = 1e-6 }
 
-    VariableTracerVOF T
+    VariableTracerVOFHeight T
     VariableFiltered T1 T 1
     InitFraction T (- ellipse(-0.3,0,radius,radius))
     Init {} { U = T }

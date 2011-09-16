@@ -41,7 +41,7 @@
 # Author: St\'ephane Popinet
 # Command: sh sessile.sh
 # Version: 110912
-# Required files: sessile.sh rk-6 error-5.ref
+# Required files: sessile.sh error-6.ref
 # Running time: 6 minutes
 # Generated files: rk.eps convergence.eps
 1 0 GfsSimulation GfsBox GfsGEdge { x = 0.5 y = 0.5 } {
@@ -52,10 +52,11 @@
     PhysicalParams { alpha = 1./(T + 0.01*(1. - T)) }
     SourceViscosity 0.2/(T + 100.*(1. - T)) { beta = 1 }
     InitFraction T (- ellipse (0, 0, 0.3, 0.3))
-    Time { end = 5 }
-    EventStop { istep = 10 } U 1e-5 DU
-    OutputScalarNorm { istep = 10 } v { v = Velocity }
-    OutputScalarStats { istep = 10 } k { v = (T > 0. && T < 1. ? K : NODATA) }
+    AdaptFunction { istep = 1 } { cmax = 0 maxlevel = LEVEL } (T > 0 && T < 1)
+    Time { end = 3 }
+    EventStop { istep = 10 } K 1e-5 DK
+    OutputScalarNorm { istep = 10 } v-ANGLE { v = Velocity }
+    OutputScalarStats { istep = 10 } k { v = (T > 1e-3 && T < 1. - 1e-3 ? K : NODATA) }
     OutputScalarSum { start = end } vol { v = T }
 #    OutputSimulation { istep = 10 } stdout
     OutputSimulation { start = end } end-ANGLE.gfs

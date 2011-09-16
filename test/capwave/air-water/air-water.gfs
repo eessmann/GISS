@@ -38,7 +38,7 @@
   ApproxProjectionParams { tolerance = 1e-6 }
   ProjectionParams { tolerance = 1e-6 }
   Refine floor(LEVEL + 1 - (LEVEL - 2)*fabs(y)/1.5)
-  VariableTracerVOF T
+  VariableTracerVOFHeight T
   VariableFiltered T1 T 1
   VariableCurvature K T
   SourceTension T 1 K

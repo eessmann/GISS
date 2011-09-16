@@ -1,9 +1,10 @@
 levels="5 6 7 8"
 
+diameter=0.22
 if test x$donotrun != xtrue; then
     rm -f fit
     for level in $levels; do
-	if gerris2D -D LEVEL=$level oscillation.gfs >> fit; then :
+	if gerris2D -D LEVEL=$level -D DIAMETER=$diameter oscillation.gfs >> fit; then :
 	else
 	    exit 1
 	fi
@@ -21,14 +22,14 @@ else
 fi
 
 if cat <<EOF | gnuplot ; then :
-    set term postscript eps color lw 3 solid 20
+    set term postscript eps color lw 3 solid 20 enhanced
 
-    D = 0.2
+    D = $diameter
     n = 2.
     sigma = 1.
     rhol = 1.
     rhog = 1./1000.
-    r0 = 0.1
+    r0 = D/2.
     omega0 = sqrt((n**3-n)*sigma/((rhol+rhog)*r0**3))
 
     set output 'k.eps'
@@ -46,14 +47,17 @@ if cat <<EOF | gnuplot ; then :
     empirical_constant = 30.
     plot 'fit' u (D*2.**(\$1)):(1./(\$3**2.*D**3.))*empirical_constant**2. t "" w lp pt 5 ps 2
 
-    unset logscale
     set output 'frequency.eps'
     set xlabel 'Diameter (grid points)'
     set ylabel 'Frequency error (%)'
     unset grid
     set xzeroaxis
-    plot 'fit' u (D*2.**(\$1)):(\$4/2./omega0-1.)*100. t "" w lp pt 5 ps 2
-
+    set key spacing 1.5 top right
+    ftitle(a,b) = sprintf("%.0f/x^{%4.2f}", exp(a), -b)
+    f(x)=a+b*x
+    fit f(x) 'fit' u (log((D*2.**(\$1)))):(log((abs(\$4/2./omega0-1.))*100.)) via a,b
+    plot 'fit' u (D*2.**(\$1)):(abs(\$4/2./omega0-1.))*100. t "" w lp pt 5 ps 2, \
+         exp(f(log(x))) t ftitle(a,b)
     
 EOF
 else

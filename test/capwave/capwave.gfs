@@ -63,7 +63,7 @@
   # Decrease the resolution linearly down to 3 levels close to the
   # bottom and top boundaries
   Refine floor(LEVEL + 1 - (LEVEL - 2)*fabs(y)/1.5)
-  VariableTracerVOF T
+  VariableTracerVOFHeight T
   VariableCurvature K T
   SourceTension T 1 K
   VariablePosition Y T y

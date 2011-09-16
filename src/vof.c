@@ -2395,51 +2395,105 @@ static gdouble neighboring_column (FttCell * cell,
   return (GFS_VALUE (n, h) - orientation*(&p.x)[c])*2.;
 }
 
-static GfsVariable * smallest_height (FttCell * cell, GfsVariableTracerVOFHeight * t,
-				      FttComponent c,
-				      gdouble * orientation)
+static void curvature_from_h (FttCell * cell, GfsDomain * domain,
+			      gdouble x[3], gdouble h[3],
+			      gdouble orientation, FttComponent c,
+			      gdouble * kappa, gdouble * kmax)
 {
-  /* picks the height closest to the interface */
-  GfsVariable * hv = NULL;
-  if (cell == NULL)
-    return NULL;
-  if (GFS_HAS_DATA (cell, t->hb[c])) {
-    hv = t->hb[c]; *orientation = 1.;
-    if (GFS_HAS_DATA (cell, t->ht[c]) && 
-	fabs (GFS_VALUE (cell, t->ht[c])) < fabs (GFS_VALUE (cell, t->hb[c]))) {
-      hv = t->ht[c]; *orientation = -1.;
+  gdouble size = ftt_cell_size (cell);
+  gdouble det = x[0]*x[1]*(x[0] - x[1]), a = x[1]*(h[0] - h[2]), b = x[0]*(h[1] - h[2]);
+  gdouble hxx = 2.*(a - b)/det;
+  gdouble hx = (x[0]*b - x[1]*a)/det;
+  gdouble dnm = 1. + hx*hx;
+  *kappa = hxx/(size*sqrt (dnm*dnm*dnm));
+  if (kmax)
+    *kmax = fabs (*kappa);
+  if (GFS_IS_AXI (domain)) {
+    FttVector p;
+    ftt_cell_pos (cell, &p);
+    gdouble nr, r = p.y;
+    if (c == FTT_X)
+      nr = hx;
+    else {
+      r += orientation*h[2]*size;
+      nr = - orientation;
     }
+    gdouble kaxi = nr/(sqrt(dnm)*r);
+    *kappa += kaxi;
+    if (kmax)
+      *kmax = MAX (*kmax, fabs (kaxi));
   }
-  else if (GFS_HAS_DATA (cell, t->ht[c])) {
-    hv = t->ht[c]; *orientation = -1.;
-  }
-  return hv;
 }
 
-/* Returns: 
-   2 if the curvature was computed using equally-spaced cells
-   1 if the curvature was computed using non-equally-spaced cells
-   0 if the curvature could not be computed */
-static int curvature_along_direction_new (FttCell * cell, 
-					  GfsVariableTracerVOFHeight * t,
-					  FttComponent c,
-					  gdouble * kappa,
-					  gdouble * kmax,
-					  GtsVector * interface,
-					  guint * nb)
+/**
+ * gfs_curvature_along_direction:
+ * @cell: a #FttCell.
+ * @t: a #GfsVariableTracerVOFHeight.
+ * @c: x, y or z.
+ * @kappa: the curvature.
+ * @kmax: the maximum curvature.
+ *
+ * Tries to compute an interface curvature for @cell using
+ * height-functions on equally-spaced columns in direction @c.
+ *
+ * Returns: %TRUE if the curvature was successfully computed, %FALSE
+ * otherwise.
+ */
+gboolean gfs_curvature_along_direction (FttCell * cell, 
+					GfsVariableTracerVOFHeight * t,
+					FttComponent c,
+					gdouble * kappa,
+					gdouble * kmax)
+{
+  g_return_val_if_fail (cell != NULL, FALSE);
+  g_return_val_if_fail (t != NULL, FALSE);
+  g_return_val_if_fail (kappa != NULL, FALSE);
+
+#ifdef FTT_2D
+  gdouble orientation;
+  GfsVariable * hv = gfs_closest_height (cell, t, c, &orientation);
+  if (!hv)
+    return FALSE;
+
+  FttComponent oc = FTT_ORTHOGONAL_COMPONENT (c);
+  gdouble x[3], h[3];
+  h[2] = GFS_VALUE (cell, hv); x[2] = 0.;
+  h[0] = neighboring_column (cell, hv, c, orientation, 2*oc, &x[0]);
+  if (h[0] != GFS_NODATA && x[0] == 1.) {
+    h[1] = neighboring_column (cell, hv, c, orientation, 2*oc + 1, &x[1]);
+    if (h[1] != GFS_NODATA && x[1] == 1.) {
+      x[1] = - x[1];
+      curvature_from_h (cell, GFS_VARIABLE1 (t)->domain, x, h, orientation, c, kappa, kmax);
+      return TRUE;
+    }
+  }
+#else /* 3D */
+  g_assert_not_implemented ();
+#endif /* 3D */
+
+  return FALSE;
+}
+
+static gboolean curvature_along_direction_new (FttCell * cell, 
+					       GfsVariableTracerVOFHeight * t,
+					       FttComponent c,
+					       gdouble * kappa,
+					       gdouble * kmax,
+					       GtsVector * interface,
+					       guint * nb)
 {
 #ifdef FTT_2D
   gdouble orientation;
-  GfsVariable * hv = smallest_height (cell, t, c, &orientation);
+  GfsVariable * hv = gfs_closest_height (cell, t, c, &orientation);
   FttComponent oc = FTT_ORTHOGONAL_COMPONENT (c);
   if (!hv) {
     /* no data for either directions, look "right" and "left" to
        collect potential interface positions */
-    hv = smallest_height (ftt_cell_neighbor (cell, 2*oc), t, c, &orientation);
+    hv = gfs_closest_height (ftt_cell_neighbor (cell, 2*oc), t, c, &orientation);
     if (!hv)
-      hv = smallest_height (ftt_cell_neighbor (cell, 2*oc + 1), t, c, &orientation);
+      hv = gfs_closest_height (ftt_cell_neighbor (cell, 2*oc + 1), t, c, &orientation);
     if (!hv) /* give up */
-      return 0;
+      return FALSE;
   }
 
   gdouble x[3], h[3];
@@ -2449,30 +2503,8 @@ static int curvature_along_direction_new (FttCell * cell,
   x[1] = - x[1];
 
   if (h[2] != GFS_NODATA && h[0] != GFS_NODATA && h[1] != GFS_NODATA) {
-    gdouble size = ftt_cell_size (cell);
-    gdouble det = x[0]*x[1]*(x[0] - x[1]), a = x[1]*(h[0] - h[2]), b = x[0]*(h[1] - h[2]);
-    gdouble hxx = 2.*(a - b)/det;
-    gdouble hx = (x[0]*b - x[1]*a)/det;
-    gdouble dnm = 1. + hx*hx;
-    *kappa = hxx/(size*sqrt (dnm*dnm*dnm));
-    if (kmax)
-      *kmax = fabs (*kappa);
-    if (GFS_IS_AXI (GFS_VARIABLE1 (t)->domain)) {
-      FttVector p;
-      ftt_cell_pos (cell, &p);
-      gdouble nr, r = p.y;
-      if (c == FTT_X)
-	nr = hx;
-      else {
-	r += orientation*h[2]*size;
-	nr = - orientation;
-      }
-      gdouble kaxi = nr/(sqrt(dnm)*r);
-      *kappa += kaxi;
-      if (kmax)
-	*kmax = MAX (*kmax, fabs (kaxi));
-    }
-    return (x[0] == 1. && x[1] == -1.) + 1;
+    curvature_from_h (cell, GFS_VARIABLE1 (t)->domain, x, h, orientation, c, kappa, kmax);
+    return TRUE;
   }
   else { /* h[2] == GFS_NODATA || h[0] == GFS_NODATA || h[1] == GFS_NODATA */
     /* collect interface positions (based on height function) */
@@ -2482,13 +2514,13 @@ static int curvature_along_direction_new (FttCell * cell,
 	interface[*nb][oc] = x[i];
 	interface[(*nb)++][c] = orientation*h[i]; 
       }
-    return 0;
+    return FALSE;
   }
 #else /* 3D */
   g_assert_not_implemented ();
 #endif /* 3D */
 
-  return 0;
+  return FALSE;
 }
 
 /**
@@ -2497,8 +2529,10 @@ static int curvature_along_direction_new (FttCell * cell,
  * @t: a #GfsVariableTracerVOFHeight.
  * @kmax: a pointer or %NULL.
  *
- * An implementation of the Height-Function (HF) method generalised to
- * adaptive meshes.
+ * Tries to estimate the curvature of an interface using
+ * height-functions, either on equally-spaced columns, non-equally
+ * spaced columns or using parabola fits of interface positions
+ * defined using the height-functions in all directions.
  *
  * If @kmax is not %NULL, it is filled with the absolute value of the
  * maximum surface curvature (note that in 2D this is just the
@@ -2529,32 +2563,9 @@ gdouble gfs_height_curvature_new (FttCell * cell, GfsVariableTracerVOFHeight * t
   gdouble kappa = 0.;
   GtsVector interface[FTT_DIMENSION*NI];
   guint n = 0;
-  for (c = 0; c < FTT_DIMENSION; c++) { /* try each direction */
-    int status = curvature_along_direction_new (cell, t, try[c], &kappa, kmax, interface, &n);
-    if (status == 2) /* equally-spaced cells */
+  for (c = 0; c < FTT_DIMENSION; c++) /* try each direction */
+    if (curvature_along_direction_new (cell, t, try[c], &kappa, kmax, interface, &n))
       return kappa;
-    else if (status == 1) { /* non-equally-spaced cells */
-      /* look for better (i.e. equally-spaced) curvature for neighbors on the same column */
-      guint level = ftt_cell_level (cell);
-      FttDirection d;
-      for (d = 2*try[c]; d <= 2*try[c] + 1; d++) {
-	FttCell * neighbor = ftt_cell_neighbor (cell, d);
-	if (neighbor && ftt_cell_level (neighbor) == level) {
-	  n = 0;
-	  gdouble kappa1, kmax1;
-	  int s1 = curvature_along_direction_new (neighbor, t, try[c],
-						  &kappa1, &kmax1, interface, &n);
-	  if (s1 == 2) { /* equally-spaced cells */
-	    if (kmax)
-	      *kmax = kmax1;
-	    return kappa1;
-	  }
-	}
-      }
-      /* did not find better neighboring curvatures, return non-equally-spaced value */
-      return kappa;
-    }
-  }
 
   /* Could not compute curvature from the simple algorithm along any direction:
    * Try parabola fitting of the collected interface positions */
@@ -2711,7 +2722,7 @@ static void height_propagation (FttCell * cell, HFState * hf, GfsVariable * h, g
   for (d = 2*hf->c; d <= 2*hf->c + 1; d++, orientation = - orientation) {
     gdouble H = GFS_VALUE (cell, h);
     FttCell * neighbor = ftt_cell_neighbor (cell, d);
-    while (fabs (H) < DMAX && neighbor && !is_interfacial (neighbor, hf->f) && 
+    while (fabs (H) < DMAX - 1. && neighbor && !is_interfacial (neighbor, hf->f) && 
 	   ftt_cell_level (neighbor) == level) {
       H -= orientation;
       GFS_VALUE (neighbor, h) = H;
@@ -2779,7 +2790,7 @@ static void height_propagation_from_boundary (FttCell * cell, HFState * hf, GfsV
     cell = ftt_cell_neighbor (cell, d);
   }
   /* propagate to non-interfacial cells up to DMAX */
-  while (fabs (H) < DMAX && cell && !is_interfacial (cell, hf->f) && 
+  while (fabs (H) < DMAX - 1. && cell && !is_interfacial (cell, hf->f) && 
 	 ftt_cell_level (cell) == level) {
     H += orientation;
     GFS_VALUE (cell, h) = H;
@@ -2980,7 +2991,7 @@ static gboolean height_normal (FttCell * cell, GfsVariable * v, FttVector * m)
   m->y = 1.;
   for (c = 0; c < 2; c++) {
     gdouble orientation;
-    GfsVariable * hv = smallest_height (cell, t, c, &orientation);
+    GfsVariable * hv = gfs_closest_height (cell, t, c, &orientation);
     if (hv != NULL) {
       gdouble H = GFS_VALUE (cell, hv);
       gdouble x[2], h[2];
@@ -3152,6 +3163,43 @@ GfsVariableTracerVOFClass * gfs_variable_tracer_vof_height_class (void)
   }
 
   return klass;
+}
+
+/**
+ * gfs_closest_height:
+ * @cell: a #FttCell.
+ * @t: a #GfsVariableTracerVOFHeight.
+ * @c: x, y or z.
+ * @orientation: the orientation or %NULL.
+ *
+ * Returns: the variable containing the height value (in direction @c)
+ * closest to the interface, in which case orientation is set to 1 or
+ * -1, or %NULL if no heights are defined for this cell.
+ */
+GfsVariable * gfs_closest_height (FttCell * cell, 
+				  GfsVariableTracerVOFHeight * t,
+				  FttComponent c,
+				  gdouble * orientation)
+{
+  g_return_val_if_fail (cell != NULL, NULL);
+  g_return_val_if_fail (t != NULL, NULL);
+
+  GfsVariable * hv = NULL;
+  gdouble o = 0.;
+  if (cell == NULL)
+    return NULL;
+  if (GFS_HAS_DATA (cell, t->hb[c])) {
+    hv = t->hb[c]; o = 1.;
+    if (GFS_HAS_DATA (cell, t->ht[c]) && 
+	fabs (GFS_VALUE (cell, t->ht[c])) < fabs (GFS_VALUE (cell, t->hb[c]))) {
+      hv = t->ht[c]; o = -1.;
+    }
+  }
+  else if (GFS_HAS_DATA (cell, t->ht[c])) {
+    hv = t->ht[c]; o = -1.;
+  }
+  if (orientation) *orientation = o;
+  return hv;
 }
 
 /** \endobject{GfsVariableTracerVOFHeight} */

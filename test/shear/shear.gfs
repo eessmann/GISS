@@ -60,7 +60,7 @@
 
     # Add tracer T, using a VOF advection scheme.
     # The default scheme is a Van-Leer limited, second-order upwind scheme.
-    VariableTracerVOF T
+    VariableTracerVOFHeight T
 
     InitFraction T (ellipse (0, -.236338, 0.2, 0.2))
 

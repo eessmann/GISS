@@ -39,7 +39,7 @@
   ApproxProjectionParams { tolerance = 1e-6 }
   ProjectionParams { tolerance = 1e-6 }
   Refine LEVEL
-  VariableTracerVOF {} T
+  VariableTracerVOFHeight T
 
   # Line below is for direct imposition of gravity acceleration
   #  Source {} V 50

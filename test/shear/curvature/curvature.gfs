@@ -32,7 +32,7 @@
 # \end{table}
 #
 # Author: St\'ephane Popinet
-# Command: sh ../shear.sh curvature.gfs | gfsview-batch2D curvature.gfv
+# Command: sh ../shear.sh curvature.gfs
 # Version: 091022
 # Required files: ../shear.sh norms.ref curvature.gfv
 # Running time: 2 minutes
@@ -46,7 +46,7 @@
 
     # Add tracer T, using a VOF advection scheme.
     # The default scheme is a Van-Leer limited, second-order upwind scheme.
-    VariableTracerVOF T
+    VariableTracerVOFHeight T
 
     # Curvature K of the interface defined by T
     VariableCurvature K T
@@ -69,8 +69,8 @@
         return T > 0. && T < 1. ? ftt_cell_size (cell)*fabs (K) : 0.;
     }
 
-    OutputSimulation { start = 2.5 } stdout
-    EventScript { start = 2.5 } { echo "Save t-2.5.eps { format = EPS line_width = 0.5 }" }
+    GModule gfsview
+    OutputView { start = 2.5 } t-2.5.eps { format = EPS line_width = 0.5 } curvature.gfv
     
     # Add a new variable 
     Variable Tref

@@ -140,6 +140,11 @@ gdouble  gfs_vof_interpolate       (FttCell * cell,
 gdouble  gfs_height_curvature      (FttCell * cell, 
 				    GfsVariableTracerVOF * t,
 				    gdouble * kmax);
+gboolean gfs_curvature_along_direction (FttCell * cell, 
+					GfsVariableTracerVOFHeight * t,
+					FttComponent c,
+					gdouble * kappa,
+					gdouble * kmax);
 gdouble  gfs_height_curvature_new  (FttCell * cell, 
 				    GfsVariableTracerVOFHeight * t,
 				    gdouble * kmax);
@@ -148,6 +153,10 @@ gdouble  gfs_fit_curvature         (FttCell * cell,
 				    gdouble * kmax);
 gdouble  gfs_vof_correctness       (FttCell * cell, 
 				    GfsVariableTracerVOF * t);
+GfsVariable * gfs_closest_height   (FttCell * cell, 
+				    GfsVariableTracerVOFHeight * t,
+				    FttComponent c,
+				    gdouble * orientation);
 
 #ifdef __cplusplus
 }

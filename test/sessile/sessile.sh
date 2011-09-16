@@ -1,5 +1,5 @@
-angles="30 40 60 90 120 150 180"
-for level in 4 5; do
+angles="30 45 60 90 120 150 180"
+for level in 4 5 6; do
     for theta in $angles; do
 	if gerris2D -DANGLE=$theta -DLEVEL=$level sessile.gfs; then :
 	else
@@ -44,10 +44,10 @@ awk 'BEGIN {
        if ($3 > kexact) error = $3 - kexact;
        else error = kexact - $3;
        print $1,error/kexact; 
-     }' < rk-5 > error-5
+     }' < rk-6 > error-6
 
 if gnuplot <<EOF; then :
-set term postscript eps color enhanced lw 2 18
+set term postscript eps color enhanced lw 3 20
 set output 'rk.eps'
 set xlabel "Contact angle (degrees)"
 set ylabel "Radius"
@@ -66,7 +66,7 @@ set logscale
 set xtics 4.8,2,19.2
 plot [4:25][0.0005:]\
   'convergence-30' u 1:(abs(\$2)) w lp t '30 degrees', \
-  'convergence-40' u 1:(abs(\$2)) w lp t '40 degrees', \
+  'convergence-45' u 1:(abs(\$2)) w lp t '45 degrees', \
   'convergence-60' u 1:(abs(\$2)) w lp t '60 degrees', \
   'convergence-90' u 1:(abs(\$2)) w lp t '90 degrees', \
   'convergence-120' u 1:(abs(\$2)) w lp t '120 degrees', \
@@ -81,8 +81,8 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-if (Curve('error-5',1,2) - Curve('error-5.ref',1,2)).max() > 0.:
-    print (Curve('error-5',1,2) - Curve('error-5.ref',1,2)).max()
+if (Curve('error-6',1,2) - Curve('error-6.ref',1,2)).max() > 0.:
+    print (Curve('error-6',1,2) - Curve('error-6.ref',1,2)).max()
     exit(1)
 EOF
 else
