@@ -11,7 +11,8 @@
 # scheme to follow the interface. The errors are due to the
 # first-order estimation of the fluxes (i.e. second-order for the VOF
 # interface reconstruction but only first-order for the velocity
-# field).
+# field). A levelset method would not suffer from the same problem
+# (green line on Figure \ref{evolution}).
 #
 # Figure \ref{error} illustrates the evolution of the error with
 # time. For $t=1$ the interface is at 45 degrees and the errors in
@@ -19,14 +20,15 @@
 #
 # \begin{figure}[htbp] 
 # \caption{\label{evolution}Evolution of the VOF interface (blue) in a
-# shear flow. The red line is the exact solution. (a) $t=0$, (b)
+# shear flow. The red line is the exact solution. The green line is
+# the zero-levelset of a distance function. (a) $t=0$, (b)
 # $t=1$, (c) $t=2$, (d) $t=5$.}
 # \begin{center}
 # \begin{tabular}{cc}
-# (a) \includegraphics[width=0.35\hsize]{rotate-0.eps} &
-# (b) \includegraphics[width=0.35\hsize]{rotate-1.eps} \\
-# (c) \includegraphics[width=0.35\hsize]{rotate-2.eps} &
-# (d) \includegraphics[width=0.35\hsize]{rotate-5.eps}
+# (a) \includegraphics[width=0.45\hsize]{rotate-0.eps} &
+# (b) \includegraphics[width=0.45\hsize]{rotate-1.eps} \\
+# (c) \includegraphics[width=0.45\hsize]{rotate-2.eps} &
+# (d) \includegraphics[width=0.45\hsize]{rotate-5.eps}
 # \end{tabular}
 # \end{center}
 # \end{figure}
@@ -49,13 +51,16 @@
     PhysicalParams { L = 2. }
     Refine 3
     VariableTracerVOF T
-    Init {} { U = y }
+    VariableTracer D
+    Init {} {
+	U = y
+	D = x
+    }
     InitFraction T (x - 1e-4)
     Variable Tref
     InitFraction { istep = 1 } Tref (x - t*y)
     OutputScalarNorm { istep = 1 } error { v = (T - Tref) }
     Time { end = 5 }
-#    OutputSimulation { istep = 1 } stdout
     GModule gfsview
     OutputView { step = 1 } rotate-%g.eps { format = EPS } rotate.gfv
     EventScript { start = end } {
