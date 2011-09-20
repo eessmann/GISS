@@ -2472,6 +2472,8 @@ gboolean gfs_curvature_along_direction (FttCell * cell,
   GfsVariable * hv = gfs_closest_height (cell, t, c, &orientation);
   if (!hv)
     return FALSE;
+  else if (fabs (GFS_VALUE (cell, hv)) > 1.)
+    return FALSE; /* interface is too far */
 
   FttComponent oc = FTT_ORTHOGONAL_COMPONENT (c);
   gdouble x[3], h[3];
@@ -2513,6 +2515,8 @@ static gboolean curvature_along_direction_new (FttCell * cell,
     if (!hv) /* give up */
       return FALSE;
   }
+  else if (fabs (GFS_VALUE (cell, hv)) > 1.)
+    return FALSE; /* interface is too far */
 
   gdouble x[3], h[3];
   h[2] = GFS_VALUE (cell, hv); x[2] = 0.;
@@ -3030,7 +3034,7 @@ static gboolean height_normal (FttCell * cell, GfsVariable * v, FttVector * m)
   for (c = 0; c < 2; c++) {
     gdouble orientation;
     GfsVariable * hv = gfs_closest_height (cell, t, c, &orientation);
-    if (hv != NULL) {
+    if (hv != NULL && fabs (GFS_VALUE (cell, hv)) <= 1.) {
       gdouble H = GFS_VALUE (cell, hv);
       gdouble x[2], h[2];
       FttComponent oc = FTT_ORTHOGONAL_COMPONENT (c);
