@@ -30,8 +30,6 @@ Isoline {
 } x-t*y {
   amin = 1
   amax = 1
-  np = 10
-  format = "% 6.3e"
   cmap = Jet
 } 0 {
   reversed = 0
@@ -52,8 +50,6 @@ VOF {
 } P {
   amin = 1
   amax = 1
-  np = 10
-  format = "% 6.3e"
   cmap = Jet
 } T {
   reversed = 0
@@ -74,8 +70,6 @@ Vectors {
 } P {
   amin = 1
   amax = 1
-  np = 10
-  format = "% 6.3e"
   cmap = Jet
 } U V {
   scale = 0.114

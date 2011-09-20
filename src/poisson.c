@@ -888,11 +888,11 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
   gdouble alpha = data[2] ? gfs_function_face_value (data[2], face) : 1.;
   gdouble v = lambda2[face->d/2]*alpha*gfs_domain_face_fraction (kappa->domain, face)*
     gfs_function_face_value (t->sigma, face);
-  gdouble k1 = GFS_VARIABLE (face->cell, kappa->i);
-  gdouble k2 = GFS_VARIABLE (face->neighbor, kappa->i);
+  gdouble k1 = GFS_VALUE (face->cell, kappa);
+  gdouble k2 = GFS_VALUE (face->neighbor, kappa);
 #if 0
-  gdouble c1 = GFS_VARIABLE (face->cell, t->c->i);
-  gdouble c2 = GFS_VARIABLE (face->neighbor, t->c->i);
+  gdouble c1 = GFS_VALUE (face->cell, t->c);
+  gdouble c2 = GFS_VALUE (face->neighbor, t->c);
   gdouble w1 = c1*(1. - c1);
   gdouble w2 = c2*(1. - c2);
 
@@ -1000,11 +1000,11 @@ static void get_from_above (FttCell * parent, GfsVariable * v)
     f.d = 2*c;
     f.neighbor = n.c[f.d];
     gfs_face_gradient (&f, &g, v->i, level);
-    g1 = g.b - g.a*GFS_VARIABLE (parent, v->i);
+    g1 = g.b - g.a*GFS_VALUE (parent, v);
     f.d = 2*c + 1;
     f.neighbor = n.c[f.d];
     gfs_face_gradient (&f, &g, v->i, level);
-    g2 = g.b - g.a*GFS_VARIABLE (parent, v->i);
+    g2 = g.b - g.a*GFS_VALUE (parent, v);
     (&h.x)[c] = (g1 - g2)/2.;
   }
 
@@ -1013,10 +1013,10 @@ static void get_from_above (FttCell * parent, GfsVariable * v)
     if (child.c[i]) {
       FttVector p;
       
-      GFS_VARIABLE (child.c[i], v->i) = GFS_VARIABLE (parent, v->i);
+      GFS_VALUE (child.c[i], v) = GFS_VALUE (parent, v);
       ftt_cell_relative_pos (child.c[i], &p);
       for (c = 0; c < FTT_DIMENSION; c++)
-	GFS_VARIABLE (child.c[i], v->i) += (&p.x)[c]*(&h.x)[c];
+	GFS_VALUE (child.c[i], v) += (&p.x)[c]*(&h.x)[c];
     }
 }
 
@@ -1029,8 +1029,8 @@ static void get_from_below_3D (FttCell * cell, const GfsVariable * v)
   ftt_cell_children (cell, &child);
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i])
-      val += GFS_VARIABLE (child.c[i], v->i);
-  GFS_VARIABLE (cell, v->i) = val/2.;
+      val += GFS_VALUE (child.c[i], v);
+  GFS_VALUE (cell, v) = val/2.;
 }
 
 static void get_from_below_2D (FttCell * cell, const GfsVariable * v)
@@ -1042,8 +1042,8 @@ static void get_from_below_2D (FttCell * cell, const GfsVariable * v)
   ftt_cell_children (cell, &child);
   for (i = 0; i < FTT_CELLS; i++)
     if (child.c[i])
-      val += GFS_VARIABLE (child.c[i], v->i);
-  GFS_VARIABLE (cell, v->i) = val;
+      val += GFS_VALUE (child.c[i], v);
+  GFS_VALUE (cell, v) = val;
 }
 
 static void relax_loop (GfsDomain * domain, 
