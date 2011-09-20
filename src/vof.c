@@ -2690,16 +2690,34 @@ static void undefined_height (FttCell * cell, HFState * hf)
 #define SIGN(x) ((x) > 0. ? 1. : -1.)
 #define BOUNDARY_HIT (2.*HMAX)
 
-static gint children_are_full_or_empty (FttCell * cell, FttDirection d, GfsVariable * fv)
+static gint children_half_height (FttCell * cell, FttDirection d, GfsVariable * fv,
+				  gdouble * H, gint * n)
 {
   FttCellChildren child;
-  guint i, n = ftt_cell_children_direction (cell, FTT_OPPOSITE_DIRECTION (d), &child);
+  guint i, m = ftt_cell_children_direction (cell, FTT_OPPOSITE_DIRECTION (d), &child);
   gint s = 0;
-  for (i = 0; i < n; i++)
+  for (i = 0; i < m; i++)
     if (child.c[i]) {
       gdouble f = GFS_VALUE (child.c[i], fv);
-      if (f > 0. && f < 1.)
+      if (f > 0. && f < 1.) {
+	s = 0;
+	break;
+      }
+      s = SIGN (f - 0.5);
+    }
+  if (s != 0)
+    return s;
+
+  *H += GFS_VALUE (cell, fv);
+  (*n)++;
+
+  m = ftt_cell_children_direction (cell, d, &child);
+  for (i = 0; i < m; i++)
+    if (child.c[i]) {
+      gdouble f = GFS_VALUE (child.c[i], fv);
+      if (f > 0. && f < 1.) {
 	return 0;
+      }
       s = SIGN (f - 0.5);
     }
   return s;
@@ -2719,10 +2737,12 @@ static gint half_height (FttCell * cell, GfsVariable * fv, FttDirection d,
 	return 0;
       if (GFS_CELL_IS_BOUNDARY (neighbor))
 	return 2;
-      if (FTT_CELL_IS_LEAF (neighbor) || !(s = children_are_full_or_empty (neighbor, d, fv))) {
+      if (FTT_CELL_IS_LEAF (neighbor)) {
 	*H += f;
 	(*n)++;
       }
+      else
+	s = children_half_height (neighbor, d, fv, H, n);
     }
     else /* full or empty cell */
       s = SIGN (f - 0.5);
