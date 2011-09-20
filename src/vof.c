@@ -2376,23 +2376,41 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
 
 /* Returns: the height @h of the neighboring column in direction @d or
    GFS_NODATA if it is undefined. Also fills @x with the coordinates
-   of the cell (1 or 3/2 depending on its relative level). */
+   of the cell (3/4, 1 or 3/2 depending on its relative level). */
 static gdouble neighboring_column (FttCell * cell, 
 				   GfsVariable * h, FttComponent c, gdouble orientation,
 				   FttDirection d, gdouble * x)
 {
   FttCell * n = ftt_cell_neighbor (cell, d);
-  if (!n || !GFS_HAS_DATA (n, h))
+  if (!n)
     return GFS_NODATA;
   if (ftt_cell_level (cell) == ftt_cell_level (n)) {
-    *x = 1.;
-    return GFS_VALUE (n, h);
+    if (GFS_HAS_DATA (n, h)) {
+      *x = 1.;
+      return GFS_VALUE (n, h);
+    }
+    else if (FTT_CELL_IS_LEAF (n))
+      return GFS_NODATA;
+    /* check finer neighbors */
+    FttCellChildren child;
+    int i, m = ftt_cell_children_direction (n, FTT_OPPOSITE_DIRECTION (d), &child);
+    for (i = 0; i < m; i++)
+      if (child.c[i] && GFS_HAS_DATA (child.c[i], h)) {
+	FttVector p;
+	ftt_cell_relative_pos (child.c[i], &p);
+	*x = 3./4.;
+	return GFS_VALUE (child.c[i], h)/2. + orientation*(&p.x)[c];
+      }
+    return GFS_NODATA;
   }
-  /* coarser neighbor */
-  FttVector p;
-  ftt_cell_relative_pos (cell, &p);
-  *x = 3./2.;
-  return (GFS_VALUE (n, h) - orientation*(&p.x)[c])*2.;
+  else if (GFS_HAS_DATA (n, h)) {
+    /* coarser neighbor */
+    FttVector p;
+    ftt_cell_relative_pos (cell, &p);
+    *x = 3./2.;
+    return (GFS_VALUE (n, h) - orientation*(&p.x)[c])*2.;
+  }
+  return GFS_NODATA;
 }
 
 static void curvature_from_h (FttCell * cell, GfsDomain * domain,
@@ -2659,7 +2677,7 @@ typedef struct {
 static gboolean is_interfacial (FttCell * cell, gpointer data)
 {
   GfsVariable * f = data;
-  return (GFS_VALUE (cell, f) > 0. && GFS_VALUE (cell, f) < 1.);
+  return !GFS_IS_FULL (GFS_VALUE (cell, f));
 }
 
 static void undefined_height (FttCell * cell, HFState * hf)
