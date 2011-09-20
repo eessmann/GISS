@@ -1903,6 +1903,12 @@ static void advection_run (GfsSimulation * sim)
     gdouble tstart = gfs_clock_elapsed (domain->timer);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
+
+    gfs_domain_cell_traverse (domain,
+    			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+    			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
+    gfs_simulation_adapt (sim);
+
     if (!streamfunction) {
       gfs_domain_face_traverse (domain, FTT_XYZ,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -1912,16 +1918,10 @@ static void advection_run (GfsSimulation * sim)
 				(FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity,
 				gfs_domain_velocity (domain));
     }
+
     gfs_simulation_set_timestep (sim);
 
     gfs_advance_tracers (domain, sim->advection_params.dt);
-
-    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
-
-    gfs_domain_cell_traverse (domain,
-			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
-    gfs_simulation_adapt (sim);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
