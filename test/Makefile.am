@@ -11,6 +11,7 @@ TESTDIRS = \
 	dumbell \
 	advection \
 	shear \
+	rotate \
 	diffusion \
 	conservation \
 	reynolds \
