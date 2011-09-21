@@ -1063,6 +1063,8 @@ static void gfs_output_interface_grid_read (GtsObject ** o, GtsFile * fp)
       {GTS_NONE}
     }; 
     gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;
     output->cost = cos(output->theta*M_PI/180.);
     output->sint = sin(output->theta*M_PI/180.);
     output->cosa = cos(output->alpha*M_PI/180.);
