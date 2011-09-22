@@ -425,6 +425,7 @@ static void bc_angle_read (GtsObject ** o, GtsFile * fp)
 
   if (!GFS_IS_VARIABLE_TRACER_VOF_HEIGHT (GFS_BC (*o)->v))
     gts_file_error (fp, "expecting a GfsVariableTracerVOFHeight");
+  gfs_function_set_units (GFS_BC_VALUE (*o)->val, 0.);
 }
 
 static void gfs_bc_angle_init (GfsBc * object)
