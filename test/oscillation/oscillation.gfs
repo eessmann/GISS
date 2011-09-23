@@ -94,7 +94,7 @@ Define RADIUS(x,y)      (DIAMETER/2.*(1. + EPSILON*cos (2.*atan2 (y, x))))
     }
 
     EventScript { start = end } {
-        cat <<EOF | gnuplot 2>&1 | awk '{if ($1 == "result:") print LEVEL,$2,$3,$4;}'
+        cat <<EOF | gnuplot 2>&1 | awk '{if ($1 == "result:") print LEVEL,$2,$3,$4,$5;}'
            k(t)=a*exp(-b*t)*(1.-cos(c*t))
            a = 3e-4
            b = 1.5
@@ -109,7 +109,7 @@ Define RADIUS(x,y)      (DIAMETER/2.*(1. + EPSILON*cos (2.*atan2 (y, x))))
 
            c = 2.*omega0
            fit k(x) 'k-LEVEL' u 3:5 via a,b,c
-           print "result: ", a, b, c       
+           print "result: ", a, b, c, D
 EOF
         rm -f fit.log
     }

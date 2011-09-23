@@ -23,8 +23,8 @@
 # \ref{convergence}).
 #
 # \begin{figure}[htbp]
-# \caption{\label{rk}Dependence of the equilibrium radius as a
-# function of the contact angle for various spatial resolutions.}
+# \caption{\label{rk}Dependence of the equilibrium radius on the
+# contact angle for several spatial resolutions.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{rk.eps}
 # \end{center}
@@ -32,7 +32,7 @@
 #
 # \begin{figure}[htbp]
 # \caption{\label{convergence}Convergence of the equilibrium curvature
-# as a function of spatial resolution.}
+# with the spatial resolution.}
 # \begin{center}
 # \includegraphics[width=0.8\hsize]{convergence.eps}
 # \end{center}

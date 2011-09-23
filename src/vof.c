@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1145,6 +1145,7 @@ GfsVariableTracerVOFClass * gfs_variable_tracer_vof_class (void)
 
 typedef struct {
   GfsAdvectionParams * par, vpar;
+  GfsVariable * u, * du[FTT_DIMENSION - 1];
   FttComponent c;
   GfsDomain * domain;
   guint depth, too_coarse;
@@ -1161,59 +1162,60 @@ static gdouble plane_volume_shifted (FttVector m, gdouble alpha, FttVector p[2])
   return gfs_plane_volume (&m, alpha);
 }
 
-static gdouble fine_fraction (FttCellFace * face, VofParms * p, gdouble un)
+static gdouble fine_fraction (FttCellFace * face, VofParms * p, gdouble un,
+			      FttVector q[2])
 {
   gdouble f = GFS_VALUE (face->cell, p->par->v);
   if (f == 0. || f == 1.)
     return f;
-  else if (GFS_CELL_IS_BOUNDARY (face->cell))
-    return GFS_STATE (face->cell)->f[face->d].v;
   else {
     FttComponent c;
-    FttVector m;
+    FttVector m, q1[2];
     gdouble alpha = GFS_VALUE (face->cell, GFS_VARIABLE_TRACER_VOF (p->par->v)->alpha);
 
     for (c = 0; c < FTT_DIMENSION; c++)
       (&m.x)[c] = GFS_VALUE (face->cell, GFS_VARIABLE_TRACER_VOF (p->par->v)->m[c]);
+    c = face->d/2;
     if (face->d % 2 != 0) {
-      (&m.x)[face->d/2] = - (&m.x)[face->d/2];
-      alpha += (&m.x)[face->d/2];
+      (&m.x)[c] = - (&m.x)[c];
+      alpha += (&m.x)[c];
     }
 
-    FttVector q[2] = {{0., 0., 0.},{1., 1., 1.}};
-
-    (&q[0].x)[face->d/2] = 1. - un; (&q[1].x)[face->d/2] = 1.;
-    return plane_volume_shifted (m, alpha, q);
+    q1[0] = q[0]; q1[1] = q[1];
+    (&q1[0].x)[c] = 1. - un;
+    return plane_volume_shifted (m, alpha, q1);
   }
 }
 
-static gdouble coarse_fraction (FttCellFace * face, VofParms * p, gdouble un)
+static gdouble coarse_fraction (FttCellFace * face, VofParms * p, gdouble un,
+				FttVector q[2])
 {
   gdouble f = GFS_VALUE (face->neighbor, p->par->v);
   if (f == 0. || f == 1.)
     return f;
   else {
-    FttVector q[2] = {{0., 0., 0.},{1., 1., 1.}};
     FttComponent c;
-    FttVector m, o;
+    FttVector m, o, q1[2];
     gdouble alpha = GFS_VALUE (face->neighbor, GFS_VARIABLE_TRACER_VOF (p->par->v)->alpha);
     
     for (c = 0; c < FTT_DIMENSION; c++)
       (&m.x)[c] = GFS_VALUE (face->neighbor, GFS_VARIABLE_TRACER_VOF (p->par->v)->m[c]);
+    
     if (!FTT_FACE_DIRECT (face)) {
       (&m.x)[face->d/2] = - (&m.x)[face->d/2];
       alpha += (&m.x)[face->d/2];
     }
     
     /* shift interface perpendicularly */
+    q1[0] = q[0]; q1[1] = q[1];
     ftt_cell_relative_pos (face->cell, &o);
     for (c = 0; c < FTT_DIMENSION; c++)
       if (c != face->d/2) {
-	(&q[0].x)[c] = (&o.x)[c] + 0.25;
-	(&q[1].x)[c] = (&o.x)[c] + 0.75;
+	(&q1[0].x)[c] = (&o.x)[c] + 1./4. + (&q1[0].x)[c]/2.;
+	(&q1[1].x)[c] = (&o.x)[c] + 1./4. + (&q1[1].x)[c]/2.;
       }
-    (&q[1].x)[face->d/2] = un;
-    return plane_volume_shifted (m, alpha, q);
+    (&q1[1].x)[face->d/2] = un;
+    return plane_volume_shifted (m, alpha, q1);
   }
 }
 
@@ -1229,10 +1231,12 @@ static void face_too_coarse (FttCellFace * face, VofParms * p)
       un = - un;
     if (un > 0.) {
       gdouble f = GFS_VALUE (face->neighbor, p->par->v);
-      if (GFS_IS_FULL (f) &&
-	  fine_fraction (face, p, un*p->par->dt/ftt_cell_size (face->cell)) != f) {
-	p->too_coarse++;
-	TOO_COARSE (face->neighbor) = TRUE;
+      if (GFS_IS_FULL (f)) {
+	FttVector q[2] = {{0., 0., 0.},{1., 1., 1.}};
+	if (fine_fraction (face, p, un*p->par->dt/ftt_cell_size (face->cell), q) != f) {
+	  p->too_coarse++;
+	  TOO_COARSE (face->neighbor) = TRUE;
+	}
       }
     }
   }
@@ -1337,89 +1341,11 @@ static void refine_too_coarse (FttCell * cell, VofParms * p)
   }
 }
 
-static void vof_face_value (FttCellFace * face, VofParms * p)
-{
-  gdouble un = GFS_FACE_NORMAL_VELOCITY (face)*p->par->dt/ftt_cell_size (face->cell);
-  if (!FTT_FACE_DIRECT (face))
-    un = - un;
-
-  switch (ftt_face_type (face)) {
-  case FTT_FINE_FINE: {
-    if (un < 0.) {
-      FttCell * tmp = face->cell;
-      face->cell = face->neighbor;
-      face->neighbor = tmp;
-      face->d = FTT_OPPOSITE_DIRECTION (face->d);
-      un = - un;
-    }
-    GFS_STATE (face->cell)->f[face->d].v = fine_fraction (face, p, un);
-    break;
-  }
-  case FTT_FINE_COARSE: {
-    GFS_STATE (face->cell)->f[face->d].v = 
-      un > 0. ? fine_fraction (face, p, un) : coarse_fraction (face, p, -un/2.);
-    break;
-  }
-  default:
-    g_assert_not_reached ();
-  }
-}
-
-static void vof_flux (FttCellFace * face, VofParms * p)
-{
-  gdouble un = GFS_FACE_NORMAL_VELOCITY (face)*p->par->dt/ftt_cell_size (face->cell);
-  if (!FTT_FACE_DIRECT (face))
-    un = - un;
-  if (fabs (un) > 0.5) {
-    FttVector p;
-    ftt_face_pos (face, &p);
-    g_warning ("CFL (%g) at (%g,%g,%g) is larger than 0.5!", un, p.x, p.y, p.z);
-  }
-  un *= gfs_domain_face_fraction (p->par->fv->domain, face);
-
-  gdouble flux = GFS_STATE (face->cell)->f[face->d].v*un;
-  switch (ftt_face_type (face)) {
-  case FTT_FINE_FINE: {
-    if (un < 0.)
-      flux = GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v*un;
-    GFS_VALUE (face->neighbor, p->par->fv) += flux;
-    GFS_VALUE (face->neighbor, p->vpar.fv) += un;
-    break;
-  }
-  case FTT_FINE_COARSE: {
-    GFS_VALUE (face->neighbor, p->par->fv) += flux/FTT_CELLS;
-    GFS_VALUE (face->neighbor, p->vpar.fv) += un/FTT_CELLS;
-    break;
-  }
-  default:
-    g_assert_not_reached ();
-  }
-  GFS_VALUE (face->cell, p->par->fv) -= flux;
-  GFS_VALUE (face->cell, p->vpar.fv) -= un;
-}
-
-static void initialize_dV (FttCell * cell, GfsVariable * dV)
-{
-  GFS_VALUE (cell, dV) = 1.;
-}
-
-static void f_times_dV (FttCell * cell, VofParms * p)
-{
-  GFS_VALUE (cell, p->par->fv) = 0.;
-  GFS_VALUE (cell, p->vpar.fv) = 0.;
-  GFS_VALUE (cell, p->par->v) *= GFS_VALUE (cell, p->vpar.v);
-}
-
-static void f_over_dV (FttCell * cell, VofParms * p)
-{
-  g_assert (GFS_VALUE (cell, p->vpar.v) > 0.);
-  gdouble f = GFS_VALUE (cell, p->par->v)/GFS_VALUE (cell, p->vpar.v);
-  GFS_VALUE (cell, p->par->v) = f < 1e-10 ? 0. : f > 1. - 1e-10 ? 1. : f;
-}
-
 /* refine cells which would lead to a loss of resolution at the interface */
 static void fix_too_coarse (GfsDomain * domain, VofParms * p)
 {
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) gfs_cell_reset, p->par->fv);
   p->depth = 0;
   p->domain = domain;
   p->too_coarse = 0;
@@ -1449,6 +1375,126 @@ static void fix_too_coarse (GfsDomain * domain, VofParms * p)
   domain->cell_init_data = domain;
 }
 
+static void vof_flux (FttCellFace * face, VofParms * p)
+{
+  gdouble size = ftt_cell_size (face->cell);
+  gdouble un = GFS_FACE_NORMAL_VELOCITY (face)*p->par->dt/size, dun[FTT_DIMENSION - 1];
+  FttComponent c;
+
+  int n; /* loop over n "horizontal bands" */
+  if (GFS_IS_FULL (GFS_VALUE (face->cell, p->par->v)) && 
+      GFS_IS_FULL (GFS_VALUE (face->neighbor, p->par->v))) {
+    n = 1; /* non-interfacial cells: use only one band */
+    for (c = 0; c < FTT_DIMENSION - 1; c++)
+      dun[c] = 0.;
+  }
+  else {
+    for (c = 0; c < FTT_DIMENSION - 1; c++)
+      dun[c] = gfs_face_interpolated_value (face, p->du[c]->i)*p->par->dt;
+    n = 4; /* interfacial cells: use 4 bands */
+  }
+
+  if (!FTT_FACE_DIRECT (face)) {
+    un = - un;
+    for (c = 0; c < FTT_DIMENSION - 1; c++)
+      dun[c] = - dun[c];
+  }
+  if (fabs (un) > 0.51) {
+    FttVector p;
+    ftt_face_pos (face, &p);
+    g_warning ("CFL (%g) at (%g,%g,%g) is larger than 0.51!", un, p.x, p.y, p.z);
+  }
+
+  FttVector q[2] = {{0., 0., 0.},{1., 1., 1.}};
+  gdouble flux = 0., unj = un;
+  FttComponent ci = FTT_ORTHOGONAL_COMPONENT (p->c);
+
+#if FTT_2D
+  gdouble f = gfs_domain_face_fraction (p->par->fv->domain, face)/n;
+#else /* 3D */
+  gdouble f = gfs_domain_face_fraction (p->par->fv->domain, face)/(n*n);
+  FttComponent cj = FTT_ORTHOGONAL_COMPONENT (ci);
+  int j;
+  for (j = 0; j < n; j++) {
+    (&q[0].x)[cj] = j/(gdouble) n;        /* front of the band */
+    (&q[1].x)[cj] = (j + 1)/(gdouble) n;  /* back of the band */
+    /* linear interpolation of the velocity at the center of the band */
+    unj = un + (1 - n + 2*j)*dun[1]/(gdouble) (2*n);
+#endif /* 3D */
+
+  int i;
+  for (i = 0; i < n; i++) {
+    (&q[0].x)[ci] = i/(gdouble) n;        /* bottom of the band */
+    (&q[1].x)[ci] = (i + 1)/(gdouble) n;  /* top of the band */
+    /* linear interpolation of the velocity at the center of the band */
+    gdouble uni = unj + (1 - n + 2*i)*dun[0]/(gdouble) (2*n);
+    
+    switch (ftt_face_type (face)) {
+    case FTT_FINE_FINE: {
+      if (uni < 0.) {
+	FttCell * tmp = face->cell;
+	face->cell = face->neighbor;
+	face->neighbor = tmp;
+	face->d = FTT_OPPOSITE_DIRECTION (face->d);
+	uni = - uni;
+	unj = - unj;
+	un = - un;
+	for (c = 0; c < FTT_DIMENSION - 1; c++)
+	  dun[c] = - dun[c];
+      }
+      flux = fine_fraction (face, p, uni, q)*uni*f;
+      GFS_VALUE (face->neighbor, p->par->fv) += flux;
+      GFS_VALUE (face->neighbor, p->vpar.fv) += uni*f;
+      break;
+    }
+    case FTT_FINE_COARSE: {
+      flux = uni > 0. ? 
+	fine_fraction (face, p, uni, q)*uni*f : 
+	coarse_fraction (face, p, -uni/2., q)*uni*f;
+      GFS_VALUE (face->neighbor, p->par->fv) += flux/FTT_CELLS;
+      GFS_VALUE (face->neighbor, p->vpar.fv) += uni*f/FTT_CELLS;
+      break;
+    }
+    default:
+      g_assert_not_reached ();
+    }
+    GFS_VALUE (face->cell, p->par->fv) -= flux;
+    GFS_VALUE (face->cell, p->vpar.fv) -= uni*f;
+  }
+
+#if !FTT_2D
+  }
+#endif
+}
+
+static void initialize_dV (FttCell * cell, GfsVariable * dV)
+{
+  GFS_VALUE (cell, dV) = 1.;
+}
+
+static void reset_fluxes (FttCell * cell, VofParms * p)
+{
+  GFS_VALUE (cell, p->par->fv) = 0.;
+  GFS_VALUE (cell, p->vpar.fv) = 0.;
+  FttComponent c, d = FTT_ORTHOGONAL_COMPONENT (p->c);
+  for (c = 0; c < FTT_DIMENSION - 1; c++) {
+    GFS_VALUE (cell, p->du[c]) = gfs_center_gradient (cell, d, p->u->i)/ftt_cell_size (cell);
+    d = FTT_ORTHOGONAL_COMPONENT (d);
+  }
+}
+
+static void f_times_dV (FttCell * cell, VofParms * p)
+{
+  GFS_VALUE (cell, p->par->v) *= GFS_VALUE (cell, p->vpar.v);
+}
+
+static void f_over_dV (FttCell * cell, VofParms * p)
+{
+  g_assert (GFS_VALUE (cell, p->vpar.v) > 0.);
+  gdouble f = GFS_VALUE (cell, p->par->v)/GFS_VALUE (cell, p->vpar.v);
+  GFS_VALUE (cell, p->par->v) = f < 1e-10 ? 0. : f > 1. - 1e-10 ? 1. : f;
+}
+
 /**
  * gfs_tracer_vof_advection:
  * @domain: a #GfsDomain.
@@ -1462,7 +1508,7 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
 {
   VofParms p;
   static FttComponent cstart = 0;
-  FttComponent c;
+  FttComponent c, d;
 
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
@@ -1473,30 +1519,27 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
 
   p.par = par;
   gfs_advection_params_init (&p.vpar);
+  for (d = 0; d < FTT_DIMENSION - 1; d++)
+    p.du[d] = gfs_temporary_variable (domain);
   p.vpar.v = gfs_temporary_variable (domain);
   p.vpar.fv = gfs_temporary_variable (domain);
   p.vpar.average = par->average;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) initialize_dV, p.vpar.v);
+  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) initialize_dV, p.vpar.v);
   par->fv = gfs_temporary_variable (domain);
   for (c = 0; c < FTT_DIMENSION; c++) {
     p.c = (cstart + c) % FTT_DIMENSION;
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
     fix_too_coarse (domain, &p);
-    gfs_domain_face_traverse (domain, p.c,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) vof_face_value, &p);
-    gfs_domain_face_bc (domain, p.c, par->v);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) f_times_dV, &p);
+    p.u = gfs_domain_velocity (domain)[p.c];
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) reset_fluxes, &p);
+    for (d = 0; d < FTT_DIMENSION - 1; d++)
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.du[d]);
     gfs_domain_face_traverse (domain, p.c,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) vof_flux, &p);
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) f_times_dV, &p);
     gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) par->update, par);
     gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) par->update, &p.vpar);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-    			      (FttCellTraverseFunc) f_over_dV, &p);
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) f_over_dV, &p);
 
     /* update VOF data (normals etc...) */
     (* GFS_VARIABLE_TRACER_VOF_CLASS (GTS_OBJECT (p.par->v)->klass)->update) (p.par->v, domain);
@@ -1506,6 +1549,8 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   par->fv = NULL;
   gts_object_destroy (GTS_OBJECT (p.vpar.v));
   gts_object_destroy (GTS_OBJECT (p.vpar.fv));
+  for (d = 0; d < FTT_DIMENSION - 1; d++)
+    gts_object_destroy (GTS_OBJECT (p.du[d]));
 
   gfs_domain_timer_stop (domain, "tracer_vof_advection");
 }

@@ -9,13 +9,21 @@ View {
   lc = 0.001
   reactivity = 0.1
 }
-VOF {
-  r = 0.00114443 g = 0 b = 1
+Boundaries {
+  r = 0 g = 0 b = 0
   shading = Constant
   maxlevel = -1
   font_size = 1
   raster_font = 1
-  line_width = 3
+  line_width = 1
+}
+Vectors {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+  line_width = 1
 } {
   n.x = 0 n.y = 0 n.z = 1
   pos = 0
@@ -23,9 +31,18 @@ VOF {
   amin = 1
   amax = 1
   cmap = Jet
-} T {
-  reversed = 0
+} U V {
+  scale = 0.114
   use_scalar = 0
-  draw_edges = 0
-  interpolate = 0
+}
+Cells {
+  r = 0 g = 0 b = 0
+  shading = Constant
+  maxlevel = -1
+  font_size = 1
+  raster_font = 1
+  line_width = 1
+} {
+  n.x = 0 n.y = 0 n.z = 1
+  pos = 0
 }

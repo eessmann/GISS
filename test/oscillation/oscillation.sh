@@ -1,21 +1,44 @@
 levels="5 6 7 8"
 
-diameter=0.22
-if test x$donotrun != xtrue; then
+rm -f error laplace
+
+# try several small perturbations of the interface position
+# the results are quite sensitive to interface configurations
+# for i in 4 3 2 1 0; do
+for i in 0; do
+    diameter=`awk -v i=$i 'BEGIN { print 0.2 - i/512.}'`
     rm -f fit
-    for level in $levels; do
-	if gerris2D -D LEVEL=$level -D DIAMETER=$diameter oscillation.gfs >> fit; then :
-	else
-	    exit 1
-	fi
-    done
-fi
+    if test x$donotrun != xtrue; then
+	for level in $levels; do
+	    if gerris2D -D LEVEL=$level -D DIAMETER=$diameter oscillation.gfs >> fit; then :
+	    else
+		exit 1
+	    fi
+	done
+    fi
+
+    if awk -v D=$diameter 'BEGIN {
+              n = 2.
+              sigma = 1.
+              rhol = 1.
+              rhog = 1./1000.
+              r0 = D/2.
+              omega0 = sqrt((n**3-n)*sigma/((rhol+rhog)*r0**3))
+              empirical_constant = 30.
+            }{
+              print D*2.**$1, $4/2./omega0-1., D >> "error"
+              print D*2.**$1, (1./($3**2.*D**3.))*empirical_constant**2, D >> "laplace"
+            }' < fit; then :
+    else
+	exit 1
+    fi
+done
 
 rm -f fit-*
 if awk '{
-  level = $1; a = $2; b = $3; c = $4;
-  for (t = 0; t <= 1.; t += 0.005)
-    print t, 2.*a*exp(-b*t) >> "fit-" level;
+    level = $1; a = $2; b = $3; c = $4;
+    for (t = 0; t <= 1.; t += 0.005)
+      print t, 2.*a*exp(-b*t) >> "fit-" level;
 }' < fit ; then :
 else
     exit 1
@@ -23,14 +46,6 @@ fi
 
 if cat <<EOF | gnuplot ; then :
     set term postscript eps color lw 3 solid 20 enhanced
-
-    D = $diameter
-    n = 2.
-    sigma = 1.
-    rhol = 1.
-    rhog = 1./1000.
-    r0 = D/2.
-    omega0 = sqrt((n**3-n)*sigma/((rhol+rhog)*r0**3))
 
     set output 'k.eps'
     set xlabel 'Time'
@@ -44,8 +59,7 @@ if cat <<EOF | gnuplot ; then :
     set logscale y
     set logscale x 2
     set grid
-    empirical_constant = 30.
-    plot 'fit' u (D*2.**(\$1)):(1./(\$3**2.*D**3.))*empirical_constant**2. t "" w lp pt 5 ps 2
+    plot 'laplace' t "" w p pt 5 ps 2
 
     set output 'frequency.eps'
     set xlabel 'Diameter (grid points)'
@@ -55,8 +69,8 @@ if cat <<EOF | gnuplot ; then :
     set key spacing 1.5 top right
     ftitle(a,b) = sprintf("%.0f/x^{%4.2f}", exp(a), -b)
     f(x)=a+b*x
-    fit f(x) 'fit' u (log((D*2.**(\$1)))):(log((abs(\$4/2./omega0-1.))*100.)) via a,b
-    plot 'fit' u (D*2.**(\$1)):(abs(\$4/2./omega0-1.))*100. t "" w lp pt 5 ps 2, \
+    fit f(x) 'error' u (log(\$1)):(log(abs(\$2)*100.)) via a,b
+    plot 'error' u (\$1):(abs(\$2)*100.) t "" w p pt 5 ps 2, \
          exp(f(log(x))) t ftitle(a,b)
     
 EOF
