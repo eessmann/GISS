@@ -34,6 +34,7 @@ endif
 if HAS_GSL
 BUBBLES = libbubbles2D.la libbubbles3D.la
 endif
+FFT = libfft2D.la libfft3D.la
 
 pkglib_LTLIBRARIES = \
 	$(MAP) \
@@ -57,6 +58,7 @@ pkglib_LTLIBRARIES = \
 	$(LIS) \
 	$(AGMG) \
 	$(ODE) \
+	$(FFT) \
         $(BUBBLES)
 
 bin_PROGRAMS = \
@@ -81,6 +83,7 @@ EXTRA_DIST = \
 	lis.mod \
 	agmg.mod \
 	ode.mod \
+	fft.mod\
 	topics.mod
 
 BUILT_SOURCES = \
@@ -99,6 +102,7 @@ BUILT_SOURCES = \
 	lis.c \
 	agmg.c \
 	ode.c \
+	fft.c\
 	topics.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
@@ -180,6 +184,11 @@ libbubbles3D_la_LIBADD = $(GSL_LIBS)
 libbubbles2D_la_SOURCES = bubbles.c
 libbubbles2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
 libbubbles2D_la_LIBADD = $(GSL_LIBS)
+
+libfft3D_la_SOURCES = fft.c
+libfft3D_la_CFLAGS = $(AM_CFLAGS) -lfftw3
+libfft2D_la_SOURCES = fft.c
+libfft2D_la_CFLAGS = $(AM_CFLAGS) -lfftw3 -DFTT_2D=1
 
 libhypre3D_la_SOURCES = hypre.c
 libhypre3D_la_CFLAGS = $(AM_CFLAGS)
