@@ -100,7 +100,6 @@ Define LEVEL 10
     Time { end = 5.8 dtmax = 1e-2 }
 
     # We need to tune the solver
-    AdvectionParams { gc = 1 }
     ApproxProjectionParams { tolerance = 1e-4 }
     ProjectionParams { tolerance = 1e-4 }
 

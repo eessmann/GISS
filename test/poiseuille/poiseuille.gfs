@@ -31,10 +31,6 @@
     # add a transverse source term to also test hydrostatic balance
     Source V 1
 
-    # we need this so that acceleration can be balanced by viscous stress
-    # and yes, fixme, this is a mess...
-    AdvectionParams { gc = 1 }
-
     EventStop { istep = 1 } U 1e-6 DU
     ProjectionParams { tolerance = 1e-6 }
     ApproxProjectionParams { tolerance = 1e-6 }

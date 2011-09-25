@@ -65,7 +65,7 @@ GModule electrohydro
     VariableTracerVOF T
     VariableCurvature K T
     SourceTension T 1 K
-    SourceViscosity Cmu { beta = 1 }
+    SourceViscosity Cmu
 
     InitFraction T (R0*R0 - (x*x + y*y))
     AdaptGradient { istep = 1 } { cmax = 1e-4 minlevel = 4 maxlevel = 7 } T

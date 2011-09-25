@@ -19,8 +19,9 @@
 # fluxes cancel out exactly.
 #
 # \begin{figure}[htbp] 
-# \caption{\label{evolution}Evolution of the VOF interface (blue) in a
-# shear flow. (a) $t=0$, (b) $t=1$, (c) $t=2$, (d) $t=5$.}
+# \caption{\label{evolution}Evolution of the VOF interface (green $n =
+# 1$, red $n = 4$) in a shear flow. (a) $t=0$, (b) $t=1$, (c) $t=2$,
+# (d) $t=5$.}
 # \begin{center}
 # \begin{tabular}{cc}
 # (a) \includegraphics[width=0.45\hsize]{rotate-0.eps} &

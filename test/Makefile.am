@@ -73,6 +73,7 @@ DOC = tests
 TEXINPUTS = .:$(top_srcdir)/doc/examples:
 
 tests: tests.dvi
+	if ! test -d $(DOC); then mkdir $(DOC); fi
 	TEXINPUTS=$(TEXINPUTS) hevea -fix -I $(top_srcdir)/doc/examples $(DOC).tex
 	TEXINPUTS=$(TEXINPUTS) imagen -res 500 -extra "pnmscale 0.24" $(DOC)
 	hacha $(DOC).html

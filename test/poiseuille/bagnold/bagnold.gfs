@@ -35,10 +35,9 @@ Define UB(x) ((1. - pow(1. - x, 1.5))*2./3.*U0)
 1 1 GfsSimulation GfsBox GfsGEdge { y = 0.5 } {
     Time { iend = 1000 dtmax = 5 }
 
-    # We need to tune the solver
+    # Ignore inertia
     AdvectionParams {
 	scheme = none
-	gc = 1 
     }
     ApproxProjectionParams { tolerance = 1e-8 }
     ProjectionParams { tolerance = 1e-8 }

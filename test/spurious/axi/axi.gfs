@@ -44,7 +44,7 @@
 # \end{figure}
 #
 # Author: St\'ephane Popinet
-# Command: sh ../spurious.sh axi.gfs 1.5e-7
+# Command: sh ../spurious.sh axi.gfs 1e-6
 # Version: 1.3.1
 # Required files: convergence.ref kconvergence.ref
 # Generated files: laplace.eps curvature.eps convergence.eps kconvergence.eps

@@ -4,7 +4,7 @@
 #
 # A sessile drop is a drop of liquid at rest on a solid surface. In
 # the absence of gravity, the shape of the drop is controlled by
-# surface tension. An important parameter is the "contact angle"
+# surface tension only. An important parameter is the "contact angle"
 # $\theta$ between the solid surface and the interface. In the absence
 # of gravity, the drop is hemispherical and it is easy to show that
 # the relation between the radius of the drop $R$ and its volume $V$
@@ -50,13 +50,13 @@
     VariableCurvature K T
     SourceTension T 1. K
     PhysicalParams { alpha = 1./(T + 0.01*(1. - T)) }
-    SourceViscosity 0.2/(T + 100.*(1. - T)) { beta = 1 }
+    SourceViscosity 0.2/(T + 100.*(1. - T))
     InitFraction T (- ellipse (0, 0, 0.3, 0.3))
     AdaptFunction { istep = 1 } { cmax = 0 maxlevel = LEVEL } (T > 0 && T < 1)
     Time { end = 3 }
     EventStop { istep = 10 } K 1e-5 DK
     OutputScalarNorm { istep = 10 } v-ANGLE { v = Velocity }
-    OutputScalarStats { istep = 10 } k { v = (T > 1e-3 && T < 1. - 1e-3 ? K : NODATA) }
+    OutputScalarStats { istep = 10 } k { v = (T > 0.05 && T < 0.95 ? K : NODATA) }
     OutputScalarSum { start = end } vol { v = T }
 #    OutputSimulation { istep = 10 } stdout
     OutputSimulation { start = end } end-ANGLE.gfs

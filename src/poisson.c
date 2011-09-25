@@ -80,7 +80,7 @@ void gfs_multilevel_params_init (GfsMultilevelParams * par)
 
   par->dimension = FTT_DIMENSION;
   par->weighted = FALSE;
-  par->beta = 0.5;
+  par->beta = 1.;
   par->omega = 1.;
 
   par->function = FALSE;

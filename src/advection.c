@@ -901,8 +901,8 @@ void gfs_advection_params_write (GfsAdvectionParams * par, FILE * fp)
 	   par->flux == gfs_face_velocity_convective_flux ?
 	   "gfs_face_velocity_convective_flux" : "NULL",
 	   par->average);
-  if (par->gc)
-    fputs ("  gc       = 1\n", fp);
+  if (!par->gc)
+    fputs ("  gc       = 0\n", fp);
   switch (par->scheme) {
   case GFS_GODUNOV: fputs ("  scheme   = godunov\n", fp); break;
   case GFS_NONE:    fputs ("  scheme   = none\n", fp); break;
@@ -930,7 +930,7 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->use_centered_velocity = TRUE;
   par->scheme = GFS_GODUNOV;
   par->average = FALSE;
-  par->gc = FALSE;
+  par->gc = TRUE;
   par->update = (GfsMergedTraverseFunc) gfs_advection_update;
   par->moving_order = 1;
   par->sink[0] = par->sink[1] = par->sink[2] = 0.;
