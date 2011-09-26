@@ -24,6 +24,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#include <stdlib.h>
 #include <gmodule.h>
 #include "ftt.h"
 
@@ -219,6 +220,64 @@ gdouble            gfs_format_time_value (GSList * format,
 void               gfs_cell_message      (const FttCell * cell, 
 					  const gchar *format,
 					  ...);
+
+/* The code below redefines the g_assert() macros so that they behave
+   consistently between Glib versions. In particular, we want to be
+   able to add error handlers.  */
+
+#undef g_assert
+#undef g_assert_not_reached
+
+#ifdef G_DISABLE_ASSERT
+
+#define g_assert(expr)		G_STMT_START{ (void)0; }G_STMT_END
+#define g_assert_not_reached()	G_STMT_START{ (void)0; }G_STMT_END
+
+#else /* !G_DISABLE_ASSERT */
+
+#ifdef __GNUC__
+
+#define g_assert(expr)			G_STMT_START{		\
+      if G_LIKELY(expr) { } else {				\
+        g_log (G_LOG_DOMAIN,                                    \
+               G_LOG_LEVEL_ERROR, 	                        \
+               "file %s: line %d (%s): assertion failed: (%s)",	\
+	       __FILE__,    			                \
+	       __LINE__,	      			        \
+	       __PRETTY_FUNCTION__,	      	                \
+	       #expr);		                                \
+        abort ();} }G_STMT_END
+
+#define g_assert_not_reached()		G_STMT_START{		\
+        g_log (G_LOG_DOMAIN,                                    \
+               G_LOG_LEVEL_ERROR, 	                        \
+               "file %s: line %d (%s): should not be reached",	\
+	       __FILE__,    			                \
+	       __LINE__,	      			        \
+	       __PRETTY_FUNCTION__);				\
+        abort (); }G_STMT_END
+
+#else /* !__GNUC__ */
+
+#define g_assert(expr)			G_STMT_START{		\
+     if (expr) { } else						\
+       g_log (G_LOG_DOMAIN,					\
+	      G_LOG_LEVEL_ERROR,				\
+	      "file %s: line %d: assertion failed: (%s)",	\
+	      __FILE__,						\
+	      __LINE__,						\
+	      #expr);			}G_STMT_END
+
+#define g_assert_not_reached()		G_STMT_START{	\
+     g_log (G_LOG_DOMAIN,				\
+	    G_LOG_LEVEL_ERROR,				\
+	    "file %s: line %d: should not be reached",	\
+	    __FILE__,					\
+	    __LINE__);		}G_STMT_END
+
+#endif /* __GNUC__ */
+
+#endif /* !G_DISABLE_ASSERT */
   
 #ifdef __cplusplus
 }

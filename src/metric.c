@@ -1132,6 +1132,7 @@ static gdouble stretch_face_metric (const GfsDomain * domain, const FttCellFace 
 #endif
   default: g_assert_not_reached ();
   }
+  return 1.;
 }
 
 static gdouble stretch_cell_metric (const GfsDomain * domain, const FttCell * cell)
