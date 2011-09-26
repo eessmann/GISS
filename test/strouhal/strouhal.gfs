@@ -59,7 +59,7 @@
   # Adapt the mesh using the vorticity criterion at every timestep
   AdaptVorticity { istep = 1 } { maxlevel = (x > 0.5 - t ? 9 : 10) cmax = 1e-2 }
 
-  SourceViscosity 3.125e-5 { beta = 1}
+  SourceViscosity 3.125e-5
 
   OutputSimulation { start = end } end.gfs 
   OutputSolidForce { istep = 1 } forces.dat

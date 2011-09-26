@@ -1073,8 +1073,22 @@ static void vof_coarse_fine (FttCell * parent, GfsVariable * v)
 
 static void vof_fine_coarse (FttCell * parent, GfsVariable * v)
 {
+  gdouble val = 0., sa = 0.;
+  guint i;
+  FttCellChildren child;
+
+  ftt_cell_children (parent, &child);
+  for (i = 0; i < FTT_CELLS; i++)
+    if (child.c[i] && GFS_HAS_DATA (child.c[i], v)) {
+      val += GFS_VALUE (child.c[i], v);
+      sa += 1.;
+    }
+  if (sa > 0.)
+    GFS_VALUE (parent, v) = val/sa;
+  else
+    GFS_VALUE (parent, v) = GFS_NODATA;
+
   GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
-  gfs_get_from_below_intensive (parent, v);
   gdouble f = GFS_VALUE (parent, v);
   FttComponent c;
 
@@ -1085,11 +1099,7 @@ static void vof_fine_coarse (FttCell * parent, GfsVariable * v)
     GFS_VALUE (parent, t->alpha) = f;
   }
   else {
-    FttCellChildren child;
     FttVector m = {0., 0., 0.};
-    guint i;
-    
-    ftt_cell_children (parent, &child);
     for (i = 0; i < FTT_CELLS; i++)
       if (child.c[i]) {
 	gdouble f = GFS_VALUE (child.c[i], v);
