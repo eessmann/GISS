@@ -72,8 +72,8 @@
     } Psi (t < 2.5 ? 1. : -1.)*sin((x + 0.5)*M_PI)*sin((y + 0.5)*M_PI)/M_PI
     
     # Adapt the mesh dynamically so that at any time the maximum of the gradient
-    # of T is less than 1e-2 per cell length
-    AdaptGradient { istep = 1 } { cmax = 1e-2 maxlevel = 8 } T
+    # of T is less than or equal to zero per cell length
+    AdaptGradient { istart = 1 istep = 1 } { cmax = 0 maxlevel = 8 } T
     
     OutputPPM { start = 0 } { convert ppm:- t-0.eps } { v = T }
     OutputPPM { start = 2.5 } { convert ppm:- t-2.5.eps } { v = T }

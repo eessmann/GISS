@@ -26,6 +26,7 @@
 #include "adaptive.h"
 #include "solid.h"
 #include "init.h"
+#include "vof.h"
 
 #include "graphic.h"
 
@@ -702,6 +703,131 @@ GfsEventClass * gfs_adapt_error_class (void)
 }
 
 /** \endobject{GfsAdaptError} */
+
+/**
+ * Adapting cells depending on the local "thickness" of a VOF defined interface.
+ * \beginobject{GfsAdaptThickness}
+ */
+
+static void gfs_adapt_thickness_destroy (GtsObject * o)
+{
+  if (GFS_ADAPT_THICKNESS (o)->c)
+    gts_object_destroy (GTS_OBJECT (GFS_ADAPT_THICKNESS (o)->c));
+
+  (* GTS_OBJECT_CLASS (gfs_adapt_thickness_class ())->parent_class->destroy) (o);
+}
+
+static void gfs_adapt_thickness_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_adapt_thickness_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a variable name");
+    return;
+  }
+  
+  GfsAdaptThickness * a = GFS_ADAPT_THICKNESS (*o);
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (a));
+  a->v = gfs_variable_from_name (domain->variables, fp->token->str);
+  if (a->v == NULL) {
+    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+    return;    
+  }
+  if (!GFS_IS_VARIABLE_TRACER_VOF_HEIGHT (a->v)) {
+    gts_file_error (fp, "expecting a VariableTracerVOFHeight");
+    return;    
+  }
+  gts_file_next_token (fp);
+
+  a->c = gfs_domain_add_variable (domain, NULL, NULL);
+  a->c->coarse_fine = none;
+  a->c->fine_coarse = none;
+}
+
+static void gfs_adapt_thickness_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_adapt_thickness_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %s", GFS_ADAPT_THICKNESS  (o)->v->name);
+}
+
+static void update_thickness (FttCell * cell, GfsAdapt * a)
+{
+  GfsVariable * v = GFS_ADAPT_THICKNESS (a)->c;
+  GfsVariable * f = GFS_ADAPT_THICKNESS (a)->v;
+  if (GFS_VALUE (cell, f) <= 0. || GFS_VALUE (cell, f) >= 1.)
+    GFS_VALUE (cell, v) = G_MAXDOUBLE;
+  else {
+    GfsVariableTracerVOFHeight * t = GFS_VARIABLE_TRACER_VOF_HEIGHT (f);
+    FttCell * parent = ftt_cell_parent (cell);
+    gdouble thickness = (!parent || GFS_VALUE (parent, v) == G_MAXDOUBLE) ? G_MAXDOUBLE : 
+      2.*GFS_VALUE (parent, v);
+    FttComponent c;
+    for (c = 0; c < FTT_DIMENSION; c++)
+      if (GFS_HAS_DATA (cell, t->hb[c]) && GFS_HAS_DATA (cell, t->ht[c])) {
+	gdouble d = fabs (GFS_VALUE (cell, t->hb[c]) + GFS_VALUE (cell, t->ht[c]));
+	if (d < thickness)
+	  thickness = d;
+      }
+    GFS_VALUE (cell, v) = thickness;
+  }
+}
+
+static gboolean gfs_adapt_thickness_event (GfsEvent * event, 
+					   GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_adapt_thickness_class ())->parent_class)->event) 
+      (event, sim)) {
+    gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) update_thickness, event);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_adapt_thickness_class_init (GfsEventClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_adapt_thickness_destroy;
+  GTS_OBJECT_CLASS (klass)->read = gfs_adapt_thickness_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_adapt_thickness_write;
+  klass->event = gfs_adapt_thickness_event;
+}
+
+static gdouble thickness_cost (FttCell * cell, GfsAdaptThickness * a)
+{
+  return GFS_VALUE (cell, a->c) > 0. ? 1./GFS_VALUE (cell, a->c) : G_MAXDOUBLE;
+}
+
+static void gfs_adapt_thickness_init (GfsAdaptThickness * object)
+{
+  GfsAdapt * a = GFS_ADAPT (object);
+  a->cost = (GtsKeyFunc) thickness_cost;
+  a->cmax = 1./3.;
+  a->cfactor = 1.1;
+}
+
+GfsEventClass * gfs_adapt_thickness_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsAdaptThickness",
+      sizeof (GfsAdaptThickness),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) gfs_adapt_thickness_class_init,
+      (GtsObjectInitFunc) gfs_adapt_thickness_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_adapt_class ()), &info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsAdaptThickness} */
 
 static void refine_cell_corner (FttCell * cell, GfsDomain * domain)
 {

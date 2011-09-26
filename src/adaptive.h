@@ -150,6 +150,26 @@ struct _GfsAdaptError {
 
 GfsEventClass * gfs_adapt_error_class  (void);
 
+/* GfsAdaptThickness: Header */
+
+typedef struct _GfsAdaptThickness         GfsAdaptThickness;
+
+struct _GfsAdaptThickness {
+  /*< private >*/
+  GfsAdapt parent;
+
+  /*< public >*/
+  GfsVariable * v, * c;
+};
+
+#define GFS_ADAPT_THICKNESS(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsAdaptThickness,\
+					         gfs_adapt_thickness_class ())
+#define GFS_IS_ADAPT_THICKNESS(obj)         (gts_object_is_from_class (obj,\
+						 gfs_adapt_thickness_class ()))
+
+GfsEventClass * gfs_adapt_thickness_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
