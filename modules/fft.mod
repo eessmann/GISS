@@ -11,11 +11,13 @@ typedef struct _GfsOutputSpectra                     GfsOutputSpectra;
 struct _GfsOutputSpectra {
   /*< private >*/
   GfsOutput parent;
+  GfsCartesianGrid * cgd;
+  guint dir[3];
 
   /*< public >*/
   GfsVariable * v;
-  FttVector L;
-  GfsCartesianGrid cgd;
+  FttVector L, pos;
+  gint level;
 };
 
 
@@ -29,25 +31,15 @@ GfsOutputClass * gfs_output_spectra_class  (void);
 
 /** \beginobject{GfsOutputSpectra} */
 
-static void fill_cartesian_matrix_2D ( GfsCartesianGrid * cgd, GfsVariable * v, GfsDomain * domain )
-{
-  guint i,j;
-  FttVector pos;
-  FttCell * cell;
+typedef struct {
+  FILE * fp;
+  fftw_complex *out;
+  FttVector L,kmax;
+  guint n1,n2,n3;
+  guint dir1,dir2; 
+} Datawrite;
 
-  for (i = 0; i < cgd->n[0]; i++) {
-    for (j = 0; j < cgd->n[1]; j++) {
-      pos.x = cgd->x[0][i];
-      pos.y = cgd->x[1][j];
-      pos.z = 0;
-
-      cell = gfs_domain_locate (domain, pos, -1, NULL);
-      cgd->v[i*cgd->n[1]+j] = gfs_interpolate (cell, pos, v);
-    }
-  }
-}
-
-static void fill_cartesian_matrix_3D ( GfsCartesianGrid * cgd, GfsVariable * v, GfsDomain * domain )
+static void fill_cartesian_matrix ( GfsCartesianGrid * cgd, GfsVariable * v, GfsDomain * domain )
 {
   guint i,j,k;
   FttVector pos;
@@ -58,7 +50,7 @@ static void fill_cartesian_matrix_3D ( GfsCartesianGrid * cgd, GfsVariable * v, 
       for (k = 0; k < cgd->n[2]; k++) {
         pos.x = cgd->x[0][i];
         pos.y = cgd->x[1][j];
-        pos.z = cgd->x[2][j];
+        pos.z = cgd->x[2][k];
 
         cell = gfs_domain_locate (domain, pos, -1, NULL);
         cgd->v[k+cgd->n[2]*(i*cgd->n[1]+j)] = gfs_interpolate (cell, pos, v);
@@ -67,59 +59,87 @@ static void fill_cartesian_matrix_3D ( GfsCartesianGrid * cgd, GfsVariable * v, 
   }
 }
 
-static void write_spectra_2D ( GfsSimulation * sim, FILE * fp, fftw_complex *out, FttVector L, guint nx, guint ny){
+static FttVector init_kmax (FttVector L) {
+
+  FttVector kmax;
+  guint i;
+
+  for (i = 0; i < 3; i++) {
+    if ((&(L.x))[i] != 0) 
+      (&(kmax.x))[i] = 2.*M_PI/(&(L.x))[i]; 
+    else
+      (&(kmax.x))[i] = 0;
+  }
+
+  return kmax;
+
+}
+
+static void write_spectra_1D ( Datawrite * data ){
+
+  guint i; 
+  FttVector k;
+  fputs ("# 1:kx 2:ky 3:kz 4:real 5:img \n", data->fp);
+
+  for ( i = 0; i < data->n1; i++ )
+  {
+    k.x = data->kmax.x*i;
+    k.y = data->kmax.y*i;
+    k.z = data->kmax.z*i;
+    fprintf (data->fp, "  %g  %g %g  %g  %g \n", 
+        k.x, k.y, k.z , data->out[i][0], data->out[i][1] );
+  }
+}
+
+static void write_spectra_2D ( Datawrite * data ) {
 
   guint i,j; 
   gint aux;
-  gdouble kx,ky;
-  fputs ("# 1:kx 2:ky 3:kz 4:real 5:img \n", fp);
-  gdouble kxmax = 2.*M_PI/L.x; 
-  gdouble kymax = 2.*M_PI/L.y;
+  FttVector k;
+  k.x = k.y = k.z = 0;
+  fputs ("# 1:kx 2:ky 3:kz 4:real 5:img \n", data->fp);
 
-  for ( i = 0; i < nx; i++ )
+  for ( i = 0; i < data->n1; i++ )
   {
-    if ( i < nx/2. +1 ) kx = kxmax*i;
+    if ( i < data->n1/2. +1 ) (&(k.x))[data->dir1] = (&(data->kmax.x))[data->dir1]*i;
     else {
-      aux = i-nx;
-      kx = kxmax*aux;
+      aux = i-data->n1;
+      (&(k.x))[data->dir1] = (&(data->kmax.x))[data->dir1]*aux;
     }
-    for ( j = 0; j < ny; j++ )
+    for ( j = 0; j < data->n2; j++ )
     {
-      ky = kymax*j;
-      fprintf (fp, "  %g  %g %g  %g  %g \n", 
-          kx, ky, 0.0 , out[i*ny+j][0], out[i*ny+j][1] );
+      (&(k.x))[data->dir2] = (&(data->kmax.x))[data->dir2]*j;
+      fprintf (data->fp, "  %g  %g %g  %g  %g \n", 
+          k.x, k.y, k.z , data->out[i*data->n2+j][0], data->out[i*data->n2+j][1] );
     }
   }
 }
 
-static void write_spectra_3D ( GfsSimulation * sim, FILE * fp, fftw_complex *out, FttVector L, guint nx, guint ny , guint nz){
+static void write_spectra_3D ( Datawrite * data ) {
 
-  guint i,j,k; 
+  guint i,j,l; 
   gint aux;
-  gdouble kx,ky,kz;
-  fputs ("# 1:kx 2:ky 3:kz 4:real 5:img \n", fp);
-  gdouble kxmax = 2.*M_PI/L.x; 
-  gdouble kymax = 2.*M_PI/L.y;
-  gdouble kzmax = 2.*M_PI/L.z;
+  FttVector k;
+  fputs ("# 1:kx 2:ky 3:kz 4:real 5:img \n", data->fp);
 
-  for ( i = 0; i < nx; i++ )
+  for ( i = 0; i < data->n1; i++ )
   {
-    if ( i < nx/2. +1 ) kx = kxmax*i;
+    if ( i < data->n1/2. +1 ) k.x = data->kmax.x*i;
     else { 
-      aux = i-nx;
-      kx = kxmax*aux;
+      aux = i-data->n1;
+      k.x = data->kmax.x*aux;
     }
-    for ( j = 0; j < ny; j++ )
+    for ( j = 0; j < data->n2; j++ )
     {
-      if ( j < ny/2. +1 ) ky = kymax*j;
+      if ( j < data->n2/2. +1 ) k.y = data->kmax.y*j;
       else {
-        aux = j-ny;
-        ky = kymax*aux;
+        aux = j-data->n2;
+        k.y = data->kmax.y*aux;
       }
-      for ( k = 0; k < nz; k++ )
-        ky = kzmax*(gdouble) k;
-      fprintf (fp, "  %g  %g %g  %g  %g \n", 
-          kx, ky, kz , out[k+nz*(i*ny+j)][0], out[k+nz*(i*ny+j)][1] );
+      for ( l = 0; l < data->n3; l++ )
+        k.z = data->kmax.z*(gdouble) l;
+      fprintf (data->fp, "  %g  %g %g  %g  %g \n", 
+          k.x, k.y, k.z , data->out[l+data->n3*(i*data->n2+j)][0], data->out[l+data->n3*(i*data->n2+j)][1] );
     }
   }
 }
@@ -132,24 +152,50 @@ static gboolean output_spectra_event (GfsEvent * event,
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsOutputSpectra * v = GFS_OUTPUT_SPECTRA (event);
     fftw_plan p;
+    fftw_complex *out;
+    Datawrite data;
 
-#if FTT_2D
-    fill_cartesian_matrix_2D( &(v->cgd), v->v, domain);
-    guint nyh = ( v->cgd.n[1] / 2 ) + 1;
-    fftw_complex *out =  fftw_malloc( sizeof(fftw_complex)*v->cgd.n[0]*nyh );
-    p = fftw_plan_dft_r2c_2d( v->cgd.n[0], v->cgd.n[1], v->cgd.v, out,  FFTW_ESTIMATE);
-    fftw_execute(p); 
-    write_spectra_2D ( sim, GFS_OUTPUT (event)->file->fp, out, v->L, v->cgd.n[0], nyh);
+    data.fp  = GFS_OUTPUT (event)->file->fp;
+    data.L   = v->L;
+    data.kmax = init_kmax(v->L);
+    data.dir1 = v->dir[0];
+    data.dir2 = v->dir[1];
 
-#else
-    fill_cartesian_matrix_3D( &(v->cgd), v->v, domain);
-    guint nzh = ( v->cgd.n[2] / 2 ) + 1;
-    fftw_complex *out =  fftw_malloc( sizeof(fftw_complex)*v->cgd.n[0]*v->cgd.n[1]*nzh );
-    p = fftw_plan_dft_r2c_3d( v->cgd.n[0], v->cgd.n[1], v->cgd.n[2], v->cgd.v, out,  FFTW_ESTIMATE);
-    fftw_execute(p); 
-    write_spectra_3D ( sim, GFS_OUTPUT (event)->file->fp, out, v->L, v->cgd.n[0], v->cgd.n[1], nzh );
-
-#endif /* FTT_3D */
+    switch (v->cgd->N) {
+      case 1: {
+                fill_cartesian_matrix( v->cgd, v->v, domain);
+                data.n1 = ( v->cgd->n[v->dir[0]] / 2 ) + 1;
+                out =  fftw_malloc( sizeof(fftw_complex)*data.n1 );
+                data.out = out;
+                p = fftw_plan_dft_r2c_1d( v->cgd->n[v->dir[0]], v->cgd->v, out,  FFTW_ESTIMATE);
+                fftw_execute(p);
+                write_spectra_1D ( &data );
+                break;
+              }
+      case 2: {
+                fill_cartesian_matrix( v->cgd, v->v, domain);
+                data.n1 = v->cgd->n[v->dir[0]];
+                data.n2 = ( v->cgd->n[v->dir[1]] / 2 ) + 1;
+                out = fftw_malloc( sizeof(fftw_complex)*v->cgd->n[v->dir[0]]*data.n2 );
+                data.out = out;
+                p = fftw_plan_dft_r2c_2d( v->cgd->n[v->dir[0]], v->cgd->n[v->dir[1]], v->cgd->v, out,  FFTW_ESTIMATE);
+                fftw_execute(p); 
+                write_spectra_2D ( &data );
+                break;
+              }
+      case 3: {
+                fill_cartesian_matrix( v->cgd, v->v, domain);
+                data.n1 = v->cgd->n[0];
+                data.n2 = v->cgd->n[1];
+                data.n3 = ( v->cgd->n[2] / 2 ) + 1;
+                out =  fftw_malloc( sizeof(fftw_complex)*v->cgd->n[0]*v->cgd->n[1]*data.n3 );
+                data.out = out;
+                p = fftw_plan_dft_r2c_3d( v->cgd->n[0], v->cgd->n[1], v->cgd->n[2], v->cgd->v, out,  FFTW_ESTIMATE);
+                fftw_execute(p); 
+                write_spectra_3D ( &data );
+                break;
+              }
+    }
 
     fftw_destroy_plan(p);
     fftw_free ( out );
@@ -166,7 +212,10 @@ static void output_spectra_read (GtsObject ** o, GtsFile * fp)
     return;
   GfsOutputSpectra * v = GFS_OUTPUT_SPECTRA (*o);
   FttVector pos;
-  guint level;
+  GtsObjectClass * klass;
+
+  klass = gfs_cartesian_grid_class ();
+  v->cgd = gfs_cartesian_grid_new (klass); 
 
   if (fp->type != GTS_STRING) {
     gts_file_error (fp, "expecting a string (v)");
@@ -203,7 +252,7 @@ static void output_spectra_read (GtsObject ** o, GtsFile * fp)
         return;
       }
       gts_file_next_token (fp);
-      pos.x = atof(fp->token->str);
+      v->pos.x = atof(fp->token->str);
     }
     else if (!strcmp (fp->token->str, "y")) {
       gts_file_next_token (fp);
@@ -212,7 +261,7 @@ static void output_spectra_read (GtsObject ** o, GtsFile * fp)
         return;
       }
       gts_file_next_token (fp);
-      pos.y = atof(fp->token->str);
+      v->pos.y = atof(fp->token->str);
     }
     else if (!strcmp (fp->token->str, "z")) {
       gts_file_next_token (fp);
@@ -221,7 +270,7 @@ static void output_spectra_read (GtsObject ** o, GtsFile * fp)
         return;
       }
       gts_file_next_token (fp);
-      pos.z = atof(fp->token->str);
+      v->pos.z = atof(fp->token->str);
     }
     else if (!strcmp (fp->token->str, "Lx")) {
       gts_file_next_token (fp);
@@ -267,43 +316,79 @@ static void output_spectra_read (GtsObject ** o, GtsFile * fp)
 
   if (fp->type != GTS_INT) {
     gts_file_error (fp, "expecting an integel (level)");
-    return FALSE;
+    return;
   }
-  level = atoi(fp->token->str);
+  v->level = atoi(fp->token->str);
   gts_file_next_token (fp);
 
-  guint i,j,size =1;
-  v->cgd.n = g_malloc (v->cgd.N*sizeof (guint));  
-  for (i = 0; i < v->cgd.N; i++) {
-    v->cgd.n[i] = pow(2,level);
-    size *= v->cgd.n[i];
-  }
+  guint i,j,k,size =1;
 
-  //fixme: Generalize for tilted planes
-  v->cgd.x = g_malloc0 (v->cgd.N*sizeof (gdouble *));
-  for (i = 0; i < v->cgd.N; i++) {
-    v->cgd.x[i] = g_malloc (v->cgd.n[i]*sizeof (gdouble));
-    for (j = 0; j < v->cgd.n[i]; j++){ 
-      v->cgd.x[i][j] = (&(pos.x))[i] + (&(v->L.x))[i]*(gdouble)j/((gdouble)(v->cgd.n[i]-1))-0.5;
+  /*number of dims of the fft*/
+  v->cgd->N = 0;
+  k=0;
+  for (i = 0; i < 3; i++) {
+    if ((&(v->L.x))[i] != 0) {
+      v->cgd->N++;
+      v->dir[k] = i;
+      k++;
     }
   }
 
-  v->cgd.v = g_malloc0( sizeof ( gdouble ) * 2*(size/2+1)  );
+  /*number of points in each direction*/
+  v->cgd->n = g_malloc (3*sizeof (guint));  
+  for (i = 0; i < 3; i++) {
+    if ((&(v->L.x))[i] == 0 )
+      v->cgd->n[i] = 1;
+    else
+      v->cgd->n[i] = pow(2,v->level);
+    size *= v->cgd->n[i];
+  }
+
+  /*mesh coordinates*/
+  v->cgd->x = g_malloc0 (3*sizeof (gdouble *));
+  for (i = 0; i < 3; i++) {
+    v->cgd->x[i] = g_malloc (v->cgd->n[i]*sizeof (gdouble));
+    if (v->cgd->n[i] != 1) {
+      for (j = 0; j < v->cgd->n[i]; j++){ 
+        v->cgd->x[i][j] = (&(v->pos.x))[i] + (&(v->L.x))[i]*(gdouble)j/((gdouble)(v->cgd->n[i]-1))-0.5;
+      }
+    }
+    else {
+      v->cgd->x[i][0] = (&(v->pos.x))[i];
+    }
+  }
+
+  /*memory data allocation*/
+  v->cgd->v = g_malloc0( sizeof ( gdouble ) * 2*(size/2+1)  );
 
 }
 
 static void output_spectra_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_output_spectra_class ())->parent_class->write) (o, fp); 
+  
+  GfsOutputSpectra * v = GFS_OUTPUT_SPECTRA (o);
+  fprintf (fp, " %s ", v->v->name );
+  fprintf (fp, "{ x= %g y=%g z=%g Lx=%g Ly=%g Lz=%g } ", v->pos.x, v->pos.y, v->pos.z, v->L.x, v->L.y, v->L.z);
+  fprintf (fp, "%i", v->level);
 
-  fprintf (fp, " %s ", GFS_OUTPUT_SPECTRA (o)->v->name );
 }
 
 static void output_spectra_destroy ( GtsObject * o ) {
 
-  guint i;
+  /* three dimensions allocated*/
+  GFS_OUTPUT_SPECTRA (o)->cgd->N = 3; 
+  /*GfsCartesianGrid * grid = GFS_OUTPUT_SPECTRA (o)->cgd;
+    gts_object_destroy (GTS_OBJECT(grid));*/
+  //(* GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())destroy) (GTS_OBJECT(GFS_OUTPUT_SPECTRA(o)->cgd));
+}
+
+static void output_spectra_init ( GtsObject * o ) {
+
   GfsOutputSpectra * v = GFS_OUTPUT_SPECTRA (o);
-  //fixme: call gfs_cartesian_grid_destroy if possible
+  v->L.x = v->L.y = v->L.z = 0; 
+  v->pos.x = v->pos.y = v->pos.z = 0; 
+
 }
 
 static void output_spectra_class_init (GtsObjectClass * klass)
@@ -324,7 +409,7 @@ GfsOutputClass * gfs_output_spectra_class (void)
       sizeof (GfsOutputSpectra),
       sizeof (GfsOutputClass),
       (GtsObjectClassInitFunc) output_spectra_class_init,
-      (GtsObjectInitFunc) NULL,
+      (GtsObjectInitFunc) output_spectra_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
@@ -337,87 +422,6 @@ GfsOutputClass * gfs_output_spectra_class (void)
 
 /** \endobject{GfsOutputSpectra} */
 
-/* GfsOutputSpectra2D: header */
-
-#define GFS_OUTPUT_SPECTRA_2D(obj)            GTS_OBJECT_CAST (obj,\
-    GfsOutputSpectra2D,\
-    gfs_output_spectra_2D_class ())
-#define GFS_IS_OUTPUT_SPECTRA_2D(obj)         (gts_object_is_from_class (obj,\
-      gfs_output_spectra_2D_class ()))
-
-GfsOutputClass * gfs_output_spectra_2D_class  (void);
-
-/** \beginobject{GfsOutputSpectra2D} */
-
-static void output_spectra_2D_init (GfsOutputSpectra *o)
-{
-  o->cgd.N = 2;
-}
-
-GfsOutputClass * gfs_output_spectra_2D_class (void)
-{
-  static GfsOutputClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_output_spectra_2D_info = {
-      "GfsOutputSpectra2D",
-      sizeof (GfsOutputSpectra),
-      sizeof (GfsOutputClass),
-      (GtsObjectClassInitFunc) NULL,
-      (GtsObjectInitFunc) output_spectra_2D_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_output_spectra_class ()),
-        &gfs_output_spectra_2D_info);
-  }
-
-  return klass;
-}
-
-/** \endobject{GfsOutputSpectra2D} */
-
-/* GfsOutputSpectra3D: header */
-
-#define GFS_OUTPUT_SPECTRA_3D(obj)            GTS_OBJECT_CAST (obj,\
-    GfsOutputSpectra3D,\
-    gfs_output_spectra_3D_class ())
-#define GFS_IS_OUTPUT_SPECTRA_3D(obj)         (gts_object_is_from_class (obj,\
-      gfs_output_spectra_3D_class ()))
-
-GfsOutputClass * gfs_output_spectra_3D_class  (void);
-
-/** \beginobject{GfsOutputSpectra3D} */
-
-static void output_spectra_3D_init (GfsOutputSpectra *o)
-{
-  o->cgd.N = 3;
-}
-
-GfsOutputClass * gfs_output_spectra_3D_class (void)
-{
-  static GfsOutputClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo gfs_output_spectra_3D_info = {
-      "GfsOutputSpectra3D",
-      sizeof (GfsOutputSpectra),
-      sizeof (GfsOutputClass),
-      (GtsObjectClassInitFunc) NULL,
-      (GtsObjectInitFunc) output_spectra_3D_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_output_spectra_class ()),
-        &gfs_output_spectra_3D_info);
-  }
-
-  return klass;
-}
-
-/** \endobject{GfsOutputSpectra3D} */
-
-
 /* Initialize module */
 
 const gchar gfs_module_name[] = "fourier";
@@ -426,7 +430,5 @@ const gchar * g_module_check_init (void);
 const gchar * g_module_check_init (void)
 { 
   gfs_output_spectra_class ();
-  gfs_output_spectra_2D_class ();
-  gfs_output_spectra_3D_class ();
   return NULL; 
 }
