@@ -375,6 +375,12 @@ if test x$lis = xno; then
 fi
 AM_CONDITIONAL(BUILD_LIS, test x$lis = xyes)
 
+# Build fft module if fttw3 is installed
+PKG_CHECK_MODULES(FFTW3, [ fftw3 >= 3 ], [ fftw3="yes" ], [ fftw3="no" ])
+AM_CONDITIONAL(HAS_FFTW3, test x$fftw3 = xyes)
+AC_SUBST(FFTW3_CFLAGS)
+AC_SUBST(FFTW3_LIBS)
+
 dnl header file checks
 AC_CHECK_HEADERS(fenv.h, AC_DEFINE(HAVE_FENV_H))
 AC_CHECK_HEADERS(unistd.h, AC_DEFINE(HAVE_UNISTD_H))
@@ -567,5 +573,10 @@ if test x$no_gsl != xyes; then
 echo "  bubbles           = yes"
 else
 echo "  bubbles           = no"
+fi
+if test x$fftw3 != xno; then
+echo "  fft               = yes"
+else
+echo "  fft               = no"
 fi
 echo

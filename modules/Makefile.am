@@ -34,7 +34,9 @@ endif
 if HAS_GSL
 BUBBLES = libbubbles2D.la libbubbles3D.la
 endif
+if HAS_FFTW3
 FFT = libfft2D.la libfft3D.la
+endif
 
 pkglib_LTLIBRARIES = \
 	$(MAP) \
@@ -58,8 +60,8 @@ pkglib_LTLIBRARIES = \
 	$(LIS) \
 	$(AGMG) \
 	$(ODE) \
-	$(FFT) \
-        $(BUBBLES)
+        $(BUBBLES) \
+	$(FFT)
 
 bin_PROGRAMS = \
 	xyz2rsurface \
@@ -83,8 +85,8 @@ EXTRA_DIST = \
 	lis.mod \
 	agmg.mod \
 	ode.mod \
-	fft.mod\
-	topics.mod
+	topics.mod \
+	fft.mod
 
 BUILT_SOURCES = \
 	map.c \
@@ -102,8 +104,8 @@ BUILT_SOURCES = \
 	lis.c \
 	agmg.c \
 	ode.c \
-	fft.c\
-	topics.c
+	topics.c \
+	fft.c
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -186,9 +188,11 @@ libbubbles2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
 libbubbles2D_la_LIBADD = $(GSL_LIBS)
 
 libfft3D_la_SOURCES = fft.c
-libfft3D_la_CFLAGS = $(AM_CFLAGS) -lfftw3
+libfft3D_la_CFLAGS = $(AM_CFLAGS) $(FFTW3_CFLAGS)
+libfft3D_la_LIBADD = $(FFTW3_LIBS)
 libfft2D_la_SOURCES = fft.c
-libfft2D_la_CFLAGS = $(AM_CFLAGS) -lfftw3 -DFTT_2D=1
+libfft2D_la_CFLAGS = $(AM_CFLAGS) $(FFTW3_CFLAGS) -DFTT_2D=1
+libfft2D_la_LIBADD = $(FFTW3_LIBS)
 
 libhypre3D_la_SOURCES = hypre.c
 libhypre3D_la_CFLAGS = $(AM_CFLAGS)
