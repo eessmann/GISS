@@ -1956,7 +1956,8 @@ static gboolean curvature_along_direction (FttCell * cell,
 	r += (d == FTT_TOP ? - H*size : H*size);
 	nr = (d == FTT_TOP ? 1. : -1.);
       }
-      gdouble kaxi = nr/(sqrt(dnm)*r);
+      /* limit the minimum radius to half the grid size */
+      gdouble kaxi = nr/MAX (sqrt(dnm)*r, size/2.);
       *kappa += kaxi;
       if (kmax)
 	*kmax = MAX (*kmax, fabs (kaxi));
@@ -2491,7 +2492,8 @@ static void curvature_from_h (FttCell * cell, GfsDomain * domain,
       r += orientation*h[2]*size;
       nr = - orientation;
     }
-    gdouble kaxi = nr/(sqrt(dnm)*r);
+    /* limit the minimum radius to half the grid size */
+    gdouble kaxi = nr/MAX (sqrt(dnm)*r, size/2.);
     *kappa += kaxi;
     if (kmax)
       *kmax = MAX (*kmax, fabs (kaxi));
