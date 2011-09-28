@@ -2516,6 +2516,9 @@ FttCell * gfs_domain_locate (GfsDomain * domain,
 			     gint max_depth,
 			     GfsBox ** where)
 {
+  g_return_val_if_fail (domain != NULL, NULL);
+  g_return_val_if_fail (domain->array != NULL, NULL);
+
   GSList * b = locate_array_locate (domain->array, &target);
   if (b && GFS_IS_BOX (b->data)) {
     if (where)
@@ -2546,6 +2549,9 @@ FttCell * gfs_domain_boundary_locate (GfsDomain * domain,
 				      gint max_depth,
 				      GtsObject ** where)
 {
+  g_return_val_if_fail (domain != NULL, NULL);
+  g_return_val_if_fail (domain->array != NULL, NULL);
+
   GSList * b = locate_array_locate (domain->array, &target);
   if (!b)
     return NULL;
