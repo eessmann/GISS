@@ -147,12 +147,13 @@ static void write_spectra_3D ( Datawrite * data )
         aux = j-data->n2;
         k.y = data->kmax.y*aux;
       }
-      for ( l = 0; l < data->n3; l++ )
+      for ( l = 0; l < data->n3; l++ ) {
         k.z = data->kmax.z*(gdouble) l;
-      fprintf (data->fp, "%g %g %g %g %g\n", 
-	       k.x, k.y, k.z , 
-	       data->out[l+data->n3*(i*data->n2+j)][0], 
-	       data->out[l+data->n3*(i*data->n2+j)][1]);
+        fprintf (data->fp, "%g %g %g %g %g\n", 
+            k.x, k.y, k.z , 
+            data->out[l+data->n3*(i*data->n2+j)][0], 
+            data->out[l+data->n3*(i*data->n2+j)][1]);
+      }
     }
   }
 }
@@ -247,12 +248,12 @@ static void output_spectra_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  if (fp->type != GTS_INT) {
-    gts_file_error (fp, "expecting an integel (level)");
-    return;
+  if (fp->type == GTS_INT) {
+    v->level = atoi(fp->token->str);
+    gts_file_next_token (fp);
   }
-  v->level = atoi(fp->token->str);
-  gts_file_next_token (fp);
+  else
+    v->level = gfs_domain_depth(domain);
 
   guint i, j, k, size = 1;
 
