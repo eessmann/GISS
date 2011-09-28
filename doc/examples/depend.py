@@ -5,6 +5,9 @@ import os
 import os.path
 import gfs2tex
 
+print "## File generated automatically by depend.py: do not modify by hand"
+print ""
+
 dists = ""
 depends = ""
 docs = ""

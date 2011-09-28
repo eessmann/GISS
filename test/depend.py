@@ -6,6 +6,9 @@ import os.path
 sys.path.append("../doc/examples")
 import gfs2tex
 
+print "## File generated automatically by depend.py: do not modify by hand"
+print ""
+
 dists = ""
 depends = ""
 docs = ""
@@ -32,6 +35,8 @@ for start in sys.argv[1:]:
                 dists += "\\\n\t" + test.path + "/" + f
             for f in test.generated:
                 depends += "\\\n\t" + test.path + "/" + f
+                if f[-4:] == ".mpg" or f[-4:] == ".ogv" or f[-4:] == ".png" or f[-4:] == ".mp4":
+                    docs += "\\\n\t" + test.path + "/" + f
 
 print "DOCS = " + docs + dists
 print ""
