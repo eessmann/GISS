@@ -1657,6 +1657,8 @@ static void gfs_output_scalar_destroy (GtsObject * o)
     gts_object_destroy (GTS_OBJECT (output->condition));
   if (output->w)
     gts_object_destroy (GTS_OBJECT (output->w));
+  if (output->format)
+    g_free (output->format);
   
   (* GTS_OBJECT_CLASS (gfs_output_scalar_class ())->parent_class->destroy) (o);
 }
@@ -1770,6 +1772,25 @@ static void gfs_output_scalar_read (GtsObject ** o, GtsFile * fp)
 	output->w = gfs_function_new (gfs_function_class (), 0.);
       gfs_function_read (output->w, gfs_object_simulation (*o), fp);
     }
+    else if (!strcmp (fp->token->str, "format")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting '='");
+	return;
+      }
+      gts_file_next_token (fp);
+      if (fp->type != GTS_STRING) {
+	gts_file_error (fp, "expecting a string");
+	return;
+      }
+      if (fp->token->str[0] == '"') {
+	output->format = g_strdup (&(fp->token->str[1]));
+	output->format[strlen(output->format) - 1] = '\0';
+      }
+      else
+	output->format = g_strdup (fp->token->str);
+      gts_file_next_token (fp);
+    }
     else {
       gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
       return;
@@ -1805,6 +1826,8 @@ static void gfs_output_scalar_write (GtsObject * o, FILE * fp)
     fputs (" w = ", fp);
     gfs_function_write (output->w, fp);
   }
+  if (output->format)
+    fprintf (fp, " format = %s", output->format);
   if (!output->autoscale)
     fprintf (fp, " min = %g max = %g }", output->min, output->max);
   else
@@ -2002,10 +2025,18 @@ static gboolean gfs_output_scalar_stats_event (GfsEvent * event,
 						output->maxlevel,
 						output->condition ? cell_condition : NULL,
 						output->condition);
-    fprintf (GFS_OUTPUT (event)->file->fp, 
-	     "%s time: %g min: %10.3e avg: %10.3e | %10.3e max: %10.3e\n",
+    gchar * format;
+    if (output->format) {
+      gchar * f = output->format;
+      format = g_strdup_printf ("%%s time: %s min: %s avg: %s | %s max: %s\n",
+				f, f, f, f, f);
+    }
+    else
+      format = g_strdup ("%s time: %g min: %10.3e avg: %10.3e | %10.3e max: %10.3e\n");
+    fprintf (GFS_OUTPUT (event)->file->fp, format,
 	     output->name, sim->time.t,
 	     stats.min, stats.mean, stats.stddev, stats.max);
+    g_free (format);
     return TRUE;
   }
   return FALSE;
@@ -2071,9 +2102,16 @@ static gboolean gfs_output_scalar_sum_event (GfsEvent * event,
     gfs_all_reduce (GFS_DOMAIN (sim), s.sum, MPI_DOUBLE, MPI_SUM);
     if (!output->w)
       s.sum *= pow (sim->physical_params.L, FTT_DIMENSION);
-    fprintf (GFS_OUTPUT (event)->file->fp,
-	     "%s time: %g sum: % 15.6e\n", 
+    gchar * format;
+    if (output->format) {
+      gchar * f = output->format;
+      format = g_strdup_printf ("%%s time: %s sum: %s\n", f, f);
+    }
+    else
+      format = g_strdup ("%s time: %g sum: % 15.6e\n");
+    fprintf (GFS_OUTPUT (event)->file->fp, format,
 	     output->name, sim->time.t, s.sum);
+    g_free (format);
     return TRUE;
   }
   return FALSE;
@@ -2569,12 +2607,19 @@ static gboolean gfs_output_droplet_sums_event (GfsEvent * event, GfsSimulation *
 	g_free (p.v);
 	p.v = gv;
       }
-#endif /* HAVE_MPI */      
+#endif /* HAVE_MPI */
       qsort (p.v, p.n, sizeof (VolumePair), volume_sort);
+      gchar * f = GFS_OUTPUT_SCALAR (event)->format;
+      gchar * format;
+      if (f)
+	format = g_strdup_printf ("%s %%d %s\n", f, f);
+      else
+	format = g_strdup ("%g %d %.12g\n");
       guint i;
       for (i = 0; i < p.n; i++)
-	fprintf (GFS_OUTPUT (event)->file->fp, "%g %d %.12g\n", sim->time.t, i + 1, p.v[i].f);
+	fprintf (GFS_OUTPUT (event)->file->fp, format, sim->time.t, i + 1, p.v[i].f);
       g_free (p.v);
+      g_free (format);
     }
     if (p.tag != d->tag)
       gts_object_destroy (GTS_OBJECT (p.tag));
@@ -2851,10 +2896,18 @@ static gboolean gfs_output_error_norm_event (GfsEvent * event,
       if (snorm.second > 0.) norm.second /= snorm.second;
       if (snorm.infty > 0.)  norm.infty  /= snorm.infty;
     }
-    fprintf (GFS_OUTPUT (event)->file->fp,
-	     "%s time: %g first: % 10.3e second: % 10.3e infty: % 10.3e bias: %10.3e\n",
+    gchar * format;
+    if (output->format) {
+      gchar * f = output->format;
+      format = g_strdup_printf ("%%s time: %s first: %s second: %s infty: %s bias: %s\n",
+				f, f, f, f, f);
+    }
+    else
+      format = g_strdup ("%s time: %g first: %10.3e second: %10.3e infty: %10.3e bias: %10.3e\n");
+    fprintf (GFS_OUTPUT (event)->file->fp, format,
 	     output->name, sim->time.t,
 	     norm.first, norm.second, norm.infty, norm.bias);
+    g_free (format);
     return TRUE;
   }
   return FALSE;
@@ -2958,9 +3011,16 @@ static gboolean gfs_output_correlation_event (GfsEvent * event,
       gts_object_destroy (GTS_OBJECT (enorm->v));
       enorm->v = NULL;
     }
-    fprintf (GFS_OUTPUT (event)->file->fp,
-	     "%s time: %g %10.3e\n",
+    gchar * format;
+    if (output->format) {
+      gchar * f = output->format;
+      format = g_strdup_printf ("%%s time: %s %s\n", f, f);
+    }
+    else
+      format = g_strdup ("%s time: %g %10.3e\n");
+    fprintf (GFS_OUTPUT (event)->file->fp, format,
 	     output->name, sim->time.t, sumref > 0. ? sum/sumref : 0.);
+    g_free (format);
     return TRUE;
   }
   return FALSE;

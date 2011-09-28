@@ -190,6 +190,7 @@ struct _GfsOutputScalar {
   gdouble min, max;
   gint maxlevel;
   GfsFunction * condition, * w;
+  gchar * format;
 };
 
 #define GFS_OUTPUT_SCALAR(obj)            GTS_OBJECT_CAST (obj,\
