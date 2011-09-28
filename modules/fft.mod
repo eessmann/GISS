@@ -269,6 +269,11 @@ static void output_spectra_read (GtsObject ** o, GtsFile * fp)
     }
   }
 
+  if (v->cgd->N == 0) {
+    gts_file_error (fp, "There must be at least one L component larger than 0");
+    return;
+  }
+
   /* number of points in each direction */
   v->cgd->n = g_malloc (3*sizeof (guint));  
   for (i = 0; i < 3; i++) {
@@ -306,6 +311,7 @@ static void output_spectra_write (GtsObject * o, FILE * fp)
 
 static void output_spectra_destroy ( GtsObject * o )
 {
+  GFS_OUTPUT_SPECTRA (o)->cgd->N = 3;
   gts_object_destroy (GTS_OBJECT (GFS_OUTPUT_SPECTRA (o)->cgd));
 
   (* GTS_OBJECT_CLASS (gfs_output_spectra_class ())->parent_class->destroy) (o);
@@ -314,7 +320,7 @@ static void output_spectra_destroy ( GtsObject * o )
 static void output_spectra_init ( GtsObject * o )
 {
   GfsOutputSpectra * v = GFS_OUTPUT_SPECTRA (o);
-  v->L.x = v->L.y = v->L.z = 1.;
+  v->L.x = v->L.y = v->L.z = 0.;
   v->pos.x = v->pos.y = v->pos.z = 0.;
 }
 
