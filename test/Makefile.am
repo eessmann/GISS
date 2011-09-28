@@ -36,6 +36,7 @@ TESTDIRS = \
 	capwave \
 	oscillation \
 	height \
+	plateau \
 	sessile \
 	geo \
 	waves \
