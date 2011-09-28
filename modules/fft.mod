@@ -150,9 +150,9 @@ static void write_spectra_3D ( Datawrite * data )
       for ( l = 0; l < data->n3; l++ ) {
         k.z = data->kmax.z*(gdouble) l;
         fprintf (data->fp, "%g %g %g %g %g\n", 
-            k.x, k.y, k.z , 
-            data->out[l+data->n3*(i*data->n2+j)][0], 
-            data->out[l+data->n3*(i*data->n2+j)][1]);
+		 k.x, k.y, k.z , 
+		 data->out[l+data->n3*(i*data->n2+j)][0], 
+		 data->out[l+data->n3*(i*data->n2+j)][1]);
       }
     }
   }
@@ -249,11 +249,11 @@ static void output_spectra_read (GtsObject ** o, GtsFile * fp)
     return;
 
   if (fp->type == GTS_INT) {
-    v->level = atoi(fp->token->str);
+    v->level = atoi (fp->token->str);
     gts_file_next_token (fp);
   }
   else
-    v->level = gfs_domain_depth(domain);
+    v->level = gfs_domain_depth (domain);
 
   guint i, j, k, size = 1;
 
@@ -261,7 +261,7 @@ static void output_spectra_read (GtsObject ** o, GtsFile * fp)
 
   /* number of dims of the fft */
   v->cgd->N = 0;
-  k=0;
+  k = 0;
   for (i = 0; i < 3; i++) {
     if ((&(v->L.x))[i] != 0) {
       v->cgd->N++;
