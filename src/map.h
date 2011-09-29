@@ -88,9 +88,10 @@ typedef struct _GfsMapTransform         GfsMapTransform;
 struct _GfsMapTransform {
   /*< private >*/
   GfsMap parent;
+  GtsMatrix * m, * im;
 
   /*< public >*/
-  GtsVector translate;
+  GtsVector translate, rotate;
 };
 
 #define GFS_MAP_TRANSFORM(obj)            GTS_OBJECT_CAST (obj,\

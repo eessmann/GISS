@@ -269,24 +269,72 @@ GfsMapClass * gfs_map_function_class (void)
  * \beginobject{GfsMapTransform}
  */
 
+static void gfs_map_transform_destroy (GtsObject * o)
+{
+  gts_matrix_destroy (GFS_MAP_TRANSFORM (o)->m);
+  gts_matrix_destroy (GFS_MAP_TRANSFORM (o)->im);
+
+  (* GTS_OBJECT_CLASS (gfs_map_transform_class ())->parent_class->destroy) (o);
+}
+
 static void gfs_map_transform_read (GtsObject ** o, GtsFile * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_map_transform_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
-  if (fp->type != '{') {
-    gts_file_error (fp, "expecting an opening brace");
-    return;
-  }
   GfsMapTransform * map = GFS_MAP_TRANSFORM (*o);
   GtsFileVariable var[] = {
     {GTS_DOUBLE, "tx", TRUE, &map->translate[0]},
     {GTS_DOUBLE, "ty", TRUE, &map->translate[1]},
     {GTS_DOUBLE, "tz", TRUE, &map->translate[2]},
+    {GTS_DOUBLE, "rx", TRUE, &map->rotate[0]},
+    {GTS_DOUBLE, "ry", TRUE, &map->rotate[1]},
+    {GTS_DOUBLE, "rz", TRUE, &map->rotate[2]},
     {GTS_NONE}
   };
   gts_file_assign_variables (fp, var);
+
+  if (map->rotate[0] != 0.) { /* rotate around x-axis */
+    gdouble angle = map->rotate[0]*M_PI/180.;
+    gdouble cosa = cos (angle), sina = sin (angle);
+    GtsMatrix * rot = gts_matrix_identity (NULL);
+    rot[1][1] = cosa; rot[1][2] = -sina;
+    rot[2][1] = sina; rot[2][2] = cosa;
+    GtsMatrix * p = gts_matrix_product (map->m, rot);
+    gts_matrix_destroy (rot);
+    gts_matrix_destroy (map->m);
+    map->m = p;
+  }
+  if (map->rotate[1] != 0.) { /* rotate around y-axis */
+    gdouble angle = map->rotate[1]*M_PI/180.;
+    gdouble cosa = cos (angle), sina = sin (angle);
+    GtsMatrix * rot = gts_matrix_identity (NULL);
+    rot[0][0] = cosa; rot[0][2] = sina;
+    rot[2][0] = -sina; rot[2][2] = cosa;
+    GtsMatrix * p = gts_matrix_product (map->m, rot);
+    gts_matrix_destroy (rot);
+    gts_matrix_destroy (map->m);
+    map->m = p;
+  }
+  if (map->rotate[2] != 0.) { /* rotate around z-axis */
+    gdouble angle = map->rotate[2]*M_PI/180.;
+    gdouble cosa = cos (angle), sina = sin (angle);
+    GtsMatrix * rot = gts_matrix_identity (NULL);
+    rot[0][0] = cosa; rot[0][1] = -sina;
+    rot[1][0] = sina; rot[1][1] = cosa;
+    GtsMatrix * p = gts_matrix_product (map->m, rot);
+    gts_matrix_destroy (rot);
+    gts_matrix_destroy (map->m);
+    map->m = p;
+  }
+
+  map->m[0][3] += map->translate[0];
+  map->m[1][3] += map->translate[1];
+  map->m[2][3] += map->translate[2];
+
+  gts_matrix_destroy (map->im);
+  map->im = gts_matrix_inverse (map->m);
 }
 
 static void gfs_map_transform_write (GtsObject * o, FILE * fp)
@@ -297,35 +345,41 @@ static void gfs_map_transform_write (GtsObject * o, FILE * fp)
   if (gts_vector_norm (map->translate) > 0.)
     fprintf (fp, "  tx = %g ty = %g tz = %g\n",
 	     map->translate[0], map->translate[1], map->translate[2]);
+  if (gts_vector_norm (map->rotate) > 0.)
+    fprintf (fp, "  rx = %g ry = %g rz = %g\n",
+	     map->rotate[0], map->rotate[1], map->rotate[2]);
   fputc ('}', fp);
 }
 
-static void gfs_map_transform_class_init (GfsMapClass * klass)
+static void gfs_map_transform_class_init (GtsObjectClass * klass)
 {
-  GTS_OBJECT_CLASS (klass)->read = gfs_map_transform_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_map_transform_write;
+  klass->destroy = gfs_map_transform_destroy;
+  klass->read = gfs_map_transform_read;
+  klass->write = gfs_map_transform_write;
 }
 
 static void map_transform_transform (GfsMap * map, const FttVector * src, FttVector * dest)
 {
-  GfsMapTransform * mf = GFS_MAP_TRANSFORM (map);
-  FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    (&dest->x)[c] = (&src->x)[c] - mf->translate[c];
+  GtsPoint p;
+  p.x = src->x; p.y = src->y; p.z = src->z;
+  gts_point_transform (&p, GFS_MAP_TRANSFORM (map)->im);
+  dest->x = p.x; dest->y = p.y; dest->z = p.z;
 }
 
 static void map_transform_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
 {
-  GfsMapTransform * mf = GFS_MAP_TRANSFORM (map);
-  FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    (&dest->x)[c] = (&src->x)[c] + mf->translate[c];
+  GtsPoint p;
+  p.x = src->x; p.y = src->y; p.z = src->z;
+  gts_point_transform (&p, GFS_MAP_TRANSFORM (map)->m);
+  dest->x = p.x; dest->y = p.y; dest->z = p.z;
 }
 
 static void gfs_map_transform_init (GfsMap * map)
 {
   map->transform = map_transform_transform;
   map->inverse =   map_transform_inverse;
+  GFS_MAP_TRANSFORM (map)->m =  gts_matrix_identity (NULL);
+  GFS_MAP_TRANSFORM (map)->im = gts_matrix_identity (NULL);
 }
 
 GfsMapClass * gfs_map_transform_class (void)
