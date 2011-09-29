@@ -36,7 +36,7 @@ struct _GfsOutputSpectra {
   /*< public >*/
   GfsVariable * v;
   FttVector L, pos;
-  gint level;
+  gint level, Ndim;
 };
 
 
@@ -175,7 +175,7 @@ static gboolean output_spectra_event (GfsEvent * event,
     data.dir2 = v->dir[1];
 
     fill_cartesian_matrix( v->cgd, v->v, domain);
-    switch (v->cgd->N) {
+    switch (v->Ndim) {
       case 1: {
 	data.n1 = ( v->cgd->n[v->dir[0]] / 2 ) + 1;
 	data.out = fftw_malloc( sizeof(fftw_complex)*data.n1 );
@@ -260,17 +260,18 @@ static void output_spectra_read (GtsObject ** o, GtsFile * fp)
   v->cgd = gfs_cartesian_grid_new (gfs_cartesian_grid_class ()); 
 
   /* number of dims of the fft */
-  v->cgd->N = 0;
+  v->cgd->N = 3;
+  v->Ndim = 0;
   k = 0;
   for (i = 0; i < 3; i++) {
     if ((&(v->L.x))[i] != 0) {
-      v->cgd->N++;
+      v->Ndim++;
       v->dir[k] = i;
       k++;
     }
   }
 
-  if (v->cgd->N == 0) {
+  if (v->Ndim == 0) {
     gts_file_error (fp, "There must be at least one L component larger than 0");
     return;
   }
@@ -312,7 +313,6 @@ static void output_spectra_write (GtsObject * o, FILE * fp)
 
 static void output_spectra_destroy ( GtsObject * o )
 {
-  GFS_OUTPUT_SPECTRA (o)->cgd->N = 3;
   gts_object_destroy (GTS_OBJECT (GFS_OUTPUT_SPECTRA (o)->cgd));
 
   (* GTS_OBJECT_CLASS (gfs_output_spectra_class ())->parent_class->destroy) (o);
