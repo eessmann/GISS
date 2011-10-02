@@ -21,15 +21,18 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <sys/times.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
 #include <math.h>
-#include <sys/times.h>
 #include "config.h"
 #include "solid.h"
 #include "simulation.h"
@@ -539,58 +542,26 @@ static gboolean lookup_function (GfsFunction * f, const gchar * finname)
   return FALSE;
 }
 
-static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
+static gint compile (GtsFile * fp, GfsFunction * f, const gchar * dirname, const gchar * finname)
 {
-  gchar foutname[] = "/tmp/gfsXXXXXX";
-  gchar ferrname[] = "/tmp/gfsXXXXXX";
-  gchar ftmpname[] = "/tmp/gfsXXXXXX";
-  gint foutd, ferrd, ftmpd;
-  gchar * cc;
-  gint status;
-  
-  foutd = mkstemp (foutname);
-  ferrd = mkstemp (ferrname);
-  ftmpd = mkstemp (ftmpname);
-  if (foutd < 0 || ferrd < 0 || ftmpd < 0) {
-    gts_file_error (fp, "cannot create temporary file");
-    return SIGABRT;
-  }
-  gchar * cccommand = g_strdup_printf ("gcc `pkg-config "
+  gchar * build_command = g_strdup_printf ("cd %s && %s/build_function %d "
 #if FTT_2D
-				       "gerris2D"
+					   "gerris2D"
 #else /* 3D */
-				       "gerris3D"
+					   "gerris3D"
 #endif
-				       " --cflags --libs` -O -Wall -Wno-unused -Werror "
-				       " -D_GFSLINE_=%d "
-				       MODULES_FLAGS,
-				       fp->line);
-  cc = g_strjoin (" ",
-		  cccommand, ftmpname, 
-		  "-o", foutname,
-                  "`sed 's/@/#/g' <", finname,
-		  "| awk '{"
-		  "   if ($1 == \"#\" && $2 == \"link\") {"
-		  "     for (i = 3; i <= NF; i++) printf (\"%s \", $i);"
-		  "     print \"\" > \"/dev/stderr\";"
-		  "   }"
-		  "   else if ($1 == \"#link\") {"
-		  "     for (i = 2; i <= NF; i++) printf (\"%s \", $i);"
-		  "     print \"\" > \"/dev/stderr\";"
-		  "   } else print $0 > \"/dev/stderr\";"
-		  "}' 2>", ftmpname, "` 2>",
-		  ferrname, NULL);
-  g_free (cccommand);
-  status = system (cc);
-  g_free (cc);
-  close (ftmpd);
-  remove (ftmpname);
+					   " > log 2>&1"
+					   , dirname, GFS_MODULES_DIR, fp->line);
+  gint status = system (build_command);
+  g_free (build_command);
   if (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || WTERMSIG (status) == SIGQUIT))
     status = SIGQUIT;
   else if (status == -1 || WEXITSTATUS (status) != 0) {
-    GString * msg = g_string_new ("");
-    FILE * ferr = fdopen (ferrd, "r");
+    gchar * errname = g_strconcat (dirname, "/log", NULL);
+    FILE * ferr = fopen (errname, "r");
+    g_free (errname);
     gchar * needle;
+    GString * msg = g_string_new ("");
     gint c;
 
     while ((c = fgetc (ferr)) != EOF)
@@ -603,8 +574,10 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
     status = SIGABRT;
   }
   else {
-    GfsModule * module = gfs_module_new (fp, foutname, 
+    gchar * mname = g_strconcat (dirname, "/module.so", NULL);
+    GfsModule * module = gfs_module_new (fp, mname, 
 					 gfs_object_simulation (f)->function_cache, finname);
+    g_free (mname);
     if (module) {
       gfs_module_ref (module, f);
       status = SIGCONT;
@@ -612,10 +585,15 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * finname)
     else
       status = SIGABRT;
   }
-  close (foutd);
-  remove (foutname);
-  close (ferrd);
-  remove (ferrname);
+#if 1
+  gchar * cleanup = g_strconcat ("rm -r -f ", dirname, NULL);
+  gint status1 = system (cleanup);
+  g_free (cleanup);
+  if (status1 == -1 || WEXITSTATUS (status1) != 0)
+    g_warning ("error when cleaning up %s", dirname);
+#else
+  g_warning ("not cleaning up %s", dirname);
+#endif
   return status;
 }
 
@@ -636,142 +614,150 @@ static gchar * find_identifier (const gchar * s, const gchar * i)
 
 #define DEFERRED_COMPILATION ((GfsFunctionFunc) 0x1)
 
+#if !HAVE_MKDTEMP
+static char * mkdtemp (char * template)
+{
+  if (!tmpnam (template))
+    return NULL;
+  if (mkdir (template, S_IRWXU))
+    return NULL;
+  return template;
+}
+#endif /* !HAVE_MKDTEMP */
+
 static void function_compile (GfsFunction * f, GtsFile * fp)
 {
-  if (!HAVE_PKG_CONFIG) {
-    gts_file_error (fp, "expecting a number, variable or GTS surface (val)\n"
-		    "(functions are not supported on this system)");
+  GfsSimulation * sim = gfs_object_simulation (f);
+  GfsDomain * domain = GFS_DOMAIN (sim);
+  GSList * lv = NULL, * ldv = NULL, * i;
+  gchar dirname[L_tmpnam] = "/tmp/gfsXXXXXX";
+  FILE * fin;
+
+  if (mkdtemp (dirname) == NULL) {
+    gts_file_error (fp, "cannot create temporary directory\n%s", strerror (errno));
     return;
   }
-  else {
-    GfsSimulation * sim = gfs_object_simulation (f);
-    GfsDomain * domain = GFS_DOMAIN (sim);
-    gchar finname[] = "/tmp/gfsXXXXXX";
-    gint find;
-    FILE * fin;
-    GSList * lv = NULL, * ldv = NULL, * i;
-
-    find = mkstemp (finname);
-    if (find < 0) {
-      gts_file_error (fp, "cannot create temporary file");
-      return;
-    }
-    fin = fdopen (find, "w");
-    fputs ("#include <stdlib.h>\n"
-	   "#include <stdio.h>\n"
-	   "#include <math.h>\n"
-	   "#include <gfs.h>\n",
+  gchar * finname = g_strdup_printf ("%s/function.c", dirname);
+  fin = fopen (finname, "w");
+  fputs ("#include <stdlib.h>\n"
+	 "#include <stdio.h>\n"
+	 "#include <math.h>\n"
+	 "#include <gfs.h>\n",
+	 fin);
+  if (f->spatial)
+    fputs ("#include <gerris/spatial.h>\n", fin);
+  else if (!f->constant)
+    fputs ("#include <gerris/function.h>\n", fin);
+  i = sim->globals;
+  while (i) {
+    fprintf (fin, "#line %d \"GfsGlobal\"\n", GFS_GLOBAL (i->data)->line);
+    fputs (GFS_GLOBAL (i->data)->s, fin);
+    fputc ('\n', fin);
+    i = i->next;
+  }
+  if (f->spatial)
+    fputs ("double f (double x, double y, double z, double t) {\n"
+	   "  _x = x; _y = y; _z = z;\n", 
 	   fin);
-    if (f->spatial)
-      fputs ("#include <gerris/spatial.h>\n", fin);
-    else if (!f->constant)
-      fputs ("#include <gerris/function.h>\n", fin);
-    i = sim->globals;
+  else if (f->constant)
+    fputs ("double f (void) {\n", fin);
+  else {
+    fputs ("typedef double (* Func) (const FttCell * cell,\n"
+	   "                         const FttCellFace * face,\n"
+	   "                         GfsSimulation * sim,\n"
+	   "                         gpointer data);\n"
+	   "double f (FttCell * cell, FttCellFace * face, GfsSimulation * sim) {\n"
+	   "  _sim = sim; _cell = cell;\n",
+	   fin);
+    i = domain->variables;
     while (i) {
-      fprintf (fin, "#line %d \"GfsGlobal\"\n", GFS_GLOBAL (i->data)->line);
-      fputs (GFS_GLOBAL (i->data)->s, fin);
-      fputc ('\n', fin);
+      if (GFS_VARIABLE1 (i->data)->name && 
+	  find_identifier (f->expr->str, GFS_VARIABLE1 (i->data)->name))
+	lv = g_slist_prepend (lv, i->data);
       i = i->next;
     }
-    if (f->spatial)
-      fputs ("double f (double x, double y, double z, double t) {\n"
-	     "  _x = x; _y = y; _z = z;\n", 
-	     fin);
-    else if (f->constant)
-      fputs ("double f (void) {\n", fin);
-    else {
-      fputs ("typedef double (* Func) (const FttCell * cell,\n"
-	     "                         const FttCellFace * face,\n"
-	     "                         GfsSimulation * sim,\n"
-	     "                         gpointer data);\n"
-	     "double f (FttCell * cell, FttCellFace * face, GfsSimulation * sim) {\n"
-	     "  _sim = sim; _cell = cell;\n",
-	     fin);
-      i = domain->variables;
+    i = domain->derived_variables;
+    while (i) {
+      GfsDerivedVariable * v = i->data;
+      if (find_identifier (f->expr->str, v->name))
+	ldv = g_slist_prepend (ldv, v);
+      i = i->next;
+    }
+    if (lv || ldv) {
+      GSList * i = lv;
+
       while (i) {
-	if (GFS_VARIABLE1 (i->data)->name && 
-	    find_identifier (f->expr->str, GFS_VARIABLE1 (i->data)->name))
-	  lv = g_slist_prepend (lv, i->data);
+	GfsVariable * v = i->data;
+	fprintf (fin, "  double %s;\n", v->name);
 	i = i->next;
       }
-      i = domain->derived_variables;
+      i = ldv;
       while (i) {
 	GfsDerivedVariable * v = i->data;
-	if (find_identifier (f->expr->str, v->name))
-	  ldv = g_slist_prepend (ldv, v);
+	fprintf (fin, "  double %s;\n", v->name);
 	i = i->next;
       }
-      if (lv || ldv) {
-	GSList * i = lv;
-
+      if (lv) {
+	fputs ("  if (cell) {\n", fin);
+	i = lv;
 	while (i) {
 	  GfsVariable * v = i->data;
-	  fprintf (fin, "  double %s;\n", v->name);
+	  fprintf (fin, 
+		   "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%p),\n"
+		   "           GFS_VALUE (cell, GFS_VARIABLE1 (%p)));\n", 
+		   v->name, v, v);
 	  i = i->next;
 	}
+	fputs ("  } else {\n", fin);
+	i = lv;
+	while (i) {
+	  GfsVariable * v = i->data;
+	  fprintf (fin, 
+		   "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%p),\n"
+		   "           gfs_face_interpolated_value (face, GFS_VARIABLE1 (%p)->i));\n", 
+		   v->name, v, v);
+	  i = i->next;
+	}
+	fputs ("  }\n", fin);
+	g_slist_free (lv);
+      }
+      if (ldv) {
 	i = ldv;
 	while (i) {
 	  GfsDerivedVariable * v = i->data;
-	  fprintf (fin, "  double %s;\n", v->name);
+	  fprintf (fin, "  %s = (* (Func) %p) (cell, face, sim, ((GfsDerivedVariable *) %p)->data);\n", 
+		   v->name, v->func, v);
 	  i = i->next;
 	}
-	if (lv) {
-	  fputs ("  if (cell) {\n", fin);
-	  i = lv;
-	  while (i) {
-	    GfsVariable * v = i->data;
-	    fprintf (fin, 
-		     "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%p),\n"
-		     "           GFS_VALUE (cell, GFS_VARIABLE1 (%p)));\n", 
-		     v->name, v, v);
-	    i = i->next;
-	  }
-	  fputs ("  } else {\n", fin);
-	  i = lv;
-	  while (i) {
-	    GfsVariable * v = i->data;
-	    fprintf (fin, 
-		     "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%p),\n"
-		     "           gfs_face_interpolated_value (face, GFS_VARIABLE1 (%p)->i));\n", 
-		     v->name, v, v);
-	    i = i->next;
-	  }
-	  fputs ("  }\n", fin);
-	  g_slist_free (lv);
-	}
-	if (ldv) {
-	  i = ldv;
-	  while (i) {
-	    GfsDerivedVariable * v = i->data;
-	    fprintf (fin, "  %s = (* (Func) %p) (cell, face, sim, ((GfsDerivedVariable *) %p)->data);\n", 
-		     v->name, v->func, v);
-	    i = i->next;
-	  }
-	  g_slist_free (ldv);
-	}
+	g_slist_free (ldv);
       }
     }
-    fputs ("#line _GFSLINE_ \"GfsFunction\"\n", fin);
+  }
+  fputs ("#line _GFSLINE_ \"GfsFunction\"\n", fin);
 
-    if (f->isexpr)
-      fprintf (fin, "return %s;\n}\n", f->expr->str);
-    else {
-      gchar * s = f->expr->str;
-      guint len = strlen (s);
-      g_assert (s[0] == '{' && s[len-1] == '}');
-      s[len-1] = '\0';
-      fprintf (fin, "%s\n}\n", &s[1]);
-      s[len-1] = '}';
-    }
-    fclose (fin);
-    close (find);
+  if (f->isexpr)
+    fprintf (fin, "return %s;\n}\n", f->expr->str);
+  else {
+    gchar * s = f->expr->str;
+    guint len = strlen (s);
+    g_assert (s[0] == '{' && s[len-1] == '}');
+    s[len-1] = '\0';
+    fprintf (fin, "%s\n}\n", &s[1]);
+    s[len-1] = '}';
+  }
+  fclose (fin);
 
-    if (!lookup_function (f, finname)) {
-      gint status = compile (fp, f, finname);
-      if (status == SIGQUIT)
-	exit (0);
-    }
+  if (!lookup_function (f, finname)) {
+    gint status = compile (fp, f, dirname, finname);
+    g_free (finname);
+    if (status == SIGQUIT)
+      exit (0);
+  }
+  else {
     remove (finname);
+    g_free (finname);
+    if (rmdir (dirname))
+      g_warning ("could not remove directory %s\n%s", dirname, strerror (errno));
   }
 }
 

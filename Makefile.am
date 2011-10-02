@@ -20,13 +20,15 @@ LOG = /var/www/gerris/version/gerris_changes
 
 SUBDIRS = src modules tools test doc desktop debian
 
-EXTRA_DIST = ChangeLog m4
+EXTRA_DIST = ChangeLog m4 build_function_gcc build_function_libtool
 
 if DARCS_CONTROLLED
 DARCS_CHANGELOG = changelog
 else
 DARCS_CHANGELOG = 
 endif
+
+pkglib_SCRIPTS = build_function libtool
 
 ChangeLog: $(DARCS_CHANGELOG)
 

@@ -103,7 +103,7 @@ fi
 AC_PROG_CC
 
 if test x$GCC = xyes ; then
-  CFLAGS="$CFLAGS -Wall -Werror-implicit-function-declaration -Wmissing-prototypes -Wmissing-declarations -pipe -std=c99 -D_XOPEN_SOURCE=500"
+  CFLAGS="$CFLAGS -Wall -Werror-implicit-function-declaration -Wmissing-prototypes -Wmissing-declarations -pipe -std=c99 -D_XOPEN_SOURCE=500 -D_BSD_SOURCE"
 fi
 
 dnl Initialize libtool
@@ -239,23 +239,35 @@ LIBS=$OLD_LIBS
 
 # checking how to build modules
 if test "$have_gmodule" = "yes"; then
+   # try gcc first
    module_flags=""
-   for flags in \
-       "-fPIC -shared -x c" \
-       "-fPIC -dynamiclib -x c -undefined dynamic_lookup" \
-       "-fPIC -bundle -x c"
-   do
+   if test x$GCC = xyes; then
+     gcc_flags="-fpic -x c"
+     for flags in \
+         "-shared" \
+         "-dynamiclib -undefined dynamic_lookup" \
+         "-bundle"
+     do
 	if test x"$module_flags" = x; then
-	   if echo "test(){}" | gcc $flags - 2> /dev/null; then
-	      module_flags=\"$flags\"
+	   if echo "void test(){}" | gcc $flags $gcc_flags - 2> /dev/null; then
+	      module_flags="$flags"
 	   fi
 	fi
-   done
-   if test x"$module_flags" = x; then
-	have_gmodule=no
-	AC_MSG_WARN([Could not build module, functions in parameter files will not be supported.])
+     done
    fi
-   AC_DEFINE_UNQUOTED(MODULES_FLAGS, $module_flags, [Linking flags to build modules.])
+   if test x"$module_flags" = x; then
+       # use libtool if not using gcc
+       sed -e "s|PREFIX|$prefix|g" -e "s|COMPILER|$CC|g" < build_function_libtool > build_function
+   else
+       sed "s/MODULE_FLAGS/$module_flags/" < build_function_gcc > build_function
+   fi
+else
+   # cannot use modules
+   cat <<EOF > build_function
+#!/bin/sh
+echo "functions are not supported on this system"
+exit 1
+EOF
 fi
 
 # checks for pkg-config
