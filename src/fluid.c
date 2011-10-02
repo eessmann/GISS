@@ -2922,11 +2922,12 @@ static gdouble distance (FttVector * c, FttCell * cell, gboolean centered)
   else {
     FttVector cm;
     gfs_cell_cm (cell, &cm);
-    return sqrt ((cm.x - c->x)*(cm.x - c->x) + (cm.y - c->y)*(cm.y - c->y)
-#if (!FTT_2D)
-      + (cm.z - c->z)*(cm.z - c->z)
+#if FTT_2D
+    return sqrt ((cm.x - c->x)*(cm.x - c->x) + (cm.y - c->y)*(cm.y - c->y));
+#else /* 3D */
+    return sqrt ((cm.x - c->x)*(cm.x - c->x) + (cm.y - c->y)*(cm.y - c->y) +
+		 (cm.z - c->z)*(cm.z - c->z));
 #endif /* 3D */
-		 );
   }
 }
 

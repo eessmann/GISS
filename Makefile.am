@@ -18,7 +18,7 @@ KEY = 07AB22DC
 # change this to the html changelog for this launchpad release
 LOG = /var/www/gerris/version/gerris_changes
 
-SUBDIRS = modules src tools test doc desktop debian
+SUBDIRS = src modules tools test doc desktop debian
 
 EXTRA_DIST = ChangeLog m4
 

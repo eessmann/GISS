@@ -228,7 +228,15 @@ static GfsModule * gfs_module_new (GtsFile * fp, const gchar * mname,
 {
   GModule * module;
   GfsFunctionFunc f;
+#ifdef MODULES_SUFFIX
+  gchar * path;
+  if (mname[0] != G_DIR_SEPARATOR)
+    path = g_strconcat (GFS_MODULES_DIR, G_DIR_SEPARATOR_S, mname, MODULES_SUFFIX, NULL);
+  else
+    path = g_strdup (mname);
+#else
   gchar * path = g_module_build_path (GFS_MODULES_DIR, mname);
+#endif
   module = g_module_open (path, 0);
   g_free (path);
   if (module == NULL)

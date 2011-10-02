@@ -1,0 +1,36 @@
+# file generated automatically by configure from 'build_function_gcc'
+#!/bin/sh
+
+LINENO=$1     # line number
+DIMENSION=$2  # gerris2D or gerris3D
+
+CC=gcc
+LD=gcc
+CFLAGS="-O -fpic -Wall -Wno-unused -Werror"
+LDFLAGS="-O -fpic MODULE_FLAGS"
+
+touch links
+if sed 's/@/#/g' < function.c | awk '{
+      if ($1 == "#" && $2 == "link") {
+        for (i = 3; i <= NF; i++)
+          printf ("%s ", $i) >> "links";
+        print "";
+      } else if ($1 == "#link") {
+        for (i = 2; i <= NF; i++)
+          printf ("%s ", $i) >> "links";
+        print "";
+      } else print $0;
+    }' > module.c; then :
+else
+    exit 1
+fi
+
+if $CC `pkg-config $DIMENSION --cflags` -D_GFSLINE_=$LINENO $CFLAGS \
+    -c -o module.o module.c; then
+    if $LD `pkg-config $DIMENSION --libs` $LDFLAGS -o module.so `cat links` module.o; then :
+    else
+	exit 1
+    fi
+else
+    exit 1
+fi

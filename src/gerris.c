@@ -153,69 +153,76 @@ int main (int argc, char * argv[])
     case 'v': /* verbose */
       verbose = TRUE;
       break;
-    case 'h': /* help */
-      gfs_error (0,
-             "Usage: gerris [OPTION] FILE\n"
-	     "The Gerris flow solver simulation engine.\n"
-	     "\n"
-	     "  -s N   --split=N     splits the domain N times and returns\n"
-             "                       the corresponding simulation\n"
-	     "  -i     --pid         keep box pids when splitting\n"
-             "  -p N   --partition=N partition the domain in 2^N subdomains and returns\n" 
-             "                       the corresponding simulation\n"
-             "  -b N   --bubble=N    partition the domain in N subdomains and returns\n" 
-             "                       the corresponding simulation\n"
-	     "  -d     --data        when splitting or partitioning, output all data\n"
-	     "  -P     --profile     profiles calls to boundary conditions\n"
+    case 'h': { /* help */
+      gchar * usage = 
+	"Usage: gerris [OPTION] FILE\n"
+	"The Gerris flow solver simulation engine.\n"
+	"\n"
+	"  -s N   --split=N     splits the domain N times and returns\n"
+	"                       the corresponding simulation\n"
+	"  -i     --pid         keep box pids when splitting\n"
+	"  -p N   --partition=N partition the domain in 2^N subdomains and returns\n" 
+	"                       the corresponding simulation\n"
+	"  -b N   --bubble=N    partition the domain in N subdomains and returns\n" 
+	"                       the corresponding simulation\n"
+	"  -d     --data        when splitting or partitioning, output all data\n"
+	"  -P     --profile     profiles calls to boundary conditions\n"
 #ifdef HAVE_M4
-	     "  -m     --macros      Turn macros support on\n"
-	     "  -DNAME               Defines NAME as a macro expanding to VALUE\n"
-	     "  -DNAME=VALUE         (macro support is implicitly turned on)\n"
-	     "         --define=NAME\n"
-             "         --define=NAME=VALUE\n"
-	     "  -IDIR --include=DIR  Append DIR to macro include path\n"
+	"  -m     --macros      Turn macros support on\n"
+	"  -DNAME               Defines NAME as a macro expanding to VALUE\n"
+	"  -DNAME=VALUE         (macro support is implicitly turned on)\n"
+	"         --define=NAME\n"
+	"         --define=NAME=VALUE\n"
+	"  -IDIR --include=DIR  Append DIR to macro include path\n"
 #endif /* HAVE_M4 */
-	     "  -eEV   --event=EV    Evaluates GfsEvent EV and returns the simulation\n"
-	     "  -v     --verbose     Display more messages\n"
-	     "  -h     --help        display this help and exit\n"
-	     "  -V     --version     output version information and exit\n"
-	     "\n"
-	     "Reports bugs to %s\n",
-	     FTT_MAINTAINER);
+	"  -eEV   --event=EV    Evaluates GfsEvent EV and returns the simulation\n"
+	"  -v     --verbose     Display more messages\n"
+	"  -h     --help        display this help and exit\n"
+	"  -V     --version     output version information and exit\n"
+	"\n"
+	"Reports bugs to %s\n";
+      gfs_error (0, usage, FTT_MAINTAINER);
       return 0; /* success */
       break;
-    case 'V': /* version */
-      gfs_error (0,
-	       "gerris: using %dD libgfs version %s (%s)\n"
-	       "  compiled with flags: %s\n"
-	       "  MPI:          %s\n"
-	       "  pkg-config:   %s\n"
-	       "  m4 and gawk:  %s\n"
-	       "Copyright (C) 2001-2010 NIWA.\n"
-	       "This is free software; see the source for copying conditions.  There is NO\n"
-	       "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
-	       FTT_DIMENSION,
-	       GFS_VERSION,
-	       GFS_BUILD_VERSION,
-	       GFS_COMPILATION_FLAGS,
+    }
+    case 'V': { /* version */
+      gchar * mpi = 
 #ifdef HAVE_MPI
-	       "yes",
+	"yes";
 #else
-	       "no",
+        "no";
 #endif
+      gchar * pkgconfig =
 #ifdef HAVE_PKG_CONFIG
-	       "yes",
+	"yes";
 #else
-	       "no",
+        "no";
 #endif
+      gchar * m4 =
 #ifdef HAVE_M4
-	       "yes"
+	"yes";
 #else
-	       "no"
+        "no";
 #endif
-	       );
+      gfs_error (0,
+		 "gerris: using %dD libgfs version %s (%s)\n"
+		 "  compiled with flags: %s\n"
+		 "  MPI:          %s\n"
+		 "  pkg-config:   %s\n"
+		 "  m4 and gawk:  %s\n"
+		 "Copyright (C) 2001-2010 NIWA.\n"
+		 "This is free software; see the source for copying conditions.  There is NO\n"
+		 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
+		 FTT_DIMENSION,
+		 GFS_VERSION,
+		 GFS_BUILD_VERSION,
+		 GFS_COMPILATION_FLAGS,
+		 mpi,
+		 pkgconfig,
+		 m4);
       return 0; /* succes */
       break;
+    }
     case '?': /* wrong options */
       gfs_error (0, "Try `gerris --help' for more information.\n");
       return 1; /* failure */

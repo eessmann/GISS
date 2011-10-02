@@ -67,8 +67,6 @@
 #include "particle.h"
 #include "cartesian.h"
 
-#include "modules.h"
-
 #ifdef HAVE_MPI
 # include <mpi.h>
 #endif /* HAVE_MPI */
@@ -422,7 +420,4 @@ void gfs_init (int * argc, char *** argv)
 
   /* Instantiates classes before reading any domain or simulation file */
   gfs_classes ();
-
-  /* If modules are not supported, calls modules init functions */
-#include "modules.c"
 }

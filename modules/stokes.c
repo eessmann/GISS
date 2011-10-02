@@ -20,26 +20,30 @@
 #include <math.h>
 #include "event.h"
 #include "solid.h"
+#include "config.h"
 
-extern void cw260_ (const float * zd,
-		    const float * zt, 
-		    const float * zh, 
-		    const float * zu, 
-		    const int * nverb, 
-		    int * nfun, 
-		    float * zel);
+#define CW260_F77 F77_FUNC (cw260, CW260)
+#define KMTS_F77 F77_FUNC (kmts, KMTS)
 
-extern void kmts_  (const int * nfun,
-		    const float * xx,
-		    const float * yy,
-		    const float * tt,
-		    float * uu, 
-		    float * vv,
-		    float * ut,
-		    float * vt,
-		    float * du,
-		    float * dv,
-		    float * etah);
+void CW260_F77 (const float * zd,
+		const float * zt, 
+		const float * zh, 
+		const float * zu, 
+		const int * nverb, 
+		int * nfun, 
+		float * zel);
+
+void KMTS_F77  (const int * nfun,
+		const float * xx,
+		const float * yy,
+		const float * tt,
+		float * uu, 
+		float * vv,
+		float * ut,
+		float * vt,
+		float * du,
+		float * dv,
+		float * etah);
 
 /* GfsInitStokesWave: Header */
 
@@ -90,7 +94,7 @@ static void gfs_init_stokes_wave_read (GtsObject ** o, GtsFile * fp)
   
   float min = 1., max = 100., zt = (min + max)/2.;
   do {
-    cw260_ (&zd, &zt, &zh, &zu, &nverb, &order, &l);
+    CW260_F77 (&zd, &zt, &zh, &zu, &nverb, &order, &l);
     fprintf (stderr, "# order: %d wavelength: %g period: %g\n", 
 	     order, l, zt);
     if (l > WAVELENGTH)
@@ -117,7 +121,7 @@ static void init_velocity (FttCell * cell, GfsVariable ** velocity)
   FttVector p;
   gfs_cell_cm (cell, &p);
   float x = (p.x + 0.5)*WAVELENGTH, y = p.y*WAVELENGTH, t = 0., u, v, ut, vt, du, dv, etah;
-  kmts_ (&order, &x, &y, &t, &u, &v, &ut, &vt, &du, &dv, &etah);
+  KMTS_F77 (&order, &x, &y, &t, &u, &v, &ut, &vt, &du, &dv, &etah);
   GFS_VALUE (cell, velocity[0]) = u/sqrt(WAVELENGTH*9.81);
   GFS_VALUE (cell, velocity[1]) = v/sqrt(WAVELENGTH*9.81);
 }
@@ -125,7 +129,7 @@ static void init_velocity (FttCell * cell, GfsVariable ** velocity)
 static gdouble stokes_height (gdouble x, gdouble y, gdouble z, gdouble t)
 {
   float xx = (x + 0.5)*WAVELENGTH, yy = WAVELENGTH, u, v, ut, vt, du, dv, etah, t1 = 0.;
-  kmts_ (&order, &xx, &yy, &t1, &u, &v, &ut, &vt, &du, &dv, &etah);
+  KMTS_F77 (&order, &xx, &yy, &t1, &u, &v, &ut, &vt, &du, &dv, &etah);
   return etah/WAVELENGTH - y;
 }
 

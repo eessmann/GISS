@@ -29,9 +29,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include "gfsconfig.h"
-
-#define FTT_MAINTAINER "s.popinet@niwa.co.nz"
+#define FTT_MAINTAINER "s.popinet@gmail.com"
 
 #if FTT_2D
 # define FTT_CELLS     4
