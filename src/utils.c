@@ -695,9 +695,9 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 	while (i) {
 	  GfsVariable * v = i->data;
 	  fprintf (fin, 
-		   "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%p),\n"
-		   "           GFS_VALUE (cell, GFS_VARIABLE1 (%p)));\n", 
-		   v->name, v, v);
+		   "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%#lx),\n"
+		   "           GFS_VALUE (cell, GFS_VARIABLE1 (%#lx)));\n", 
+		   v->name, (unsigned long) v, (unsigned long) v);
 	  i = i->next;
 	}
 	fputs ("  } else {\n", fin);
@@ -705,9 +705,9 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 	while (i) {
 	  GfsVariable * v = i->data;
 	  fprintf (fin, 
-		   "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%p),\n"
-		   "           gfs_face_interpolated_value (face, GFS_VARIABLE1 (%p)->i));\n", 
-		   v->name, v, v);
+		   "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%#lx),\n"
+		   "           gfs_face_interpolated_value (face, GFS_VARIABLE1 (%#lx)->i));\n", 
+		   v->name, (unsigned long) v, (unsigned long) v);
 	  i = i->next;
 	}
 	fputs ("  }\n", fin);
@@ -717,8 +717,8 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 	i = ldv;
 	while (i) {
 	  GfsDerivedVariable * v = i->data;
-	  fprintf (fin, "  %s = (* (Func) %p) (cell, face, sim, ((GfsDerivedVariable *) %p)->data);\n", 
-		   v->name, v->func, v);
+	  fprintf (fin, "  %s = (* (Func) %#lx) (cell, face, sim, ((GfsDerivedVariable *) %#lx)->data);\n", 
+		   v->name, (unsigned long) v->func, (unsigned long) v);
 	  i = i->next;
 	}
 	g_slist_free (ldv);
