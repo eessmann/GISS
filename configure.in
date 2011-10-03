@@ -286,18 +286,19 @@ if test x"$have_pkg_config" = x""; then
    have_pkg_config=undefined
 fi
 
-# checks for gawk and m4
-AC_CHECK_PROG(have_awk, gawk, yes, no)
-if test "$have_awk" = "yes"; then
-   AC_CHECK_PROG(have_m4, m4, yes, no)
-   if test "$have_m4" = "yes"; then
-      AC_DEFINE(HAVE_M4, 1, [Define to 1 if gawk and m4 are available.])
-   else
-      AC_DEFINE(HAVE_M4, 0)
+# checks for m4
+AC_CHECK_PROG(have_m4, m4, yes, no)
+options_m4=""
+if test "$have_m4" = "yes"; then
+   AC_DEFINE(HAVE_M4, 1, [Define to 1 if m4 is available.])
+   # check whether m4 accepts the -P option
+   if m4 -P 2> /dev/null; then
+      options_m4="-P"
    fi
 else
-   have_m4=undefined
+   AC_DEFINE(HAVE_M4, 0)
 fi
+AC_DEFINE_UNQUOTED(M4_OPTIONS, "$options_m4", [Options for m4])
 
 AC_SUBST(CFLAGS)
 AC_SUBST(CPPFLAGS)
@@ -451,8 +452,10 @@ echo "  C   Flags         = $CFLAGS"
 echo "  MPI enabled       = $use_mpicc"
 echo "  GModule support   = $have_gmodule"
 echo "  pkg-config        = $have_pkg_config"
-echo "  gawk              = $have_awk"
 echo "  m4                = $have_m4"
+if test x$have_m4 = xyes; then
+   echo "  m4 options        = $options_m4"
+fi
 echo
 echo "Modules"
 echo

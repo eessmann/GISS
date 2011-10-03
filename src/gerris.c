@@ -18,6 +18,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 #include "config.h"
@@ -74,7 +75,7 @@ int main (int argc, char * argv[])
   guint split = 0;
   guint npart = 0;
   gboolean profile = FALSE, macros = FALSE, one_box_per_pe = TRUE, bubble = FALSE, verbose = FALSE;
-  gchar * m4_options = g_strdup ("-P");
+  gchar * m4_options = g_strdup (M4_OPTIONS);
   GPtrArray * events = g_ptr_array_new ();
   gint maxlevel = -2;
 
@@ -209,8 +210,8 @@ int main (int argc, char * argv[])
 		 "  compiled with flags: %s\n"
 		 "  MPI:          %s\n"
 		 "  pkg-config:   %s\n"
-		 "  m4 and gawk:  %s\n"
-		 "Copyright (C) 2001-2010 NIWA.\n"
+		 "  m4:           %s\n"
+		 "Copyright (C) 2001-2011 NIWA.\n"
 		 "This is free software; see the source for copying conditions.  There is NO\n"
 		 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n",
 		 FTT_DIMENSION,
@@ -237,15 +238,19 @@ int main (int argc, char * argv[])
   }
 
   if (macros) {
-    const gchar awk[] = "gawk -f " GFS_MODULES_DIR "/m4.awk ";
+    gchar * awk = g_strconcat ("awk -v prefix=",
+			       strstr (m4_options, "-P") ? "m4_" : "",
+			       " -f ", GFS_MODULES_DIR, "/m4.awk ", 
+			       NULL);
     gchar * command;
-    
+
     if (!strcmp (argv[optind], "-"))
       command = g_strjoin (NULL, awk, "| m4 ", m4_options, NULL);
     else
       command = g_strjoin (NULL, awk, argv[optind], " | m4 ", m4_options, NULL);
     fptr = popen (command, "r");
     g_free (command);
+    g_free (awk);
   }
   else { /* no macros */
     if (!strcmp (argv[optind], "-"))
