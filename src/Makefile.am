@@ -67,8 +67,7 @@ pkginclude_HEADERS = \
 	function.h
 
 include_HEADERS = \
-	gfs.h \
-	gfsconfig.h
+	gfs.h
 
 SRC = \
 	ftt.c \

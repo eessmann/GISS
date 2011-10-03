@@ -80,7 +80,6 @@ AC_ARG_ENABLE(mpi,
 	*) with_mpicc=no ;;
   esac])
 
-use_mpicc=no
 if test "x$with_mpicc" != "xno" ; then
   if test "x$with_mpicc" != "x" ; then
      if test -x "$with_mpicc" ; then
@@ -88,7 +87,7 @@ if test "x$with_mpicc" != "xno" ; then
        CC="$with_mpicc"
      fi
   else
-     AC_CHECK_PROG(use_mpicc, mpicc, yes)
+     AC_CHECK_PROG(use_mpicc, mpicc, yes, no)
      if test "x$use_mpicc" = "xyes" ; then
        CC=mpicc
      fi
@@ -98,6 +97,8 @@ if test "x$with_mpicc" != "xno" ; then
   else
      AC_MSG_WARN([MPI not found. No MPI support will be compiled in.])
   fi
+else
+  use_mpicc=no
 fi
 
 AC_PROG_CC
