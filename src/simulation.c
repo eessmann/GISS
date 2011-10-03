@@ -24,7 +24,6 @@
 #include <math.h>
 #include <gmodule.h>
 #include "config.h"
-#include "gfsconfig.h"
 #include "simulation.h"
 #include "output.h"
 #include "refine.h"

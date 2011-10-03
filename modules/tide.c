@@ -22,7 +22,6 @@
 #include <time.h>
 #include <stdlib.h>
 #include "fes2004/fes2004_lib.h"
-#include "gfsconfig.h"
 #include "variable.h"
 
 /* Heavily based on GfsBcFlather */
