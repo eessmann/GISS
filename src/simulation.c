@@ -213,7 +213,15 @@ static GModule * load_module (GtsFile * fp, GfsSimulation * sim)
 				  "3D"
 #endif
 				  , NULL);
+#ifdef MODULES_SUFFIX
+      gchar * path;
+      if (name[0] != G_DIR_SEPARATOR)
+	path = g_strconcat (GFS_MODULES_DIR, G_DIR_SEPARATOR_S, "lib", name, MODULES_SUFFIX, NULL);
+      else
+	path = g_strdup (name);
+#else
       gchar * path = g_module_build_path (GFS_MODULES_DIR, name);
+#endif
       g_free (name);
       module = g_module_open (path, 0);
       g_free (path);
