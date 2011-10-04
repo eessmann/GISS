@@ -961,13 +961,18 @@ static void allocate_normal_alpha (GfsVariableTracerVOF * t)
 
 static void variable_tracer_vof_update (GfsVariable * v, GfsDomain * domain)
 {
+  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) v->fine_coarse, v);
   gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, v);
+  GSList * j = t->concentrations->items;
+  while (j) {
+    gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, j->data);
+    j = j->next;
+  }
     
   /* update normals and alpha */
-  GfsVariableTracerVOF * t = GFS_VARIABLE_TRACER_VOF (v);
   guint l, depth = gfs_domain_depth (domain);
   FttComponent c;
   for (l = 0; l <= depth; l++) {
@@ -1001,6 +1006,7 @@ static void variable_tracer_vof_destroy (GtsObject * o)
       gts_object_destroy (GTS_OBJECT (v->m[c]));
     gts_object_destroy (GTS_OBJECT (v->alpha));
   }
+  gts_object_destroy (GTS_OBJECT (v->concentrations));
 
   (* GTS_OBJECT_CLASS (gfs_variable_tracer_vof_class ())->parent_class->destroy) (o);
 }
@@ -1036,7 +1042,7 @@ static void vof_coarse_fine (FttCell * parent, GfsVariable * v)
   guint i;
   
   ftt_cell_children (parent, &child);
-  if (GFS_IS_FULL (f))
+  if (GFS_IS_FULL (f)) {
     for (i = 0; i < FTT_CELLS; i++) {
       FttComponent c;
       if (!child.c[i])
@@ -1047,7 +1053,16 @@ static void vof_coarse_fine (FttCell * parent, GfsVariable * v)
       GFS_VALUE (child.c[i], t->m[0]) = 1.;
       GFS_VALUE (child.c[i], t->alpha) = f;
     }
+    
+    /* second-order interpolation for concentrations in full cells */
+    GSList * j = t->concentrations->items;
+    while (j) {
+      gfs_cell_coarse_fine (parent, j->data);
+      j = j->next;
+    }
+  }
   else {
+    /* interfacial cell */
     gdouble alpha = GFS_VALUE (parent, t->alpha);
     FttVector m;
     
@@ -1067,6 +1082,15 @@ static void vof_coarse_fine (FttCell * parent, GfsVariable * v)
       }
       GFS_VALUE (child.c[i], v) = gfs_plane_volume (&m, 2.*alpha1);
       GFS_VALUE (child.c[i], t->alpha) = 2.*alpha1;
+    }
+
+    /* firs-order interpolation for concentrations in interfacial cells */
+    GSList * j = t->concentrations->items;
+    while (j) {
+      GfsVariable * v = j->data;
+      for (i = 0; i < FTT_CELLS; i++)
+	GFS_VALUE (child.c[i], v) = GFS_VALUE (parent, v);
+      j = j->next;
     }
   }
 }
@@ -1121,6 +1145,20 @@ static void vof_fine_coarse (FttCell * parent, GfsVariable * v)
       GFS_VALUE (parent, t->m[c]) = (&m.x)[c];
     GFS_VALUE (parent, t->alpha) = gfs_plane_alpha (&m, f);
   }
+
+  GSList * j = t->concentrations->items;
+  while (j) {
+    GfsVariable * p = j->data;
+    gdouble sp = 0.;
+    for (i = 0; i < FTT_CELLS; i++)
+      if (child.c[i] && GFS_HAS_DATA (child.c[i], v))
+	sp += GFS_VALUE (child.c[i], v)*GFS_VALUE (child.c[i], p);
+    if (val > 0.)
+      GFS_VALUE (parent, p) = sp/val;
+    else
+      GFS_VALUE (parent, p) = 0.;
+    j = j->next;
+  }
 }
 
 static void variable_tracer_vof_init (GfsVariable * v)
@@ -1131,6 +1169,8 @@ static void variable_tracer_vof_init (GfsVariable * v)
   v->fine_coarse = vof_fine_coarse;
   //  v->face_value = gfs_vof_face_value;
   GFS_VARIABLE_TRACER (v)->advection.cfl = 0.5;
+  GFS_VARIABLE_TRACER_VOF (v)->concentrations = 
+    GTS_SLIST_CONTAINER (gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ())));
 }
 
 GfsVariableTracerVOFClass * gfs_variable_tracer_vof_class (void)
@@ -1155,7 +1195,7 @@ GfsVariableTracerVOFClass * gfs_variable_tracer_vof_class (void)
 
 typedef struct {
   GfsAdvectionParams * par, vpar;
-  GfsVariable * u, * du[FTT_DIMENSION - 1];
+  GfsVariable * u, * du[FTT_DIMENSION - 1], * vof;
   FttComponent c;
   GfsDomain * domain;
   guint depth, too_coarse;
@@ -1172,19 +1212,18 @@ static gdouble plane_volume_shifted (FttVector m, gdouble alpha, FttVector p[2])
   return gfs_plane_volume (&m, alpha);
 }
 
-static gdouble fine_fraction (FttCellFace * face, VofParms * p, gdouble un,
-			      FttVector q[2])
+static gdouble fine_fraction (FttCellFace * face, GfsVariable * v, gdouble un, FttVector q[2])
 {
-  gdouble f = GFS_VALUE (face->cell, p->par->v);
+  gdouble f = GFS_VALUE (face->cell, v);
   if (f == 0. || f == 1.)
     return f;
   else {
     FttComponent c;
     FttVector m, q1[2];
-    gdouble alpha = GFS_VALUE (face->cell, GFS_VARIABLE_TRACER_VOF (p->par->v)->alpha);
+    gdouble alpha = GFS_VALUE (face->cell, GFS_VARIABLE_TRACER_VOF (v)->alpha);
 
     for (c = 0; c < FTT_DIMENSION; c++)
-      (&m.x)[c] = GFS_VALUE (face->cell, GFS_VARIABLE_TRACER_VOF (p->par->v)->m[c]);
+      (&m.x)[c] = GFS_VALUE (face->cell, GFS_VARIABLE_TRACER_VOF (v)->m[c]);
     c = face->d/2;
     if (face->d % 2 != 0) {
       (&m.x)[c] = - (&m.x)[c];
@@ -1197,19 +1236,18 @@ static gdouble fine_fraction (FttCellFace * face, VofParms * p, gdouble un,
   }
 }
 
-static gdouble coarse_fraction (FttCellFace * face, VofParms * p, gdouble un,
-				FttVector q[2])
+static gdouble coarse_fraction (FttCellFace * face, GfsVariable * v, gdouble un, FttVector q[2])
 {
-  gdouble f = GFS_VALUE (face->neighbor, p->par->v);
+  gdouble f = GFS_VALUE (face->neighbor, v);
   if (f == 0. || f == 1.)
     return f;
   else {
     FttComponent c;
     FttVector m, o, q1[2];
-    gdouble alpha = GFS_VALUE (face->neighbor, GFS_VARIABLE_TRACER_VOF (p->par->v)->alpha);
+    gdouble alpha = GFS_VALUE (face->neighbor, GFS_VARIABLE_TRACER_VOF (v)->alpha);
     
     for (c = 0; c < FTT_DIMENSION; c++)
-      (&m.x)[c] = GFS_VALUE (face->neighbor, GFS_VARIABLE_TRACER_VOF (p->par->v)->m[c]);
+      (&m.x)[c] = GFS_VALUE (face->neighbor, GFS_VARIABLE_TRACER_VOF (v)->m[c]);
     
     if (!FTT_FACE_DIRECT (face)) {
       (&m.x)[face->d/2] = - (&m.x)[face->d/2];
@@ -1243,7 +1281,7 @@ static void face_too_coarse (FttCellFace * face, VofParms * p)
       gdouble f = GFS_VALUE (face->neighbor, p->par->v);
       if (GFS_IS_FULL (f)) {
 	FttVector q[2] = {{0., 0., 0.},{1., 1., 1.}};
-	if (fine_fraction (face, p, un*p->par->dt/ftt_cell_size (face->cell), q) != f) {
+	if (fine_fraction (face, p->vof, un*p->par->dt/ftt_cell_size (face->cell), q) != f) {
 	  p->too_coarse++;
 	  TOO_COARSE (face->neighbor) = TRUE;
 	}
@@ -1385,6 +1423,18 @@ static void fix_too_coarse (GfsDomain * domain, VofParms * p)
   domain->cell_init_data = domain;
 }
 
+static void concentration_face_values (FttCell * cell, VofParms * p)
+{
+  GfsStateVector * s = GFS_STATE (cell);
+  gdouble size = ftt_cell_size (cell);
+  gdouble unorm = p->par->dt*(s->f[2*p->c].un + s->f[2*p->c + 1].un)/(2.*size);
+  gdouble g = (* p->par->gradient) (cell, p->c, p->par->v->i);
+  gdouble v = GFS_VALUE (cell, p->par->v);
+  s->f[2*p->c].v     = v + MIN ((  1. - unorm)/2.,  0.5)*g;
+  s->f[2*p->c + 1].v = v + MAX ((- 1. - unorm)/2., -0.5)*g;
+  GFS_VALUE (cell, p->par->fv) = 0.;
+}
+
 static void vof_flux (FttCellFace * face, VofParms * p)
 {
   gdouble size = ftt_cell_size (face->cell);
@@ -1392,8 +1442,8 @@ static void vof_flux (FttCellFace * face, VofParms * p)
   FttComponent c;
 
   int n; /* loop over n "horizontal bands" */
-  if (GFS_IS_FULL (GFS_VALUE (face->cell, p->par->v)) && 
-      GFS_IS_FULL (GFS_VALUE (face->neighbor, p->par->v))) {
+  if (GFS_IS_FULL (GFS_VALUE (face->cell, p->vof)) && 
+      GFS_IS_FULL (GFS_VALUE (face->neighbor, p->vof))) {
     n = 1; /* non-interfacial cells: use only one band */
     for (c = 0; c < FTT_DIMENSION - 1; c++)
       dun[c] = 0.;
@@ -1420,9 +1470,9 @@ static void vof_flux (FttCellFace * face, VofParms * p)
   FttComponent ci = FTT_ORTHOGONAL_COMPONENT (p->c);
 
 #if FTT_2D
-  gdouble f = gfs_domain_face_fraction (p->par->fv->domain, face)/n;
+  gdouble f = gfs_domain_face_fraction (p->vof->domain, face)/n;
 #else /* 3D */
-  gdouble f = gfs_domain_face_fraction (p->par->fv->domain, face)/(n*n);
+  gdouble f = gfs_domain_face_fraction (p->vof->domain, face)/(n*n);
   FttComponent cj = FTT_ORTHOGONAL_COMPONENT (ci);
   int j;
   for (j = 0; j < n; j++) {
@@ -1452,24 +1502,33 @@ static void vof_flux (FttCellFace * face, VofParms * p)
 	for (c = 0; c < FTT_DIMENSION - 1; c++)
 	  dun[c] = - dun[c];
       }
-      flux = fine_fraction (face, p, uni, q)*uni*f;
-      GFS_VALUE (face->neighbor, p->par->fv) += flux;
-      GFS_VALUE (face->neighbor, p->vpar.fv) += uni*f;
+      flux = fine_fraction (face, p->vof, uni, q)*uni*f;
+      if (p->par->v == p->vof)
+	GFS_VALUE (face->neighbor, p->vpar.fv) += uni*f;
+      else
+	flux *= GFS_STATE (face->cell)->f[face->d].v;
+      GFS_VALUE (face->neighbor, p->par->fv) += flux;	
       break;
     }
     case FTT_FINE_COARSE: {
       flux = uni > 0. ? 
-	fine_fraction (face, p, uni, q)*uni*f : 
-	coarse_fraction (face, p, -uni/2., q)*uni*f;
+	fine_fraction (face, p->vof, uni, q)*uni*f : 
+	coarse_fraction (face, p->vof, -uni/2., q)*uni*f;
+      if (p->par->v == p->vof)
+	GFS_VALUE (face->neighbor, p->vpar.fv) += uni*f/FTT_CELLS;
+      else
+	flux *= uni > 0. ?
+	  GFS_STATE (face->cell)->f[face->d].v :
+	  GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v;
       GFS_VALUE (face->neighbor, p->par->fv) += flux/FTT_CELLS;
-      GFS_VALUE (face->neighbor, p->vpar.fv) += uni*f/FTT_CELLS;
       break;
     }
     default:
       g_assert_not_reached ();
     }
+    if (p->par->v == p->vof)
+      GFS_VALUE (face->cell, p->vpar.fv) -= uni*f;
     GFS_VALUE (face->cell, p->par->fv) -= flux;
-    GFS_VALUE (face->cell, p->vpar.fv) -= uni*f;
   }
 
 #if !FTT_2D
@@ -1498,11 +1557,25 @@ static void f_times_dV (FttCell * cell, VofParms * p)
   GFS_VALUE (cell, p->par->v) *= GFS_VALUE (cell, p->vpar.v);
 }
 
+static void concentration_times_dV (FttCell * cell, VofParms * p)
+{
+  GFS_VALUE (cell, p->par->v) *= GFS_VALUE (cell, p->vpar.v)*GFS_VALUE (cell, p->vof);
+}
+
 static void f_over_dV (FttCell * cell, VofParms * p)
 {
   g_assert (GFS_VALUE (cell, p->vpar.v) > 0.);
   gdouble f = GFS_VALUE (cell, p->par->v)/GFS_VALUE (cell, p->vpar.v);
   GFS_VALUE (cell, p->par->v) = f < 1e-10 ? 0. : f > 1. - 1e-10 ? 1. : f;
+}
+
+static void concentration_over_dV (FttCell * cell, VofParms * p)
+{
+  gdouble f = GFS_VALUE (cell, p->vof);
+  if (f > 0.)
+    GFS_VALUE (cell, p->par->v) = GFS_VALUE (cell, p->par->v)/(GFS_VALUE (cell, p->vpar.v)*f);
+  else
+    GFS_VALUE (cell, p->par->v) = GFS_NODATA;
 }
 
 /**
@@ -1528,6 +1601,7 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   gfs_domain_timer_start (domain, "tracer_vof_advection");
 
   p.par = par;
+  p.vof = par->v;
   gfs_advection_params_init (&p.vpar);
   for (d = 0; d < FTT_DIMENSION - 1; d++)
     p.du[d] = gfs_temporary_variable (domain);
@@ -1536,6 +1610,12 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   p.vpar.average = par->average;
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) initialize_dV, p.vpar.v);
   par->fv = gfs_temporary_variable (domain);
+  GSList * concentrations = GFS_VARIABLE_TRACER_VOF (p.vof)->concentrations->items, * j;
+  j = concentrations;
+  while (j) {
+    GFS_VARIABLE_TRACER (j->data)->advection.fv = gfs_temporary_variable (domain);
+    j = j->next;
+  }
   for (c = 0; c < FTT_DIMENSION; c++) {
     p.c = (cstart + c) % FTT_DIMENSION;
     fix_too_coarse (domain, &p);
@@ -1546,10 +1626,35 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
     gfs_domain_face_traverse (domain, p.c,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) vof_flux, &p);
+    j = concentrations;
+    while (j) {
+      GfsAdvectionParams * par = &GFS_VARIABLE_TRACER (j->data)->advection;
+      GfsVariable * fv = p.par->fv;
+      p.par->v = j->data;
+      p.par->fv = par->fv;
+      p.par->gradient = par->gradient;
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) concentration_face_values, &p);
+      gfs_domain_face_bc (domain, p.c, p.par->v);
+      gfs_domain_face_traverse (domain, p.c,
+				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				(FttFaceTraverseFunc) vof_flux, &p);
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) concentration_times_dV, &p);
+      gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) par->update, par);
+      p.par->fv = fv;
+      p.par->v = p.vof;
+      j = j->next;
+    }
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) f_times_dV, &p);
     gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) par->update, par);
     gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) par->update, &p.vpar);
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) f_over_dV, &p);
+    j = concentrations;
+    while (j) {
+      p.par->v = j->data;
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) concentration_over_dV, &p);
+      p.par->v = p.vof;
+      j = j->next;
+    }
 
     /* update VOF data (normals etc...) */
     (* GFS_VARIABLE_TRACER_VOF_CLASS (GTS_OBJECT (p.par->v)->klass)->update) (p.par->v, domain);
@@ -1557,6 +1662,12 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   cstart = (cstart + 1) % FTT_DIMENSION;
   gts_object_destroy (GTS_OBJECT (par->fv));
   par->fv = NULL;
+  j = concentrations;
+  while (j) {
+    gts_object_destroy (GTS_OBJECT (GFS_VARIABLE_TRACER (j->data)->advection.fv));
+    GFS_VARIABLE_TRACER (j->data)->advection.fv = NULL;
+    j = j->next;
+  }
   gts_object_destroy (GTS_OBJECT (p.vpar.v));
   gts_object_destroy (GTS_OBJECT (p.vpar.fv));
   for (d = 0; d < FTT_DIMENSION - 1; d++)
@@ -2725,6 +2836,75 @@ gdouble gfs_vof_correctness (FttCell * cell, GfsVariableTracerVOF * t)
 
 /** \endobject{GfsVariableTracerVOF} */
 
+/** \beginobject{GfsVariableVOFConcentration} */
+
+static void variable_vof_concentration_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_vof_concentration_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (name)");
+    return;
+  }
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  GfsVariable * v = gfs_variable_from_name (domain->variables, fp->token->str);  
+  if (v == NULL) {
+    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+    return;
+  }
+  if (!GFS_IS_VARIABLE_TRACER_VOF (v)) {
+    gts_file_error (fp, "variable `%s' is not a VOF tracer", fp->token->str);
+    return;
+  }
+  GfsVariableTracerVOF * vof = GFS_VARIABLE_TRACER_VOF (v);
+  GFS_VARIABLE_VOF_CONCENTRATION (*o)->vof = vof;
+  gts_container_add (GTS_CONTAINER (vof->concentrations), GTS_CONTAINEE (*o));
+  gts_file_next_token (fp);
+}
+
+static void variable_vof_concentration_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_vof_concentration_class ())->parent_class->write) (o, fp);
+  fprintf (fp, " %s", GFS_VARIABLE1 (GFS_VARIABLE_VOF_CONCENTRATION (o)->vof)->name);
+}
+
+static void variable_vof_concentration_class_init (GtsObjectClass * klass)
+{
+  klass->read = variable_vof_concentration_read;
+  klass->write = variable_vof_concentration_write;
+}
+
+static void variable_vof_concentration_init (GfsVariable * v)
+{
+  /* this is taken care of by the associated VOF tracer */
+  v->fine_coarse = v->coarse_fine = no_coarse_fine;
+  GFS_VARIABLE_TRACER (v)->advection.scheme = GFS_NONE;
+}
+
+GfsVariableClass * gfs_variable_vof_concentration_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsVariableVOFConcentration",
+      sizeof (GfsVariableVOFConcentration),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_vof_concentration_class_init,
+      (GtsObjectInitFunc) variable_vof_concentration_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_tracer_class ()), &info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsVariableVOFConcentration} */
+
 /** \beginobject{GfsVariableTracerVOFHeight} */
 
 typedef struct {
@@ -3192,7 +3372,12 @@ static void variable_tracer_vof_height_update (GfsVariable * v, GfsDomain * doma
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) v->fine_coarse, v);
   gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, v);
-  
+  GSList * j = GFS_VARIABLE_TRACER_VOF (v)->concentrations->items;
+  while (j) {
+    gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, j->data);
+    j = j->next;
+  }
+
   /* update height functions */
   GfsVariableTracerVOFHeight * h = GFS_VARIABLE_TRACER_VOF_HEIGHT (v);
   HFState hf;

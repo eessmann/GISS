@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -70,6 +70,8 @@ typedef struct _GfsVariableTracerVOFClass   GfsVariableTracerVOFClass;
 struct _GfsVariableTracerVOF {
   /*< private >*/
   GfsVariableTracer parent;
+  /* a list of GfsVariableVOFConcentration associated with this VOF tracer */
+  GtsSListContainer * concentrations;
 
   /*< public >*/
   GfsVariable * m[FTT_DIMENSION], * alpha;
@@ -93,6 +95,26 @@ struct _GfsVariableTracerVOFClass {
 						   gfs_variable_tracer_vof_class ()))
 
 GfsVariableTracerVOFClass * gfs_variable_tracer_vof_class  (void);
+
+/* GfsVariableVOFConcentration: header */
+
+typedef struct _GfsVariableVOFConcentration        GfsVariableVOFConcentration;
+
+struct _GfsVariableVOFConcentration {
+  /*< private >*/
+  GfsVariableTracer parent;
+
+  /*< public >*/
+  GfsVariableTracerVOF * vof;
+};
+
+#define GFS_VARIABLE_VOF_CONCENTRATION(obj)            GTS_OBJECT_CAST (obj,\
+					                GfsVariableVOFConcentration,\
+					                gfs_variable_vof_concentration_class ())
+#define GFS_IS_VARIABLE_VOF_CONCENTRATION(obj)         (gts_object_is_from_class (obj,\
+							gfs_variable_vof_concentration_class ()))
+
+GfsVariableClass * gfs_variable_vof_concentration_class  (void);
 
 /* GfsVariableTracerVOFHeight: header */
 

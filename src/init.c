@@ -164,6 +164,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_variable_class (),
       gfs_variable_boolean_class (),
       gfs_variable_tracer_class (),
+        gfs_variable_vof_concentration_class (),
         gfs_variable_tracer_vof_class (),
           gfs_variable_tracer_vof_height_class (),
       gfs_variable_residual_class (),
