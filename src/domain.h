@@ -209,6 +209,8 @@ void         gfs_domain_face_bc               (GfsDomain * domain,
 					       FttComponent c,
 					       GfsVariable * v);
 void         gfs_domain_match                 (GfsDomain * domain);
+void         gfs_domain_forget_boundary       (GfsDomain * domain, 
+					       GfsBoundary * boundary);
 void         gfs_domain_surface_bc            (GfsDomain * domain,
 					       GfsVariable * v);
 guint        gfs_domain_depth                 (GfsDomain * domain);

@@ -399,7 +399,6 @@ static GPtrArray * box_ids (GfsDomain * domain)
   return ids;
 }
 
-
 static void convert_boundary_mpi_into_edges (GfsBox * box, GPtrArray * ids)
 {
   gint pid = gfs_box_domain (box)->pid;
@@ -1255,6 +1254,32 @@ void gfs_domain_match (GfsDomain * domain)
 
   if (domain->profile_bc)
     gfs_domain_timer_stop (domain, "match");
+}
+
+/**
+ * gfs_domain_forget_boundary:
+ * @domain: a #GfsDomain.
+ * @boundary: a #GfsBoundary belonging to @domain.
+ *
+ * Makes @domain permanently ignore @boundary when performing
+ * "locate()" queries.
+ */
+void gfs_domain_forget_boundary (GfsDomain * domain, GfsBoundary * boundary)
+{
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (boundary != NULL);
+  g_return_if_fail (gfs_box_domain (boundary->box) == domain);
+
+  LocateArray * a = domain->array;
+  gint i;
+  for (i = 0; i < a->size; i++) {
+    GSList * new = g_slist_remove (a->root[i], boundary);
+    if (new != a->root[i]) {
+      a->root[i] = new;
+      return;
+    }
+  }
+  g_warning ("gfs_domain_forget_boundary() could not find boundary");
 }
 
 static void dirichlet_bc (FttCell * cell)

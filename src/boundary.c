@@ -553,9 +553,11 @@ static void destroy_bc (GfsVariable * v, GtsObject * o)
 static void gfs_boundary_destroy (GtsObject * object)
 {
   GfsBoundary * boundary = GFS_BOUNDARY (object);
+  GfsDomain * domain = gfs_box_domain (boundary->box);
 
+  if (domain)
+    gfs_domain_forget_boundary (domain, boundary);
   if (boundary->root) {
-    GfsDomain * domain = gfs_box_domain (boundary->box);
     if (domain == NULL) /* domain has been destroyed */
       ftt_cell_destroy (boundary->root, NULL, NULL);
     else
