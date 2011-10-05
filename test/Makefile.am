@@ -42,6 +42,7 @@ TESTDIRS = \
 	waves \
 	nz \
 	parabola \
+	shore \
 	lonlat \
 	cosine \
 	harmonic \
