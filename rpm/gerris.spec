@@ -21,6 +21,7 @@ URL: http://gfs.sourceforge.net
 Packager: Matthieu Castellazzi <m.castellazzi@niwa.co.nz>
 Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+# Fedora
 %if 0%{?fedora_version}
 Requires: proj gsl netcdf
 %if %{?fedora_version} > 14
@@ -28,10 +29,11 @@ Requires: hdf5-openmpi
 %endif
 BuildRequires: netcdf-devel proj-devel gcc-gfortran
 %endif
+# Suse
 %if 0%{?suse_version}
 BuildRequires: libnetcdf-devel libproj-devel gcc-fortran python
 %endif
-# For both distros
+# For all distros
 Requires: pkgconfig gcc sed gawk m4 gerris-snapshot-devel
 BuildRequires: glibc-devel automake libtool gsl-devel gts-snapshot-devel >= %{gts_version}
 BuildRequires: openmpi openmpi-devel

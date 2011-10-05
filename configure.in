@@ -331,7 +331,9 @@ AM_CONDITIONAL(BUILD_TIDE, test x$netcdf = xtrue -a x$no_gsl = x)
 
 # Stokes module requires a fortran compiler
 AC_PROG_F77
-AC_F77_WRAPPERS
+if test x$F77 != x; then
+   AC_F77_WRAPPERS
+fi
 AM_CONDITIONAL(BUILD_STOKES, test x$F77 != x)
 
 # Enable the AGMG module (disabled by default due to non-free license)
