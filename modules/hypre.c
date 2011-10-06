@@ -1,5 +1,5 @@
-/* Gerris - The GNU Flow Solver                       (-*-C-*-)
- * Copyright (C) 2001-2008 National Institute of Water and Atmospheric Research
+/* Gerris - The GNU Flow Solver
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -713,19 +713,20 @@ typedef struct {
   GfsVariable * lhs;
 } CopyParams;
 
-static void copy_poisson_solution (FttCell * cell, CopyParams * p)
+static void copy_solution (FttCell * cell, CopyParams * p)
 {
-   GFS_VALUE (cell, p->lhs) =
-     g_array_index (p->lp->lhs, gdouble, (int) GFS_VALUE (cell, p->lp->id) - p->lp->istart);
+  GFS_VALUE (cell, p->lhs) =
+    g_array_index (p->lp->lhs, gdouble, (int) GFS_VALUE (cell, p->lp->id) - p->lp->istart);
 }
 
-static void solve_poisson_problem_using_hypre (GfsDomain * domain,
-					       GfsLinearProblem * lp,
-					       GfsMultilevelParams * par)
+static void solve_linear_problem (GfsDomain * domain,
+				  GfsLinearProblem * lp,
+				  GfsMultilevelParams * par,
+				  gdouble tolerance)
 {
   HypreProblem hp;
-  gdouble tolerance = par->tolerance;
-  par->tolerance = MIN (0.1*tolerance/par->residual.infty, 0.99);
+  gdouble old = par->tolerance;
+  par->tolerance = tolerance;
  
   hypre_problem_new (&hp, domain, lp->rhs->len, lp->istart);
   hypre_problem_init (&hp, lp, domain);
@@ -752,7 +753,7 @@ static void solve_poisson_problem_using_hypre (GfsDomain * domain,
   
   hypre_problem_copy (&hp, lp);
   hypre_problem_destroy (&hp);
-  par->tolerance = tolerance;
+  par->tolerance = old;
 }
 
 static void correct (FttCell * cell, gpointer * data)
@@ -781,11 +782,11 @@ static void hypre_poisson_solve (GfsDomain * domain,
 			      (FttCellTraverseFunc) gfs_cell_reset, dp);
     GfsLinearProblem * lp = gfs_get_poisson_problem (domain, res, dp, dia, -1, lhs);
  
-    solve_poisson_problem_using_hypre (domain, lp, par);
+    solve_linear_problem (domain, lp, par, MIN (0.1*par->tolerance/par->residual.infty, 0.99));
 
     CopyParams p = { lp, dp };
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-    			      (FttCellTraverseFunc) copy_poisson_solution, &p);
+    			      (FttCellTraverseFunc) copy_solution, &p);
     gfs_linear_problem_destroy (lp);
 
     /* correct on leaf cells */
@@ -801,6 +802,51 @@ static void hypre_poisson_solve (GfsDomain * domain,
     gfs_residual (domain, par->dimension, FTT_TRAVERSE_LEAFS, -1, lhs, rhs, dia, res);
     par->residual = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, dt, res);
   }
+}
+
+static void hypre_diffusion_solve (GfsDomain * domain,
+				   GfsMultilevelParams * par,
+				   GfsVariable * lhs,
+				   GfsVariable * rhs, 
+				   GfsVariable * rhoc,
+				   GfsVariable * axi)
+{
+  /* calculates the initial residual and its norm */
+  GfsVariable * res = gfs_temporary_variable (domain);
+  gfs_diffusion_residual (domain, lhs, rhs, rhoc, axi, res);
+  par->residual_before = par->residual = 
+    gfs_domain_norm_variable (domain, res, NULL, FTT_TRAVERSE_LEAFS, -1, NULL, NULL);
+  
+  if (par->nitermax > 0 && par->residual.infty > 0.) {
+    GfsVariable * dp = gfs_temporary_variable (domain);
+    dp->component = lhs->component;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, dp);
+    GfsLinearProblem * lp = gfs_get_diffusion_problem (domain, res, dp, rhoc, axi, -1, lhs);
+ 
+    solve_linear_problem (domain, lp, par, MIN (0.1*par->tolerance/par->residual.infty, 0.99));
+
+    CopyParams p = { lp, dp };
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+    			      (FttCellTraverseFunc) copy_solution, &p);
+    gfs_linear_problem_destroy (lp);
+
+    /* correct on leaf cells */
+    gpointer data[2];
+    data[0] = lhs;
+    data[1] = dp;
+    gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			 (FttCellTraverseFunc) correct, data,
+			 lhs, lhs);
+    gts_object_destroy (GTS_OBJECT (dp));
+
+    /* compute new residual on leaf cells */
+    gfs_diffusion_residual (domain, lhs, rhs, rhoc, axi, res);
+    par->residual = gfs_domain_norm_variable (domain, res, NULL, 
+					      FTT_TRAVERSE_LEAFS, -1, NULL, NULL);
+  }
+
+  gts_object_destroy (GTS_OBJECT (res));
 }
 
 static void hypre_solver_write (HypreSolverParams * par,FILE * fp)
@@ -1009,13 +1055,21 @@ void gfs_module_read (GtsFile * fp, GfsSimulation * sim)
   if (fp->type == '{')
     hypre_solver_read (&proj_hp, fp);
   
-  /* initialise the poisson cycle hook */
   if (fp->type != GTS_ERROR) {
     if (sim == NULL)
       gts_file_error (fp, "hypre module must be called within the GfsSimulation parameter block");
     else {
+      /* initialise the poisson solver hook */
       sim->approx_projection_params.poisson_solve = hypre_poisson_solve;
       sim->projection_params.poisson_solve = hypre_poisson_solve;
+      /* initialise the diffusion solver hook(s) */
+      sim->advection_params.diffusion_solve = hypre_diffusion_solve;
+      GSList * i = GFS_DOMAIN (sim)->variables;
+      while (i) {
+	if (GFS_IS_VARIABLE_TRACER (i->data))
+	  GFS_VARIABLE_TRACER (i->data)->advection.diffusion_solve = hypre_diffusion_solve;
+	i = i->next;
+      }
     }
   }
 }

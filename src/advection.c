@@ -935,6 +935,7 @@ void gfs_advection_params_init (GfsAdvectionParams * par)
   par->moving_order = 1;
   par->sink[0] = par->sink[1] = par->sink[2] = 0.;
   par->linear = FALSE;
+  par->diffusion_solve = gfs_diffusion;
 }
 
 static gdouble none (FttCell * cell, FttComponent c, guint v)

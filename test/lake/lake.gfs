@@ -4,10 +4,10 @@
 #
 # A simple test of a wind-driven lake with a 1/10 mesh stretching
 # ratio. Due to the anisotropy of stretching, the hypre module needs
-# to be used to solve the Poisson problem efficiently. Further, with
-# Neumann boundary conditions everywhere for the pressure, the
-# resulting linear system is rank-deficient and needs to be "fixed" to
-# avoid drift problems in HYPRE.
+# to be used to solve the Poisson and diffusion problems
+# efficiently. Further, with Neumann boundary conditions everywhere
+# for the pressure, the resulting linear system is rank-deficient and
+# needs to be "fixed" to avoid drift problems in HYPRE.
 #
 # \begin{figure}[htbp]
 # \caption{\label{vectors}Norm of the velocity and vectors for the
@@ -29,9 +29,7 @@
     GModule hypre
     MetricStretch {} { sy = 0.1 }
     Time { end = 5 dtmax = 0.1 }
-    # fixme: we need to limit the cost of the implicit diffusion
-    # solver (which does not use hypre yet)
-    SourceViscosity 1./400. { beta = 1. nitermax = 4 tolerance = 1. }
+    SourceViscosity 1./400.
     Refine 6
     OutputTime { istep = 1 } stderr
     OutputProjectionStats { istep = 1 } stderr
@@ -39,6 +37,7 @@
     OutputScalarStats { istep = 1 } p { v = P }
     GModule gfsview
     OutputView { start = end } lake.eps { format = EPS } lake.gfv
+    OutputSimulation { start = end } end.gfs
 }
 GfsBox {
     top = Boundary {

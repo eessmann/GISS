@@ -30,6 +30,9 @@
     Refine 5
     SurfaceBc T Dirichlet 1
 
+    # Just checks that it works with hypre
+    GModule hypre
+
     Time { end = 0.02 dtmax = 9e-5 }
 #    OutputTime { istep = 1 } stderr
     OutputSimulation { start = 0.01 } end.gfs

@@ -25,6 +25,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "domain.h"
+#include "poisson.h"
 
 #define GFS_SMALL 0.5
 
@@ -59,6 +60,12 @@ struct _GfsAdvectionParams {
   guint moving_order;
   GtsVector sink;
   gboolean linear;
+  void (* diffusion_solve) (GfsDomain * domain,
+			    GfsMultilevelParams * par,
+			    GfsVariable * v,
+			    GfsVariable * rhs, 
+			    GfsVariable * rhoc,
+			    GfsVariable * axi);
 };
 
 void         gfs_advection_params_init        (GfsAdvectionParams * par);

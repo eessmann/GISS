@@ -240,6 +240,8 @@ typedef struct {
   GfsLinearProblem * lp;
   GfsVariable * dia;
   gint maxlevel;
+  FttComponent component;
+  GfsVariable * axi, * rhs;
 } RelaxStencilParams;
 
 static void relax_stencil (FttCell * cell, RelaxStencilParams * p)
@@ -280,7 +282,6 @@ static void relax_dirichlet_stencil (FttCell * cell, RelaxStencilParams * p)
   FttCellFace f;
   GfsGradient ng;
   GfsVariable * id = p->lp->id;
-
   GfsStencil * stencil = gfs_stencil_new (cell, p->lp, 0.);
 
   g.a = GFS_VALUE (cell, p->dia);
@@ -298,7 +299,7 @@ static void relax_dirichlet_stencil (FttCell * cell, RelaxStencilParams * p)
     g.a += ng.a;
   }
   if (g.a > 0.)
-    gfs_stencil_add_element (stencil, cell, p->lp,  -g.a);
+    gfs_stencil_add_element (stencil, cell, p->lp, -g.a);
   else {
     gfs_stencil_destroy (stencil);
     stencil = gfs_stencil_new (cell, p->lp, 1.);
@@ -397,6 +398,34 @@ static void check_box_dirichlet (GfsBox * box, CompatPar * p)
     }
 }
 
+static void cell_numbering (GfsDomain * domain,
+			    GfsLinearProblem * lp,
+			    GfsVariable * rhs, GfsVariable * lhs,
+			    gint maxlevel)
+{
+  /* fixme: should it be FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS */
+  NumberingParams np = { lp, lhs, rhs, 0, maxlevel, (FttFaceTraverseFunc) bc_number };
+
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
+			    (FttCellTraverseFunc) leaves_numbering, &np);
+
+  if (domain->pid >= 0)
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, lp->id);
+
+#ifdef HAVE_MPI
+  /* Renumbering of the different subdomains for parallel simulations */
+  if (domain->pid >= 0) {
+    set_mpi_domain_index (domain, lp);
+
+    np.nleafs = lp->istart;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
+			    (FttCellTraverseFunc) leaves_renumbering, &np);
+
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, lp->id);
+  }
+#endif /* HAVE_MPI */  
+}
+
 /**
  * gfs_get_poisson_problem:
  * @domain: the domain over which the poisson problem is defined
@@ -418,30 +447,8 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
   gfs_domain_timer_start (domain, "get_poisson_problem");
 
   GfsLinearProblem * lp = gfs_linear_problem_new (domain);
-  
-  /* Cell numbering */
-  
-  /* fixme: should it be FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS */
-  NumberingParams np = { lp, lhs, rhs, 0, maxlevel, (FttFaceTraverseFunc) bc_number };
-
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
-			    (FttCellTraverseFunc) leaves_numbering, &np);
-
-  if (domain->pid >= 0)
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, lp->id);
-
-#ifdef HAVE_MPI
-  /* Renumbering of the different subdomains for parallel simulations */
-  if (domain->pid >= 0) {
-    set_mpi_domain_index (domain, lp);
-
-    np.nleafs = lp->istart;
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
-			    (FttCellTraverseFunc) leaves_renumbering, &np);
-
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, lp->id);
-  }
-#endif /* HAVE_MPI */
+ 
+  cell_numbering (domain, lp, rhs, lhs, maxlevel);
  
   /* Creates stencils on the fly */
   RelaxStencilParams p = { lp, dia, maxlevel };
@@ -1430,17 +1437,17 @@ void gfs_diffusion_rhs (GfsDomain * domain,
 			    (FttCellTraverseFunc) diffusion_rhs, &p);
 }
 
+/* diffusion_relax_stencil() needs to be updated whenever this
+   function is modified */
 static void diffusion_relax (FttCell * cell, RelaxParams * p)
 {
-  gdouble a;
   GfsGradient g = { 0., 0. };
   gdouble h = ftt_cell_size (cell);
   FttCellNeighbors neighbor;
   FttCellFace face;
 
-  a = GFS_VARIABLE (cell, p->dia);
   if (GFS_IS_MIXED (cell) && ((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-    g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, 0.) ;
+    g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, 0.);
 
   face.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
@@ -1456,14 +1463,49 @@ static void diffusion_relax (FttCell * cell, RelaxParams * p)
     g.a += ng.a;
     g.b += ng.b;
   }
-  a *= h*h;
+  gdouble a = GFS_VARIABLE (cell, p->dia)*h*h;
   g_assert (a > 0.);
   g.a = 1. + g.a/a;
   if (p->axi)
     g.a += GFS_VARIABLE (cell, p->axi);
-  g.b = GFS_VARIABLE (cell, p->res) + g.b/a;
   g_assert (g.a > 0.);
-  GFS_VARIABLE (cell, p->u) = g.b/g.a;
+  GFS_VARIABLE (cell, p->u) = (g.b/a + GFS_VARIABLE (cell, p->res))/g.a;
+}
+
+static void diffusion_relax_stencil (FttCell * cell, RelaxStencilParams * p)
+{
+  GfsGradient g = { 0., 0. };
+  gdouble h = ftt_cell_size (cell);
+  FttCellNeighbors neighbor;
+  FttCellFace face;
+  GfsVariable * id = p->lp->id;
+  GfsStencil * stencil = gfs_stencil_new (cell, p->lp, 0.);
+
+  if (GFS_IS_MIXED (cell) && ((cell)->flags & GFS_FLAG_DIRICHLET) != 0) {
+    g.b = gfs_cell_dirichlet_gradient_flux_stencil (cell, p->maxlevel, 0., p->lp, stencil);
+    /* fixme: not sure about this */
+    g_array_index (p->lp->lhs, gdouble, (gint) GFS_VALUE (cell, id)) -= g.b;
+  }
+
+  face.cell = cell;
+  ftt_cell_neighbors (cell, &neighbor);
+  for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++) {
+    GfsGradient ng;
+    face.neighbor = neighbor.c[face.d];
+    gfs_face_cm_weighted_gradient_stencil (&face, &ng, p->maxlevel, p->lp, stencil);
+    if (face.d/2 == p->component)
+      ng.a *= 2.;
+    g.a += ng.a;
+  }
+  gdouble a = GFS_VALUE (cell, p->dia)*h*h;
+  g_assert (a > 0.);
+  g.a = 1. + g.a/a;
+  if (p->axi)
+    g.a += GFS_VALUE (cell, p->axi);
+  g_assert (g.a > 0.);
+  gfs_stencil_add_element (stencil, cell, p->lp, - a*g.a);
+
+  gfs_linear_problem_add_stencil (p->lp, stencil);
 }
 
 static void diffusion_residual (FttCell * cell, RelaxParams * p)
@@ -1630,3 +1672,55 @@ void gfs_diffusion_cycle (GfsDomain * domain,
   gts_object_destroy (GTS_OBJECT (dp));
 }
 
+static void scale_rhs (FttCell * cell, RelaxStencilParams * p)
+{
+  gdouble h = ftt_cell_size (cell);
+  GFS_VALUE (cell, p->rhs) *= - GFS_VALUE (cell, p->dia)*h*h;
+}
+
+/**
+ * gfs_get_diffusion_problem:
+ * @domain: the domain over which the poisson problem is defined
+ * @rhs: the variable to use as right-hand side
+ * @lhs: the variable to use as left-hand side
+ * @dia: the diagonal weight
+ * @maxlevel: the maximum level to consider (or -1).
+ * @v: a #GfsVariable of which @lhs is an homogeneous version.
+ *
+ * Extracts the diffusion problem associated with @lhs and @rhs.
+ *
+ * Returns: a #GfsLinearProblem.
+ */
+GfsLinearProblem * gfs_get_diffusion_problem (GfsDomain * domain,
+					      GfsVariable * rhs, 
+					      GfsVariable * lhs,
+					      GfsVariable * rhoc,
+					      GfsVariable * axi,
+					      gint maxlevel,
+					      GfsVariable * v)
+{
+  gfs_domain_timer_start (domain, "get_diffusion_problem");
+
+  GfsLinearProblem * lp = gfs_linear_problem_new (domain);
+ 
+  RelaxStencilParams p = {
+    lp, rhoc, maxlevel, 
+    GFS_IS_AXI (domain) ? v->component : FTT_DIMENSION,
+    axi,
+    rhs
+  };
+
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
+			    maxlevel, (FttCellTraverseFunc) scale_rhs, &p);
+  cell_numbering (domain, lp, rhs, lhs, maxlevel);
+ 
+  /* Creates stencils on the fly */
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_reset_bc, lp);
+  gfs_domain_homogeneous_bc_stencil (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
+				     maxlevel, lhs, v, lp);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS,
+			    maxlevel, (FttCellTraverseFunc) diffusion_relax_stencil, &p);
+  gfs_domain_timer_stop (domain, "get_diffusion_problem");
+
+  return lp;
+}

@@ -132,16 +132,23 @@ struct _GfsLinearProblem {
   gint istart;
 };
 
+GfsLinearProblem * gfs_linear_problem_new            (GfsDomain * domain);
+void               gfs_linear_problem_add_stencil    (GfsLinearProblem * lp, 
+						      GfsStencil * stencil);
+void               gfs_linear_problem_destroy        (GfsLinearProblem * lp);
 GfsLinearProblem * gfs_get_poisson_problem           (GfsDomain * domain,
 						      GfsVariable * rhs, 
 						      GfsVariable * lhs,
 						      GfsVariable * dia,
 						      gint maxlevel,
 						      GfsVariable * v);
-GfsLinearProblem * gfs_linear_problem_new            (GfsDomain * domain);
-void               gfs_linear_problem_add_stencil    (GfsLinearProblem * lp, 
-						      GfsStencil * stencil);
-void               gfs_linear_problem_destroy        (GfsLinearProblem * lp);
+GfsLinearProblem * gfs_get_diffusion_problem         (GfsDomain * domain,
+						      GfsVariable * rhs, 
+						      GfsVariable * lhs,
+						      GfsVariable * rhoc,
+						      GfsVariable * axi,
+						      gint maxlevel,
+						      GfsVariable * v);
 
 #ifdef __cplusplus
 }

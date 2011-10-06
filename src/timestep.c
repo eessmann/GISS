@@ -859,7 +859,7 @@ static void variable_diffusion (GfsDomain * domain,
   /* fixme: time shoud be set to t + dt here in case boundary values are
      time-dependent in the call below */
   gfs_domain_surface_bc (domain, par->v);
-  gfs_diffusion (domain, &d->D->par, par->v, rhs, rhoc, axi);
+  par->diffusion_solve (domain, &d->D->par, par->v, rhs, rhoc, axi);
 
   if (axi)
     gts_object_destroy (GTS_OBJECT (axi));
