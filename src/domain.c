@@ -1271,15 +1271,12 @@ void gfs_domain_forget_boundary (GfsDomain * domain, GfsBoundary * boundary)
   g_return_if_fail (gfs_box_domain (boundary->box) == domain);
 
   LocateArray * a = domain->array;
+  if (a == NULL)
+    return;
+
   gint i;
-  for (i = 0; i < a->size; i++) {
-    GSList * new = g_slist_remove (a->root[i], boundary);
-    if (new != a->root[i]) {
-      a->root[i] = new;
-      return;
-    }
-  }
-  g_warning ("gfs_domain_forget_boundary() could not find boundary");
+  for (i = 0; i < a->size; i++)
+    a->root[i] = g_slist_remove (a->root[i], boundary);
 }
 
 static void dirichlet_bc (FttCell * cell)
