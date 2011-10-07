@@ -533,6 +533,7 @@ static void domain_destroy (GtsObject * o)
   g_slist_free (domain->variables_io);
 
   locate_array_destroy (domain->array);
+  domain->array = NULL;
 
   g_hash_table_destroy (domain->objects);
 
