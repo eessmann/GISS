@@ -1683,7 +1683,8 @@ static void scale_rhs (FttCell * cell, RelaxStencilParams * p)
  * @domain: the domain over which the poisson problem is defined
  * @rhs: the variable to use as right-hand side
  * @lhs: the variable to use as left-hand side
- * @dia: the diagonal weight
+ * @rhoc: the mass.
+ * @axi: the axisymmetric term (or %NULL).
  * @maxlevel: the maximum level to consider (or -1).
  * @v: a #GfsVariable of which @lhs is an homogeneous version.
  *
