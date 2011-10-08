@@ -117,6 +117,13 @@ fi
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir $RPM_BUILD_ROOT
+
+# if we have centos or rhel, set mpi-selector
+%if 0%{?rhel_version} || 0%{?centos_version}
+mpi-selector --set $(mpi-selector --list)
+source /etc/profile.d/mpi-selector.sh
+%endif
+
 make install DESTDIR=$RPM_BUILD_ROOT
 
 # Comply shared library policy
