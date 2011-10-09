@@ -315,40 +315,58 @@ static void advection_term (FttCellFace * face, FaceData * fd)
 #endif
 }
 
+static gdouble transverse_diffusion (FttCell * cell, 
+				     FttComponent oc,
+				     FttDirection d,
+				     gdouble un,
+				     FaceData * fd)
+{
+  FttDirection daux    = 2*oc;
+  gdouble uauxtop = interpolate_value_skew (cell, d, &daux, fd);
+  daux    = 2*oc+1;
+  gdouble uauxbot = interpolate_value_skew (cell, d, &daux, fd);
+  return (uauxtop - un) - (un - uauxbot);
+}
+
 static void diffusion_term (FttCellFace * face, DataDif * data)
 {
   gdouble size = ftt_cell_size (face->cell); /* fixme: I need to account for the metric */
-  gdouble un, unext, unprev,uauxbot, uauxtop;
+  gdouble un, unext, unprev;
 
-  gdouble viscosity = 0.;  
-  viscosity  = data->alpha ? gfs_function_face_value (data->alpha, face) : 1.;
+  gdouble flux      = 0.;  
+  gdouble viscosity  = data->alpha ? gfs_function_face_value (data->alpha, face) : 1.;
   viscosity *= gfs_diffusion_cell (data->d->D, face->cell);
 
   GfsStateVector * s = GFS_STATE (face->cell);
 
-  FttDirection daux, od = FTT_OPPOSITE_DIRECTION(face->d);
-  FttComponent oc = FTT_ORTHOGONAL_COMPONENT(face->d/2);
+  FttDirection od = FTT_OPPOSITE_DIRECTION(face->d);
 
   un      = interpolate_value_skew (face->cell, face->d, NULL, data->fd);
 
   if ( (face->d % 2 ) != 0 ) {
     unext   = interpolate_value_skew (face->cell, od     , NULL, data->fd);
     unprev  = interpolate_value_skew (face->cell, face->d, &(face->d) , data->fd); 
-    daux    = 2*oc;
-    uauxtop = interpolate_value_skew (face->cell, face->d, &daux, data->fd);
-    daux    = 2*oc+1;
-    uauxbot = interpolate_value_skew (face->cell, face->d, &daux, data->fd);
   }
   else {
     unext   = interpolate_value_skew (face->cell, face->d, &(face->d), data->fd);
     unprev  = interpolate_value_skew (face->cell, od,      NULL,    data->fd);
-    daux    = 2*oc;
-    uauxtop = interpolate_value_skew (face->cell, face->d, &daux,   data->fd);
-    daux    = 2*oc+1;
-    uauxbot = interpolate_value_skew (face->cell, face->d, &daux,   data->fd);
   } 
-  s->f[face->d].v -= viscosity*((unext - un)/size - (un - unprev)/size);
-  s->f[face->d].v -= viscosity*((uauxtop - un)/size - (un - uauxbot)/size); 
+  flux = (unext - un) - (un - unprev);
+
+
+  FttComponent c = face->d/2;
+#if FTT_2D
+  FttComponent oc = FTT_ORTHOGONAL_COMPONENT (c);
+  flux += transverse_diffusion(face->cell, oc, face->d, un, data->fd);
+#else
+  static FttComponent orthogonal[FTT_DIMENSION][2] = {
+    {FTT_Y, FTT_Z}, {FTT_X, FTT_Z}, {FTT_X, FTT_Y}
+  };
+  flux += transverse_diffusion(face->cell, orthogonal[c][0], face->d, un, data->fd);
+  flux += transverse_diffusion(face->cell, orthogonal[c][1], face->d, un, data->fd);
+#endif 
+
+  s->f[face->d].v -= viscosity*flux/size;
 }
 
 static void update_vel (FttCell * cell, FaceData * fd)
