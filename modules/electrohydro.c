@@ -566,6 +566,8 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
 
   /* fixme: we need to rescale, not entirely clear why... */
   gdouble scale = pow (GFS_SIMULATION (elec)->physical_params.L, -5.);
+  if(GFS_SIMULATION(elec)->physical_params.alpha)
+    scale *= gfs_function_value(GFS_SIMULATION(elec)->physical_params.alpha, cell);
   for (c = 0; c < FTT_DIMENSION; c++)
     GFS_VALUE (cell, s->fe[c]) = scale*fe[c]/h/radc;
 }
