@@ -33,6 +33,7 @@ struct _GfsSkewSymmetric {
 
   /*< public >*/
   gdouble beta;         /*parameter to define the position of the intermediate step*/
+  GfsVariable * velfaces[FTT_NEIGHBORS],  *velold[FTT_NEIGHBORS];
 };
 
 #define GFS_SKEW_SYMMETRIC(obj)            GTS_OBJECT_CAST (obj,		\
@@ -121,6 +122,32 @@ static void gfs_skew_symmetric_class_init (GfsSimulationClass * klass)
 static void gfs_skew_symmetric_init (GfsSkewSymmetric * object)
 {
   object->beta = 0.20;
+
+  GfsDomain * domain = GFS_DOMAIN (object);
+  GfsVariable  * velfaces[FTT_NEIGHBORS], * velold[FTT_NEIGHBORS];
+  FttDirection d;
+  gchar sufix[2];
+  gchar *name, * descr;
+
+
+  for (d = 0; d < FTT_NEIGHBORS; d++) {
+    sprintf(sufix, "%d", (guint)d);
+   
+    name = g_strconcat ("Uface", sufix, NULL);
+    descr = g_strconcat (sufix, "-component of face velocity", NULL);
+    velfaces[d] = gfs_domain_add_variable (domain, name, descr);
+    velfaces[d]->units = 1.;
+    g_free(name); g_free(descr);
+
+    name = g_strconcat ("Ufaceold", sufix, NULL);
+    descr = g_strconcat (sufix, "-component of old face velocity", NULL);
+    velold[d]   = gfs_domain_add_variable (domain, name, descr);
+    velold[d]->units = 1.;
+    g_free(name); g_free(descr);
+  }
+
+  gfs_variable_set_vector (velfaces, FTT_DIMENSION);
+  gfs_variable_set_vector (velold, FTT_DIMENSION);
 }
 
 GfsSimulationClass * gfs_skew_symmetric_class (void)
@@ -306,7 +333,7 @@ static void advection_term (FttCellFace * face, FaceData * fd)
 #if FTT_2D
   s->f[face->d].v += transverse_advection (face->cell, 
 					   FTT_ORTHOGONAL_COMPONENT (c), d, un, fd, cond);
-#else  /* FTT_3D (fixme: probably: check!!!*/
+#else  /* FTT_3D */
   static FttComponent orthogonal[FTT_DIMENSION][2] = {
     {FTT_Y, FTT_Z}, {FTT_X, FTT_Z}, {FTT_X, FTT_Y}
   };
@@ -456,6 +483,37 @@ static void obtain_face_fluxes (const FttCell * cell)
   }
 }
 
+static GfsVariable ** face_velocity (GfsDomain * domain, GfsSkewSymmetric * ss)
+{
+  FttComponent c;
+  static gchar name[][7] = {"Uface0","Uface1","Uface2","Uface3","Uface4","Uface5"};
+
+  g_return_val_if_fail (domain != NULL, NULL);
+  
+  for (c = 0; c < FTT_NEIGHBORS; c++) {
+    GfsVariable * v = gfs_variable_from_name (domain->variables, name[c]);
+    g_return_val_if_fail (v != NULL, NULL);
+    ss->velfaces[c] = v;
+  }
+  return ss->velfaces;
+}
+
+static GfsVariable ** face_velocity_old (GfsDomain * domain, GfsSkewSymmetric * ss)
+{
+  FttComponent c;
+  static gchar name[][10] = {"Ufaceold0","Ufaceold1","Ufaceold2","Ufaceold3","Ufaceold4","Ufaceold5"};
+
+  g_return_val_if_fail (domain != NULL, NULL);
+  
+  for (c = 0; c < FTT_NEIGHBORS; c++) {
+    GfsVariable * v = gfs_variable_from_name (domain->variables, name[c]);
+    g_return_val_if_fail (v != NULL, NULL);
+    ss->velold[c] = v;
+  }
+  return ss->velold;
+}
+
+
 static void gfs_skew_symmetric_momentum (GfsSimulation * sim, FaceData * fd, GfsVariable **gmac)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
@@ -512,8 +570,7 @@ static void gfs_skew_symmetric_momentum (GfsSimulation * sim, FaceData * fd, Gfs
 
 static void gfs_skew_symmetric_run (GfsSimulation * sim)
 {
-  GfsVariable * p,  * res = NULL, * gmac[FTT_DIMENSION], 
-    * velfaces[FTT_NEIGHBORS], *velold[FTT_NEIGHBORS];
+  GfsVariable * p,  * res = NULL, * gmac[FTT_DIMENSION]; 
   GfsDomain * domain;
   GSList * i;
 
@@ -528,12 +585,6 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
 
   gfs_variable_set_vector (gmac, FTT_DIMENSION);
 
-  FttDirection d;
-  for (d = 0; d < FTT_NEIGHBORS; d++) {
-    velfaces[d] = gfs_temporary_variable (domain);
-    velold[d]   = gfs_temporary_variable (domain);
-  }
-
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);
 
@@ -547,8 +598,8 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
   gfs_simulation_set_timestep (sim);
 
   GfsVariable ** u = gfs_domain_velocity (domain);
-  for (d = 0; d <  FTT_NEIGHBORS; d++)
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, velfaces[d]);
+  GfsVariable ** velfaces = face_velocity (domain,  GFS_SKEW_SYMMETRIC(sim));
+  GfsVariable ** velold   = face_velocity_old (domain,  GFS_SKEW_SYMMETRIC(sim));
 
   FaceData fd = { velfaces, velold, u, p, &sim->advection_params.dt, GFS_SKEW_SYMMETRIC(sim)->beta};
 
@@ -567,19 +618,8 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) get_velfaces, &fd);
 
-    for (d = 0; d <  FTT_NEIGHBORS; d++) 
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, velfaces[d]);
-    
     gfs_advance_tracers (domain, sim->advection_params.dt*fd.beta);
   }
-
-  /* initialize uold. fixme: If I restart the simulation, I should initialize it properly */
-  gfs_domain_cell_traverse (domain, 
-			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) initialize_unold, &fd);
-      
-  for (d = 0; d <  FTT_NEIGHBORS; d++) /* fixme: required? */
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, velold[d]);
 
   while (sim->time.t < sim->time.end && sim->time.i < sim->time.iend) {
     
@@ -589,8 +629,6 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
 
     gfs_skew_symmetric_momentum (sim, &fd, gmac);
 
-
-    /* fixme: the time step is divided by 2 in mac_projection? (CHECK!) */
     sim->advection_params.dt = sim->advection_params.dt*2.;
     gfs_mac_projection (domain,
 			&sim->projection_params, 
@@ -628,12 +666,7 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
 
   for (c = 0; c < FTT_DIMENSION; c++) 
     gts_object_destroy (GTS_OBJECT (gmac[c]));
-  
 
-  for (d = 0; d < FTT_NEIGHBORS; d++){
-    gts_object_destroy (GTS_OBJECT (velfaces[d]));
-    gts_object_destroy (GTS_OBJECT (velold[d]));
-  }
 }
 
 /* Initialize module */
