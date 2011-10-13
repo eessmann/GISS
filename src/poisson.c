@@ -814,16 +814,6 @@ static void poisson_mixed_coeff (FttCell * cell, PoissonCoeff * p)
   }
 }
 
-static void init_fract (FttCell * cell, GfsFunction * alpha)
-{
-  FttDirection d;
-  for (d = 0; d < FTT_NEIGHBORS; d++) {
-  FttCellFace face = ftt_cell_face(cell,d);
-  gdouble alpha0 = alpha ? gfs_function_face_value (alpha, &face) : 1.;
-  GFS_STATE (cell)->f[d].aux = alpha0;
-  }
-}
-
 static void face_coeff_from_below (FttCell * cell)
 {
   FttDirection d;
@@ -892,9 +882,6 @@ void gfs_poisson_coefficients (GfsDomain * domain,
   gfs_domain_face_traverse (domain, FTT_XYZ, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) poisson_coeff, &p);
-  gfs_domain_cell_traverse (domain,
-			    FTT_POST_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) init_fract, alpha);
   gfs_domain_cell_traverse (domain,
 			    FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			    (FttCellTraverseFunc) face_coeff_from_below, NULL);
@@ -992,9 +979,6 @@ void gfs_source_tension_coefficients (GfsSourceTension * s,
   gfs_domain_face_traverse (domain, FTT_XYZ, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) tension_coeff, data);
-  gfs_domain_cell_traverse (domain,
-			    FTT_POST_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) init_fract, alpha);
 }
 
 static void correct (FttCell * cell, gpointer * data)

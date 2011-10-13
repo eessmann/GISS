@@ -39,7 +39,6 @@ typedef struct _GfsFaceStateVector GfsFaceStateVector;
 struct _GfsFaceStateVector {
   gdouble un;
   gdouble v;
-  gdouble aux;
 };
 
 struct _GfsStateVector {

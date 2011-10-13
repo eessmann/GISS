@@ -161,7 +161,6 @@ struct _FttOct {
 struct _FttCellFace {
   FttCell * cell, * neighbor;
   FttDirection d;
-  gdouble v;
 };
 
 #define  FTT_ROOT_CELL(c)         ((struct _FttRootCell *) c)
