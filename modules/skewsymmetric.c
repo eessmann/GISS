@@ -1,4 +1,4 @@
-/* Gerris - The GNU Flow Solver                       (-*-C-*-)
+/* Gerris - The GNU Flow Solver
  * Copyright (C) 2011 Daniel Fuster
  *
  * This program is free software; you can redistribute it and/or
@@ -32,8 +32,8 @@ struct _GfsSkewSymmetric {
   GfsSimulation parent;
 
   /*< public >*/
-  gdouble beta;         /*parameter to define the position of the intermediate step*/
-  GfsVariable * velfaces[FTT_NEIGHBORS],  *velold[FTT_NEIGHBORS];
+  gdouble beta;         /* parameter to define the position of the intermediate step */
+  GfsVariable * velfaces[FTT_NEIGHBORS], * velold[FTT_NEIGHBORS];
 };
 
 #define GFS_SKEW_SYMMETRIC(obj)            GTS_OBJECT_CAST (obj,		\
@@ -64,50 +64,21 @@ static void gfs_skew_symmetric_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  if (fp->type != '{') return;
-
-  fp->scope_max++;
-  gts_file_next_token (fp);
-
-  while (fp->type != GTS_ERROR && fp->type != '}') {
-    if (fp->type == '\n') {
-      gts_file_next_token (fp);
-      continue;
-    }
-    if (fp->type != GTS_STRING) {
-      gts_file_error (fp, "expecting a keyword");
-      return;
-    }
-    else if (!strcmp (fp->token->str, "beta")) {
-      gts_file_next_token (fp);
-      if (fp->type != '=')
-        gts_file_error (fp, "expecting `='");
-      else {
-        gts_file_next_token (fp);
-        GFS_SKEW_SYMMETRIC(*o)->beta = atof (fp->token->str);
-        gts_file_next_token (fp);
-      }
-    }
-    else
-      gts_file_error (fp, "unknown keyword `%s'", fp->token->str);
-  }
-
-  if (fp->type == GTS_ERROR)
+  if (fp->type != '{') 
     return;
-  if (fp->type != '}') {
-    gts_file_error (fp, "expecting a closing brace");
-    return;
-  }
-  fp->scope_max--;
-  gts_file_next_token (fp);
 
+  GtsFileVariable var[] = {
+    {GTS_DOUBLE, "beta", TRUE, &GFS_SKEW_SYMMETRIC (*o)->beta},
+    {GTS_NONE}
+  };
+  gts_file_assign_variables (fp, var);
 }
 
 static void gfs_skew_symmetric_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_skew_symmetric_class ())->parent_class->write) (o, fp);
 
-  fprintf (fp, " { beta = %g } \n", GFS_SKEW_SYMMETRIC(o)->beta);
+  fprintf (fp, " { beta = %g }", GFS_SKEW_SYMMETRIC (o)->beta);
 }
 
 static void gfs_skew_symmetric_run (GfsSimulation * sim);
@@ -126,21 +97,15 @@ static void gfs_skew_symmetric_init (GfsSkewSymmetric * object)
   GfsDomain * domain = GFS_DOMAIN (object);
   GfsVariable  * velfaces[FTT_NEIGHBORS], * velold[FTT_NEIGHBORS];
   FttDirection d;
-  gchar sufix[2];
-  gchar *name, * descr;
-
-
   for (d = 0; d < FTT_NEIGHBORS; d++) {
-    sprintf(sufix, "%d", (guint)d);
-   
-    name = g_strconcat ("Uface", sufix, NULL);
-    descr = g_strconcat (sufix, "-component of face velocity", NULL);
+    gchar * name = g_strdup_printf ("Uface%d", d);
+    gchar * descr = g_strdup_printf ("%d-component of face velocity", d);
     velfaces[d] = gfs_domain_add_variable (domain, name, descr);
     velfaces[d]->units = 1.;
     g_free(name); g_free(descr);
 
-    name = g_strconcat ("Ufaceold", sufix, NULL);
-    descr = g_strconcat (sufix, "-component of old face velocity", NULL);
+    name = g_strdup_printf ("Ufaceold%d", d);
+    descr = g_strdup_printf ("%d-component of old face velocity", d);
     velold[d]   = gfs_domain_add_variable (domain, name, descr);
     velold[d]->units = 1.;
     g_free(name); g_free(descr);
@@ -184,13 +149,6 @@ static void get_face_values (FttCell * cell, FaceData * fd)
     else
       s->f[d].un  = 0;
   }
-}
-
-static void initialize_unold (FttCell * cell, FaceData * fd)
-{
-  FttDirection d;
-  for (d = 0; d < FTT_NEIGHBORS; d++) 
-    GFS_VALUE (cell, fd->velold[d]) = GFS_VALUE (cell, fd->velfaces[d]);
 }
 
 static void get_velfaces (FttCell * cell, FaceData * fd)
@@ -348,9 +306,9 @@ static gdouble transverse_diffusion (FttCell * cell,
 				     gdouble un,
 				     FaceData * fd)
 {
-  FttDirection daux    = 2*oc;
+  FttDirection daux = 2*oc;
   gdouble uauxtop = interpolate_value_skew (cell, d, &daux, fd);
-  daux    = 2*oc+1;
+  daux = 2*oc + 1;
   gdouble uauxbot = interpolate_value_skew (cell, d, &daux, fd);
   return (uauxtop - un) - (un - uauxbot);
 }
@@ -360,17 +318,17 @@ static void diffusion_term (FttCellFace * face, DataDif * data)
   gdouble size = ftt_cell_size (face->cell); /* fixme: I need to account for the metric */
   gdouble un, unext, unprev;
 
-  gdouble flux      = 0.;  
-  gdouble viscosity  = data->alpha ? gfs_function_face_value (data->alpha, face) : 1.;
+  gdouble flux = 0.;  
+  gdouble viscosity = data->alpha ? gfs_function_face_value (data->alpha, face) : 1.;
   viscosity *= gfs_diffusion_cell (data->d->D, face->cell);
 
   GfsStateVector * s = GFS_STATE (face->cell);
 
   FttDirection od = FTT_OPPOSITE_DIRECTION(face->d);
 
-  un      = interpolate_value_skew (face->cell, face->d, NULL, data->fd);
+  un = interpolate_value_skew (face->cell, face->d, NULL, data->fd);
 
-  if ( (face->d % 2 ) != 0 ) {
+  if ((face->d % 2) != 0) {
     unext   = interpolate_value_skew (face->cell, od     , NULL, data->fd);
     unprev  = interpolate_value_skew (face->cell, face->d, &(face->d) , data->fd); 
   }
@@ -406,7 +364,8 @@ static void update_vel (FttCell * cell, FaceData * fd)
     GFS_VALUE (cell, fd->velfaces[d]) = (GFS_VALUE (cell, fd->velfaces[d]) + 
 					 fd->beta*GFS_VALUE (cell, fd->velold[d]))/(1.+fd->beta); 
     s->f[d].un = (2*fd->beta*GFS_VALUE (cell, fd->velfaces[d]) + 
-		  (0.5-fd->beta)*GFS_VALUE (cell, fd->velold[d])- s->f[d].v*(*fd->dt)/size)/(0.5+fd->beta);
+		  (0.5-fd->beta)*GFS_VALUE (cell, fd->velold[d]) - 
+		  s->f[d].v*(*fd->dt)/size)/(0.5+fd->beta);
     GFS_VALUE (cell, fd->velold[d]) = GFS_VALUE (cell, fd->velfaces[d]);
   }
 }
