@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2009 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2009-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -388,6 +388,7 @@ static gdouble solid_metric (const GfsDomain * domain, const FttCell * cell)
 
 static gdouble scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
 {
+  /* fixme: this does not allow for Z-metric */
   if (c > FTT_Y)
     return 1.;
   FttComponent d = FTT_ORTHOGONAL_COMPONENT (c);
@@ -396,12 +397,13 @@ static gdouble scale_metric (const GfsDomain * domain, const FttCell * cell, Ftt
 }
 
 static gdouble face_scale_metric (const GfsDomain * domain, const FttCellFace * face,
-					  FttComponent c)
+				  FttComponent c)
 {
+  /* fixme: this does not allow for Z-metric */
   if (c > FTT_Y)
     return 1.;
-  /* fixme: here we assume that the metric is isotropic */
-  return GFS_VALUE (face->cell, GFS_GENERIC_METRIC (domain->metric_data)->h[face->d]);
+  /* fixme: this is not second-order for fine/coarse faces */
+  return (scale_metric (domain, face->cell, c) + scale_metric (domain, face->neighbor, c))/2.;
 }
 
 static void none (FttCell * parent, GfsVariable * v)
@@ -612,8 +614,8 @@ static void metric_read (GtsObject ** o, GtsFile * fp)
     }
   
   if (fp->type == GTS_ERROR)
-    return;  
- }
+    return;
+}
 
 static void metric_class_init (GtsObjectClass * klass)
 {
@@ -1762,6 +1764,10 @@ GfsEventClass * gfs_metric_stretch_class (void)
 }
 
 /** \endobject{GfsMetricStretch} */
+
+/* GfsMetricCubed1 is a reimplementation of GfsMetricCubed using
+   GfsGenericMetric. This is left here as an example of how to
+   implement a complex metric relatively simply. */
 
 /* GfsMapCubed1: Header */
 

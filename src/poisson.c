@@ -419,8 +419,7 @@ static void cell_numbering (GfsDomain * domain,
 
     np.nleafs = lp->istart;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
-			    (FttCellTraverseFunc) leaves_renumbering, &np);
-
+			      (FttCellTraverseFunc) leaves_renumbering, &np);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, lp->id);
   }
 #endif /* HAVE_MPI */  
