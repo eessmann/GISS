@@ -16,7 +16,8 @@ gerris=gerris-stable
 gfsview=gfsview-stable
 gts=gts-mainline
 
-darcs_gts=http://gts.sf.net/darcs
+gts_devel=http://gts.sf.net/darcs/gts-devel
+gts_stable=/var/www/darcs/gts-stable
 gerris_devel=popinet@patch-tag.com:/r/popinet/gerris-devel
 gerris_stable=/var/www/darcs/gerris-stable
 gfsview_devel=popinet@patch-tag.com:/r/popinet/gfsview-devel
@@ -140,7 +141,7 @@ darcs_update()
 build_gts=false
 cd $wdir/$gts
 ( make -k distclean ) > /dev/null 2>&1
-if darcs_update $darcs_gts/gts-devel; then
+if darcs_update $gts_devel; then
     gts_changed=false
 else
     gts_changed=true
@@ -236,23 +237,23 @@ if ( $build_gerris || $build_gfsview ) ; then
        cat $wdir/tests
    fi
    if test -z "$check" && test -z "$tests"; then
-       if ( cd $wdir/$gts && darcs_upgrade $darcs_gts/$gts gts && \
+       if ( cd $wdir/$gts && darcs_upgrade $gts_stable gts && \
 	    cd $wdir/$gerris && darcs_upgrade $gerris_stable gerris && \
 	    cd $wdir/$gfsview && darcs_upgrade $gfsview_stable gfsview ) \
 	   > $wdir/darcs 2>&1 ; then
 	   gts_snapshot=true
-	   # if $gts_changed ; then
-	   #     if ( darcs2dist gts $darcs_gts/$gts $gtsweb && \
-           #          cd $wdir/$gts && make ChangeLog buildservice-snapshot ) \
-           #     > $wdir/snapshot 2>&1 ; then :
-	   #     else
-	   # 	   echo
-	   # 	   echo ============ $wdir: GTS snapshot failed ============
-	   # 	   echo
-	   # 	   cat $wdir/snapshot
-	   # 	   gts_snapshot=false
-	   #     fi
-	   # fi
+	   if $gts_changed ; then
+	       if ( darcs2dist gts $gts_stable $gtsweb && \
+                    cd $wdir/$gts && make ChangeLog buildservice-snapshot ) \
+               > $wdir/snapshot 2>&1 ; then :
+	       else
+	   	   echo
+	   	   echo ============ $wdir: GTS snapshot failed ============
+	   	   echo
+	   	   cat $wdir/snapshot
+	   	   gts_snapshot=false
+	       fi
+	   fi
 	   gerris_snapshot=true
 	   if $gerris_changed && $gts_snapshot ; then
 	       if ( darcs2dist gerris $gerris_stable $localgerrisweb ) \
