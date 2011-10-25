@@ -81,7 +81,8 @@ Define Wsol0 (A0*cos(Phi)*sin(2*Omega*t) - B0*cos(Phi)*cos(2*Omega*t) + D0)
   # The reference length is set to 60 m
   PhysicalParams { L = 60 }
 
-  GfsMetricStretch Stretch { sy = 0.5 sz = 0.25 }
+  # The domain is 60 x 30 x 15 m with an anisotropic mesh
+  MetricStretch {} { sy = 0.5 sz = 0.25 }
   
   # Initialisation of the velocity field
   Init {} {

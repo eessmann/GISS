@@ -441,7 +441,7 @@ gdouble gfs_domain_solid_metric (const GfsDomain * domain, const FttCell * cell)
  * @c: a #FttComponent.
  *
  * Returns: the @c component of the scale factor of the metric at the
- * center the face.
+ * center of the face.
  */
 static inline
 gdouble gfs_domain_face_scale_metric (const GfsDomain * domain, 

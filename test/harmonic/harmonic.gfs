@@ -95,6 +95,14 @@
   Time { iend = 1 }
   PhysicalParams { L = 2.*M_PI/4. }
   MetricCubed M LEVEL
+
+  # Use alternative implementation
+  # MetricCubed1 M
+  # MapFunction {
+  #     x = atan2 (X, Z)*180./M_PI
+  #     y = asin (CLAMP(Y,-1.,1.))*180./M_PI
+  # }
+
   Refine LEVEL
 
   GModule hypre
