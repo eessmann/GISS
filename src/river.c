@@ -834,6 +834,7 @@ static void gfs_discharge_elevation_class_init (GtsObjectClass * klass)
 
 static void gfs_discharge_elevation_init (GfsDischargeElevation * b)
 {
+  GFS_EVENT (b)->start = 0.; /* this is not an "Init" event */
   b->tolerance = 1e-2;
   b->Q = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_set_units (b->Q, 3.);
