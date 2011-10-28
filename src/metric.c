@@ -25,6 +25,7 @@
 #include <complex.h>
 #include "map.h"
 #include "solid.h"
+#include "source.h"
 
 #if USE_GSL
 # include <gsl/gsl_integration.h>
@@ -410,6 +411,46 @@ static void none (FttCell * parent, GfsVariable * v)
 {
 }
 
+static gdouble face_metric_direction (const GfsDomain * domain, FttCell * cell, FttDirection d)
+{
+  FttCellFace f;
+  f.cell = cell;
+  f.d = d;
+  return (* domain->face_metric) (domain, &f);
+}
+
+/* see: doc/figures/viscous-metric.tm equation (4) */
+static gdouble viscous_metric (const GfsDomain * domain, 
+			       FttCell * cell,
+			       GfsVariable * v,
+			       GfsDiffusion * d)
+{
+  g_assert (v->component < FTT_DIMENSION);
+  /* fixme: 2D only */
+  if (v->component > 1)
+    return 0.;
+  FttComponent c1 = v->component;
+  FttComponent c2 = (c1 + 1) % 2;
+  double h1h2 = (* domain->cell_metric) (domain, cell);
+  double h1 = (* domain->scale_metric) (domain, cell, c1);
+  double h2 = (* domain->scale_metric) (domain, cell, c2);
+  double size = ftt_cell_size (cell);
+  double h1_2 = (face_metric_direction (domain, cell, 2*c2) - 
+		 face_metric_direction (domain, cell, 2*c2 + 1))/size;
+  double h2_1 = (face_metric_direction (domain, cell, 2*c1) - 
+		 face_metric_direction (domain, cell, 2*c1 + 1))/size;
+  double u1 = GFS_VALUE (cell, v);
+  double u2_1 = gfs_center_gradient (cell, c1, v->vector[c2]->i);
+  double u2_2 = gfs_center_gradient (cell, c2, v->vector[c2]->i);
+  double eta = gfs_diffusion_cell (d, cell);
+  /* fixme: this does not include the terms with derivatives of the viscosity yet */
+  /* fixme: this does not include the "curvature" of the metric yet */
+  return eta*(
+	      - u1*(h1_2*h1_2 + h2_1*h2_1)/h1h2 /* fixme: this term could be implicit */
+	      + 2.*(u2_1*h1_2/h1 - u2_2*h2_1/h2)
+	      )/h1h2;
+}
+
 static void generic_metric_read (GtsObject ** o, GtsFile * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_generic_metric_class ())->parent_class->read) (o, fp);
@@ -456,6 +497,7 @@ static void generic_metric_read (GtsObject ** o, GtsFile * fp)
   domain->solid_metric = solid_metric;
   domain->scale_metric = scale_metric;
   domain->face_scale_metric = face_scale_metric;
+  domain->viscous_metric = viscous_metric;
 }
 
 static void generic_metric_class_init (GtsObjectClass * klass)
@@ -598,7 +640,7 @@ static void metric_read (GtsObject ** o, GtsFile * fp)
   GtsFileVariable var[] = {
     {GTS_OBJ, "X", TRUE, &m->x},
     {GTS_OBJ, "Y", TRUE, &m->y},
-    {GTS_OBJ, "Z", TRUE, &m->z},
+    /* {GTS_OBJ, "Z", TRUE, &m->z}, fixme: Z metric does not work yet */
     {GTS_NONE}
   };
   FttComponent c;

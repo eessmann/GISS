@@ -1365,15 +1365,17 @@ static void source_viscosity_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT (d->D)->klass->write) (GTS_OBJECT (d->D), fp);
 }
 
+/* Returns explicit terms not included in the implicit scheme
+   i.e. terms linked to a variable viscosity and/or metric terms */
 static gdouble source_viscosity_non_diffusion_value (GfsSourceGeneric * s,
 						     FttCell * cell,
 						     GfsVariable * v)
 {
+  gdouble src = 0.;
   GfsVariable * mu = GFS_SOURCE_DIFFUSION (s)->D->mu;
 
-  if (mu == NULL)
-    return 0.;
-  else {
+  /* variable viscosity */
+  if (mu != NULL) {
     GfsVariable ** u = GFS_SOURCE_VISCOSITY (s)->v;
     FttComponent c = v->component, j;
     GfsFunction * alpha = gfs_object_simulation (s)->physical_params.alpha;
@@ -1383,8 +1385,14 @@ static gdouble source_viscosity_non_diffusion_value (GfsSourceGeneric * s,
     for (j = 0; j < FTT_DIMENSION; j++)
       a += (gfs_center_gradient (cell, c, u[j]->i)*
 	    gfs_center_gradient (cell, j, mu->i));
-    return a*(alpha ? gfs_function_value (alpha, cell) : 1.)/(h*h);
+    src += a*(alpha ? gfs_function_value (alpha, cell) : 1.)/(h*h);
   }
+
+  /* metric */
+  if (v->domain->viscous_metric)
+    src += (* v->domain->viscous_metric) (v->domain, cell, v, GFS_SOURCE_DIFFUSION (s)->D);
+
+  return src;
 }
 
 static gdouble source_viscosity_value (GfsSourceGeneric * s,

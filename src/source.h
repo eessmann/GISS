@@ -203,8 +203,6 @@ GfsSourceGenericClass * gfs_source_flux_class  (void);
 
 /* GfsDiffusion: Header */
 
-typedef struct _GfsDiffusion         GfsDiffusion;
-
 struct _GfsDiffusion {
   /*< private >*/
   GfsEvent parent;
