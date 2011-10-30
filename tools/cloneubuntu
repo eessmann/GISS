@@ -3,8 +3,8 @@
 # Clones an ubuntu 'universe' package in openSUSE's builservice
 
 project=home:popinet
-distro=natty
-repo=xUbuntu_11.04
+distro=oneiric
+repo=xUbuntu_11.10
 
 package=$1
 if test -z "$package"; then
@@ -55,7 +55,7 @@ else
     exit 1
 fi
 
-if osc update && cd $package-$distro; then :
+if osc checkout $package-$distro && cd $package-$distro; then :
 else
     exit 1
 fi
