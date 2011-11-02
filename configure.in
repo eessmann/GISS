@@ -292,10 +292,14 @@ AC_CHECK_PROG(have_m4, m4, yes, no)
 options_m4=""
 if test "$have_m4" = "yes"; then
    AC_DEFINE(HAVE_M4, 1, [Define to 1 if m4 is available.])
-   # check whether m4 accepts the -P option
-   if m4 -P 2> /dev/null; then
+   AC_MSG_CHECKING(check whether m4 accepts the -P option)
+   if m4 -P < /dev/null 2> /dev/null; then
       options_m4="-P"
+      accepts_P="yes"
+   else
+      accepts_P="no"
    fi
+   AC_MSG_RESULT($accepts_P)
 else
    AC_DEFINE(HAVE_M4, 0)
 fi
