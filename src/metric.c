@@ -1854,7 +1854,7 @@ static GfsMapClass * gfs_map_cubed1_class (void)
   static GfsMapClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_map_cubed1_info = {
+    GtsObjectClassInfo info = {
       "GfsMapCubed1",
       sizeof (GfsMap),
       sizeof (GfsMapClass),
@@ -1863,7 +1863,7 @@ static GfsMapClass * gfs_map_cubed1_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_map_class ()), &gfs_map_cubed1_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_map_class ()), &info);
   }
 
   return klass;
@@ -1881,7 +1881,7 @@ GfsVariableClass * gfs_metric_cubed1_class (void)
   static GfsVariableClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_metric_cubed1_info = {
+    GtsObjectClassInfo info = {
       "GfsMetricCubed1",
       sizeof (GfsGenericMetric),
       sizeof (GfsVariableClass),
@@ -1890,10 +1890,8 @@ GfsVariableClass * gfs_metric_cubed1_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_metric_class ()),
-				  &gfs_metric_cubed1_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_metric_class ()), &info);
   }
 
   return klass;
 }
-

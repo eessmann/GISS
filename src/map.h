@@ -35,9 +35,13 @@ struct _GfsMap {
   /*< private >*/
   GtsSListContainee parent;
 
-  void (* transform)    (GfsMap * map, const FttVector * src, FttVector * dest);
-  void (* inverse)      (GfsMap * map, const FttVector * src, FttVector * dest);
-  void (* inverse_cell) (GfsMap * map, const FttVector * src, FttVector * dest);
+  void (* transform)           (GfsMap * map, const FttVector * src, FttVector * dest);
+  void (* inverse)             (GfsMap * map, const FttVector * src, FttVector * dest);
+  void (* transform_vector)    (GfsMap * map, const FttVector * p,
+				const FttVector * src, FttVector * dest);
+  void (* inverse_vector)      (GfsMap * map, const FttVector * p,
+				const FttVector * src, FttVector * dest);
+  void (* inverse_cell)        (GfsMap * map, const FttVector * src, FttVector * dest);
   /*< public >*/
 };
 

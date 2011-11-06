@@ -1822,6 +1822,60 @@ void gfs_simulation_map_inverse (GfsSimulation * sim, FttVector * p)
 }
 
 /**
+ * gfs_simulation_map_vector:
+ * @sim: a #GfsSimulation.
+ * @p: the position.
+ * @v: a #FttVector.
+ *
+ * Applies the inverse mapping transformations associated with @sim at
+ * location @p, to vector @v.
+ */
+void gfs_simulation_map_vector (GfsSimulation * sim, const FttVector * p, FttVector * v)
+{
+  g_return_if_fail (sim != NULL);
+  g_return_if_fail (p != NULL);
+  g_return_if_fail (v != NULL);
+    
+  FttComponent c;
+  for (c = 0; c < 3; c++)
+    (&v->x)[c] *= (&GFS_DOMAIN (sim)->lambda.x)[c]/sim->physical_params.L;
+
+  GSList * i = sim->maps->items;
+  while (i) {
+    (* GFS_MAP (i->data)->transform_vector) (i->data, p, v, v);
+    i = i->next;
+  }
+}
+
+/**
+ * gfs_simulation_map_inverse_vector:
+ * @sim: a #GfsSimulation.
+ * @p: the position.
+ * @v: a #FttVector.
+ *
+ * Applies the inverse mapping transformations associated with @sim at
+ * location @p, to vector @v.
+ */
+void gfs_simulation_map_inverse_vector (GfsSimulation * sim, const FttVector * p, FttVector * v)
+{
+  g_return_if_fail (sim != NULL);
+  g_return_if_fail (p != NULL);
+  g_return_if_fail (v != NULL);
+  
+  GSList * reverse = g_slist_reverse (sim->maps->items);
+  GSList * i = reverse;
+  while (i) {
+    (* GFS_MAP (i->data)->inverse_vector) (i->data, p, v, v);
+    i = i->next;
+  }
+  sim->maps->items = g_slist_reverse (reverse);
+
+  FttComponent c;
+  for (c = 0; c < 3; c++)
+    (&v->x)[c] *= sim->physical_params.L/(&GFS_DOMAIN (sim)->lambda.x)[c];
+}
+
+/**
  * gfs_simulation_map_inverse_cell:
  * @sim: a #GfsSimulation.
  * @p: an array of #FttVector.

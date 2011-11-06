@@ -83,7 +83,7 @@ static double evaluate (GfsMap * map, const FttVector * x, const FttVector * rhs
   return delta;
 }
 
-#define DELTA 1e-3
+#define DELTA 1e-6
 #define NMAX 100
 
 static void jacobian (GfsMap * map, const FttVector * x, const FttVector * rhs, FttVector * f,
@@ -125,6 +125,57 @@ static void map_transform (GfsMap * map, const FttVector * src, FttVector * dest
   g_assert (n < NMAX);
 }
 
+static void normalized_jacobian (GfsMap * map, const FttVector * p, GtsMatrix * J)
+{
+  FttVector f, rhs = {0., 0., 0.};
+  evaluate (map, p, &rhs, &f);
+  jacobian (map, p, &rhs, &f, J);
+  /* normalize */
+  int i, j;
+  for (i = 0; i < 3; i++) {
+    gdouble h = 0.;
+    for (j = 0; j < 3; j++)
+      h += J[j][i]*J[j][i];
+    h = sqrt (h);
+    for (j = 0; j < 3; j++)
+      J[j][i] /= h;
+  }
+}
+
+static void map_inverse_vector (GfsMap * map, const FttVector * p,
+				const FttVector * src, FttVector * dest)
+{
+  GtsMatrix J[4];
+  normalized_jacobian (map, p, J);
+  FttVector src1 = *src; /* in case src and dest are identical */
+  int i, j;
+  for (i = 0; i < 3; i++) {
+    (&dest->x)[i] = 0.;
+    for (j = 0; j < 3; j++)
+      (&dest->x)[i] += (&src1.x)[j]*J[i][j];
+  }
+}
+
+static void map_transform_vector (GfsMap * map, const FttVector * p,
+				  const FttVector * src, FttVector * dest)
+{
+  GtsMatrix J[4];
+  normalized_jacobian (map, p, J);
+  GtsMatrix * iJ = gts_matrix3_inverse (J);
+  if (!iJ) {
+    gts_matrix_print (J, stderr);
+    g_assert_not_reached ();
+  }
+  FttVector src1 = *src; /* in case src and dest are identical */
+  int i, j;
+  for (i = 0; i < 3; i++) {
+    (&dest->x)[i] = 0.;
+    for (j = 0; j < 3; j++)
+      (&dest->x)[i] += (&src1.x)[j]*iJ[i][j];
+  }
+  gts_matrix_destroy (iJ);
+}
+
 static void inverse_cell (GfsMap * map, const FttVector * src, FttVector * dest)
 {
   gint i;
@@ -136,6 +187,8 @@ static void gfs_map_init (GfsMap * map)
 {
   map->inverse = not_implemented;
   map->transform = map_transform;
+  map->inverse_vector = map_inverse_vector;
+  map->transform_vector = map_transform_vector;
   map->inverse_cell = inverse_cell;
 }
 
