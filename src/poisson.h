@@ -98,20 +98,20 @@ void                  gfs_diffusion_coefficients     (GfsDomain * domain,
 						      GfsSourceDiffusion * d,
 						      gdouble dt,
 						      GfsVariable * rhoc,
-						      GfsVariable * axi,
+						      GfsVariable * metric,
 						      GfsFunction * alpha,
 						      gdouble beta);
 void                  gfs_diffusion_rhs              (GfsDomain * domain,
 						      GfsVariable * v,
 						      GfsVariable * rhs,
 						      GfsVariable * rhoc,
-						      GfsVariable * axi,
+						      GfsVariable * metric,
 						      gdouble beta);
 void                  gfs_diffusion_residual         (GfsDomain * domain,
 						      GfsVariable * u,
 						      GfsVariable * rhs,
 						      GfsVariable * rhoc,
-						      GfsVariable * axi,
+						      GfsVariable * metric,
 						      GfsVariable * res);
 void                  gfs_diffusion_cycle            (GfsDomain * domain,
 						      guint levelmin,
@@ -120,7 +120,7 @@ void                  gfs_diffusion_cycle            (GfsDomain * domain,
 						      GfsVariable * u,
 						      GfsVariable * rhs,
 						      GfsVariable * rhoc,
-						      GfsVariable * axi,
+						      GfsVariable * metric,
 						      GfsVariable * res);
 
 /* GfsLinearProblem: Object */
@@ -146,7 +146,7 @@ GfsLinearProblem * gfs_get_diffusion_problem         (GfsDomain * domain,
 						      GfsVariable * rhs, 
 						      GfsVariable * lhs,
 						      GfsVariable * rhoc,
-						      GfsVariable * axi,
+						      GfsVariable * metric,
 						      gint maxlevel,
 						      GfsVariable * v);
 

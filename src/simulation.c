@@ -2221,6 +2221,25 @@ static gdouble axi_solid_metric (const GfsDomain * domain, const FttCell * cell)
   return GFS_STATE (cell)->solid->ca.y;
 }
 
+static gdouble axi_scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
+{
+  if (c < 2)
+    return 1.;
+  FttVector p;
+  gfs_cell_cm (cell, &p);
+  return p.y;
+}
+
+static gdouble axi_viscous_metric_implicit (const GfsDomain * domain, 
+					    FttCell * cell, FttComponent c)
+{
+  if (c != FTT_Y)
+    return 0.;
+  FttVector p;
+  gfs_cell_cm (cell, &p);
+  return 1./(p.y*p.y);
+}
+
 static void axi_class_init (GfsSimulationClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->read = axi_read;
@@ -2231,6 +2250,8 @@ static void axi_init (GfsDomain * domain)
   domain->face_metric  = axi_face_metric;
   domain->cell_metric  = axi_cell_metric;
   domain->solid_metric = axi_solid_metric;
+  domain->scale_metric = axi_scale_metric;
+  domain->viscous_metric_implicit = axi_viscous_metric_implicit;
 }
 
 GfsSimulationClass * gfs_axi_class (void)

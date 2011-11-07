@@ -1,6 +1,6 @@
-<TeXmacs|1.0.7.4>
+<TeXmacs|1.0.7.3>
 
-<style|generic>
+<style|article>
 
 <\body>
   The viscous terms require the expression of
@@ -152,26 +152,26 @@
 <\auxiliary>
   <\collection>
     <\associate|toc>
-      <with|par-left|<quote|1.5fn>|General case
+      <with|par-left|<quote|1.5fn>|1<space|2spc>General case
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-1>>
 
-      <with|par-left|<quote|1.5fn>|Decoupled case
+      <with|par-left|<quote|1.5fn>|2<space|2spc>Decoupled case
       (<with|mode|<quote|math>|h<rsub|1,2>=h<rsub|2,1>=0>)
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-2>>
 
-      <with|par-left|<quote|1.5fn>|Orthonormal case
+      <with|par-left|<quote|1.5fn>|3<space|2spc>Orthonormal case
       (<with|mode|<quote|math>|h<rsub|1>=h<rsub|2>=1>)
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-3>>
 
-      <with|par-left|<quote|1.5fn>|Viscous term
+      <with|par-left|<quote|1.5fn>|4<space|2spc>Viscous term
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-4>>
 
-      <with|par-left|<quote|1.5fn>|Application to polar coordinates
-      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <with|par-left|<quote|1.5fn>|5<space|2spc>Application to polar
+      coordinates <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-5>>
     </associate>
   </collection>

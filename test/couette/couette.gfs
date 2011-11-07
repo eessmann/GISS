@@ -70,8 +70,8 @@
     # (beta = 0.5 -> Crank-Nicholson, beta = 1 -> backward Euler)
     beta = 1
   }
-  GfsSurfaceBc U Dirichlet (x*x + y*y > 0.140625 ? 0. : - ay)
-  GfsSurfaceBc V Dirichlet (x*x + y*y > 0.140625 ? 0. :   ax)
+  SurfaceBc U Dirichlet (x*x + y*y > 0.140625 ? 0. : - ay)
+  SurfaceBc V Dirichlet (x*x + y*y > 0.140625 ? 0. :   ax)
   EventStop { istep = 1 } U 1e-4 DU
 
   OutputScalarNorm { istep = 1 } du-MODEL { v = DU }

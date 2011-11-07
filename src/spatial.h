@@ -31,6 +31,9 @@
 #define X _x
 #define Y _y
 #define Z _z
+#define rx _x
+#define ry _y
+#define rz _z
 
 static double _x = 0., _y = 0., _z = 0.;
 

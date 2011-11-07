@@ -240,8 +240,7 @@ typedef struct {
   GfsLinearProblem * lp;
   GfsVariable * dia;
   gint maxlevel;
-  FttComponent component;
-  GfsVariable * axi, * rhs;
+  GfsVariable * metric, * rhs;
 } RelaxStencilParams;
 
 static void relax_stencil (FttCell * cell, RelaxStencilParams * p)
@@ -500,8 +499,7 @@ typedef struct {
   guint u, rhs, dia, res;
   gint maxlevel;
   gdouble beta, omega;
-  FttComponent component;
-  guint axi;
+  guint metric;
 } RelaxParams;
 
 /* relax_stencil() needs to be updated whenever this
@@ -1257,7 +1255,7 @@ typedef struct {
   GfsSourceDiffusion * d;
   gdouble lambda2[FTT_DIMENSION];
   gdouble dt;
-  GfsVariable * rhoc, * axi;
+  GfsVariable * rhoc, * metric;
   GfsFunction * alpha;
   GfsDomain * domain;
 } DiffusionCoeff;
@@ -1285,7 +1283,7 @@ static void diffusion_coef (FttCellFace * face, DiffusionCoeff * c)
   }
 }
 
-static void diffusion_mixed_coef (FttCell * cell, DiffusionCoeff * c)
+static void diffusion_mixed_coeff (FttCell * cell, DiffusionCoeff * c)
 {
   reset_coeff (cell, NULL);
   if (GFS_IS_MIXED (cell))
@@ -1301,15 +1299,18 @@ static void diffusion_mixed_coef (FttCell * cell, DiffusionCoeff * c)
 	     "Please check your definition of alpha.",
 	     rho, p.x, p.y, p.z);
     }
-    gdouble f = gfs_domain_cell_fraction (c->domain, cell);
-    GFS_VALUE (cell, c->rhoc) = rho*f;
-
-    if (c->axi) {
-      FttVector p;
-      gfs_cell_cm (cell, &p);
-      GFS_VALUE (cell, c->axi) = 2.*c->dt*gfs_source_diffusion_cell (c->d, cell)/(rho*p.y*p.y);
-    }
+    GFS_VALUE (cell, c->rhoc) = rho*gfs_domain_cell_fraction (c->domain, cell);
   }
+}
+
+static void viscous_metric_coeff (FttCell * cell, DiffusionCoeff * c)
+{
+  GFS_VALUE (cell, c->metric) =
+    c->dt*
+    gfs_source_diffusion_cell (c->d, cell)*
+    (* c->domain->viscous_metric_implicit) (c->domain, cell, c->metric->component)
+    *gfs_domain_cell_fraction (c->domain, cell)
+    /GFS_VALUE (cell, c->rhoc);
 }
 
 /**
@@ -1318,7 +1319,7 @@ static void diffusion_mixed_coef (FttCell * cell, DiffusionCoeff * c)
  * @d: a #GfsSourceDiffusion.
  * @dt: the time-step.
  * @rhoc: where to store the mass.
- * @axi: where to store the axisymmetric term (or %NULL).
+ * @metric: where to store the implicit metric term (or %NULL).
  * @alpha: the inverse of density or %NULL.
  * @beta: the implicitness parameter (0.5 Crank-Nicholson, 1. backward Euler).
  *
@@ -1328,7 +1329,7 @@ void gfs_diffusion_coefficients (GfsDomain * domain,
 				 GfsSourceDiffusion * d,
 				 gdouble dt,
 				 GfsVariable * rhoc,
-				 GfsVariable * axi,
+				 GfsVariable * metric,
 				 GfsFunction * alpha,
 				 gdouble beta)
 {
@@ -1349,11 +1350,15 @@ void gfs_diffusion_coefficients (GfsDomain * domain,
   coef.rhoc = rhoc;
   coef.alpha = alpha;
   coef.domain = domain;
-  coef.axi = axi;
+  coef.metric = metric;
   gfs_catch_floating_point_exceptions ();
   gfs_domain_cell_traverse (domain,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			    (FttCellTraverseFunc) diffusion_mixed_coef, &coef);
+			    (FttCellTraverseFunc) diffusion_mixed_coeff, &coef);
+  if (coef.metric && coef.rhoc)
+    gfs_domain_cell_traverse (domain,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) viscous_metric_coeff, &coef);
   gfs_restore_fpe_for_function (alpha);
   gfs_domain_face_traverse (domain, FTT_XYZ, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -1387,15 +1392,11 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
 
     face.neighbor = neighbor.c[face.d];
     gfs_face_cm_weighted_gradient (&face, &g, p->u, -1);
-    if (face.d/2 == p->component) {
-      g.a *= 2.;
-      g.b *= 2.;
-    }
     f += g.b - g.a*val;
   }
   GFS_VARIABLE (cell, p->rhs) += p->beta*f/(h*h*GFS_VARIABLE (cell, p->dia));
-  if (p->axi)
-    GFS_VARIABLE (cell, p->rhs) -= val*p->beta*GFS_VARIABLE (cell, p->axi);
+  if (p->metric)
+    GFS_VARIABLE (cell, p->rhs) -= val*p->beta*GFS_VARIABLE (cell, p->metric);
 }
 
 /**
@@ -1404,7 +1405,7 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
  * @v: a #GfsVariable.
  * @rhs: a #GfsVariable.
  * @rhoc: the mass.
- * @axi: the axisymmetric term.
+ * @metric: the metric term.
  * @beta: the implicitness parameter (0.5 Crank-Nicholson, 1. backward Euler).
  *
  * Adds to the @rhs variable of @cell the right-hand side of the
@@ -1415,7 +1416,7 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
  */
 void gfs_diffusion_rhs (GfsDomain * domain, 
 			GfsVariable * v, GfsVariable * rhs, 
-			GfsVariable * rhoc, GfsVariable * axi,
+			GfsVariable * rhoc, GfsVariable * metric,
 			gdouble beta)
 {
   RelaxParams p;
@@ -1430,8 +1431,7 @@ void gfs_diffusion_rhs (GfsDomain * domain,
   p.rhs = rhs->i;
   p.dia = rhoc->i;
   p.beta = (1. - beta)/beta;
-  p.component = GFS_IS_AXI (domain) ? v->component : FTT_DIMENSION;
-  p.axi = axi ? axi->i : FALSE;
+  p.metric = metric ? metric->i : FALSE;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) diffusion_rhs, &p);
 }
@@ -1455,18 +1455,14 @@ static void diffusion_relax (FttCell * cell, RelaxParams * p)
 
     face.neighbor = neighbor.c[face.d];
     gfs_face_cm_weighted_gradient (&face, &ng, p->u, p->maxlevel);
-    if (face.d/2 == p->component) {
-      ng.a *= 2.;
-      ng.b *= 2.;
-    }
     g.a += ng.a;
     g.b += ng.b;
   }
   gdouble a = GFS_VARIABLE (cell, p->dia)*h*h;
   g_assert (a > 0.);
   g.a = 1. + g.a/a;
-  if (p->axi)
-    g.a += GFS_VARIABLE (cell, p->axi);
+  if (p->metric)
+    g.a += GFS_VARIABLE (cell, p->metric);
   g_assert (g.a > 0.);
   GFS_VARIABLE (cell, p->u) = (g.b/a + GFS_VARIABLE (cell, p->res))/g.a;
 }
@@ -1492,15 +1488,13 @@ static void diffusion_relax_stencil (FttCell * cell, RelaxStencilParams * p)
     GfsGradient ng;
     face.neighbor = neighbor.c[face.d];
     gfs_face_cm_weighted_gradient_stencil (&face, &ng, p->maxlevel, p->lp, stencil);
-    if (face.d/2 == p->component)
-      ng.a *= 2.;
     g.a += ng.a;
   }
   gdouble a = GFS_VALUE (cell, p->dia)*h*h;
   g_assert (a > 0.);
   g.a = 1. + g.a/a;
-  if (p->axi)
-    g.a += GFS_VALUE (cell, p->axi);
+  if (p->metric)
+    g.a += GFS_VALUE (cell, p->metric);
   g_assert (g.a > 0.);
   gfs_stencil_add_element (stencil, cell, p->lp, - a*g.a);
 
@@ -1531,18 +1525,14 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
 
     face.neighbor = neighbor.c[face.d];
     gfs_face_cm_weighted_gradient (&face, &ng, p->u, -1);
-    if (face.d/2 == p->component) {
-      ng.a *= 2.;
-      ng.b *= 2.;
-    }
     g.a += ng.a;
     g.b += ng.b;
   }
   a *= h*h;
   g_assert (a > 0.);
   g.a = 1. + g.a/a;
-  if (p->axi)
-    g.a += GFS_VARIABLE (cell, p->axi);
+  if (p->metric)
+    g.a += GFS_VARIABLE (cell, p->metric);
   g.b = GFS_VARIABLE (cell, p->rhs) + g.b/a;
   GFS_VARIABLE (cell, p->res) = g.b - g.a*GFS_VARIABLE (cell, p->u);
 }
@@ -1553,7 +1543,7 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
  * @u: the variable to use as left-hand side.
  * @rhs: the right-hand side.
  * @rhoc: the mass.
- * @axi: the axisymmetric term.
+ * @metric: the metric term.
  * @res: the residual.
  *
  * Sets the @res variable of each leaf cell of @domain to the residual
@@ -1567,7 +1557,7 @@ void gfs_diffusion_residual (GfsDomain * domain,
 			     GfsVariable * u,
 			     GfsVariable * rhs,
 			     GfsVariable * rhoc,
-			     GfsVariable * axi,
+			     GfsVariable * metric,
 			     GfsVariable * res)
 {
   RelaxParams p;
@@ -1582,8 +1572,7 @@ void gfs_diffusion_residual (GfsDomain * domain,
   p.rhs = rhs->i;
   p.dia = rhoc->i;
   p.res = res->i;
-  p.component = GFS_IS_AXI (domain) ? u->component : FTT_DIMENSION;
-  p.axi = axi ? axi->i : FALSE;
+  p.metric = metric ? metric->i : FALSE;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) diffusion_residual, &p);
 }
@@ -1597,7 +1586,7 @@ void gfs_diffusion_residual (GfsDomain * domain,
  * @u: the variable to use as left-hand side.
  * @rhs: the right-hand side.
  * @rhoc: the mass.
- * @axi: the axisymmetric term.
+ * @metric: the metric term.
  * @res: the residual.
  *
  * Apply one multigrid iteration to the diffusion equation for @u.
@@ -1617,7 +1606,7 @@ void gfs_diffusion_cycle (GfsDomain * domain,
 			  GfsVariable * u,
 			  GfsVariable * rhs,
 			  GfsVariable * rhoc,
-			  GfsVariable * axi,
+			  GfsVariable * metric,
 			  GfsVariable * res)
 {
   GfsVariable * dp;
@@ -1631,7 +1620,6 @@ void gfs_diffusion_cycle (GfsDomain * domain,
   g_return_if_fail (res != NULL);
 
   dp = gfs_temporary_variable (domain);
-  dp->component = u->component;
 
   /* compute residual on non-leafs cells */
   gfs_domain_cell_traverse (domain, 
@@ -1643,8 +1631,7 @@ void gfs_diffusion_cycle (GfsDomain * domain,
   p.u = dp->i;
   p.res = res->i;
   p.dia = rhoc->i;
-  p.component = GFS_IS_AXI (domain) ? u->component : FTT_DIMENSION;
-  p.axi = axi ? axi->i : FALSE;
+  p.metric = metric ? metric->i : FALSE;
 
   gfs_domain_cell_traverse (domain, 
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, levelmin,
@@ -1666,7 +1653,7 @@ void gfs_diffusion_cycle (GfsDomain * domain,
 		       (FttCellTraverseFunc) correct, data,
 		       u, u);
   /* compute new residual on leaf cells */
-  gfs_diffusion_residual (domain, u, rhs, rhoc, axi, res);
+  gfs_diffusion_residual (domain, u, rhs, rhoc, metric, res);
 
   gts_object_destroy (GTS_OBJECT (dp));
 }
@@ -1683,7 +1670,7 @@ static void scale_rhs (FttCell * cell, RelaxStencilParams * p)
  * @rhs: the variable to use as right-hand side
  * @lhs: the variable to use as left-hand side
  * @rhoc: the mass.
- * @axi: the axisymmetric term (or %NULL).
+ * @metric: the metric term (or %NULL).
  * @maxlevel: the maximum level to consider (or -1).
  * @v: a #GfsVariable of which @lhs is an homogeneous version.
  *
@@ -1695,7 +1682,7 @@ GfsLinearProblem * gfs_get_diffusion_problem (GfsDomain * domain,
 					      GfsVariable * rhs, 
 					      GfsVariable * lhs,
 					      GfsVariable * rhoc,
-					      GfsVariable * axi,
+					      GfsVariable * metric,
 					      gint maxlevel,
 					      GfsVariable * v)
 {
@@ -1705,8 +1692,7 @@ GfsLinearProblem * gfs_get_diffusion_problem (GfsDomain * domain,
  
   RelaxStencilParams p = {
     lp, rhoc, maxlevel, 
-    GFS_IS_AXI (domain) ? v->component : FTT_DIMENSION,
-    axi,
+    metric,
     rhs
   };
 

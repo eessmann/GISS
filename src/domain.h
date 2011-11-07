@@ -82,10 +82,13 @@ struct _GfsDomain {
   gdouble (* solid_metric)      (const GfsDomain *, const FttCell *);
   gdouble (* scale_metric)      (const GfsDomain *, const FttCell *, FttComponent);
   gdouble (* face_scale_metric) (const GfsDomain *, const FttCellFace *, FttComponent);
-  gdouble (* viscous_metric)    (const GfsDomain * domain, 
-				 FttCell * cell,
-				 GfsVariable * v,
-				 GfsDiffusion * d);
+  gdouble (* viscous_metric_implicit)    (const GfsDomain * domain, 
+					  FttCell * cell,
+					  FttComponent component);
+  gdouble (* viscous_metric_explicit)    (const GfsDomain * domain, 
+					  FttCell * cell,
+					  GfsVariable * v,
+					  GfsDiffusion * d);
 
   /* Object hash table for (optional) object IDs */
   GHashTable * objects;
