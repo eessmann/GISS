@@ -47,6 +47,7 @@ TESTDIRS = \
 	cosine \
 	harmonic \
 	gaussian \
+	annulus \
 	planar \
 	bump \
 	cylinder \
