@@ -208,12 +208,72 @@ GfsSourceGeneric * gfs_source_find (GfsVariable * v, GfsSourceGenericClass * kla
 
 static void source_scalar_write (GtsObject * o, FILE * fp)
 {
-  if (GTS_OBJECT_CLASS (gfs_source_scalar_class ())->parent_class->write)
-    (* GTS_OBJECT_CLASS (gfs_source_scalar_class ())->parent_class->write) 
-      (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_source_scalar_class ())->parent_class->write) (o, fp);
 
-  g_assert (GFS_SOURCE_SCALAR (o)->v);
-  fprintf (fp, " %s", GFS_SOURCE_SCALAR (o)->v->name);
+  GfsSourceScalar * s = GFS_SOURCE_SCALAR (o);
+  if (s->v)
+    fprintf (fp, " %s", s->v->name);
+  else {
+    gint i;
+    fputs (" (", fp);
+    for (i = 0; i < FTT_DIMENSION - 1; i++)
+      fprintf (fp, "%s,", s->vector[i]->name);
+    fprintf (fp, "%s)", s->vector[FTT_DIMENSION - 1]->name);
+  }
+}
+
+static gboolean read_vector (GtsFile * fp, gchar * component[FTT_DIMENSION])
+{
+  if (fp->type != '(') {
+    gts_file_error (fp, "expecting an opening bracket '('");
+    return FALSE;
+  }
+  gint c = gts_file_getc (fp), parlevel = 0, n = 0;
+  GString * s = g_string_new ("");
+  while ((parlevel > 0 || c != ')') && c != EOF) {
+    if (c == ',' && parlevel == 0) {
+      /* end of component */
+      if (n == FTT_DIMENSION) {
+	gts_file_error (fp, "too many vector components");
+	gint i;
+	for (i = 0; i < n; i++)
+	  g_free (component[i]);
+	g_string_free (s, TRUE);
+	return FALSE;
+      }
+      component[n++] = s->str;
+      g_string_free (s, FALSE);
+      s = g_string_new ("");
+    }
+    else {
+      /* expression */
+      g_string_append_c (s, c);
+      if (c == '(' || c == '[' || c == '{')
+	parlevel++;
+      else if (c == ')' || c == ']' || c == '}')
+	parlevel--;
+    }
+    c = gts_file_getc (fp);
+  }
+  if (c != ')') {
+    gts_file_error (fp, "parse error (missing closing bracket ')'?)"); 
+    gint i;
+    for (i = 0; i < n; i++)
+      g_free (component[i]);
+    g_string_free (s, TRUE);
+    return FALSE;
+  }
+  if (n != FTT_DIMENSION - 1) {
+    gts_file_error (fp, "not enough vector components");
+    gint i;
+    for (i = 0; i < n; i++)
+      g_free (component[i]);
+    g_string_free (s, TRUE);
+    return FALSE;
+  }
+  component[n++] = s->str;
+  g_string_free (s, FALSE);
+  return TRUE;
 }
 
 static void source_scalar_read (GtsObject ** o, GtsFile * fp)
@@ -229,21 +289,51 @@ static void source_scalar_read (GtsObject ** o, GtsFile * fp)
 
   source = GFS_SOURCE_SCALAR (*o);
   domain =  GFS_DOMAIN (gfs_object_simulation (source));
-  if (fp->type != GTS_STRING) {
-    gts_file_error (fp, "expecting a string (GfsVariable)");
+
+  if (fp->type == '(') {
+    /* vector */
+    gchar * component[FTT_DIMENSION];
+    if (!read_vector (fp, component))
+      return;
+    gint i;
+    for (i = 0; i < FTT_DIMENSION; i++) {
+      if (!(source->vector[i] = gfs_variable_from_name (domain->variables, component[i]))) {
+	gts_file_error (fp, "unknown variable '%s'", component[i]);
+	for (i = 0; i < FTT_DIMENSION; i++)
+	  g_free (component[i]);
+	return;
+      }
+      if (source->vector[i]->component != i) {
+	gts_file_error (fp, "variable '%s' is not the correct vector component", component[i]);
+	for (i = 0; i < FTT_DIMENSION; i++)
+	  g_free (component[i]);
+	return;
+      }
+      if (source->vector[i]->sources == NULL)
+	source->vector[i]->sources = 
+	  gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
+      gts_container_add (source->vector[i]->sources, GTS_CONTAINEE (source));
+    }
+    for (i = 0; i < FTT_DIMENSION; i++)
+      g_free (component[i]);
+  }
+  else if (fp->type == GTS_STRING) {
+    /* scalar */
+    source->v = gfs_variable_from_name (domain->variables, fp->token->str);
+    if (source->v == NULL) {
+      gts_file_error (fp, "unknown variable `%s'", fp->token->str);
+      return;
+    }
+    if (source->v->sources == NULL)
+      source->v->sources = 
+	gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
+    gts_container_add (source->v->sources, GTS_CONTAINEE (source));    
+  }
+  else {
+    gts_file_error (fp, "expecting a scalar or vector");
     return;
   }
-  source->v = gfs_variable_from_name (domain->variables, 
-				      fp->token->str);
-  if (source->v == NULL) {
-    gts_file_error (fp, "unknown variable `%s'", fp->token->str);
-    return;
-  }
-  if (source->v->sources == NULL)
-    source->v->sources = 
-      gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
-  gts_container_add (source->v->sources, GTS_CONTAINEE (source));
-  
+
   gts_file_next_token (fp);
 }
 
@@ -342,8 +432,14 @@ GfsSourceGenericClass * gfs_source_velocity_class (void)
 
 static void source_destroy (GtsObject * o)
 {
-  if (GFS_SOURCE (o)->intensity)
-    gts_object_destroy (GTS_OBJECT (GFS_SOURCE (o)->intensity));
+  GfsSource * s = GFS_SOURCE (o);
+  if (s->intensity)
+    gts_object_destroy (GTS_OBJECT (s->intensity));
+
+  gint i;
+  for (i = 0; i < FTT_DIMENSION; i++)
+    if (s->intensity_v[i])
+      gts_object_destroy (GTS_OBJECT (s->intensity_v[i]));
 
   (* GTS_OBJECT_CLASS (gfs_source_class ())->parent_class->destroy) (o);
 }
@@ -355,6 +451,33 @@ static gdouble source_face_value (GfsSourceGeneric * s,
   return gfs_function_face_value (GFS_SOURCE (s)->intensity, face);
 }
 
+static gdouble source_vector_face_value (GfsSourceGeneric * s, 
+					 FttCellFace * face, 
+					 GfsVariable * v)
+{
+  FttVector p, u;
+  int i;
+  for (i = 0; i < FTT_DIMENSION; i++)
+    (&u.x)[i] = gfs_function_face_value (GFS_SOURCE (s)->intensity_v[i], face);
+  ftt_face_pos (face, &p);
+  gfs_simulation_map_vector (GFS_SIMULATION (v->domain), &p, &u);
+  return (&u.x)[v->component];
+}
+
+static gdouble source_value (GfsSourceGeneric * s, 
+			     FttCell * cell, 
+			     GfsVariable * v)
+{
+  return gfs_function_value (GFS_SOURCE (s)->intensity, cell);
+}
+
+static gdouble source_vector_value (GfsSourceGeneric * s, 
+				    FttCell * cell, 
+				    GfsVariable * v)
+{
+  return gfs_function_value (GFS_SOURCE (s)->intensity_v[v->component], cell);
+}
+
 static void source_read (GtsObject ** o, GtsFile * fp)
 {
   if (GTS_OBJECT_CLASS (gfs_source_class ())->parent_class->read)
@@ -363,16 +486,54 @@ static void source_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  GFS_SOURCE (*o)->intensity = gfs_function_new (gfs_function_class (), 0.);
-  gfs_function_set_units (GFS_SOURCE (*o)->intensity, GFS_SOURCE_SCALAR (*o)->v->units);
-  gfs_function_read (GFS_SOURCE (*o)->intensity, gfs_object_simulation (*o), fp);
-  if (fp->type != GTS_ERROR) {
-    GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
-    gchar * name = GFS_SOURCE_SCALAR (s)->v->name;
-    if (!strcmp (name, "U") || !strcmp (name, "V") || !strcmp (name, "W")) {
-      s->mac_value = s->centered_value = NULL;
-      s->face_value = source_face_value;
+  GfsSourceScalar * s = GFS_SOURCE_SCALAR (*o);
+  if (s->v) {    
+    /* scalar */
+    GFS_SOURCE (s)->intensity = gfs_function_new (gfs_function_class (), 0.);
+    gfs_function_set_units (GFS_SOURCE (s)->intensity, s->v->units);
+    gfs_function_read (GFS_SOURCE (s)->intensity, gfs_object_simulation (s), fp);
+    if (fp->type != GTS_ERROR) {
+      GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
+      gchar * name = GFS_SOURCE_SCALAR (s)->v->name;
+      if (!strcmp (name, "U") || !strcmp (name, "V") || !strcmp (name, "W")) {
+	s->mac_value = s->centered_value = NULL;
+	s->face_value = source_face_value;
+      }
     }
+  }
+  else {
+    /* vector */
+    gchar * component[FTT_DIMENSION];
+    if (!read_vector (fp, component))
+      return;
+    GfsSource * r = GFS_SOURCE (s);
+    gint i;
+    for (i = 0; i < FTT_DIMENSION; i++) {
+      r->intensity_v[i] = gfs_function_new (gfs_function_class (), 0.);
+      gfs_function_set_units (r->intensity_v[i], s->vector[i]->units);
+      GtsFile * fp1 = gts_file_new_from_string (component[i]);
+      gfs_function_read (r->intensity_v[i], gfs_object_simulation (s), fp1);
+      if (fp1->type == GTS_ERROR) {
+	gts_file_error (fp, "%s", fp1->error);
+	gts_file_destroy (fp1);
+	for (i = 0; i < FTT_DIMENSION; i++)
+	  g_free (component[i]);
+	return;
+      }
+      gts_file_destroy (fp1);
+    }
+    for (i = 0; i < FTT_DIMENSION; i++)
+      g_free (component[i]);
+    if (!strcmp (s->vector[0]->name, "U")) {
+      GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
+      s->mac_value = s->centered_value = NULL;
+      s->face_value = source_vector_face_value;
+    }
+    else {
+      GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
+      s->mac_value = s->centered_value = source_vector_value;
+    }
+    gts_file_next_token (fp);
   }
 }
 
@@ -381,7 +542,19 @@ static void source_write (GtsObject * o, FILE * fp)
   if (GTS_OBJECT_CLASS (gfs_source_class ())->parent_class->write)
     (* GTS_OBJECT_CLASS (gfs_source_class ())->parent_class->write) 
       (o, fp);
-  gfs_function_write (GFS_SOURCE (o)->intensity, fp);
+  GfsSource * s = GFS_SOURCE (o);
+  if (s->intensity)
+    gfs_function_write (s->intensity, fp);
+  else {
+    gint i;
+    fputs (" (", fp);
+    for (i = 0; i < FTT_DIMENSION - 1; i++) {
+      gfs_function_write (s->intensity_v[i], fp);
+      fputc (',', fp);
+    }
+    gfs_function_write (s->intensity_v[FTT_DIMENSION - 1], fp);
+    fputc (')', fp);
+  }    
 }
 
 static void source_class_init (GfsSourceGenericClass * klass)
@@ -389,13 +562,6 @@ static void source_class_init (GfsSourceGenericClass * klass)
   GTS_OBJECT_CLASS (klass)->destroy = source_destroy;
   GTS_OBJECT_CLASS (klass)->read = source_read;
   GTS_OBJECT_CLASS (klass)->write = source_write;
-}
-
-static gdouble source_value (GfsSourceGeneric * s, 
-			     FttCell * cell, 
-			     GfsVariable * v)
-{
-  return gfs_function_value (GFS_SOURCE (s)->intensity, cell);
 }
 
 static void source_init (GfsSourceGeneric * s)

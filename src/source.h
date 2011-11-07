@@ -87,6 +87,7 @@ struct _GfsSourceScalar {
 
   /*< public >*/
   GfsVariable * v;
+  GfsVariable * vector[FTT_DIMENSION];
 };
 
 #define GFS_SOURCE_SCALAR(obj)            GTS_OBJECT_CAST (obj,\
@@ -127,6 +128,7 @@ struct _GfsSource {
 
   /*< public >*/
   GfsFunction * intensity;
+  GfsFunction * intensity_v[FTT_DIMENSION];
 };
 
 #define GFS_SOURCE(obj)            GTS_OBJECT_CAST (obj,\
