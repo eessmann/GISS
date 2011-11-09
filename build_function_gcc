@@ -1,12 +1,13 @@
-# file generated automatically by configure from 'build_function_gcc'
 #!/bin/sh
+# file generated automatically by configure from 'build_function_gcc'
 
 LINENO=$1     # line number
 DIMENSION=$2  # gerris2D or gerris3D
+WDIR=$3       # simulation directory
 
 CC=gcc
 LD=gcc
-CFLAGS="-O -fpic -Wall -Wno-unused -Werror"
+CFLAGS="-O -fpic -Wall -Wno-unused -Werror -I$WDIR"
 LDFLAGS="-O -fpic MODULE_FLAGS"
 
 touch links

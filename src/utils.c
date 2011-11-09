@@ -536,14 +536,16 @@ static gboolean lookup_function (GfsFunction * f, const gchar * finname)
 
 static gint compile (GtsFile * fp, GfsFunction * f, const gchar * dirname, const gchar * finname)
 {
+  char pwd[512];
+  g_assert (getcwd (pwd, 512));
   gchar * build_command = g_strdup_printf ("cd %s && %s/build_function %d "
 #if FTT_2D
 					   "gerris2D"
 #else /* 3D */
 					   "gerris3D"
 #endif
-					   " > log 2>&1"
-					   , dirname, GFS_MODULES_DIR, fp->line);
+					   " \"%s\" > log 2>&1"
+					   , dirname, GFS_MODULES_DIR, fp->line, pwd);
   gint status = system (build_command);
   g_free (build_command);
   if (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || WTERMSIG (status) == SIGQUIT))
@@ -607,6 +609,7 @@ static gchar * find_identifier (const gchar * s, const gchar * i)
 #define DEFERRED_COMPILATION ((GfsFunctionFunc) 0x1)
 
 #if !HAVE_MKDTEMP
+/* fixme: eventually this could be replaced with g_mkdtemp() */
 static char * mkdtemp (char * template)
 {
   if (!tmpnam (template))
