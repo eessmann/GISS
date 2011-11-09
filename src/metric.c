@@ -434,10 +434,10 @@ static gdouble viscous_metric_implicit (const GfsDomain * domain,
   double h1h2 = (* domain->cell_metric) (domain, cell);
   double size = ftt_cell_size (cell);
   double h1_2 = (face_metric_direction (domain, cell, 2*c2) - 
-		 face_metric_direction (domain, cell, 2*c2 + 1))/size;
+		 face_metric_direction (domain, cell, 2*c2 + 1));
   double h2_1 = (face_metric_direction (domain, cell, 2*c1) - 
-		 face_metric_direction (domain, cell, 2*c1 + 1))/size;
-  return (h1_2*h1_2 + h2_1*h2_1)/(h1h2*h1h2);
+		 face_metric_direction (domain, cell, 2*c1 + 1));
+  return (h1_2*h1_2 + h2_1*h2_1)/(size*size*h1h2*h1h2);
 }
 
 /* see: doc/figures/viscous-metric.tm equation (4) */
@@ -457,9 +457,9 @@ static gdouble viscous_metric_explicit (const GfsDomain * domain,
   double h2 = (* domain->scale_metric) (domain, cell, c2);
   double size = ftt_cell_size (cell);
   double h1_2 = (face_metric_direction (domain, cell, 2*c2) - 
-		 face_metric_direction (domain, cell, 2*c2 + 1))/size;
+		 face_metric_direction (domain, cell, 2*c2 + 1));
   double h2_1 = (face_metric_direction (domain, cell, 2*c1) - 
-		 face_metric_direction (domain, cell, 2*c1 + 1))/size;
+		 face_metric_direction (domain, cell, 2*c1 + 1));
   double u2_1 = gfs_center_gradient (cell, c1, v->vector[c2]->i);
   double u2_2 = gfs_center_gradient (cell, c2, v->vector[c2]->i);
   double eta = gfs_diffusion_cell (d, cell);
@@ -467,7 +467,7 @@ static gdouble viscous_metric_explicit (const GfsDomain * domain,
   /* fixme: this does not include the "curvature" of the metric yet */
   /* fixme: this does not take into account density */
   return eta*(
-	      + 2.*(u2_1*h1_2/h1 - u2_2*h2_1/h2)
+	      + 2.*(u2_1*h1_2/h1 - u2_2*h2_1/h2)/(size*size)
 	      )/h1h2;
 }
 
