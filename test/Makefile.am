@@ -48,6 +48,7 @@ TESTDIRS = \
 	harmonic \
 	gaussian \
 	annulus \
+	wannier \
 	planar \
 	bump \
 	cylinder \
