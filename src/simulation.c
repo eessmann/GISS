@@ -1518,6 +1518,12 @@ void gfs_simulation_set_timestep (GfsSimulation * sim)
 
   if (sim->advection_params.dt < 1e-9)
     sim->advection_params.dt = 1e-9;
+
+  if (sim->time.t < sim->time.end && sim->advection_params.dt == G_MAXINT)
+    g_log (G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+	   "could not find a suitable timescale to set the timestep.\n"
+	   "Please set a timescale explicitly (e.g. through the 'step' parameter\n"
+	   "of a GfsEvent).");
 }
 
 /**
