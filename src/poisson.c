@@ -913,10 +913,11 @@ static void tension_coeff (FttCellFace * face, gpointer * data)
     }
     else if (k2 < G_MAXDOUBLE)
       v *= k2;
-    else
-      v = 1e6;
+    else /* the curvature is undefined: we assume that this is because
+	    we are far enough from the interface and thus that the
+	    surface tension force is zero */
+      v = 0.;
   }
-  g_assert (v <= 1e6);
 
   if (alpha <= 0.) {
     FttVector p;
