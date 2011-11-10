@@ -26,7 +26,7 @@
     # use a non-uniformly-stretched metric in the y-direction
     # the grid points are denser close to the wall
     Metric M {
-	Y = tanh(4.*y)/tanh(4./2.)/2.
+	y = tanh(4.*ry)/tanh(4./2.)/2.
     }
     
     Refine LEVEL

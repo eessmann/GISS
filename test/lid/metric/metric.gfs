@@ -54,8 +54,8 @@
 
   # Use a non-uniformly-stretched metric in the x- and y-directions
   Metric M {
-      Y = tanh(4.*y)/tanh(4./2.)/2.
-      X = tanh(4.*x)/tanh(4./2.)/2.
+      x = tanh(4.*rx)/tanh(4./2.)/2.
+      y = tanh(4.*ry)/tanh(4./2.)/2.
   }
 
   # Use hypre to accelerate convergence. It also works with the native
