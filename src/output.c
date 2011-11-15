@@ -1429,6 +1429,11 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
     case GFS_TECPLOT: {
       gfs_domain_write_tecplot (domain, output->max_depth, domain->variables_io, output->precision,
 				GFS_OUTPUT (event)->file->fp);
+#if !FTT_2D 
+      gfs_domain_write_tecplot_surface (domain, output->max_depth, domain->variables_io, output->precision,
+					GFS_OUTPUT (event)->file->fp);
+#endif
+
       break;
     }
 

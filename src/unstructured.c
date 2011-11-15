@@ -25,6 +25,8 @@
 #include "variable.h"
 #include "config.h"
 #include "version.h"
+#include "graphic.h"
+#include "solid.h"
 
 #define NV (4*(FTT_DIMENSION - 1))
 
@@ -404,3 +406,223 @@ void gfs_domain_write_tecplot (GfsDomain * domain, gint max_depth, GSList * vari
   for (i = 0; i < NV; i++)
     gts_object_destroy (GTS_OBJECT (v[i]));
 }
+
+#if !FTT_2D //gfs_domain_write_tecplot_surface
+
+typedef struct {
+  FttCell * cell;             /* cell */
+  guint nnodes;               /* number of nodes (3 or 4) */
+  FttVector node[4];          /* node coordinates */
+} WallFace;
+
+typedef struct {
+  GfsDomain * domain;
+  GSList * wallfaces;
+  guint nnodes_total;
+} AllocateFacesParams;
+
+static void allocate_wallfaces (FttCell * cell, AllocateFacesParams * par)
+{
+  if (!GFS_IS_MIXED (cell)) return;
+
+  GfsSolidVector * s = GFS_STATE (cell)->solid;
+  FttVector normal; //solid normal
+  gfs_solid_normal (cell, &normal);
+  gts_vector_normalize (&normal.x);
+
+  FttDirection d[12];
+  FttVector nodecutface[FTT_DIMENSION*(FTT_DIMENSION - 1) + 1];/* array of node coordinates for a cut face */
+  guint inode, inode2, jnode_max_sintheta = 0, nnodes = 
+    gfs_cut_cube_vertices (cell, -1, &s->ca, &normal, nodecutface, d, NULL, NULL);
+  g_assert (nnodes <= 6);
+  
+  guint nnodecutface = nnodes;
+
+  if (nnodecutface > 3) {   /* reorder faces if necessary */
+    /* Tecplot can think that opposite vertices of the quadrilateral surface 
+       element are connected. This may result in ugly X-shaped surface elements. 
+       Reorder the array of node if necessary, using bubble sort, 
+       to maximize the sine of the angle between the vector from each 
+       intersection point to the cell center and the vector from this point 
+       to the next point in the array */
+
+    FttVector facecenter = {s->ca.x, s->ca.y, s->ca.z};
+
+    guint i_switchnodes = 0;        /* counter to avoid infinite loop */    
+    gboolean switchnodes = FALSE;   /* logical variable used to reorder cut face nodes */
+
+    do {
+      i_switchnodes++;
+
+      for (inode = 0; inode < nnodecutface; inode++) {
+	FttVector node = nodecutface[inode];                /* face node coordinates */
+	FttVector diff1 = {facecenter.x - node.x, 
+			   facecenter.y - node.y, 
+			   facecenter.z - node.z};
+	gdouble length_diff1 = ftt_vector_norm (&diff1);
+
+	gdouble max_sintheta = 0.;
+	/* cycle through all other nodes (jnode) where cut face intersects cell edges */
+	for (inode2 = 1; inode2 < nnodecutface; inode2++) {
+	  gint jnode = (inode + inode2)%nnodecutface;
+	  FttVector diff2 = {nodecutface[jnode].x - node.x, 
+			     nodecutface[jnode].y - node.y,
+			     nodecutface[jnode].z - node.z};
+	  gdouble length_diff2 = ftt_vector_norm (&diff2);
+
+	  gdouble sintheta = ((diff1.y*diff2.z - diff1.z*diff2.y)*normal.x + 
+			      (diff1.z*diff2.x - diff1.x*diff2.z)*normal.y + 
+			      (diff1.x*diff2.y - diff1.y*diff2.x)*normal.z)/
+	    (length_diff1*length_diff2);
+
+	  if (sintheta > max_sintheta) {
+	    max_sintheta = sintheta;
+	    jnode_max_sintheta = jnode;
+	  }	  
+	}
+	
+	//terminate if cannot find positive angle between cut face nodes
+	g_assert (max_sintheta != 0.);
+	
+	inode2 = (inode + 1)%nnodecutface;
+	if (jnode_max_sintheta != inode2) {
+	  node = nodecutface[jnode_max_sintheta];
+	  nodecutface[jnode_max_sintheta] = nodecutface[inode2];
+	  nodecutface[inode2] = node;
+	  
+	  switchnodes = TRUE;
+	}
+      }//inode-loop      
+    } while (switchnodes && i_switchnodes < 1000);   /* avoid infinite loop */    
+  } /* reorder faces if necessary */
+
+  /* If there are more than 4 points in the array, 
+     divide the cut face into a quadrilateral face and 
+     either a quadrilateral or triangular face */
+
+  /* assign data to nodeinfo array, increment number of wall faces and number of nodes */
+  if (nnodecutface <= 4) {
+    WallFace * face = g_malloc (sizeof (WallFace));
+
+    for (inode = 0; inode < nnodecutface; inode++)
+      face->node[inode] = nodecutface[inode];
+    face->cell = cell;
+    face->nnodes = nnodecutface;
+    
+    par->nnodes_total += nnodecutface;
+    par->wallfaces = g_slist_append (par->wallfaces, face);
+  }
+  else { /* cut face must be divided into 2 quadrilateral/triangular faces */
+    /* first face is quadrilateral */
+    WallFace * face1 = g_malloc (sizeof (WallFace));
+    
+    for (inode = 0; inode < 4; inode++)
+      face1->node[inode] = nodecutface[inode];
+    face1->cell = cell;
+    face1->nnodes = 4;
+
+    par->wallfaces = g_slist_append (par->wallfaces, face1);
+    par->nnodes_total += 4;
+
+    /* second face is triangular if nnodecutface=5; otherwise quadrilateral */
+    WallFace * face2 = g_malloc (sizeof (WallFace));
+
+    nnodecutface -= 2;
+    for (inode = 0; inode < nnodecutface; inode++)
+      face2->node[inode] = 
+	nodecutface[(inode + 3)%(nnodecutface + 2)];
+    face2->cell = cell;
+    face2->nnodes = nnodecutface;
+
+    par->wallfaces = g_slist_append (par->wallfaces, face2);
+    par->nnodes_total += nnodecutface;
+  } //cut face must be divided into 2 quadrilateral/triangular faces
+}
+
+void gfs_domain_write_tecplot_surface (GfsDomain * domain, gint max_depth, GSList * variables, 
+				       const gchar * precision, FILE * fp)
+{
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (precision != NULL);
+  g_return_if_fail (fp != NULL);
+
+  GSList * j;
+  AllocateFacesParams par = {domain, NULL, 0};
+
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, max_depth,
+			    (FttCellTraverseFunc) allocate_wallfaces, &par);
+
+#if 0 /* include header for standalone event */
+  fprintf (fp,
+	   " TITLE = \"Gerris simulation version %s (%s)\"\n",
+	   GFS_VERSION,
+	   GFS_BUILD_VERSION);
+
+  fputs (FTT_DIMENSION == 2 ? " VARIABLES = 'X', 'Y'" : " VARIABLES = 'X', 'Y', 'Z'", fp);
+  j = variables;
+  while (j) {
+    GfsVariable * v = j->data;
+    fprintf (fp, ", '%s'", v->name);
+    j = j->next;
+  }
+  fputc ('\n', fp);
+#endif /* include header for standalone event */
+
+  guint inode, nwallfaces = g_slist_length (par.wallfaces);
+  fprintf (fp, " ZONE T=\"WALL DATA\", N=%i, E=%i, F=FEPOINT, ", par.nnodes_total, nwallfaces);
+  fputs ("ET=QUADRILATERAL\n", fp);
+
+  /* nodes and scalar data */
+  gchar * xyzformat = 
+#if FTT_2D
+    g_strdup_printf ("%s %s", precision, precision);
+#else
+    g_strdup_printf ("%s %s %s", precision, precision, precision);
+#endif
+  gchar * format = g_strdup_printf (" %s", precision);
+ 
+  j = par.wallfaces;
+  while (j) {
+    WallFace * face = j->data;
+    FttCell * cell = face->cell;
+
+    for (inode = 0; inode < face->nnodes; inode++) {
+      FttVector * node = &face->node[inode];
+      fprintf (fp, xyzformat, node->x, node->y, node->z);
+
+      GSList * k = variables;
+      while (k) {
+	GfsVariable * v = k->data;
+	/* write out cell values; can use interpolate for more precise data representation */
+	fprintf (fp, format, GFS_VALUE (cell, v));
+	k = k->next;
+      }
+      fputc ('\n', fp);
+    }
+
+    j = j->next;
+  }
+  g_free (format);
+  g_free (xyzformat);
+
+  /* output node connectivity information */
+  inode = 1; 
+  j = par.wallfaces;
+  while (j) {
+    WallFace * face = j->data;
+
+    if (face->nnodes == 4)
+      fprintf (fp, "%d %d %d %d\n", inode, inode + 1, inode + 2, inode + 3);
+    else                   /* triangular face */
+      fprintf (fp, "%d %d %d %d\n", inode, inode + 1, inode + 2, inode + 2);
+
+    inode += face->nnodes;
+    j = j->next;
+  }
+
+  /* cleanup */
+  g_slist_foreach (par.wallfaces, (GFunc) g_free, NULL);
+  g_slist_free (par.wallfaces);
+}
+
+#endif //gfs_domain_write_tecplot_surface

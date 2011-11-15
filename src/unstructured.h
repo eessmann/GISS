@@ -37,6 +37,14 @@ void gfs_domain_write_tecplot (GfsDomain * domain,
 			       GSList * variables, 
 			       const gchar * precision,
 			       FILE * fp);
+#if !FTT_2D 
+void gfs_domain_write_tecplot_surface (GfsDomain * domain, 
+				       gint max_depth, 
+				       GSList * variables, 
+				       const gchar * precision,
+				       FILE * fp);
+#endif
+
 
 #ifdef __cplusplus
 }
