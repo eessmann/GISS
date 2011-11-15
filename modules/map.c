@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver                       (-*-C-*-)
- * Copyright (C) 2001-2008 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -106,12 +106,13 @@ static void projection_transform (GfsMap * map, const FttVector * src, FttVector
   projLP idata;
   projXY odata;
   GfsMapProjection * m = GFS_MAP_PROJECTION (map);
-  idata.u = src->x*DEG_TO_RAD;
-  idata.v = src->y*DEG_TO_RAD;
+  gdouble L = gfs_object_simulation (map)->physical_params.L;
+  idata.u = src->x/L*DEG_TO_RAD;
+  idata.v = src->y/L*DEG_TO_RAD;
   odata = pj_fwd (idata, m->pj);
-  dest->x = odata.u*m->cosa - odata.v*m->sina;
-  dest->y = odata.v*m->cosa + odata.u*m->sina;
-  dest->z = src->z;
+  dest->x = (odata.u*m->cosa - odata.v*m->sina)*L;
+  dest->y = (odata.v*m->cosa + odata.u*m->sina)*L;
+  dest->z = src->z*L;
 }
 
 static void projection_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
@@ -119,12 +120,13 @@ static void projection_inverse (GfsMap * map, const FttVector * src, FttVector *
   projLP odata;
   projXY idata;
   GfsMapProjection * m = GFS_MAP_PROJECTION (map);
-  idata.u = src->x*m->cosa + src->y*m->sina;
-  idata.v = src->y*m->cosa - src->x*m->sina;
+  gdouble L = gfs_object_simulation (map)->physical_params.L;
+  idata.u = (src->x*m->cosa + src->y*m->sina)*L;
+  idata.v = (src->y*m->cosa - src->x*m->sina)*L;
   odata = pj_inv (idata, GFS_MAP_PROJECTION (map)->pj);
-  dest->x = odata.u*RAD_TO_DEG;
-  dest->y = odata.v*RAD_TO_DEG;
-  dest->z = src->z;
+  dest->x = odata.u*RAD_TO_DEG/L;
+  dest->y = odata.v*RAD_TO_DEG/L;
+  dest->z = src->z/L;
 }
 
 static void projection_inverse_cell (GfsMap * map, const FttVector * src, FttVector * dest)
