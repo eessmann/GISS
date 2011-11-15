@@ -1377,10 +1377,11 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
   FttCellFace face;
   
   if (GFS_IS_MIXED (cell)) {
+    GfsSolidVector * solid = GFS_STATE (cell)->solid;
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-      f = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, GFS_STATE (cell)->solid->fv);
+      f = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, solid->fv);
     else
-      f = GFS_STATE (cell)->solid->fv;
+      f = solid->fv*solid->v;
   }
   else
     f = 0.; /* Neumann condition by default */
@@ -1513,10 +1514,11 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
   h = ftt_cell_size (cell);
   a = GFS_VARIABLE (cell, p->dia);
   if (GFS_IS_MIXED (cell)) {
+    GfsSolidVector * solid = GFS_STATE (cell)->solid;
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
-      g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, GFS_STATE (cell)->solid->fv);
+      g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, solid->fv);
     else
-      g.b = GFS_STATE (cell)->solid->fv;
+      g.b = solid->fv*solid->v;
   }
 
   face.cell = cell;

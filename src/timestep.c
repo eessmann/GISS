@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1121,14 +1121,19 @@ static void gfs_surface_bc_bc (FttCell * cell, GfsSurfaceGenericBc * b)
   GfsSurfaceBc * bc = GFS_SURFACE_BC (b);
 
   if (gfs_function_value (bc->type, cell) > 0.) {
+    /* Dirichlet */
     cell->flags |= GFS_FLAG_DIRICHLET;
     gfs_function_set_units (bc->val, GFS_SURFACE_GENERIC_BC (bc)->v->units);
     GFS_STATE (cell)->solid->fv = gfs_function_value (bc->val, cell);
   }
   else {
+    /* Neumann */
     cell->flags &= ~GFS_FLAG_DIRICHLET;
     gfs_function_set_units (bc->val, GFS_SURFACE_GENERIC_BC (bc)->v->units - 1.);
-    GFS_STATE (cell)->solid->fv = gfs_function_value (bc->val, cell);
+    FttVector n;
+    gfs_solid_normal (cell, &n);
+    GFS_STATE (cell)->solid->fv = gfs_function_value (bc->val, cell)*ftt_vector_norm (&n)
+      *pow (ftt_cell_size (cell), FTT_DIMENSION - 1);;
   }
 }
 
