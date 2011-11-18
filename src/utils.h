@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -220,6 +220,9 @@ gdouble            gfs_format_time_value (GSList * format,
 void               gfs_cell_message      (const FttCell * cell, 
 					  const gchar *format,
 					  ...);
+void               gfs_debug             (const gchar * format,
+					  ...);
+void               gfs_debug_enabled     (gboolean enabled);
 
 /* The code below redefines the g_assert() macros so that they behave
    consistently between Glib versions. In particular, we want to be

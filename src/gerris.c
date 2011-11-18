@@ -95,16 +95,17 @@ int main (int argc, char * argv[])
       {"data", no_argument, NULL, 'd'},
       {"event", required_argument, NULL, 'e'},
       {"bubble", required_argument, NULL, 'b'},
+      {"debug", no_argument, NULL, 'B'},
       {"verbose", no_argument, NULL, 'v'},
       {"help", no_argument, NULL, 'h'},
       {"version", no_argument, NULL, 'V'},
       { NULL }
     };
     int option_index = 0;
-    switch ((c = getopt_long (argc, argv, "hVs:ip:PD:I:mde:b:v",
+    switch ((c = getopt_long (argc, argv, "hVs:ip:PD:I:mde:b:vB",
 			      long_options, &option_index))) {
 #else /* not HAVE_GETOPT_LONG */
-    switch ((c = getopt (argc, argv, "hVs:ip:PD:I:mde:b:v"))) {
+    switch ((c = getopt (argc, argv, "hVs:ip:PD:I:mde:b:vB"))) {
 #endif /* not HAVE_GETOPT_LONG */
     case 'P': /* profile */
       profile = TRUE;
@@ -151,6 +152,9 @@ int main (int argc, char * argv[])
     case 'e': /* event */
       g_ptr_array_add (events, g_strdup (optarg));
       break;
+    case 'B': /* debug */
+      gfs_debug_enabled (TRUE);
+      break;
     case 'v': /* verbose */
       verbose = TRUE;
       break;
@@ -177,6 +181,7 @@ int main (int argc, char * argv[])
 	"  -IDIR --include=DIR  Append DIR to macro include path\n"
 #endif /* HAVE_M4 */
 	"  -eEV   --event=EV    Evaluates GfsEvent EV and returns the simulation\n"
+	"  -B     --debug       Enables debugging messages\n"
 	"  -v     --verbose     Display more messages\n"
 	"  -h     --help        display this help and exit\n"
 	"  -V     --version     output version information and exit\n"

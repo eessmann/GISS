@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1990,6 +1990,7 @@ gdouble gfs_format_time_value (GSList * format, const gchar * string)
 }
 
 /**
+ * gfs_cell_message:
  * @cell: a #FttCell.
  * @format: a string format.
  * ...: arguments for format.
@@ -2012,4 +2013,36 @@ void gfs_cell_message (const FttCell * cell,
   g_message ("%s\n%s", s, s1);
   g_free (s);
   g_free (s1);
+}
+
+static gboolean GfsDebug = FALSE;
+
+/**
+ * gfs_debug:
+ * @format: a string format.
+ * ...: arguments for format.
+ *
+ * Logs a debugging message (only when gfs_debug_enabled() is set to
+ * %TRUE).
+ */
+void gfs_debug (const gchar * format,
+		...)
+{
+  if (GfsDebug) {
+    g_return_if_fail (format != NULL);
+    va_list ap;
+    va_start (ap, format);    
+    g_logv (G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, format, ap);
+  }  
+}
+
+/**
+ * gfs_debug_enabled:
+ * @enabled: whether to enable debug message logging.
+ * 
+ * Enables or disables debug message logging (see also gfs_debug()).
+ */
+void gfs_debug_enabled (gboolean enabled)
+{
+  GfsDebug = enabled;
 }

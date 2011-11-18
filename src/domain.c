@@ -4061,6 +4061,7 @@ void gfs_domain_timer_start (GfsDomain * domain, const gchar * name)
   else
     g_return_if_fail (t->start < 0.);
   t->start = gfs_clock_elapsed (domain->timer);
+  gfs_debug ("starting %s at %g", name, t->start);
 }
 
 /**
@@ -4086,6 +4087,7 @@ void gfs_domain_timer_stop (GfsDomain * domain, const gchar * name)
 
   gts_range_add_value (&t->r, end - t->start);
   gts_range_update (&t->r);
+  gfs_debug ("stopping %s: elapsed: %g", name, end - t->start);
   t->start = -1.;
 }
 
