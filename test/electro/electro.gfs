@@ -62,6 +62,7 @@ GModule electrohydro
     
     Time { end = 1 }
 
+    VariableTracer Rhoe
     VariableTracerVOF T
     VariableCurvature K T
     SourceTension T 1 K
@@ -150,6 +151,7 @@ GModule electrohydro
 } {
     # Electric parameters
     perm = (Q*T + (1. - T))
+    charge = Rhoe
     ElectricProjectionParams { tolerance = 1e-4 }
 }
 GfsBox {

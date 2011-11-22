@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -76,7 +76,8 @@ void                  gfs_residual                   (GfsDomain * domain,
 void                  gfs_poisson_coefficients       (GfsDomain * domain,
 						      GfsFunction * alpha,
 						      gboolean positive,
-						      gboolean centered);
+						      gboolean centered,
+						      gboolean reset);
 void                  gfs_poisson_cycle              (GfsDomain * domain,
 						      GfsMultilevelParams * p,
 						      GfsVariable * u,

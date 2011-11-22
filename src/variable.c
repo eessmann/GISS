@@ -607,7 +607,7 @@ static gboolean variable_diagonal_event (GfsEvent * event, GfsSimulation * sim)
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) unity, tmp);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, tmp);
-    gfs_poisson_coefficients (domain, sim->physical_params.alpha, TRUE, TRUE);
+    gfs_poisson_coefficients (domain, sim->physical_params.alpha, TRUE, TRUE, TRUE);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) variable_diagonal, data);
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
@@ -972,7 +972,7 @@ static gboolean variable_poisson_event (GfsEvent * event, GfsSimulation * sim)
     DivData p = { GFS_VARIABLE_FUNCTION (event)->f, div };
     /* fixme: compatibility condition? */
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) rescale_div, &p);
-    gfs_poisson_coefficients (domain, NULL, FALSE, TRUE);
+    gfs_poisson_coefficients (domain, NULL, FALSE, TRUE, TRUE);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, dia);
     par.poisson_solve (domain, &par, v, div, res, dia, 1.);

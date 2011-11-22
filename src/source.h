@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -249,6 +249,7 @@ struct _GfsSourceDiffusion {
 
   /*< public >*/
   GfsDiffusion * D;
+  GfsVariable * phi;
 };
 
 #define GFS_SOURCE_DIFFUSION(obj)            GTS_OBJECT_CAST (obj,\
@@ -272,7 +273,6 @@ struct _GfsSourceDiffusionExplicit {
   GfsSourceDiffusion parent;
 
   /*< public >*/
-  GfsVariable * phi;
 };
 
 #define GFS_SOURCE_DIFFUSION_EXPLICIT(obj)            GTS_OBJECT_CAST (obj,\

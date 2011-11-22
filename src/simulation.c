@@ -2137,7 +2137,7 @@ static void poisson_run (GfsSimulation * sim)
     
     gfs_domain_surface_bc (domain, p);
     correct_div (domain, gfs_variable_from_name (domain->variables, "Div"), div, !p->centered);
-    gfs_poisson_coefficients (domain, sim->physical_params.alpha, FALSE, p->centered);
+    gfs_poisson_coefficients (domain, sim->physical_params.alpha, FALSE, p->centered, TRUE);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, dia);
 

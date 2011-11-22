@@ -49,6 +49,7 @@ GModule electrohydro
     Time { end = 35 dtmax=1.0 }
 
     VariableTracerVOF T
+    GfsVariableTracer Rhoe
     InitFraction T (R0*R0 - y*y - x*x)
     AdaptGradient { istep = 1 } { cmax = 1e-4 minlevel = 5 maxlevel = LEVEL + 1 } T
     PhysicalParams { L = 2 }
@@ -80,6 +81,7 @@ GModule electrohydro
 } {
     # Electric parameters
     perm = E1*T+E2*(1.-T)
+    charge = Rhoe
     GfsElectricProjectionParams { tolerance = 1e-7 }
 }
 GfsBox {

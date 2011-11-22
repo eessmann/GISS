@@ -306,7 +306,7 @@ void gfs_update_gradients (GfsDomain * domain,
   reset_gradients (domain, FTT_DIMENSION, g);
   gfs_velocity_face_sources (domain, gfs_domain_velocity (domain), 0., alpha, g);
   /* Initialize face coefficients */
-  gfs_poisson_coefficients (domain, alpha, TRUE, TRUE);
+  gfs_poisson_coefficients (domain, alpha, TRUE, TRUE, TRUE);
   /* Add pressure gradient */
   gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, 0.);
   gfs_scale_gradients (domain, FTT_DIMENSION, g);
@@ -365,7 +365,7 @@ static void mac_projection (GfsDomain * domain,
   GfsVariable * res1 = res ? res : gfs_temporary_variable (domain);
 
   /* Initialize face coefficients */
-  gfs_poisson_coefficients (domain, alpha, TRUE, TRUE);
+  gfs_poisson_coefficients (domain, alpha, TRUE, TRUE, TRUE);
 
   /* Initialize diagonal coefficient */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
@@ -726,7 +726,8 @@ static GfsSourceDiffusion * source_diffusion (GfsVariable * v)
       
       if (GFS_IS_SOURCE_DIFFUSION (o) && 
 	  !GFS_IS_SOURCE_DIFFUSION_EXPLICIT (o) &&
-	  !GFS_IS_SOURCE_VISCOSITY_EXPLICIT (o))
+	  !GFS_IS_SOURCE_VISCOSITY_EXPLICIT (o) &&
+	  GFS_SOURCE_DIFFUSION (o)->phi == GFS_SOURCE_SCALAR (o)->v)
         return GFS_SOURCE_DIFFUSION (o);
       i = i->next;
     }

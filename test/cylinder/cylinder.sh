@@ -85,10 +85,10 @@ done
 # check error norms
 if cat <<EOF | python ; then :
 from check import *
-if (Curve('norms.ref',1,8) - Curve('norms',1,8)).max() > 1e-5 or \
-   (Curve('norms.ref',1,10) - Curve('norms',1,10)).max() > 1e-5:
-    print (Curve('norms.ref',1,8) - Curve('norms',1,8)).max()
-    print (Curve('norms.ref',1,10) - Curve('norms',1,10)).max()
+if (Curve('norms',1,8) - Curve('norms.ref',1,8)).max() > 1e-5 or \
+   (Curve('norms',1,10) - Curve('norms.ref',1,10)).max() > 1e-5:
+    print (Curve('norms',1,8) - Curve('norms.ref',1,8)).max()
+    print (Curve('norms',1,10) - Curve('norms.ref',1,10)).max()
     exit(1)
 EOF
 else

@@ -318,7 +318,7 @@ static void ocean_run (GfsSimulation * sim)
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
 
-    gfs_poisson_coefficients (domain, fH, TRUE, TRUE);
+    gfs_poisson_coefficients (domain, fH, TRUE, TRUE, TRUE);
     gfs_correct_normal_velocities_weighted (domain, 2, p, g, 0., 
 					    sim->approx_projection_params.weighted);
     gfs_centered_velocity_advection_diffusion (domain, 2,
@@ -667,7 +667,7 @@ static void face_coeff_from_below (FttCell * cell)
 
 static void depth_integrated_coefficients (GfsDomain * domain)
 {
-  gfs_poisson_coefficients (domain, NULL, TRUE, TRUE);
+  gfs_poisson_coefficients (domain, NULL, TRUE, TRUE, TRUE);
   gfs_domain_cell_traverse_boundary (domain, FTT_FRONT,
 				     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				     (FttCellTraverseFunc) compute_coeff, NULL);
@@ -732,7 +732,7 @@ static void ocean_run (GfsSimulation * sim)
     gfs_predicted_face_velocities (domain, 2, &sim->advection_params);
 
     gfs_domain_timer_start (domain, "correct_normal_velocities");
-    gfs_poisson_coefficients (domain, NULL, TRUE, TRUE);
+    gfs_poisson_coefficients (domain, NULL, TRUE, TRUE, TRUE);
     gfs_correct_normal_velocities_weighted (domain, 2, p, g, sim->advection_params.dt/2.,
 					    sim->approx_projection_params.weighted);
     gfs_domain_cell_traverse_boundary (domain, FTT_FRONT,
@@ -788,7 +788,7 @@ static void ocean_run (GfsSimulation * sim)
 			       sim->physical_params.g/GFS_OCEAN (domain)->layer->len);
     gts_object_destroy (GTS_OBJECT (divn));
 
-    gfs_poisson_coefficients (domain, NULL, TRUE, TRUE);
+    gfs_poisson_coefficients (domain, NULL, TRUE, TRUE, TRUE);
     gfs_correct_normal_velocities_weighted (domain, 2, p, g, sim->advection_params.dt/2.,
 					    sim->approx_projection_params.weighted);
     gfs_correct_centered_velocities (domain, 2, g, sim->advection_params.dt/2.);

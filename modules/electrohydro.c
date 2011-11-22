@@ -1,5 +1,5 @@
-/* Gerris - The GNU Flow Solver                       (-*-C-*-)
- * Copyright (C) 2010 Jose M. López-Herrera Sánchez
+/* Gerris - The GNU Flow Solver
+ * Copyright (C) 2010-2011 Jose M. López-Herrera Sánchez
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -35,8 +35,8 @@ struct _GfsElectroHydro {
   GfsVariable * phi ;                             /* Electric potential */
   GfsVariable * E[FTT_DIMENSION] ;                /* Electric field; E=-Nabla Phi */
   GfsMultilevelParams electric_projection_params; /* Params for the electric potential */
-  GfsVariable * rhoe ;                            /* volumetric charge density */
   GfsFunction * perm ;                            /* electric permittivity */
+  GfsFunction * charge ;                          /* charge density is user defined */
 };
 
 #define GFS_ELECTRO_HYDRO(obj)            GTS_OBJECT_CAST (obj,		\
@@ -98,6 +98,17 @@ static void gfs_electro_hydro_read (GtsObject ** o, GtsFile * fp)
       }
     }
 
+    /* ------------ charge density defined by the function charge  ------------ */
+    else if (!strcmp (fp->token->str, "charge")) {
+      gts_file_next_token (fp);
+      if (fp->type != '=')
+	gts_file_error (fp, "expecting `='");
+      else {
+	gts_file_next_token (fp);
+	gfs_function_read (elec->charge, sim, fp);
+      }
+    }
+
     /* ------------ GfsElectricProjectionParams ------------ */
     else if (strmatch (fp->token->str, "GfsElectricProjectionParams")) {
       gts_file_next_token (fp);
@@ -126,6 +137,11 @@ static void gfs_electro_hydro_write (GtsObject * o, FILE * fp)
   fputs (" {\n"
 	 "  perm =", fp);
   gfs_function_write (elect->perm, fp);
+
+  fputs (" \n"
+	 "  charge =", fp);
+  gfs_function_write (elect->charge, fp);
+
   fputs ("\n"
 	 "  GfsElectricProjectionParams ", fp);
   gfs_multilevel_params_write (&elect->electric_projection_params, fp);
@@ -135,7 +151,9 @@ static void gfs_electro_hydro_write (GtsObject * o, FILE * fp)
 
 static void gfs_electro_hydro_destroy (GtsObject * object)
 {
-  gts_object_destroy (GTS_OBJECT (GFS_ELECTRO_HYDRO (object)->perm));
+  GfsElectroHydro * elec = GFS_ELECTRO_HYDRO (object);
+  gts_object_destroy (GTS_OBJECT (elec->perm));
+  gts_object_destroy (GTS_OBJECT (elec->charge));
   
   (* GTS_OBJECT_CLASS (gfs_electro_hydro_class ())->parent_class->destroy) (object);
 }
@@ -180,10 +198,6 @@ static void gfs_electro_hydro_init (GfsElectroHydro * object)
 
   object->phi = gfs_domain_add_variable (domain, "Phi", "Electric potential");
   object->phi->centered = TRUE;
-  object->rhoe = gfs_variable_new (gfs_variable_tracer_class(), domain,
-				   "Rhoe", "Volumetric charge density");
-  object->rhoe->units = -3.;
-  domain->variables = g_slist_append (domain->variables, object->rhoe);
 
   for (c = 0; c < FTT_DIMENSION; c++) {
     object->E[c] = gfs_domain_add_variable (domain , name[c], desc[c]);
@@ -194,6 +208,9 @@ static void gfs_electro_hydro_init (GfsElectroHydro * object)
   gfs_multilevel_params_init (&object->electric_projection_params);
   object->perm = gfs_function_new (gfs_function_class (), 1.);
   gfs_function_set_units (object->perm, -1.);
+
+  object->charge = gfs_function_new (gfs_function_class (), 0.);
+  gfs_function_set_units (object->charge, -3.);
 
   /* default BC for the electric field */
   for (c = 0; c < FTT_DIMENSION; c++) {
@@ -236,25 +253,10 @@ GfsSimulationClass * gfs_electro_hydro_class (void)
 }
 
 /* Setting div as - \int of rhoe on the cell volume */
-static void rescale_div (FttCell * cell, gpointer * data)
+static void rescale_div (FttCell * cell, GfsVariable * div)
 {
-  GfsVariable * divu = data[0];
-  GfsVariable * div = data[1];
   gdouble size = ftt_cell_size (cell);
-
-  GFS_VALUE (cell, div) = - GFS_VALUE (cell, divu)*size*size*
-    gfs_domain_cell_fraction (div->domain, cell);
-}
-
-static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * div)
-{
-  gpointer data[2];
-
-  data[0] = divu;
-  data[1] = div;
-
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) rescale_div, data);
+  GFS_VALUE (cell, div) *= - size*size*gfs_domain_cell_fraction (div->domain, cell);
 }
 
 /* Calculates -gradient of @v and write it in vector @g  */
@@ -277,20 +279,104 @@ static void has_dirichlet (FttCell * cell, GfsVariable * p)
     p->centered = FALSE;
 }
 
-static void poisson_electric (GfsElectroHydro * elec)
+static GfsSourceDiffusion * source_implicit_ohmic (GfsVariable * v)
+{
+  if (v->sources) {
+    GSList * i = GTS_SLIST_CONTAINER (v->sources)->items;
+    while (i) {
+      GtsObject * o = i->data;
+      if (GFS_IS_SOURCE_DIFFUSION (o) && 
+	  !GFS_IS_SOURCE_DIFFUSION_EXPLICIT (o) &&
+	  GFS_SOURCE_DIFFUSION (o)->phi == GFS_ELECTRO_HYDRO (v->domain)->phi)
+	return GFS_SOURCE_DIFFUSION (o);
+      i = i->next;
+    }
+  }
+  return NULL;
+}
+
+typedef struct {
+  GfsFunction * charge;
+  GfsVariable * rhs;
+} OhmicParams;
+
+static void rhoe_update (FttCell * cell, gpointer * data)
+{
+  gdouble f, h, val;
+  FttCellNeighbors neighbor;
+  FttCellFace face;
+  GfsVariable  * phi = data[0];
+  GfsVariable * rhoe = data[1];
+  
+  if (GFS_IS_MIXED (cell)) {
+    if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
+      f = gfs_cell_dirichlet_gradient_flux (cell, phi->i, -1, GFS_STATE (cell)->solid->fv);
+    else
+      f = GFS_STATE (cell)->solid->fv;
+  }
+  else
+    f = 0.; /* Neumann condition by default */
+  h = ftt_cell_size (cell);
+  val = GFS_VALUE (cell, phi);
+  face.cell = cell;
+  ftt_cell_neighbors (cell, &neighbor);
+  for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++) {
+    GfsGradient g;
+
+    face.neighbor = neighbor.c[face.d];
+    gfs_face_cm_weighted_gradient (&face, &g, phi->i, -1);
+    f += g.b - g.a*val;
+  }
+  GFS_VALUE (cell, rhoe) = -f/(h*h*gfs_domain_cell_fraction (rhoe->domain, cell));
+}
+
+static void charge_density_update (GfsDomain * domain, GfsVariable * phi, GfsVariable * rhoe)
+{
+  gpointer data[2];
+  data[0] = phi;
+  data[1] = rhoe;
+  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) rhoe_update, data);
+}
+
+static void set_dive (FttCell * cell, OhmicParams * p)
+{
+  GFS_VALUE (cell, p->rhs) = gfs_function_value (p->charge, cell);
+}
+	
+static void poisson_electric (GfsElectroHydro * elec, gdouble dt)
 {
   GfsMultilevelParams * par = &elec->electric_projection_params;
-  GfsDomain * domain = GFS_DOMAIN (elec);
-  GfsVariable * diae, * dive, * res1e;
+  GfsDomain * domain = GFS_DOMAIN (elec); 
+  GfsVariable * diae, * dive, * res1e, * rhoe ;
   GfsVariable * phi = elec->phi; 
   GfsVariable ** e = elec->E;
+  GfsSourceDiffusion * d;
 
   dive = gfs_temporary_variable (domain);
-  correct_div (domain, elec->rhoe, dive);
-  gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered);
+
+  OhmicParams p = { elec->charge, dive };
+  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) set_dive, &p);
+
+  if ((rhoe = gfs_function_get_variable (elec->charge)))
+    d = source_implicit_ohmic (rhoe);
+  else
+    d = NULL;
+
+  if (d) {
+    GfsVariable * rhoc = gfs_temporary_variable (domain);
+    gfs_diffusion_coefficients (domain, d, dt, rhoc, NULL, NULL, d->D->par.beta);
+    gfs_domain_surface_bc (domain, phi);
+    gfs_diffusion_rhs (domain, phi, dive, rhoc, NULL, d->D->par.beta);
+    gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered, FALSE);
+    gts_object_destroy (GTS_OBJECT (rhoc));
+    par = &d->D->par;
+  }
+  else 
+    gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered, TRUE);
+  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) rescale_div, dive);
+
   res1e = gfs_temporary_variable (domain);
   diae = gfs_temporary_variable (domain);
-
 
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, diae);
@@ -307,6 +393,13 @@ static void poisson_electric (GfsElectroHydro * elec)
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++)
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, e[c]);
+
+  /* Compute the charge density from the electric potential */
+  if (d) {
+    gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered, TRUE);
+    charge_density_update (domain, phi, rhoe);
+    /* fixme: update elec->rhoe bc ? */
+  }
 
   gts_object_destroy (GTS_OBJECT (diae));
   gts_object_destroy (GTS_OBJECT (dive));
@@ -369,7 +462,7 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
 				p, sim->physical_params.alpha, res, g, NULL);
     gfs_simulation_set_timestep (sim);
     gfs_advance_tracers (domain, sim->advection_params.dt/2.);
-    poisson_electric (elec);
+    poisson_electric (elec, sim->advection_params.dt/2.);
   }
   else if (sim->advection_params.gc)
     gfs_update_gradients (domain, p, sim->physical_params.alpha, g);
@@ -424,7 +517,7 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
 
     gfs_simulation_set_timestep (sim);
     gfs_advance_tracers (domain, sim->advection_params.dt);
-    poisson_electric (elec);
+    poisson_electric (elec, sim->advection_params.dt);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
@@ -703,7 +796,7 @@ static gboolean gfs_source_charge_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_source_charge_class ())->parent_class)->event)
       (event, sim)) {
     gfs_poisson_coefficients (GFS_DOMAIN (sim), GFS_SOURCE_CHARGE (event)->conductivity, 
-			      FALSE, FALSE);
+			      FALSE, FALSE, TRUE);
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) source_charge, event);
     return TRUE;

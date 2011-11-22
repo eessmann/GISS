@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -758,7 +758,8 @@ static void reset_coeff (FttCell * cell, PoissonCoeff * p)
 {
   FttDirection d;
   GfsFaceStateVector * f = GFS_STATE (cell)->f;
-  
+  if (GFS_IS_MIXED (cell))
+    GFS_STATE (cell)->solid->v = 0.;   
   for (d = 0; d < FTT_NEIGHBORS; d++)
     f[d].v = 0.;
 }
@@ -778,11 +779,11 @@ static void poisson_coeff (FttCellFace * face,
 	   "Please check your definition.",
 	   alpha, p.x, p.y, p.z);
   }
-  GFS_STATE (face->cell)->f[face->d].v = v;
+  GFS_STATE (face->cell)->f[face->d].v += v;
   
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
-    GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v = v;
+    GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v += v;
     break;
   case FTT_FINE_COARSE:
     GFS_STATE (face->neighbor)->f[FTT_OPPOSITE_DIRECTION (face->d)].v +=
@@ -795,10 +796,9 @@ static void poisson_coeff (FttCellFace * face,
 
 static void poisson_mixed_coeff (FttCell * cell, PoissonCoeff * p)
 {
-  reset_coeff (cell, NULL);
   if (GFS_IS_MIXED (cell)) {
     gdouble alpha = p->alpha ? gfs_function_value (p->alpha, cell) : 1.;
-    GFS_STATE (cell)->solid->v = alpha*gfs_domain_solid_metric (p->domain, cell);
+    GFS_STATE (cell)->solid->v += alpha*gfs_domain_solid_metric (p->domain, cell);
 
     if (alpha <= 0. && p->positive) {
       FttVector p;
@@ -844,6 +844,7 @@ static void face_coeff_from_below (FttCell * cell)
  * @alpha: the inverse of density or %NULL.
  * @positive: if %TRUE, @alpha must be strictly positive.
  * @centered: %TRUE if solving for a centered variable.
+ * @reset: %TRUE if resetting previous coefficients.
  *
  * Initializes the face coefficients for the Poisson equation
  * \f$\nabla\cdot\alpha\nabla p=\dots\f$.
@@ -853,7 +854,8 @@ static void face_coeff_from_below (FttCell * cell)
 void gfs_poisson_coefficients (GfsDomain * domain,
 			       GfsFunction * alpha,
 			       gboolean positive,
-			       gboolean centered)
+			       gboolean centered,
+			       gboolean reset)
 {
   PoissonCoeff p;
   FttComponent i;
@@ -868,11 +870,11 @@ void gfs_poisson_coefficients (GfsDomain * domain,
   p.alpha = alpha;
   p.domain = domain;
   p.positive = positive;
-  if (centered)
+  if (reset)
     gfs_domain_cell_traverse (domain,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) reset_coeff, &p);
-  else
+  if (!centered)
     gfs_domain_cell_traverse (domain,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) poisson_mixed_coeff, &p);

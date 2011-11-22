@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1030,7 +1030,7 @@ static gdouble diffusion_face (GfsDiffusion * d, FttCellFace * f)
 
 static gdouble diffusion_cell (GfsDiffusion * d, FttCell * cell)
 {
-  if (d->mu) return GFS_VARIABLE (cell, d->mu->i);
+  if (d->mu) return GFS_VALUE (cell, d->mu);
   gdouble val = gfs_function_get_constant_value (d->val);
   return val < G_MAXDOUBLE ? val : 0.;
 }
@@ -1102,10 +1102,11 @@ static GfsSourceDiffusion * previous_diffusion_source (GfsVariable * v,
 						       GfsSourceDiffusion * d)
 {
   GSList * i;
-
   i = GTS_SLIST_CONTAINER (v->sources)->items;
   while (i) {
-    if (i->data != d && GFS_IS_SOURCE_DIFFUSION (i->data))
+    if (i->data != d &&
+	GFS_IS_SOURCE_DIFFUSION (i->data) && 
+	GFS_SOURCE_DIFFUSION (i->data)->phi == d->phi)
       return i->data;
     i = i->next;
   }
@@ -1133,11 +1134,25 @@ static void source_diffusion_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+  if (fp->type != GTS_STRING)
+    d->phi = GFS_SOURCE_SCALAR (*o)->v;
+  else {
+    d->phi = gfs_variable_from_name (domain->variables, fp->token->str);
+    if (!d->phi) {
+      gts_file_error (fp, "unknown variable '%s'", fp->token->str);
+      return;
+    }
+    gts_file_next_token (fp);
+    gfs_function_set_units (d->D->val, 
+			    2. + GFS_SOURCE_SCALAR (*o)->v->units - d->phi->units);
+  }
+
   if (GFS_SOURCE_SCALAR (d)->v->component < FTT_DIMENSION &&
       gfs_function_get_constant_value (d->D->val) == G_MAXDOUBLE)
-      g_warning ("%d:%d: Terms may be missing when using variable diffusion\n"
-		 "on vector quantities",
-		 fp->line, fp->pos);
+    g_warning ("%d:%d: Terms may be missing when using variable diffusion\n"
+	       "on vector quantities",
+	       fp->line, fp->pos);
 }
 
 static void source_diffusion_write (GtsObject * o, FILE * fp)
@@ -1146,6 +1161,9 @@ static void source_diffusion_write (GtsObject * o, FILE * fp)
 
   (* GTS_OBJECT_CLASS (gfs_source_diffusion_class ())->parent_class->write) (o, fp);
   (* GTS_OBJECT (d->D)->klass->write) (GTS_OBJECT (d->D), fp);
+
+  if (d->phi != GFS_SOURCE_SCALAR (o)->v)
+    fprintf (fp, " %s", d->phi->name);
 }
 
 static gboolean source_diffusion_event (GfsEvent * event, GfsSimulation * sim)
@@ -1164,6 +1182,8 @@ static gdouble source_diffusion_value (GfsSourceGeneric * s,
 				       FttCell * cell,
 				       GfsVariable * v)
 {
+  GfsVariable * phi = GFS_SOURCE_DIFFUSION (s)->phi != GFS_SOURCE_SCALAR (s)->v ? 
+    GFS_SOURCE_DIFFUSION (s)->phi : v;
   FttCellFace f;
   FttCellNeighbors n;
   GfsGradient g = { 0., 0. };
@@ -1172,7 +1192,7 @@ static gdouble source_diffusion_value (GfsSourceGeneric * s,
   if (GFS_IS_MIXED (cell)) /* this improves results for channel test */
     return 0.;
 
-  v0 = GFS_VARIABLE (cell, v->i);
+  v0 = GFS_VALUE (cell, phi);
   f.cell = cell;
   ftt_cell_neighbors (cell, &n);
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
@@ -1183,18 +1203,18 @@ static gdouble source_diffusion_value (GfsSourceGeneric * s,
     if (f.neighbor) {
       GfsGradient e;
 
-      gfs_face_gradient (&f, &e, v->i, -1);
+      gfs_face_gradient (&f, &e, phi->i, -1);
       g.a += D*e.a;
       g.b += D*e.b;
     }
-    else if (f.d/2 == v->component) {
+    else if (f.d/2 == phi->component) {
       g.a += D;
       g.b -= D*v0;
     }
   }
   h = ftt_cell_size (cell);
 
-  GfsFunction * alpha = v->component < FTT_DIMENSION ? 
+  GfsFunction * alpha = phi->component < FTT_DIMENSION ? 
     gfs_object_simulation (s)->physical_params.alpha : NULL;
   return (alpha ? gfs_function_value (alpha, cell) : 1.)*(g.b - g.a*v0)/(h*h);
 }
@@ -1303,7 +1323,7 @@ static void source_diffusion_explicit_flux (GfsSourceGeneric * s,
 					    GfsVariable * v, GfsVariable * sv, 
 					    gdouble dt)
 {
-  GfsVariable * phi = GFS_SOURCE_DIFFUSION_EXPLICIT (s)->phi;
+  GfsVariable * phi = GFS_SOURCE_DIFFUSION (s)->phi;
   gfs_diffusion_coefficients (domain, GFS_SOURCE_DIFFUSION (s), dt, NULL, NULL, NULL, 1.);
   gfs_domain_surface_bc (domain, phi);
   FluxPar p = { s, phi, sv };
@@ -1317,29 +1337,11 @@ static void gfs_source_diffusion_explicit_read (GtsObject ** o, GtsFile * fp)
       (o, fp);
   if (fp->type == GTS_ERROR)
     return;
-
-  GfsSourceDiffusionExplicit * s = GFS_SOURCE_DIFFUSION_EXPLICIT (*o);
-  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (s));
-  if (fp->type != GTS_STRING)
-    s->phi = GFS_SOURCE_SCALAR (s)->v;
-  else {
-    s->phi = gfs_variable_from_name (domain->variables, fp->token->str);
-    if (!s->phi) {
-      gts_file_error (fp, "unknown variable '%s'", fp->token->str);
-      return;
-    }
-    gts_file_next_token (fp);
-    gfs_function_set_units (GFS_SOURCE_DIFFUSION (s)->D->val, 
-			    2. + GFS_SOURCE_SCALAR (s)->v->units - s->phi->units);
-  }
 }
 
 static void gfs_source_diffusion_explicit_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_source_diffusion_explicit_class ())->parent_class->write) (o, fp);
-  GfsSourceDiffusionExplicit * s = GFS_SOURCE_DIFFUSION_EXPLICIT (o);
-  if (s->phi != GFS_SOURCE_SCALAR (s)->v)
-    fprintf (fp, " %s", s->phi->name);
 }
 
 typedef struct {
@@ -1386,7 +1388,7 @@ static gdouble source_diffusion_stability (GfsSourceGeneric * s,
   par.s = s;
   par.dtmax = G_MAXDOUBLE;
   par.alpha = NULL;
-  if (GFS_SOURCE_SCALAR (s)->v == GFS_SOURCE_DIFFUSION_EXPLICIT (s)->phi)
+  if (GFS_SOURCE_SCALAR (s)->v == GFS_SOURCE_DIFFUSION (s)->phi)
     gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) cell_diffusion_stability, &par);
   /* else
@@ -1597,7 +1599,7 @@ static void add_viscosity_explicit_flux (FttCell * cell, FluxPar * p)
       g.b = gfs_cell_dirichlet_gradient_flux (cell, p->v->i, -1., 0.);
   }
 
-  v0 = GFS_VARIABLE (cell, p->v->i);
+  v0 = GFS_VALUE (cell, p->v);
   f.cell = cell;
   ftt_cell_neighbors (cell, &n);
   for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
