@@ -52,7 +52,8 @@ TESTDIRS = \
 	planar \
 	bump \
 	cylinder \
-	electro
+	electro \
+	debye
 
 WEBROOT = /var/www/gerris
 
