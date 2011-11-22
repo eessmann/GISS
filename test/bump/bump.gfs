@@ -46,7 +46,7 @@
 # Author: Jose M. L\'opez-Herrera S\'anchez
 # Command: sh bump.sh
 # Version: 100610
-# Required files: bump.sh norms.ref
+# Required files: bump.sh norms-explicit.ref norms-implicit.ref
 # Running time: 30 seconds
 # Generated files: profile.eps figure.eps error.eps
 
@@ -64,29 +64,30 @@ GModule electrohydro
 	  return exp(-alpha)/beta*exp(-t/te);
         }
     }
+    VariableTracer Rhoe
     Refine 7*(1. - 4.*(x*x + y*y))
     Time { end = 6 dtmax = 1e-2 }
-    PhysicalParams{ L = 1 }
     Init {} { Rhoe = gaussbell(x,y,0) }
 
 #    OutputTime { istep = 5 } stderr
 #    OutputScalarNorm { istep = 5 } stderr { v = Rhoe }
     SourceDiffusionExplicit Rhoe 1 Phi
+#    SourceDiffusion Rhoe 1 { beta = 0.5 } Phi
 
     OutputSimulation { start = 0 } {
-	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$9 > "t_0"; }'
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$11 > "t_0-SCHEME"; }'
     } { format = text }
     OutputSimulation { start = 2 } {
-	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$9 > "t_2"; }'
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$11 > "t_2-SCHEME"; }'
     } { format = text }
     OutputSimulation { start = 4 } {
-	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$9 > "t_4"; }'
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$11 > "t_4-SCHEME"; }'
     } { format = text }
     OutputSimulation { start = 6 } {
-	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$9 > "t_6"; }'
+	awk '{ if ($1 != "#") print sqrt($1*$1+$2*$2),$11 > "t_6-SCHEME"; }'
     } { format = text }
 
-    OutputErrorNorm { istep = 10 } norms { v = Rhoe } { s = gaussbell(x,y,t) }
+    OutputErrorNorm { istep = 10 } norms-SCHEME { v = Rhoe } { s = gaussbell(x,y,t) }
     OutputLocation { istep = 10 } { 
         awk '
          BEGIN {
@@ -97,12 +98,13 @@ GModule electrohydro
          } 
          {
             if ($1 != "#")
-                print $1, rhoinic*exp(-$1*K/perm), $10;
-         }' > timevol
+                print $1, rhoinic*exp(-$1*K/perm), $12;
+         }' > timevol-SCHEME
     } { 0. 0. 0. }
 } {
     # Electric parameters
     perm = 2
+    charge = Rhoe
     GfsElectricProjectionParams { tolerance = 1e-7 }
 }
 GfsBox {
