@@ -211,6 +211,7 @@ static void gfs_electro_hydro_init (GfsElectroHydro * object)
 
   object->charge = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_set_units (object->charge, -3.);
+  gfs_object_simulation_set (object->charge, object);
 
   /* default BC for the electric field */
   for (c = 0; c < FTT_DIMENSION; c++) {
