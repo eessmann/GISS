@@ -107,12 +107,12 @@ static void projection_transform (GfsMap * map, const FttVector * src, FttVector
   projXY odata;
   GfsMapProjection * m = GFS_MAP_PROJECTION (map);
   gdouble L = gfs_object_simulation (map)->physical_params.L;
-  idata.u = src->x/L*DEG_TO_RAD;
-  idata.v = src->y/L*DEG_TO_RAD;
+  idata.u = src->x*L*DEG_TO_RAD;
+  idata.v = src->y*L*DEG_TO_RAD;
   odata = pj_fwd (idata, m->pj);
-  dest->x = (odata.u*m->cosa - odata.v*m->sina)*L;
-  dest->y = (odata.v*m->cosa + odata.u*m->sina)*L;
-  dest->z = src->z*L;
+  dest->x = (odata.u*m->cosa - odata.v*m->sina)/L;
+  dest->y = (odata.v*m->cosa + odata.u*m->sina)/L;
+  dest->z = src->z;
 }
 
 static void projection_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
@@ -126,7 +126,7 @@ static void projection_inverse (GfsMap * map, const FttVector * src, FttVector *
   odata = pj_inv (idata, GFS_MAP_PROJECTION (map)->pj);
   dest->x = odata.u*RAD_TO_DEG/L;
   dest->y = odata.v*RAD_TO_DEG/L;
-  dest->z = src->z/L;
+  dest->z = src->z;
 }
 
 static void projection_inverse_cell (GfsMap * map, const FttVector * src, FttVector * dest)
@@ -142,11 +142,12 @@ static void projection_inverse_cell (GfsMap * map, const FttVector * src, FttVec
   o.x /= 4.; o.y /= 4.; o.z /= 4.;
   projection_inverse (map, &o, &o);
   /* make sure we do not cross periodic longitude boundary */
+  gdouble L = gfs_object_simulation (map)->physical_params.L;
   for (i = 0; i < 4; i++)
-    if (dest[i].x > o.x + 180.)
-      dest[i].x -= 360.;
-    else if (dest[i].x < o.x - 180.)
-      dest[i].x += 360.;
+    if (dest[i].x > o.x + 180./L)
+      dest[i].x -= 360./L;
+    else if (dest[i].x < o.x - 180./L)
+      dest[i].x += 360./L;
 }
 
 static void gfs_map_projection_class_init (GfsMapClass * klass)

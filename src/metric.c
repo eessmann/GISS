@@ -1116,10 +1116,32 @@ static void map_cubed_inverse (GfsMap * map, const FttVector * src, FttVector * 
   dest->z = src->z;
 }
 
+static void map_cubed_inverse_cell (GfsMap * map, const FttVector * src, FttVector * dest)
+{
+  gint i;
+  FttVector o = { 0., 0., 0. };
+  for (i = 0; i < 4; i++) {
+    o.x += src[i].x;
+    o.y += src[i].y;
+    o.z += src[i].z;
+    map_cubed_inverse (map, &(src[i]), &(dest[i]));
+  }
+  o.x /= 4.; o.y /= 4.; o.z /= 4.;
+  map_cubed_inverse (map, &o, &o);
+  /* make sure we do not cross periodic longitude boundary */
+  gdouble L = gfs_object_simulation (map)->physical_params.L;
+  for (i = 0; i < 4; i++)
+    if (dest[i].x > o.x + 180./L)
+      dest[i].x -= 360./L;
+    else if (dest[i].x < o.x - 180./L)
+      dest[i].x += 360./L;
+}
+
 static void gfs_map_cubed_init (GfsMap * map)
 {
   map->transform = map_cubed_transform;
   map->inverse =   map_cubed_inverse;  
+  map->inverse_cell = map_cubed_inverse_cell;  
 }
 
 static GfsMapClass * gfs_map_cubed_class (void)
