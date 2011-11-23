@@ -407,7 +407,7 @@ void gfs_domain_write_tecplot (GfsDomain * domain, gint max_depth, GSList * vari
     gts_object_destroy (GTS_OBJECT (v[i]));
 }
 
-#if !FTT_2D //gfs_domain_write_tecplot_surface
+#if !FTT_2D /* gfs_domain_write_tecplot_surface */
 
 typedef struct {
   FttCell * cell;             /* cell */
@@ -426,12 +426,13 @@ static void allocate_wallfaces (FttCell * cell, AllocateFacesParams * par)
   if (!GFS_IS_MIXED (cell)) return;
 
   GfsSolidVector * s = GFS_STATE (cell)->solid;
-  FttVector normal; //solid normal
+  FttVector normal; /* solid normal */
   gfs_solid_normal (cell, &normal);
   gts_vector_normalize (&normal.x);
 
   FttDirection d[12];
-  FttVector nodecutface[FTT_DIMENSION*(FTT_DIMENSION - 1) + 1];/* array of node coordinates for a cut face */
+  /* array of node coordinates for a cut face */
+  FttVector nodecutface[FTT_DIMENSION*(FTT_DIMENSION - 1) + 1];
   guint inode, inode2, jnode_max_sintheta = 0, nnodes = 
     gfs_cut_cube_vertices (cell, -1, &s->ca, &normal, nodecutface, d, NULL, NULL);
   g_assert (nnodes <= 6);
@@ -481,7 +482,7 @@ static void allocate_wallfaces (FttCell * cell, AllocateFacesParams * par)
 	  }	  
 	}
 	
-	//terminate if cannot find positive angle between cut face nodes
+	/* terminate if cannot find positive angle between cut face nodes */
 	g_assert (max_sintheta != 0.);
 	
 	inode2 = (inode + 1)%nnodecutface;
@@ -492,7 +493,7 @@ static void allocate_wallfaces (FttCell * cell, AllocateFacesParams * par)
 	  
 	  switchnodes = TRUE;
 	}
-      }//inode-loop      
+      } /* inode-loop */
     } while (switchnodes && i_switchnodes < 1000);   /* avoid infinite loop */    
   } /* reorder faces if necessary */
 
@@ -536,9 +537,21 @@ static void allocate_wallfaces (FttCell * cell, AllocateFacesParams * par)
 
     par->wallfaces = g_slist_append (par->wallfaces, face2);
     par->nnodes_total += nnodecutface;
-  } //cut face must be divided into 2 quadrilateral/triangular faces
+  } /* cut face must be divided into 2 quadrilateral/triangular faces */
 }
 
+/**
+ * gfs_domain_write_tecplot_surface:
+ * @domain: a #GfsDomain.
+ * @max_depth: the maximum depth to consider.
+ * @variables: a list of #GfsVariable to output.
+ * @precision: the formatting string for converting float to ASCII.
+ * @fp: a file pointer.
+ *
+ * Writes in @fp a Tecplot-formatted representation of the solid
+ * surface of @domain and of the corresponding variables in the given
+ * list.
+ */
 void gfs_domain_write_tecplot_surface (GfsDomain * domain, gint max_depth, GSList * variables, 
 				       const gchar * precision, FILE * fp)
 {
@@ -625,4 +638,4 @@ void gfs_domain_write_tecplot_surface (GfsDomain * domain, gint max_depth, GSLis
   g_slist_free (par.wallfaces);
 }
 
-#endif //gfs_domain_write_tecplot_surface
+#endif /* gfs_domain_write_tecplot_surface */

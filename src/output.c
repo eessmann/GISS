@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1430,10 +1430,10 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
       gfs_domain_write_tecplot (domain, output->max_depth, domain->variables_io, output->precision,
 				GFS_OUTPUT (event)->file->fp);
 #if !FTT_2D 
-      gfs_domain_write_tecplot_surface (domain, output->max_depth, domain->variables_io, output->precision,
+      gfs_domain_write_tecplot_surface (domain, output->max_depth, domain->variables_io, 
+					output->precision,
 					GFS_OUTPUT (event)->file->fp);
 #endif
-
       break;
     }
 
