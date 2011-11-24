@@ -354,11 +354,11 @@ void gfs_domain_write_tecplot (GfsDomain * domain, gint max_depth, GSList * vari
 	   GFS_VERSION,
 	   GFS_BUILD_VERSION);
 
-  fputs (FTT_DIMENSION == 2 ? " VARIABLES = 'X', 'Y'" : " VARIABLES = 'X', 'Y', 'Z'", fp);
+  fputs (FTT_DIMENSION == 2 ? " VARIABLES = \"X\", \"Y\"" : " VARIABLES = \"X\", \"Y\", \"Z\"", fp);
   GSList * j = variables;
   while (j) {
     GfsVariable * v = j->data;
-    fprintf (fp, ", '%s'", v->name);
+    fprintf (fp, ", \"%s\"", v->name);
     j = j->next;
   }
   fputc ('\n', fp);
