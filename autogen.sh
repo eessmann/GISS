@@ -1,9 +1,29 @@
 #!/bin/sh
 # Run this to generate all the initial makefiles, etc.
 
-# a fix for missing Makefile.deps
+
+system=`uname -s`
+libtoolize=libtoolize
+libtool=libtool
+
+
+# a fix for missing Makefile.deps. This will not
+# work on MacOS - Darwin, but there is a fix below
 touch -d @0 test/Makefile.deps
 touch -d @0 doc/examples/Makefile.deps
+
+
+case $system in
+    Darwin)
+	libtoolize=glibtoolize
+	libtool=glibtool
+	touch=gtouch
+	export CFLAGS="$CFLAGS -D_DARWIN_C_SOURCE"
+# the fix for missing Makefile.deps
+	touch  @0 test/Makefile.deps
+	touch  @0 doc/examples/Makefile.deps
+    ;;
+esac
 
 # a fix for older automake/autoconf versions
 if test -e m4; then :
@@ -17,20 +37,13 @@ test -z "$srcdir" && srcdir=.
 DIE=0
 
 # a fix for Mac OS X (Darwin)
-
-system=`uname -s`
-libtoolize=libtoolize
-libtool=libtool
-case $system in
-    Darwin)
-	libtoolize=glibtoolize
-	libtool=glibtool
-    ;;
-esac
-
-# On Mac OS fink is often used and installs stuff in /sw, so we search there
+# On Mac OS fink uses /sw and Macport uses /opt
 if [ -d "/sw" ]; then
 	ACLOCAL_FLAGS="-I /sw/share/aclocal $ACLOCAL_FLAGS"
+fi
+
+if [ -d "/opt" ]; then
+	ACLOCAL_FLAGS="-I /opt/local/share/aclocal $ACLOCAL_FLAGS"
 fi
 # end of Mac OS X (Darwin) fix
 
