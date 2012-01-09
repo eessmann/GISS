@@ -1,0 +1,119 @@
+# Title: Boundary layer on a rotating disk
+#
+# Description:
+#
+# Von K\'arm\'an\cite{karman1921} showed that the steady flow of an 
+# incompressible liquid of kinematics viscosity $\nu$ induced by 
+# a infinite plane disk rotating at angular velocity $\Omega$ can be 
+# described by a similarity solution. In effect, using 
+# $\zeta=z\sqrt{\Omega/\nu}$ and setting the  
+# axial velocity $U$, radial velocity $V$ and 
+# azimuthal velocity $W$ as, 
+# $$
+# U=\sqrt{\nu \Omega} F(\zeta) \quad V=\Omega r H(\zeta) 
+# \quad W = \Omega r G(\zeta)
+# $$
+# the Navier-Stokes equations reduce to a couple of ODE:
+# $$
+# F'''-F\, F'' +F'^2/2 +2G^2  = 0 \quad \mbox{and} \quad G''-F\,G'+G\,F' = 0
+# $$
+# being the boundary conditions,
+# $$
+# F(0)=F'(0)=0 \: G(0)=1. \quad \mbox{and} \quad F'(\infty)=G(\infty)=0.
+# $$
+# where the prime denote diferenciation respect to $\zeta$. 
+#
+# In figure \ref{veloc} it is compared the analytical dimensionless axial 
+# and azimuthal velocities of Von K\'arm\'an with those obtained with Gerris. 
+# \begin{figure}[htbp]
+# \caption{\label{veloc} Profiles of dimensionless axial and azimuthal velocity.}
+# \begin{center}
+# \includegraphics[width=\hsize]{profiles.eps}
+# \end{center}
+# \end{figure}
+#
+# Author: J.M. L\'opez-Herrera
+# Command: sh swirl.sh
+# Version: 111123
+# Required files: swirl.sh analytical
+# Running time: 66.59 seconds
+# Generated files: nu profiles.eps
+#
+4 3 GfsAxi GfsBox GfsGEdge {x=0.5} {
+    VariableTracerSwirl W
+    GfsPhysicalParams{L = 3}
+    SourceViscosity 0.2
+    GfsAdaptVorticity { istep = 1 } { maxlevel = 6 minlevel = 5 cmax = 1e-3 }
+    Time{end = 12 dtmax=0.01}
+    GfsEventStop {istep = 10} U 0.001 DU
+#    GfsOutputTime {istep = 10} stdout
+    GfsOutputSimulation {start = end} { 
+	awk 'BEGIN{nu=0.2} 
+             {if ($2 != 0. && $1 != "#" && ($1*$1+$2*$2)<8.0)  
+             print $1/sqrt(nu),-$4/sqrt(nu),$5/$2;}' > nu } {format = text variables = U,W}
+}
+# mbox 1
+GfsBox {
+    left = Boundary {
+	BcDirichlet U 0
+	BcDirichlet V 0
+	BcDirichlet W y
+    }
+    right = Boundary {
+	BcNeumann U 0
+	BcNeumann V 0
+	BcNeumann W 0
+        BcDirichlet P 0.
+    }
+    bottom = Boundary {BcDirichlet W 0 }
+}
+# mbox 2
+GfsBox {
+    left = Boundary {
+	BcDirichlet U 0
+	BcDirichlet V 0
+	BcDirichlet W y
+    }
+    right = Boundary {
+	BcNeumann U 0
+	BcNeumann V 0
+	BcNeumann W 0
+        BcDirichlet P 0.
+    }
+}
+# mbox 3
+GfsBox {
+    left = Boundary {
+	BcDirichlet U 0
+	BcDirichlet V 0
+	BcDirichlet W y
+    }
+    right = Boundary {
+	BcNeumann U 0
+	BcNeumann V 0
+	BcNeumann W 0
+        BcDirichlet P 0.
+    }
+}
+# mbox 4
+GfsBox {
+    left = Boundary {
+	BcDirichlet U 0
+	BcDirichlet V 0
+	BcDirichlet W y
+    }
+    right = Boundary {
+	BcNeumann U 0
+	BcNeumann V 0
+	BcNeumann W 0
+        BcDirichlet P 0.
+    }
+    top = Boundary {
+	BcNeumann U 0
+	BcNeumann V 0
+	BcNeumann W 0
+    }
+}
+1 2 top
+2 3 top
+3 4 top

@@ -53,7 +53,8 @@ TESTDIRS = \
 	bump \
 	cylinder \
 	electro \
-	debye
+	debye \
+	swirl
 
 EXTRA_DIST = \
 	template.tex \
