@@ -21,7 +21,7 @@
 #include "source.h"
 #include "adaptive.h"
 #include "output.h"
-#include "solid.h"
+#include "init.h"
 
 /* GfsSkewSymmetric: Header */
 
@@ -606,7 +606,7 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
 			&sim->projection_params, 
 			&sim->advection_params,
 			p, sim->physical_params.alpha, gmac, NULL);
-    
+
     gfs_domain_cell_traverse (domain, 
                               FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, 
                               (FttCellTraverseFunc) correct_face_velocity, NULL);
@@ -644,6 +644,103 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
 
 }
 
+/** \beginobject{GfsInitFaceValues} */
+
+#define GFS_IS_FACE_VALUES_INIT(obj)         (gts_object_is_from_class (obj, \
+                                              gfs_face_values_init_class ()))
+
+GfsGenericInitClass * gfs_face_values_init_class (void);
+
+
+typedef struct {
+  GfsVariable * v;
+  GfsFunction * f;
+} VarFunc;
+
+typedef struct {
+  GfsVariable * v1, * v2;
+  GfsFunction * f;
+} FaceInitData;
+
+static void init_fd (FttCellFace * face, FaceInitData * fd)
+{
+  if (face->d % 2 != 0) 
+    GFS_VALUE (face->cell, fd->v2) = gfs_function_face_value(fd->f, face);
+  else
+    GFS_VALUE (face->cell, fd->v1) = gfs_function_face_value(fd->f, face);
+
+}
+
+static gboolean gfs_face_values_init_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_face_values_init_class ())->parent_class)->event) 
+      (event, sim)) {
+    GSList * i = GFS_INIT (event)->f;
+    FaceInitData data;
+    FttComponent c;
+
+    while (i) {
+      VarFunc * vf = i->data;
+      gfs_catch_floating_point_exceptions ();
+      if (g_strcmp0(&vf->v->name[0],"U") == 0) { 
+        data.v1 = GFS_SKEW_SYMMETRIC(sim)->velfaces[0];
+        data.v2 = GFS_SKEW_SYMMETRIC(sim)->velfaces[1];
+        data.f  = vf->f;
+        c  = 0;
+      }
+      else if (g_strcmp0(&vf->v->name[0],"V") == 0) {
+        data.v1 = GFS_SKEW_SYMMETRIC(sim)->velfaces[2];
+        data.v2 = GFS_SKEW_SYMMETRIC(sim)->velfaces[3];
+        data.f  = vf->f;
+        c  = 1;
+      }
+#if (!FTT_2D)
+      else if (g_strcmp0(&vf->v->name[0],"W") == 0) {
+        data.v1 = GFS_SKEW_SYMMETRIC(sim)->velfaces[4];
+        data.v2 = GFS_SKEW_SYMMETRIC(sim)->velfaces[5];
+        data.f  = vf->f;
+        c  = 2;
+      }
+#endif
+      gfs_domain_face_traverse (GFS_DOMAIN (sim), c,
+                                FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, 
+                                (FttFaceTraverseFunc)  init_fd, &data);
+      gfs_restore_fpe_for_function (vf->f);
+      i = i->next;
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_face_values_init_class_init (GfsGenericInitClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = gfs_face_values_init_event;
+}
+
+GfsGenericInitClass * gfs_face_values_init_class (void)
+{
+  static GfsGenericInitClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_face_values_init_info = {
+      "GfsInitFaceValues",
+      sizeof (GfsInit),
+      sizeof (GfsGenericInitClass),
+      (GtsObjectClassInitFunc) gfs_face_values_init_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_init_class ()),
+        &gfs_face_values_init_info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsInitFaceValues} */
+
 /* Initialize module */
 
 /* only define gfs_module_name for "official" modules (i.e. those installed in
@@ -654,5 +751,6 @@ const gchar * g_module_check_init (void);
 const gchar * g_module_check_init (void)
 {
   gfs_skew_symmetric_class ();
+  gfs_face_values_init_class ();
   return NULL;
 } 
