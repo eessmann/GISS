@@ -24,8 +24,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
 #include "domain.h"
 
 #include "advection.h"
@@ -4344,12 +4344,10 @@ void gfs_domain_filter (GfsDomain * domain, GfsVariable * v, GfsVariable * fv)
     gfs_domain_copy_bc (domain, FTT_TRAVERSE_LEAFS, -1, v, fv);
 }
 
-struct _GfsRequest {  
-  FILE * fp;
-  long length;
+struct _GfsRequest {
+  void * buf;
 #ifdef HAVE_MPI
   MPI_Request request[2];
-  void * buf;
 #endif
 };
 
@@ -4370,27 +4368,31 @@ struct _GfsRequest {
 GfsRequest * gfs_send_objects (GSList * list, int dest)
 {
 #ifdef HAVE_MPI
-  GfsRequest * r = g_malloc (sizeof (GfsRequest));
-  r->fp = tmpfile ();
-  int fd = fileno (r->fp);
-  struct stat sb;
+  FILE * fp = tmpfile ();
+  if (fp == NULL)
+    g_error ("gfs_send_objects(): could not create temporary file\n%s", strerror (errno));
   while (list) {
     GtsObject * object = list->data;
     g_assert (object->klass->write != NULL);
-    (* object->klass->write) (object, r->fp);
-    fputc ('\n', r->fp);
+    (* object->klass->write) (object, fp);
+    fputc ('\n', fp);
     list = list->next;
   }
-  fflush (r->fp);
+  fflush (fp);
+  int fd = fileno (fp);
+  struct stat sb;
   g_assert (fstat (fd, &sb) != -1);
-  r->length = sb.st_size;
-  MPI_Isend (&r->length, 1, MPI_LONG, dest, 0, MPI_COMM_WORLD, &r->request[0]);
+  GfsRequest * r = g_malloc0 (sizeof (GfsRequest));
+  long length = sb.st_size;
+  MPI_Isend (&length, 1, MPI_LONG, dest, 0, MPI_COMM_WORLD, &r->request[0]);
   /*  g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, "sending %ld bytes to PE %d", length, dest); */
-  if (r->length > 0) {
-    r->buf = mmap (NULL, r->length, PROT_READ, MAP_PRIVATE, fd, 0);
-    g_assert (r->buf != MAP_FAILED);
-    MPI_Isend (r->buf, r->length, MPI_BYTE, dest, 1, MPI_COMM_WORLD, &r->request[1]);
+  if (length > 0) {
+    r->buf = g_malloc (length);
+    rewind (fp);
+    g_assert (fread (r->buf, 1, length, fp) == length);
+    MPI_Isend (r->buf, length, MPI_BYTE, dest, 1, MPI_COMM_WORLD, &r->request[1]);
   }
+  fclose (fp);
   return r;
 #else  /* not HAVE_MPI */
   return NULL;
@@ -4410,11 +4412,10 @@ void gfs_wait (GfsRequest * r)
 
   MPI_Status status;
   MPI_Wait (&r->request[0], &status);
-  if (r->length > 0) {
+  if (r->buf) {
     MPI_Wait (&r->request[1], &status);
-    munmap (r->buf, r->length);
+    g_free (r->buf);
   }
-  fclose (r->fp);
   g_free (r);
 #endif /* HAVE_MPI */
 }

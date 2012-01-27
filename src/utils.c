@@ -27,7 +27,6 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <sys/mman.h>
 #include <sys/times.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -1767,10 +1766,11 @@ void gfs_union_close (FILE * fp, int rank, FILE * fpp)
     long length = sb.st_size;
     MPI_Send (&length, 1, MPI_LONG, 0, rank, MPI_COMM_WORLD);
     if (length > 0) {
-      char * buf = mmap (NULL, length, PROT_READ, MAP_PRIVATE, fd, 0);
-      g_assert (buf != MAP_FAILED);
+      void * buf = g_malloc (length);
+      rewind (fpp);
+      g_assert (fread (buf, 1, length, fpp) == length);
       MPI_Send (buf, length, MPI_BYTE, 0, rank + 1, MPI_COMM_WORLD);
-      munmap (buf, length);
+      g_free (buf);
     }
 #endif /* HAVE_MPI */
     fclose (fpp);
