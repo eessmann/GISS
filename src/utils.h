@@ -87,6 +87,12 @@ typedef struct _GfsGlobal         GfsGlobal;
 						 gfs_global_class ()))
 
 GtsObjectClass * gfs_global_class  (void);
+  
+/* GfsModule: Header */
+
+typedef struct _GfsModule GfsModule;
+
+void gfs_module_unref (GfsModule * m, GHashTable * cache);
 
 /* GfsFunction: Header */
 

@@ -195,12 +195,12 @@ GtsObjectClass * gfs_global_class (void)
 
 /* GfsModule: Header */
 
-typedef struct {
+struct _GfsModule {
   GModule * module;
   gchar * expression;
   guint refcount;
   GfsFunctionFunc f;
-} GfsModule;
+};
 
 /* GfsFunction: Header */
 
@@ -248,7 +248,7 @@ static GfsModule * gfs_module_new (GtsFile * fp, const gchar * mname,
   GfsModule * m = g_malloc (sizeof (GfsModule));
   m->module = module;
   m->f = f;
-  m->refcount = 0;
+  m->refcount = 1;
 
   g_assert (g_file_get_contents (finname, &m->expression, NULL, NULL));
   g_hash_table_insert (cache, m->expression, m);
@@ -270,8 +270,17 @@ static void gfs_module_ref (GfsModule * m, GfsFunction * f)
   m->refcount++;
 }
 
-static void gfs_module_unref (GfsModule * m, GHashTable * cache)
+/**
+ * @m: a #GfsModule.
+ * @cache: a function cache.
+ *
+ * Unrefs @m from @cache.
+ */
+void gfs_module_unref (GfsModule * m, GHashTable * cache)
 {
+  g_return_if_fail (m != NULL);
+  g_return_if_fail (cache != NULL);
+
   m->refcount--;
   if (m->refcount == 0) {
     if (!g_module_close (m->module))
@@ -828,7 +837,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     }
   }
 
-  if (sim->deferred_compilation) {
+  if (sim->deferred_compilation && domain->pid < 0) {
     f->f = DEFERRED_COMPILATION;
     f->fpd = *fp;
   }

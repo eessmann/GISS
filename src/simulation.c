@@ -46,6 +46,11 @@ static void module_close (GModule *module)
     g_warning ("%s: %s", g_module_name (module), g_module_error ());
 }
 
+static void unref_module (gpointer key, gpointer value, gpointer hash)
+{
+  gfs_module_unref (value, hash);
+}
+
 static void simulation_destroy (GtsObject * object)
 {
   GfsSimulation * sim = GFS_SIMULATION (object);
@@ -75,6 +80,7 @@ static void simulation_destroy (GtsObject * object)
 
   /* it is now safe to destroy the function cache (all the functions
      used in GfsBoxes etc.. have been destroyed) */
+  g_hash_table_foreach (function_cache, unref_module, function_cache);
   g_hash_table_destroy (function_cache);
 }
 
