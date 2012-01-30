@@ -512,7 +512,7 @@ static void relax (FttCell * cell, RelaxParams * p)
   FttCellFace f;
   GfsGradient ng;
 
-  g.a = GFS_VARIABLE (cell, p->dia);
+  g.a = GFS_VALUEI (cell, p->dia);
   g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
@@ -525,9 +525,9 @@ static void relax (FttCell * cell, RelaxParams * p)
     }
   }
   if (g.a > 0.)
-    GFS_VARIABLE (cell, p->u) = (g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
+    GFS_VALUEI (cell, p->u) = (g.b - GFS_VALUEI (cell, p->rhs))/g.a;
   else
-    GFS_VARIABLE (cell, p->u) = 0.;
+    GFS_VALUEI (cell, p->u) = 0.;
 }
 
 static void relax2D (FttCell * cell, RelaxParams * p)
@@ -537,7 +537,7 @@ static void relax2D (FttCell * cell, RelaxParams * p)
   FttCellFace f;
   GfsGradient ng;
 
-  g.a = GFS_VARIABLE (cell, p->dia);
+  g.a = GFS_VALUEI (cell, p->dia);
   g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
@@ -550,11 +550,11 @@ static void relax2D (FttCell * cell, RelaxParams * p)
     }
   }
   if (g.a > 0.)
-    GFS_VARIABLE (cell, p->u) = 
-      (1. - p->omega)*GFS_VARIABLE (cell, p->u) 
-      + p->omega*(g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
+    GFS_VALUEI (cell, p->u) = 
+      (1. - p->omega)*GFS_VALUEI (cell, p->u) 
+      + p->omega*(g.b - GFS_VALUEI (cell, p->rhs))/g.a;
   else
-    GFS_VARIABLE (cell, p->u) = 0.;
+    GFS_VALUEI (cell, p->u) = 0.;
 }
 
 /* relax_dirichlet_stencil() needs to be updated whenever this
@@ -566,7 +566,7 @@ static void relax_dirichlet (FttCell * cell, RelaxParams * p)
   FttCellFace f;
   GfsGradient ng;
 
-  g.a = GFS_VARIABLE (cell, p->dia);
+  g.a = GFS_VALUEI (cell, p->dia);
   if (GFS_IS_MIXED (cell) && ((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
     g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, 0.);
   else
@@ -581,9 +581,9 @@ static void relax_dirichlet (FttCell * cell, RelaxParams * p)
     g.b += ng.b;
   }
   if (g.a > 0.)
-    GFS_VARIABLE (cell, p->u) = (g.b - GFS_VARIABLE (cell, p->rhs))/g.a;
+    GFS_VALUEI (cell, p->u) = (g.b - GFS_VALUEI (cell, p->rhs))/g.a;
   else
-    GFS_VARIABLE (cell, p->u) = 0.;
+    GFS_VALUEI (cell, p->u) = 0.;
 }
 
 /**
@@ -639,7 +639,7 @@ static void residual_set (FttCell * cell, RelaxParams * p)
   FttCellFace f;
   GfsGradient ng;
 
-  g.a = GFS_VARIABLE (cell, p->dia);
+  g.a = GFS_VALUEI (cell, p->dia);
   g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
@@ -651,8 +651,8 @@ static void residual_set (FttCell * cell, RelaxParams * p)
       g.b += ng.b;
     }
   }
-  GFS_VARIABLE (cell, p->res) = GFS_VARIABLE (cell, p->rhs) - 
-    (g.b - GFS_VARIABLE (cell, p->u)*g.a);
+  GFS_VALUEI (cell, p->res) = GFS_VALUEI (cell, p->rhs) - 
+    (g.b - GFS_VALUEI (cell, p->u)*g.a);
 }
 
 static void residual_set2D (FttCell * cell, RelaxParams * p)
@@ -662,7 +662,7 @@ static void residual_set2D (FttCell * cell, RelaxParams * p)
   FttCellFace f;
   GfsGradient ng;
 
-  g.a = GFS_VARIABLE (cell, p->dia);
+  g.a = GFS_VALUEI (cell, p->dia);
   g.b = 0.;
   f.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
@@ -674,8 +674,8 @@ static void residual_set2D (FttCell * cell, RelaxParams * p)
       g.b += ng.b;
     }
   }
-  GFS_VARIABLE (cell, p->res) = GFS_VARIABLE (cell, p->rhs) - 
-    (g.b - GFS_VARIABLE (cell, p->u)*g.a);
+  GFS_VALUEI (cell, p->res) = GFS_VALUEI (cell, p->rhs) - 
+    (g.b - GFS_VALUEI (cell, p->u)*g.a);
 }
 
 static void residual_set_dirichlet (FttCell * cell, RelaxParams * p)
@@ -685,7 +685,7 @@ static void residual_set_dirichlet (FttCell * cell, RelaxParams * p)
   FttCellFace f;
   GfsGradient ng;
 
-  g.a = GFS_VARIABLE (cell, p->dia);
+  g.a = GFS_VALUEI (cell, p->dia);
   if (GFS_IS_MIXED (cell) && ((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
     g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, p->maxlevel, GFS_STATE (cell)->solid->fv);
   else
@@ -699,8 +699,8 @@ static void residual_set_dirichlet (FttCell * cell, RelaxParams * p)
     g.a += ng.a;
     g.b += ng.b;
   }
-  GFS_VARIABLE (cell, p->res) = GFS_VARIABLE (cell, p->rhs) - 
-    (g.b - GFS_VARIABLE (cell, p->u)*g.a);
+  GFS_VALUEI (cell, p->res) = GFS_VALUEI (cell, p->rhs) - 
+    (g.b - GFS_VALUEI (cell, p->u)*g.a);
 }
 
 /**
@@ -1388,7 +1388,7 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
   else
     f = 0.; /* Neumann condition by default */
   h = ftt_cell_size (cell);
-  val = GFS_VARIABLE (cell, p->u);
+  val = GFS_VALUEI (cell, p->u);
   face.cell = cell;
   ftt_cell_neighbors (cell, &neighbor);
   for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++) {
@@ -1398,9 +1398,9 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
     gfs_face_cm_weighted_gradient (&face, &g, p->u, -1);
     f += g.b - g.a*val;
   }
-  GFS_VARIABLE (cell, p->rhs) += p->beta*f/(h*h*GFS_VARIABLE (cell, p->dia));
+  GFS_VALUEI (cell, p->rhs) += p->beta*f/(h*h*GFS_VALUEI (cell, p->dia));
   if (p->metric)
-    GFS_VARIABLE (cell, p->rhs) -= val*p->beta*GFS_VARIABLE (cell, p->metric);
+    GFS_VALUEI (cell, p->rhs) -= val*p->beta*GFS_VALUEI (cell, p->metric);
 }
 
 /**
@@ -1462,13 +1462,13 @@ static void diffusion_relax (FttCell * cell, RelaxParams * p)
     g.a += ng.a;
     g.b += ng.b;
   }
-  gdouble a = GFS_VARIABLE (cell, p->dia)*h*h;
+  gdouble a = GFS_VALUEI (cell, p->dia)*h*h;
   g_assert (a > 0.);
   g.a = 1. + g.a/a;
   if (p->metric)
-    g.a += GFS_VARIABLE (cell, p->metric);
+    g.a += GFS_VALUEI (cell, p->metric);
   g_assert (g.a > 0.);
-  GFS_VARIABLE (cell, p->u) = (g.b/a + GFS_VARIABLE (cell, p->res))/g.a;
+  GFS_VALUEI (cell, p->u) = (g.b/a + GFS_VALUEI (cell, p->res))/g.a;
 }
 
 static void diffusion_relax_stencil (FttCell * cell, RelaxStencilParams * p)
@@ -1514,7 +1514,7 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
   FttCellFace face;
 
   h = ftt_cell_size (cell);
-  a = GFS_VARIABLE (cell, p->dia);
+  a = GFS_VALUEI (cell, p->dia);
   if (GFS_IS_MIXED (cell)) {
     GfsSolidVector * solid = GFS_STATE (cell)->solid;
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
@@ -1537,9 +1537,9 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
   g_assert (a > 0.);
   g.a = 1. + g.a/a;
   if (p->metric)
-    g.a += GFS_VARIABLE (cell, p->metric);
-  g.b = GFS_VARIABLE (cell, p->rhs) + g.b/a;
-  GFS_VARIABLE (cell, p->res) = g.b - g.a*GFS_VARIABLE (cell, p->u);
+    g.a += GFS_VALUEI (cell, p->metric);
+  g.b = GFS_VALUEI (cell, p->rhs) + g.b/a;
+  GFS_VALUEI (cell, p->res) = g.b - g.a*GFS_VALUEI (cell, p->u);
 }
 
 /**

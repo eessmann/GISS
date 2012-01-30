@@ -1,5 +1,5 @@
-/* Gerris - The GNU Flow Solver			(-*-C-*-)
- * Copyright (C) 2009 National Institute of Water and Atmospheric Research
+/* Gerris - The GNU Flow Solver
+ * Copyright (C) 2009-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1062,7 +1062,7 @@ static gboolean particulate_field_event (GfsEvent * event,
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_particulate_field_class ())->parent_class)->event)
       (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
-    GfsVariable * v = GFS_VARIABLE1 (event);
+    GfsVariable * v = GFS_VARIABLE (event);
     GfsParticulateField * pfield = GFS_PARTICULATE_FIELD (v);
 
     /* Reset variable */

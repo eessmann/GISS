@@ -1,4 +1,4 @@
-/* Gerris - The GNU Flow Solver                       (-*-C-*-)
+/* Gerris - The GNU Flow Solver
  * Copyright (C) 2001-2008 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
@@ -72,7 +72,7 @@ static void write_density_value (FttCell * cell, gpointer * data)
     return;
   }
 
-  value = (GFS_VARIABLE (cell, v->i) - *min)/(*max - *min);
+  value = (GFS_VALUE (cell, v) - *min)/(*max - *min);
 
   if (level < *max_depth) {
     gdouble size = ftt_cell_size(cell)/2.0;

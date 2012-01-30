@@ -193,7 +193,7 @@ static void triangulate (FttCell * cell, gpointer * data)
     GfsNorm * norm = data[4];
 
     gts_point_transform (GTS_POINT (v), transform);
-    GTS_POINT (v)->z = *z + GFS_VARIABLE (cell, var->i)/(norm->infty*1000.);
+    GTS_POINT (v)->z = *z + GFS_VALUE (cell, var)/(norm->infty*1000.);
   }
   g_assert (gts_delaunay_add_vertex (s, v, NULL) == NULL);
   VERTEX_CELL_FACE (v)->cell = cell;
@@ -223,7 +223,7 @@ static void triangulate_face (FttCell * cell, gpointer * data)
       GTS_POINT (v)->z = *z + 
 	gfs_face_interpolated_value  (&face, var->i)/(norm->infty*1000.);
     else
-      GTS_POINT (v)->z = *z + GFS_VARIABLE (cell, var->i)/(norm->infty*1000.);
+      GTS_POINT (v)->z = *z + GFS_VALUE (cell, var)/(norm->infty*1000.);
   }
   g_assert (gts_delaunay_add_vertex (s, v, NULL) == NULL);
   VERTEX_CELL_FACE (v)->face = face;
@@ -448,7 +448,7 @@ static void write_gnuplot (FttCell * cell, gpointer * data)
 		       pos.z >= bbox->z1 && pos.z <= bbox->z2)) {
     gfs_simulation_map_inverse (GFS_SIMULATION (v->domain), &pos);
     fprintf (fp, "%g %g %g %g\n", 
-	     pos.x, pos.y, pos.z, GFS_VARIABLE (cell, v->i));
+	     pos.x, pos.y, pos.z, GFS_VALUE (cell, v));
   }
 }
 
@@ -1006,7 +1006,7 @@ static void write_square (FttCell * cell, gpointer * data)
 
   ftt_cell_pos (cell, &p);
   c = colormap_color (colormap, 
-		      (GFS_VARIABLE (cell, v->i) - *min)/(*max - *min));
+		      (GFS_VALUE (cell, v) - *min)/(*max - *min));
 #if FTT_2D    
   fprintf (fp, 
 	   "OFF 4 1 4\n"
@@ -1888,12 +1888,12 @@ static void vorticity_vector (FttCell * cell, gpointer * data)
   GfsVariable ** g = data[0];
   GfsVariable ** v = data[1];
 
-  GFS_VARIABLE (cell, g[0]->i) = (gfs_center_gradient (cell, FTT_Y, v[2]->i) -
-				  gfs_center_gradient (cell, FTT_Z, v[1]->i))/size;
-  GFS_VARIABLE (cell, g[1]->i) = (gfs_center_gradient (cell, FTT_Z, v[0]->i) -
-				  gfs_center_gradient (cell, FTT_X, v[2]->i))/size;
-  GFS_VARIABLE (cell, g[2]->i) = (gfs_center_gradient (cell, FTT_X, v[1]->i) -
-				  gfs_center_gradient (cell, FTT_Y, v[0]->i))/size;
+  GFS_VALUE (cell, g[0]) = (gfs_center_gradient (cell, FTT_Y, v[2]->i) -
+			    gfs_center_gradient (cell, FTT_Z, v[1]->i))/size;
+  GFS_VALUE (cell, g[1]) = (gfs_center_gradient (cell, FTT_Z, v[0]->i) -
+			    gfs_center_gradient (cell, FTT_X, v[2]->i))/size;
+  GFS_VALUE (cell, g[2]) = (gfs_center_gradient (cell, FTT_X, v[1]->i) -
+			    gfs_center_gradient (cell, FTT_Y, v[0]->i))/size;
 }
 #endif /* 3D */
 

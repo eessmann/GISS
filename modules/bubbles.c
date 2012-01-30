@@ -1,4 +1,4 @@
-/* Gerris - The GNU Flow Solver			(-*-C-*-)
+/* Gerris - The GNU Flow Solver
  * Copyright (C) 2010-2011 Daniel Fuster/CNRS
  *
  * This program is free software; you can redistribute it and/or
@@ -313,7 +313,7 @@ static gboolean bubble_fraction_event (GfsEvent * event,
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_particulate_field_class ())->parent_class)->event)
       (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
-    GfsVariable * v = GFS_VARIABLE1 (event);
+    GfsVariable * v = GFS_VARIABLE (event);
     GfsParticulateField * pfield = GFS_PARTICULATE_FIELD (v);
     GfsBubbleFraction * bf = GFS_BUBBLE_FRACTION (event);
     

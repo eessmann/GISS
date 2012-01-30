@@ -57,7 +57,7 @@ static void gfs_variable_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "`%s' is a reserved keyword", fp->token->str);
     return;
   }
-  v = GFS_VARIABLE1 (*o);
+  v = GFS_VARIABLE (*o);
   v->name = g_strdup (fp->token->str);
   gts_file_next_token (fp);
 
@@ -77,12 +77,12 @@ static void gfs_variable_write (GtsObject * o, FILE * fp)
 {
   if (GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->write)
     (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->write) (o, fp);
-  fprintf (fp, " %s", GFS_VARIABLE1 (o)->name);
+  fprintf (fp, " %s", GFS_VARIABLE (o)->name);
 }
 
 static void gfs_variable_destroy (GtsObject * object)
 {
-  GfsVariable * v = GFS_VARIABLE1 (object);
+  GfsVariable * v = GFS_VARIABLE (object);
 
   g_free (v->name);
   g_free (v->description);
@@ -161,7 +161,7 @@ GfsVariable * gfs_variable_new (GfsVariableClass * klass,
        gfs_derived_variable_from_name (domain->derived_variables, name)))
     return NULL;
 
-  v = GFS_VARIABLE1 (gts_object_new (GTS_OBJECT_CLASS (klass)));
+  v = GFS_VARIABLE (gts_object_new (GTS_OBJECT_CLASS (klass)));
   if (name)
     v->name = g_strdup (name);
   if (description)
@@ -184,9 +184,9 @@ GfsVariable * gfs_variable_from_name (GSList * i,
 {
   g_return_val_if_fail (name != NULL, NULL);
 
-  while (i && (!GFS_VARIABLE1 (i->data)->name || strcmp (name, GFS_VARIABLE1 (i->data)->name)))
+  while (i && (!GFS_VARIABLE (i->data)->name || strcmp (name, GFS_VARIABLE (i->data)->name)))
     i = i->next;
-  return i ? GFS_VARIABLE1 (i->data) : NULL;
+  return i ? GFS_VARIABLE (i->data) : NULL;
 }
 
 /**
@@ -365,9 +365,9 @@ static void variable_tracer_init (GfsVariableTracer * v)
   gfs_advection_params_init (&v->advection);
   v->advection.gradient = gfs_center_van_leer_gradient;
   v->advection.flux = gfs_face_advection_flux;
-  v->advection.v = GFS_VARIABLE1 (v);
+  v->advection.v = GFS_VARIABLE (v);
   v->advection.fv = NULL;
-  GFS_VARIABLE1 (v)->description = g_strdup ("Tracer");
+  GFS_VARIABLE (v)->description = g_strdup ("Tracer");
 }
 
 GfsVariableClass * gfs_variable_tracer_class (void)
@@ -401,7 +401,7 @@ static void scale_residual (FttCell * cell, GfsVariable * res)
 {
   gdouble size = ftt_cell_size (cell);
   gdouble dt = GFS_SIMULATION (res->domain)->advection_params.dt;
-  GFS_VARIABLE (cell, res->i) *= dt*dt/(size*size);
+  GFS_VALUE (cell, res) *= dt*dt/(size*size);
 }
 
 static gboolean variable_residual_event (GfsEvent * event, GfsSimulation * sim)
@@ -483,11 +483,11 @@ static void variable_filtered_read (GtsObject ** o, GtsFile * fp)
   }
   gts_file_next_token (fp);  
 
-  if (GFS_VARIABLE1 (v)->description)
-    g_free (GFS_VARIABLE1 (v)->description);
-  GFS_VARIABLE1 (v)->description = g_strjoin (" ", "Variable", v->v->name, "filtered", NULL);
+  if (GFS_VARIABLE (v)->description)
+    g_free (GFS_VARIABLE (v)->description);
+  GFS_VARIABLE (v)->description = g_strjoin (" ", "Variable", v->v->name, "filtered", NULL);
 
-  GFS_VARIABLE1 (v)->units = v->v->units;
+  GFS_VARIABLE (v)->units = v->v->units;
 }
 
 static void variable_filtered_write (GtsObject * o, FILE * fp)
@@ -501,7 +501,7 @@ static void variable_filtered_event_half (GfsEvent * event, GfsSimulation * sim)
 {
   guint n = GFS_VARIABLE_FILTERED (event)->niter;
   GfsDomain * domain = GFS_DOMAIN (sim);
-  GfsVariable * v = GFS_VARIABLE1 (event);
+  GfsVariable * v = GFS_VARIABLE (event);
 
   gfs_domain_filter (domain, GFS_VARIABLE_FILTERED (event)->v, v);
   while (--n)
@@ -565,7 +565,7 @@ GfsVariableClass * gfs_variable_filtered_class (void)
 
 static void unity (FttCell * cell, GfsVariable * v)
 {
-  GFS_VARIABLE (cell, v->i) = 1.;
+  GFS_VALUE (cell, v) = 1.;
 }
 
 static void variable_diagonal (FttCell * cell, gpointer * data)
@@ -611,7 +611,7 @@ static gboolean variable_diagonal_event (GfsEvent * event, GfsSimulation * sim)
     gfs_poisson_coefficients (domain, sim->physical_params.alpha, TRUE, TRUE, TRUE);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) variable_diagonal, data);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE1 (event));
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE (event));
     gts_object_destroy (GTS_OBJECT (tmp));
     return TRUE;
   }
@@ -668,7 +668,7 @@ static void variable_function_read (GtsObject ** o, GtsFile * fp)
   gfs_function_read (v->f, GFS_DOMAIN (gfs_object_simulation (*o)), fp);
   if (fp->type == GTS_ERROR)
     return;
-  gfs_function_set_units (v->f, GFS_VARIABLE1 (*o)->units);
+  gfs_function_set_units (v->f, GFS_VARIABLE (*o)->units);
 }
 
 static void variable_function_write (GtsObject * o, FILE * fp)
@@ -699,7 +699,7 @@ static void variable_function_coarse_fine (FttCell * parent, GfsVariable * v)
 
 static void variable_function_init (GfsVariableFunction * v)
 {
-  GFS_VARIABLE1 (v)->coarse_fine = variable_function_coarse_fine;
+  GFS_VARIABLE (v)->coarse_fine = variable_function_coarse_fine;
   v->f = gfs_function_new (gfs_function_class (), 0.);
 }
 
@@ -822,8 +822,8 @@ static void variable_stream_function_read (GtsObject ** o, GtsFile * fp)
     gfs_function_read (v->f, domain, fp);
     if (fp->type == GTS_ERROR)
       return;
-    gfs_function_set_units (v->f, GFS_VARIABLE1 (*o)->units);
-    GFS_VARIABLE1 (v)->coarse_fine = variable_stream_function_coarse_fine;
+    gfs_function_set_units (v->f, GFS_VARIABLE (*o)->units);
+    GFS_VARIABLE (v)->coarse_fine = variable_stream_function_coarse_fine;
   }
 }
 
@@ -965,7 +965,7 @@ static gboolean variable_poisson_event (GfsEvent * event, GfsSimulation * sim)
     GfsVariable * dia = gfs_temporary_variable (domain);
     GfsVariable * div = gfs_temporary_variable (domain);
     GfsVariable * res = gfs_temporary_variable (domain);
-    GfsVariable * v = GFS_VARIABLE1 (event);
+    GfsVariable * v = GFS_VARIABLE (event);
     GfsMultilevelParams par;
     gfs_multilevel_params_init (&par);
 

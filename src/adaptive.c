@@ -886,11 +886,11 @@ static FttCell * remove_top_fine (GtsEHeap * h, gdouble * cost, GfsVariable * hf
   FttCell * cell = gts_eheap_remove_top (h, cost);
 
   if (cell)
-    GFS_VARIABLE (cell, hfine->i) = 0.;
+    GFS_VALUE (cell, hfine) = 0.;
   while (cell && ftt_cell_depth (cell) - ftt_cell_level (cell) != 1) {
     cell = gts_eheap_remove_top (h, cost);
     if (cell) 
-      GFS_VARIABLE (cell, hfine->i) = 0.;
+      GFS_VALUE (cell, hfine) = 0.;
   }
   return cell;
 }
@@ -915,7 +915,7 @@ static void compute_cost (FttCell * cell, AdaptParams * p)
 {
   gdouble cost = refine_cost (cell, p->sim);
 
-  GFS_VARIABLE (cell, p->hcoarsev->i) = GFS_VARIABLE (cell, p->hfinev->i) = 0.;
+  GFS_VALUE (cell, p->hcoarsev) = GFS_VALUE (cell, p->hfinev) = 0.;
   if (FTT_CELL_IS_LEAF (cell))
     CELL_COST (cell) = cost;
   else {
@@ -944,7 +944,7 @@ static void compute_cost (FttCell * cell, AdaptParams * p)
 
 static void store_cost (FttCell * cell, AdaptParams * p)
 {
-  GFS_VARIABLE (cell, p->c->i) = CELL_COST (cell);
+  GFS_VALUE (cell, p->c) = CELL_COST (cell);
 }
 
 static guint minlevel (FttCell * cell, GfsSimulation * sim)
@@ -985,11 +985,11 @@ static void fill_heaps (FttCell * cell, AdaptParams * p)
   FttCell * parent = ftt_cell_parent (cell);
   
   if (level < maxlevel (cell, p->sim))
-    GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, p->hcoarsev->i)) = 
+    GFS_DOUBLE_TO_POINTER (GFS_VALUE (cell, p->hcoarsev)) = 
       gts_eheap_insert_with_key (p->hcoarse, cell, - CELL_COST (cell));
-  if (parent && !GFS_CELL_IS_PERMANENT (parent) && GFS_VARIABLE (parent, p->hfinev->i) == 0. &&
+  if (parent && !GFS_CELL_IS_PERMANENT (parent) && GFS_VALUE (parent, p->hfinev) == 0. &&
       level > minlevel (parent, p->sim))
-    GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (parent, p->hfinev->i)) = 
+    GFS_DOUBLE_TO_POINTER (GFS_VALUE (parent, p->hfinev)) = 
       gts_eheap_insert_with_key (p->hfine, parent, CELL_COST (parent));
 }
 

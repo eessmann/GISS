@@ -49,7 +49,7 @@ static void setup_binary_IO (GfsDomain * domain)
   domain->variables_io = NULL;
   GSList * i = domain->variables;
   while (i) {
-    if (GFS_VARIABLE1 (i->data)->name)
+    if (GFS_VARIABLE (i->data)->name)
       domain->variables_io = g_slist_append (domain->variables_io, i->data);
     i = i->next;
   }

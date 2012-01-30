@@ -102,12 +102,12 @@ static void draw_vector (FttCell * cell, gpointer * data)
 
   gfs_cell_cm (cell, &pos);
   
-  f.x = GFS_VARIABLE (cell, u[0]->i)*(*scale);
-  f.y = GFS_VARIABLE (cell, u[1]->i)*(*scale);
+  f.x = GFS_VALUE (cell, u[0])*(*scale);
+  f.y = GFS_VALUE (cell, u[1])*(*scale);
 #if FTT_2D
   f.z = 0.;
 #else
-  f.z = GFS_VARIABLE (cell, u[2]->i)*(*scale);
+  f.z = GFS_VALUE (cell, u[2])*(*scale);
 #endif
   fprintf (fp, "VECT 1 3 0 3 0 %g %g %g %g %g %g %g %g %g\n",
 	   pos.x + f.x - (f.x - f.y/2.)/5.,
@@ -135,9 +135,9 @@ static void compute_mixed_vorticity (FttCell * cell, gpointer * data)
   g_assert (((cell)->flags & GFS_FLAG_DIRICHLET) != 0);
   gfs_cell_dirichlet_gradient (cell, u->i, -1, GFS_STATE (cell)->solid->fv, &g);
   if (u->component == FTT_X)
-    GFS_VARIABLE (cell, v->i) -= g.y;
+    GFS_VALUE (cell, v) -= g.y;
   else
-    GFS_VARIABLE (cell, v->i) += g.x;
+    GFS_VALUE (cell, v) += g.x;
 }
 
 static void output_mixed_vorticity (FttCell * cell, GfsVariable * v)
@@ -146,7 +146,7 @@ static void output_mixed_vorticity (FttCell * cell, GfsVariable * v)
   GfsSolidVector * s = GFS_STATE (cell)->solid;
 
   printf ("%g %g %g %g\n", s->ca.x, s->ca.y, s->ca.z, 
-	  GFS_VARIABLE (cell, v->i)/size);
+	  GFS_VALUE (cell, v)/size);
 }
 
 static void output_mixed_pressure (FttCell * cell, GfsVariable * p)
@@ -678,14 +678,14 @@ static void update_var (FttCell * cell, gpointer * data)
   GfsVariable * v = data[0];
   GfsFunction * f = data[1];
 
-  GFS_VARIABLE (cell, v->i) = gfs_function_value (f, cell);
+  GFS_VALUE (cell, v) = gfs_function_value (f, cell);
 }
 
 static void velocity_norm (FttCell * cell, gpointer * data)
 {
   GfsVariable * v = data[0];
   GfsVariable ** u = data[1];
-  GFS_VARIABLE (cell, v->i) = gfs_vector_norm (cell, u);
+  GFS_VALUE (cell, v) = gfs_vector_norm (cell, u);
 }
 
 int main (int argc, char * argv[])

@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -674,8 +674,8 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 	   fin);
     i = domain->variables;
     while (i) {
-      if (GFS_VARIABLE1 (i->data)->name && 
-	  find_identifier (f->expr->str, GFS_VARIABLE1 (i->data)->name))
+      if (GFS_VARIABLE (i->data)->name && 
+	  find_identifier (f->expr->str, GFS_VARIABLE (i->data)->name))
 	lv = g_slist_prepend (lv, i->data);
       i = i->next;
     }
@@ -706,8 +706,8 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 	while (i) {
 	  GfsVariable * v = i->data;
 	  fprintf (fin, 
-		   "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%#lx),\n"
-		   "           GFS_VALUE (cell, GFS_VARIABLE1 (%#lx)));\n", 
+		   "    %s = gfs_dimensional_value (GFS_VARIABLE (%#lx),\n"
+		   "           GFS_VALUE (cell, GFS_VARIABLE (%#lx)));\n", 
 		   v->name, (unsigned long) v, (unsigned long) v);
 	  i = i->next;
 	}
@@ -716,8 +716,8 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 	while (i) {
 	  GfsVariable * v = i->data;
 	  fprintf (fin, 
-		   "    %s = gfs_dimensional_value (GFS_VARIABLE1 (%#lx),\n"
-		   "           gfs_face_interpolated_value (face, GFS_VARIABLE1 (%#lx)->i));\n", 
+		   "    %s = gfs_dimensional_value (GFS_VARIABLE (%#lx),\n"
+		   "           gfs_face_interpolated_value_new (face, GFS_VARIABLE (%#lx)->i));\n", 
 		   v->name, (unsigned long) v, (unsigned long) v);
 	  i = i->next;
 	}

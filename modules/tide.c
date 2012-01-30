@@ -1,4 +1,4 @@
-/* Gerris - The GNU Flow Solver                       (-*-C-*-)
+/* Gerris - The GNU Flow Solver
  * Copyright (C) 2001-2008 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
@@ -269,7 +269,7 @@ static gdouble tide_value (FttCellFace * f, GfsBc * b)
       a *= sim->physical_params.g/5000.; /* fixme: reference depth is fixed at 5000 meters */
       return gfs_function_face_value (GFS_BC_VALUE (b)->val, f) +
 	(FTT_FACE_DIRECT (f) ? -1. : 1.)*
-	(GFS_VARIABLE (f->neighbor, GFS_BC_TIDE (b)->p->i) - a)*
+	(GFS_VALUE (f->neighbor, GFS_BC_TIDE (b)->p) - a)*
 	cg/sim->physical_params.g
 #if !FTT_2D
 	/H
@@ -284,13 +284,13 @@ static void tide (FttCellFace * f, GfsBc * b)
 {
   g_assert (GFS_CELL_IS_GRADIENT_BOUNDARY (f->cell));
   g_assert (ftt_cell_neighbor (f->cell, f->d) == f->neighbor);
-  GFS_VARIABLE (f->cell, b->v->i) = 2.*tide_value (f, b) - GFS_VARIABLE (f->neighbor, b->v->i);
+  GFS_VALUE (f->cell, b->v) = 2.*tide_value (f, b) - GFS_VALUE (f->neighbor, b->v);
 }
 
 static void homogeneous_tide (FttCellFace * f, GfsBc * b)
 {
   g_assert (GFS_CELL_IS_GRADIENT_BOUNDARY (f->cell));
-  GFS_VARIABLE (f->cell, b->v->i) = - GFS_VARIABLE (f->neighbor, b->v->i);
+  GFS_VALUE (f->cell, b->v) = - GFS_VALUE (f->neighbor, b->v);
 }
 
 static void face_tide (FttCellFace * f, GfsBc * b)

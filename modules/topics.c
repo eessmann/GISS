@@ -1,4 +1,4 @@
-/* Gerris - The GNU Flow Solver (-*-C-*-)
+/* Gerris - The GNU Flow Solver
  * Copyright (C) 2011 Sebastien Delaux, National Institute of Water
  * and Atmospheric Research
  *

@@ -1,5 +1,5 @@
-/* Gerris - The GNU Flow Solver                       (-*-C-*-)
- * Copyright (C) 2001-2008 National Institute of Water and Atmospheric Research
+/* Gerris - The GNU Flow Solver
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -974,12 +974,12 @@ static void terrain_coarse_fine (FttCell * parent, GfsVariable * v)
   g_assert (c >= 0 && c < NM);
   for (n = 0; n < NM; n++) {
     GSList * i = v->domain->variables;
-    while (i && (!GFS_VARIABLE1 (i->data)->name || 
-		 strncmp (v->name, GFS_VARIABLE1 (i->data)->name, len) ||
-		 GFS_VARIABLE1 (i->data)->name[len] != ASCII_ZERO + n))
+    while (i && (!GFS_VARIABLE (i->data)->name || 
+		 strncmp (v->name, GFS_VARIABLE (i->data)->name, len) ||
+		 GFS_VARIABLE (i->data)->name[len] != ASCII_ZERO + n))
       i = i->next;
     g_assert (i);
-    h[n] = GFS_VALUE (parent, GFS_VARIABLE1 (i->data));
+    h[n] = GFS_VALUE (parent, GFS_VARIABLE (i->data));
   }
 
   ftt_cell_children (parent, &child);
@@ -1697,7 +1697,7 @@ static void variable_terrain_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  GfsVariable * v1 = GFS_VARIABLE1 (*o);
+  GfsVariable * v1 = GFS_VARIABLE (*o);
   v1->units = 1.;
   g_free (v1->description);
   v1->description = g_strdup ("Terrain");

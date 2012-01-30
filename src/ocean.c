@@ -157,7 +157,7 @@ typedef struct {
 
 static void normal_divergence (FttCell * cell, FreeSurfaceParams * p)
 {
-  GFS_VARIABLE (cell, p->div->i) += (1. - THETA)*GFS_VARIABLE (cell, p->divn->i)/THETA;
+  GFS_VALUE (cell, p->div) += (1. - THETA)*GFS_VALUE (cell, p->divn)/THETA;
 }
 
 static void scale_divergence_helmoltz (FttCell * cell, FreeSurfaceParams * p)
@@ -172,9 +172,9 @@ static void scale_divergence_helmoltz (FttCell * cell, FreeSurfaceParams * p)
     c *= GFS_STATE (cell)->solid->s[FTT_FRONT];
 #endif /* 3D */
 
-  GFS_VARIABLE (cell, p->dia->i) = c;
-  GFS_VARIABLE (cell, p->div->i) = 2.*GFS_VARIABLE (cell, p->div->i)/p->dt -
-    c*GFS_VARIABLE (cell, p->pn->i);
+  GFS_VALUE (cell, p->dia) = c;
+  GFS_VALUE (cell, p->div) = 2.*GFS_VALUE (cell, p->div)/p->dt -
+    c*GFS_VALUE (cell, p->pn);
 }
 
 #if !FTT_2D
@@ -510,7 +510,7 @@ static void compute_w (FttCell * c, GfsVariable * W)
 	wf/GFS_STATE (c)->solid->s[FTT_FRONT] : 0.;
     else
       s->f[FTT_FRONT].un = w = wf;
-    GFS_VARIABLE (c, W->i) = (s->f[FTT_BACK].un + s->f[FTT_FRONT].un)/2.;
+    GFS_VALUE (c, W) = (s->f[FTT_BACK].un + s->f[FTT_FRONT].un)/2.;
     c = ftt_cell_neighbor (c, FTT_FRONT);
   }
 }
@@ -534,7 +534,7 @@ static void compute_div (FttCell * c, GfsVariable * W)
     else
       wf += (s->f[FTT_RIGHT].un - s->f[FTT_LEFT].un +
 	     s->f[FTT_TOP].un - s->f[FTT_BOTTOM].un);
-    GFS_VARIABLE (c, W->i) = wf*size;
+    GFS_VALUE (c, W) = wf*size;
     c = ftt_cell_neighbor (c, FTT_BACK);
   }
 }
@@ -570,13 +570,13 @@ static void face_interpolated_normal_velocity (const FttCellFace * face, GfsVari
   guint i = v[face->d/2]->i;
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
-    u = (GFS_VARIABLE (face->cell, i) + GFS_VARIABLE (face->neighbor, i))/2.; 
+    u = (GFS_VALUEI (face->cell, i) + GFS_VALUEI (face->neighbor, i))/2.; 
     break;
   case FTT_FINE_COARSE: {
     gdouble w1 = height (face->cell), w2 = height (face->neighbor);
     g_assert (w1 + w2);
     w1 = 2.*w1/(w1 + w2);
-    u = w1*gfs_face_interpolated_value (face, i) + (1. - w1)*GFS_VARIABLE (face->neighbor, i);
+    u = w1*gfs_face_interpolated_value (face, i) + (1. - w1)*GFS_VALUEI (face->neighbor, i);
     break;
   }
   default:
@@ -879,10 +879,10 @@ static void hydrostatic_pressure (FttCell * cell, gpointer * data)
   GfsVariable * vp = data[0];
   GfsVariable * rho = data[1];
   gdouble * g = data[2];
-  gdouble r = GFS_VARIABLE (cell, rho->i), p = (*g)*r/2., r1;
+  gdouble r = GFS_VALUE (cell, rho), p = (*g)*r/2., r1;
   FttCellFace f;
   
-  GFS_VARIABLE (cell, vp->i) = p;
+  GFS_VALUE (cell, vp) = p;
   f.cell = cell;
   f.d = FTT_BACK;
   f.neighbor = ftt_cell_neighbor (f.cell, f.d);
@@ -891,7 +891,7 @@ static void hydrostatic_pressure (FttCell * cell, gpointer * data)
     r1 = gfs_face_interpolated_value (&f, rho->i);
     /* g_assert (r1 >= r); */
     r = r1;
-    GFS_VARIABLE (f.neighbor, vp->i) = p = p + (*g)*r;
+    GFS_VALUE (f.neighbor, vp) = p = p + (*g)*r;
     f.cell = f.neighbor;
     f.neighbor = ftt_cell_neighbor (f.cell, f.d);
   }
@@ -1004,7 +1004,7 @@ static gdouble gfs_source_hydrostatic_centered_value (GfsSourceGeneric * s,
 
 static void copy_ph (FttCell * cell, GfsSourceHydrostatic * s)
 {
-  GFS_VARIABLE (cell, s->ph1->i) = GFS_VARIABLE (cell, s->ph->i);
+  GFS_VALUE (cell, s->ph1) = GFS_VALUE (cell, s->ph);
 }
 
 static gboolean gfs_source_hydrostatic_event (GfsEvent * event, GfsSimulation * sim)
@@ -1130,11 +1130,11 @@ static gdouble gfs_source_friction_saved_value (GfsSourceGeneric * s,
 						FttCell * cell, 
 						GfsVariable * v)
 {
-  gdouble H = GFS_VARIABLE (cell, GFS_SOURCE_FRICTION (s)->h->i);
+  gdouble H = GFS_VALUE (cell, GFS_SOURCE_FRICTION (s)->h);
 
   g_assert (H > 0.);
   return - GFS_SOURCE_FRICTION (s)->f*
-    GFS_VARIABLE (cell, GFS_SOURCE_FRICTION (s)->u[v->component]->i)/H;
+    GFS_VALUE (cell, GFS_SOURCE_FRICTION (s)->u[v->component])/H;
 }
 
 static void save_velocity (FttCell * cell, GfsSourceFriction * s)
@@ -1142,7 +1142,7 @@ static void save_velocity (FttCell * cell, GfsSourceFriction * s)
   FttComponent c;
 
   for (c = 0; c < FTT_DIMENSION; c++)
-    GFS_VARIABLE (cell, s->u[c]->i) = GFS_VARIABLE (cell, GFS_SOURCE_VELOCITY (s)->v[c]->i);
+    GFS_VALUE (cell, s->u[c]) = GFS_VALUE (cell, GFS_SOURCE_VELOCITY (s)->v[c]);
 }
 
 static gboolean gfs_source_friction_event (GfsEvent * event, GfsSimulation * sim)
@@ -1302,13 +1302,13 @@ static gdouble flather_value (FttCellFace * f, GfsBc * b)
 static void flather (FttCellFace * f, GfsBc * b)
 {
   g_assert (GFS_CELL_IS_GRADIENT_BOUNDARY (f->cell));
-  GFS_VARIABLE (f->cell, b->v->i) = 2.*flather_value (f, b) - GFS_VARIABLE (f->neighbor, b->v->i);
+  GFS_VALUE (f->cell, b->v) = 2.*flather_value (f, b) - GFS_VALUE (f->neighbor, b->v);
 }
 
 static void homogeneous_flather (FttCellFace * f, GfsBc * b)
 {
   g_assert (GFS_CELL_IS_GRADIENT_BOUNDARY (f->cell));
-  GFS_VARIABLE (f->cell, b->v->i) = - GFS_VARIABLE (f->neighbor, b->v->i);
+  GFS_VALUE (f->cell, b->v) = - GFS_VALUE (f->neighbor, b->v);
 }
 
 static void face_flather (FttCellFace * f, GfsBc * b)

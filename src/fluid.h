@@ -69,7 +69,7 @@ typedef enum {
 } GfsFlags;
 
 #define GFS_STATE(cell)               ((GfsStateVector *) (cell)->data)
-#define GFS_VARIABLE(cell, index)     ((&GFS_STATE (cell)->place_holder)[index])
+#define GFS_VALUEI(cell, index)     ((&GFS_STATE (cell)->place_holder)[index])
 
 #define GFS_FACE_NORMAL_VELOCITY(fa)\
   (GFS_STATE ((fa)->cell)->f[(fa)->d].un)

@@ -377,7 +377,7 @@ static gdouble face_metric (const GfsDomain * domain, const FttCellFace * face)
 
 static gdouble cell_metric (const GfsDomain * domain, const FttCell * cell)
 {
-  return GFS_VALUE (cell, GFS_VARIABLE1 (domain->metric_data));
+  return GFS_VALUE (cell, GFS_VARIABLE (domain->metric_data));
 }
 
 static gdouble solid_metric (const GfsDomain * domain, const FttCell * cell)
@@ -493,7 +493,7 @@ static void generic_metric_read (GtsObject ** o, GtsFile * fp)
     gts_file_next_token (fp);
   }
 
-  GfsVariable * a = GFS_VARIABLE1 (*o);
+  GfsVariable * a = GFS_VARIABLE (*o);
   FttDirection d;
   for (d = 0; d < 4; d++) {
     gchar * name = g_strdup_printf ("%sh%d", a->name, d);
@@ -1324,7 +1324,7 @@ static void metric_cubed_read (GtsObject ** o, GtsFile * fp)
     gts_file_next_token (fp);
   }
 
-  GfsVariable * a = GFS_VARIABLE1 (*o);
+  GfsVariable * a = GFS_VARIABLE (*o);
   a->coarse_fine = cubed_coarse_fine;
 
   a->domain->face_scale_metric = cubed_face_scale_metric;
@@ -1492,7 +1492,7 @@ static gdouble lon_lat_face_metric (const GfsDomain * domain, const FttCellFace 
 
 static gdouble lon_lat_cell_metric (const GfsDomain * domain, const FttCell * cell)
 {
-  return GFS_VALUE (cell, GFS_VARIABLE1 (domain->metric_data));
+  return GFS_VALUE (cell, GFS_VARIABLE (domain->metric_data));
 }
 
 static gdouble lon_lat_solid_metric (const GfsDomain * domain, const FttCell * cell)
@@ -1506,7 +1506,7 @@ static gdouble lon_lat_scale_metric (const GfsDomain * domain, const FttCell * c
 {
   if (c != FTT_X)
     return 1.;
-  return GFS_VALUE (cell, GFS_VARIABLE1 (domain->metric_data));
+  return GFS_VALUE (cell, GFS_VARIABLE (domain->metric_data));
 }
 
 static gdouble lon_lat_face_scale_metric (const GfsDomain * domain, const FttCellFace * face, 
@@ -1514,7 +1514,7 @@ static gdouble lon_lat_face_scale_metric (const GfsDomain * domain, const FttCel
 {
   if (c != FTT_X)
     return 1.;
-  return gfs_face_interpolated_value (face, GFS_VARIABLE1 (domain->metric_data)->i);
+  return gfs_face_interpolated_value (face, GFS_VARIABLE (domain->metric_data)->i);
 }
 
 static void lonlat_coarse_fine (FttCell * parent, GfsVariable * a)
@@ -1584,7 +1584,7 @@ static void metric_lon_lat_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
-  GfsVariable * a = GFS_VARIABLE1 (*o);
+  GfsVariable * a = GFS_VARIABLE (*o);
   GfsMetricLonLat * lonlat = GFS_METRIC_LON_LAT (a);
   gchar * name = g_strdup_printf ("%sh2", a->name);
   lonlat->h2 = gfs_domain_get_or_add_variable (domain, name, "LonLat face metric");

@@ -429,7 +429,7 @@ void gfs_advance_tracers (GfsDomain * domain, gdouble dt)
       gfs_tracer_advection_diffusion (domain, &t->advection);
       gfs_domain_cell_traverse (domain,
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-				(FttCellTraverseFunc) GFS_VARIABLE1 (t)->fine_coarse, t);
+				(FttCellTraverseFunc) GFS_VARIABLE (t)->fine_coarse, t);
     }
     i = i->next;
   }  
@@ -1745,7 +1745,7 @@ static void error_handler (const gchar *log_domain,
   domain->variables_io = NULL;
   GSList * i = domain->variables;
   while (i) {
-    if (GFS_VARIABLE1 (i->data)->name)
+    if (GFS_VARIABLE (i->data)->name)
       domain->variables_io = g_slist_append (domain->variables_io, i->data);
     i = i->next;
   }

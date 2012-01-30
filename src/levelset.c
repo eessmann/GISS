@@ -47,9 +47,9 @@ static void variable_distance_read (GtsObject ** o, GtsFile * fp)
     gts_file_error (fp, "unknown variable `%s'", fp->token->str);
     return;
   }
-  if (GFS_VARIABLE1 (*o)->description)
-    g_free (GFS_VARIABLE1 (*o)->description);
-  GFS_VARIABLE1 (*o)->description = g_strjoin (" ", 
+  if (GFS_VARIABLE (*o)->description)
+    g_free (GFS_VARIABLE (*o)->description);
+  GFS_VARIABLE (*o)->description = g_strjoin (" ", 
 					       "Distance to the interface defined by tracer",
 					       fp->token->str, NULL);
   gts_file_next_token (fp);
@@ -75,7 +75,7 @@ static void variable_distance_write (GtsObject * o, FILE * fp)
 
 static gdouble vof_distance2 (FttCell * cell, GtsPoint * t, gpointer v)
 {
-  gdouble f = GFS_VALUE (cell, GFS_VARIABLE1 (v));
+  gdouble f = GFS_VALUE (cell, GFS_VARIABLE (v));
   
   if (GFS_IS_FULL (f))
     return GFS_NODATA;
@@ -165,14 +165,14 @@ static void variable_distance_event_half (GfsEvent * event, GfsSimulation * sim)
 			      (FttCellTraverseFunc) v->v->fine_coarse, v->v);
     gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			 (FttCellTraverseFunc) distance_for_stencil, data,
-			 GFS_VARIABLE1 (event),GFS_VARIABLE1 (event));
+			 GFS_VARIABLE (event),GFS_VARIABLE (event));
     gts_object_destroy (data[1]);
     gts_object_destroy (data[2]);
   }
   else
     gfs_traverse_and_bc (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			 (FttCellTraverseFunc) distance, v,
-			 GFS_VARIABLE1 (event),GFS_VARIABLE1 (event));
+			 GFS_VARIABLE (event),GFS_VARIABLE (event));
 
   gfs_domain_timer_stop (domain, "distance");
 }

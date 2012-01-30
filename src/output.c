@@ -1169,8 +1169,8 @@ static gboolean gfs_output_location_event (GfsEvent * event,
 
       fputs ("# 1:t 2:x 3:y 4:z", fp);
       while (i) {
-	if (GFS_VARIABLE1 (i->data)->name)
-	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
+	if (GFS_VARIABLE (i->data)->name)
+	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE (i->data)->name);
 	i = i->next;
       }
       fputc ('\n', fp);
@@ -1344,9 +1344,9 @@ static void write_text (FttCell * cell, gpointer * data)
   g_free (format);
   format = g_strdup_printf (" %s", output->precision);
   while (i) {
-    if (GFS_VARIABLE1 (i->data)->name)
+    if (GFS_VARIABLE (i->data)->name)
       fprintf (fp, format, gfs_dimensional_value (i->data, 
-						  GFS_VALUE (cell, GFS_VARIABLE1 (i->data))));
+						  GFS_VALUE (cell, GFS_VARIABLE (i->data))));
     i = i->next;
   }
   g_free (format);
@@ -1366,7 +1366,7 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
       GSList * i = domain->variables;
       domain->variables_io = NULL;
       while (i) {
-	if (GFS_VARIABLE1 (i->data)->name)
+	if (GFS_VARIABLE (i->data)->name)
 	  domain->variables_io = g_slist_append (domain->variables_io, i->data);
 	i = i->next;
       }
@@ -1395,8 +1395,8 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
 
 	fputs ("# 1:x 2:y 3:z", fp);
 	while (i) {
-	  g_assert (GFS_VARIABLE1 (i->data)->name);
-	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE1 (i->data)->name);
+	  g_assert (GFS_VARIABLE (i->data)->name);
+	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE (i->data)->name);
 	  i = i->next;
 	}
 	fputc ('\n', fp);
@@ -1461,10 +1461,10 @@ static void output_simulation_write (GtsObject * o, FILE * fp)
   if (output->max_depth != -1)
     fprintf (fp, " depth = %d", output->max_depth);
   if (i != NULL) {
-    fprintf (fp, " variables = %s", GFS_VARIABLE1 (i->data)->name);
+    fprintf (fp, " variables = %s", GFS_VARIABLE (i->data)->name);
     i = i->next;
     while (i) {
-      fprintf (fp, ",%s", GFS_VARIABLE1 (i->data)->name);
+      fprintf (fp, ",%s", GFS_VARIABLE (i->data)->name);
       i = i->next;
     }
   }
@@ -2197,7 +2197,7 @@ static void maxima (FttCell * cell, GfsOutputScalarMaxima * m)
   guint i;
 
   for (i = 0; i < m->N; i++) {
-    gdouble v = GFS_VARIABLE (cell, GFS_OUTPUT_SCALAR (m)->v->i);
+    gdouble v = GFS_VALUE (cell, GFS_OUTPUT_SCALAR (m)->v);
 
     if (v > m->m[3][i]) {
       FttVector p;

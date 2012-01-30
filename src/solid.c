@@ -856,13 +856,13 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
 	  guint i, n = ftt_cell_children_direction (neighbor.c[d], od, &child);
 	  gdouble s = 0.;
 
-	  g_assert (GFS_VARIABLE (neighbor.c[d], status->i) != 1.);
+	  g_assert (GFS_VALUE (neighbor.c[d], status) != 1.);
 	  for (i = 0; i < n; i++)
-	    if (child.c[i] && GFS_VARIABLE (child.c[i], status->i) != 1.)
+	    if (child.c[i] && GFS_VALUE (child.c[i], status) != 1.)
 	      s += GFS_IS_MIXED (child.c[i]) ? GFS_STATE (child.c[i])->solid->s[od] : 1.;
 	  solid->s[d] = s/n;
 	}
-	else if (GFS_VARIABLE (neighbor.c[d], status->i) != 1.) {
+	else if (GFS_VALUE (neighbor.c[d], status) != 1.) {
 	  if (!GFS_IS_MIXED (neighbor.c[d]) && solid->s[d] < 1.)
 	    solid->s[d] = 1.;
 	  else if (neighbor.c[d]->flags & GFS_FLAG_THIN)
@@ -1166,7 +1166,7 @@ gboolean gfs_cell_check_solid_fractions (FttCell * root)
 
 static void save_solid (FttCell * cell, GfsVariable * c)
 {
-  GFS_DOUBLE_TO_POINTER (GFS_VARIABLE (cell, c->i)) = GFS_STATE (cell)->solid;
+  GFS_DOUBLE_TO_POINTER (GFS_VALUE (cell, c)) = GFS_STATE (cell)->solid;
   GFS_STATE (cell)->solid = NULL;
 }
 

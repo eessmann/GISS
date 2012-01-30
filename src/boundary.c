@@ -46,9 +46,9 @@ static FttVector rpos[FTT_NEIGHBORS] = {
 static void symmetry (FttCellFace * f, GfsBc * b)
 {
   if (b->v->component == f->d/2)
-    GFS_VARIABLE (f->cell, b->v->i) = - GFS_VARIABLE (f->neighbor, b->v->i);
+    GFS_VALUE (f->cell, b->v) = - GFS_VALUE (f->neighbor, b->v);
   else
-    GFS_VARIABLE (f->cell, b->v->i) =   GFS_VARIABLE (f->neighbor, b->v->i);
+    GFS_VALUE (f->cell, b->v) =   GFS_VALUE (f->neighbor, b->v);
 }
 
 static void set_stencil_neighbor (FttCellFace * f, GfsBc * b, gdouble w)
@@ -68,7 +68,7 @@ static void face_symmetry (FttCellFace * f, GfsBc * b)
     GFS_STATE (f->cell)->f[f->d].v = 
       GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = 0.;
   else if (GFS_IS_VARIABLE_TRACER_VOF (b->v))
-    GFS_STATE (f->cell)->f[f->d].v = GFS_VARIABLE (f->neighbor, b->v->i);
+    GFS_STATE (f->cell)->f[f->d].v = GFS_VALUE (f->neighbor, b->v);
   else
     GFS_STATE (f->cell)->f[f->d].v = 
       GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v;
@@ -470,9 +470,9 @@ static void navier (FttCellFace * f, GfsBc * b)
 {
   gdouble h = ftt_cell_size (f->cell);
   gdouble lambda = gfs_function_face_value (GFS_BC_NAVIER (b)->lambda, f);
-  GFS_VARIABLE (f->cell, b->v->i) = 
+  GFS_VALUE (f->cell, b->v) = 
     (2.*gfs_function_face_value (GFS_BC_VALUE (b)->val, f)*h
-     - (h - 2.*lambda)*GFS_VARIABLE (f->neighbor, b->v->i))/(h + 2.*lambda);
+     - (h - 2.*lambda)*GFS_VALUE (f->neighbor, b->v))/(h + 2.*lambda);
 }
 
 static void face_navier (FttCellFace * f, GfsBc * b)
@@ -481,7 +481,7 @@ static void face_navier (FttCellFace * f, GfsBc * b)
   gdouble lambda = gfs_function_face_value (GFS_BC_NAVIER (b)->lambda, f);
   GFS_STATE (f->cell)->f[f->d].v = GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = 
     (gfs_function_face_value (GFS_BC_VALUE (b)->val, f)*h + 
-     2.*lambda*GFS_VARIABLE (f->neighbor, b->v->i))/(h + 2.*lambda);
+     2.*lambda*GFS_VALUE (f->neighbor, b->v))/(h + 2.*lambda);
 }
 
 static void bc_navier_read (GtsObject ** o, GtsFile * fp)
@@ -1244,7 +1244,7 @@ static void center_periodic (FttCellFace * face, GfsBc * b)
   g_assert (ftt_face_type (face) == FTT_FINE_FINE);
   g_assert (!FTT_CELL_IS_LEAF (face->cell) || FTT_CELL_IS_LEAF (face->neighbor));
   g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =
-    GFS_VARIABLE (face->neighbor, b->v->i);
+    GFS_VALUE (face->neighbor, b->v);
 }
 
 static void face_periodic (FttCellFace * face, GfsBc * b)
@@ -1332,7 +1332,7 @@ static void center_update (FttCell * cell,
 			   GfsBoundaryPeriodic * boundary)
 {
   g_assert (boundary->rcvcount < boundary->rcvbuf->len);
-  GFS_VARIABLE (cell, GFS_BOUNDARY (boundary)->v->i) =
+  GFS_VALUE (cell, GFS_BOUNDARY (boundary)->v) =
     g_array_index (boundary->rcvbuf, gdouble, boundary->rcvcount++);
 }
 

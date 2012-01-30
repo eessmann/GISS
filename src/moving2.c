@@ -579,14 +579,14 @@ static void moving_face_advection_flux (const FttCellFace * face,
     gfs_face_upwinded_value (face, GFS_FACE_UPWINDING, NULL)/ftt_cell_size (face->cell);
   if (!FTT_FACE_DIRECT (face))
     flux = - flux;
-  GFS_VARIABLE (face->cell, par->fv->i) -= flux;
+  GFS_VALUE (face->cell, par->fv) -= flux;
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += flux;
+    GFS_VALUE (face->neighbor, par->fv) += flux;
     break;
   case FTT_FINE_COARSE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += flux/FTT_CELLS;
+    GFS_VALUE (face->neighbor, par->fv) += flux/FTT_CELLS;
     break;
   default:
     g_assert_not_reached ();
@@ -616,14 +616,14 @@ static void moving_face_velocity_advection_flux (const FttCellFace * face,
 #endif
   if (!FTT_FACE_DIRECT (face))
     flux = - flux;
-  GFS_VARIABLE (face->cell, par->fv->i) -= flux;
+  GFS_VALUE (face->cell, par->fv) -= flux;
 
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += flux;
+    GFS_VALUE (face->neighbor, par->fv) += flux;
     break;
   case FTT_FINE_COARSE:
-    GFS_VARIABLE (face->neighbor, par->fv->i) += flux/FTT_CELLS;
+    GFS_VALUE (face->neighbor, par->fv) += flux/FTT_CELLS;
     break;
   default:
     g_assert_not_reached ();

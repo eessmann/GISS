@@ -182,10 +182,10 @@ static void domain_write (GtsObject * o, FILE * fp)
     GSList * i = domain->variables_io;
 
     if (i != NULL) {
-      fprintf (fp, "variables = %s", GFS_VARIABLE1 (i->data)->name);
+      fprintf (fp, "variables = %s", GFS_VARIABLE (i->data)->name);
       i = i->next;
       while (i) {
-	fprintf (fp, ",%s", GFS_VARIABLE1 (i->data)->name);
+	fprintf (fp, ",%s", GFS_VARIABLE (i->data)->name);
 	i = i->next;
       }
       fputc (' ', fp);
@@ -1755,7 +1755,7 @@ void gfs_domain_cell_traverse_boundary (GfsDomain * domain,
 static void add_stats (const FttCell * cell, gpointer * data)
 {
   GtsRange * s = data[0];
-  gdouble v = GFS_VALUE (cell, GFS_VARIABLE1 (data[1]));
+  gdouble v = GFS_VALUE (cell, GFS_VARIABLE (data[1]));
 
   if (v != GFS_NODATA)
     gts_range_add_value (s, v);
@@ -2988,7 +2988,7 @@ void gfs_cell_write (const FttCell * cell, FILE * fp,
     fputs (" -1", fp);
   
   while (variables) {
-    fprintf (fp, " %g", GFS_VALUE (cell, GFS_VARIABLE1 (variables->data)));
+    fprintf (fp, " %g", GFS_VALUE (cell, GFS_VARIABLE (variables->data)));
     variables = variables->next;
   }
 }
@@ -3100,7 +3100,7 @@ void gfs_cell_write_binary (const FttCell * cell, FILE * fp,
   }
   
   while (variables) {
-    gdouble a = GFS_VALUE (cell, GFS_VARIABLE1 (variables->data));
+    gdouble a = GFS_VALUE (cell, GFS_VARIABLE (variables->data));
     fwrite (&a, sizeof (gdouble), 1, fp);
     variables = variables->next;
   }
@@ -4508,7 +4508,7 @@ static void setup_binary_IO (GfsDomain * domain)
   domain->variables_io = NULL;
   GSList * i = domain->variables;
   while (i) {
-    if (GFS_VARIABLE1 (i->data)->name)
+    if (GFS_VARIABLE (i->data)->name)
       domain->variables_io = g_slist_append (domain->variables_io, i->data);
     i = i->next;
   }

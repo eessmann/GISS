@@ -727,7 +727,7 @@ gdouble gfs_vof_plane_interpolate (FttCell * cell,
   g_return_val_if_fail (t != NULL, 0.);
   g_return_val_if_fail (m != NULL, 0.);
 
-  GfsVariable * v = GFS_VARIABLE1 (t);
+  GfsVariable * v = GFS_VARIABLE (t);
   gdouble f = GFS_VALUE (cell, v);
   g_return_val_if_fail (!GFS_IS_FULL (f), 0.);
   FttComponent c;
@@ -772,7 +772,7 @@ gdouble gfs_vof_interpolate (FttCell * cell,
   g_return_val_if_fail (l <= level, 0.);
   g_return_val_if_fail (t != NULL, 0.);
 
-  GfsVariable * v = GFS_VARIABLE1 (t);
+  GfsVariable * v = GFS_VARIABLE (t);
   gdouble f = GFS_VALUE (cell, v);
   if (l == level || GFS_IS_FULL (f))
     return f;
@@ -937,7 +937,7 @@ static void no_coarse_fine (FttCell * cell,  GfsVariable * v) {}
 
 static void allocate_normal_alpha (GfsVariableTracerVOF * t)
 {
-  GfsVariable * v = GFS_VARIABLE1 (t);
+  GfsVariable * v = GFS_VARIABLE (t);
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++) {
     static gchar index[][2] = {"x", "y", "z"};
@@ -989,7 +989,7 @@ static gboolean variable_tracer_vof_event (GfsEvent * event,
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_tracer_vof_class ())->parent_class)->event)
       (event, sim)) {
-    (* GFS_VARIABLE_TRACER_VOF_CLASS (GTS_OBJECT (event)->klass)->update) (GFS_VARIABLE1 (event),
+    (* GFS_VARIABLE_TRACER_VOF_CLASS (GTS_OBJECT (event)->klass)->update) (GFS_VARIABLE (event),
 									   GFS_DOMAIN (sim));
     return TRUE;
   }
@@ -1710,7 +1710,7 @@ gdouble gfs_vof_face_value (const FttCellFace * face, GfsVariableTracerVOF * t)
   g_return_val_if_fail (face != NULL, 0.);
   g_return_val_if_fail (t != NULL, 0.);
 
-  GfsVariable * v = GFS_VARIABLE1 (t);
+  GfsVariable * v = GFS_VARIABLE (t);
   gdouble vright, vleft = GFS_VALUE (face->cell, v); //face_value (face->cell, face->d, v);
   if (ftt_face_type (face) == FTT_FINE_COARSE) {
     gdouble f = GFS_VALUE (face->neighbor, v);
@@ -1776,7 +1776,7 @@ guint gfs_vof_facet (FttCell * cell,
   g_return_val_if_fail (p != NULL, 0);
   g_return_val_if_fail (m != NULL, 0);
 
-  if (GFS_IS_FULL (GFS_VALUE (cell, GFS_VARIABLE1 (t))))
+  if (GFS_IS_FULL (GFS_VALUE (cell, GFS_VARIABLE (t))))
     return 0;
 
   guint n = 0;
@@ -1855,7 +1855,7 @@ gdouble gfs_vof_facet_distance2 (FttCell * cell,
   g_return_val_if_fail (t != NULL, GFS_NODATA);
   g_return_val_if_fail (p != NULL, GFS_NODATA);
 
-  if (GFS_IS_FULL (GFS_VALUE (cell, GFS_VARIABLE1 (t))))
+  if (GFS_IS_FULL (GFS_VALUE (cell, GFS_VARIABLE (t))))
     return GFS_NODATA;
 
   FttVector q, m;
@@ -1920,7 +1920,7 @@ gdouble gfs_vof_center (FttCell * cell, GfsVariableTracerVOF * t, FttVector * p)
   g_return_val_if_fail (t != NULL, FALSE);
   g_return_val_if_fail (p != NULL, 0);
 
-  if (GFS_IS_FULL (GFS_VALUE (cell, GFS_VARIABLE1 (t))))
+  if (GFS_IS_FULL (GFS_VALUE (cell, GFS_VARIABLE (t))))
     return 0.;
 
   FttVector m, o;
@@ -2009,7 +2009,7 @@ static gboolean curvature_along_direction (FttCell * cell,
 					   GtsVector * interface,
 					   guint * n)
 {
-  GfsVariable * v = GFS_VARIABLE1 (t);
+  GfsVariable * v = GFS_VARIABLE (t);
 
   FttVector m;
   FttComponent i;
@@ -2335,7 +2335,7 @@ static void add_vof_center (FttCell * cell, FttVector * p, guint level,
 			    GfsVariableTracerVOF * t,
 			    ParabolaFit * fit, gdouble w)
 {
-  gdouble f = GFS_VALUE (cell, GFS_VARIABLE1 (t));
+  gdouble f = GFS_VALUE (cell, GFS_VARIABLE (t));
   if (!GFS_IS_FULL (f)) {
     FttVector m, c;
     gdouble alpha = gfs_vof_plane_interpolate (cell, p, level, t, &m);
@@ -2392,7 +2392,7 @@ gdouble gfs_fit_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble * k
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (t != NULL, 0.);
 
-  GfsVariable * v = GFS_VARIABLE1 (t);
+  GfsVariable * v = GFS_VARIABLE (t);
   g_return_val_if_fail (!GFS_IS_FULL (GFS_VALUE (cell,  v)), 0.);
 
   FttVector m;
@@ -2410,7 +2410,7 @@ gdouble gfs_fit_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble * k
   fc.z = (fc.z - p.z)/h;
   parabola_fit_init (&fit, &fc, &m);
   parabola_fit_add (&fit, &fc.x, area);
-  fit_from_fractions (cell, GFS_VARIABLE1 (t), &fit);
+  fit_from_fractions (cell, GFS_VARIABLE (t), &fit);
   parabola_fit_solve (&fit);
   gdouble kappa = parabola_fit_curvature (&fit, 2., kmax)/h;
   if (kmax)
@@ -2486,7 +2486,7 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (t != NULL, 0.);
 
-  GfsVariable * v = GFS_VARIABLE1 (t);
+  GfsVariable * v = GFS_VARIABLE (t);
   gdouble f = GFS_VALUE (cell,  v);
   g_return_val_if_fail (!GFS_IS_FULL (f), 0.);
 
@@ -2651,7 +2651,7 @@ gboolean gfs_curvature_along_direction (FttCell * cell,
     h[1] = neighboring_column (cell, hv, c, orientation, 2*oc + 1, &x[1]);
     if (h[1] != GFS_NODATA && x[1] == 1.) {
       x[1] = - x[1];
-      curvature_from_h (cell, GFS_VARIABLE1 (t)->domain, x, h, orientation, c, kappa, kmax);
+      curvature_from_h (cell, GFS_VARIABLE (t)->domain, x, h, orientation, c, kappa, kmax);
       return TRUE;
     }
   }
@@ -2693,7 +2693,7 @@ static gboolean curvature_along_direction_new (FttCell * cell,
   x[1] = - x[1];
 
   if (h[2] != GFS_NODATA && h[0] != GFS_NODATA && h[1] != GFS_NODATA) {
-    curvature_from_h (cell, GFS_VARIABLE1 (t)->domain, x, h, orientation, c, kappa, kmax);
+    curvature_from_h (cell, GFS_VARIABLE (t)->domain, x, h, orientation, c, kappa, kmax);
     return TRUE;
   }
   else { /* h[2] == GFS_NODATA || h[0] == GFS_NODATA || h[1] == GFS_NODATA */
@@ -2738,7 +2738,7 @@ gdouble gfs_height_curvature_new (FttCell * cell, GfsVariableTracerVOFHeight * t
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (t != NULL, 0.);
 
-  GfsVariable * v = GFS_VARIABLE1 (t);
+  GfsVariable * v = GFS_VARIABLE (t);
   gdouble f = GFS_VALUE (cell,  v);
   g_return_val_if_fail (!GFS_IS_FULL (f), 0.);
 
@@ -2806,7 +2806,7 @@ gdouble gfs_height_curvature_new (FttCell * cell, GfsVariableTracerVOFHeight * t
  */
 gdouble gfs_vof_correctness (FttCell * cell, GfsVariableTracerVOF * t)
 {
-  GfsVariable * v = GFS_VARIABLE1 (t);
+  GfsVariable * v = GFS_VARIABLE (t);
   gdouble F(3,3,3);
   
   g_return_val_if_fail (cell != NULL, 0.);
@@ -2867,7 +2867,7 @@ static void variable_vof_concentration_read (GtsObject ** o, GtsFile * fp)
 static void variable_vof_concentration_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_variable_vof_concentration_class ())->parent_class->write) (o, fp);
-  fprintf (fp, " %s", GFS_VARIABLE1 (GFS_VARIABLE_VOF_CONCENTRATION (o)->vof)->name);
+  fprintf (fp, " %s", GFS_VARIABLE (GFS_VARIABLE_VOF_CONCENTRATION (o)->vof)->name);
 }
 
 static void variable_vof_concentration_class_init (GtsObjectClass * klass)
@@ -3443,7 +3443,7 @@ static void variable_tracer_vof_height_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  GfsVariable * v = GFS_VARIABLE1 (*o);
+  GfsVariable * v = GFS_VARIABLE (*o);
   GfsVariableTracerVOFHeight * t = GFS_VARIABLE_TRACER_VOF_HEIGHT (v);
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++) {

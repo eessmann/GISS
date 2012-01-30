@@ -61,7 +61,7 @@ struct _GfsVariableClass {
   /*< public >*/
 };
 
-#define GFS_VARIABLE1(obj)            GTS_OBJECT_CAST (obj,\
+#define GFS_VARIABLE(obj)            GTS_OBJECT_CAST (obj,\
 					         GfsVariable,\
 					         gfs_variable_class ())
 #define GFS_VARIABLE_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
