@@ -253,6 +253,25 @@ GfsEventClass * gfs_spatial_sum_class  (void);
 
 GfsVariableClass * gfs_variable_poisson_class  (void);
 
+/* GfsHydrostaticPressure: Header */
+
+typedef struct _GfsHydrostaticPressure GfsHydrostaticPressure;
+
+/** \instance{GfsHydrostaticPressure} */
+struct _GfsHydrostaticPressure {
+  /*< private >*/
+  GfsVariable parent;
+  FttComponent c;
+};
+
+#define GFS_HYDROSTATIC_PRESSURE(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsHydrostaticPressure,\
+					         gfs_hydrostatic_pressure_class ())
+#define GFS_IS_HYDROSTATIC_PRESSURE(obj)         (gts_object_is_from_class (obj,\
+						 gfs_hydrostatic_pressure_class ()))
+
+GfsVariableClass * gfs_hydrostatic_pressure_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

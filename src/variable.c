@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include "variable.h"
 #include "vof.h"
+#include "source.h"
 #include "init.h"
 
 /**
@@ -1078,6 +1079,147 @@ GfsVariableClass * gfs_variable_age_class (void)
 }
 
 /** \endobject{GfsVariableAge} */
+
+/**
+ * The hydrostatic pressure
+ * \beginobject{GfsHydrostaticPressure}
+ */
+
+static FttComponent hydrostatic_component (GfsDomain * domain)
+{
+  GfsVariable ** u = gfs_domain_velocity (domain);
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    if (u[c]->sources) {
+      GSList * i = GTS_SLIST_CONTAINER (u[c]->sources)->items;      
+      while (i) {
+	GfsSourceGeneric * s = i->data;
+	if (s->face_value)
+	  return c;
+	i = i->next;
+      }
+    }
+  return FTT_DIMENSION;
+}
+
+static void hydrostatic_pressure_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_hydrostatic_pressure_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsHydrostaticPressure * ph = GFS_HYDROSTATIC_PRESSURE (*o);
+  ph->c = hydrostatic_component (GFS_VARIABLE (*o)->domain);
+  if (ph->c == FTT_DIMENSION) {
+    gts_file_error (fp, "could not find any velocity sources");
+    return;
+  }
+
+  GFS_VARIABLE (*o)->units = 2.;
+}
+
+static void hydrostatic_pressure (FttCell * cell, GfsVariable * v)
+{
+  FttDirection d = 2*GFS_HYDROSTATIC_PRESSURE (v)->c + 1;
+  GtsFifo * fifo = gts_fifo_new ();
+
+  GFS_VALUE (cell, v) = 0.;
+  gts_fifo_push (fifo, cell);
+
+  while ((cell = gts_fifo_pop (fifo))) {
+    FttCell * neighbor = ftt_cell_neighbor (cell, d);
+    if (neighbor) {
+      if (FTT_CELL_IS_LEAF (neighbor)) {
+	if (ftt_cell_level (neighbor) == ftt_cell_level (cell)) {
+	  /* neighbor at same level */
+	  double dp = GFS_STATE (cell)->f[d].un*ftt_cell_size (cell)/GFS_STATE (cell)->f[d].v;
+	  GFS_VALUE (neighbor, v) = GFS_VALUE (cell, v) - dp;
+	  gts_fifo_push (fifo, neighbor);
+	}
+	else {
+	  /* coarser neighbour */
+	  if (gts_fifo_top (fifo) == NULL) { /* only consider the last fine cell */
+	    FttDirection od = FTT_OPPOSITE_DIRECTION (d);
+	    double dp = GFS_STATE (neighbor)->f[od].un*ftt_cell_size (neighbor)/
+	      GFS_STATE (neighbor)->f[od].v;
+	    double p = 0.;
+	    FttCellChildren child;
+	    int i, n = ftt_cell_children_direction (ftt_cell_parent (cell), d, &child);
+	    for (i = 0; i < n; i++)
+	      p += GFS_VALUE (child.c[i], v);
+	    GFS_VALUE (neighbor, v) = p/n - 3.*dp/4.;
+	    gts_fifo_push (fifo, neighbor);
+	  }
+	}
+      }
+      else {
+	/* finer neighbor */
+	FttCellChildren child;
+	int i, n = ftt_cell_children_direction (neighbor, FTT_OPPOSITE_DIRECTION (d), &child);
+	double dp = GFS_STATE (cell)->f[d].un*ftt_cell_size (cell)/GFS_STATE (cell)->f[d].v;
+	double p = GFS_VALUE (cell, v) - 3.*dp/4.;
+	for (i = 0; i < n; i++) {
+	  GFS_VALUE (child.c[i], v) = p;
+	  gts_fifo_push (fifo, child.c[i]);
+	}
+      }
+    }
+  }
+
+  gts_fifo_destroy (fifo);
+}
+
+static gboolean hydrostatic_pressure_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (gfs_variable_class ())->event) (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    gfs_domain_face_traverse (domain, FTT_XYZ,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
+    gfs_velocity_face_sources (domain, gfs_domain_velocity (domain), 1., NULL, NULL);
+    gfs_poisson_coefficients (domain, sim->physical_params.alpha, TRUE, TRUE, TRUE);
+    gfs_domain_cell_traverse_boundary (domain, 2*GFS_HYDROSTATIC_PRESSURE (event)->c,
+				       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				       (FttCellTraverseFunc) hydrostatic_pressure, event);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE (event));
+    return TRUE;
+  }
+  return FALSE;  
+}
+
+static void hydrostatic_pressure_class_init (GtsObjectClass * klass)
+{
+  klass->read = hydrostatic_pressure_read;
+  GFS_EVENT_CLASS (klass)->event = hydrostatic_pressure_event;
+}
+
+static void hydrostatic_pressure_init (GfsVariable * v)
+{
+  GFS_EVENT (v)->start = -1;
+  v->coarse_fine = (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine;
+}
+
+GfsVariableClass * gfs_hydrostatic_pressure_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsHydrostaticPressure",
+      sizeof (GfsHydrostaticPressure),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) hydrostatic_pressure_class_init,
+      (GtsObjectInitFunc) hydrostatic_pressure_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), &info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsHydrostaticPressure} */
 
 /**
  * Spatially-constant but time-dependent variables.

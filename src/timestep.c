@@ -367,6 +367,14 @@ static void mac_projection (GfsDomain * domain,
   /* Initialize face coefficients */
   gfs_poisson_coefficients (domain, alpha, TRUE, TRUE, TRUE);
 
+  /* hydrostatic pressure */
+  GSList * i = domain->variables;
+  while (i) {
+    if (GFS_IS_HYDROSTATIC_PRESSURE (i->data))
+      gfs_correct_normal_velocities (domain, FTT_DIMENSION, i->data, g, apar->dt);
+    i = i->next;
+  }
+
   /* Initialize diagonal coefficient */
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			    (FttCellTraverseFunc) gfs_cell_reset, dia);
