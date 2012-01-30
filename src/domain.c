@@ -2339,17 +2339,10 @@ static void box_split (GfsBox * box, SplitPar * p)
 	    GFS_BOUNDARY_PERIODIC (newboundary)->d = GFS_BOUNDARY_PERIODIC (boundary)->d;
 	  }
 	  else {
-	    gchar fname[] = "/tmp/XXXXXX";
-	    gint fd = mkstemp (fname);
-	    FILE * fp = fdopen (fd, "w");
-	    GtsFile * gfp;
-	    
+	    FILE * fp = tmpfile ();
 	    (* GTS_OBJECT_CLASS (klass)->write) (GTS_OBJECT (boundary), fp);
-	    fclose (fp);
-	    close (fd);
-	    fp = fopen (fname, "r");
-	    unlink (fname);
-	    gfp = gts_file_new (fp);
+	    rewind (fp);
+	    GtsFile * gfp = gts_file_new (fp);
 	    (* GTS_OBJECT_CLASS (klass)->read) (&newboundary, gfp);
 	    g_assert (gfp->type != GTS_ERROR);
 	    gts_file_destroy (gfp);
