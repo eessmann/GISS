@@ -717,7 +717,7 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 	  GfsVariable * v = i->data;
 	  fprintf (fin, 
 		   "    %s = gfs_dimensional_value (GFS_VARIABLE (%#lx),\n"
-		   "           gfs_face_interpolated_value_new (face, GFS_VARIABLE (%#lx)->i));\n", 
+		   "           gfs_face_interpolated_value (face, GFS_VARIABLE (%#lx)->i));\n", 
 		   v->name, (unsigned long) v, (unsigned long) v);
 	  i = i->next;
 	}
