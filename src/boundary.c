@@ -1308,7 +1308,8 @@ static void periodic_match (GfsBoundary * boundary)
   (* gfs_boundary_class ()->match) (boundary);
 
   g_assert (GFS_BOUNDARY_PERIODIC (boundary)->sndcount == 0);
-  boundary_tree (boundary->root, GFS_BOUNDARY_PERIODIC (boundary));
+  if (boundary->root)
+    boundary_tree (boundary->root, GFS_BOUNDARY_PERIODIC (boundary));
 }
 
 static void send (GfsBoundary * bb)
