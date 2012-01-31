@@ -23,8 +23,6 @@ EXAMPLES = \
 	plateau \
 	atomisation
 
-WEBROOT = /var/www/gerris
-
 EXTRA_DIST = \
 	template.tex \
 	examples.bib \

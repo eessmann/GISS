@@ -15,8 +15,7 @@ PPA = gerris-ppa
 # change this to the ID of the PPA GPG key
 KEY = 07AB22DC
 
-# change this to the html changelog for this launchpad release
-LOG = /var/www/gerris/version/gerris_changes
+LOG = $(WEBROOT)/version/gerris_changes
 
 SUBDIRS = src modules tools test doc desktop debian
 

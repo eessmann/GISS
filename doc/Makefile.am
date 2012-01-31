@@ -2,8 +2,6 @@
 
 SUBDIRS = tutorial examples manpages
 
-WEBROOT = /var/www/gerris
-
 EXTRA_DIST = figures share doxy.conf
 
 noinst_PROGRAMS = autoclass

@@ -55,8 +55,6 @@ TESTDIRS = \
 	electro \
 	debye
 
-WEBROOT = /var/www/gerris
-
 EXTRA_DIST = \
 	template.tex \
 	tests.bib \
