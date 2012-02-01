@@ -372,8 +372,10 @@ static void poisson_electric (GfsElectroHydro * elec, gdouble dt)
     gts_object_destroy (GTS_OBJECT (rhoc));
     par = &d->D->par;
   }
-  else 
+  else {
+    gfs_domain_surface_bc (domain, phi);
     gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered, TRUE);
+  }
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) rescale_div, dive);
 
   res1e = gfs_temporary_variable (domain);
