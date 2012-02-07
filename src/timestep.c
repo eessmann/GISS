@@ -249,7 +249,6 @@ void gfs_velocity_face_sources (GfsDomain * domain,
 {
   g_return_if_fail (domain != NULL);
   g_return_if_fail (u != NULL);
-  g_return_if_fail (g != NULL);
 
   FttComponent c;
   for (c = 0; c < FTT_DIMENSION; c++)
