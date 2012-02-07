@@ -652,6 +652,8 @@ static void domain_init (GfsDomain * domain)
 
   domain->sorted = g_ptr_array_new ();
   domain->dirty = TRUE;
+  
+  domain->projections = NULL;
 }
 
 GfsDomainClass * gfs_domain_class (void)
@@ -2193,7 +2195,7 @@ GfsNorm gfs_domain_norm_residual (GfsDomain * domain,
  * gfs_domain_velocity:
  * @domain: a #GfsDomain.
  *
- * Returns: the components of the velocity vector for @domain.
+ * Returns: the components of the velocity vector for @domain or %NULL.
  */
 GfsVariable ** gfs_domain_velocity (GfsDomain * domain)
 {
@@ -2204,7 +2206,8 @@ GfsVariable ** gfs_domain_velocity (GfsDomain * domain)
   
   for (c = 0; c < FTT_DIMENSION; c++) {
     GfsVariable * v = gfs_variable_from_name (domain->variables, name[c]);
-    g_return_val_if_fail (v != NULL, NULL);
+    if (v == NULL)
+      return NULL;
     domain->velocity[c] = v;
   }
   return domain->velocity;
@@ -4589,3 +4592,222 @@ GtsObject * gfs_object_from_name (GfsDomain * domain, const gchar * name)
 }
 
 /** \endobject{GfsDomain} */
+
+/**
+ * Projection of a GfsDomain along a coordinate direction.
+ * \beginobject{GfsDomainProjection}
+ */
+
+static void gfs_domain_projection_destroy (GtsObject * o)
+{
+  GfsDomainProjection * p = GFS_DOMAIN_PROJECTION (o);
+  p->domain->projections = g_slist_remove (p->domain->projections, p);
+
+  (* GTS_OBJECT_CLASS (gfs_domain_projection_class ())->parent_class->destroy) (o);
+} 
+
+static void gfs_domain_projection_class_init (GfsEventClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->destroy = gfs_domain_projection_destroy;
+}
+
+GfsDomainClass * gfs_domain_projection_class (void)
+{
+  static GfsDomainClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsDomainProjection",
+      sizeof (GfsDomainProjection),
+      sizeof (GfsDomainClass),
+      (GtsObjectClassInitFunc) gfs_domain_projection_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_domain_class ()), &info);
+  }
+
+  return klass;
+}
+
+typedef struct {
+  GfsDomainProjection * proj;
+  FttCell * cell;
+  GfsVariable * maxlevel;
+} ProjData;
+
+static gboolean overlap (FttCell * cell1, gpointer data)
+{
+  ProjData * r = data;
+  FttCell * cell2 = r->cell;
+  if (ftt_cell_level (cell1) < ftt_cell_level (cell2)) {
+    FttCell * tmp = cell2;
+    cell2 = cell1;
+    cell1 = tmp;
+  }
+  FttVector p, q;
+  ftt_cell_pos (cell1, &p);
+  ftt_cell_pos (cell2, &q);
+  gdouble h = ftt_cell_size (cell2)/2.;
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    if (c != r->proj->c && ((&p.x)[c] < (&q.x)[c] - h || (&p.x)[c] > (&q.x)[c] + h))
+      return FALSE;
+  return TRUE;
+}
+
+static void update_maxlevel (FttCell * cell, int * maxlevel)
+{
+  int level = ftt_cell_level (cell);
+  if (level > *maxlevel)
+    *maxlevel = level;
+}
+
+static void project_refine (FttCell * cell, ProjData * p)
+{
+  int level = ftt_cell_level (cell), maxlevel = 0;
+  p->cell = cell;
+  gfs_domain_cell_traverse_condition (p->proj->domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, level + 1,
+				      (FttCellTraverseFunc) update_maxlevel, &maxlevel,
+				      overlap, p);
+  GFS_VALUE (cell, p->maxlevel) = maxlevel;
+  if (FTT_CELL_IS_LEAF (cell)) {
+    if (maxlevel > level) {
+      ftt_cell_refine_single (cell, 
+			      GFS_DOMAIN (p->proj)->cell_init, 
+			      GFS_DOMAIN (p->proj)->cell_init_data);
+      ftt_cell_flatten (cell, 2*p->proj->c, (FttCellCleanupFunc) gfs_cell_cleanup, p->proj);
+    }
+  }
+  else
+    ftt_cell_flatten (cell, 2*p->proj->c, (FttCellCleanupFunc) gfs_cell_cleanup, p->proj);
+}
+
+static gboolean finer (FttCell * cell, ProjData * p)
+{
+  int level = ftt_cell_level (cell);
+  g_assert (level >= GFS_VALUE (cell, p->maxlevel));
+  return (level > GFS_VALUE (cell, p->maxlevel));
+}
+
+static void project_coarsen_box (GfsBox * box, ProjData * p)
+{
+  ftt_cell_coarsen (box->root,
+		    (FttCellCoarsenFunc) finer, p,
+		    (FttCellCleanupFunc) gfs_cell_cleanup, p->proj);
+}
+
+/**
+ * gfs_domain_projection_reshape:
+ * @proj: a #GfsDomainProjection.
+ *
+ * Updates the mesh for projection @proj.
+ */
+void gfs_domain_projection_reshape (GfsDomainProjection * proj)
+{
+  g_return_if_fail (proj != NULL);
+
+  ProjData p = { proj };
+  GfsDomain * domain = GFS_DOMAIN (proj);
+  p.maxlevel = gfs_temporary_variable (domain);
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			    (FttCellTraverseFunc) project_refine, &p);
+  gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) project_coarsen_box, &p);
+  gts_object_destroy (GTS_OBJECT (p.maxlevel));
+  gfs_domain_reshape (domain, gfs_domain_depth (domain));
+}
+
+/**
+ * gfs_domain_projection_new:
+ * @domain: a #GfsDomain.
+ * @c: the component aligned with the projection direction.
+ *
+ * Returns: a new #GfsDomainProjection, projection of @domain along @c.
+ */
+GfsDomainProjection * gfs_domain_projection_new (GfsDomain * domain,
+						 FttComponent c)
+{
+  g_return_val_if_fail (domain != NULL, NULL);
+  g_return_val_if_fail (c < FTT_DIMENSION, NULL);
+
+  /* clone domain */
+  FILE * f = tmpfile ();
+  gint depth = domain->max_depth_write;
+  domain->max_depth_write = -2; /* no variables, no cells */
+  GtsObjectClass * klass = GTS_OBJECT (domain)->klass;
+  GTS_OBJECT (domain)->klass = GTS_OBJECT_CLASS (gfs_domain_projection_class ());
+  gts_graph_write (GTS_GRAPH (domain), f);
+  GTS_OBJECT (domain)->klass = klass;
+  domain->max_depth_write = depth;
+
+  rewind (f);
+  GtsFile * fp = gts_file_new (f);
+  GfsDomainProjection * proj = GFS_DOMAIN_PROJECTION (gfs_domain_read (fp));
+  if (fp->type == GTS_ERROR)
+    g_error ("gfs_domain_projection_new:\n%d:%d:%s", fp->line, fp->pos, fp->error);
+  gts_file_destroy (fp);
+  fclose (f);
+  gfs_clock_start (GFS_DOMAIN (proj)->timer);
+
+  /* project domain */
+  proj->c = c;
+  proj->domain = domain;
+  domain->projections = g_slist_prepend (domain->projections, proj);
+  gfs_domain_projection_reshape (proj);
+
+  return proj;
+}
+
+typedef struct {
+  GfsDomainProjection * proj;
+  FttCell * cell;
+  GfsProjectionTraverseFunc func;
+  gpointer data;
+} ProjectionTraverse;
+
+static void apply_func (FttCell * cell, ProjectionTraverse * p)
+{
+  (* p->func) (p->cell, cell, p->data);
+}
+
+static void traverse_overlapping (FttCell * cell, ProjectionTraverse * p)
+{
+  p->cell = cell;
+  gfs_domain_cell_traverse_condition (p->proj->domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, 
+				      ftt_cell_level (cell),
+				      (FttCellTraverseFunc) apply_func, p,
+				      overlap, p);
+}
+
+/**
+ * gfs_domain_projection_traverse:
+ * @domain: a #GfsDomainProjection.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @max_depth: the maximum depth of the traversal. Cells below this
+ * depth will not be traversed. If @max_depth is -1 all cells in the
+ * tree are visited.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ *
+ * For each cell of @domain defined by the traversal flags, traverses
+ * all the overlapping leaf cells of its parent domain.
+ */
+void gfs_domain_projection_traverse (GfsDomainProjection * domain,
+				     FttTraverseType order,
+				     FttTraverseFlags flags,
+				     gint max_depth,
+				     GfsProjectionTraverseFunc func,
+				     gpointer data)
+{
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (func != NULL);
+
+  ProjectionTraverse p = { domain, NULL, func, data };
+  gfs_domain_cell_traverse (GFS_DOMAIN (domain), order, flags, max_depth,
+			    (FttCellTraverseFunc) traverse_overlapping, &p);
+}
+
+/** \endobject{GfsDomainProjection} */

@@ -861,6 +861,12 @@ void gfs_domain_reshape (GfsDomain * domain, guint depth)
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, i->data);
     i = i->next;
   }
+
+  i = domain->projections;
+  while (i) {
+    gfs_domain_projection_reshape (i->data);
+    i = i->next;
+  }
 }
 
 #define CELL_COST(cell) (GFS_VALUE (cell, p->costv))

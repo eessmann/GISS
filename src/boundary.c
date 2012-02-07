@@ -783,7 +783,8 @@ static void gfs_boundary_read (GtsObject ** o, GtsFile * fp)
 
   GfsBoundary * b = GFS_BOUNDARY (*o);
   GfsVariable ** v = gfs_domain_velocity (gfs_box_domain (b->box));
-  gfs_boundary_add_bc (b, gfs_bc_value_new (gfs_bc_dirichlet_class (), v[b->d/2], NULL, FALSE));
+  if (v)
+    gfs_boundary_add_bc (b, gfs_bc_value_new (gfs_bc_dirichlet_class (), v[b->d/2], NULL, FALSE));
 
   boundary_read_extra_bc (GFS_BOUNDARY (*o), fp);
 }

@@ -105,6 +105,8 @@ struct _GfsDomain {
 
   GPtrArray * sorted; /**< array of sorted boxes */
   gboolean dirty;     /**< whether the sorted array needs updating */
+
+  GSList * projections; /**< list of GfsDomainProjection associated with this domain */
 };
 
 struct _GfsDomainClass {
@@ -124,7 +126,7 @@ struct _GfsDomainClass {
 
 #define gfs_domain_variables_number(d) ((d)->allocated->len - 1)
 #define gfs_domain_variables_size(d)   (sizeof (GfsStateVector) +\
-                                        sizeof (gdouble)*((d)->allocated->len - 1))
+					sizeof (gdouble)*(MAX ((d)->allocated->len, 1) - 1))
      
 GfsDomainClass * gfs_domain_class          (void);
 void         gfs_domain_cell_traverse         (GfsDomain * domain,
@@ -481,6 +483,37 @@ gdouble gfs_cell_volume (const FttCell * cell, const GfsDomain * domain)
 
 GtsObject * gfs_object_from_name        (GfsDomain * domain, 
 					 const gchar * name);
+
+/* GfsDomainProjection: Header */
+
+typedef struct _GfsDomainProjection GfsDomainProjection;
+
+struct _GfsDomainProjection {
+  /*< private >*/
+  GfsDomain parent;
+  
+  /*< public >*/
+  GfsDomain * domain;
+  FttComponent c;
+};
+
+#define GFS_DOMAIN_PROJECTION(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsDomainProjection,\
+					           gfs_domain_projection_class ())
+
+GfsDomainClass *      gfs_domain_projection_class    (void);
+GfsDomainProjection * gfs_domain_projection_new      (GfsDomain * domain,
+						      FttComponent c);
+void                  gfs_domain_projection_reshape  (GfsDomainProjection * proj);
+typedef void       (* GfsProjectionTraverseFunc)     (FttCell * cell, 
+						      FttCell * proj, 
+						      gpointer data);
+void                  gfs_domain_projection_traverse (GfsDomainProjection * domain,
+						      FttTraverseType order,
+						      FttTraverseFlags flags,
+						      gint max_depth,
+						      GfsProjectionTraverseFunc func,
+						      gpointer data);
 
 #ifdef __cplusplus
 }
