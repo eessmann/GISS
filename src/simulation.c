@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -2070,7 +2070,6 @@ static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * d
   gts_range_init (&p.vol);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) rescale_div, &p);
-
   if (!dirichlet) {
     gts_range_update (&p.vol);
     
@@ -2082,16 +2081,29 @@ static void correct_div (GfsDomain * domain, GfsVariable * divu, GfsVariable * d
   }
 }
 
-static void copy_res (FttCell * cell, gpointer * data)
-{
-  GfsVariable * res = data[0], * res1 = data[1];
-  GFS_VALUE (cell, res) = GFS_VALUE (cell, res1);
-}
-
 static void has_dirichlet (FttCell * cell, GfsVariable * p)
 {
   if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
     p->centered = FALSE;
+}
+
+typedef struct {
+  GfsVariable * lhs;
+  gboolean dirichlet;
+} CompatPar;
+
+static void check_box_dirichlet (GfsBox * box, CompatPar * p)
+{
+  FttDirection d;
+  for (d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, p->lhs);
+      if (GFS_IS_BC_DIRICHLET (bc)) {
+	p->dirichlet = TRUE;
+	return;
+      }	
+    }
 }
 
 static void poisson_run (GfsSimulation * sim)
@@ -2120,9 +2132,18 @@ static void poisson_run (GfsSimulation * sim)
       g_warning ("the solid surface cuts %d boundary cells,\n"
 		 "this may cause errors for the Poisson solution\n", nf);
   }
+  gboolean dirichlet = !p->centered;
+  gfs_all_reduce (domain, dirichlet, MPI_INT, MPI_MAX);
+  if (!dirichlet) {
+    /* check whether any boundary has a Dirichlet condition on @p */
+    CompatPar q = { p, FALSE };
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) check_box_dirichlet, &q);
+    gfs_all_reduce (domain, q.dirichlet, MPI_INT, MPI_MAX);
+    dirichlet = q.dirichlet;
+  }
 
   div = gfs_temporary_variable (domain);
-  res1 = gfs_temporary_variable (domain);
+  res1 = res ? res : gfs_temporary_variable (domain);
   dia = gfs_temporary_variable (domain);
 
   while (sim->time.i < sim->time.iend && sim->time.t < sim->time.end) {
@@ -2133,16 +2154,8 @@ static void poisson_run (GfsSimulation * sim)
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gfs_simulation_adapt (sim);
 
-    if (res) {
-      gpointer data[2];
-      data[0] = res;
-      data[1] = res1;
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) copy_res, data);
-    }
-    
     gfs_domain_surface_bc (domain, p);
-    correct_div (domain, gfs_variable_from_name (domain->variables, "Div"), div, !p->centered);
+    correct_div (domain, gfs_variable_from_name (domain->variables, "Div"), div, dirichlet);
     gfs_poisson_coefficients (domain, sim->physical_params.alpha, FALSE, p->centered, TRUE);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, dia);
@@ -2163,7 +2176,8 @@ static void poisson_run (GfsSimulation * sim)
 
   gts_object_destroy (GTS_OBJECT (dia));
   gts_object_destroy (GTS_OBJECT (div));
-  gts_object_destroy (GTS_OBJECT (res1));
+  if (!res)
+    gts_object_destroy (GTS_OBJECT (res1));
 }
 
 static void poisson_class_init (GfsSimulationClass * klass)
