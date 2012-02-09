@@ -1118,6 +1118,47 @@ static void hydrostatic_pressure_read (GtsObject ** o, GtsFile * fp)
   GFS_VARIABLE (*o)->units = 2.;
 }
 
+static gboolean hydrostatic_pressure_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (gfs_variable_class ())->event) (event, sim)) {
+    gfs_hydrostatic_pressure_update (GFS_HYDROSTATIC_PRESSURE (event), sim->physical_params.alpha);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void hydrostatic_pressure_class_init (GtsObjectClass * klass)
+{
+  klass->read = hydrostatic_pressure_read;
+  GFS_EVENT_CLASS (klass)->event = hydrostatic_pressure_event;
+}
+
+static void hydrostatic_pressure_init (GfsVariable * v)
+{
+  GFS_EVENT (v)->start = -1;
+  v->coarse_fine = (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine;
+}
+
+GfsVariableClass * gfs_hydrostatic_pressure_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsHydrostaticPressure",
+      sizeof (GfsHydrostaticPressure),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) hydrostatic_pressure_class_init,
+      (GtsObjectInitFunc) hydrostatic_pressure_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), &info);
+  }
+
+  return klass;
+}
+
 static void hydrostatic_pressure (FttCell * cell, GfsVariable * v)
 {
   FttDirection d = 2*GFS_HYDROSTATIC_PRESSURE (v)->c + 1;
@@ -1169,54 +1210,28 @@ static void hydrostatic_pressure (FttCell * cell, GfsVariable * v)
   gts_fifo_destroy (fifo);
 }
 
-static gboolean hydrostatic_pressure_event (GfsEvent * event, GfsSimulation * sim)
+/**
+ * gfs_hydrostatic_pressure_update:
+ * @p: a #GfsHydrostaticPressure.
+ * @alpha: the reciprocal of density or %NULL.
+ *
+ * Updates the hydrostatic pressure field @p. Note that face
+ * velocities are also reset.
+ */
+void gfs_hydrostatic_pressure_update (GfsHydrostaticPressure * p, GfsFunction * alpha)
 {
-  if ((* GFS_EVENT_CLASS (gfs_variable_class ())->event) (event, sim)) {
-    GfsDomain * domain = GFS_DOMAIN (sim);
-    gfs_domain_face_traverse (domain, FTT_XYZ,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
-    gfs_velocity_face_sources (domain, gfs_domain_velocity (domain), 1., NULL, NULL);
-    gfs_poisson_coefficients (domain, sim->physical_params.alpha, TRUE, TRUE, TRUE);
-    gfs_domain_cell_traverse_boundary (domain, 2*GFS_HYDROSTATIC_PRESSURE (event)->c,
-				       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				       (FttCellTraverseFunc) hydrostatic_pressure, event);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, GFS_VARIABLE (event));
-    return TRUE;
-  }
-  return FALSE;  
-}
+  g_return_if_fail (p != NULL);
 
-static void hydrostatic_pressure_class_init (GtsObjectClass * klass)
-{
-  klass->read = hydrostatic_pressure_read;
-  GFS_EVENT_CLASS (klass)->event = hydrostatic_pressure_event;
-}
-
-static void hydrostatic_pressure_init (GfsVariable * v)
-{
-  GFS_EVENT (v)->start = -1;
-  v->coarse_fine = (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine;
-}
-
-GfsVariableClass * gfs_hydrostatic_pressure_class (void)
-{
-  static GfsVariableClass * klass = NULL;
-
-  if (klass == NULL) {
-    GtsObjectClassInfo info = {
-      "GfsHydrostaticPressure",
-      sizeof (GfsHydrostaticPressure),
-      sizeof (GfsVariableClass),
-      (GtsObjectClassInitFunc) hydrostatic_pressure_class_init,
-      (GtsObjectInitFunc) hydrostatic_pressure_init,
-      (GtsArgSetFunc) NULL,
-      (GtsArgGetFunc) NULL
-    };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), &info);
-  }
-
-  return klass;
+  GfsVariable * v = GFS_VARIABLE (p);
+  gfs_domain_face_traverse (v->domain, FTT_XYZ,
+			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
+  gfs_velocity_face_sources (v->domain, gfs_domain_velocity (v->domain), 1., NULL, NULL);
+  gfs_poisson_coefficients (v->domain, alpha, TRUE, TRUE, TRUE);
+  gfs_domain_cell_traverse_boundary (v->domain, 2*p->c,
+				     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				     (FttCellTraverseFunc) hydrostatic_pressure, p);
+  gfs_domain_bc (v->domain, FTT_TRAVERSE_LEAFS, -1, v);
 }
 
 /** \endobject{GfsHydrostaticPressure} */

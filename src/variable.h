@@ -271,6 +271,8 @@ struct _GfsHydrostaticPressure {
 						 gfs_hydrostatic_pressure_class ()))
 
 GfsVariableClass * gfs_hydrostatic_pressure_class  (void);
+void               gfs_hydrostatic_pressure_update (GfsHydrostaticPressure * p, 
+						    GfsFunction * alpha);
 
 #ifdef __cplusplus
 }

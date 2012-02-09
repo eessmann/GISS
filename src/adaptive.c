@@ -1328,6 +1328,13 @@ gboolean gfs_simulation_adapt (GfsSimulation * simulation)
       gfs_domain_reshape (domain, depth);
       gfs_all_reduce (domain, depth, MPI_UNSIGNED, MPI_MAX);
       simulation->adapts_stats.depth_increase = depth - depth_before;
+      /* hydrostatic pressure */
+      GSList * i = domain->variables;
+      while (i) {
+	if (GTS_OBJECT (i->data)->klass == GTS_OBJECT_CLASS (gfs_hydrostatic_pressure_class ()))
+	  gfs_hydrostatic_pressure_update (i->data, simulation->physical_params.alpha);
+	i = i->next;
+      }
     }
   }
 
