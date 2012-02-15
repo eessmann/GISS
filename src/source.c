@@ -222,60 +222,6 @@ static void source_scalar_write (GtsObject * o, FILE * fp)
   }
 }
 
-static gboolean read_vector (GtsFile * fp, gchar * component[FTT_DIMENSION])
-{
-  if (fp->type != '(') {
-    gts_file_error (fp, "expecting an opening bracket '('");
-    return FALSE;
-  }
-  gint c = gts_file_getc (fp), parlevel = 0, n = 0;
-  GString * s = g_string_new ("");
-  while ((parlevel > 0 || c != ')') && c != EOF) {
-    if (c == ',' && parlevel == 0) {
-      /* end of component */
-      if (n == FTT_DIMENSION) {
-	gts_file_error (fp, "too many vector components");
-	gint i;
-	for (i = 0; i < n; i++)
-	  g_free (component[i]);
-	g_string_free (s, TRUE);
-	return FALSE;
-      }
-      component[n++] = s->str;
-      g_string_free (s, FALSE);
-      s = g_string_new ("");
-    }
-    else {
-      /* expression */
-      g_string_append_c (s, c);
-      if (c == '(' || c == '[' || c == '{')
-	parlevel++;
-      else if (c == ')' || c == ']' || c == '}')
-	parlevel--;
-    }
-    c = gts_file_getc (fp);
-  }
-  if (c != ')') {
-    gts_file_error (fp, "parse error (missing closing bracket ')'?)"); 
-    gint i;
-    for (i = 0; i < n; i++)
-      g_free (component[i]);
-    g_string_free (s, TRUE);
-    return FALSE;
-  }
-  if (n != FTT_DIMENSION - 1) {
-    gts_file_error (fp, "not enough vector components");
-    gint i;
-    for (i = 0; i < n; i++)
-      g_free (component[i]);
-    g_string_free (s, TRUE);
-    return FALSE;
-  }
-  component[n++] = s->str;
-  g_string_free (s, FALSE);
-  return TRUE;
-}
-
 static void source_scalar_read (GtsObject ** o, GtsFile * fp)
 {
   GfsSourceScalar * source;
@@ -292,30 +238,15 @@ static void source_scalar_read (GtsObject ** o, GtsFile * fp)
 
   if (fp->type == '(') {
     /* vector */
-    gchar * component[FTT_DIMENSION];
-    if (!read_vector (fp, component))
+    if (!gfs_read_variable_vector (fp, source->vector, domain))
       return;
     gint i;
     for (i = 0; i < FTT_DIMENSION; i++) {
-      if (!(source->vector[i] = gfs_variable_from_name (domain->variables, component[i]))) {
-	gts_file_error (fp, "unknown variable '%s'", component[i]);
-	for (i = 0; i < FTT_DIMENSION; i++)
-	  g_free (component[i]);
-	return;
-      }
-      if (source->vector[i]->component != i) {
-	gts_file_error (fp, "variable '%s' is not the correct vector component", component[i]);
-	for (i = 0; i < FTT_DIMENSION; i++)
-	  g_free (component[i]);
-	return;
-      }
       if (source->vector[i]->sources == NULL)
 	source->vector[i]->sources = 
 	  gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
       gts_container_add (source->vector[i]->sources, GTS_CONTAINEE (source));
     }
-    for (i = 0; i < FTT_DIMENSION; i++)
-      g_free (component[i]);
   }
   else if (fp->type == GTS_STRING) {
     /* scalar */
@@ -503,27 +434,9 @@ static void source_read (GtsObject ** o, GtsFile * fp)
   }
   else {
     /* vector */
-    gchar * component[FTT_DIMENSION];
-    if (!read_vector (fp, component))
+    if (!gfs_read_function_vector (fp, s->vector, GFS_SOURCE (s)->intensity_v, 
+				   gfs_object_simulation (s)))
       return;
-    GfsSource * r = GFS_SOURCE (s);
-    gint i;
-    for (i = 0; i < FTT_DIMENSION; i++) {
-      r->intensity_v[i] = gfs_function_new (gfs_function_class (), 0.);
-      gfs_function_set_units (r->intensity_v[i], s->vector[i]->units);
-      GtsFile * fp1 = gts_file_new_from_string (component[i]);
-      gfs_function_read (r->intensity_v[i], gfs_object_simulation (s), fp1);
-      if (fp1->type == GTS_ERROR) {
-	gts_file_error (fp, "%s", fp1->error);
-	gts_file_destroy (fp1);
-	for (i = 0; i < FTT_DIMENSION; i++)
-	  g_free (component[i]);
-	return;
-      }
-      gts_file_destroy (fp1);
-    }
-    for (i = 0; i < FTT_DIMENSION; i++)
-      g_free (component[i]);
     if (!strcmp (s->vector[0]->name, "U")) {
       GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
       s->mac_value = s->centered_value = NULL;

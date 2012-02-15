@@ -542,22 +542,28 @@ GfsEventClass * gfs_generic_init_class (void)
  */
 
 typedef struct {
-  GfsVariable * v;
-  GfsFunction * f;
+  GfsVariable * v[FTT_DIMENSION];
+  GfsFunction * f[FTT_DIMENSION];
+  guint n;
 } VarFunc;
 
-static VarFunc * var_func_new (GfsVariable * v, GfsFunction * f)
+static VarFunc * var_func_new (GfsVariable ** v, GfsFunction ** f, int n)
 {
   VarFunc * vf = g_malloc (sizeof (VarFunc));
-  vf->v = v;
-  vf->f = f;
-  gfs_function_set_units (vf->f, vf->v->units);
+  gint i;
+  for (i = 0; i < n; i++) {
+    vf->v[i] = v[i];
+    vf->f[i] = f[i];
+  }
+  vf->n = n;
   return vf;
 }
 
 static void var_func_destroy (VarFunc * v)
 {
-  gts_object_destroy (GTS_OBJECT (v->f));
+  gint i;
+  for (i = 0; i < v->n; i++)
+    gts_object_destroy (GTS_OBJECT (v->f[i]));
   g_free (v);
 }
 
@@ -580,13 +586,33 @@ static void gfs_init_read (GtsObject ** o, GtsFile * fp)
       gts_file_next_token (fp);
       continue;
     }
-    if (fp->type != GTS_STRING) {
+    GfsInit * init = GFS_INIT (*o);
+    GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+      
+    if (fp->type == '(') {
+      /* vector */
+      GfsVariable * v[FTT_DIMENSION];
+      if (!gfs_read_variable_vector (fp, v, domain))
+	return;
+
+      if (fp->type != '=') {
+	gts_file_error (fp, "expecting `='");
+	return;
+      }
+      gts_file_next_token (fp);
+
+      GfsFunction * f[FTT_DIMENSION];
+      if (!gfs_read_function_vector (fp, v, f, domain))
+	return;
+
+      init->f = g_slist_append (init->f, var_func_new (v, f, FTT_DIMENSION));
+    }
+    else if (fp->type != GTS_STRING) {
       gts_file_error (fp, "expecting a variable name");
       return;
     }
     else {
-      GfsInit * init = GFS_INIT (*o);
-      GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+      /* scalar */
       GfsVariable * v = gfs_domain_get_or_add_variable (domain, fp->token->str, NULL);
       GfsFunction * f;
 
@@ -608,7 +634,8 @@ static void gfs_init_read (GtsObject ** o, GtsFile * fp)
 	gts_object_destroy (GTS_OBJECT (f));
 	return;
       }
-      init->f = g_slist_append (init->f, var_func_new (v, f));
+      gfs_function_set_units (f, v->units);
+      init->f = g_slist_append (init->f, var_func_new (&v, &f, 1));
     }
   }
   if (fp->type != '}') {
@@ -635,9 +662,26 @@ static void gfs_init_write (GtsObject * o, FILE * fp)
   i = GFS_INIT (o)->f;
   while (i) {
     VarFunc * v = i->data;
-    fprintf (fp, "  %s =", v->v->name);
-    gfs_function_write (v->f, fp);
-    fputc ('\n', fp);
+    if (v->n == 1) {
+      /* scalar */
+      fprintf (fp, "  %s =", v->v[0]->name);
+      gfs_function_write (v->f[0], fp);
+      fputc ('\n', fp);
+    }
+    else {
+      /* vector */
+      fprintf (fp, "  (%s", v->v[0]->name);
+      gint i;
+      for (i = 1; i < v->n; i++)
+	fprintf (fp, ",%s", v->v[i]->name);
+      fputs (") = (", fp);
+      gfs_function_write (v->f[0], fp);
+      for (i = 1; i < v->n; i++) {
+	fputc (',', fp);
+	gfs_function_write (v->f[i], fp);
+      }
+      fputs (")\n", fp);
+    }
     i = i->next;
   }
   fputc ('}', fp);
@@ -654,9 +698,21 @@ static void gfs_init_destroy (GtsObject * object)
     (object);
 }
 
-static void init_vf (FttCell * cell, VarFunc * vf)
+static void init_scalar (FttCell * cell, VarFunc * vf)
 {
-  GFS_VALUE (cell, vf->v) = gfs_function_value (vf->f, cell);
+  GFS_VALUE (cell, vf->v[0]) = gfs_function_value (vf->f[0], cell);
+}
+
+static void init_vector (FttCell * cell, VarFunc * vf)
+{
+  FttVector p, u;
+  int i;
+  for (i = 0; i < FTT_DIMENSION; i++)
+    (&u.x)[i] = gfs_function_value (vf->f[i], cell);
+  ftt_cell_pos (cell, &p);
+  gfs_simulation_map_vector (GFS_SIMULATION (vf->v[0]->domain), &p, &u);
+  for (i = 0; i < FTT_DIMENSION; i++)
+    GFS_VALUE (cell, vf->v[i]) = (&u.x)[i];
 }
 
 static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
@@ -669,10 +725,10 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
       VarFunc * vf = i->data;
       gfs_catch_floating_point_exceptions ();
       gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) init_vf, vf);
-      gfs_restore_fpe_for_function (vf->f);
-      if (vf->v->component == FTT_DIMENSION)
-	gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v);
+				(FttCellTraverseFunc) (vf->n == 1 ? init_scalar : init_vector), vf);
+      gfs_restore_fpe_for_function (vf->f[0]);
+      if (vf->v[0]->component == FTT_DIMENSION)
+	gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v[0]);
       i = i->next;
     }
     /* boundary conditions for vector quantities need to be called in
@@ -681,8 +737,10 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
     i = GFS_INIT (event)->f;
     while (i) {
       VarFunc * vf = i->data;
-      if (vf->v->component < FTT_DIMENSION)
-	gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v);
+      gint j;
+      for (j = 0; j < vf->n; j++)
+	if (vf->v[j]->component < FTT_DIMENSION)
+	  gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v[j]);
       i = i->next;
     }
     return TRUE;

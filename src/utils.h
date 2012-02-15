@@ -229,6 +229,15 @@ void               gfs_cell_message      (const FttCell * cell,
 void               gfs_debug             (const gchar * format,
 					  ...);
 void               gfs_debug_enabled     (gboolean enabled);
+gboolean           gfs_read_vector       (GtsFile * fp, 
+					  gchar * component[FTT_DIMENSION]);
+gboolean           gfs_read_variable_vector (GtsFile * fp, 
+					     GfsVariable * vector[FTT_DIMENSION], 
+					     GfsDomain * domain);
+gboolean           gfs_read_function_vector (GtsFile * fp, 
+					     GfsVariable * vector[FTT_DIMENSION], 
+					     GfsFunction * function[FTT_DIMENSION],
+					     gpointer sim);
 
 /* The code below redefines the g_assert() macros so that they behave
    consistently between Glib versions. In particular, we want to be

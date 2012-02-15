@@ -1839,7 +1839,7 @@ void gfs_simulation_map_inverse (GfsSimulation * sim, FttVector * p)
  * @p: the position.
  * @v: a #FttVector.
  *
- * Applies the inverse mapping transformations associated with @sim at
+ * Applies the mapping transformations associated with @sim at
  * location @p, to vector @v.
  */
 void gfs_simulation_map_vector (GfsSimulation * sim, const FttVector * p, FttVector * v)

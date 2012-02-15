@@ -2055,3 +2055,163 @@ void gfs_debug_enabled (gboolean enabled)
 {
   GfsDebug = enabled;
 }
+
+/**
+ * gfs_read_vector:
+ * @fp: a #GtsFile.
+ * @component: an array of vector component names.
+ *
+ * Reads a vector from @fp and fills @component. Note that the
+ * component strings need to be freed after use.
+ *
+ * Returns: %TRUE if all vector components have been read, %FALSE
+ * otherwise, in which case the error is reported in @fp.
+ */
+gboolean gfs_read_vector (GtsFile * fp, gchar * component[FTT_DIMENSION])
+{
+  g_return_val_if_fail (fp != NULL, FALSE);
+  g_return_val_if_fail (component != NULL, FALSE);
+
+  if (fp->type != '(') {
+    gts_file_error (fp, "expecting an opening bracket '('");
+    return FALSE;
+  }
+  gint c = gts_file_getc (fp), parlevel = 0, n = 0;
+  GString * s = g_string_new ("");
+  while ((parlevel > 0 || c != ')') && c != EOF) {
+    if (c == ',' && parlevel == 0) {
+      /* end of component */
+      if (n == FTT_DIMENSION) {
+	gts_file_error (fp, "too many vector components");
+	gint i;
+	for (i = 0; i < n; i++)
+	  g_free (component[i]);
+	g_string_free (s, TRUE);
+	return FALSE;
+      }
+      component[n++] = s->str;
+      g_string_free (s, FALSE);
+      s = g_string_new ("");
+    }
+    else {
+      /* expression */
+      g_string_append_c (s, c);
+      if (c == '(' || c == '[' || c == '{')
+	parlevel++;
+      else if (c == ')' || c == ']' || c == '}')
+	parlevel--;
+    }
+    c = gts_file_getc (fp);
+  }
+  if (c != ')') {
+    gts_file_error (fp, "parse error (missing closing bracket ')'?)"); 
+    gint i;
+    for (i = 0; i < n; i++)
+      g_free (component[i]);
+    g_string_free (s, TRUE);
+    return FALSE;
+  }
+  if (n != FTT_DIMENSION - 1) {
+    gts_file_error (fp, "not enough vector components");
+    gint i;
+    for (i = 0; i < n; i++)
+      g_free (component[i]);
+    g_string_free (s, TRUE);
+    return FALSE;
+  }
+  component[n++] = s->str;
+  g_string_free (s, FALSE);
+  gts_file_next_token (fp);
+  return TRUE;
+}
+
+/**
+ * gfs_read_variable_vector:
+ * @fp: a #GtsFile.
+ * @vector: an array of vector component variables.
+ * @domain: the #GfsDomain to which @vector belongs.
+ *
+ * Reads a vector from @fp and fills @vector.
+ *
+ * Returns: %TRUE if all vector components have been read, %FALSE
+ * otherwise, in which case the error is reported in @fp.
+ */
+gboolean gfs_read_variable_vector (GtsFile * fp, 
+				   GfsVariable * vector[FTT_DIMENSION], 
+				   GfsDomain * domain)
+{
+  g_return_val_if_fail (fp != NULL, FALSE);
+  g_return_val_if_fail (vector != NULL, FALSE);
+  g_return_val_if_fail (domain != NULL, FALSE);
+
+  gchar * component[FTT_DIMENSION];
+  if (!gfs_read_vector (fp, component))
+    return FALSE;
+
+  gint i;
+  gboolean status = TRUE;
+  for (i = 0; i < FTT_DIMENSION && status; i++) {
+    if (!(vector[i] = gfs_variable_from_name (domain->variables, component[i]))) {
+      gts_file_error (fp, "unknown variable '%s'", component[i]);
+      status = FALSE;
+    }
+    if (vector[i]->component != i) {
+      gts_file_error (fp, "variable '%s' is not the correct vector component", component[i]);
+      status = FALSE;
+    }
+  }
+  for (i = 0; i < FTT_DIMENSION; i++)
+    g_free (component[i]);
+  return status;
+}
+
+/**
+ * gfs_read_function_vector:
+ * @fp: a #GtsFile.
+ * @vector: an array of vector component variables.
+ * @function: an array of vector component #GfsFunction corresponding
+ * to @vector.
+ * @sim: the #GfsSimulation to which @vector belongs.
+ *
+ * Reads a vector from @fp and fills @vector.
+ *
+ * Returns: %TRUE if all vector components have been read, %FALSE
+ * otherwise, in which case the error is reported in @fp.
+ */
+gboolean gfs_read_function_vector (GtsFile * fp, 
+				   GfsVariable * vector[FTT_DIMENSION], 
+				   GfsFunction * function[FTT_DIMENSION],
+				   gpointer sim)
+{
+  g_return_val_if_fail (fp != NULL, FALSE);
+  g_return_val_if_fail (vector != NULL, FALSE);
+  g_return_val_if_fail (function != NULL, FALSE);
+  g_return_val_if_fail (sim != NULL, FALSE);
+
+  gchar * component[FTT_DIMENSION];
+  if (!gfs_read_vector (fp, component))
+    return FALSE;
+
+  gboolean status = TRUE;
+  gint i;
+  for (i = 0; i < FTT_DIMENSION && status; i++) {
+    function[i] = gfs_function_new (gfs_function_class (), 0.);
+    gfs_function_set_units (function[i], vector[i]->units);
+    GtsFile * fp1 = gts_file_new_from_string (component[i]);
+    gfs_function_read (function[i], sim, fp1);
+    if (fp1->type == GTS_ERROR) {
+      gts_file_error (fp, "%s", fp1->error);
+      gint j;
+      for (j = 0; j <= i; j++) {
+	gts_object_destroy (GTS_OBJECT (function[i]));
+	function[i] = NULL;
+      }	
+      status = FALSE;
+    }
+    gts_file_destroy (fp1);
+  }
+  for (i = 0; i < FTT_DIMENSION; i++)
+    g_free (component[i]);
+  return status;
+}
+  
