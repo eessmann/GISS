@@ -89,6 +89,10 @@ struct _GfsDomain {
 					  FttCell * cell,
 					  GfsVariable * v,
 					  GfsDiffusion * d);
+  void    (* advection_metric)           (const GfsDomain * domain, 
+					  FttCell * cell,
+					  FttComponent c1,
+					  gdouble m[2]);
 
   /* Object hash table for (optional) object IDs */
   GHashTable * objects;

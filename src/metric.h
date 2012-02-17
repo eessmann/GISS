@@ -26,6 +26,13 @@ extern "C" {
 
 #include "map.h"
 
+/* GfsGenericMetric: Header */
+
+#define GFS_IS_GENERIC_METRIC(obj)         (gts_object_is_from_class (obj,\
+						   gfs_generic_metric_class ()))
+
+GfsEventClass * gfs_generic_metric_class  (void);
+
 /* GfsVariableMetric: Header */
 
 #define GFS_IS_VARIABLE_METRIC(obj)         (gts_object_is_from_class (obj,\
@@ -33,11 +40,11 @@ extern "C" {
 
 GfsVariableClass * gfs_variable_metric_class  (void);
 
-/* GfsGenericMetric: Header */
+/* GfsStoredMetric: Header */
 
-typedef struct _GfsGenericMetric GfsGenericMetric;
+typedef struct _GfsStoredMetric GfsStoredMetric;
 
-struct _GfsGenericMetric {
+struct _GfsStoredMetric {
   /*< private >*/
   GfsVariable parent;
   GfsMap * map;
@@ -47,13 +54,13 @@ struct _GfsGenericMetric {
   GfsMapClass * map_class;
 };
 
-#define GFS_GENERIC_METRIC(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsGenericMetric,\
-					           gfs_generic_metric_class ())
-#define GFS_IS_GENERIC_METRIC(obj)         (gts_object_is_from_class (obj,\
-						   gfs_generic_metric_class ()))
+#define GFS_STORED_METRIC(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsStoredMetric,\
+					           gfs_stored_metric_class ())
+#define GFS_IS_STORED_METRIC(obj)         (gts_object_is_from_class (obj,\
+						   gfs_stored_metric_class ()))
 
-GfsVariableClass * gfs_generic_metric_class  (void);
+GfsVariableClass * gfs_stored_metric_class  (void);
 
 /* GfsMetric: Header */
 
@@ -61,7 +68,7 @@ typedef struct _GfsMetric GfsMetric;
 
 struct _GfsMetric {
   /*< private >*/
-  GfsGenericMetric parent;
+  GfsStoredMetric parent;
 
   /*< public >*/
   GfsFunction * x, * y, * z;
@@ -81,7 +88,7 @@ typedef struct _GfsMetricCubed GfsMetricCubed;
 
 struct _GfsMetricCubed {
   /*< private >*/
-  GfsGenericMetric parent;
+  GfsStoredMetric parent;
 
   /*< public >*/
   gint level;

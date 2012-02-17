@@ -1617,7 +1617,7 @@ GfsSourceGenericClass * gfs_source_viscosity_explicit_class (void)
 /** \endobject{GfsSourceViscosityExplicit} */
 
 /**
- * Coriolis acceleration and linear friction.
+ * Coriolis acceleration, linear friction and/or advection metric terms.
  * \beginobject{GfsSourceCoriolis}
  */
 
@@ -1719,42 +1719,75 @@ static void gfs_source_coriolis_write (GtsObject * o, FILE * fp)
     fprintf (fp," { x = %g y = %g z = %g }", s->d[0], s->d[1], s->d[2]);
 }
 
+static void coriolis_drag_metric_coefficients (GfsSourceCoriolis * sc,
+					       FttCell * cell,
+					       GfsVariable ** u,
+					       FttComponent c1,
+					       gdouble f[2])
+{
+  /* fixme: 2D only */
+  g_assert (FTT_DIMENSION == 2);
+
+  f[0] = sc->drag ? gfs_function_value (sc->drag, cell) : 0.;
+  f[1] = sc->omegaz ? gfs_function_value (sc->omegaz, cell) : 0.;
+
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (sc));
+  if (domain->advection_metric) {
+    FttComponent c2 = (c1 + 1) % 2;
+    gdouble m[2];
+    (* domain->advection_metric) (domain, cell, c1, m);
+    f[0] += GFS_VALUE (cell, u[c2])*m[0];
+    f[1] += (c1 == FTT_X ? 1. : -1.)*GFS_VALUE (cell, u[c2])*m[1];
+  }
+}
+
 static gdouble gfs_source_coriolis_mac_value (GfsSourceGeneric * s,
 					      FttCell * cell,
 					      GfsVariable * v)
 {
   GfsSourceVelocity * sv = GFS_SOURCE_VELOCITY (s);
   GfsSourceCoriolis * sc = GFS_SOURCE_CORIOLIS (s);
+
+#if FTT_2D
+  gdouble f[2];
+  coriolis_drag_metric_coefficients (sc, cell, sv->v, v->component, f);
+  switch (v->component) {
+  case FTT_X: return   f[1]*GFS_VALUE (cell, sv->v[1]) - f[0]*GFS_VALUE (cell, sv->v[0]);
+  case FTT_Y: return - f[0]*GFS_VALUE (cell, sv->v[1]) - f[1]*GFS_VALUE (cell, sv->v[0]);
+  default: g_assert_not_reached ();
+  }
+#else  /* 3D */
   gdouble f = gfs_function_value (sc->omegaz, cell);
   gdouble e = sc->drag ? gfs_function_value (sc->drag, cell) : 0.;
 
   switch (v->component) {
-#if FTT_2D
-  case FTT_X: return   f*GFS_VALUE (cell, sv->v[1]) - e*GFS_VALUE (cell, sv->v[0]);
-  case FTT_Y: return - e*GFS_VALUE (cell, sv->v[1]) - f*GFS_VALUE (cell, sv->v[0]);
-#else  /* 3D */
   case FTT_X: return - e*GFS_VALUE (cell, sv->v[0]) +
       f*(GFS_VALUE (cell, sv->v[1])*sc->d[2] - GFS_VALUE (cell, sv->v[2])*sc->d[1]);
   case FTT_Y: return - e*GFS_VALUE (cell, sv->v[1]) +
       f*(GFS_VALUE (cell, sv->v[2])*sc->d[0] - GFS_VALUE (cell, sv->v[0])*sc->d[2]);
   case FTT_Z: return - e*GFS_VALUE (cell, sv->v[2]) +
       f*(GFS_VALUE (cell, sv->v[0])*sc->d[1] - GFS_VALUE (cell, sv->v[1])*sc->d[0]);
-#endif /* 3D */
   default: g_assert_not_reached ();
   }
+#endif /* 3D */
   return 0.;
 }
 
 static void save_coriolis (FttCell * cell, GfsSourceCoriolis * s)
 {
   GfsSourceVelocity * sv = GFS_SOURCE_VELOCITY (s);
+#if FTT_2D
+  gdouble f[2];
+  coriolis_drag_metric_coefficients (s, cell, sv->v, FTT_X, f);
+  GFS_VALUE (cell, s->u[0]) =   
+    (1. - s->beta)*(f[1]*GFS_VALUE (cell, sv->v[1]) - f[0]*GFS_VALUE (cell, sv->v[0]));
+  coriolis_drag_metric_coefficients (s, cell, sv->v, FTT_Y, f);
+  GFS_VALUE (cell, s->u[1]) = 
+    (1. - s->beta)*(- f[0]*GFS_VALUE (cell, sv->v[1]) - f[1]*GFS_VALUE (cell, sv->v[0]));
+#else  /* 3D */
   gdouble f = gfs_function_value (s->omegaz, cell)*(1. - s->beta);
   gdouble e = s->drag ? gfs_function_value (s->drag, cell)*(1. - s->beta) : 0.;
 
-#if FTT_2D
-  GFS_VALUE (cell, s->u[0]) =   f*GFS_VALUE (cell, sv->v[1]) - e*GFS_VALUE (cell, sv->v[0]);
-  GFS_VALUE (cell, s->u[1]) = - e*GFS_VALUE (cell, sv->v[1]) - f*GFS_VALUE (cell, sv->v[0]);
-#else  /* 3D */
   GFS_VALUE (cell, s->u[0]) = - e*GFS_VALUE (cell, sv->v[0]) +
     f*(GFS_VALUE (cell, sv->v[1])*s->d[2] - GFS_VALUE (cell, sv->v[2])*s->d[1]);
   GFS_VALUE (cell, s->u[1]) = - e*GFS_VALUE (cell, sv->v[1]) +
@@ -1863,21 +1896,24 @@ GfsSourceCoriolis * gfs_has_source_coriolis (GfsDomain * domain)
 static void implicit_coriolis_2D (FttCell * cell, GfsSourceCoriolis * s)
 {
   GfsSourceVelocity * sv = GFS_SOURCE_VELOCITY (s);
-  gdouble c, u, v;
+  gdouble m[2][2];
+  gdouble f[2];
   GfsSimulation * sim = gfs_object_simulation (s);
+  gdouble dt = sim->advection_params.dt*s->beta;
 
-  c = sim->advection_params.dt*gfs_function_value (s->omegaz, cell)*s->beta;
-  u = GFS_VALUE (cell, sv->v[0]);
-  v = GFS_VALUE (cell, sv->v[1]);
-  if (s->drag) {
-    gdouble e = sim->advection_params.dt*gfs_function_value (s->drag, cell)*s->beta;
-    GFS_VALUE (cell, sv->v[0]) = (u + c*v/(1. + e))/((1. + e) + c*c/(1. + e));
-    GFS_VALUE (cell, sv->v[1]) = (v - c*u/(1. + e))/((1. + e) + c*c/(1. + e));
-  }
-  else {
-    GFS_VALUE (cell, sv->v[0]) = (u + c*v)/(1. + c*c);
-    GFS_VALUE (cell, sv->v[1]) = (v - c*u)/(1. + c*c);
-  }
+  coriolis_drag_metric_coefficients (s, cell, sv->v, FTT_X, f);
+  m[0][0] = 1. + f[0]*dt;
+  m[0][1] = - f[1]*dt;
+  coriolis_drag_metric_coefficients (s, cell, sv->v, FTT_Y, f);
+  m[1][0] =   f[1]*dt;
+  m[1][1] = 1. + f[0]*dt;
+
+  gdouble det = m[0][0]*m[1][1] - m[0][1]*m[1][0];
+  gdouble u = GFS_VALUE (cell, sv->v[0]);
+  gdouble v = GFS_VALUE (cell, sv->v[1]);
+
+  GFS_VALUE (cell, sv->v[0]) = (  m[1][1]*u - m[0][1]*v)/det;
+  GFS_VALUE (cell, sv->v[1]) = (- m[1][0]*u + m[0][0]*v)/det;
 }
 
 static void implicit_coriolis_3D (FttCell * cell, GfsSourceCoriolis * s)

@@ -31,26 +31,170 @@
 # include <gsl/gsl_integration.h>
 #endif
 
+/** \beginobject{GfsGenericMetric} */
+
+static gdouble face_metric_direction (const GfsDomain * domain, FttCell * cell, FttDirection d)
+{
+  FttCellFace f;
+  f.cell = cell;
+  f.d = d;
+  return (* domain->face_metric) (domain, &f);
+}
+
+/* see: doc/figures/viscous-metric.tm equation (4) */
+static gdouble viscous_metric_implicit (const GfsDomain * domain,
+					FttCell * cell,
+					FttComponent component)
+{
+  g_assert (component < FTT_DIMENSION);
+  /* fixme: 2D only */
+  if (component > 1)
+    return 0.;
+  /* fixme: this does not include the "curvature" of the metric yet */
+  FttComponent c1 = component;
+  FttComponent c2 = (c1 + 1) % 2;
+  double h1h2 = (* domain->cell_metric) (domain, cell);
+  double size = ftt_cell_size (cell);
+  double h1_2 = (face_metric_direction (domain, cell, 2*c2) - 
+		 face_metric_direction (domain, cell, 2*c2 + 1));
+  double h2_1 = (face_metric_direction (domain, cell, 2*c1) - 
+		 face_metric_direction (domain, cell, 2*c1 + 1));
+  return (h1_2*h1_2 + h2_1*h2_1)/(size*size*h1h2*h1h2);
+}
+
+/* see: doc/figures/viscous-metric.tm equation (4) */
+static gdouble viscous_metric_explicit (const GfsDomain * domain, 
+					FttCell * cell,
+					GfsVariable * v,
+					GfsDiffusion * d)
+{
+  g_assert (v->component < FTT_DIMENSION);
+  /* fixme: 2D only */
+  if (v->component > 1)
+    return 0.;
+  FttComponent c1 = v->component;
+  FttComponent c2 = (c1 + 1) % 2;
+  double h1h2 = (* domain->cell_metric) (domain, cell);
+  double h1 = (* domain->scale_metric) (domain, cell, c1);
+  double h2 = (* domain->scale_metric) (domain, cell, c2);
+  double size = ftt_cell_size (cell);
+  double h1_2 = (face_metric_direction (domain, cell, 2*c2) - 
+		 face_metric_direction (domain, cell, 2*c2 + 1));
+  double h2_1 = (face_metric_direction (domain, cell, 2*c1) - 
+		 face_metric_direction (domain, cell, 2*c1 + 1));
+  double u2_1 = gfs_center_gradient (cell, c1, v->vector[c2]->i);
+  double u2_2 = gfs_center_gradient (cell, c2, v->vector[c2]->i);
+  double eta = gfs_diffusion_cell (d, cell);
+  /* fixme: this does not include the terms with derivatives of the viscosity yet */
+  /* fixme: this does not include the "curvature" of the metric yet */
+  /* fixme: this does not take into account density */
+  return eta*(
+	      + 2.*(u2_1*h1_2/h1 - u2_2*h2_1/h2)/(size*size)
+	      )/h1h2;
+}
+
+static void advection_metric (const GfsDomain * domain, 
+			      FttCell * cell,
+			      FttComponent c1,
+			      gdouble m[2])
+{
+  g_assert (c1 < FTT_DIMENSION);
+  /* fixme: 2D only */
+  g_assert (c1 <= 1);
+  FttComponent c2 = (c1 + 1) % 2;
+  double h1h2 = (* domain->cell_metric) (domain, cell);
+  double size = ftt_cell_size (cell);
+  double h1_2 = (face_metric_direction (domain, cell, 2*c2) - 
+		 face_metric_direction (domain, cell, 2*c2 + 1));
+  double h2_1 = (face_metric_direction (domain, cell, 2*c1) - 
+		 face_metric_direction (domain, cell, 2*c1 + 1));
+
+  m[0] = h1_2/(size*h1h2);
+  m[1] = h2_1/(size*h1h2);
+}
+
+static void set_default_metric (GtsObject ** o, GtsFile * fp)
+{
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
+
+  if (domain->metric_data || domain->face_metric || domain->cell_metric) {
+    gts_file_error (fp, "cannot use multiple metrics (yet)");
+    return;
+  }
+
+  domain->viscous_metric_implicit = viscous_metric_implicit;
+  domain->viscous_metric_explicit = viscous_metric_explicit;
+  domain->advection_metric = advection_metric;
+}
+
+static void generic_metric_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_generic_metric_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  set_default_metric (o, fp);
+}
+
+static void generic_metric_class_init (GtsObjectClass * klass)
+{
+  klass->read = generic_metric_read;
+}
+
+GfsEventClass * gfs_generic_metric_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsGenericMetric",
+      sizeof (GfsEvent),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) generic_metric_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()), &info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsGenericMetric} */
+
 /**
  * A generic class for metrics which require storage.
  * \beginobject{GfsVariableMetric}
  */
+
+static void variable_metric_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_metric_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+  set_default_metric (o, fp);
+}
+
+static void variable_metric_class_init (GtsObjectClass * klass)
+{
+  klass->read = variable_metric_read;
+}
+
 GfsVariableClass * gfs_variable_metric_class (void)
 {
   static GfsVariableClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_variable_metric_info = {
+    GtsObjectClassInfo info = {
       "GfsVariableMetric",
       sizeof (GfsVariable),
       sizeof (GfsVariableClass),
-      (GtsObjectClassInitFunc) NULL,
+      (GtsObjectClassInitFunc) variable_metric_class_init,
       (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), 
-				  &gfs_variable_metric_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_class ()), &info);
   }
 
   return klass;
@@ -58,7 +202,7 @@ GfsVariableClass * gfs_variable_metric_class (void)
 
 /** \endobject{GfsVariableMetric} */
 
-/** \beginobject{GfsGenericMetric} */
+/** \beginobject{GfsStoredMetric} */
 
 #define USE_GSL 0
 
@@ -309,7 +453,7 @@ static void metric_coarse_fine (FttCell * parent, GfsVariable * a)
   ftt_cell_children (parent, &child);
   int i;
 
-  GfsGenericMetric * m = GFS_GENERIC_METRIC (a);
+  GfsStoredMetric * m = GFS_STORED_METRIC (a);
   GfsMap * map = m->map;
   for (i = 0; i < FTT_CELLS; i++) {
     ftt_cell_pos (child.c[i], &p);
@@ -357,7 +501,7 @@ static void metric_fine_coarse (FttCell * parent, GfsVariable * a)
     va += GFS_VALUE (child.c[n], a);
   GFS_VALUE (parent, a) = va/4.;
 
-  GfsGenericMetric * m = GFS_GENERIC_METRIC (a);
+  GfsStoredMetric * m = GFS_STORED_METRIC (a);
   GFS_VALUE (parent, m->h[0]) = (GFS_VALUE (child.c[1], m->h[0]) +
 				 GFS_VALUE (child.c[3], m->h[0]))/2.;
   GFS_VALUE (parent, m->h[1]) = (GFS_VALUE (child.c[0], m->h[1]) +
@@ -372,7 +516,7 @@ static gdouble face_metric (const GfsDomain * domain, const FttCellFace * face)
 { 
   if (face->d/2 > FTT_Y)
     return 1.;
-  return GFS_VALUE (face->cell, GFS_GENERIC_METRIC (domain->metric_data)->h[face->d]);
+  return GFS_VALUE (face->cell, GFS_STORED_METRIC (domain->metric_data)->h[face->d]);
 }
 
 static gdouble cell_metric (const GfsDomain * domain, const FttCell * cell)
@@ -393,8 +537,8 @@ static gdouble scale_metric (const GfsDomain * domain, const FttCell * cell, Ftt
   if (c > FTT_Y)
     return 1.;
   FttComponent d = FTT_ORTHOGONAL_COMPONENT (c);
-  return (GFS_VALUE (cell, GFS_GENERIC_METRIC (domain->metric_data)->h[2*d]) +
-	  GFS_VALUE (cell, GFS_GENERIC_METRIC (domain->metric_data)->h[2*d + 1]))/2.;
+  return (GFS_VALUE (cell, GFS_STORED_METRIC (domain->metric_data)->h[2*d]) +
+	  GFS_VALUE (cell, GFS_STORED_METRIC (domain->metric_data)->h[2*d + 1]))/2.;
 }
 
 static gdouble face_scale_metric (const GfsDomain * domain, const FttCellFace * face,
@@ -411,79 +555,14 @@ static void none (FttCell * parent, GfsVariable * v)
 {
 }
 
-static gdouble face_metric_direction (const GfsDomain * domain, FttCell * cell, FttDirection d)
+static void stored_metric_read (GtsObject ** o, GtsFile * fp)
 {
-  FttCellFace f;
-  f.cell = cell;
-  f.d = d;
-  return (* domain->face_metric) (domain, &f);
-}
-
-/* see: doc/figures/viscous-metric.tm equation (4) */
-static gdouble viscous_metric_implicit (const GfsDomain * domain,
-					FttCell * cell,
-					FttComponent component)
-{
-  g_assert (component < FTT_DIMENSION);
-  /* fixme: 2D only */
-  if (component > 1)
-    return 0.;
-  /* fixme: this does not include the "curvature" of the metric yet */
-  FttComponent c1 = component;
-  FttComponent c2 = (c1 + 1) % 2;
-  double h1h2 = (* domain->cell_metric) (domain, cell);
-  double size = ftt_cell_size (cell);
-  double h1_2 = (face_metric_direction (domain, cell, 2*c2) - 
-		 face_metric_direction (domain, cell, 2*c2 + 1));
-  double h2_1 = (face_metric_direction (domain, cell, 2*c1) - 
-		 face_metric_direction (domain, cell, 2*c1 + 1));
-  return (h1_2*h1_2 + h2_1*h2_1)/(size*size*h1h2*h1h2);
-}
-
-/* see: doc/figures/viscous-metric.tm equation (4) */
-static gdouble viscous_metric_explicit (const GfsDomain * domain, 
-					FttCell * cell,
-					GfsVariable * v,
-					GfsDiffusion * d)
-{
-  g_assert (v->component < FTT_DIMENSION);
-  /* fixme: 2D only */
-  if (v->component > 1)
-    return 0.;
-  FttComponent c1 = v->component;
-  FttComponent c2 = (c1 + 1) % 2;
-  double h1h2 = (* domain->cell_metric) (domain, cell);
-  double h1 = (* domain->scale_metric) (domain, cell, c1);
-  double h2 = (* domain->scale_metric) (domain, cell, c2);
-  double size = ftt_cell_size (cell);
-  double h1_2 = (face_metric_direction (domain, cell, 2*c2) - 
-		 face_metric_direction (domain, cell, 2*c2 + 1));
-  double h2_1 = (face_metric_direction (domain, cell, 2*c1) - 
-		 face_metric_direction (domain, cell, 2*c1 + 1));
-  double u2_1 = gfs_center_gradient (cell, c1, v->vector[c2]->i);
-  double u2_2 = gfs_center_gradient (cell, c2, v->vector[c2]->i);
-  double eta = gfs_diffusion_cell (d, cell);
-  /* fixme: this does not include the terms with derivatives of the viscosity yet */
-  /* fixme: this does not include the "curvature" of the metric yet */
-  /* fixme: this does not take into account density */
-  return eta*(
-	      + 2.*(u2_1*h1_2/h1 - u2_2*h2_1/h2)/(size*size)
-	      )/h1h2;
-}
-
-static void generic_metric_read (GtsObject ** o, GtsFile * fp)
-{
-  (* GTS_OBJECT_CLASS (gfs_generic_metric_class ())->parent_class->read) (o, fp);
+  (* GTS_OBJECT_CLASS (gfs_stored_metric_class ())->parent_class->read) (o, fp);
   if (fp->type == GTS_ERROR)
     return;
 
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
-  if (domain->metric_data || domain->face_metric || domain->cell_metric || domain->solid_metric) {
-    gts_file_error (fp, "cannot use multiple metrics (yet)");
-    return;
-  }
-
-  GfsGenericMetric * m = GFS_GENERIC_METRIC (*o);
+  GfsStoredMetric * m = GFS_STORED_METRIC (*o);
   if (fp->type == GTS_STRING) {
     if (!(m->e = gfs_domain_get_or_add_variable (domain, fp->token->str, "Metric error"))) {
       gts_file_error (fp, "`%s' is a reserved variable name", fp->token->str);
@@ -517,42 +596,39 @@ static void generic_metric_read (GtsObject ** o, GtsFile * fp)
   domain->solid_metric = solid_metric;
   domain->scale_metric = scale_metric;
   domain->face_scale_metric = face_scale_metric;
-  domain->viscous_metric_implicit = viscous_metric_implicit;
-  domain->viscous_metric_explicit = viscous_metric_explicit;
 }
 
-static void generic_metric_class_init (GtsObjectClass * klass)
+static void stored_metric_class_init (GtsObjectClass * klass)
 {
-  klass->read = generic_metric_read;
+  klass->read = stored_metric_read;
 }
 
-static void generic_metric_init (GfsGenericMetric * m)
+static void stored_metric_init (GfsStoredMetric * m)
 {
   m->map_class = gfs_map_class ();
 }
 
-GfsVariableClass * gfs_generic_metric_class (void)
+GfsVariableClass * gfs_stored_metric_class (void)
 {
   static GfsVariableClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_generic_metric_info = {
-      "GfsGenericMetric",
-      sizeof (GfsGenericMetric),
+    GtsObjectClassInfo info = {
+      "GfsStoredMetric",
+      sizeof (GfsStoredMetric),
       sizeof (GfsVariableClass),
-      (GtsObjectClassInitFunc) generic_metric_class_init,
-      (GtsObjectInitFunc) generic_metric_init,
+      (GtsObjectClassInitFunc) stored_metric_class_init,
+      (GtsObjectInitFunc) stored_metric_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_metric_class ()),
-				  &gfs_generic_metric_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_metric_class ()), &info);
   }
 
   return klass;
 }
 
-/** \endobject{GfsGenericMetric} */
+/** \endobject{GfsStoredMetric} */
 
 /* GfsMapMetric: Header */
 
@@ -689,7 +765,7 @@ static void metric_class_init (GtsObjectClass * klass)
 
 static void metric_init (GfsMetric * m)
 {
-  GFS_GENERIC_METRIC (m)->map_class = gfs_map_metric_class ();
+  GFS_STORED_METRIC (m)->map_class = gfs_map_metric_class ();
   m->x = gfs_function_new (gfs_function_map_class (), 1.);
   m->y = gfs_function_new (gfs_function_map_class (), 1.);
   m->z = gfs_function_new (gfs_function_map_class (), 1.);
@@ -709,7 +785,7 @@ GfsVariableClass * gfs_metric_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_metric_class ()),
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_stored_metric_class ()),
 				  &gfs_metric_info);
   }
 
@@ -1275,7 +1351,7 @@ static gdouble cubed_face_scale_metric (const GfsDomain * domain, const FttCellF
   /* fixme: here we assume that the metric is perfectly isotropic:
      this is not strictly the case numerically (0.08% difference), but
      is it the case theoretically? */
-  return GFS_VALUE (face->cell, GFS_GENERIC_METRIC (domain->metric_data)->h[face->d]);
+  return GFS_VALUE (face->cell, GFS_STORED_METRIC (domain->metric_data)->h[face->d]);
 }
 
 typedef struct {
@@ -1381,7 +1457,7 @@ static void cubed_coarse_fine (FttCell * parent, GfsVariable * a)
   GFS_VALUE (child.c[2], a) = matrix_a (r, m, 0, 0);
   GFS_VALUE (child.c[3], a) = matrix_a (r, m, m, 0);
 
-  GfsGenericMetric * metric = GFS_GENERIC_METRIC (a);
+  GfsStoredMetric * metric = GFS_STORED_METRIC (a);
   GFS_VALUE (child.c[0], metric->h[0]) = GFS_VALUE (child.c[1], metric->h[1]) = 
     matrix_hy (r, m, m, m);
   GFS_VALUE (child.c[0], metric->h[3]) = GFS_VALUE (child.c[2], metric->h[2]) = 
@@ -1434,7 +1510,7 @@ static void metric_cubed_class_init (GtsObjectClass * klass)
   klass->write = metric_cubed_write;
 }
 
-static void metric_cubed_init (GfsGenericMetric * m)
+static void metric_cubed_init (GfsStoredMetric * m)
 {
   m->map_class = gfs_map_cubed_class ();
 }
@@ -1444,7 +1520,7 @@ GfsVariableClass * gfs_metric_cubed_class (void)
   static GfsVariableClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_metric_cubed_info = {
+    GtsObjectClassInfo info = {
       "GfsMetricCubed",
       sizeof (GfsMetricCubed),
       sizeof (GfsVariableClass),
@@ -1453,8 +1529,7 @@ GfsVariableClass * gfs_metric_cubed_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_metric_class ()), 
-				  &gfs_metric_cubed_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_stored_metric_class ()), &info);
   }
 
   return klass;
@@ -1668,12 +1743,6 @@ static void metric_lon_lat_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
-  if (domain->metric_data || domain->face_metric || domain->cell_metric || domain->solid_metric) {
-    gts_file_error (fp, "cannot use multiple metrics (yet)");
-    return;
-  }
-
   GFS_METRIC_LON_LAT (*o)->r = gfs_read_constant (fp, gfs_object_simulation (*o));
   if (fp->type == GTS_ERROR)
     return;
@@ -1682,6 +1751,7 @@ static void metric_lon_lat_read (GtsObject ** o, GtsFile * fp)
     return;
   }
 
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
   GfsVariable * a = GFS_VARIABLE (*o);
   GfsMetricLonLat * lonlat = GFS_METRIC_LON_LAT (a);
   gchar * name = g_strdup_printf ("%sh2", a->name);
@@ -1878,12 +1948,6 @@ static void metric_stretch_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
-  if (domain->metric_data || domain->face_metric || domain->cell_metric || domain->solid_metric) {
-    gts_file_error (fp, "cannot use multiple metrics (yet)");
-    return;
-  }
-
   GfsMetricStretch * s = GFS_METRIC_STRETCH (*o);
   if (fp->type == '{') {
     GtsFileVariable var[] = {
@@ -1901,6 +1965,7 @@ static void metric_stretch_read (GtsObject ** o, GtsFile * fp)
     }
   }
 
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (*o));
   GtsObject * map = gts_object_new (GTS_OBJECT_CLASS (gfs_map_stretch_class ()));
   gfs_object_simulation_set (map, domain);
   gts_container_add (GTS_CONTAINER (GFS_SIMULATION (domain)->maps), GTS_CONTAINEE (map));
@@ -1930,7 +1995,7 @@ GfsEventClass * gfs_metric_stretch_class (void)
   static GfsEventClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_metric_stretch_info = {
+    GtsObjectClassInfo info = {
       "GfsMetricStretch",
       sizeof (GfsMetricStretch),
       sizeof (GfsEventClass),
@@ -1939,8 +2004,7 @@ GfsEventClass * gfs_metric_stretch_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_event_class ()),
-				  &gfs_metric_stretch_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_metric_class ()), &info);
   }
 
   return klass;
@@ -1949,7 +2013,7 @@ GfsEventClass * gfs_metric_stretch_class (void)
 /** \endobject{GfsMetricStretch} */
 
 /* GfsMetricCubed1 is a reimplementation of GfsMetricCubed using
-   GfsGenericMetric. This is left here as an example of how to
+   GfsStoredMetric. This is left here as an example of how to
    implement a complex metric relatively simply. */
 
 /* GfsMapCubed1: Header */
@@ -2012,7 +2076,7 @@ static GfsMapClass * gfs_map_cubed1_class (void)
 
 /* GfsMetricCubed1: Object */
 
-static void metric_cubed1_init (GfsGenericMetric * m)
+static void metric_cubed1_init (GfsStoredMetric * m)
 {
   m->map_class = gfs_map_cubed1_class ();
 }
@@ -2024,14 +2088,14 @@ GfsVariableClass * gfs_metric_cubed1_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo info = {
       "GfsMetricCubed1",
-      sizeof (GfsGenericMetric),
+      sizeof (GfsStoredMetric),
       sizeof (GfsVariableClass),
       (GtsObjectClassInitFunc) NULL,
       (GtsObjectInitFunc) metric_cubed1_init,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_metric_class ()), &info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_stored_metric_class ()), &info);
   }
 
   return klass;

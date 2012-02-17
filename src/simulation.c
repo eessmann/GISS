@@ -400,6 +400,9 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   sim->events->items = g_slist_reverse (sim->events->items);
   sim->solids->items = g_slist_reverse (sim->solids->items);
   sim->modules = g_slist_reverse (sim->modules);
+
+  if (sim->advection_params.scheme == GFS_NONE)
+    GFS_DOMAIN (sim)->advection_metric = NULL;
 }
 
 /**

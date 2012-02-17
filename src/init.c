@@ -196,11 +196,13 @@ GtsObjectClass ** gfs_classes (void)
     gfs_init_wave_class (),
 
     gfs_generic_metric_class (),
-      gfs_metric_class (),
-      gfs_metric_cubed_class (),
-      gfs_metric_cubed1_class (),
-    gfs_metric_lon_lat_class (),
-    gfs_metric_stretch_class (),
+      gfs_metric_stretch_class (),
+      gfs_variable_metric_class (),
+        gfs_metric_lon_lat_class (),
+        gfs_stored_metric_class (),
+          gfs_metric_class (),
+          gfs_metric_cubed_class (),
+          gfs_metric_cubed1_class (),
 
     gfs_adapt_class (),
       gfs_adapt_vorticity_class (),
