@@ -876,7 +876,7 @@ static void box_homogeneous_bc_stencil (GfsBox * box, BcData * p)
   FttDirection d;
 
   for (d = 0; d < FTT_NEIGHBORS; d++) 
-    if (GFS_IS_BOUNDARY (box->neighbor[d]) && !GFS_IS_BOUNDARY_MPI (box->neighbor[d])) {
+    if (GFS_IS_BOUNDARY (box->neighbor[d]) && !GFS_IS_BOUNDARY_PERIODIC (box->neighbor[d])) {
       GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
       GfsBc * bc = gfs_boundary_lookup_bc (b, p->v);
       

@@ -234,6 +234,7 @@ void gfs_linear_problem_destroy (GfsLinearProblem * lp)
     gfs_stencil_destroy (g_ptr_array_index (lp->LP, i));
 
   g_ptr_array_free (lp->LP, TRUE);
+  g_free (lp);
 }
 
 typedef struct {
@@ -408,9 +409,6 @@ static void cell_numbering (GfsDomain * domain,
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
 			    (FttCellTraverseFunc) leaves_numbering, &np);
 
-  if (domain->pid >= 0)
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, lp->id);
-
 #ifdef HAVE_MPI
   /* Renumbering of the different subdomains for parallel simulations */
   if (domain->pid >= 0) {
@@ -419,9 +417,10 @@ static void cell_numbering (GfsDomain * domain,
     np.nleafs = lp->istart;
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, maxlevel,
 			      (FttCellTraverseFunc) leaves_renumbering, &np);
-    gfs_domain_bc (domain, FTT_TRAVERSE_LEVEL | FTT_TRAVERSE_LEAFS, -1, lp->id);
   }
 #endif /* HAVE_MPI */  
+
+  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, maxlevel, lp->id);
 }
 
 /**
@@ -448,7 +447,7 @@ GfsLinearProblem * gfs_get_poisson_problem (GfsDomain * domain,
  
   cell_numbering (domain, lp, rhs, lhs, maxlevel);
  
-  /* Creates stencils on the fly */
+  /* Create stencils on the fly */
   RelaxStencilParams p = { lp, dia, maxlevel };
 
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_reset_bc, lp);

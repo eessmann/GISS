@@ -473,15 +473,6 @@ void gfs_mac_projection (GfsDomain * domain,
 
   mac_projection (domain, par, apar, p, alpha, NULL, g, divergence_hook);
 
-#if 0
-  {
-    FILE * fp = fopen ("/tmp/macafter", "wt");
-
-    gfs_write_mac_velocity (domain, 0.9, FTT_TRAVERSE_LEAFS, -1, NULL, fp);
-    fclose (fp);
-  }
-#endif
-  
   apar->dt = dt;
 
   gfs_domain_timer_stop (domain, "mac_projection");
