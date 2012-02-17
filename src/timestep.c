@@ -594,6 +594,77 @@ void gfs_approximate_projection (GfsDomain * domain,
     g_warning ("approx projection: max residual %g > %g", par->residual.infty, par->tolerance);
 }
 
+static void save_face_values (FttCell * cell, GfsVariable * f[4])
+{
+  FttDirection d;
+  for (d = 0; d < 4; d++)
+    GFS_VALUE (cell, f[d]) = GFS_STATE (cell)->f[d].v;
+}
+
+static void face_values_init (FttCellTraverseFunc face_values, GfsAdvectionParams * par)
+{
+  if (par->v->component < FTT_DIMENSION && par->v->domain->has_rotated_bc) {
+    /* store normal and tangential face values for vector
+       quantities. This is required to apply boundary conditions for
+       rotated topologies (e.g. cubed sphere) */
+    GfsVariable * v = par->v;
+    GfsDomain * domain = v->domain;
+    FttComponent c;
+
+    for (c = 0; c < 2; c++) {
+      FttDirection d;
+      for (d = 0; d < 4; d++) {
+	g_assert (v->vector[0]->face[c][d] == NULL);
+	g_assert (v->vector[1]->face[c][d] == NULL);
+	v->vector[0]->face[c][d] = v->vector[1]->face[c][d] = 
+	  gfs_temporary_variable (domain);
+      }
+    }
+
+    for (c = 0; c < 2; c++) {
+      par->v = v->vector[c];
+      gfs_domain_traverse_leaves (domain, face_values, par);
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) save_face_values, par->v->face[c]);
+    }
+
+    par->v = v;
+  }
+}
+
+static void restore_face_values (FttCell * cell, GfsVariable * f[4])
+{
+  FttDirection d;
+  for (d = 0; d < 4; d++)
+    GFS_STATE (cell)->f[d].v = GFS_VALUE (cell, f[d]);
+}
+
+static void face_values_set (FttCellTraverseFunc face_values, GfsAdvectionParams * par)
+{
+  if (par->v->component < 2 && par->v->domain->has_rotated_bc)
+    /* vector: restore stored face values */
+    gfs_domain_traverse_leaves (par->v->domain, (FttCellTraverseFunc) restore_face_values, 
+				par->v->face[par->v->component]);
+  else
+    /* scalar or z-component: compute face values */
+    gfs_domain_traverse_leaves (par->v->domain, face_values, par);
+  gfs_domain_face_bc (par->v->domain, FTT_XYZ, par->v);
+}
+
+static void face_values_free (GfsVariable * v)
+{
+  if (v->component < FTT_DIMENSION && v->domain->has_rotated_bc) {
+    FttComponent c;
+    for (c = 0; c < 2; c++) {
+      FttDirection d;
+      for (d = 0; d < 4; d++) {
+	if (v->vector[0]->face[c][d])
+	  gts_object_destroy (GTS_OBJECT (v->vector[0]->face[c][d]));
+	v->vector[0]->face[c][d] = v->vector[1]->face[c][d] = NULL;
+      }
+    }
+  }
+}
+
 /**
  * gfs_predicted_face_velocities:
  * @domain: a #GfsDomain.
@@ -629,17 +700,16 @@ void gfs_predicted_face_velocities (GfsDomain * domain,
     face_values = (FttCellTraverseFunc) gfs_cell_advected_face_values;
     par->upwinding = GFS_CENTERED_UPWINDING;
   }
+  par->v = par->u[0];
+  face_values_init (face_values, par);
   for (c = 0; c < d; c++) {
     par->v = par->u[c];
-    gfs_domain_cell_traverse (domain, 
-    			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-    			      face_values, par);
-    gfs_domain_face_bc (domain, c, par->v);
+    face_values_set (face_values, par);
     gfs_domain_face_traverse (domain, c,
     			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) gfs_face_advected_normal_velocity, par);
   }
-
+  face_values_free (par->u[0]);
   gfs_domain_timer_stop (domain, "predicted_face_velocities");
 }
 
@@ -804,9 +874,7 @@ static void variable_sources (GfsDomain * domain,
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
     gfs_add_sinking_velocity (domain, par->sink);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_advected_face_values, par);
-    gfs_domain_face_bc (domain, FTT_XYZ, par->v);
+    face_values_set ((FttCellTraverseFunc) gfs_cell_advected_face_values, par);
     gfs_domain_face_traverse (domain, FTT_XYZ,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) par->flux, par);
@@ -914,6 +982,8 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 
   par->use_centered_velocity = FALSE;
   v = gfs_domain_velocity (domain);
+  par->v = v[0];
+  face_values_init ((FttCellTraverseFunc) gfs_cell_advected_face_values, par);
   for (c = 0; c < dimension; c++) {
     GfsSourceDiffusion * d = source_diffusion (v[c]);
 
@@ -933,6 +1003,7 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
       gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, par->v);
     }
   }
+  face_values_free (par->v);
   gfs_domain_timer_stop (domain, "centered_velocity_advection_diffusion");
 }
 

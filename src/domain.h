@@ -107,6 +107,8 @@ struct _GfsDomain {
   gboolean dirty;     /**< whether the sorted array needs updating */
 
   GSList * projections; /**< list of GfsDomainProjection associated with this domain */
+
+  gboolean has_rotated_bc; /**< whether the domain uses "rotated" edges */
 };
 
 struct _GfsDomainClass {

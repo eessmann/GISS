@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1550,6 +1550,24 @@ static void center_periodic_rotate (FttCellFace * face, GfsBc * b)
       GFS_VALUE (face->neighbor, b->v);
 }
 
+static void face_periodic_rotate (FttCellFace * face, GfsBc * b)
+{
+  GfsBoundaryPeriodic * boundary_periodic = GFS_BOUNDARY_PERIODIC (b->b);
+
+  g_assert (boundary_periodic->sndcount < boundary_periodic->sndbuf->len);
+  FttDirection d = FTT_OPPOSITE_DIRECTION (face->d);
+  if (b->v->component < 2) { /* 2D-vector-rotation only */
+    FttComponent c = FTT_ORTHOGONAL_COMPONENT (b->v->component);
+    g_assert (d < 4);
+    g_assert (b->v->face[c][d]);
+    g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =
+      (2.*c - 1.)*boundary_periodic->rotate*GFS_VALUE (face->neighbor, b->v->face[c][d]);
+  }
+  else
+    g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =
+      GFS_STATE (face->neighbor)->f[d].v;
+}
+
 /**
  * gfs_boundary_periodic_rotate_new:
  * @klass: a #GfsBoundaryClass.
@@ -1578,6 +1596,7 @@ GfsBoundaryPeriodic * gfs_boundary_periodic_rotate_new (GfsBoundaryClass * klass
 
   GfsBc * b = GFS_BOUNDARY (boundary)->default_bc;
   b->bc = b->homogeneous_bc = (FttFaceTraverseFunc) center_periodic_rotate;
+  b->face_bc = (FttFaceTraverseFunc) face_periodic_rotate;
 
   return boundary;
 }
@@ -1682,6 +1701,7 @@ void gfs_gedge_link_boxes (GfsGEdge * edge)
 				      b1, edge->d, b2, edge->rotate,  1.);
     gfs_boundary_periodic_rotate_new (gfs_boundary_periodic_class (),
 				      b2, edge->rotate, b1, edge->d, -1.);
+    gfs_box_domain (b1)->has_rotated_bc = TRUE;
   }
   else {
     g_return_if_fail (b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] == NULL);

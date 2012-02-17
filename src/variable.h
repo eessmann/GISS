@@ -50,6 +50,7 @@ struct _GfsVariable {
   GfsDomain * domain;
   FttCellCleanupFunc cleanup;
   gdouble units;
+  GfsVariable * face[2][4];
 };
 
 typedef struct _GfsVariableClass    GfsVariableClass;
