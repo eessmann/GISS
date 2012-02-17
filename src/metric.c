@@ -1137,11 +1137,109 @@ static void map_cubed_inverse_cell (GfsMap * map, const FttVector * src, FttVect
       dest[i].x += 360./L;
 }
 
+static double evaluate (const FttVector * x, const FttVector * rhs, FttVector * f)
+{
+  gdouble delta = 0.;
+  cmap_xy2XYZ (x->x, x->y, &f->x, &f->y, &f->z);
+  int i;
+  for (i = 0; i < 3; i++) {
+    (&f->x)[i] -= (&rhs->x)[i];
+    delta += (&f->x)[i]*(&f->x)[i];
+  }
+  return delta;
+}
+
+#define DELTA 1e-6
+
+static void jacobian (const FttVector * x, const FttVector * rhs, FttVector * f,
+		      GtsMatrix * J)
+{
+  int i, j;
+  for (i = 0; i < 3; i++)
+    for (j = 0; j < 3; j++) {
+      FttVector df, dx = *x;
+      (&dx.x)[j] += DELTA;
+      cmap_xy2XYZ (dx.x, dx.y, &df.x, &df.y, &df.z);
+      df.x *= 1. + dx.z;
+      df.y *= 1. + dx.z;
+      df.z *= 1. + dx.z;
+      J[i][j] = ((&df.x)[i] - (&rhs->x)[i] - (&f->x)[i])/DELTA;
+    }
+}
+
+static void normalized_jacobian (const FttVector * p, GtsMatrix * J)
+{
+  FttVector f, rhs = {0., 0., 0.};
+  g_assert (p->z == 0.);
+  evaluate (p, &rhs, &f);
+  jacobian (p, &rhs, &f, J);
+  /* normalize */
+  int i, j;
+  for (i = 0; i < 3; i++) {
+    gdouble h = 0.;
+    for (j = 0; j < 3; j++)
+      h += J[j][i]*J[j][i];
+    h = sqrt (h);
+    for (j = 0; j < 3; j++)
+      J[j][i] /= h;
+  }
+}
+
+static void map_cubed_inverse_vector (GfsMap * map, const FttVector * p,
+				      const FttVector * src, FttVector * dest)
+{
+  g_assert_not_implemented ();
+
+  GtsMatrix J[4];
+  normalized_jacobian (p, J);
+  FttVector src1 = *src; /* in case src and dest are identical */
+  int i, j;
+  for (i = 0; i < 3; i++) {
+    (&dest->x)[i] = 0.;
+    for (j = 0; j < 3; j++)
+      (&dest->x)[i] += (&src1.x)[j]*J[i][j];
+  }
+}
+
+static void map_cubed_transform_vector (GfsMap * map, const FttVector * p,
+					const FttVector * src, FttVector * dest)
+{
+  GtsMatrix J[4];
+  normalized_jacobian (p, J);
+  GtsMatrix * iJ = gts_matrix3_inverse (J);
+  if (!iJ) {
+    gts_matrix_print (J, stderr);
+    g_assert_not_reached ();
+  }
+
+  FttVector src1 = * src;
+  FttVector p1;
+  map_cubed_inverse (map, p, &p1);
+  GfsSimulation * sim = gfs_object_simulation (map);
+  gdouble lon = p1.x*sim->physical_params.L*M_PI/180.;
+  gdouble lat = p1.y*sim->physical_params.L*M_PI/180.;
+  gdouble coslon = cos (lon), sinlon = sin (lon);
+  gdouble sinlat = sin (lat);
+  src1.x = coslon*src->x - sinlat*sinlon*src->y;
+  src1.y = cos(lat)*src->y;
+  src1.z = - sinlon*src->x - sinlat*coslon*src->y;
+
+  int i, j;
+  for (i = 0; i < 3; i++) {
+    (&dest->x)[i] = 0.;
+    for (j = 0; j < 3; j++)
+      (&dest->x)[i] += (&src1.x)[j]*iJ[i][j];
+  }
+  gts_matrix_destroy (iJ);
+}
+
 static void gfs_map_cubed_init (GfsMap * map)
 {
   map->transform = map_cubed_transform;
-  map->inverse =   map_cubed_inverse;  
-  map->inverse_cell = map_cubed_inverse_cell;  
+  map->inverse =   map_cubed_inverse;
+  map->inverse_cell = map_cubed_inverse_cell;
+  map->inverse_vector = map_cubed_inverse_vector;
+  map->transform_vector = map_cubed_transform_vector;
 }
 
 static GfsMapClass * gfs_map_cubed_class (void)
