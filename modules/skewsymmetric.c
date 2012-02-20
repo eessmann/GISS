@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2011 Daniel Fuster
+ * Copyright (C) 2011-2012 Daniel Fuster
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -57,7 +57,7 @@ typedef struct {
   FaceData * fd;
 } DataDif;
 
- /** \beginobject{GfsSkewSymmetric} */
+/** \beginobject{GfsSkewSymmetric} */
 
 static void gfs_skew_symmetric_read (GtsObject ** o, GtsFile * fp)
 {
@@ -699,12 +699,14 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
 
 }
 
+/** \endobject{GfsSkewSymmetric} */
+
 /** \beginobject{GfsInitFaceValues} */
 
-#define GFS_IS_FACE_VALUES_INIT(obj)         (gts_object_is_from_class (obj, \
-                                              gfs_face_values_init_class ()))
+#define GFS_IS_INIT_FACE_VALUES(obj)         (gts_object_is_from_class (obj, \
+                                              gfs_init_face_values_class ()))
 
-GfsGenericInitClass * gfs_face_values_init_class (void);
+GfsGenericInitClass * gfs_init_face_values_class (void);
 
 
 typedef struct {
@@ -726,9 +728,9 @@ static void init_fd (FttCellFace * face, FaceInitData * fd)
 
 }
 
-static gboolean gfs_face_values_init_event (GfsEvent * event, GfsSimulation * sim)
+static gboolean gfs_init_face_values_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_face_values_init_class ())->parent_class)->event) 
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_face_values_class ())->parent_class)->event) 
       (event, sim)) {
     GSList * i = GFS_INIT (event)->f;
     FaceInitData data;
@@ -768,27 +770,26 @@ static gboolean gfs_face_values_init_event (GfsEvent * event, GfsSimulation * si
   return FALSE;
 }
 
-static void gfs_face_values_init_class_init (GfsGenericInitClass * klass)
+static void gfs_init_face_values_class_init (GfsGenericInitClass * klass)
 {
-  GFS_EVENT_CLASS (klass)->event = gfs_face_values_init_event;
+  GFS_EVENT_CLASS (klass)->event = gfs_init_face_values_event;
 }
 
-GfsGenericInitClass * gfs_face_values_init_class (void)
+GfsGenericInitClass * gfs_init_face_values_class (void)
 {
   static GfsGenericInitClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_face_values_init_info = {
+    GtsObjectClassInfo info = {
       "GfsInitFaceValues",
       sizeof (GfsInit),
       sizeof (GfsGenericInitClass),
-      (GtsObjectClassInitFunc) gfs_face_values_init_class_init,
+      (GtsObjectClassInitFunc) gfs_init_face_values_class_init,
       (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_init_class ()),
-        &gfs_face_values_init_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_init_class ()), &info);
   }
 
   return klass;
@@ -806,6 +807,6 @@ const gchar * g_module_check_init (void);
 const gchar * g_module_check_init (void)
 {
   gfs_skew_symmetric_class ();
-  gfs_face_values_init_class ();
+  gfs_init_face_values_class ();
   return NULL;
 } 
