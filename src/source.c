@@ -1725,14 +1725,12 @@ static void coriolis_drag_metric_coefficients (GfsSourceCoriolis * sc,
 					       FttComponent c1,
 					       gdouble f[2])
 {
-  /* fixme: 2D only */
-  g_assert (FTT_DIMENSION == 2);
-
   f[0] = sc->drag ? gfs_function_value (sc->drag, cell) : 0.;
   f[1] = sc->omegaz ? gfs_function_value (sc->omegaz, cell) : 0.;
 
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (sc));
   if (domain->advection_metric) {
+    /* fixme: 2D only */
     FttComponent c2 = (c1 + 1) % 2;
     gdouble m[2];
     (* domain->advection_metric) (domain, cell, c1, m);
