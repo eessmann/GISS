@@ -708,10 +708,10 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
 
 GfsGenericInitClass * gfs_init_face_values_class (void);
 
-
 typedef struct {
-  GfsVariable * v;
-  GfsFunction * f;
+  GfsVariable * v[FTT_DIMENSION];
+  GfsFunction * f[FTT_DIMENSION];
+  guint n;
 } VarFunc;
 
 typedef struct {
@@ -722,10 +722,9 @@ typedef struct {
 static void init_fd (FttCellFace * face, FaceInitData * fd)
 {
   if (face->d % 2 != 0) 
-    GFS_VALUE (face->cell, fd->v2) = gfs_function_face_value(fd->f, face);
+    GFS_VALUE (face->cell, fd->v2) = gfs_function_face_value (fd->f, face);
   else
-    GFS_VALUE (face->cell, fd->v1) = gfs_function_face_value(fd->f, face);
-
+    GFS_VALUE (face->cell, fd->v1) = gfs_function_face_value (fd->f, face);
 }
 
 static gboolean gfs_init_face_values_event (GfsEvent * event, GfsSimulation * sim)
@@ -733,36 +732,39 @@ static gboolean gfs_init_face_values_event (GfsEvent * event, GfsSimulation * si
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_face_values_class ())->parent_class)->event) 
       (event, sim)) {
     GSList * i = GFS_INIT (event)->f;
-    FaceInitData data;
-    FttComponent c;
-
     while (i) {
       VarFunc * vf = i->data;
-      gfs_catch_floating_point_exceptions ();
-      if (g_strcmp0(&vf->v->name[0],"U") == 0) { 
+      FaceInitData data;
+      FttComponent c = FTT_DIMENSION;
+      if (!strcmp (vf->v[0]->name, "U")) {
+	if (vf->n > 1)
+	  g_assert_not_implemented ();
         data.v1 = GFS_SKEW_SYMMETRIC(sim)->velfaces[0];
         data.v2 = GFS_SKEW_SYMMETRIC(sim)->velfaces[1];
-        data.f  = vf->f;
-        c  = 0;
+        data.f  = vf->f[0];
+        c  = FTT_X;
       }
-      else if (g_strcmp0(&vf->v->name[0],"V") == 0) {
+      else if (!strcmp (vf->v[0]->name, "V")) {
         data.v1 = GFS_SKEW_SYMMETRIC(sim)->velfaces[2];
         data.v2 = GFS_SKEW_SYMMETRIC(sim)->velfaces[3];
-        data.f  = vf->f;
-        c  = 1;
+        data.f  = vf->f[0];
+        c  = FTT_Y;
       }
 #if (!FTT_2D)
-      else if (g_strcmp0(&vf->v->name[0],"W") == 0) {
+      else if (!strcmp (vf->v[0]->name, "W")) {
         data.v1 = GFS_SKEW_SYMMETRIC(sim)->velfaces[4];
         data.v2 = GFS_SKEW_SYMMETRIC(sim)->velfaces[5];
-        data.f  = vf->f;
-        c  = 2;
+        data.f  = vf->f[0];
+        c  = FTT_Z;
       }
 #endif
-      gfs_domain_face_traverse (GFS_DOMAIN (sim), c,
-                                FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, 
-                                (FttFaceTraverseFunc)  init_fd, &data);
-      gfs_restore_fpe_for_function (vf->f);
+      if (c < FTT_DIMENSION) {
+	gfs_catch_floating_point_exceptions ();
+	gfs_domain_face_traverse (GFS_DOMAIN (sim), c,
+				  FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, 
+				  (FttFaceTraverseFunc) init_fd, &data);
+	gfs_restore_fpe_for_function (vf->f[0]);
+      }
       i = i->next;
     }
     return TRUE;
