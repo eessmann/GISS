@@ -2723,7 +2723,7 @@ guint gfs_domain_size (GfsDomain * domain,
 }
 
 typedef struct {
-  gdouble cflu, cflg;
+  gdouble cfl;
   GfsVariable ** v;
   GfsDomain * domain;
 } CflData;
@@ -2740,8 +2740,8 @@ static void minimum_mac_cfl (FttCellFace * face, CflData * p)
   }
   if (un != 0.) {
     gdouble cflu = length/fabs (un);
-    if (cflu*cflu < p->cflu)
-      p->cflu = cflu*cflu;
+    if (cflu*cflu < p->cfl)
+      p->cfl = cflu*cflu;
   }
   FttComponent c = face->d/2;
   if (p->v[c]->sources) {
@@ -2755,8 +2755,8 @@ static void minimum_mac_cfl (FttCellFace * face, CflData * p)
     }
     if (g != 0.) {
       gdouble cflg = 2.*length/fabs (g);
-      if (cflg < p->cflg)
-	p->cflg = cflg;
+      if (cflg < p->cfl)
+	p->cfl = cflg;
     }
   }
 }
@@ -2783,8 +2783,8 @@ static void minimum_cfl (FttCell * cell, CflData * p)
     if (GFS_VALUE (cell, p->v[c]) != 0.) {
       gdouble cflu = length/fabs (fm*GFS_VALUE (cell, p->v[c]));
 
-      if (cflu*cflu < p->cflu)
-	p->cflu = cflu*cflu;
+      if (cflu*cflu < p->cfl)
+	p->cfl = cflu*cflu;
     }
     if (p->v[c]->sources) {
       gdouble g = gfs_variable_mac_source (p->v[c], cell);
@@ -2792,8 +2792,8 @@ static void minimum_cfl (FttCell * cell, CflData * p)
       if (g != 0.) {
 	gdouble cflg = 2.*length/fabs (fm*g);
 
-	if (cflg < p->cflg)
-	  p->cflg = cflg;
+	if (cflg < p->cfl)
+	  p->cfl = cflg;
       }
     }
   }
@@ -2818,16 +2818,15 @@ gdouble gfs_domain_cfl (GfsDomain * domain,
 
   g_return_val_if_fail (domain != NULL, 0.);
 
-  p.cflu = p.cflg = G_MAXDOUBLE;
+  p.cfl = G_MAXDOUBLE;
   p.v = gfs_domain_velocity (domain);
   p.domain = domain;
   gfs_domain_face_traverse (domain, FTT_XYZ, FTT_PRE_ORDER, flags, max_depth, 
 			    (FttFaceTraverseFunc) minimum_mac_cfl, &p);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
 			    (FttCellTraverseFunc) minimum_cfl, &p);
-  gfs_all_reduce (domain, p.cflu, MPI_DOUBLE, MPI_MIN);
-  gfs_all_reduce (domain, p.cflg, MPI_DOUBLE, MPI_MIN);
-  return p.cflu < G_MAXDOUBLE ? sqrt (p.cflu) : sqrt (p.cflg);
+  gfs_all_reduce (domain, p.cfl, MPI_DOUBLE, MPI_MIN);
+  return sqrt (p.cfl);
 }
 
 /**
