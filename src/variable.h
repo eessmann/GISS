@@ -251,6 +251,22 @@ GfsEventClass * gfs_spatial_sum_class  (void);
 
 /* GfsVariablePoisson: Header */
 
+typedef struct _GfsVariablePoisson                GfsVariablePoisson;
+
+struct _GfsVariablePoisson {
+  /*< private >*/
+  GfsVariableFunction parent;
+
+  /*< public >*/
+  GfsMultilevelParams par;
+};
+
+#define GFS_VARIABLE_POISSON(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsVariablePoisson,\
+					           gfs_variable_poisson_class ())
+#define GFS_IS_VARIABLE_POISSON(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_poisson_class ()))
+
 GfsVariableClass * gfs_variable_poisson_class  (void);
 
 /* GfsHydrostaticPressure: Header */

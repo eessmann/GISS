@@ -946,6 +946,24 @@ GfsVariableClass * gfs_variable_stream_function_class (void)
  * \beginobject{GfsVariablePoisson}
  */
 
+static void variable_poisson_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_poisson_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type == '{')
+    gfs_multilevel_params_read (&GFS_VARIABLE_POISSON (*o)->par, fp);
+}
+
+static void variable_poisson_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_poisson_class ())->parent_class->write) (o, fp);
+
+  fputc (' ', fp);
+  gfs_multilevel_params_write (&GFS_VARIABLE_POISSON (o)->par, fp);
+}
+
 typedef struct {
   GfsFunction * f;
   GfsVariable * div;
@@ -966,8 +984,7 @@ static gboolean variable_poisson_event (GfsEvent * event, GfsSimulation * sim)
     GfsVariable * div = gfs_temporary_variable (domain);
     GfsVariable * res = gfs_temporary_variable (domain);
     GfsVariable * v = GFS_VARIABLE (event);
-    GfsMultilevelParams par;
-    gfs_multilevel_params_init (&par);
+    GfsVariablePoisson * pv = GFS_VARIABLE_POISSON (v);
 
     gfs_domain_surface_bc (domain, v);
     DivData p = { GFS_VARIABLE_FUNCTION (event)->f, div };
@@ -976,8 +993,8 @@ static gboolean variable_poisson_event (GfsEvent * event, GfsSimulation * sim)
     gfs_poisson_coefficients (domain, NULL, FALSE, TRUE, TRUE);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, dia);
-    par.poisson_solve (domain, &par, v, div, res, dia, 1.);
-    //    gfs_multilevel_params_stats_write (&par, stderr);
+    pv->par.poisson_solve (domain, &pv->par, v, div, res, dia, 1.);
+    //    gfs_multilevel_params_stats_write (&pv->par, stderr);
 
     gts_object_destroy (GTS_OBJECT (dia));
     gts_object_destroy (GTS_OBJECT (div));
@@ -989,12 +1006,16 @@ static gboolean variable_poisson_event (GfsEvent * event, GfsSimulation * sim)
 
 static void variable_poisson_class_init (GtsObjectClass * klass)
 {
+  klass->read = variable_poisson_read;
+  klass->write = variable_poisson_write;
   GFS_EVENT_CLASS (klass)->event = variable_poisson_event;
 }
 
 static void variable_poisson_init (GfsVariable * v)
 {
+  v->centered = TRUE;
   v->coarse_fine = (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine;
+  gfs_multilevel_params_init (&GFS_VARIABLE_POISSON (v)->par);
 }
 
 GfsVariableClass * gfs_variable_poisson_class (void)
@@ -1004,7 +1025,7 @@ GfsVariableClass * gfs_variable_poisson_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo gfs_variable_poisson_info = {
       "GfsVariablePoisson",
-      sizeof (GfsVariableFunction),
+      sizeof (GfsVariablePoisson),
       sizeof (GfsVariableClass),
       (GtsObjectClassInitFunc) variable_poisson_class_init,
       (GtsObjectInitFunc) variable_poisson_init,
