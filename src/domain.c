@@ -2134,13 +2134,17 @@ GfsNorm gfs_domain_norm_variable (GfsDomain * domain,
   return n;
 }
 
-static void add_norm_residual (const FttCell * cell, gpointer * data)
+typedef struct {
+  GfsVariable * res;
+  gdouble bias;
+  GfsNorm n;
+} ResData;
+
+static void add_norm_residual (const FttCell * cell, ResData * p)
 {
   gdouble size = ftt_cell_size (cell);
-  GfsVariable * res = data[0];
-  GfsNorm * n = data[1];
-  
-  gfs_norm_add (n, GFS_VALUE (cell, res)/(size*size), 1.);
+  gfs_norm_add (&p->n, GFS_VALUE (cell, p->res)/(size*size), 1.);
+  p->bias += GFS_VALUE (cell, p->res);
 }
 
 /**
@@ -2165,26 +2169,24 @@ GfsNorm gfs_domain_norm_residual (GfsDomain * domain,
 				  gdouble dt,
 				  GfsVariable * res)
 {
-  GfsNorm n;
-  gpointer data[2];
+  ResData p = { res, 0. };
 
-  g_return_val_if_fail (domain != NULL, n);
-  g_return_val_if_fail (res != NULL, n);
+  g_return_val_if_fail (domain != NULL, p.n);
+  g_return_val_if_fail (res != NULL, p.n);
   
-  gfs_norm_init (&n);
-  data[0] = res;
-  data[1] = &n;
+  gfs_norm_init (&p.n);
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, max_depth, 
-			   (FttCellTraverseFunc) add_norm_residual, data);
-  domain_norm_reduce (domain, &n);
-  gfs_norm_update (&n);
+			   (FttCellTraverseFunc) add_norm_residual, &p);
+  domain_norm_reduce (domain, &p.n);
+  gfs_all_reduce (domain, p.bias, MPI_DOUBLE, MPI_SUM);
+  gfs_norm_update (&p.n);
 
   dt *= dt;
-  n.bias *= dt;
-  n.first *= dt;
-  n.second *= dt;
-  n.infty *= dt;
-  return n;
+  p.n.bias = p.bias*dt;
+  p.n.first *= dt;
+  p.n.second *= dt;
+  p.n.infty *= dt;
+  return p.n;
 }
 
 /**
