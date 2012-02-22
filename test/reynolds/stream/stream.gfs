@@ -51,10 +51,17 @@
   Refine LEVEL
   VariableTracer Omega
   Init {} {
-    Omega = 4.*M_PI*cos (2.*M_PI*x)*cos (2.*M_PI*y)
     U0 = (- cos (2.*M_PI*x)*sin (2.*M_PI*y))
     V0 = (sin (2.*M_PI*x)*cos (2.*M_PI*y))
+    # we need (U,V) to compute the vorticity
+    U = U0
+    V = V0
   }
+  # In the general case the vorticity cannot be consistently
+  # defined directly (because it needs to verify discrete properties
+  # on the circulation)
+  # Initialising from the velocity field (U,V) as done below should be safe
+  Init {} { Omega = Vorticity }
   VariablePoisson Psi -Omega
   VariableStreamFunction { istep = 1 } Psi1 Psi
   OutputScalarNorm { istep = 1 } divLEVEL { v = (dx("U") + dy("V")) }

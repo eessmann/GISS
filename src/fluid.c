@@ -2161,9 +2161,7 @@ gdouble gfs_face_interpolated_value (const FttCellFace * face,
   g_return_val_if_fail (face != NULL, 0.);
 
   if (face->neighbor) {
-    g_assert (FTT_CELL_IS_LEAF (face->neighbor) || 
-	      ftt_cell_level (face->neighbor) < ftt_cell_level (face->cell));
-    v1 = gfs_neighbor_value (face, v, &x1);
+    v1 = neighbor_value (face, v, &x1);
     return ((x1 - 0.5)*GFS_VALUEI (face->cell, v) + 0.5*v1)/x1;
   }
   else
@@ -2351,6 +2349,28 @@ gdouble gfs_divergence (FttCell * cell,
   return div/ftt_cell_size (cell);
 }
 
+#if FTT_2D
+static gdouble face_interpolated_value (const FttCellFace * face, GfsVariable * v)
+{
+  if (!face->neighbor || FTT_CELL_IS_LEAF (face->neighbor) ||
+      ftt_cell_level (face->neighbor) < ftt_cell_level (face->cell))
+    return gfs_face_interpolated_value (face, v->i);
+  else {
+    /* finer neighbor */
+    FttCellFace f = { NULL, face->cell, FTT_OPPOSITE_DIRECTION (face->d) };
+    FttCellChildren child;
+    int i, n = ftt_cell_children_direction (face->neighbor, f.d, &child);
+    gdouble avg = 0.;
+    for (i = 0; i < n; i++)
+      if (child.c[i]) {
+	f.cell = child.c[i];
+	avg += gfs_face_interpolated_value (&f, v->i)*gfs_domain_face_fraction (v->domain, &f);
+      }
+    return avg/(gfs_domain_face_fraction (v->domain, face)*n);
+  }
+}
+#endif /* 2D */
+
 /**
  * gfs_vorticity:
  * @cell: a #FttCell.
@@ -2362,19 +2382,28 @@ gdouble gfs_divergence (FttCell * cell,
 gdouble gfs_vorticity (FttCell * cell,
 		       GfsVariable ** v)
 {
-  gdouble size;
-#if (!FTT_2D)
-  FttVector vort;
-#endif /* FTT_3D */
-
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (v != NULL, 0.);
 
-  size = ftt_cell_size (cell);
 #if FTT_2D
-  return (gfs_center_gradient (cell, FTT_X, v[1]->i) -
-	  gfs_center_gradient (cell, FTT_Y, v[0]->i))/size;
+  FttCellNeighbors n;
+  ftt_cell_neighbors (cell, &n);
+  FttCellFace f = { cell };
+  double circ = 0.;
+  f.d = FTT_RIGHT; f.neighbor = n.c[f.d];
+  circ += face_interpolated_value (&f, v[1])*gfs_domain_face_fraction (v[0]->domain, &f);
+  f.d = FTT_LEFT; f.neighbor = n.c[f.d];
+  circ -= face_interpolated_value (&f, v[1])*gfs_domain_face_fraction (v[0]->domain, &f);
+  f.d = FTT_TOP; f.neighbor = n.c[f.d];
+  circ -= face_interpolated_value (&f, v[0])*gfs_domain_face_fraction (v[0]->domain, &f);
+  f.d = FTT_BOTTOM; f.neighbor = n.c[f.d];
+  circ += face_interpolated_value (&f, v[0])*gfs_domain_face_fraction (v[0]->domain, &f);
+  /* vorticity is circulation over area */
+  return circ*ftt_cell_size (cell)/gfs_cell_volume (cell, v[0]->domain);
 #else  /* FTT_3D */
+  /* fixme: does not work with metric */
+  FttVector vort;
+  gdouble size = ftt_cell_size (cell);
   vort.x = (gfs_center_gradient (cell, FTT_Y, v[2]->i) -
 	    gfs_center_gradient (cell, FTT_Z, v[1]->i))/size;
   vort.y = (gfs_center_gradient (cell, FTT_Z, v[0]->i) -
