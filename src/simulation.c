@@ -263,6 +263,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   fp->scope_max++;
   gts_file_next_token (fp);
 
+  GfsDomain * domain = GFS_DOMAIN (sim);
   while (fp->type != GTS_ERROR && fp->type != '}') {
     if (fp->type == '\n') {
       gts_file_next_token (fp);
@@ -298,7 +299,7 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
     /* ------------ GfsPhysicalParams ------------ */
     else if (strmatch (fp->token->str, "GfsPhysicalParams")) {
       gts_file_next_token (fp);
-      gfs_physical_params_read (&sim->physical_params, GFS_DOMAIN (sim), fp);
+      gfs_physical_params_read (&sim->physical_params, domain, fp);
       if (fp->type == GTS_ERROR)
 	return;
     }
@@ -326,14 +327,14 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       if (fp->type == GTS_ERROR)
 	return;
       if (sim->advection_params.linear) {
-	sim->u0[0] = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), 
+	sim->u0[0] = gfs_domain_get_or_add_variable (domain, 
 						     "U0", "x-component of the base velocity");
 	sim->u0[0]->units = 1.;
-	sim->u0[1] = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), 
+	sim->u0[1] = gfs_domain_get_or_add_variable (domain, 
 						     "V0", "y-component of the base velocity");
 	sim->u0[1]->units = 1.;
 #if (!FTT_2D)
-	sim->u0[2] = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), 
+	sim->u0[2] = gfs_domain_get_or_add_variable (domain, 
 						     "W0", "z-component of the base velocity");
 	sim->u0[2]->units = 1.;
 #endif /* FTT_3D */
@@ -402,7 +403,11 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
   sim->modules = g_slist_reverse (sim->modules);
 
   if (sim->advection_params.scheme == GFS_NONE)
-    GFS_DOMAIN (sim)->advection_metric = NULL;
+    domain->advection_metric = NULL;
+  else if (domain->advection_metric && !gfs_has_source_coriolis (domain)) {
+    /* we need to add a pseudo-Coriolis term to include the metric advection terms */
+    
+  }
 }
 
 /**
@@ -1951,6 +1956,18 @@ gboolean gfs_variable_is_dimensional (GfsVariable * v)
  * \beginobject{GfsAdvection}
  */
 
+static void event_do_adapt (GfsEvent * event, GfsSimulation * sim)
+{
+  if (GFS_IS_ADAPT (event))
+    gfs_event_do (event, sim);
+}
+
+static void event_do_not_adapt (GfsEvent * event, GfsSimulation * sim)
+{
+  if (!GFS_IS_ADAPT (event))
+    gfs_event_do (event, sim);
+}
+
 static void advection_run (GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
@@ -1973,12 +1990,14 @@ static void advection_run (GfsSimulation * sim)
 	 sim->time.i < sim->time.iend) {
     gdouble tstart = gfs_clock_elapsed (domain->timer);
 
-    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) event_do_adapt, sim);
 
     gfs_domain_cell_traverse (domain,
     			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
     			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gfs_simulation_adapt (sim);
+
+    gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) event_do_not_adapt, sim);
 
     if (!streamfunction) {
       gfs_domain_face_traverse (domain, FTT_XYZ,
