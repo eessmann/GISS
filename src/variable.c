@@ -745,16 +745,23 @@ static gdouble face_metric (FttCell * cell, FttDirection d, GfsDomain * domain)
     return 1.;
 }
 
+static gdouble face_metric_inverse (FttCell * cell, FttDirection d, GfsDomain * domain)
+{
+  gdouble fm = face_metric (cell, d, domain);
+  /* for degenerate metric e.g. lon-lat */
+  return fm > 1e-6 ? 1./fm : 0.;
+}
+
 static void init_mac_from_stream_function (FttCell * cell,
 					   gdouble psi0, gdouble psi1, gdouble psi2, gdouble psi3,
 					   gdouble h,
 					   GfsDomain * domain,
 					   GfsVariable ** u)
 {
-  GFS_STATE (cell)->f[0].un = (psi2 - psi1)/(h*face_metric (cell, 0, domain));
-  GFS_STATE (cell)->f[1].un = (psi3 - psi0)/(h*face_metric (cell, 1, domain));
-  GFS_STATE (cell)->f[2].un = (psi3 - psi2)/(h*face_metric (cell, 2, domain));
-  GFS_STATE (cell)->f[3].un = (psi0 - psi1)/(h*face_metric (cell, 3, domain));
+  GFS_STATE (cell)->f[0].un = (psi2 - psi1)*face_metric_inverse (cell, 0, domain)/h;
+  GFS_STATE (cell)->f[1].un = (psi3 - psi0)*face_metric_inverse (cell, 1, domain)/h;
+  GFS_STATE (cell)->f[2].un = (psi3 - psi2)*face_metric_inverse (cell, 2, domain)/h;
+  GFS_STATE (cell)->f[3].un = (psi0 - psi1)*face_metric_inverse (cell, 3, domain)/h;
 
   GFS_VALUE (cell, u[0]) = (GFS_STATE (cell)->f[0].un + GFS_STATE (cell)->f[1].un)/2.;
   GFS_VALUE (cell, u[1]) = (GFS_STATE (cell)->f[2].un + GFS_STATE (cell)->f[3].un)/2.;
@@ -831,22 +838,22 @@ static void variable_stream_function_fine_coarse (FttCell * cell, GfsVariable * 
 {
   FttCellChildren child;
   ftt_cell_children (cell, &child);
-  double s = 2.*face_metric (cell, 0, v->domain);
   GFS_STATE (cell)->f[0].un = 
+    face_metric_inverse (cell, 0, v->domain)/2.*
     (face_metric (child.c[1], 0, v->domain)*GFS_STATE (child.c[1])->f[0].un +
-     face_metric (child.c[3], 0, v->domain)*GFS_STATE (child.c[3])->f[0].un)/s;
-  s = 2.*face_metric (cell, 1, v->domain);
+     face_metric (child.c[3], 0, v->domain)*GFS_STATE (child.c[3])->f[0].un);
   GFS_STATE (cell)->f[1].un = 
+    face_metric_inverse (cell, 1, v->domain)/2.*
     (face_metric (child.c[0], 1, v->domain)*GFS_STATE (child.c[0])->f[1].un +
-     face_metric (child.c[2], 1, v->domain)*GFS_STATE (child.c[2])->f[1].un)/s;
-  s = 2.*face_metric (cell, 2, v->domain);
+     face_metric (child.c[2], 1, v->domain)*GFS_STATE (child.c[2])->f[1].un);
   GFS_STATE (cell)->f[2].un = 
+    face_metric_inverse (cell, 2, v->domain)/2.*
     (face_metric (child.c[0], 2, v->domain)*GFS_STATE (child.c[0])->f[2].un +
-     face_metric (child.c[1], 2, v->domain)*GFS_STATE (child.c[1])->f[2].un)/s;
-  s = 2.*face_metric (cell, 3, v->domain);
+     face_metric (child.c[1], 2, v->domain)*GFS_STATE (child.c[1])->f[2].un);
   GFS_STATE (cell)->f[3].un = 
+    face_metric_inverse (cell, 3, v->domain)/2.*
     (face_metric (child.c[3], 3, v->domain)*GFS_STATE (child.c[3])->f[3].un +
-     face_metric (child.c[2], 3, v->domain)*GFS_STATE (child.c[2])->f[3].un)/s;
+     face_metric (child.c[2], 3, v->domain)*GFS_STATE (child.c[2])->f[3].un);
   GFS_VALUE (cell, v) = (GFS_VALUE (child.c[0], v) + GFS_VALUE (child.c[1], v) + 
 			 GFS_VALUE (child.c[2], v) + GFS_VALUE (child.c[3], v))/4.;
 }
