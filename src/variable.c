@@ -988,13 +988,16 @@ static gboolean variable_poisson_event (GfsEvent * event, GfsSimulation * sim)
 
     gfs_domain_surface_bc (domain, v);
     DivData p = { GFS_VARIABLE_FUNCTION (event)->f, div };
-    /* fixme: compatibility condition? */
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) rescale_div, &p);
     gfs_poisson_coefficients (domain, NULL, FALSE, TRUE, TRUE);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, dia);
     pv->par.poisson_solve (domain, &pv->par, v, div, res, dia, 1.);
-    //    gfs_multilevel_params_stats_write (&pv->par, stderr);
+    if (pv->par.residual.infty > pv->par.tolerance) {
+      g_warning ("VariablePoisson %s: max residual %g > %g",
+		 v->name, pv->par.residual.infty, pv->par.tolerance);
+      gfs_multilevel_params_stats_write (&pv->par, stderr);
+    }
 
     gts_object_destroy (GTS_OBJECT (dia));
     gts_object_destroy (GTS_OBJECT (div));

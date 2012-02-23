@@ -1062,12 +1062,14 @@ void gfs_module_read (GtsFile * fp, GfsSimulation * sim)
       /* initialise the poisson solver hook */
       sim->approx_projection_params.poisson_solve = hypre_poisson_solve;
       sim->projection_params.poisson_solve = hypre_poisson_solve;
-      /* initialise the diffusion solver hook(s) */
+      /* initialise the other diffusion and Poisson solver hook(s) */
       sim->advection_params.diffusion_solve = hypre_diffusion_solve;
       GSList * i = GFS_DOMAIN (sim)->variables;
       while (i) {
 	if (GFS_IS_VARIABLE_TRACER (i->data))
 	  GFS_VARIABLE_TRACER (i->data)->advection.diffusion_solve = hypre_diffusion_solve;
+	else if (GFS_IS_VARIABLE_POISSON (i->data))
+	  GFS_VARIABLE_POISSON (i->data)->par.poisson_solve = hypre_poisson_solve;
 	i = i->next;
       }
     }
