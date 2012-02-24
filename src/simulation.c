@@ -46,11 +46,6 @@ static void module_close (GModule *module)
     g_warning ("%s: %s", g_module_name (module), g_module_error ());
 }
 
-static void unref_module (gpointer key, gpointer value, gpointer hash)
-{
-  gfs_module_unref (value, hash);
-}
-
 static void simulation_destroy (GtsObject * object)
 {
   GfsSimulation * sim = GFS_SIMULATION (object);
@@ -74,14 +69,7 @@ static void simulation_destroy (GtsObject * object)
   g_slist_foreach (sim->preloaded_modules, (GFunc) module_close, NULL);
   g_slist_free (sim->preloaded_modules);
 
-  GHashTable * function_cache = sim->function_cache;
-
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->destroy) (object);
-
-  /* it is now safe to destroy the function cache (all the functions
-     used in GfsBoxes etc.. have been destroyed) */
-  g_hash_table_foreach (function_cache, unref_module, function_cache);
-  g_hash_table_destroy (function_cache);
 }
 
 static void simulation_write (GtsObject * object, FILE * fp)
@@ -93,10 +81,7 @@ static void simulation_write (GtsObject * object, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_simulation_class ())->parent_class->write)
     (object, fp);
 
-  fputs (" {\n"
-	 "  # when editing this file it is recommended to comment out the following line\n"
-	 "  GfsDeferredCompilation\n",
-	 fp);
+  fputs (" {\n", fp);
 
   i = sim->modules;
   while (i) {
@@ -274,11 +259,9 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
       return;
     }
 
-    /* ------ Deferred compilation ------*/
-    if (!strcmp (fp->token->str, "GfsDeferredCompilation")) {
-      sim->deferred_compilation = TRUE;
+    /* ------ fixme: obsolete, just here for backward compatibility ------*/
+    if (!strcmp (fp->token->str, "GfsDeferredCompilation"))
       gts_file_next_token (fp);
-    }
 
     /* ------------ GModule ------------ */
     else if (!strcmp (fp->token->str, "GModule")) {
@@ -989,12 +972,8 @@ static void simulation_init (GfsSimulation * object)
 					(GTS_CONTAINER_CLASS
 					 (gts_slist_container_class ())));
   object->modules = object->preloaded_modules = NULL;
-
-  object->deferred_compilation = FALSE;
   
   object->tnext = 0.;
-
-  object->function_cache = g_hash_table_new (g_str_hash, g_str_equal);
 }
 
 GfsSimulationClass * gfs_simulation_class (void)
