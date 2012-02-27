@@ -53,9 +53,9 @@ struct _GfsStateVector {
 
 struct _GfsSolidVector {
   gdouble s[FTT_NEIGHBORS];
-  gdouble a, v, fv;
+  gdouble a, fv;
   FttCell * merged;
-  FttVector cm, ca;
+  FttVector cm, ca, v;
 };
 
 typedef enum {

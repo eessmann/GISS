@@ -524,11 +524,10 @@ static gdouble cell_metric (const GfsDomain * domain, const FttCell * cell)
   return GFS_VALUE (cell, GFS_VARIABLE (domain->metric_data));
 }
 
-static gdouble solid_metric (const GfsDomain * domain, const FttCell * cell)
+static void solid_metric (const GfsDomain * domain, const FttCell * cell, FttVector * m)
 {
   g_assert (GFS_IS_MIXED (cell));
   g_assert_not_implemented ();
-  return 1;
 }
 
 static gdouble scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
@@ -1668,13 +1667,6 @@ static gdouble lon_lat_cell_metric (const GfsDomain * domain, const FttCell * ce
   return GFS_VALUE (cell, GFS_VARIABLE (domain->metric_data));
 }
 
-static gdouble lon_lat_solid_metric (const GfsDomain * domain, const FttCell * cell)
-{
-  g_assert (GFS_IS_MIXED (cell));
-  g_assert_not_implemented ();
-  return 1.;
-}
-
 static gdouble lon_lat_scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
 {
   if (c != FTT_X)
@@ -1775,7 +1767,7 @@ static void metric_lon_lat_read (GtsObject ** o, GtsFile * fp)
   domain->metric_data = *o;
   domain->face_metric  = lon_lat_face_metric;
   domain->cell_metric  = lon_lat_cell_metric;
-  domain->solid_metric = lon_lat_solid_metric;
+  domain->solid_metric = solid_metric;
   domain->scale_metric = lon_lat_scale_metric;
   domain->face_scale_metric = lon_lat_face_scale_metric;
 }
@@ -1925,10 +1917,18 @@ static gdouble stretch_cell_metric (const GfsDomain * domain, const FttCell * ce
 #endif
 }
 
-static gdouble stretch_solid_metric (const GfsDomain * domain, const FttCell * cell)
+static void stretch_solid_metric (const GfsDomain * domain, const FttCell * cell, FttVector * m)
 {
-  g_assert_not_implemented ();
-  return 1;
+  GfsMetricStretch * s = GFS_METRIC_STRETCH (domain->metric_data);
+  g_assert (GFS_IS_MIXED (cell));
+#if FTT_2D
+  m->x = s->sy/s->sx;
+  m->y = s->sx/s->sy;
+#else
+  m->x = s->sy*s->sz/s->sx;
+  m->y = s->sx*s->sz/s->sy;
+  m->z = s->sx*s->sy/s->sz;
+#endif
 }
 
 static gdouble stretch_scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)

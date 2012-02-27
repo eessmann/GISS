@@ -79,7 +79,7 @@ struct _GfsDomain {
   gpointer metric_data;
   gdouble (* face_metric)       (const GfsDomain *, const FttCellFace *);
   gdouble (* cell_metric)       (const GfsDomain *, const FttCell *);
-  gdouble (* solid_metric)      (const GfsDomain *, const FttCell *);
+  void    (* solid_metric)      (const GfsDomain *, const FttCell *, FttVector *);
   gdouble (* scale_metric)      (const GfsDomain *, const FttCell *, FttComponent);
   gdouble (* face_scale_metric) (const GfsDomain *, const FttCellFace *, FttComponent);
   gdouble (* viscous_metric_implicit)    (const GfsDomain * domain, 
@@ -434,16 +434,16 @@ gdouble gfs_domain_cell_fraction (const GfsDomain * domain, const FttCell * cell
  * gfs_domain_solid_metric:
  * @domain; a #GfsDomain.
  * @cell: a mixed #FttCell.
+ * @m: a #FttVector.
  *
- * Returns: the coordinate metric at the center of area of the solid
- * surface contained within @cell.
+ * Fills @m with the components of the coordinate metric at the center
+ * of area of the solid surface contained within @cell.
  */
 static inline
-gdouble gfs_domain_solid_metric (const GfsDomain * domain, const FttCell * cell)
+void gfs_domain_solid_metric (const GfsDomain * domain, const FttCell * cell, FttVector * m)
 {
   if (domain->solid_metric)
-    return (* domain->solid_metric) (domain, cell);
-  return 1.;
+    (* domain->solid_metric) (domain, cell, m);
 }
 
 /**

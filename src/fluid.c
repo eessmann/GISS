@@ -1640,15 +1640,9 @@ gdouble gfs_cell_dirichlet_gradient_flux (FttCell * cell,
     return 0.;
   else {
     GfsSolidVector * s = GFS_STATE (cell)->solid;
-    FttVector g;
-    
+    FttVector g;    
     gfs_cell_dirichlet_gradient (cell, v, max_level, v0, &g);
-
-    return (g.x*(s->s[1] - s->s[0]) + g.y*(s->s[3] - s->s[2])
-#if (!FTT_2D)
-	    + g.z*(s->s[5] - s->s[4])
-#endif
-	    )*s->v;
+    return g.x*s->v.x + g.y*s->v.y + g.z*s->v.z;
   }
 }
 
@@ -1704,28 +1698,14 @@ gdouble gfs_cell_dirichlet_gradient_flux_stencil (FttCell * cell,
   g_return_val_if_fail (lp != NULL, 0.);
   g_return_val_if_fail (stencil != NULL, 0.);
 
-  if (GFS_IS_MIXED (cell)) {
+  if (!GFS_IS_MIXED (cell))
+    return 0.;
+  else {
     GfsSolidVector * s = GFS_STATE (cell)->solid;
     FttVector g;
-    FttVector w;
-
-    w.x = (s->s[1] - s->s[0])*s->v;
-    w.y = (s->s[3] - s->s[2])*s->v;
-#if FTT_2D
-    w.z = 0.;
-#else
-    w.z = (s->s[5] - s->s[4])*s->v;
-#endif
-      
-    gfs_cell_dirichlet_gradient_stencil (cell, max_level, v0, &g, lp, stencil, &w);
-      
-    return (g.x*(s->s[1] - s->s[0]) + g.y*(s->s[3] - s->s[2])
-#if (!FTT_2D)
-	    + g.z*(s->s[5] - s->s[4])
-#endif
-	    )*s->v;
+    gfs_cell_dirichlet_gradient_stencil (cell, max_level, v0, &g, lp, stencil, &s->v);
+    return g.x*s->v.x + g.y*s->v.y + g.z*s->v.z;
   }
-  return 0.;
 }
 
 /**

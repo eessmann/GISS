@@ -1209,7 +1209,7 @@ static void add_diffusion_explicit_flux (FttCell * cell, FluxPar * p)
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
       f = gfs_cell_dirichlet_gradient_flux (cell, p->v->i, -1, solid->fv);
     else
-      f = solid->fv*solid->v;
+      f = solid->fv*solid->v.x;
   }
   else
     f = 0.; /* Neumann condition by default */
@@ -1237,8 +1237,8 @@ static void source_diffusion_explicit_flux (GfsSourceGeneric * s,
 					    gdouble dt)
 {
   GfsVariable * phi = GFS_SOURCE_DIFFUSION (s)->phi;
-  gfs_diffusion_coefficients (domain, GFS_SOURCE_DIFFUSION (s), dt, NULL, NULL, NULL, 1.);
   gfs_domain_surface_bc (domain, phi);
+  gfs_diffusion_coefficients (domain, GFS_SOURCE_DIFFUSION (s), dt, NULL, NULL, NULL, 1.);
   FluxPar p = { s, phi, sv };
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_diffusion_explicit_flux, &p);
 }
@@ -1570,8 +1570,8 @@ static void source_viscosity_explicit_flux (GfsSourceGeneric * s,
 {
   FluxPar p;
 
-  gfs_diffusion_coefficients (domain, GFS_SOURCE_DIFFUSION (s), dt, NULL, NULL, NULL, 1.);
   gfs_domain_surface_bc (domain, v);
+  gfs_diffusion_coefficients (domain, GFS_SOURCE_DIFFUSION (s), dt, NULL, NULL, NULL, 1.);
   p.s = s;
   p.v = v;
   p.sv = sv;

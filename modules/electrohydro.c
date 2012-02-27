@@ -365,8 +365,8 @@ static void poisson_electric (GfsElectroHydro * elec, gdouble dt)
 
   if (d) {
     GfsVariable * rhoc = gfs_temporary_variable (domain);
-    gfs_diffusion_coefficients (domain, d, dt, rhoc, NULL, NULL, d->D->par.beta);
     gfs_domain_surface_bc (domain, phi);
+    gfs_diffusion_coefficients (domain, d, dt, rhoc, NULL, NULL, d->D->par.beta);
     gfs_diffusion_rhs (domain, phi, dive, rhoc, NULL, d->D->par.beta);
     gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered, FALSE);
     gts_object_destroy (GTS_OBJECT (rhoc));
@@ -641,8 +641,9 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
     if (((cell)->flags & GFS_FLAG_DIRICHLET) == 0)
       /* Neumann conditions for Phi */
       g_assert_not_implemented ();
-
-    gdouble rs = gfs_domain_solid_metric (GFS_DOMAIN (elec), cell);
+    
+    FttVector m = {1.,1.,1.};
+    gfs_domain_solid_metric (GFS_DOMAIN (elec), cell, &m);
     gdouble permc = gfs_function_value (perm, cell);
     gdouble emod = 0., en = 0., a;
     GfsSolidVector * s = GFS_STATE (cell)->solid;
@@ -657,7 +658,7 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
       en   += (&g.x)[c]*(&n.x)[c];
     }
     for (c = 0; c < FTT_DIMENSION; c++) 
-      fe[c] += a*((&g.x)[c]*en*rs - emod/2.*(&n.x)[c]*radc)*permc;
+      fe[c] += a*((&g.x)[c]*en*(&m.x)[c] - emod/2.*(&n.x)[c]*radc)*permc;
   }
 
   /* fixme: we need to rescale, not entirely clear why... */

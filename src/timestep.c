@@ -856,8 +856,8 @@ static void variable_diffusion (GfsDomain * domain,
     metric->component = par->v->component;
   }
 
-  gfs_diffusion_coefficients (domain, d, par->dt, rhoc, metric, alpha, d->D->par.beta);
   gfs_domain_surface_bc (domain, par->v);
+  gfs_diffusion_coefficients (domain, d, par->dt, rhoc, metric, alpha, d->D->par.beta);
   gfs_diffusion_rhs (domain, par->v, rhs, rhoc, metric, d->D->par.beta);
   /* fixme: time shoud be set to t + dt here in case boundary values are
      time-dependent in the call below */

@@ -757,8 +757,10 @@ static void reset_coeff (FttCell * cell, PoissonCoeff * p)
 {
   FttDirection d;
   GfsFaceStateVector * f = GFS_STATE (cell)->f;
-  if (GFS_IS_MIXED (cell))
-    GFS_STATE (cell)->solid->v = 0.;   
+  if (GFS_IS_MIXED (cell)) {
+    FttVector v = {0.,0.,0.};
+    GFS_STATE (cell)->solid->v = v;
+  }
   for (d = 0; d < FTT_NEIGHBORS; d++)
     f[d].v = 0.;
 }
@@ -797,7 +799,18 @@ static void poisson_mixed_coeff (FttCell * cell, PoissonCoeff * p)
 {
   if (GFS_IS_MIXED (cell)) {
     gdouble alpha = p->alpha ? gfs_function_value (p->alpha, cell) : 1.;
-    GFS_STATE (cell)->solid->v += alpha*gfs_domain_solid_metric (p->domain, cell);
+    if (((cell)->flags & GFS_FLAG_DIRICHLET) == 0) 
+      /* Neumann condition (prescribed flux) */
+      GFS_STATE (cell)->solid->v.x += alpha;
+    else {
+      /* Dirichlet */
+      GfsSolidVector * s = GFS_STATE (cell)->solid;
+      FttVector m = {1.,1.,1.};
+      gfs_domain_solid_metric (p->domain, cell, &m);
+      FttComponent c;
+      for (c = 0; c < FTT_DIMENSION; c++)
+	(&s->v.x)[c] += alpha*(&m.x)[c]*(s->s[2*c + 1] - s->s[2*c]);
+    }
 
     if (alpha <= 0. && p->positive) {
       FttVector p;
@@ -1288,9 +1301,21 @@ static void diffusion_coef (FttCellFace * face, DiffusionCoeff * c)
 static void diffusion_mixed_coeff (FttCell * cell, DiffusionCoeff * c)
 {
   reset_coeff (cell, NULL);
-  if (GFS_IS_MIXED (cell))
-    GFS_STATE (cell)->solid->v = 
-      c->dt*gfs_domain_solid_metric (c->domain, cell)*gfs_source_diffusion_cell (c->d, cell);
+  if (GFS_IS_MIXED (cell)) {
+    gdouble diffusion = c->dt*gfs_source_diffusion_cell (c->d, cell);
+    if (((cell)->flags & GFS_FLAG_DIRICHLET) == 0)
+      /* Neumann condition (prescribed flux) */
+      GFS_STATE (cell)->solid->v.x = diffusion;
+    else {
+      /* Dirichlet */
+      GfsSolidVector * s = GFS_STATE (cell)->solid;
+      FttVector m = {1.,1.,1.};
+      gfs_domain_solid_metric (c->domain, cell, &m);
+      FttComponent i;
+      for (i = 0; i < FTT_DIMENSION; i++)
+	(&s->v.x)[i] = diffusion*(&m.x)[i]*(s->s[2*i + 1] - s->s[2*i]);
+    }
+  }
   if (c->rhoc) {
     gdouble rho = c->alpha ? 1./gfs_function_value (c->alpha, cell) : 1.;
     if (rho <= 0.) {
@@ -1382,7 +1407,7 @@ static void diffusion_rhs (FttCell * cell, RelaxParams * p)
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
       f = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, solid->fv);
     else
-      f = solid->fv*solid->v;
+      f = solid->fv*solid->v.x;
   }
   else
     f = 0.; /* Neumann condition by default */
@@ -1519,7 +1544,7 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
     if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
       g.b = gfs_cell_dirichlet_gradient_flux (cell, p->u, -1, solid->fv);
     else
-      g.b = solid->fv*solid->v;
+      g.b = solid->fv*solid->v.x;
   }
 
   face.cell = cell;

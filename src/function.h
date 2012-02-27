@@ -141,7 +141,12 @@ static double flux (const gchar * name)
   if ((_cell->flags & GFS_FLAG_DIRICHLET) == 0)
     flux = GFS_STATE (_cell)->solid->fv;
   else {
-    GFS_STATE (_cell)->solid->v = 1.;
+    GfsSolidVector * s = GFS_STATE (_cell)->solid;
+    FttVector m = {1.,1.,1.};
+    gfs_domain_solid_metric (GFS_DOMAIN (_sim), _cell, &m);
+    FttComponent c;
+    for (c = 0; c < FTT_DIMENSION; c++)
+      (&s->v.x)[c] = (&m.x)[c]*(s->s[2*c + 1] - s->s[2*c]);
     flux = gfs_cell_dirichlet_gradient_flux (_cell, v->i, -1, GFS_STATE (_cell)->solid->fv);
   }
   return gfs_dimensional_value (v, flux*pow (_sim->physical_params.L*ftt_cell_size (_cell), 

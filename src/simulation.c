@@ -2234,10 +2234,10 @@ static gdouble axi_cell_metric (const GfsDomain * domain, const FttCell * cell)
   return p.y;
 }
 
-static gdouble axi_solid_metric (const GfsDomain * domain, const FttCell * cell)
+static void axi_solid_metric (const GfsDomain * domain, const FttCell * cell, FttVector * m)
 {
   g_assert (GFS_IS_MIXED (cell));
-  return GFS_STATE (cell)->solid->ca.y;
+  m->x = m->y = GFS_STATE (cell)->solid->ca.y;
 }
 
 static gdouble axi_scale_metric (const GfsDomain * domain, const FttCell * cell, FttComponent c)
