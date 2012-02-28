@@ -186,6 +186,26 @@ GfsVariableClass * gfs_variable_stream_function_class  (void);
 
 GfsVariableClass * gfs_variable_age_class  (void);
 
+/* GfsVariableAverage: header */
+
+typedef struct _GfsVariableAverage                GfsVariableAverage;
+
+struct _GfsVariableAverage {
+  /*< private >*/
+  GfsVariableFunction parent;
+
+  /*< public >*/
+  FttComponent c;
+};
+
+#define GFS_VARIABLE_AVERAGE(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsVariableAverage,\
+					           gfs_variable_average_class ())
+#define GFS_IS_VARIABLE_AVERAGE(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_average_class ()))
+
+GfsVariableClass * gfs_variable_average_class  (void);
+
 /* GfsDerivedVariable: Header */
 
 struct _GfsDerivedVariable {

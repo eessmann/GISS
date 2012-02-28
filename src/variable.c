@@ -1112,6 +1112,157 @@ GfsVariableClass * gfs_variable_age_class (void)
 /** \endobject{GfsVariableAge} */
 
 /**
+ * Averaging along a coordinate direction.
+ * \beginobject{GfsVariableAverage}
+ */
+
+static void variable_average_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_average_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  if (fp->type != GTS_STRING) {
+    gts_file_error (fp, "expecting a string (component)");
+    return;
+  }
+  gchar s[][2] = {"x", "y", "z"};
+  GfsVariableAverage * v = GFS_VARIABLE_AVERAGE (*o);
+  for (v->c = 0; v->c < FTT_DIMENSION; v->c++)
+    if (!strcmp (fp->token->str, s[v->c]))
+      break;
+  if (v->c == FTT_DIMENSION) {
+    gts_file_error (fp, "unknown component '%s'", fp->token->str);
+    return;
+  }
+  gts_file_next_token (fp);
+}
+
+static void variable_average_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_variable_average_class ())->parent_class->write) (o, fp);
+
+  gchar s[][2] = {"x", "y", "z"};
+  fprintf (fp, " %s", s[GFS_VARIABLE_AVERAGE (o)->c]);
+}
+
+/* see also hydrostatic_pressure() */
+static void average (FttCell * cell, GfsVariable * v)
+{
+  FttDirection d = 2*GFS_VARIABLE_AVERAGE (v)->c + 1;
+  gdouble avg = 0., vol = 0.;
+  GtsFifo * fifo = gts_fifo_new (), * column = gts_fifo_new ();
+
+  gts_fifo_push (fifo, cell);
+  while ((cell = gts_fifo_pop (fifo))) {
+    double w = gfs_cell_volume (cell, v->domain);
+    vol += w;
+    avg += w*gfs_function_value (GFS_VARIABLE_FUNCTION (v)->f, cell);
+    gts_fifo_push (column, cell);
+
+    FttCell * neighbor = ftt_cell_neighbor (cell, d);
+    if (neighbor) {
+      if (FTT_CELL_IS_LEAF (neighbor)) {
+	if (ftt_cell_level (neighbor) == ftt_cell_level (cell))
+	  /* neighbor at same level */
+	  gts_fifo_push (fifo, neighbor);
+	else {
+	  /* coarser neighbour */
+#if 1
+	  g_assert_not_implemented ();
+#else
+	  if (gts_fifo_top (fifo) == NULL) { /* only consider the last fine cell */
+	    FttDirection od = FTT_OPPOSITE_DIRECTION (d);
+	    double dp = GFS_STATE (neighbor)->f[od].un*ftt_cell_size (neighbor)/
+	      GFS_STATE (neighbor)->f[od].v;
+	    double p = 0.;
+	    FttCellChildren child;
+	    int i, n = ftt_cell_children_direction (ftt_cell_parent (cell), d, &child);
+	    for (i = 0; i < n; i++)
+	      p += GFS_VALUE (child.c[i], v);
+	    GFS_VALUE (neighbor, v) = p/n - 3.*dp/4.;
+	    gts_fifo_push (fifo, neighbor);
+	  }
+#endif
+	}
+      }
+      else {
+	/* finer neighbor */
+#if 1
+	  g_assert_not_implemented ();
+#else
+	FttCellChildren child;
+	int i, n = ftt_cell_children_direction (neighbor, FTT_OPPOSITE_DIRECTION (d), &child);
+	double dp = GFS_STATE (cell)->f[d].un*ftt_cell_size (cell)/GFS_STATE (cell)->f[d].v;
+	double p = GFS_VALUE (cell, v) - 3.*dp/4.;
+	for (i = 0; i < n; i++) {
+	  GFS_VALUE (child.c[i], v) = p;
+	  gts_fifo_push (fifo, child.c[i]);
+	}
+#endif
+      }
+    }
+  }
+  gts_fifo_destroy (fifo);
+
+  if (vol > 0.)
+    avg /= vol;
+
+  while ((cell = gts_fifo_pop (column)))
+    GFS_VALUE (cell, v) = avg;
+  gts_fifo_destroy (column);
+}
+
+static gboolean variable_average_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_variable_function_class ())->parent_class)->event)
+      (event, sim)) {
+    GfsVariable * v = GFS_VARIABLE (event);
+    GfsVariableAverage * av = GFS_VARIABLE_AVERAGE (v);
+    gfs_domain_cell_traverse_boundary (v->domain, 2*av->c,
+				       FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+				       (FttCellTraverseFunc) average, av);
+    gfs_domain_bc (v->domain, FTT_TRAVERSE_LEAFS, -1, v);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void variable_average_class_init (GtsObjectClass * klass)
+{
+  klass->read = variable_average_read;
+  klass->write = variable_average_write;
+  GFS_EVENT_CLASS (klass)->event = variable_average_event;
+}
+
+static void variable_average_init (GfsVariable * v)
+{
+  v->coarse_fine = (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine;
+}
+
+GfsVariableClass * gfs_variable_average_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsVariableAverage",
+      sizeof (GfsVariableAverage),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_average_class_init,
+      (GtsObjectInitFunc) variable_average_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_function_class ()), &info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsVariableAverage} */
+
+/**
  * The hydrostatic pressure
  * \beginobject{GfsHydrostaticPressure}
  */

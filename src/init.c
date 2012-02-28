@@ -175,6 +175,7 @@ GtsObjectClass ** gfs_classes (void)
         gfs_variable_stream_function_class (),
 #endif /* FTT_2D */
         gfs_variable_poisson_class (),
+        gfs_variable_average_class (),
       gfs_hydrostatic_pressure_class (),
       gfs_variable_age_class (),
       gfs_variable_curvature_class (),
