@@ -1043,16 +1043,15 @@ static void vof_coarse_fine (FttCell * parent, GfsVariable * v)
   
   ftt_cell_children (parent, &child);
   if (GFS_IS_FULL (f)) {
-    for (i = 0; i < FTT_CELLS; i++) {
-      FttComponent c;
-      if (!child.c[i])
-	g_assert_not_implemented ();
-      GFS_VALUE (child.c[i], v) = f;
-      for (c = 1; c < FTT_DIMENSION; c++)
-	GFS_VALUE (child.c[i], t->m[c]) = 0.;
-      GFS_VALUE (child.c[i], t->m[0]) = 1.;
-      GFS_VALUE (child.c[i], t->alpha) = f;
-    }
+    for (i = 0; i < FTT_CELLS; i++) 
+      if (child.c[i]) {
+	FttComponent c;
+	GFS_VALUE (child.c[i], v) = f;
+	for (c = 1; c < FTT_DIMENSION; c++)
+	  GFS_VALUE (child.c[i], t->m[c]) = 0.;
+	GFS_VALUE (child.c[i], t->m[0]) = 1.;
+	GFS_VALUE (child.c[i], t->alpha) = f;
+      }
     
     /* second-order interpolation for concentrations in full cells */
     GSList * j = t->concentrations->items;
@@ -1068,28 +1067,28 @@ static void vof_coarse_fine (FttCell * parent, GfsVariable * v)
     
     for (i = 0; i < FTT_DIMENSION; i++)
       (&m.x)[i] = GFS_VALUE (parent, t->m[i]);
-    for (i = 0; i < FTT_CELLS; i++) {
-      gdouble alpha1 = alpha;
-      FttComponent c;
-      FttVector p;
-      
-      if (!child.c[i])
-	g_assert_not_implemented ();
-      ftt_cell_relative_pos (child.c[i], &p);
-      for (c = 0; c < FTT_DIMENSION; c++) {
-	alpha1 -= (&m.x)[c]*(0.25 + (&p.x)[c]);
-	GFS_VALUE (child.c[i], t->m[c]) = (&m.x)[c];
+    for (i = 0; i < FTT_CELLS; i++)
+      if (child.c[i]) {
+	/* fixme: this is not mass conserving */
+	gdouble alpha1 = alpha;
+	FttComponent c;
+	FttVector p;
+	ftt_cell_relative_pos (child.c[i], &p);
+	for (c = 0; c < FTT_DIMENSION; c++) {
+	  alpha1 -= (&m.x)[c]*(0.25 + (&p.x)[c]);
+	  GFS_VALUE (child.c[i], t->m[c]) = (&m.x)[c];
+	}
+	GFS_VALUE (child.c[i], v) = gfs_plane_volume (&m, 2.*alpha1);
+	GFS_VALUE (child.c[i], t->alpha) = 2.*alpha1;
       }
-      GFS_VALUE (child.c[i], v) = gfs_plane_volume (&m, 2.*alpha1);
-      GFS_VALUE (child.c[i], t->alpha) = 2.*alpha1;
-    }
 
     /* firs-order interpolation for concentrations in interfacial cells */
     GSList * j = t->concentrations->items;
     while (j) {
       GfsVariable * v = j->data;
       for (i = 0; i < FTT_CELLS; i++)
-	GFS_VALUE (child.c[i], v) = GFS_VALUE (parent, v);
+	if (child.c[i])
+	  GFS_VALUE (child.c[i], v) = GFS_VALUE (parent, v);
       j = j->next;
     }
   }
@@ -1299,12 +1298,12 @@ static void vof_cell_fine_init (FttCell * parent, VofParms * p)
     FttDirection od = FTT_OPPOSITE_DIRECTION (d);
     FttCellChildren dchild;
     guint i, n = ftt_cell_children_direction (parent, d, &dchild);
-    for (i = 0; i < n; i++) {
-      g_assert (dchild.c[i]);
-      FttCell * neighbor = ftt_cell_neighbor (dchild.c[i], d);
-      if (neighbor)
-	GFS_STATE (dchild.c[i])->f[d].un = GFS_STATE (neighbor)->f[od].un;
-    }
+    for (i = 0; i < n; i++)
+      if (dchild.c[i]) {
+	FttCell * neighbor = ftt_cell_neighbor (dchild.c[i], d);
+	if (neighbor)
+	  GFS_STATE (dchild.c[i])->f[d].un = GFS_STATE (neighbor)->f[od].un;
+      }
   }
 
   FttCellChildren child;
@@ -1312,12 +1311,13 @@ static void vof_cell_fine_init (FttCell * parent, VofParms * p)
   guint n;
   ftt_cell_children (parent, &child);
   for (n = 0; n < FTT_CELLS; n++) {
-    g_assert (child.c[n]);
-    GFS_VALUE (child.c[n], p->vpar.v) = GFS_VALUE (parent, p->vpar.v);
     div[n] = 0.;
-    FttComponent c;
-    for (c = 0; c < FTT_DIMENSION; c++)
-      div[n] += GFS_STATE (child.c[n])->f[2*c].un - GFS_STATE (child.c[n])->f[2*c + 1].un;
+    if (child.c[n]) {
+      GFS_VALUE (child.c[n], p->vpar.v) = GFS_VALUE (parent, p->vpar.v);
+      FttComponent c;
+      for (c = 0; c < FTT_DIMENSION; c++)
+	div[n] += GFS_STATE (child.c[n])->f[2*c].un - GFS_STATE (child.c[n])->f[2*c + 1].un;
+    }
   }
 
 #if FTT_2D
@@ -1325,10 +1325,22 @@ static void vof_cell_fine_init (FttCell * parent, VofParms * p)
   P[1] = (3.*div[1] + div[2])/4. + div[3]/2.;
   P[2] = (div[1] + 3.*div[2])/4. + div[3]/2.;
   P[3] = (div[1] + div[2])/2. + div[3];
-  GFS_STATE (child.c[0])->f[0].un = GFS_STATE (child.c[1])->f[1].un = P[1] - P[0];
-  GFS_STATE (child.c[2])->f[0].un = GFS_STATE (child.c[3])->f[1].un = P[3] - P[2];
-  GFS_STATE (child.c[0])->f[3].un = GFS_STATE (child.c[2])->f[2].un = P[0] - P[2];
-  GFS_STATE (child.c[1])->f[3].un = GFS_STATE (child.c[3])->f[2].un = P[1] - P[3];
+  if (child.c[0]) {
+    GFS_STATE (child.c[0])->f[0].un = P[1] - P[0];
+    GFS_STATE (child.c[0])->f[3].un = P[0] - P[2];
+  }
+  if (child.c[1]) {
+    GFS_STATE (child.c[1])->f[1].un = P[1] - P[0];
+    GFS_STATE (child.c[1])->f[3].un = P[1] - P[3];
+  }
+  if (child.c[2]) {
+    GFS_STATE (child.c[2])->f[0].un = P[3] - P[2];
+    GFS_STATE (child.c[2])->f[2].un = P[0] - P[2];
+  }
+  if (child.c[3]) {
+    GFS_STATE (child.c[3])->f[1].un = P[3] - P[2];
+    GFS_STATE (child.c[3])->f[2].un = P[1] - P[3];
+  }
 #else /* 3D */
   static gdouble m[7][7] = {{7./12.,5./24.,3./8.,5./24.,3./8.,1./4.,1./3.},
 			    {5./24.,7./12.,3./8.,5./24.,1./4.,3./8.,1./3.}, 
@@ -1344,20 +1356,46 @@ static void vof_cell_fine_init (FttCell * parent, VofParms * p)
     for (j = 0; j < 7; j++)
       P[i + 1] += m[i][j]*div[j + 1];
   }
-  GFS_STATE (child.c[0])->f[0].un = GFS_STATE (child.c[1])->f[1].un = P[1] - P[0];
-  GFS_STATE (child.c[2])->f[0].un = GFS_STATE (child.c[3])->f[1].un = P[3] - P[2];
-  GFS_STATE (child.c[0])->f[3].un = GFS_STATE (child.c[2])->f[2].un = P[0] - P[2];
-  GFS_STATE (child.c[1])->f[3].un = GFS_STATE (child.c[3])->f[2].un = P[1] - P[3];
-
-  GFS_STATE (child.c[4])->f[0].un = GFS_STATE (child.c[5])->f[1].un = P[5] - P[4];
-  GFS_STATE (child.c[6])->f[0].un = GFS_STATE (child.c[7])->f[1].un = P[7] - P[6];
-  GFS_STATE (child.c[4])->f[3].un = GFS_STATE (child.c[6])->f[2].un = P[4] - P[6];
-  GFS_STATE (child.c[5])->f[3].un = GFS_STATE (child.c[7])->f[2].un = P[5] - P[7];
-
-  GFS_STATE (child.c[0])->f[5].un = GFS_STATE (child.c[4])->f[4].un = P[0] - P[4];
-  GFS_STATE (child.c[1])->f[5].un = GFS_STATE (child.c[5])->f[4].un = P[1] - P[5];
-  GFS_STATE (child.c[2])->f[5].un = GFS_STATE (child.c[6])->f[4].un = P[2] - P[6];
-  GFS_STATE (child.c[3])->f[5].un = GFS_STATE (child.c[7])->f[4].un = P[3] - P[7];
+  if (child.c[0]) {
+    GFS_STATE (child.c[0])->f[0].un = P[1] - P[0];
+    GFS_STATE (child.c[0])->f[3].un = P[0] - P[2];
+    GFS_STATE (child.c[0])->f[5].un = P[0] - P[4];
+  }
+  if (child.c[1]) {
+    GFS_STATE (child.c[1])->f[1].un = P[1] - P[0];
+    GFS_STATE (child.c[1])->f[3].un = P[1] - P[3];
+    GFS_STATE (child.c[1])->f[5].un = P[1] - P[5];
+  }
+  if (child.c[2]) {
+    GFS_STATE (child.c[2])->f[0].un = P[3] - P[2];
+    GFS_STATE (child.c[2])->f[2].un = P[0] - P[2];
+    GFS_STATE (child.c[2])->f[5].un = P[2] - P[6];
+  }
+  if (child.c[3]) {
+    GFS_STATE (child.c[3])->f[1].un = P[3] - P[2];
+    GFS_STATE (child.c[3])->f[2].un = P[1] - P[3];
+    GFS_STATE (child.c[3])->f[5].un = P[3] - P[7];
+  }
+  if (child.c[4]) {
+    GFS_STATE (child.c[4])->f[0].un = P[5] - P[4];
+    GFS_STATE (child.c[4])->f[3].un = P[4] - P[6];
+    GFS_STATE (child.c[4])->f[4].un = P[0] - P[4];
+  }
+  if (child.c[5]) {
+    GFS_STATE (child.c[5])->f[1].un = P[5] - P[4];
+    GFS_STATE (child.c[5])->f[3].un = P[5] - P[7];
+    GFS_STATE (child.c[5])->f[4].un = P[1] - P[5];
+  }
+  if (child.c[6]) {
+    GFS_STATE (child.c[6])->f[0].un = P[7] - P[6];
+    GFS_STATE (child.c[6])->f[2].un = P[4] - P[6];
+    GFS_STATE (child.c[6])->f[4].un = P[2] - P[6];
+  }
+  if (child.c[7]) {
+    GFS_STATE (child.c[7])->f[1].un = P[7] - P[6];
+    GFS_STATE (child.c[7])->f[2].un = P[5] - P[7];
+    GFS_STATE (child.c[7])->f[4].un = P[3] - P[7];
+  }
 #endif /* 3D */
 }
 
