@@ -2,7 +2,7 @@
 #
 # Description:
 #
-# The skew-symmetric module with AMR
+# The skew-symmetric module with AMR.
 #
 # \begin{figure}[htbp]
 # \caption{\label{kinetic}Evolution of the kinetic energy.}
@@ -20,7 +20,7 @@
 #
 # Author: Daniel Fuster
 # Command: sh skew.sh skew_box.gfs 1
-# Version: 110723
+# Version: 120229
 # Required files: skew.sh error.ref 
 # Running time: 
 # Generated files: kinetic.eps accuracy.eps
