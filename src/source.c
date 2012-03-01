@@ -933,10 +933,10 @@ static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
   return FALSE;
 }
 
-static gdouble diffusion_face (GfsDiffusion * d, FttCellFace * f)
+static gdouble diffusion_face (GfsDiffusion * d, FttCellFace * face)
 {
-  if (d->par.function) return gfs_function_face_value (d->val, f);
-  if (d->mu) return gfs_face_interpolated_value (f, d->mu->i);
+  if (d->par.function) return gfs_function_face_value (d->val, face);
+  if (d->mu) return gfs_face_interpolated_value_generic (face, d->mu);
   gdouble val = gfs_function_get_constant_value (d->val);
   return val < G_MAXDOUBLE ? val : 0.;
 }

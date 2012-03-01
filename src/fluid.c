@@ -2136,6 +2136,9 @@ void gfs_norm_update (GfsNorm * n)
  * Computes the value of variable @v on the @face using second-order
  * interpolation from the cell-centered values.
  *
+ * Note that this function cannot be called for coarse -> fine faces
+ * (use gfs_face_interpolated_value_generic() instead).
+ *
  * Returns: the value of variable @v on the face.  
  */
 gdouble gfs_face_interpolated_value (const FttCellFace * face,
@@ -2170,6 +2173,39 @@ gdouble gfs_face_interpolated_value (const FttCellFace * face,
   else
     return ((x1 - 0.5)*v0 + 0.5*v1)/x1;
 #endif
+}
+
+/**
+ * gfs_face_interpolated_value_generic:
+ * @face: a #FttFace.
+ * @v: a #GfsVariable.
+ *
+ * Same as gfs_face_interpolated_value() but also works for coarse ->
+ * fine faces.
+ *
+ * Returns: the value of variable @v on the face.  
+ */
+gdouble gfs_face_interpolated_value_generic (const FttCellFace * face, const GfsVariable * v)
+{  
+  g_return_val_if_fail (face != NULL, 0.);
+  g_return_val_if_fail (v != NULL, 0.);
+  
+  if (!face->neighbor || FTT_CELL_IS_LEAF (face->neighbor) ||
+      ftt_cell_level (face->neighbor) < ftt_cell_level (face->cell))
+    return gfs_face_interpolated_value (face, v->i);
+  else {
+    /* finer neighbor */
+    FttCellFace f = { NULL, face->cell, FTT_OPPOSITE_DIRECTION (face->d) };
+    FttCellChildren child;
+    int i, n = ftt_cell_children_direction (face->neighbor, f.d, &child);
+    gdouble avg = 0.;
+    for (i = 0; i < n; i++)
+      if (child.c[i]) {
+	f.cell = child.c[i];
+	avg += gfs_face_interpolated_value (&f, v->i)*gfs_domain_face_fraction (v->domain, &f);
+      }
+    return avg == 0. ? 0. : avg/(gfs_domain_face_fraction (v->domain, face)*n);
+  }
 }
 
 /**
