@@ -576,16 +576,25 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * dirname, const
 {
   char pwd[512];
   g_assert (getcwd (pwd, 512));
-  gchar * build_command = g_strdup_printf ("cd %s && %s/build_function %d "
+  GString * build_command = g_string_new ("");
+  g_string_printf (build_command,
+		   "cd %s && %s/build_function %d "
 #if FTT_2D
-					   "gerris2D"
+		   "gerris2D"
 #else /* 3D */
-					   "gerris3D"
+		   "gerris3D"
 #endif
-					   " \"%s\" > log 2>&1"
-					   , dirname, GFS_MODULES_DIR, fp->line, pwd);
-  gint status = system (build_command);
-  g_free (build_command);
+		   " \"%s\""
+		   , dirname, GFS_MODULES_DIR, fp->line, pwd);
+  GfsSimulation * sim = gfs_object_simulation (f);
+  GSList * i = sim->globals;
+  while (i) {
+    g_string_append_printf (build_command, " %d", GFS_GLOBAL (i->data)->line);
+    i = i->next;
+  }
+  g_string_append (build_command, " > log 2>&1");
+  gint status = system (build_command->str);
+  g_string_free (build_command, TRUE);
   if (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || WTERMSIG (status) == SIGQUIT))
     status = SIGQUIT;
   else if (status == -1 || WEXITSTATUS (status) != 0) {
@@ -678,12 +687,13 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
     fputs ("#include <gerris/spatial.h>\n", fin);
   else if (!f->constant)
     fputs ("#include <gerris/function.h>\n", fin);
+  guint ng = 0;
   i = sim->globals;
   while (i) {
-    fprintf (fin, "#line %d \"GfsGlobal\"\n", GFS_GLOBAL (i->data)->line);
+    fprintf (fin, "#line _GFSLINE%d_ \"GfsGlobal\"\n", ng);
     fputs (GFS_GLOBAL (i->data)->s, fin);
     fputc ('\n', fin);
-    i = i->next;
+    i = i->next; ng++;
   }
   if (f->spatial)
     fputs ("double f (double x, double y, double z, double t) {\n"

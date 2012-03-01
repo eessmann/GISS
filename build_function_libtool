@@ -4,6 +4,7 @@
 LINENO=$1     # line number
 DIMENSION=$2  # gerris2D or gerris3D
 WDIR=$3       # simulation directory
+              # remaining arguments are line numbers for GfsGlobal
 
 CC="PREFIX/lib/gerris/libtool --tag=CC --silent --mode=compile COMPILER"
 LD="PREFIX/lib/gerris/libtool --tag=CC --silent --mode=link COMPILER"
@@ -26,7 +27,18 @@ else
     exit 1
 fi
 
-if $CC `pkg-config $DIMENSION --cflags` -D_GFSLINE_=$LINENO $CFLAGS \
+shift
+shift
+shift
+i=0
+globals=""
+while test $# -gt 0; do
+    globals="$globals -D_GFSLINE"$i"_="$1
+    i=`expr $i + 1`
+    shift
+done
+
+if $CC `pkg-config $DIMENSION --cflags` -D_GFSLINE_=$LINENO $globals $CFLAGS \
     -c module.c; then :
     if $LD `pkg-config $DIMENSION --libs` $LDFLAGS -o libmodule.la `cat links` module.lo; then :
     else
