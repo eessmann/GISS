@@ -2184,7 +2184,7 @@ gboolean gfs_read_variable_vector (GtsFile * fp,
       gts_file_error (fp, "unknown variable '%s'", component[i]);
       status = FALSE;
     }
-    if (vector[i]->component != i) {
+    else if (vector[i]->component != i) {
       gts_file_error (fp, "variable '%s' is not the correct vector component", component[i]);
       status = FALSE;
     }
@@ -2243,4 +2243,3 @@ gboolean gfs_read_function_vector (GtsFile * fp,
     g_free (component[i]);
   return status;
 }
-  
