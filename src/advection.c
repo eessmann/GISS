@@ -75,7 +75,7 @@ void gfs_cell_advected_face_values (FttCell * cell,
   for (c = 0; c < FTT_DIMENSION; c++) {
     gdouble unorm = par->use_centered_velocity ?
       par->dt*GFS_VALUE (cell, par->u[c])/msize[c] :
-       par->dt*(s->f[2*c].un + s->f[2*c + 1].un)/(2.*msize[c]);
+      par->dt*(s->f[2*c].un + s->f[2*c + 1].un)/(2.*msize[c]);
     gdouble g = (* par->gradient) (cell, c, par->v->i);
     gdouble vl = GFS_VALUE (cell, par->v) + MIN ((1. - unorm)/2., 0.5)*g;
     gdouble vr = GFS_VALUE (cell, par->v) + MAX ((- 1. - unorm)/2., -0.5)*g;

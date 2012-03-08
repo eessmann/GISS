@@ -1365,6 +1365,31 @@ void gfs_domain_cell_traverse (GfsDomain * domain,
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_traverse, &d);
 }
 
+/**
+ * gfs_domain_traverse_layers:
+ * @domain: a #GfsDomain.
+ * @func: the function to call for each visited #FttCell.
+ * @data: user data to pass to @func.
+ *
+ * Traverses the leaf cells of @domain for each layer. Calls the given
+ * function for each cell visited.
+ *
+ * By default it is identical to gfs_domain_traverse_leaves() but can
+ * be overloaded for specific (layered) domains.
+ */
+void gfs_domain_traverse_layers (GfsDomain * domain,
+				 FttCellTraverseFunc func,
+				 gpointer data)
+{
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (func != NULL);
+
+  if (domain->traverse_layers)
+    (* domain->traverse_layers) (domain, func, data);
+  else
+    gfs_domain_traverse_leaves (domain, func, data);
+}
+
 static void box_traverse_box (GfsBox * box, gpointer * datum)
 {
   FttTraverseType * order = datum[0];

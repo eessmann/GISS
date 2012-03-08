@@ -28,6 +28,9 @@ extern "C" {
 #include "poisson.h"
 #include "variable.h"
 
+void          gfs_reset_gradients             (GfsDomain * domain, 
+					       guint dimension, 
+					       GfsVariable ** g);
 void          gfs_correct_normal_velocities   (GfsDomain * domain,
 					       guint dimension,
 					       GfsVariable * p,
@@ -42,12 +45,12 @@ void          gfs_update_gradients            (GfsDomain * domain,
 					       GfsVariable ** g);
 void          gfs_mac_projection              (GfsDomain * domain,
 					       GfsMultilevelParams * par,
-					       GfsAdvectionParams * apar,
+					       double dt,
 					       GfsVariable * p,
 					       GfsFunction * alpha,
 					       GfsVariable ** g,
-					       void (* divergence_hook) (GfsDomain * domain, 
-									 GfsAdvectionParams * apar, 
+					       void (* divergence_hook) (GfsDomain * domain,
+									 gdouble dt,
 									 GfsVariable * div)
 					       );
 void          gfs_correct_centered_velocities (GfsDomain * domain,
@@ -56,13 +59,13 @@ void          gfs_correct_centered_velocities (GfsDomain * domain,
 					       gdouble dt);
 void          gfs_approximate_projection      (GfsDomain * domain,
 					       GfsMultilevelParams * par,
-					       GfsAdvectionParams * apar,
+					       gdouble dt,
 					       GfsVariable * p,
 					       GfsFunction * alpha,
 					       GfsVariable * res,
 					       GfsVariable ** g,
 					       void (* divergence_hook) (GfsDomain * domain, 
-									 GfsAdvectionParams * apar, 
+									 gdouble dt,
 									 GfsVariable * div)
 					       );
 void          gfs_predicted_face_velocities   (GfsDomain * domain,

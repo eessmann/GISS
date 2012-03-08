@@ -37,16 +37,6 @@
  * \beginobject{GfsOcean}
  */
 
-static void reset_gradients (FttCell * cell, gpointer * data)
-{
-  GfsVariable ** g = data[0];
-  guint * dimension = data[1];    
-  FttComponent c;
-
-  for (c = 0; c < *dimension; c++)
-    GFS_VALUE (cell, g[c]) = 0.;
-}
-
 static void correct_normal_velocity (FttCellFace * face,
 				     gpointer * data)
 {
@@ -114,7 +104,6 @@ static void gfs_correct_normal_velocities_weighted (GfsDomain * domain,
 						    gdouble dt,
 						    gboolean weighted)
 {
-  gpointer data[3];
   FttComponent c;
     
   g_return_if_fail (domain != NULL);
@@ -124,15 +113,13 @@ static void gfs_correct_normal_velocities_weighted (GfsDomain * domain,
   for (c = 0; c < dimension; c++)
     g[c] = gfs_temporary_variable (domain);
   gfs_variable_set_vector (g, dimension);
-  data[0] = g;
-  data[1] = &dimension;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_gradients, data);
+  gfs_reset_gradients (domain, dimension, g);
   if (weighted) {
     gfs_correct_normal_velocities (domain, dimension, p, g, dt);
     gfs_scale_gradients (domain, dimension, g);
   }
   else {
+    gpointer data[3];
     data[0] = p;
     data[1] = g;
     data[2] = &dt;

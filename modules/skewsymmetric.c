@@ -636,7 +636,7 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
   
     gfs_mac_projection (domain,
 			&sim->projection_params, 
-			&sim->advection_params,
+			sim->advection_params.dt/2.,
 			p, sim->physical_params.alpha, gmac, NULL);
  
     gfs_domain_cell_traverse (domain, 
@@ -659,7 +659,7 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
 
     gfs_mac_projection (domain,
 			&sim->projection_params, 
-			&sim->advection_params,
+			sim->advection_params.dt/2.,
 			p, sim->physical_params.alpha, gmac, NULL);
 
     gfs_domain_cell_traverse (domain, 

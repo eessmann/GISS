@@ -461,7 +461,7 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
   if (sim->time.i == 0) {
     gfs_approximate_projection (domain,
 				&sim->approx_projection_params,
-				&sim->advection_params,
+				sim->advection_params.dt,
 				p, sim->physical_params.alpha, res, g, NULL);
     gfs_simulation_set_timestep (sim);
     gfs_advance_tracers (sim, sim->advection_params.dt/2.);
@@ -481,7 +481,7 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
     gfs_variables_swap (p, pmac);
     gfs_mac_projection (domain,
     			&sim->projection_params, 
-    			&sim->advection_params,
+    			sim->advection_params.dt/2.,
 			p, sim->physical_params.alpha, gmac, NULL);
     gfs_variables_swap (p, pmac);
 
@@ -512,7 +512,7 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
 
     gfs_approximate_projection (domain,
    				&sim->approx_projection_params, 
-    				&sim->advection_params, 
+    				sim->advection_params.dt, 
 				p, sim->physical_params.alpha, res, g, NULL);
 
     sim->time.t = sim->tnext;

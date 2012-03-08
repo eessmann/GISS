@@ -1025,7 +1025,7 @@ static void moving_divergence_distribution (GSList * merged, DivergenceData * p)
 }
 
 static void divergence_approx_hook (GfsDomain * domain, 
-				    GfsAdvectionParams * apar, 
+				    gdouble dt,
 				    GfsVariable * div)
 {
   DivergenceData q;
@@ -1050,20 +1050,37 @@ static void moving_divergence_mac (FttCell * cell, DivergenceData * p)
   GFS_VALUE (cell, p->div) += (olda - a)*size*size/p->dt;
 }
 
-static void divergence_mac_hook (GfsDomain * domain, GfsAdvectionParams * apar, GfsVariable * div)
+static void divergence_mac_hook_order_1 (GfsDomain * domain,
+					 gdouble dt,
+					 GfsVariable * div)
 {
   DivergenceData q;
 
-  q.dt = apar->moving_order == 2 ? 2.*apar->dt : - 2.*apar->dt;
+  q.dt = - 2.*dt;
   q.div = div;
   q.domain = domain;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttCellTraverseFunc) moving_divergence_mac, &q);
   gfs_domain_traverse_merged (domain,
 			      (GfsMergedTraverseFunc) 
-			      (apar->moving_order == 1 ?
-			       moving_divergence_distribution :
-			       moving_divergence_distribution_second_order), 
+			      moving_divergence_distribution,
+			      &q);
+}
+
+static void divergence_mac_hook_order_2 (GfsDomain * domain, 
+					 gdouble dt,
+					 GfsVariable * div)
+{
+  DivergenceData q;
+
+  q.dt = 2.*dt;
+  q.div = div;
+  q.domain = domain;
+  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			    (FttCellTraverseFunc) moving_divergence_mac, &q);
+  gfs_domain_traverse_merged (domain,
+			      (GfsMergedTraverseFunc) 
+			       moving_divergence_distribution_second_order,
 			      &q);
 }
 
@@ -1076,7 +1093,9 @@ static void moving_mac_projection (GfsSimulation * sim,
 {
   if (apar->moving_order == 2)
     swap_face_fractions (sim);
-  gfs_mac_projection (GFS_DOMAIN (sim), par, apar, p, alpha, g, divergence_mac_hook);
+  gfs_mac_projection (GFS_DOMAIN (sim), par, apar->dt, p, alpha, g, 
+		      (apar->moving_order == 2 ? 
+		       divergence_mac_hook_order_2 : divergence_mac_hook_order_1));
   if (apar->moving_order == 2)
     swap_face_fractions_back (sim);
 }
@@ -1121,7 +1140,7 @@ static void simulation_moving_run (GfsSimulation * sim)
   if (sim->time.i == 0)
     gfs_approximate_projection (domain,
 				&sim->approx_projection_params,
-				&sim->advection_params,
+				sim->advection_params.dt,
 				p, sim->physical_params.alpha, res, g,
 				divergence_approx_hook);
   else if (sim->advection_params.gc)
@@ -1175,7 +1194,7 @@ static void simulation_moving_run (GfsSimulation * sim)
 
     gfs_approximate_projection (domain,
 				&sim->approx_projection_params, 
-				&sim->advection_params, p, sim->physical_params.alpha, res, g,
+				sim->advection_params.dt, p, sim->physical_params.alpha, res, g,
 				divergence_approx_hook);
 
     sim->time.t = sim->tnext;

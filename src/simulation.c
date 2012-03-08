@@ -404,7 +404,6 @@ void gfs_advance_tracers (GfsSimulation * sim, gdouble dt)
 {
   g_return_if_fail (sim != NULL);
 
-  GfsDomain * domain = GFS_DOMAIN (sim);
   GSList * i = domain->variables;
   while (i) {
     if (GFS_IS_VARIABLE_TRACER_VOF (i->data)) {
@@ -465,7 +464,7 @@ static void simulation_run (GfsSimulation * sim)
   if (sim->time.i == 0) {
     gfs_approximate_projection (domain,
 				&sim->approx_projection_params,
-				&sim->advection_params,
+				sim->advection_params.dt,
 				p, sim->physical_params.alpha, res, g, NULL);
     gfs_simulation_set_timestep (sim);
     gfs_advance_tracers (sim, sim->advection_params.dt/2.);
@@ -495,7 +494,7 @@ static void simulation_run (GfsSimulation * sim)
     gfs_variables_swap (p, pmac);
     gfs_mac_projection (domain,
     			&sim->projection_params, 
-    			&sim->advection_params,
+    			sim->advection_params.dt/2.,
 			p, sim->physical_params.alpha, gmac, NULL);
     gfs_variables_swap (p, pmac);
 
@@ -525,7 +524,7 @@ static void simulation_run (GfsSimulation * sim)
 
     gfs_approximate_projection (domain,
    				&sim->approx_projection_params, 
-    				&sim->advection_params, 
+    				sim->advection_params.dt, 
 				p, sim->physical_params.alpha, res, g, NULL);
 
     sim->time.t = sim->tnext;
@@ -1427,7 +1426,7 @@ static gdouble min_cfl (GfsSimulation * sim)
 		 G_MAXDOUBLE :
 		 sim->advection_params.cfl);
   GSList * i = GFS_DOMAIN (sim)->variables;
-  
+
   while (i) {
     GfsVariable * v = i->data;
 
@@ -1437,7 +1436,6 @@ static gdouble min_cfl (GfsSimulation * sim)
       cfl = GFS_VARIABLE_TRACER (v)->advection.cfl;
     i = i->next;
   }
-
   return cfl;
 }
 

@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,23 +28,33 @@
 #include "solid.h"
 #include "tension.h"
 
-static void reset_cell_gradients (FttCell * cell, gpointer * data)
-{
-  GfsVariable ** g = data[0];
-  guint * dimension = data[1];    
-  FttComponent c;
+typedef struct {
+  GfsVariable ** g;
+  guint dimension;
+} GradientData;
 
-  for (c = 0; c < *dimension; c++)
-    GFS_VALUE (cell, g[c]) = 0.;
+static void reset_cell_gradients (FttCell * cell, GradientData * p)
+{
+  FttComponent c;
+  for (c = 0; c < p->dimension; c++)
+    GFS_VALUE (cell, p->g[c]) = 0.;
 }
 
-static void reset_gradients (GfsDomain * domain, guint dimension, GfsVariable ** g)
+/**
+ * gfs_reset_gradients:
+ * @domain: a #GfsDomain.
+ * @g: an array of @dimension #GfsVariables.
+ * @dimension: the number of dimension.
+ *
+ * Resets the gradient vector @g.
+ */
+void gfs_reset_gradients (GfsDomain * domain, guint dimension, GfsVariable ** g)
 {
-  gpointer data[2];
-  data[0] = g;
-  data[1] = &dimension;
-  gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			    (FttCellTraverseFunc) reset_cell_gradients, data);
+  g_return_if_fail (domain != NULL);
+  g_return_if_fail (g != NULL);
+
+  GradientData p = { g, dimension };
+  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) reset_cell_gradients, &p);
 }
 
 static void scale_cell_gradients (FttCell * cell, gpointer * data)
@@ -302,7 +312,7 @@ void gfs_update_gradients (GfsDomain * domain,
   g_return_if_fail (g != NULL);
 
   /* Add face sources */
-  reset_gradients (domain, FTT_DIMENSION, g);
+  gfs_reset_gradients (domain, FTT_DIMENSION, g);
   gfs_velocity_face_sources (domain, gfs_domain_velocity (domain), 0., alpha, g);
   /* Initialize face coefficients */
   gfs_poisson_coefficients (domain, alpha, TRUE, TRUE, TRUE);
@@ -345,19 +355,19 @@ static void volume_sources (GfsDomain * domain, GfsVariable * p, GfsVariable * d
 
 static void mac_projection (GfsDomain * domain,
 			    GfsMultilevelParams * par,
-			    GfsAdvectionParams * apar,
+			    gdouble dt,
 			    GfsVariable * p,
 			    GfsFunction * alpha,
 			    GfsVariable * res,
 			    GfsVariable ** g,
 			    void (* divergence_hook) (GfsDomain * domain, 
-						      GfsAdvectionParams * apar, 
+						      gdouble dt,
 						      GfsVariable * div)
 			    )
 {
   /* Add face sources */
-  reset_gradients (domain, FTT_DIMENSION, g);
-  gfs_velocity_face_sources (domain, gfs_domain_velocity (domain), apar->dt, alpha, g);
+  gfs_reset_gradients (domain, FTT_DIMENSION, g);
+  gfs_velocity_face_sources (domain, gfs_domain_velocity (domain), dt, alpha, g);
 
   GfsVariable * dia = gfs_temporary_variable (domain);
   GfsVariable * div = gfs_temporary_variable (domain);
@@ -370,7 +380,7 @@ static void mac_projection (GfsDomain * domain,
   GSList * i = domain->variables;
   while (i) {
     if (GFS_IS_HYDROSTATIC_PRESSURE (i->data))
-      gfs_correct_normal_velocities (domain, FTT_DIMENSION, i->data, g, apar->dt);
+      gfs_correct_normal_velocities (domain, FTT_DIMENSION, i->data, g, dt);
     i = i->next;
   }
 
@@ -384,7 +394,7 @@ static void mac_projection (GfsDomain * domain,
 
   /* Divergence hook */
   if (divergence_hook)
-    (* divergence_hook) (domain, apar, div);
+    (* divergence_hook) (domain, dt, div);
 
   /* add volume sources (if any) */
   if (p->sources)
@@ -393,7 +403,7 @@ static void mac_projection (GfsDomain * domain,
   /* Scale divergence */
   gpointer data[2];
   data[0] = div;
-  data[1] = &apar->dt;
+  data[1] = &dt;
   gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
   			    (FttCellTraverseFunc) scale_divergence, data);
 
@@ -410,14 +420,14 @@ static void mac_projection (GfsDomain * domain,
   }
 #endif
   
-  par->poisson_solve (domain, par, p, div, res1, dia, apar->dt);
+  par->poisson_solve (domain, par, p, div, res1, dia, dt);
 
   gts_object_destroy (GTS_OBJECT (dia));
   gts_object_destroy (GTS_OBJECT (div));
   if (!res)
     gts_object_destroy (GTS_OBJECT (res1));
 
-  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, apar->dt);
+  gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, g, dt);
   gfs_scale_gradients (domain, FTT_DIMENSION, g);
 }
 
@@ -425,7 +435,7 @@ static void mac_projection (GfsDomain * domain,
  * gfs_mac_projection:
  * @domain: a #GfsDomain.
  * @par: the projection control parameters.
- * @apar: the advection parameters.
+ * @dt: the timestep.
  * @p: the pressure.
  * @alpha: the Poisson equation gradient weight.
  * @g: where to store the pressure gradient.
@@ -449,31 +459,23 @@ static void mac_projection (GfsDomain * domain,
  */
 void gfs_mac_projection (GfsDomain * domain,
 			 GfsMultilevelParams * par,
-			 GfsAdvectionParams * apar,
+			 gdouble dt,
 			 GfsVariable * p,
 			 GfsFunction * alpha,
 			 GfsVariable ** g,
 			 void (* divergence_hook) (GfsDomain * domain, 
-						   GfsAdvectionParams * apar, 
+						   gdouble dt,
 						   GfsVariable * div)
 			 )
 {
-  gdouble dt;
-
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
-  g_return_if_fail (apar != NULL);
   g_return_if_fail (p != NULL);
   g_return_if_fail (g != NULL);
 
   gfs_domain_timer_start (domain, "mac_projection");
 
-  dt = apar->dt;
-  apar->dt /= 2.;
-
-  mac_projection (domain, par, apar, p, alpha, NULL, g, divergence_hook);
-
-  apar->dt = dt;
+  mac_projection (domain, par, dt, p, alpha, NULL, g, divergence_hook);
 
   gfs_domain_timer_stop (domain, "mac_projection");
 
@@ -531,7 +533,7 @@ void gfs_correct_centered_velocities (GfsDomain * domain,
  * gfs_approximate_projection:
  * @domain: a #GfsDomain.
  * @par: the projection control parameters.
- * @apar: the advection parameters.
+ * @dt: the timestep.
  * @p: the pressure.
  * @alpha: the Poisson equation gradient weight.
  * @res: the residual or %NULL.
@@ -557,19 +559,18 @@ void gfs_correct_centered_velocities (GfsDomain * domain,
  */
 void gfs_approximate_projection (GfsDomain * domain,
 				 GfsMultilevelParams * par,
-				 GfsAdvectionParams * apar,
+				 gdouble dt,
 				 GfsVariable * p,
 				 GfsFunction * alpha,
 				 GfsVariable * res,
 				 GfsVariable ** g,
 				 void (* divergence_hook) (GfsDomain * domain, 
-							   GfsAdvectionParams * apar, 
+							   gdouble dt,
 							   GfsVariable * div)
 				 )
 {
   g_return_if_fail (domain != NULL);
   g_return_if_fail (par != NULL);
-  g_return_if_fail (apar != NULL);
   g_return_if_fail (p != NULL);
   g_return_if_fail (g != NULL);
 
@@ -584,9 +585,9 @@ void gfs_approximate_projection (GfsDomain * domain,
 			    (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
 			    gfs_domain_velocity (domain));
   
-  mac_projection (domain, par, apar, p, alpha, res, g, divergence_hook);
+  mac_projection (domain, par, dt, p, alpha, res, g, divergence_hook);
 
-  gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, apar->dt);
+  gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, dt);
 
   gfs_domain_timer_stop (domain, "approximate_projection");
 

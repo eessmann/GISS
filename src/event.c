@@ -724,8 +724,8 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
     while (i) {
       VarFunc * vf = i->data;
       gfs_catch_floating_point_exceptions ();
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) (vf->n == 1 ? init_scalar : init_vector), vf);
+      gfs_domain_traverse_layers (GFS_DOMAIN (sim), (FttCellTraverseFunc) 
+				  (vf->n == 1 ? init_scalar : init_vector), vf);
       gfs_restore_fpe_for_function (vf->f[0]);
       if (vf->v[0]->component == FTT_DIMENSION)
 	gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v[0]);
@@ -1043,6 +1043,7 @@ static void stream_from_vorticity (GfsDomain * domain,
   while (norm.infty > tolerance && maxit) {
     gfs_poisson_cycle (domain, &par, stream, vorticity, dia, res);
     norm = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res);
+    fprintf (stderr, "maxit: %d infty: %g\n", maxit, norm.infty);
     maxit--;
   }
   if (maxit == 0)
