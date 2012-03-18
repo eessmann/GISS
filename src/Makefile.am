@@ -7,9 +7,6 @@ AM_CPPFLAGS = -DGFS_MODULES_DIR=\"$(libdir)/gerris\" -DGFS_DATA_DIR=\"$(pkgdatad
 INCLUDES = -I$(top_srcdir) -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs\" $(GTS_CFLAGS)
 
-bin_SCRIPTS = gfs-config
-
-gfs-config: gfs-config.in
 gerris2D.pc: gerris2D.pc.in
 gerris3D.pc: gerris3D.pc.in
 
@@ -20,7 +17,6 @@ pkgdata_DATA = m4.awk
 lib_LTLIBRARIES = libgfs2D.la libgfs3D.la
 
 BUILT_SOURCES= \
-	gfs-config  \
 	gerris2D.pc \
 	gerris3D.pc
 
