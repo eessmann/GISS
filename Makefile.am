@@ -27,7 +27,7 @@ else
 DARCS_CHANGELOG = 
 endif
 
-pkglib_SCRIPTS = build_function libtool
+pkgdata_SCRIPTS = build_function libtool
 
 ChangeLog: $(DARCS_CHANGELOG)
 

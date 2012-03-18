@@ -6,8 +6,8 @@ DIMENSION=$2  # gerris2D or gerris3D
 WDIR=$3       # simulation directory
               # remaining arguments are line numbers for GfsGlobal
 
-CC="PREFIX/lib/gerris/libtool --tag=CC --silent --mode=compile COMPILER"
-LD="PREFIX/lib/gerris/libtool --tag=CC --silent --mode=link COMPILER"
+CC="PREFIX/share/gerris/libtool --tag=CC --silent --mode=compile COMPILER"
+LD="PREFIX/share/gerris/libtool --tag=CC --silent --mode=link COMPILER"
 CFLAGS="-O -I$WDIR"
 LDFLAGS="-O -rpath PREFIX/lib/gerris"
 

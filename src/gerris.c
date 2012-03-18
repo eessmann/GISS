@@ -245,7 +245,7 @@ int main (int argc, char * argv[])
   if (macros) {
     gchar * awk = g_strconcat ("awk -v prefix=",
 			       strstr (m4_options, "-P") ? "m4_" : "",
-			       " -f ", GFS_MODULES_DIR, "/m4.awk ", 
+			       " -f ", GFS_DATA_DIR, "/m4.awk ", 
 			       NULL);
     gchar * command;
 

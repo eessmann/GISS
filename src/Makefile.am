@@ -2,7 +2,7 @@
 
 AUTOMAKE_OPTIONS = 1.6
 
-AM_CPPFLAGS = -DGFS_MODULES_DIR=\"$(libdir)/gerris\"
+AM_CPPFLAGS = -DGFS_MODULES_DIR=\"$(libdir)/gerris\" -DGFS_DATA_DIR=\"$(pkgdatadir)\"
 
 INCLUDES = -I$(top_srcdir) -I$(includedir) \
            -DG_LOG_DOMAIN=\"Gfs\" $(GTS_CFLAGS)
@@ -15,7 +15,7 @@ gerris3D.pc: gerris3D.pc.in
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = gerris2D.pc gerris3D.pc
-pkglib_DATA = m4.awk
+pkgdata_DATA = m4.awk
 
 lib_LTLIBRARIES = libgfs2D.la libgfs3D.la
 

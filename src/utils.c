@@ -585,7 +585,7 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * dirname, const
 		   "gerris3D"
 #endif
 		   " \"%s\""
-		   , dirname, GFS_MODULES_DIR, fp->line, pwd);
+		   , dirname, GFS_DATA_DIR, fp->line, pwd);
   GfsSimulation * sim = gfs_object_simulation (f);
   GSList * i = sim->globals;
   while (i) {

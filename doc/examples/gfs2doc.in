@@ -6,7 +6,7 @@ import stat
 import glob
 import tempfile
 
-sys.path.append("@prefix@/lib/gerris")
+sys.path.append("@prefix@/share/gerris")
 import gfs2tex
 
 if len(sys.argv) < 2:

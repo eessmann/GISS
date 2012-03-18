@@ -46,8 +46,7 @@ BUILT_SOURCES= \
 
 CLEANFILES = $(BUILT_SOURCES) Makefile.deps
 
-pkglib_DATA = gfs2tex.py
-pkgdata_DATA = gfs.lang gerris.dic gfs-keywords.el gfs-mode.el gfs.sty gfs.hva kaltura.sh gfs.php
+pkgdata_DATA = gfs2tex.py gfs.lang gerris.dic gfs-keywords.el gfs-mode.el gfs.sty gfs.hva kaltura.sh gfs.php
 
 gerris.dic: classes modulesyms.sh $(top_srcdir)/modules/Makefile.am modules.list
 	($(srcdir)/classes && sh $(srcdir)/modulesyms.sh $(top_srcdir)/modules $(pkglibdir)) | sort > gerris.dic
