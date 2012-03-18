@@ -2,7 +2,7 @@ levels="5 6 7 8 9"
 
 if test x$donotrun != xtrue; then
     for level in $levels; do
-	if gerris2D -DLEVEL=$level parabola.gfs; then :
+	if gerris2D -DLEVEL=$level $1; then :
 	else
 	    exit 1
 	fi
@@ -131,7 +131,7 @@ fi
 if cat <<EOF | python ; then :
 from check import *
 from sys import *
-if (Curve('error',1,4) - Curve('error.ref',1,4)).max() > 1e-3:
+if (Curve('error',1,4) - Curve('error.ref',1,4)).max() > 1e-4:
     print (Curve('error',1,4) - Curve('error.ref',1,4)).max()
     exit(1)
 EOF
