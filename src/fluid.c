@@ -570,6 +570,7 @@ static gdouble sweby_limiter (gdouble r)
   return generic_limiter (r, 1.5);
 }
 
+#if 0
 static gdouble center_limited_gradient (FttCell * cell,
 					FttComponent c,
 					guint v,
@@ -600,6 +601,137 @@ static gdouble center_limited_gradient (FttCell * cell,
   /* only one or no neighbors */
   return 0.;
 }
+#else
+static gdouble center_limited_gradient (FttCell * cell,
+					FttComponent c,
+					guint v,
+					gdouble (* limiter) (gdouble))
+{
+  FttDirection d = 2*c;
+  FttCellFace f1,f2;
+  FttVector cm, cm1, cm2;
+  gdouble x1 = 1., x2 = 1.;
+  gdouble v0, v1, v2, vr; 
+  gdouble g = 0., gs; 
+  gdouble h;
+
+
+  h = ftt_cell_size (cell);
+  gfs_cell_cm (cell, &cm);  
+  v0 = GFS_VALUEI (cell, v);
+  
+  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+  f2 = gfs_cell_face (cell, d);
+  
+  if (f1.neighbor && f2.neighbor) {
+    /* two neighbors */
+    gfs_cell_cm (f1.neighbor, &cm1);
+    gfs_cell_cm (f2.neighbor, &cm2);    
+    v1 = neighbor_value (&f1, v, &x1);
+    v2 = neighbor_value (&f2, v, &x2);     
+    
+    if (v0 != v1){      
+      if(c == 0){
+	x1 = (cm.x-cm1.x)/h;
+	x2 = (cm2.x-cm.x)/h;
+      }
+      if(c == 1){
+	x1 = (cm.y-cm1.y)/h;
+	x2 = (cm2.y-cm.y)/h;
+      }		
+      g = (* limiter) ((v2 - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
+    }
+  }
+ 
+  // mixed cells gradient following Causon et al. (2000)
+  if(GFS_IS_MIXED (cell)){
+    GfsSolidVector * s = GFS_STATE (cell)->solid;
+    FttVector ca = s->ca;
+    FttVector n;
+    gdouble nn;
+
+    gfs_solid_normal(cell,&n);
+    nn = sqrt(n.x*n.x+n.y*n.y);
+    n.x = n.x/nn;
+    n.y = n.y/nn;       
+    
+    // solid is on the right side of the cell 
+    if(c == 0 && s->s[0] < s->s[1]){      
+      if (f1.neighbor){
+	v1 = neighbor_value (&f1, v, &x1);
+	gfs_cell_cm (f1.neighbor, &cm1);
+	
+	if(v == 2) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.x; 
+	else if(v == 3) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.y; 
+	else return (s->s[0]*g)/s->s[1];
+	x1 = (cm.x-cm1.x)/h;
+	x2 = 2.0*(ca.x-cm.x)/h;
+	
+	if(v0 == v1 || v0 == vr) 
+	  gs = 0.;
+	else gs = (* limiter) ((vr - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
+	return (s->s[0]*g+(s->s[1]-s->s[0])*gs)/s->s[1];
+      }
+      else return 0;
+    }
+    
+    // solid is on the left side of the cell 
+    else if(c == 0 && s->s[0] > s->s[1]){           
+      if (f2.neighbor){
+	v2 = neighbor_value (&f2, v, &x2);
+	gfs_cell_cm (f2.neighbor, &cm2);
+	x1 = 2.0*(cm.x-ca.x)/h;
+	x2 = (cm2.x-cm.x)/h;
+	if(v == 2) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.x; 
+	else if(v == 3) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.y; 
+	else return (s->s[1]*g)/s->s[0];
+	if (v0 == vr || v0 == v2)
+	  gs = 0.;
+	else gs = (* limiter) ((v2 - v0)*x1/((v0 - vr)*x2))*(v0 - vr)/x1;
+	return (s->s[1]*g+(s->s[0]-s->s[1])*gs)/s->s[0];
+      }
+      else return 0;
+    }     
+    
+    // solid is on the top side of the cell 
+    else if(c == 1 && s->s[2] < s->s[3]){      
+      if (f1.neighbor){
+	v1 = neighbor_value (&f1, v, &x1);
+	gfs_cell_cm (f1.neighbor, &cm1);
+	x1 = (cm.y-cm1.y)/h;
+	x2 = 2.0*(ca.y-cm.y)/h;
+	if(v == 2) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.x; 
+	else if(v == 3) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.y; 
+	else return (s->s[2]*g)/s->s[3];
+	if(v0 == v1 || v0 == vr) 
+	  gs = 0.;
+	else gs = (* limiter) ((vr - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
+	return (s->s[2]*g+(s->s[3]-s->s[2])*gs)/s->s[3];
+      }
+      else return 0;
+    }
+    
+    // solid is on the bottom side of the cell 
+    else if(c == 1 && s->s[2] > s->s[3]){           
+      if (f2.neighbor){
+	v2 = neighbor_value (&f2, v, &x2);
+	gfs_cell_cm (f2.neighbor, &cm2);
+	x1 = 2.0*(cm.y-ca.y)/h;
+	x2 = (cm2.y-cm.y)/h;
+	if(v == 2) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.x; 
+	else if(v == 3) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.y; 
+	else return (s->s[3]*g)/s->s[2];
+	if (v0 == vr || v0 == v2)
+	  gs = 0.;
+	else gs = (* limiter) ((v2 - v0)*x1/((v0 - vr)*x2))*(v0 - vr)/x1;
+	return (s->s[3]*g+(s->s[2]-s->s[3])*gs)/s->s[2];
+      }
+      else return 0;
+    } 
+  }
+  return g;
+}
+#endif
 
 /**
  * gfs_center_minmod_gradient:

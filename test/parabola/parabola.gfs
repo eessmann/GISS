@@ -75,8 +75,8 @@ Define G 9.81
     }
 
     PhysicalParams { L = 10000 }
-    RefineSolid LEVEL
-    Solid (y - 4999.)
+    RefineSurface LEVEL (y - 10000.*(0.5 - 1./pow(2,LEVEL)))
+    InitMask {} (y < 10000.*(0.5 - 1./pow(2,LEVEL)))
     Init {} {
 	Zb = h0*(x/a)*(x/a)
 	P = MAX (0., h0 + Psi (x, 0.) - Zb)

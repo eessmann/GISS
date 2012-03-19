@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001-2009 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2008-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -24,6 +24,7 @@
 #include "river.h"
 #include "adaptive.h"
 #include "source.h"
+#include "solid.h"
 #include "init.h"
 
 /**
@@ -118,21 +119,38 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     {V, -1., U,  1.}
   };
   Sym * s = &sym[face->d];
+
+  gdouble a = 1., b = 1.;
+  if (GFS_IS_MIXED (face->cell)) {
+    FttVector ca, cm;
+    gfs_face_ca (face, &ca);
+    gfs_cell_cm (face->cell, &cm);
+    FttComponent c = face->d/2;
+    a = fabs (2.*((&ca.x)[c] - (&cm.x)[c])/ftt_cell_size (face->cell));
+  }
+  if (GFS_IS_MIXED (face->neighbor)) {
+    FttVector ca, cm;
+    gfs_face_ca (face, &ca); /* fixme?: this is not symmetric with the above for face->cell */
+    gfs_cell_cm (face->neighbor, &cm);
+    FttComponent c = face->d/2;
+    b = fabs (2.*((&ca.x)[c] - (&cm.x)[c])/ftt_cell_size (face->neighbor));
+  } 
+
   gdouble etaL = (GFS_VALUE (face->cell, r->v1[0]) < r->dry ? 0. :
-		  GFS_VALUE (face->cell, r->v1[0]) + 
-		  s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0]));
-  gdouble zbL = (GFS_VALUE (face->cell, r->v[3]) + 
-		 s->du*GFS_VALUE (face->cell, r->dv[face->d/2][3]));
-  gdouble zbR = (GFS_VALUE (face->neighbor, r->v[3]) -
-		 s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][3]));
+		  GFS_VALUE (face->cell, r->v1[0]) 
+		  + a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0]));
+  gdouble zbL = (GFS_VALUE (face->cell, r->v[3])
+		 + a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][3]));
+  gdouble zbR = (GFS_VALUE (face->neighbor, r->v[3])
+		 - b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][3])); 
   gdouble zbLR = MAX (zbL, zbR);
   gdouble uL[4], uR[4], f[3];
 
   if (etaL > r->dry) {
     uL[1] = s->du*(GFS_VALUE (face->cell, r->v1[s->u]) +
-		   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->u]))/etaL; /* u = uh/h */
+		   a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->u]))/etaL; /* u = uh/h */
     uL[2] = s->dv*(GFS_VALUE (face->cell, r->v1[s->v]) +
-		   s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->v]))/etaL; /* v = vh/h */
+		   a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->v]))/etaL; /* v = vh/h */
   }
   else
     uL[1] = uL[2] = 0.;
@@ -141,15 +159,17 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
 
   gdouble etaR = (GFS_VALUE (face->neighbor, r->v1[0]) < r->dry ? 0. :
 		  GFS_VALUE (face->neighbor, r->v1[0]) -
-		  s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][0]));
+		  b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][0]));
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE: case FTT_FINE_COARSE:
     /* fixme: this is only first-order accurate for fine/coarse */
     if (etaR > r->dry) {
+      /* u = uh/h */
       uR[1] = s->du*(GFS_VALUE (face->neighbor, r->v1[s->u]) -
-		     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->u]))/etaR; /* u = uh/h */
+		     b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->u]))/etaR; 
+      /* v = vh/h */
       uR[2] = s->dv*(GFS_VALUE (face->neighbor, r->v1[s->v]) -
-		     s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->v]))/etaR; /* v = vh/h */
+		     b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->v]))/etaR;
     }
     else
       uR[1] = uR[2] = 0.;
@@ -175,10 +195,20 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   f[2] = s->dv*dt*f[2];
   GFS_VALUE (face->cell, r->flux[0])    -= f[0];
   /* see equation 2.16 of Audusse et al, 2004 */
-  GFS_VALUE (face->cell, r->flux[s->u]) -= s->du*dt*(f[1] - r->g/2.*(uL[0]*uL[0] - etaL*etaL));
+  /* Slope source term "S_{i,j,p}" and second-order correction for
+     slope source term "Sc_{i,j,p}" of An et al. 2012, Advances in
+     Water Resources. 39:60-70, equations (11) and (12) */
+  gdouble eta = GFS_VALUE (face->cell, r->v1[0]);
+  if (eta < r->dry) eta = 0.;
+  gdouble zb = GFS_VALUE (face->cell, r->v[3]);
+  GFS_VALUE (face->cell, r->flux[s->u]) -= s->du*dt*(f[1] - r->g/2.*(uL[0]*uL[0] - etaL*etaL
+								     - (etaL + eta)*(zbL - zb)));
   GFS_VALUE (face->cell, r->flux[s->v]) -= f[2];
 
-  f[1] = s->du*dt*(f[1] - r->g/2.*(uR[0]*uR[0] - etaR*etaR));
+  eta = GFS_VALUE (face->neighbor, r->v1[0]);
+  if (eta < r->dry) eta = 0.;
+  zb = GFS_VALUE (face->neighbor, r->v[3]);
+  f[1] = s->du*dt*(f[1] - r->g/2.*(uR[0]*uR[0] - etaR*etaR - (etaR + eta)*(zbR - zb)));
   if (ftt_face_type (face) == FTT_FINE_COARSE) {
     f[0] /= FTT_CELLS;
     f[1] /= FTT_CELLS;
@@ -194,6 +224,31 @@ static void reset_fluxes (FttCell * cell, const GfsRiver * r)
   guint v;
   for (v = 0; v < GFS_RIVER_NVAR; v++)
     GFS_VALUE (cell, r->flux[v]) = 0.;
+}
+
+static void solid_boundary_fluxes (FttCell * cell, GfsRiver * r)
+{
+  gdouble h = ftt_cell_size (cell);
+  GfsSolidVector * s = GFS_STATE (cell)->solid;
+  FttVector cm;
+
+  gdouble hh = MAX (GFS_VALUE (cell, r->v1[0]), 0.);
+  gfs_cell_cm (cell, &cm);
+  gdouble hs = hh + 2.*((s->ca.x - cm.x)*GFS_VALUE (cell, r->dv[0][0]) + 
+			(s->ca.y - cm.y)*GFS_VALUE (cell, r->dv[1][0]))/h;
+  gdouble zbs = 2.*((s->ca.x - cm.x)*GFS_VALUE (cell, r->dv[0][3]) +
+		    (s->ca.y - cm.y)*GFS_VALUE (cell, r->dv[1][3]))/h;
+  gdouble hszbs = 
+    r->dt/h*r->g/2.*(
+		     /* the normal component of the velocity is zero at the solid boundary. */  
+		     hs*hs +
+		     /* Second-order correction for slope source term ("Sc_{i,j,s}" of 
+			An et al. 2012, Advances in Water Resources. 39:60-70, equation (27) */
+		     (hs + hh)*zbs);
+  FttVector n;
+  gfs_solid_normal (cell, &n);
+  GFS_VALUE (cell, r->flux[1]) -= n.x*hszbs;
+  GFS_VALUE (cell, r->flux[2]) -= n.y*hszbs;
 }
 
 static void sources (FttCell * cell, GfsRiver * r)
@@ -231,24 +286,28 @@ static void sources (FttCell * cell, GfsRiver * r)
       fm[d] = 1.;
     cm = ftt_cell_size (cell);
   }
-
+#if 0
   /* Second-order correction for slope source term ("Sci" of Audusse
      et al, 2004, SIAM, 25(6):2050-2065, equation 3.8) */
-  gdouble etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[0][0]);
-  gdouble zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[0][3]);
-  gdouble etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[0][0]);
-  gdouble zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[0][3]);
-
-  GFS_VALUE (cell, r->v[1]) += 
-    r->dt*r->g/4.*(fm[FTT_RIGHT] + fm[FTT_LEFT])*(etaL + etaR)*(zbL - zbR)/cm;
-
-  etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[1][0]);
-  zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[1][3]);
-  etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[1][0]);
-  zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[1][3]);
-
-  GFS_VALUE (cell, r->v[2]) += 
-    r->dt*r->g/4.*(fm[FTT_TOP] + fm[FTT_BOTTOM])*(etaL + etaR)*(zbL - zbR)/cm;
+  if (!GFS_IS_MIXED (cell)) {
+    /* fluid cell */
+    gdouble etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[0][0]);
+    gdouble zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[0][3]);
+    gdouble etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[0][0]);
+    gdouble zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[0][3]);
+    
+    GFS_VALUE (cell, r->v[1]) += 
+      r->dt*r->g/4.*(fm[FTT_RIGHT] + fm[FTT_LEFT])*(etaL + etaR)*(zbL - zbR)/cm;
+    
+    etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[1][0]);
+    zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[1][3]);
+    etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[1][0]);
+    zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[1][3]);
+    
+    GFS_VALUE (cell, r->v[2]) += 
+      r->dt*r->g/4.*(fm[FTT_TOP] + fm[FTT_BOTTOM])*(etaL + etaR)*(zbL - zbR)/cm;
+  }
+#endif
 }
 
 static void advance (GfsRiver * r, gdouble dt)
@@ -261,6 +320,9 @@ static void advance (GfsRiver * r, gdouble dt)
   gfs_domain_face_traverse (domain, FTT_XYZ,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) face_fluxes, r);
+  gfs_domain_traverse_mixed (domain,
+  			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+  			     (FttCellTraverseFunc) solid_boundary_fluxes, domain);
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) sources, r);
   for (i = 0; i < GFS_RIVER_NVAR; i++) {
     GfsAdvectionParams par;
