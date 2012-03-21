@@ -352,10 +352,22 @@ void ftt_cell_refine_corners (FttCell * cell,
     }
 }
 
-static gdouble neighbor_value (const FttCellFace * face,
-			       guint v,
-			       gdouble * x)
+/**
+ * gfs_neighbor_value:
+ * @face: a #FttCellFace.
+ * @v: a variable index.
+ * @x: relative position of the neigboring value.
+ *
+ * Returns: the (averaged) neighboring value of variable @v at @face
+ * and its position @x.
+ */
+gdouble gfs_neighbor_value (const FttCellFace * face,
+			    guint v,
+			    gdouble * x)
 {
+  g_return_val_if_fail (face != NULL, 0.);
+  g_return_val_if_fail (x != NULL, 0.);
+
   GfsGradient vc;
 #if FTT_2D
   gint dp;
@@ -436,12 +448,12 @@ gdouble gfs_center_gradient (FttCell * cell,
     FttCellFace f2 = gfs_cell_face (cell, d);
     gdouble x1 = 1., v1;
     
-    v1 = neighbor_value (&f1, v, &x1);
+    v1 = gfs_neighbor_value (&f1, v, &x1);
     if (f2.neighbor) {
       /* two neighbors: second-order differencing (parabola) */
       gdouble x2 = 1., v2;
       
-      v2 = neighbor_value (&f2, v, &x2);
+      v2 = gfs_neighbor_value (&f2, v, &x2);
       return (x1*x1*(v2 - v0) + x2*x2*(v0 - v1))/(x1*x2*(x2 + x1));
     }
     else
@@ -455,7 +467,7 @@ gdouble gfs_center_gradient (FttCell * cell,
       gdouble x2 = 1.;
       
       /* one neighbor: first-order differencing */
-      return (neighbor_value (&f2, v, &x2) - v0)/x2;
+      return (gfs_neighbor_value (&f2, v, &x2) - v0)/x2;
     }
   }
   /* no neighbors */
@@ -526,8 +538,8 @@ gdouble gfs_center_van_leer_gradient (FttCell * cell,
 	 + van Leer limiter. See http://en.wikipedia.org/wiki/Flux_limiter */
       gdouble x1 = 1., x2 = 1., v0, v1, v2;      
       v0 = GFS_VALUEI (cell, v);
-      v1 = neighbor_value (&f1, v, &x1);
-      v2 = neighbor_value (&f2, v, &x2);
+      v1 = gfs_neighbor_value (&f1, v, &x1);
+      v2 = gfs_neighbor_value (&f2, v, &x2);
       if (v1 == GFS_NODATA || v2 == GFS_NODATA)
 	return 0.;
 
@@ -570,7 +582,6 @@ static gdouble sweby_limiter (gdouble r)
   return generic_limiter (r, 1.5);
 }
 
-#if 0
 static gdouble center_limited_gradient (FttCell * cell,
 					FttComponent c,
 					guint v,
@@ -587,8 +598,8 @@ static gdouble center_limited_gradient (FttCell * cell,
     if (f2.neighbor) {
       /* two neighbors */
       gdouble x1 = 1., v1, x2 = 1., v2;
-      v1 = neighbor_value (&f1, v, &x1);
-      v2 = neighbor_value (&f2, v, &x2);
+      v1 = gfs_neighbor_value (&f1, v, &x1);
+      v2 = gfs_neighbor_value (&f2, v, &x2);
 
       gdouble g;
       if (v0 == v1)
@@ -601,137 +612,6 @@ static gdouble center_limited_gradient (FttCell * cell,
   /* only one or no neighbors */
   return 0.;
 }
-#else
-static gdouble center_limited_gradient (FttCell * cell,
-					FttComponent c,
-					guint v,
-					gdouble (* limiter) (gdouble))
-{
-  FttDirection d = 2*c;
-  FttCellFace f1,f2;
-  FttVector cm, cm1, cm2;
-  gdouble x1 = 1., x2 = 1.;
-  gdouble v0, v1, v2, vr; 
-  gdouble g = 0., gs; 
-  gdouble h;
-
-
-  h = ftt_cell_size (cell);
-  gfs_cell_cm (cell, &cm);  
-  v0 = GFS_VALUEI (cell, v);
-  
-  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
-  f2 = gfs_cell_face (cell, d);
-  
-  if (f1.neighbor && f2.neighbor) {
-    /* two neighbors */
-    gfs_cell_cm (f1.neighbor, &cm1);
-    gfs_cell_cm (f2.neighbor, &cm2);    
-    v1 = neighbor_value (&f1, v, &x1);
-    v2 = neighbor_value (&f2, v, &x2);     
-    
-    if (v0 != v1){      
-      if(c == 0){
-	x1 = (cm.x-cm1.x)/h;
-	x2 = (cm2.x-cm.x)/h;
-      }
-      if(c == 1){
-	x1 = (cm.y-cm1.y)/h;
-	x2 = (cm2.y-cm.y)/h;
-      }		
-      g = (* limiter) ((v2 - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
-    }
-  }
- 
-  // mixed cells gradient following Causon et al. (2000)
-  if(GFS_IS_MIXED (cell)){
-    GfsSolidVector * s = GFS_STATE (cell)->solid;
-    FttVector ca = s->ca;
-    FttVector n;
-    gdouble nn;
-
-    gfs_solid_normal(cell,&n);
-    nn = sqrt(n.x*n.x+n.y*n.y);
-    n.x = n.x/nn;
-    n.y = n.y/nn;       
-    
-    // solid is on the right side of the cell 
-    if(c == 0 && s->s[0] < s->s[1]){      
-      if (f1.neighbor){
-	v1 = neighbor_value (&f1, v, &x1);
-	gfs_cell_cm (f1.neighbor, &cm1);
-	
-	if(v == 2) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.x; 
-	else if(v == 3) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.y; 
-	else return (s->s[0]*g)/s->s[1];
-	x1 = (cm.x-cm1.x)/h;
-	x2 = 2.0*(ca.x-cm.x)/h;
-	
-	if(v0 == v1 || v0 == vr) 
-	  gs = 0.;
-	else gs = (* limiter) ((vr - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
-	return (s->s[0]*g+(s->s[1]-s->s[0])*gs)/s->s[1];
-      }
-      else return 0;
-    }
-    
-    // solid is on the left side of the cell 
-    else if(c == 0 && s->s[0] > s->s[1]){           
-      if (f2.neighbor){
-	v2 = neighbor_value (&f2, v, &x2);
-	gfs_cell_cm (f2.neighbor, &cm2);
-	x1 = 2.0*(cm.x-ca.x)/h;
-	x2 = (cm2.x-cm.x)/h;
-	if(v == 2) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.x; 
-	else if(v == 3) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.y; 
-	else return (s->s[1]*g)/s->s[0];
-	if (v0 == vr || v0 == v2)
-	  gs = 0.;
-	else gs = (* limiter) ((v2 - v0)*x1/((v0 - vr)*x2))*(v0 - vr)/x1;
-	return (s->s[1]*g+(s->s[0]-s->s[1])*gs)/s->s[0];
-      }
-      else return 0;
-    }     
-    
-    // solid is on the top side of the cell 
-    else if(c == 1 && s->s[2] < s->s[3]){      
-      if (f1.neighbor){
-	v1 = neighbor_value (&f1, v, &x1);
-	gfs_cell_cm (f1.neighbor, &cm1);
-	x1 = (cm.y-cm1.y)/h;
-	x2 = 2.0*(ca.y-cm.y)/h;
-	if(v == 2) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.x; 
-	else if(v == 3) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.y; 
-	else return (s->s[2]*g)/s->s[3];
-	if(v0 == v1 || v0 == vr) 
-	  gs = 0.;
-	else gs = (* limiter) ((vr - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
-	return (s->s[2]*g+(s->s[3]-s->s[2])*gs)/s->s[3];
-      }
-      else return 0;
-    }
-    
-    // solid is on the bottom side of the cell 
-    else if(c == 1 && s->s[2] > s->s[3]){           
-      if (f2.neighbor){
-	v2 = neighbor_value (&f2, v, &x2);
-	gfs_cell_cm (f2.neighbor, &cm2);
-	x1 = 2.0*(cm.y-ca.y)/h;
-	x2 = (cm2.y-cm.y)/h;
-	if(v == 2) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.x; 
-	else if(v == 3) vr = v0 - 2.0*(n.x*GFS_VALUEI (cell, 2)+n.y*GFS_VALUEI (cell, 3))*n.y; 
-	else return (s->s[3]*g)/s->s[2];
-	if (v0 == vr || v0 == v2)
-	  gs = 0.;
-	else gs = (* limiter) ((v2 - v0)*x1/((v0 - vr)*x2))*(v0 - vr)/x1;
-	return (s->s[3]*g+(s->s[2]-s->s[3])*gs)/s->s[2];
-      }
-      else return 0;
-    } 
-  }
-  return g;
-}
-#endif
 
 /**
  * gfs_center_minmod_gradient:
@@ -2281,7 +2161,9 @@ gdouble gfs_face_interpolated_value (const FttCellFace * face,
   g_return_val_if_fail (face != NULL, 0.);
 
   if (face->neighbor) {
-    v1 = neighbor_value (face, v, &x1);
+    g_assert (FTT_CELL_IS_LEAF (face->neighbor) || 
+	      ftt_cell_level (face->neighbor) < ftt_cell_level (face->cell));
+    v1 = gfs_neighbor_value (face, v, &x1);
     return ((x1 - 0.5)*GFS_VALUEI (face->cell, v) + 0.5*v1)/x1;
   }
   else
@@ -2293,11 +2175,11 @@ gdouble gfs_face_interpolated_value (const FttCellFace * face,
   g_return_val_if_fail (face != NULL, 0.);
 
   v0 = GFS_VALUEI (face->cell, v);
-  v1 = neighbor_value (face, v, &x1);
+  v1 = gfs_neighbor_value (face, v, &x1);
   f2 = gfs_cell_face (face->cell, FTT_OPPOSITE_DIRECTION (face->d));
   if (f2.neighbor) {
     gdouble x2 = 1.;
-    gdouble v2 = neighbor_value (&f2, v, &x2);
+    gdouble v2 = gfs_neighbor_value (&f2, v, &x2);
 
     return v0 + (x2*(v1 - v0)*(1. + 2.*x2) - x1*(v0 - v2)*(1. - 2.*x1))
       /(4.*x1*x2*(x1 + x2));
@@ -2361,7 +2243,7 @@ gdouble gfs_face_weighted_interpolated_value (const FttCellFace * face,
   if (face->neighbor) {
     if (FTT_CELL_IS_LEAF (face->neighbor)) {
       gdouble w = GFS_STATE (face->cell)->f[face->d].v, x1 = 1., v1;
-      v1 = neighbor_value (face, v, &x1);
+      v1 = gfs_neighbor_value (face, v, &x1);
       return w*((x1 - 0.5)*GFS_VALUEI (face->cell, v) + 0.5*v1)/x1;
     }
     else {
@@ -2377,7 +2259,7 @@ gdouble gfs_face_weighted_interpolated_value (const FttCellFace * face,
       for (i = 0; i < n; i++)
 	if ((f.cell = children.c[i])) {
 	  gdouble w = GFS_STATE (f.cell)->f[f.d].v, x1 = 1., v1;
-	  v1 = neighbor_value (&f, v, &x1);
+	  v1 = gfs_neighbor_value (&f, v, &x1);
 	  val += w*v1;
 	}
       return val/n;

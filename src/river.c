@@ -27,6 +27,174 @@
 #include "solid.h"
 #include "init.h"
 
+/* generalisation of the limited gradients (in fluid.c) to mixed cells */
+
+static gdouble generic_limiter (gdouble r, gdouble beta)
+{
+  gdouble v1 = MIN (r, beta), v2 = MIN (beta*r, 1.);
+  v1 = MAX (0., v1);
+  return MAX (v1, v2);
+}
+
+static gdouble minmod_limiter (gdouble r)
+{
+  return generic_limiter (r, 1.);
+}
+
+static gdouble superbee_limiter (gdouble r)
+{
+  return generic_limiter (r, 2.);
+}
+
+static gdouble sweby_limiter (gdouble r)
+{
+  return generic_limiter (r, 1.5);
+}
+
+static gdouble center_limited_gradient_full (FttCell * cell,
+					     FttComponent c,
+					     guint v,
+					     gdouble (* limiter) (gdouble))
+{
+  FttDirection d = 2*c;
+  FttCellFace f1;
+  gdouble v0;
+
+  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+  v0 = GFS_VALUEI (cell, v);
+  if (f1.neighbor) {
+    FttCellFace f2 = gfs_cell_face (cell, d);
+    if (f2.neighbor) {
+      /* two neighbors */
+      gdouble x1 = 1., v1, x2 = 1., v2;
+      v1 = gfs_neighbor_value (&f1, v, &x1);
+      v2 = gfs_neighbor_value (&f2, v, &x2);
+
+      gdouble g;
+      if (v0 == v1)
+	g = 0.;
+      else
+	g = (* limiter) ((v2 - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
+      return g;
+    }
+  }
+  /* only one or no neighbors */
+  return 0.;
+}
+
+static gdouble center_limited_gradient (FttCell * cell,
+					FttComponent c,
+					guint v,
+					gdouble (* limiter) (gdouble))
+{
+  FttDirection d = 2*c;
+  FttCellFace f1, f2;
+  f1 = gfs_cell_face (cell, FTT_OPPOSITE_DIRECTION (d));
+  f2 = gfs_cell_face (cell, d);
+  if (!GFS_IS_MIXED (cell) && 
+      (!f1.neighbor || !GFS_IS_MIXED (f1.neighbor)) &&
+      (!f2.neighbor || !GFS_IS_MIXED (f2.neighbor)))
+    return center_limited_gradient_full (cell, c, v, limiter);
+  gdouble h = ftt_cell_size (cell);
+  FttVector cm;
+  gfs_cell_cm (cell, &cm);  
+  gdouble v0 = GFS_VALUEI (cell, v), g = 0.;
+  
+  if (f1.neighbor && f2.neighbor) {
+    /* two neighbors */
+    gdouble x1, x2;
+    gdouble v1 = gfs_neighbor_value (&f1, v, &x1);
+    gdouble v2 = gfs_neighbor_value (&f2, v, &x2);
+    if (v0 != v1) {
+      FttVector cm1, cm2;
+      gfs_cell_cm (f1.neighbor, &cm1);
+      gfs_cell_cm (f2.neighbor, &cm2);       
+      /* fixme: this is not correct at coarse/fine boundaries */
+      x1 = ((&cm.x)[c] - (&cm1.x)[c])/h;
+      x2 = ((&cm2.x)[c] - (&cm.x)[c])/h;
+      g = (* limiter) ((v2 - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
+    }
+  }
+ 
+  /* mixed cells gradient following Causon et al. (2000) */
+  if (GFS_IS_MIXED (cell)) {
+    GfsSolidVector * s = GFS_STATE (cell)->solid;
+    FttVector ca = s->ca;
+    FttVector n;
+    gdouble nn;
+
+    gfs_solid_normal (cell, &n);
+    nn = sqrt (n.x*n.x + n.y*n.y);
+    n.x /= nn;
+    n.y /= nn;
+    
+    /* solid is on the right side of the cell */
+    if (s->s[2*c] < s->s[2*c + 1]) {
+      if (f1.neighbor) {
+	gdouble vr;
+	/* fixme: this relies on specific indices for U and V. Not recommended. */
+	if (v == 2) vr = v0 - 2.*(n.x*GFS_VALUEI (cell, 2) + n.y*GFS_VALUEI (cell, 3))*n.x;
+	else if (v == 3) vr = v0 - 2.*(n.x*GFS_VALUEI (cell, 2) + n.y*GFS_VALUEI (cell, 3))*n.y;
+	else return s->s[2*c]*g/s->s[2*c + 1];
+	gdouble x1, v1 = gfs_neighbor_value (&f1, v, &x1);
+	FttVector cm1;
+	gfs_cell_cm (f1.neighbor, &cm1);
+	/* fixme: this is not correct at coarse/fine boundaries */
+	x1 = ((&cm.x)[c] - (&cm1.x)[c])/h;
+	gdouble x2 = 2.*((&ca.x)[c] - (&cm.x)[c])/h;
+	gdouble gs = ((v0 - v1)*x2 == 0. || x1 == 0.) ? 0. :
+	  (* limiter) ((vr - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
+	return (s->s[2*c]*g + (s->s[2*c + 1] - s->s[2*c])*gs)/s->s[2*c + 1];
+      }
+      else 
+	return 0;
+    }    
+    /* solid is on the left side of the cell */
+    else if (s->s[2*c] > s->s[2*c + 1]) {
+      if (f2.neighbor) {
+	gdouble vr;
+	/* fixme: this relies on specific indices for U and V. Not recommended. */
+	if (v == 2) vr = v0 - 2.*(n.x*GFS_VALUEI (cell, 2) + n.y*GFS_VALUEI (cell, 3))*n.x; 
+	else if (v == 3) vr = v0 - 2.*(n.x*GFS_VALUEI (cell, 2) + n.y*GFS_VALUEI (cell, 3))*n.y; 
+	else return s->s[2*c + 1]*g/s->s[2*c];
+	gdouble x2, v2 = gfs_neighbor_value (&f2, v, &x2);
+	FttVector cm2;
+	gfs_cell_cm (f2.neighbor, &cm2);
+	/* fixme: this is not correct at coarse/fine boundaries */
+	gdouble x1 = 2.*((&cm.x)[c] - (&ca.x)[c])/h;
+	x2 = ((&cm2.x)[c] - (&cm.x)[c])/h;
+ 	gdouble gs = ((v0 - vr)*x2 == 0. || x1 == 0.) ? 0. :
+	  (* limiter) ((v2 - v0)*x1/((v0 - vr)*x2))*(v0 - vr)/x1;
+	return (s->s[2*c + 1]*g + (s->s[2*c] - s->s[2*c + 1])*gs)/s->s[2*c];
+      }
+      else 
+	return 0;
+    }
+  }
+  return g;
+}
+
+static gdouble center_minmod_gradient (FttCell * cell,
+				       FttComponent c,
+				       guint v)
+{
+  return center_limited_gradient (cell, c, v, minmod_limiter);
+}
+
+static gdouble center_superbee_gradient (FttCell * cell,
+					 FttComponent c,
+					 guint v)
+{
+  return center_limited_gradient (cell, c, v, superbee_limiter);
+}
+
+static gdouble center_sweby_gradient (FttCell * cell,
+				      FttComponent c,
+				      guint v)
+{
+  return center_limited_gradient (cell, c, v, sweby_limiter);
+}
+
 /**
  * Solves the Saint-Venant equations.
  * \beginobject{GfsRiver}
@@ -108,8 +276,9 @@ typedef struct {
 
 static void face_fluxes (FttCellFace * face, GfsRiver * r)
 {
-  if (GFS_VALUE (face->cell, r->v1[0]) <= r->dry &&
-      GFS_VALUE (face->neighbor, r->v1[0]) <= r->dry)
+  gdouble eta = GFS_VALUE (face->cell, r->v1[0]), etan = GFS_VALUE (face->neighbor, r->v1[0]);
+
+  if (eta <= r->dry && etan <= r->dry)
     return;
 
   static Sym sym[4] = {
@@ -136,9 +305,8 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     b = fabs (2.*((&ca.x)[c] - (&cm.x)[c])/ftt_cell_size (face->neighbor));
   } 
 
-  gdouble etaL = (GFS_VALUE (face->cell, r->v1[0]) < r->dry ? 0. :
-		  GFS_VALUE (face->cell, r->v1[0]) 
-		  + a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0]));
+  gdouble etaL = (eta <= r->dry ? 0. : 
+		  eta + a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0]));
   gdouble zbL = (GFS_VALUE (face->cell, r->v[3])
 		 + a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][3]));
   gdouble zbR = (GFS_VALUE (face->neighbor, r->v[3])
@@ -157,9 +325,8 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   uL[0] = MAX (0., etaL + zbL - zbLR);
   uL[3] = 0.;
 
-  gdouble etaR = (GFS_VALUE (face->neighbor, r->v1[0]) < r->dry ? 0. :
-		  GFS_VALUE (face->neighbor, r->v1[0]) -
-		  b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][0]));
+  gdouble etaR = (etan <= r->dry ? 0. :
+		  etan - b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][0]));
   switch (ftt_face_type (face)) {
   case FTT_FINE_FINE: case FTT_FINE_COARSE:
     /* fixme: this is only first-order accurate for fine/coarse */
@@ -193,22 +360,20 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   gdouble dt = gfs_domain_face_fraction (GFS_DOMAIN (r), face)*r->dt/h;
   f[0] *= dt;
   f[2] = s->dv*dt*f[2];
-  GFS_VALUE (face->cell, r->flux[0])    -= f[0];
-  /* see equation 2.16 of Audusse et al, 2004 */
+  GFS_VALUE (face->cell, r->flux[0]) -= f[0];
+  /* see Audusse and Bristeau, 2005, JCP, 206:311-333 */
   /* Slope source term "S_{i,j,p}" and second-order correction for
      slope source term "Sc_{i,j,p}" of An et al. 2012, Advances in
      Water Resources. 39:60-70, equations (11) and (12) */
-  gdouble eta = GFS_VALUE (face->cell, r->v1[0]);
-  if (eta < r->dry) eta = 0.;
+  if (eta <= r->dry) eta = 0.;
   gdouble zb = GFS_VALUE (face->cell, r->v[3]);
-  GFS_VALUE (face->cell, r->flux[s->u]) -= s->du*dt*(f[1] - r->g/2.*(uL[0]*uL[0] - etaL*etaL
-								     - (etaL + eta)*(zbL - zb)));
+  GFS_VALUE (face->cell, r->flux[s->u]) -= 
+    s->du*dt*(f[1] - r->g/2.*(uL[0]*uL[0] - etaL*etaL - (etaL + eta)*(zbL - zb)));
   GFS_VALUE (face->cell, r->flux[s->v]) -= f[2];
 
-  eta = GFS_VALUE (face->neighbor, r->v1[0]);
-  if (eta < r->dry) eta = 0.;
+  if (etan <= r->dry) etan = 0.;
   zb = GFS_VALUE (face->neighbor, r->v[3]);
-  f[1] = s->du*dt*(f[1] - r->g/2.*(uR[0]*uR[0] - etaR*etaR - (etaR + eta)*(zbR - zb)));
+  f[1] = s->du*dt*(f[1] - r->g/2.*(uR[0]*uR[0] - etaR*etaR - (etaR + etan)*(zbR - zb)));
   if (ftt_face_type (face) == FTT_FINE_COARSE) {
     f[0] /= FTT_CELLS;
     f[1] /= FTT_CELLS;
@@ -251,14 +416,13 @@ static void solid_boundary_fluxes (FttCell * cell, GfsRiver * r)
   GFS_VALUE (cell, r->flux[2]) -= n.y*hszbs;
 }
 
-static void sources (FttCell * cell, GfsRiver * r)
+/* Metric source terms (see doc/figures/lonlat.tm) */
+static void metric_sources (FttCell * cell, GfsRiver * r)
 {
-  /* metric coefficients */
-  gdouble fm[FTT_NEIGHBORS], cm;
-
-  /* Geometric source terms (see doc/figures/lonlat.tm) */
-  if (GFS_DOMAIN (r)->cell_metric) {
+  if (GFS_VALUE (cell, r->v1[0]) > r->dry) {
+    /* fixme: this will probably not work when combined with solids */
     GfsDomain * domain = GFS_DOMAIN (r);
+    gdouble fm[FTT_NEIGHBORS], cm;
     FttCellFace face = { cell };
     for (face.d = 0; face.d < FTT_NEIGHBORS; face.d++)
       fm[face.d] = (* domain->face_metric) (domain, &face);
@@ -272,42 +436,10 @@ static void sources (FttCell * cell, GfsRiver * r)
     gdouble fG = phiv*dh_dl - phiu*dh_dt;
     gdouble g = GFS_SIMULATION (r)->physical_params.g;
 
-    gdouble etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[0][0]);
-    gdouble etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[0][0]);
-    GFS_VALUE (cell, r->v[1]) += r->dt*(g*(etaL*etaL + etaR*etaR)/4.*dh_dl + fG*phiv)/dldh;
-
-    etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[1][0]);
-    etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[1][0]);
-    GFS_VALUE (cell, r->v[2]) += r->dt*(g*(etaL*etaL + etaR*etaR)/4.*dh_dt - fG*phiu)/dldh;
+    gdouble eta = GFS_VALUE (cell, r->v1[0]);
+    GFS_VALUE (cell, r->v[1]) += r->dt*(g*eta*eta/2.*dh_dl + fG*phiv)/dldh;
+    GFS_VALUE (cell, r->v[2]) += r->dt*(g*eta*eta/2.*dh_dt - fG*phiu)/dldh;
   }
-  else { /* metric unity */
-    FttDirection d;
-    for (d = 0; d < FTT_NEIGHBORS; d++)
-      fm[d] = 1.;
-    cm = ftt_cell_size (cell);
-  }
-#if 0
-  /* Second-order correction for slope source term ("Sci" of Audusse
-     et al, 2004, SIAM, 25(6):2050-2065, equation 3.8) */
-  if (!GFS_IS_MIXED (cell)) {
-    /* fluid cell */
-    gdouble etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[0][0]);
-    gdouble zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[0][3]);
-    gdouble etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[0][0]);
-    gdouble zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[0][3]);
-    
-    GFS_VALUE (cell, r->v[1]) += 
-      r->dt*r->g/4.*(fm[FTT_RIGHT] + fm[FTT_LEFT])*(etaL + etaR)*(zbL - zbR)/cm;
-    
-    etaL = GFS_VALUE (cell, r->v1[0]) - GFS_VALUE (cell, r->dv[1][0]);
-    zbL = GFS_VALUE (cell, r->v[3]) - GFS_VALUE (cell, r->dv[1][3]);
-    etaR = GFS_VALUE (cell, r->v1[0]) + GFS_VALUE (cell, r->dv[1][0]);
-    zbR = GFS_VALUE (cell, r->v[3]) + GFS_VALUE (cell, r->dv[1][3]);
-    
-    GFS_VALUE (cell, r->v[2]) += 
-      r->dt*r->g/4.*(fm[FTT_TOP] + fm[FTT_BOTTOM])*(etaL + etaR)*(zbL - zbR)/cm;
-  }
-#endif
 }
 
 static void advance (GfsRiver * r, gdouble dt)
@@ -323,7 +455,8 @@ static void advance (GfsRiver * r, gdouble dt)
   gfs_domain_traverse_mixed (domain,
   			     FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
   			     (FttCellTraverseFunc) solid_boundary_fluxes, domain);
-  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) sources, r);
+  if (domain->cell_metric)
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) metric_sources, r);
   for (i = 0; i < GFS_RIVER_NVAR; i++) {
     GfsAdvectionParams par;
     par.v = r->v[i];
@@ -356,7 +489,7 @@ static void cell_gradients (FttCell * cell,
   FttComponent c;
   guint v;
 
-  if (GFS_VALUE (cell, r->v[0]) < r->dry) {
+  if (GFS_VALUE (cell, r->v[0]) <= r->dry) {
     for (c = 0; c < FTT_DIMENSION; c++) {
       for (v = 0; v < GFS_RIVER_NVAR; v++)
 	GFS_VALUE (cell, r->dv[c][v]) = 0.;
@@ -411,7 +544,14 @@ static void river_run (GfsSimulation * sim)
   r->v[3] = r->zb = gfs_variable_from_name (domain->variables, "Zb");
 
   r->g = sim->physical_params.g/sim->physical_params.L;
+
   r->gradient = sim->advection_params.gradient;
+  if (r->gradient == gfs_center_minmod_gradient)
+    r->gradient = center_minmod_gradient;
+  else if (r->gradient == gfs_center_superbee_gradient)
+    r->gradient = center_superbee_gradient;
+  else if (r->gradient == gfs_center_sweby_gradient)
+    r->gradient = center_sweby_gradient;
 
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);

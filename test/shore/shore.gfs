@@ -47,7 +47,7 @@ Define DRY 1e-3
     # Set a solid boundary close to the top boundary to limit the
     # domain width to less than one cell (i.e. a 1D domain)
     RefineSolid (MINLEVEL + (LEVEL - MINLEVEL)*(1. - x/50000.))
-    Solid (y - 29999.)
+    Solid (y - 60000.*(0.5 - 0.99/pow(2,LEVEL)))
 
     # Set the topography Zb and the initial water surface elevation P
     Init {} {
@@ -61,8 +61,12 @@ Define DRY 1e-3
 	gradient = gfs_center_sweby_gradient
     }
 
+    # Force the flow to stay 1D
+    Init { istep = 10 } { V = 0 }
+
     Time { end = 220 }
 
+    # OutputTime { istep = 10 } stderr
     OutputSimulation { start = 0 } sim-LEVEL-%g.txt { format = text }
     OutputSimulation { start = 160 } sim-LEVEL-%g.txt { format = text }
     OutputSimulation { start = 175 } sim-LEVEL-%g.txt { format = text }
@@ -74,4 +78,5 @@ Define DRY 1e-3
 GfsBox {
     left = Boundary
     right = Boundary
+    top = Boundary
 }

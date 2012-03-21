@@ -28,11 +28,10 @@
 # Use the GfsRiver Saint-Venant solver
 1 0 GfsRiver GfsBox GfsGEdge {} {
     PhysicalParams { L = 8. }
-    RefineSolid 9
-
-    # Set a solid boundary close to the top boundary to limit the
-    # domain width to one cell (i.e. a 1D domain)
-    Solid (y - 3.9999)
+    
+    # Define a 1D domain using cell masking
+    RefineSurface 9 (y - 8.*(0.5 - 1./512.))
+    InitMask {} (y < 8.*(0.5 - 1./512.))
 
     # Set the topography Zb and the initial water surface elevation P
     Init {} {

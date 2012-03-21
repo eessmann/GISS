@@ -84,6 +84,8 @@ Define G 9.81
     Init { istep = 1 } {
 	Pt = MAX (0., h0 + Psi (x, t) - Zb)
     }
+    # Better convergence rates are obtained at lower CFL
+    # AdvectionParams { cfl = 0.1 }
     PhysicalParams { g = G }
     SourceCoriolis 0 tau
     Time { end = 6000 }
