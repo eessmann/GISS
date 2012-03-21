@@ -58,7 +58,6 @@ TESTDIRS = \
 
 EXTRA_DIST = \
 	template.tex \
-	tests.bib \
 	depend.py \
 	test.py \
 	check.py \
@@ -75,6 +74,8 @@ DOC = tests
 
 # we need this for gfs.sty
 TEXINPUTS = .:$(top_srcdir)/doc/examples:
+# and this for bibtex
+BIBINPUTS = $(BIBINPUTS):$(top_srcdir)/doc
 
 tests: tests.dvi
 	if ! test -d $(DOC); then mkdir $(DOC); fi
@@ -92,7 +93,7 @@ tests: tests.dvi
 	sh ../doc/examples/crossref.sh --url=http://gerris.dalembert.upmc.fr/gerris/tests/tests $(TESTDIRS)
 	mv references tests
 
-tests.dvi: tests.tex tests.bib
+tests.dvi: tests.tex $(top_srcdir)/doc/gerris.bib
 	- TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
 	bibtex tests
 	- TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex > /dev/null 2>&1

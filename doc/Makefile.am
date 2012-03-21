@@ -2,7 +2,7 @@
 
 SUBDIRS = tutorial examples manpages
 
-EXTRA_DIST = figures share doxy.conf
+EXTRA_DIST = figures share doxy.conf gerris.bib
 
 noinst_PROGRAMS = autoclass
 

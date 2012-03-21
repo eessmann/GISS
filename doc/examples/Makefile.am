@@ -25,7 +25,6 @@ EXAMPLES = \
 
 EXTRA_DIST = \
 	template.tex \
-	examples.bib \
 	gfs2tex.py \
 	gfs2tex \
 	depend.py \
@@ -86,6 +85,9 @@ clean-generic:
 
 DOC = examples
 
+# we need this for bibtex
+BIBINPUTS = $(BIBINPUTS):$(top_srcdir)/doc
+
 examples: examples.dvi crossref.sh
 	hevea -fix $(DOC).tex
 	imagen -res 600 -extra "pnmscale 0.24" $(DOC)
@@ -103,7 +105,7 @@ examples: examples.dvi crossref.sh
 	sh ./crossref.sh --url=http://gerris.dalembert.upmc.fr/gerris/examples/examples $(EXAMPLES)
 	mv references examples
 
-examples.dvi: examples.tex examples.bib
+examples.dvi: examples.tex $(top_srcdir)/doc/gerris.bib
 	- latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
 	bibtex examples
 	- latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
