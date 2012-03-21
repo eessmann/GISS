@@ -2169,8 +2169,10 @@ typedef struct {
 
 static void add_norm_residual (const FttCell * cell, ResData * p)
 {
+  GfsDomain * domain = p->res->domain;
+  gdouble a = domain->cell_metric ? (* domain->cell_metric) (domain, cell) : 1.;
   gdouble size = ftt_cell_size (cell);
-  gfs_norm_add (&p->n, GFS_VALUE (cell, p->res)/(size*size), 1.);
+  gfs_norm_add (&p->n, GFS_VALUE (cell, p->res)/(a*size*size), 1.);
   p->bias += GFS_VALUE (cell, p->res);
 }
 
