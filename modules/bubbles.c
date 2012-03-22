@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2010-2011 Daniel Fuster/CNRS
+ * Copyright (C) 2010-2012 Daniel Fuster/CNRS
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -17,7 +17,7 @@
  * 02111-1307, USA.  
  */
 
-#include "particulates.h"
+#include "particulatecommon.h"
 #include "ftt.h"
 
 #include <stdlib.h>

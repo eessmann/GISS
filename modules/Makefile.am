@@ -139,21 +139,30 @@ rsurfaceinfo_LDADD = $(KDTLIBS)
 rsurfaceinfo_CFLAGS = $(AM_CFLAGS)
 rsurfaceinfo_DEPENDENCIES = $(KDTDEPS)
 
-libparticulates3D_la_SOURCES = particulates.c particulates.h
+noinst_LTLIBRARIES = libparticulatecommon2D.la libparticulatecommon3D.la
+
+libparticulatecommon3D_la_SOURCES = particulatecommon.c particulatecommon.h
+libparticulatecommon3D_la_CFLAGS = $(AM_CFLAGS)
+libparticulatecommon2D_la_SOURCES = particulatecommon.c particulatecommon.h
+libparticulatecommon2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+
+libparticulates3D_la_SOURCES = particulates.c
 libparticulates3D_la_CFLAGS = $(AM_CFLAGS)
-libparticulates3D_la_LIBADD = $(GFS3D_LIBS)
-libparticulates2D_la_SOURCES = particulates.c particulates.h
+libparticulates3D_la_LIBADD = libparticulatecommon3D.la $(GFS3D_LIBS)
+libparticulates3D_la_DEPENDENCIES = libparticulatecommon3D.la
+libparticulates2D_la_SOURCES = particulates.c
 libparticulates2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
-libparticulates2D_la_LIBADD = $(GFS2D_LIBS)
+libparticulates2D_la_LIBADD = libparticulatecommon2D.la $(GFS2D_LIBS)
+libparticulates2D_la_DEPENDENCIES = libparticulatecommon2D.la
 
 libbubbles3D_la_SOURCES = bubbles.c
 libbubbles3D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS)
-libbubbles3D_la_LIBADD = libparticulates3D.la $(GFS3D_LIBS) $(GSL_LIBS)
-libbubbles3D_la_DEPENDENCIES = libparticulates3D.la
+libbubbles3D_la_LIBADD = libparticulatecommon3D.la $(GFS3D_LIBS) $(GSL_LIBS)
+libbubbles3D_la_DEPENDENCIES = libparticulatecommon3D.la
 libbubbles2D_la_SOURCES = bubbles.c
 libbubbles2D_la_CFLAGS = $(AM_CFLAGS) $(GSL_CFLAGS) -DFTT_2D=1
-libbubbles2D_la_LIBADD = libparticulates2D.la $(GFS2D_LIBS) $(GSL_LIBS)
-libbubbles2D_la_DEPENDENCIES = libparticulates2D.la
+libbubbles2D_la_LIBADD = libparticulatecommon2D.la $(GFS2D_LIBS) $(GSL_LIBS)
+libbubbles2D_la_DEPENDENCIES = libparticulatecommon2D.la
 
 libfft3D_la_SOURCES = fft.c
 libfft3D_la_CFLAGS = $(AM_CFLAGS) $(FFTW3_CFLAGS)
