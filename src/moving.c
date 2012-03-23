@@ -1155,7 +1155,7 @@ static void simulation_moving_run (GfsSimulation * sim)
 					       sim->time.i > 0 || !gc ? gc : gmac,
 					       sim->physical_params.alpha);
         
-    gfs_advance_tracers (domain, sim->advection_params.dt);
+    gfs_advance_tracers (sim, sim->advection_params.dt);
 
     if (gc) {
       gfs_source_coriolis_implicit (domain, sim->advection_params.dt);

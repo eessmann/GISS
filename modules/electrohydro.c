@@ -464,7 +464,7 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
 				&sim->advection_params,
 				p, sim->physical_params.alpha, res, g, NULL);
     gfs_simulation_set_timestep (sim);
-    gfs_advance_tracers (domain, sim->advection_params.dt/2.);
+    gfs_advance_tracers (sim, sim->advection_params.dt/2.);
     poisson_electric (elec, sim->advection_params.dt/2.);
   }
   else if (sim->advection_params.gc)
@@ -519,7 +519,7 @@ static void gfs_electro_hydro_run (GfsSimulation * sim)
     sim->time.i++;
 
     gfs_simulation_set_timestep (sim);
-    gfs_advance_tracers (domain, sim->advection_params.dt);
+    gfs_advance_tracers (sim, sim->advection_params.dt);
     poisson_electric (elec, sim->advection_params.dt);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);

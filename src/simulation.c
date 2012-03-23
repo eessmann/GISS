@@ -395,15 +395,16 @@ static void simulation_read (GtsObject ** object, GtsFile * fp)
 
 /**
  * gfs_advance_tracers:
- * @domain: a #GfsDomain.
+ * @sim: a #GfsSimulation.
  * @dt: the timestep.
  *
- * Performs advection/difussion of tracers associated with @domain.
+ * Performs advection/difussion of tracers associated with @sim.
  */
-void gfs_advance_tracers (GfsDomain * domain, gdouble dt)
+void gfs_advance_tracers (GfsSimulation * sim, gdouble dt)
 {
-  g_return_if_fail (domain != NULL);
+  g_return_if_fail (sim != NULL);
 
+  GfsDomain * domain = GFS_DOMAIN (sim);
   GSList * i = domain->variables;
   while (i) {
     if (GFS_IS_VARIABLE_TRACER_VOF (i->data)) {
@@ -417,7 +418,7 @@ void gfs_advance_tracers (GfsDomain * domain, gdouble dt)
       GfsVariableTracer * t = i->data;
       
       t->advection.dt = dt;
-      gfs_tracer_advection_diffusion (domain, &t->advection);
+      gfs_tracer_advection_diffusion (domain, &t->advection, sim->physical_params.alpha);
       gfs_domain_cell_traverse (domain,
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 				(FttCellTraverseFunc) GFS_VARIABLE (t)->fine_coarse, t);
@@ -467,7 +468,7 @@ static void simulation_run (GfsSimulation * sim)
 				&sim->advection_params,
 				p, sim->physical_params.alpha, res, g, NULL);
     gfs_simulation_set_timestep (sim);
-    gfs_advance_tracers (domain, sim->advection_params.dt/2.);
+    gfs_advance_tracers (sim, sim->advection_params.dt/2.);
   }
   else if (sim->advection_params.gc)
     gfs_update_gradients (domain, p, sim->physical_params.alpha, g);
@@ -531,7 +532,7 @@ static void simulation_run (GfsSimulation * sim)
     sim->time.i++;
 
     gfs_simulation_set_timestep (sim);
-    gfs_advance_tracers (domain, sim->advection_params.dt);
+    gfs_advance_tracers (sim, sim->advection_params.dt);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);
@@ -1990,7 +1991,7 @@ static void advection_run (GfsSimulation * sim)
 
     gfs_simulation_set_timestep (sim);
 
-    gfs_advance_tracers (domain, sim->advection_params.dt);
+    gfs_advance_tracers (sim, sim->advection_params.dt);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
@@ -2217,7 +2218,16 @@ static void axi_read (GtsObject ** object, GtsFile * fp)
   if (fp->type == GTS_ERROR)
     return;
 
-  GFS_DOMAIN (*object)->refpos.y = 0.5;
+  GfsDomain * domain = GFS_DOMAIN (*object);
+  domain->refpos.y = 0.5;
+  GfsVariable * w = gfs_variable_from_name (domain->variables, "W");
+  if (w) {
+    if (!GFS_IS_VARIABLE_TRACER (w)) {
+      gts_file_error (fp, "W (the azimuthal velocity) must be a tracer");
+      return;
+    }
+    w->component = FTT_Y; /* to include the appropriate diffusion metric terms */
+  }
 }
 
 static gdouble axi_face_metric (const GfsDomain * domain, const FttCellFace * face)

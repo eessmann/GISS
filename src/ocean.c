@@ -754,7 +754,7 @@ static void ocean_run (GfsSimulation * sim)
 	GfsVariableTracer * t = i->data;
 	
 	t->advection.dt = sim->advection_params.dt;
-	gfs_tracer_advection_diffusion (domain, &t->advection);
+	gfs_tracer_advection_diffusion (domain, &t->advection, NULL);
       }
       i = i->next;
     }

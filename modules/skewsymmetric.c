@@ -684,7 +684,7 @@ static void gfs_skew_symmetric_run (GfsSimulation * sim)
     sim->time.i++;
 
     gfs_simulation_set_timestep (sim);
-    gfs_advance_tracers (domain, sim->advection_params.dt);
+    gfs_advance_tracers (sim, sim->advection_params.dt);
 
     gts_range_add_value (&domain->timestep, gfs_clock_elapsed (domain->timer) - tstart);
     gts_range_update (&domain->timestep);

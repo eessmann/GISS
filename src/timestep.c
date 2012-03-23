@@ -940,12 +940,14 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
  * gfs_tracer_advection_diffusion:
  * @domain: a #GfsDomain.
  * @par: the advection parameters.
+ * @alpha: the specific volume or %NULL.
  *
  * Advects the @v field of @par using the current face-centered (MAC)
  * velocity field.
  */
 void gfs_tracer_advection_diffusion (GfsDomain * domain,
-				     GfsAdvectionParams * par)
+				     GfsAdvectionParams * par,
+				     GfsFunction * alpha)
 {
   GfsSourceDiffusion * d;
 
@@ -961,7 +963,7 @@ void gfs_tracer_advection_diffusion (GfsDomain * domain,
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttCellTraverseFunc) copy_v_rhs, par);
     variable_sources (domain, par, rhs, NULL, NULL);
-    variable_diffusion (domain, d, par, rhs, NULL);
+    variable_diffusion (domain, d, par, rhs, par->v->component < FTT_DIMENSION ? alpha : NULL);
     gts_object_destroy (GTS_OBJECT (rhs));
   }
   else {

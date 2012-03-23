@@ -230,7 +230,7 @@ static void wave_run (GfsSimulation * sim)
 	  GfsVariable * t = GFS_WAVE (sim)->F[ik][ith];
 	  sim->advection_params.v = t;
 	  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) solid_flux, &par);
-	  gfs_tracer_advection_diffusion (domain, &sim->advection_params);
+	  gfs_tracer_advection_diffusion (domain, &sim->advection_params, NULL);
 	  sim->advection_params.fv = par.fv;
 	  gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, 
 	  			      &sim->advection_params);

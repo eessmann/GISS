@@ -97,7 +97,7 @@ struct _GfsSimulationClass {
 #define GFS_IS_SIMULATION(obj)         (gts_object_is_from_class (obj,\
 						   gfs_simulation_class ()))
 
-void                 gfs_advance_tracers         (GfsDomain * domain, 
+void                 gfs_advance_tracers         (GfsSimulation * sim, 
 						  gdouble dt);
 GfsSimulationClass * gfs_simulation_class        (void);
 GfsSimulation *      gfs_simulation_new          (GfsSimulationClass * klass);
