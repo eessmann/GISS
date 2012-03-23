@@ -2,27 +2,6 @@
 
 AUTOMAKE_OPTIONS = parallel-tests
 
-EXAMPLES = \
-	cylinder \
-	rt \
-	boussinesq \
-	tangaroa \
-	logo \
-	column \
-	starting \
-	tides \
-	ship \
-	forcedturbulence \
-	wingtip \
-	garden \
-	dam \
-	hump \
-	monai \
-	tsunami \
-	cyclone \
-	plateau \
-	atomisation
-
 EXTRA_DIST = \
 	template.tex \
 	gfs2tex.py \
@@ -88,6 +67,22 @@ DOC = examples
 # we need this for bibtex
 BIBINPUTS = $(BIBINPUTS):$(top_srcdir)/doc
 
+Makefile.deps: template.tex depend.py Makefile.am
+	python depend.py `grep \\test{[^/]*} < template.tex | sed 's/\\\\test{\(.*\)}/\1/g'` > Makefile.deps
+	echo "" >> Makefile.deps
+	echo -n "EXAMPLES = " >> Makefile.deps
+	echo `grep \\test{[^/]*} < template.tex | sed 's/\\\\test{\(.*\)}/\1/g'` >> Makefile.deps
+
+include Makefile.deps
+
+examples.tex: template.tex Makefile.deps gfs2tex gfs2tex.py
+	rm -r -f examples
+	python gfs2tex $(EXAMPLES)
+	sed -e "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | head -1 | cut -d' ' -f6-`/g" \
+	    -e 's/\\test{\(.*\)\/\(.*\)}/\\input{\1\/\2\/\2.tex}/g' \
+	    -e 's/\\test{\(.*\)}/\\input{\1\/\1.tex}/g' \
+            -e 's/\\today/'"`date +\"%B %e, %Y\"`/g" < template.tex > examples.tex
+
 examples: examples.dvi crossref.sh
 	hevea -fix $(DOC).tex
 	imagen -res 600 -extra "pnmscale 0.24" $(DOC)
@@ -115,16 +110,6 @@ examples.pdf: examples.dvi
 	dvips -Ppdf -G0 examples.dvi -o examples.ps
 	ps2pdf -sPAPERSIZE=a4 -dMaxSubsetPct=100 -dCompatibilityLevel=1.2 -dSubsetFonts=true -dEmbedAllFonts=true examples.ps examples.pdf
 	rm -f examples.ps
-
-examples.tex: template.tex Makefile.deps gfs2tex gfs2tex.py
-	rm -r -f examples
-	python gfs2tex $(EXAMPLES)
-	sed "s/GFS_VERSION/`$(top_srcdir)/src/gerris2D -V 2>&1 | head -1 | cut -d' ' -f6-`/g" < template.tex | sed 's/\\today/'"`date +\"%B %e, %Y\"`/g" > examples.tex
-
-Makefile.deps: depend.py Makefile.am
-	python depend.py $(EXAMPLES) > Makefile.deps
-
-include Makefile.deps
 
 examples.tar.gz: examples.pdf examples $(DOCS)
 	tar czf examples.tar.gz examples $(DOCS)

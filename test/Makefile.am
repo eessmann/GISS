@@ -2,60 +2,6 @@
 
 AUTOMAKE_OPTIONS = parallel-tests
 
-# new test cases need to be added to this list in the order in which
-# they appear in template.tex
-
-TESTDIRS = \
-	poisson \
-	circle \
-	dumbell \
-	advection \
-	shear \
-	rotate \
-	diffusion \
-	conservation \
-	reynolds \
-	periodic \
-	merging \
-	source \
-	axi \
-	axiadvection \
-	lid \
-	poiseuille \
-	couette \
-	kinetic \
-	hydrostatic \
-	coriolis \
-	lake \
-	boundaries \
-	channel \
-	plate \
-	hexagon \
-	strouhal \
-	spurious \
-	capwave \
-	oscillation \
-	height \
-	plateau \
-	sessile \
-	geo \
-	waves \
-	nz \
-	parabola \
-	shore \
-	lonlat \
-	cosine \
-	harmonic \
-	gaussian \
-	annulus \
-	wannier \
-	planar \
-	bump \
-	cylinder \
-	electro \
-	debye \
-	swirl
-
 EXTRA_DIST = \
 	template.tex \
 	depend.py \
@@ -76,6 +22,20 @@ DOC = tests
 TEXINPUTS = .:$(top_srcdir)/doc/examples:
 # and this for bibtex
 BIBINPUTS = $(BIBINPUTS):$(top_srcdir)/doc
+
+Makefile.deps: template.tex depend.py Makefile.am
+	python depend.py `grep \\test{[^/]*} < template.tex | sed 's/\\\\test{\(.*\)}/\1/g'` > Makefile.deps
+	echo "" >> Makefile.deps
+	echo -n "TESTDIRS = " >> Makefile.deps
+	echo `grep \\test{[^/]*} < template.tex | sed 's/\\\\test{\(.*\)}/\1/g'` >> Makefile.deps
+
+include Makefile.deps
+
+tests.tex: template.tex Makefile.deps
+	rm -r -f tests
+	python gfs2tex $(TESTDIRS)
+	sed -e 's/\\test{\(.*\)\/\(.*\)}/\\input{\1\/\2\/\2.tex}/g' \
+	    -e 's/\\test{\(.*\)}/\\input{\1\/\1.tex}/g' < template.tex > tests.tex
 
 tests: tests.dvi
 	if ! test -d $(DOC); then mkdir $(DOC); fi
@@ -103,16 +63,6 @@ tests.pdf: tests.dvi
 	dvips -Ppdf -G0 tests.dvi -o tests.ps
 	ps2pdf -sPAPERSIZE=a4 -dMaxSubsetPct=100 -dCompatibilityLevel=1.2 -dSubsetFonts=true -dEmbedAllFonts=true tests.ps tests.pdf
 	rm -f tests.ps
-
-tests.tex: template.tex Makefile.deps
-	rm -r -f tests
-	python gfs2tex $(TESTDIRS)
-	cp -f template.tex tests.tex
-
-Makefile.deps: depend.py
-	python depend.py $(TESTDIRS) > Makefile.deps
-
-include Makefile.deps
 
 tests.tar.gz: tests $(DOCS)
 	tar czf tests.tar.gz tests $(DOCS)
