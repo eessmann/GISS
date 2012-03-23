@@ -2,57 +2,97 @@
 #
 # Description:
 #
-# Von K\'arm\'an\cite{karman1921} showed that the steady flow of an 
-# incompressible liquid of kinematics viscosity $\nu$ induced by 
-# a infinite plane disk rotating at angular velocity $\Omega$ can be 
-# described by a similarity solution. In effect, using 
-# $\zeta=z\sqrt{\Omega/\nu}$ and setting the  
-# axial velocity $U$, radial velocity $V$ and 
-# azimuthal velocity $W$ as, 
+# Von K\'arm\'an\cite{karman1921} showed that the steady flow of an
+# incompressible liquid of kinematic viscosity $\nu$ induced by an
+# infinite plane disk rotating at angular velocity $\Omega$ can be
+# described by a similarity solution. In effect, using
+# $\zeta=z\sqrt{\Omega/\nu}$ and setting the axial velocity $U$,
+# radial velocity $V$ and azimuthal velocity $W$ as
 # $$
 # U=\sqrt{\nu \Omega} F(\zeta) \quad V=\Omega r H(\zeta) 
 # \quad W = \Omega r G(\zeta)
 # $$
-# the Navier-Stokes equations reduce to a couple of ODE:
+# the Navier-Stokes equations reduce to a couple of ODEs:
 # $$
 # F'''-F\, F'' +F'^2/2 +2G^2  = 0 \quad \mbox{and} \quad G''-F\,G'+G\,F' = 0
 # $$
-# being the boundary conditions,
+# with boundary conditions
 # $$
 # F(0)=F'(0)=0 \: G(0)=1. \quad \mbox{and} \quad F'(\infty)=G(\infty)=0.
 # $$
-# where the prime denote diferenciation respect to $\zeta$. 
+# where the prime denotes differentiation with respect to $\zeta$.
 #
-# In figure \ref{veloc} it is compared the analytical dimensionless axial 
-# and azimuthal velocities of Von K\'arm\'an with those obtained with Gerris. 
+# In figure \ref{veloc} the analytical dimensionless axial and
+# azimuthal velocities of Von K\'arm\'an are compared with the
+# numerical solutions obtained with the axisymmetric solver including
+# azimuthal velocity (swirl).
+#
 # \begin{figure}[htbp]
-# \caption{\label{veloc} Profiles of dimensionless axial and azimuthal velocity.}
+# \caption{\label{veloc} Profiles of dimensionless axial and azimuthal velocities.}
 # \begin{center}
-# \includegraphics[width=\hsize]{profiles.eps}
+# \includegraphics[width=0.8\hsize]{profiles.eps}
 # \end{center}
 # \end{figure}
 #
 # Author: J.M. L\'opez-Herrera
-# Command: sh swirl.sh
+# Command: gerris2D swirl.gfs
 # Version: 111123
-# Required files: swirl.sh analytical
-# Running time: 66.59 seconds
-# Generated files: nu profiles.eps
+# Required files: analytical
+# Running time: 1 minute
+# Generated files: profiles.eps
 #
-4 3 GfsAxi GfsBox GfsGEdge {x=0.5} {
-    VariableTracerSwirl W
-    GfsPhysicalParams{L = 3}
+4 3 GfsAxi GfsBox GfsGEdge { x = 0.5 } {
+    PhysicalParams { L = 3 }
     SourceViscosity 0.2
-    GfsAdaptVorticity { istep = 1 } { maxlevel = 6 minlevel = 5 cmax = 1e-3 }
-    Time{end = 12 dtmax=0.01}
-    GfsEventStop {istep = 10} U 0.001 DU
-#    GfsOutputTime {istep = 10} stdout
-    GfsOutputSimulation {start = end} { 
-	awk 'BEGIN{nu=0.2} 
-             {if ($2 != 0. && $1 != "#" && ($1*$1+$2*$2)<8.0)  
-             print $1/sqrt(nu),-$4/sqrt(nu),$5/$2;}' > nu } {format = text variables = U,W}
+
+    # the block below adds the azimuthal velocity (swirl) and
+    # associated terms
+    VariableTracer W
+    SourceDiffusion W 0.2
+    Init { istep = 1 } { W = W*(1. - dt*V/y) }
+    Source V W*W/y
+
+    Refine 5
+    Time { end = 12 dtmax = 2e-2 }
+    EventStop { step = 0.1 } U 1e-3 DU
+#    OutputTime { istep = 10 } stderr
+#    OutputProjectionStats { istep = 10 } stderr
+#    OutputSimulation { istep = 10 } stdout
+    OutputSimulation { start = end } end.txt { format = text variables = U,W }
+    OutputSimulation { start = end } end.gfs
+
+    EventScript { start = end } {
+	awk 'BEGIN{ nu = 0.2 } {
+               if ($2 != 0. && $1 != "#" && ($1*$1 + $2*$2) < 8.0)
+                 print $1/sqrt(nu),-$4/sqrt(nu),$5/$2;
+             }' < end.txt > nu
+	if gnuplot <<EOF ; then :
+    set term postscript eps lw 3 color solid 20 enhanced
+    set output 'profiles.eps'
+    set xlabel '{/Symbol z}'
+    set key center right
+    plot [0:6]'analytical' u 1:2 w l t '-F({/Symbol z})', 'nu' u 1:2 t 'Gerris', \
+              'analytical' u 1:3 w l t 'G({/Symbol z})', 'nu' u 1:3 t 'Gerris'
+EOF
+	else
+	    exit $GFS_STOP;
+	fi
+
+	if python <<EOF ; then :
+from check import *
+from sys import *
+if (Curve('nu',1,2) - Curve('analytical',1,2)).normi() > 8e-3 or \
+   (Curve('nu',1,3) - Curve('analytical',1,3)).normi() > 8e-3 :
+    print (Curve('nu',1,2) - Curve('analytical',1,2)).normi()
+    print (Curve('nu',1,3) - Curve('analytical',1,3)).normi()
+    exit(1)
+EOF
+	else
+	    exit $GFS_STOP;
+	fi
+    }
 }
-# mbox 1
+# box 1
 GfsBox {
     left = Boundary {
 	BcDirichlet U 0
@@ -65,9 +105,9 @@ GfsBox {
 	BcNeumann W 0
         BcDirichlet P 0.
     }
-    bottom = Boundary {BcDirichlet W 0 }
+    bottom = Boundary { BcDirichlet W 0 }
 }
-# mbox 2
+# box 2
 GfsBox {
     left = Boundary {
 	BcDirichlet U 0
@@ -81,7 +121,7 @@ GfsBox {
         BcDirichlet P 0.
     }
 }
-# mbox 3
+# box 3
 GfsBox {
     left = Boundary {
 	BcDirichlet U 0
@@ -95,7 +135,7 @@ GfsBox {
         BcDirichlet P 0.
     }
 }
-# mbox 4
+# box 4
 GfsBox {
     left = Boundary {
 	BcDirichlet U 0
