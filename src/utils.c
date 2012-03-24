@@ -768,7 +768,7 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
 	  GfsVariable * v = i->data;
 	  fprintf (fin,
 		   "    %s = gfs_dimensional_value (var[%d],\n"
-		   "           gfs_face_interpolated_value (face, var[%d]->i));\n", 
+		   "           gfs_face_interpolated_value_generic (face, var[%d]));\n", 
 		   v->name, index, index);
 	  i = i->next; index++;
 	}
@@ -1117,7 +1117,7 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa)
     dimensional = interpolated_cgd (f, &p);
   }
   else if (f->v)
-    dimensional = gfs_dimensional_value (f->v, gfs_face_interpolated_value (fa, f->v->i));
+    dimensional = gfs_dimensional_value (f->v, gfs_face_interpolated_value_generic (fa, f->v));
   else if (f->dv)
     dimensional = (* (GfsFunctionDerivedFunc) f->dv->func) (NULL, fa,
 							    gfs_object_simulation (f),

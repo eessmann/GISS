@@ -623,7 +623,7 @@ static gdouble source_control_field_face_value (GfsSourceGeneric * s,
 						FttCellFace * face, 
 						GfsVariable * v)
 {
-  return gfs_face_interpolated_value (face, GFS_SOURCE_CONTROL_FIELD (s)->s->i);
+  return gfs_face_interpolated_value_generic (face, GFS_SOURCE_CONTROL_FIELD (s)->s);
 }
 
 static void source_control_field_read (GtsObject ** o, GtsFile * fp)

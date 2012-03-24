@@ -630,7 +630,7 @@ static void save_fe (FttCell * cell, GfsSourceElectric * s)
 
     gdouble radf = gfs_domain_face_fraction (GFS_DOMAIN (elec), &f);
     for (c = 0; c < FTT_DIMENSION; c++) {
-      gdouble es = (c == f.d/2 ? sign*en : gfs_face_interpolated_value (&f, e[c]->i));
+      gdouble es = (c == f.d/2 ? sign*en : gfs_face_interpolated_value_generic (&f, e[c]));
       emod += es*es; 
       fe[c] += permf*es*en*radf;
     }

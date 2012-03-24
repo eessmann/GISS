@@ -888,7 +888,7 @@ static void hydrostatic_pressure (FttCell * cell, gpointer * data)
   f.neighbor = ftt_cell_neighbor (f.cell, f.d);
   while (f.neighbor) {
     g_assert (ftt_face_type (&f) == FTT_FINE_FINE);
-    r1 = gfs_face_interpolated_value (&f, rho->i);
+    r1 = gfs_face_interpolated_value_generic (&f, rho);
     /* g_assert (r1 >= r); */
     r = r1;
     GFS_VALUE (f.neighbor, vp) = p = p + (*g)*r;

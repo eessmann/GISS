@@ -221,7 +221,7 @@ static void triangulate_face (FttCell * cell, gpointer * data)
     gts_point_transform (GTS_POINT (v), transform);
     if (face.neighbor)
       GTS_POINT (v)->z = *z + 
-	gfs_face_interpolated_value  (&face, var->i)/(norm->infty*1000.);
+	gfs_face_interpolated_value_generic  (&face, var)/(norm->infty*1000.);
     else
       GTS_POINT (v)->z = *z + GFS_VALUE (cell, var)/(norm->infty*1000.);
   }
