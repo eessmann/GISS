@@ -278,7 +278,7 @@ if ( $build_gerris || $build_gfsview ) ; then
 	   	   gerris_debian=false
 	       fi
 	   fi
-	   if $gfsview_changed && $gerris_snapshot ; then
+	   if $gerris_snapshot ; then
 	       if ( darcs2dist gfsview $gfsview_stable $localgerrisweb ) \
                > $wdir/snapshot 2>&1 ; then :
 	       else
