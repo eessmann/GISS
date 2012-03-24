@@ -21,7 +21,7 @@ DOC = tests
 # we need this for gfs.sty
 TEXINPUTS = .:$(top_srcdir)/doc/examples:
 # and this for bibtex
-BIBINPUTS = $(BIBINPUTS):$(top_srcdir)/doc
+BIBINPUTS = $(top_srcdir)/doc
 
 Makefile.deps: template.tex depend.py Makefile.am
 	python depend.py `grep \\test{[^/]*} < template.tex | sed 's/\\\\test{\(.*\)}/\1/g'` > Makefile.deps
@@ -55,7 +55,7 @@ tests: tests.dvi
 
 tests.dvi: tests.tex $(top_srcdir)/doc/gerris.bib
 	- TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
-	bibtex tests
+	BIBINPUTS=$(BIBINPUTS) bibtex tests
 	- TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex > /dev/null 2>&1
 	TEXINPUTS=$(TEXINPUTS) latex -interaction=nonstopmode tests.tex
 

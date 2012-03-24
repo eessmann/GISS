@@ -65,7 +65,7 @@ clean-generic:
 DOC = examples
 
 # we need this for bibtex
-BIBINPUTS = $(BIBINPUTS):$(top_srcdir)/doc
+BIBINPUTS = $(top_srcdir)/doc
 
 Makefile.deps: template.tex depend.py Makefile.am
 	python depend.py `grep \\test{[^/]*} < template.tex | sed 's/\\\\test{\(.*\)}/\1/g'` > Makefile.deps
@@ -102,7 +102,7 @@ examples: examples.dvi crossref.sh
 
 examples.dvi: examples.tex $(top_srcdir)/doc/gerris.bib
 	- latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
-	bibtex examples
+	BIBINPUTS=$(BIBINPUTS) bibtex examples
 	- latex -interaction=nonstopmode examples.tex > /dev/null 2>&1
 	latex -interaction=nonstopmode examples.tex
 
