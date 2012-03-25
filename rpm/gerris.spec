@@ -23,10 +23,13 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 # Fedora
 %if 0%{?fedora_version}
-Requires: proj gsl netcdf
 %if %{?fedora_version} > 14
 Requires: hdf5-openmpi
 %endif
+%if %{?fedora_version} > 15
+BuildRequires: atlas
+%endif
+Requires: proj gsl netcdf
 BuildRequires: netcdf-devel proj-devel gcc-gfortran
 %endif
 # Suse
@@ -74,8 +77,10 @@ Source code, doc, faq and demos files for The Gerris Flow Solver (development sn
 
 # if we have centos or rhel, set mpi-selector
 %if 0%{?rhel_version} || 0%{?centos_version}
+%if %{?centos_version} < 6
 mpi-selector --set $(mpi-selector --list)
 source /etc/profile.d/mpi-selector.sh
+%endif
 %endif
 
 RPM_OPT_FLAGS="$RPM_OPT_FLAGS -fPIC -DPIC"
@@ -120,8 +125,10 @@ mkdir $RPM_BUILD_ROOT
 
 # if we have centos or rhel, set mpi-selector
 %if 0%{?rhel_version} || 0%{?centos_version}
+%if %{?centos_version} < 6
 mpi-selector --set $(mpi-selector --list)
 source /etc/profile.d/mpi-selector.sh
+%endif
 %endif
 
 make install DESTDIR=$RPM_BUILD_ROOT
