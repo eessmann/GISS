@@ -2,7 +2,7 @@
 #
 # Description:
 #
-# Von K\'arm\'an\cite{karman1921} showed that the steady flow of an
+# Von K\'arm\'an \cite{karman1921} showed that the steady flow of an
 # incompressible liquid of kinematic viscosity $\nu$ induced by an
 # infinite plane disk rotating at angular velocity $\Omega$ can be
 # described by a similarity solution. In effect, using
