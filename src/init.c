@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -224,6 +224,7 @@ GtsObjectClass ** gfs_classes (void)
           gfs_source_control_class (),
             gfs_source_control_field_class (),
           gfs_source_flux_class (),
+          gfs_source_pipe_class (),
         gfs_source_diffusion_class (),
           gfs_source_diffusion_explicit_class (),
       gfs_source_velocity_class (),

@@ -1066,3 +1066,204 @@ GfsEventClass * gfs_discharge_elevation_class (void)
 }
 
 /** \endobject{GfsDischargeElevation} */
+
+/**
+ * "Pipe" between two locations.
+ * \beginobject{GfsSourcePipe}
+ */
+
+static gboolean read_position (GtsFile * fp, FttVector * p)
+{
+  gchar * start[FTT_DIMENSION];
+  if (!gfs_read_vector (fp, start))
+    return FALSE;
+  FttComponent c;
+  p->z = 0.;
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    (&p->x)[c] = atof (start[c]);
+    g_free (start[c]);
+  }
+  return TRUE;
+}
+
+static void source_pipe_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_pipe_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsSimulation * sim = gfs_object_simulation (*o);
+  if (!GFS_IS_RIVER (sim)) {
+    gts_file_error (fp, "%s only makes sense for GfsRiver simulations",
+		    (*o)->klass->info.name);
+    return;
+  }
+  GfsVariable * v = GFS_RIVER (sim)->v[0];
+  if (v->sources == NULL)
+    v->sources = gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
+  gts_container_add (v->sources, GTS_CONTAINEE (*o));
+
+  GfsSourcePipe * p = GFS_SOURCE_PIPE (*o);
+  if (!read_position (fp, &p->start))
+    return;
+  if (!read_position (fp, &p->end))
+    return;
+
+  p->diameter = gfs_read_constant (fp, GFS_DOMAIN (gfs_object_simulation (p)));
+  if (p->diameter == G_MAXDOUBLE)
+    return;
+}
+
+static void source_pipe_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_source_pipe_class ())->parent_class->write) (o, fp);
+  GfsSourcePipe * p = GFS_SOURCE_PIPE (o);
+  fprintf (fp, " (%f,%f) (%f,%f) %f",
+	   p->start.x, p->start.y,
+	   p->end.x, p->end.y,
+	   p->diameter);
+}
+
+#define DQ (1e-4/L3)
+
+static double flow_rate_Q (double z1, double h1, double z2, double h2,
+			   double l, GfsSourcePipe * p,
+			   double a1, double a2, double Q)
+{
+  double Q1 = (*p->flow_rate) (z1, h1 - Q/a1, z2, h2 + Q/a2, l, p);
+  if (Q1 > 0.) Q1 = MIN (Q1, a1*h1);
+  if (Q1 < 0.) Q1 = MAX (Q1, - a2*h2);
+  return Q1;
+}
+
+static gboolean source_pipe_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* gfs_event_class ()->event) (event, sim)) {
+    GfsSourcePipe * p = GFS_SOURCE_PIPE (event);
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    FttVector start = p->start, end = p->end;
+    gfs_simulation_map (sim, &start);
+    gfs_simulation_map (sim, &end);
+    /* fixme: this won't work in parallel if the ends of the pipe are on different PEs */
+    p->scell = gfs_domain_locate (domain, start, -1, NULL);
+    p->ecell = gfs_domain_locate (domain, end, -1, NULL);
+    p->Q = 0.;
+    if (p->scell && p->ecell && p->scell != p->ecell) {
+      gdouble L = sim->physical_params.L;
+      GfsVariable * h = GFS_RIVER (sim)->v[0], * zb = GFS_RIVER (sim)->zb;
+      gdouble h1 = L*GFS_VALUE (p->scell, h), z1 = L*GFS_VALUE (p->scell, zb);
+      gdouble h2 = L*GFS_VALUE (p->ecell, h), z2 = L*GFS_VALUE (p->ecell, zb);      
+      /* fixme: the length below does not take into account metric
+	 properly (e.g. won't work for MetricLonLat) */
+      gdouble l = L*sqrt ((start.x - end.x)*(start.x - end.x) +
+			  (start.y - end.y)*(start.y - end.y));
+      gdouble L2 = L*L, L3 = L*L*L;
+      gdouble a1 = L2*gfs_cell_volume (p->scell, GFS_DOMAIN (sim))/sim->advection_params.dt;
+      gdouble a2 = L2*gfs_cell_volume (p->ecell, GFS_DOMAIN (sim))/sim->advection_params.dt;
+
+      /* secant-bisection root-finding: solves flow_rate(h, l, Q) - Q = 0 for the flow rate Q */
+      p->Q = (*p->flow_rate) (z1, h1, z2, h2, l, p)/L3;
+      gdouble Q1 = p->Q*2.;
+      gdouble v1 = flow_rate_Q (z1, h1, z2, h2, l, p, a1, a2, Q1*L3)/L3 - Q1;
+      gdouble Q2 = 0.;
+      gdouble v2 = p->Q;
+      if (fabs (v1) > DQ && fabs (v2) > DQ) {
+	if (v1 > v2) {
+	  gdouble v = v1;
+	  v1 = v2; v2 = v;
+	  v = Q1;
+	  Q1 = Q2; Q2 = v;
+	}
+	if (v1*v2 >= 0.)
+	  g_warning ("source_pipe_event: v1: %g v2: %g", v1*L3, v2*L3);
+	else {
+	  guint nitermax = 1000;
+	  gdouble Qb;
+	  p->Q = (v1*Q2 - v2*Q1)/(v1 - v2);
+	  do {
+	    Qb = p->Q;
+	    gdouble v = flow_rate_Q (z1, h1, z2, h2, l, p, a1, a2, p->Q*L3)/L3 - p->Q;
+	    if (v < 0.) {
+	      v1 = v; Q1 = p->Q;
+	    }
+	    else {
+	      v2 = v; Q2 = p->Q;
+	    }
+	    if (v2 > v1)
+	      p->Q = (v1*Q2 - v2*Q1)/(v1 - v2);
+	    nitermax--;
+	  } while (fabs (p->Q - Qb) > DQ && nitermax);
+	  if (nitermax == 0)
+	    g_warning ("source_pipe_event: failed to converge! %g %g", 
+		       p->Q*L3, fabs (p->Q - Qb)*L3);
+	}
+      }
+    }
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void source_pipe_class_init (GfsSourceGenericClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = source_pipe_read;
+  GTS_OBJECT_CLASS (klass)->write = source_pipe_write;
+  GFS_EVENT_CLASS (klass)->event = source_pipe_event;
+}
+
+static gdouble source_pipe_value (GfsSourceGeneric * s, 
+				  FttCell * cell, 
+				  GfsVariable * v)
+{
+  GfsSourcePipe * p = GFS_SOURCE_PIPE (s);
+  if (cell == p->scell)
+    return - p->Q/gfs_cell_volume (cell, v->domain);
+  if (cell == p->ecell)
+    return   p->Q/gfs_cell_volume (cell, v->domain);
+  return 0.;
+}
+
+/* This is a simplistic flow rate model for a circular pipe. 
+   The pipe is assumed to be always fully submerged. */
+static double pipe_flow_rate (double z1, double h1, /* terrain elevation and flow depth at inlet */
+			      double z2, double h2, /* terrain elevation and flow depth at outlet */
+			      double l,             /* pipe length */
+			      GfsSourcePipe * p)
+{
+  gdouble r = p->diameter/2.;
+  gdouble A = M_PI*r*r; /* area */
+  gdouble P = 2.*M_PI*r; /* perimeter */
+  gdouble Rh = A/P; /* hydraulic radius */
+  gdouble S = fabs (z1 + h1 - z2 - h2)/l; /* slope */
+  gdouble n = 0.03; /* Gauckler-Manning coefficient */
+  /* Gauckler-Manning-Strickler formula for the (signed) flow rate */
+  return (z1 + h1 > z2 + h2 ? 1. : -1.)*A/n*pow (Rh, 2./3.)*sqrt (S);
+}
+
+static void source_pipe_init (GfsSourceGeneric * s)
+{
+  s->mac_value = s->centered_value = source_pipe_value;
+  GFS_SOURCE_PIPE (s)->flow_rate = pipe_flow_rate;
+}
+
+GfsSourceGenericClass * gfs_source_pipe_class (void)
+{
+  static GfsSourceGenericClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsSourcePipe",
+      sizeof (GfsSourcePipe),
+      sizeof (GfsSourceGenericClass),
+      (GtsObjectClassInitFunc) source_pipe_class_init,
+      (GtsObjectInitFunc) source_pipe_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_source_generic_class ()), &info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsSourcePipe} */

@@ -24,7 +24,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include "variable.h"
+#include "source.h"
 
 /* GfsRiver: Header */
 
@@ -83,6 +83,33 @@ struct _GfsDischargeElevation {
 						   gfs_discharge_elevation_class ()))
 
 GfsEventClass * gfs_discharge_elevation_class (void);
+
+/* GfsSourcePipe: Header */
+
+typedef struct _GfsSourcePipe         GfsSourcePipe;
+
+struct _GfsSourcePipe {
+  /*< private >*/
+  GfsSourceGeneric parent;
+  FttCell * scell, * ecell;
+  gdouble Q;
+
+  /*< public >*/
+  double (* flow_rate) (double z1, double h1, /* terrain elevation and flow depth at inlet */
+			double z2, double h2, /* terrain elevation and flow depth at outlet */
+			double l,             /* pipe length */
+			GfsSourcePipe * p);
+  FttVector start, end;
+  gdouble diameter;
+};
+
+#define GFS_SOURCE_PIPE(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSourcePipe,\
+					         gfs_source_pipe_class ())
+#define GFS_IS_SOURCE_PIPE(obj)         (gts_object_is_from_class (obj,\
+						 gfs_source_pipe_class ()))
+
+GfsSourceGenericClass * gfs_source_pipe_class  (void);
 
 #ifdef __cplusplus
 }
