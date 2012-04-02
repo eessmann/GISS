@@ -23,18 +23,6 @@
 
 #include "kdt.h"
 
-static int intersects (const KdtRect rect, const KdtRect query)
-{
-  return (rect[0].l <= query[0].h && rect[1].l <= query[1].h &&
-	  rect[0].h >= query[0].l && rect[1].h >= query[1].l);
-}
-
-static int includes (const KdtRect rect, const KdtRect query)
-{
-  return (rect[0].h <= query[0].h && rect[1].h <= query[1].h &&
-	  rect[0].l >= query[0].l && rect[1].l >= query[1].l);
-}
-
 int main (int argc, char * argv[])
 {
   if (argc != 2) {
@@ -60,7 +48,8 @@ int main (int argc, char * argv[])
     KdtSum s;
     kdt_sum_init (&s);
     //    g_timer_start (t);
-    long n = kdt_query_sum (kdt, (KdtCheck) includes, (KdtCheck) intersects, query, query, &s);
+    long n = kdt_query_sum (kdt, (KdtCheck) kdt_includes, (KdtCheck) kdt_intersects, 
+			    query, query, &s);
     //    g_timer_stop (t);
     //    fprintf (stderr, "%d %g %g %g %g\n", n, s.H0, s.Hmax, s.Hmin, g_timer_elapsed (t, NULL));
     printf ("%ld %g %g %g\n", n, s.H0, s.H1, s.H2);

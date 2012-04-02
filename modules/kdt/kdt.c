@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2010 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2010-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -32,42 +32,111 @@
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
-/* sort */
+/* KdtHeap */
 
-/* threshold below which in-memory qsort() is used rather than on-disk
-   mergesort */
-#define LENMIN 1000000
+void kdt_heap_resize (KdtHeap * h, long len)
+{
+  assert (h->len < 0 || len < h->len);
+  if (h->len == h->buflen) {
+    h->buflen = len;
+    h->p = realloc (h->p, h->buflen*sizeof (KdtPoint));
+    h->end = h->buflen;
+  }
+  else if (len <= h->buflen) {
+    h->buflen = len;
+    h->p = realloc (h->p, h->buflen*sizeof (KdtPoint));
+    kdt_heap_rewind (h);
+    assert (h->end == len);
+  }
+  h->len = len;
+}
 
-void kdt_heap_create (KdtHeap * h, int fd, long len)
+void kdt_heap_create (KdtHeap * h, int fd, long start, long len, long buflen)
 {
   h->fd = fd;
+  h->start = start;
+  if (len > 0 && len < buflen)
+    buflen = len;
   h->len = len;
+  h->buflen = buflen;
   h->i = 0;
-  h->p = malloc (len*sizeof (KdtPoint));
-  h->end = read (fd, h->p, len*sizeof (KdtPoint));
-  assert (h->end >= 0);
-  h->end /= sizeof (KdtPoint);
+  h->p = malloc (buflen*sizeof (KdtPoint));
+  if (fd >= 0) {
+    assert (lseek (fd, start, SEEK_SET) == start);
+    h->end = read (fd, h->p, buflen*sizeof (KdtPoint));
+    assert (h->end >= 0);
+    h->end /= sizeof (KdtPoint);
+    if (buflen == len)
+      assert (h->end == len);
+  }
+}
+
+void kdt_heap_rewind (KdtHeap * h)
+{
+  if (h->len == h->buflen) {
+    h->i = 0;
+    assert (h->end == h->buflen);
+  }
+  else {
+    assert (lseek (h->fd, h->start, SEEK_SET) == h->start);
+    h->i = 0;
+    h->end = read (h->fd, h->p, h->buflen*sizeof (KdtPoint));
+    assert (h->end >= 0);
+    h->end /= sizeof (KdtPoint);
+  }
 }
 
 int kdt_heap_get (KdtHeap * h, KdtPoint * p)
 {
+  if (h->len == h->buflen && h->i >= h->len)
+    return 0;
   if (h->i < h->end) {
     *p = h->p[h->i++];
     return 1;
   }
-  if (h->end < h->len)
+  if (h->end < h->buflen)
     return 0;
-  h->end = read (h->fd, h->p, h->len*sizeof (KdtPoint));
+  h->end = read (h->fd, h->p, h->buflen*sizeof (KdtPoint));
   assert (h->end >= 0);
   h->end /= sizeof (KdtPoint);
   h->i = 0;
   return kdt_heap_get (h, p);
 }
 
+static int fdtemp (void)
+{
+  char name[] = "XXXXXX";
+  int fd = mkstemp (name);
+  assert (fd >= 0);
+  assert (unlink (name) == 0);
+  return fd;
+}
+
+void kdt_heap_split (KdtHeap * h1, long len1, KdtHeap * h2)
+{
+  if (h1->len == h1->buflen) {
+    kdt_heap_create (h2, -1, 0, h1->len - len1, h1->buflen);
+    memcpy (h2->p, &h1->p[len1], h2->len*sizeof (KdtPoint));
+    h2->end = h2->len;
+    h2->fd = fdtemp ();
+  }
+  else {
+    assert (lseek (h1->fd, len1*sizeof (KdtPoint), SEEK_SET) == len1*sizeof (KdtPoint));
+    char a[4096];
+    ssize_t size;
+    int fd2 = fdtemp ();
+    while ((size = read (h1->fd, a, 4096)) > 0)
+      assert (write (fd2, a, size) == size);
+    assert (ftruncate (h1->fd, len1*sizeof (KdtPoint)) == 0);
+    kdt_heap_create (h2, fd2, 0, h1->len - len1, h1->buflen);
+  }
+  kdt_heap_resize (h1, len1);
+}
+
 void kdt_heap_put (KdtHeap * h, KdtPoint * p)
 {
-  if (h->i == h->len) {
-    assert (write (h->fd, h->p, h->len*sizeof (KdtPoint)) == h->len*sizeof (KdtPoint));
+  if (h->i == h->buflen) {
+    assert (write (h->fd, h->p, h->buflen*sizeof (KdtPoint)) == h->buflen*sizeof (KdtPoint));
     h->i = 0;
   }
   h->p[h->i++] = *p;
@@ -82,7 +151,10 @@ void kdt_heap_flush (KdtHeap * h)
 void kdt_heap_free (KdtHeap * h)
 {
   free (h->p);
+  assert (close (h->fd) == 0);
 }
+
+/* sort */
 
 static int put (KdtHeap * h, KdtPoint * p, KdtHeap * merged)
 {
@@ -90,49 +162,42 @@ static int put (KdtHeap * h, KdtPoint * p, KdtHeap * merged)
   return kdt_heap_get (h, p);
 }
 
-static int fdtemp (void)
+static void merge (KdtHeap * h1, KdtHeap * h2, 
+		   int (*compar) (const void *, const void *),
+		   long buflen)
 {
-  char name[] = "XXXXXX";
-  int fd = mkstemp (name);
-  assert (fd >= 0);
-  assert (unlink (name) == 0);
-  return fd;
-}
-
-static int merge (int fd1, int fd2, int (*compar) (const void *, const void *), long len)
-{
-  KdtHeap h1, h2, hm;
-  assert (lseek (fd1, 0, SEEK_SET) == 0);
-  kdt_heap_create (&h1, fd1, LENMIN/3);
-  assert (lseek (fd2, 0, SEEK_SET) == 0);
-  kdt_heap_create (&h2, fd2, LENMIN/3);
+  KdtHeap hm;
   int merged = fdtemp ();
-  kdt_heap_create (&hm, merged, LENMIN/3);
+  kdt_heap_create (&hm, merged, 0, h1->len + h2->len, buflen);
   KdtPoint p1, p2;
-  int r1 = kdt_heap_get (&h1, &p1);
-  int r2 = kdt_heap_get (&h2, &p2);
+  kdt_heap_rewind (h1);
+  int r1 = kdt_heap_get (h1, &p1);
+  kdt_heap_rewind (h2);
+  int r2 = kdt_heap_get (h2, &p2);
   while (r1 && r2) {
     if ((* compar) (&p2, &p1))
-      r1 = put (&h1, &p1, &hm);
+      r1 = put (h1, &p1, &hm);
     else
-      r2 = put (&h2, &p2, &hm);
+      r2 = put (h2, &p2, &hm);
   }
   while (r1)
-    r1 = put (&h1, &p1, &hm);
+    r1 = put (h1, &p1, &hm);
   while (r2)
-    r2 = put (&h2, &p2, &hm);
-  kdt_heap_free (&h1);
-  kdt_heap_free (&h2);
-  close (fd1);
-  close (fd2);
+    r2 = put (h2, &p2, &hm);
+  kdt_heap_free (h1);
   kdt_heap_flush (&hm);
-  kdt_heap_free (&hm);
-  return merged;
+  *h1 = hm;
 }
 
-static int half (int fd, long len)
+#if TIMING
+static double elapsed (const struct timeval * start, const struct timeval * end)
 {
-  long len1 = len/2;
+  return (double) (end->tv_usec - start->tv_usec) + 1e6*(double) (end->tv_sec - start->tv_sec);
+}
+#endif
+
+static int half (int fd, long len1)
+{
   assert (lseek (fd, len1*sizeof (KdtPoint), SEEK_SET) > 0);
   int fd1 = fd, fd2 = fdtemp ();
   char a[4096];
@@ -143,55 +208,41 @@ static int half (int fd, long len)
   return fd2;
 }
 
+static void mergesort (KdtHeap * h,
+		       int  (*compar)   (const void *, const void *),
+		       void (*progress) (void *), void * data)
+{
 #if TIMING
-static double elapsed (const struct timeval * start, const struct timeval * end)
-{
-  return (double) (end->tv_usec - start->tv_usec) + 1e6*(double) (end->tv_sec - start->tv_sec);
-}
-#endif
-
-static int sort (int fd, long len, 
-		 int  (*compar)   (const void *, const void *),
-		 void (*progress) (void *), void * data)
-{
   struct timeval start;
   gettimeofday (&start, NULL);
-  assert (lseek (fd, 0, SEEK_SET) == 0);
-  if (len <= LENMIN) {
-    KdtPoint * a = malloc (len*sizeof (KdtPoint));
-    assert (read (fd, a, len*sizeof (KdtPoint)) == len*sizeof (KdtPoint));
-    qsort (a, len, sizeof (KdtPoint), compar);
-    assert (lseek (fd, 0, SEEK_SET) == 0);
-    assert (write (fd, a, len*sizeof (KdtPoint)) == len*sizeof (KdtPoint));
-    free (a);
-#if TIMING
-    struct timeval end;
-    gettimeofday (&end, NULL);
-    fprintf (stderr, "sort %ld %g\n", len, elapsed (&start, &end));
 #endif
+  if (h->len == h->buflen) {
+    qsort (h->p, h->len, sizeof (KdtPoint), compar);
     if (progress)
       (* progress) (data);
-    return fd;
   }
   else {
-    long len1 = len/2, len2 = len - len1;
-    int fd2 = half (fd, len);
-    int fd3 = merge (sort (fd, len1, compar, progress, data), 
-		     sort (fd2, len2, compar, progress, data), 
-		     compar, len);
-#if TIMING
-    struct timeval end;
-    gettimeofday (&end, NULL);
-    fprintf (stderr, "sort %ld %g\n", len, elapsed (&start, &end));
-#endif
-    return fd3;
+    KdtHeap h2;
+    long buflen = h->buflen;
+    kdt_heap_split (h, h->len/2, &h2);
+    mergesort (h, compar, progress, data);
+    mergesort (&h2, compar, progress, data);
+    merge (h, &h2, compar, buflen);
+    kdt_heap_free (&h2);
   }
+#if TIMING
+  struct timeval end;
+  gettimeofday (&end, NULL);
+  fprintf (stderr, "mergesort %ld %g\n", len, elapsed (&start, &end));
+#endif
 }
 
 /* Kdt */
 
 typedef struct {
-  double split;
+  KdtRect bound1, bound2;
+  long len1;
+  int n1;
 } Node;
 
 #define SYSTEM_32_BITS (!defined (__LP64__) && !defined (__64BIT__) && \
@@ -229,26 +280,11 @@ static int check_32_bits (const Kdt * kdt)
   return 0;
 }
 
-#define KDTSIZE(len) (((len) - 1)*sizeof (Node) + (len)*sizeof (KdtPoint))
-
-int kdt_size (const Kdt * kdt, long len)
+static void sizes (const Node * n, long * nodes, long * sums, long * leaves)
 {
-  long len1 = 1;
-  while (len > kdt->h.np) {
-    len /= 2; len1 *= 2;
-  }
-  return (len1 - 1)*sizeof (Node) + len1*sizeof (KdtPoint)*kdt->h.np;
-}
-
-void kdt_sizes (const Kdt * kdt, long len, long * nodes, long * sums, long * leaves)
-{
-  long len1 = 1;
-  while (len > kdt->h.np) {
-    len /= 2; len1 *= 2;
-  }
-  *nodes = (len1 - 1)*sizeof (Node);
-  *sums  = (len1 - 1)*sizeof (KdtSum);
-  *leaves = len1*sizeof (KdtPoint)*kdt->h.np;
+  *nodes = n->n1*sizeof (Node);
+  *sums  = n->n1*sizeof (KdtSumCore);
+  *leaves = n->len1*sizeof (KdtPoint);
 }
 
 static void relative (const KdtRect rect, double * o, double * h)
@@ -260,7 +296,7 @@ static void relative (const KdtRect rect, double * o, double * h)
     *h = ((double)rect[1].h) - ((double)rect[1].l);
 }
 
-static void sum_add_point (const KdtRect parent, KdtSum * sum, const KdtPoint * a)
+static void sum_add_point (const KdtRect parent, KdtSumCore * sum, const KdtPoint * a, double w)
 {
   double p[3], o[2], h;
 
@@ -273,77 +309,85 @@ static void sum_add_point (const KdtRect parent, KdtSum * sum, const KdtPoint * 
   if (p[2] < sum->Hmin) sum->Hmin = p[2];
   if (p[2] > sum->Hmax) sum->Hmax = p[2];
 #else
-  sum->m01 += p[0];
-  sum->m02 += p[1];
-  sum->m03 += p[0]*p[1];
-  sum->m11 += p[0]*p[0];
-  sum->m13 += p[0]*p[0]*p[1];
-  sum->m22 += p[1]*p[1];
-  sum->m23 += p[0]*p[1]*p[1];
-  sum->m33 += p[0]*p[0]*p[1]*p[1];
-  sum->m44 += p[0]*p[0]*p[0];
-  sum->m55 += p[1]*p[1]*p[1];
-  sum->m66 += p[0]*p[0]*p[0]*p[0];
-  sum->m77 += p[1]*p[1]*p[1]*p[1];
-  sum->m67 += p[0]*p[0]*p[0]*p[1];
-  sum->m76 += p[1]*p[1]*p[1]*p[0];
-  sum->H0 += p[2];
-  sum->H1 += p[0]*p[2];
-  sum->H2 += p[1]*p[2];
-  sum->H3 += p[0]*p[1]*p[2];
-  sum->H4 += p[2]*p[2];
-  sum->H5 += p[0]*p[0]*p[2];
-  sum->H6 += p[1]*p[1]*p[2];
-  sum->n++;
+  sum->m01 += w*p[0];
+  sum->m02 += w*p[1];
+  sum->m03 += w*p[0]*p[1];
+  sum->m11 += w*p[0]*p[0];
+  sum->m13 += w*p[0]*p[0]*p[1];
+  sum->m22 += w*p[1]*p[1];
+  sum->m23 += w*p[0]*p[1]*p[1];
+  sum->m33 += w*p[0]*p[0]*p[1]*p[1];
+  sum->m44 += w*p[0]*p[0]*p[0];
+  sum->m55 += w*p[1]*p[1]*p[1];
+  sum->m66 += w*p[0]*p[0]*p[0]*p[0];
+  sum->m77 += w*p[1]*p[1]*p[1]*p[1];
+  sum->m67 += w*p[0]*p[0]*p[0]*p[1];
+  sum->m76 += w*p[1]*p[1]*p[1]*p[0];
+  sum->H0 += w*p[2];
+  sum->H1 += w*p[0]*p[2];
+  sum->H2 += w*p[1]*p[2];
+  sum->H3 += w*p[0]*p[1]*p[2];
+  sum->H4 += w*p[2]*p[2];
+  sum->H5 += w*p[0]*p[0]*p[2];
+  sum->H6 += w*p[1]*p[1]*p[2];
+  sum->n ++;
   if (p[2] < sum->Hmin) sum->Hmin = p[2];
   if (p[2] > sum->Hmax) sum->Hmax = p[2];
 #endif
 }
 
-static void sum_add_sum (const KdtRect parent, KdtSum * sum, const KdtRect rect, const KdtSum * a)
+static double area (const KdtRect rect)
+{
+  return (rect[0].h - rect[0].l)*(rect[1].h - rect[1].l);
+}
+
+static void sum_add_sum (const KdtRect parent, KdtSum * sum, 
+			 const KdtRect rect, const KdtSumCore * a)
 {
   double op[2], oa[2], hp, ha;
 
   relative (parent, op, &hp);
   relative (rect, oa, &ha);
-  
+
   double oap0 = oa[0] - op[0], oap1 = oa[1] - op[1];
   double an = a->n;
   double ha2 = ha*ha, hp2 = hp*hp;
-  sum->m01 += (an*oap0 + a->m01*ha)/hp;
-  sum->m02 += (an*oap1 + a->m02*ha)/hp;
-  sum->m03 += (oap0*(an*oap1 + a->m02*ha) + ha*(a->m01*oap1 + a->m03*ha))/hp2;
+  double w = 1.; // area (rect)/an;
+  sum->m01 += w*(an*oap0 + a->m01*ha)/hp;
+  sum->m02 += w*(an*oap1 + a->m02*ha)/hp;
+  sum->m03 += w*(oap0*(an*oap1 + a->m02*ha) + ha*(a->m01*oap1 + a->m03*ha))/hp2;
   double m11 = (oap0*(an*oap0 + 2.*a->m01*ha) + a->m11*ha2)/hp2;
-  sum->m11 += m11;
+  sum->m11 += w*m11;
   double m13 = ha*(oap0*(a->m02*oap0 + 2.*a->m03*ha) + a->m13*ha2)/hp2;
-  sum->m13 += (oap1*m11 + m13)/hp;
+  sum->m13 += w*(oap1*m11 + m13)/hp;
   double m22 = (oap1*(an*oap1 + 2.*a->m02*ha) + a->m22*ha2)/hp2;
-  sum->m22 += m22;
-  sum->m23 += (oap0*m22 + ha*(oap1*(oap1*a->m01 + 2.*a->m03*ha) + a->m23*ha2)/hp2)/hp;
-  sum->m33 += (oap1*(oap1*m11 + 2.*m13) + 
-		ha2*(oap0*(oap0*a->m22 + 2.*a->m23*ha) + ha2*a->m33)/hp2)/hp2;
+  sum->m22 += w*m22;
+  sum->m23 += w*(oap0*m22 + ha*(oap1*(oap1*a->m01 + 2.*a->m03*ha) + a->m23*ha2)/hp2)/hp;
+  sum->m33 += w*(oap1*(oap1*m11 + 2.*m13) + 
+		 ha2*(oap0*(oap0*a->m22 + 2.*a->m23*ha) + ha2*a->m33)/hp2)/hp2;
   double ha3 = ha2*ha, hp3 = hp2*hp;
-  sum->m44 += (oap0*(oap0*(oap0*an + 3.*ha*a->m01) + 3.*ha2*a->m11) + ha3*a->m44)/hp3;
-  sum->m55 += (oap1*(oap1*(oap1*an + 3.*ha*a->m02) + 3.*ha2*a->m22) + ha3*a->m55)/hp3;
+  sum->m44 += w*(oap0*(oap0*(oap0*an + 3.*ha*a->m01) + 3.*ha2*a->m11) + ha3*a->m44)/hp3;
+  sum->m55 += w*(oap1*(oap1*(oap1*an + 3.*ha*a->m02) + 3.*ha2*a->m22) + ha3*a->m55)/hp3;
   double ha4 = ha3*ha, hp4 = hp3*hp;
-  sum->m66 += (oap0*(oap0*(oap0*(oap0*an + 4.*ha*a->m01) + 6.*ha2*a->m11) 
-		      + 4.*ha3*a->m44) + ha4*a->m66)/hp4;
-  sum->m77 += (oap1*(oap1*(oap1*(oap1*an + 4.*ha*a->m02) + 6.*ha2*a->m22)
-		      + 4.*ha3*a->m55) + ha4*a->m77)/hp4;
-  sum->m67 += (oap1*(oap0*(oap0*(oap0*an + 3.*ha*a->m01) + 3.*ha2*a->m11) + ha3*a->m44)
-		+ oap0*(oap0*(ha*a->m02*oap0 + 3.*ha2*a->m03) + 3.*ha3*a->m13) 
-		+ ha4*a->m67)/hp4;
-  sum->m76 += (oap0*(oap1*(oap1*(oap1*an + 3.*ha*a->m02) + 3.*ha2*a->m22) + ha3*a->m55)
-		+ oap1*(oap1*(ha*a->m01*oap1 + 3.*ha2*a->m03) + 3.*ha3*a->m23)
-		+ ha4*a->m76)/hp4;
-  sum->H0 += a->H0;
-  sum->H1 += (a->H0*oap0 + a->H1*ha)/hp;
-  sum->H2 += (a->H0*oap1 + a->H2*ha)/hp;
-  sum->H3 += (ha*(ha*a->H3 + oap0*a->H2 + oap1*a->H1) + oap0*oap1*a->H0)/hp2;
-  sum->H4 += a->H4;
-  sum->H5 += (oap0*(2.*ha*a->H1 + oap0*a->H0) + ha2*a->H5)/hp2;
-  sum->H6 += (oap1*(2.*ha*a->H2 + oap1*a->H0) + ha2*a->H6)/hp2;
+  sum->m66 += w*(oap0*(oap0*(oap0*(oap0*an + 4.*ha*a->m01) + 6.*ha2*a->m11) 
+		       + 4.*ha3*a->m44) + ha4*a->m66)/hp4;
+  sum->m77 += w*(oap1*(oap1*(oap1*(oap1*an + 4.*ha*a->m02) + 6.*ha2*a->m22)
+		       + 4.*ha3*a->m55) + ha4*a->m77)/hp4;
+  sum->m67 += w*(oap1*(oap0*(oap0*(oap0*an + 3.*ha*a->m01) + 3.*ha2*a->m11) + ha3*a->m44)
+		 + oap0*(oap0*(ha*a->m02*oap0 + 3.*ha2*a->m03) + 3.*ha3*a->m13) 
+		 + ha4*a->m67)/hp4;
+  sum->m76 += w*(oap0*(oap1*(oap1*(oap1*an + 3.*ha*a->m02) + 3.*ha2*a->m22) + ha3*a->m55)
+		 + oap1*(oap1*(ha*a->m01*oap1 + 3.*ha2*a->m03) + 3.*ha3*a->m23)
+		 + ha4*a->m76)/hp4;
+  sum->H0 += w*a->H0;
+  sum->H1 += w*(a->H0*oap0 + a->H1*ha)/hp;
+  sum->H2 += w*(a->H0*oap1 + a->H2*ha)/hp;
+  sum->H3 += w*(ha*(ha*a->H3 + oap0*a->H2 + oap1*a->H1) + oap0*oap1*a->H0)/hp2;
+  sum->H4 += w*a->H4;
+  sum->H5 += w*(oap0*(2.*ha*a->H1 + oap0*a->H0) + ha2*a->H5)/hp2;
+  sum->H6 += w*(oap1*(2.*ha*a->H2 + oap1*a->H0) + ha2*a->H6)/hp2;
   sum->n += a->n;
+  sum->w += w*a->n;
   if (a->Hmin < sum->Hmin) sum->Hmin = a->Hmin;
   if (a->Hmax > sum->Hmax) sum->Hmax = a->Hmax;
 }
@@ -358,62 +402,61 @@ static int sort_y (const void * p1, const void * p2)
   return ((KdtPoint *) p1)->y > ((KdtPoint *) p2)->y;
 }
 
-static void update_sum (const KdtRect rect, KdtSum * n, KdtPoint * a, long len)
+static void kdt_sum_core_init (KdtSumCore * s)
 {
-  kdt_sum_init (n);
-  long i;
-  for (i = 0; i < len; i++, a++)
-    sum_add_point (rect, n, a);
+  memset (s, 0, sizeof (KdtSumCore));
+  s->Hmax = - 1e30;
+  s->Hmin =   1e30;
 }
 
-#define PADDING 1e100
+#define GAP 0.2
 
-static void split (KdtPoint * a, KdtRect bound, long len, int index, Kdt * kdt)
+static int update_sum (const KdtRect rect, KdtSumCore * n, KdtHeap * h, int index)
 {
-  if (len > kdt->h.np) {
-    //    fprintf (stderr, " splitting: %ld       \r", len);
-    qsort (a, len, sizeof (KdtPoint), index == 0 ? sort_x : sort_y);
-    long len1 = len/2;
-    long len2 = len - len1;
-    Node n;
-    n.split = (&a[len1].x)[index];
-    KdtSum s;
-    update_sum (bound, &s, a, len);
-    fwrite (&s, sizeof (KdtSum), 1, kdt->sums);
-    fwrite (&n, sizeof (Node), 1, kdt->nodes);
-    KdtRect bound1;
-    bound1[0].l = bound[0].l; bound1[0].h = bound[0].h;
-    bound1[1].l = bound[1].l; bound1[1].h = bound[1].h;
-    bound1[index].h = n.split;
-    split (a, bound1, len1, (index + 1) % 2, kdt);
-
-    bound1[0].l = bound[0].l; bound1[0].h = bound[0].h;
-    bound1[1].l = bound[1].l; bound1[1].h = bound[1].h;
-    bound1[index].l = n.split;
-    split (&(a[len1]), bound1, len2, (index + 1) % 2, kdt);
+  kdt_sum_core_init (n);
+  long i, imax;
+  double min, x, smax = 0;
+  KdtPoint p;
+  kdt_heap_rewind (h);
+  assert (kdt_heap_get (h, &p));
+  sum_add_point (rect, n, &p, 1.);
+  min = x = (&p.x)[index];
+  for (i = 1; i < h->len; i++) {
+    assert (kdt_heap_get (h, &p));
+    sum_add_point (rect, n, &p, 1.);
+    double s = (&p.x)[index] - x;
+    if (s > smax) {
+      smax = s;
+      imax = i;
+    }
+    x = (&p.x)[index];
   }
-  else if (len > 0) {
-    fwrite (a, sizeof (KdtPoint), len, kdt->leaves);
-    /* padding */
-    KdtPoint dummy = { PADDING, PADDING, PADDING };
-    int np = kdt->h.np;
-    while (np-- > len)
-      fwrite (&dummy, sizeof (KdtPoint), 1, kdt->leaves);
-  }
+  return smax/(x - min) > GAP ? imax : -1;
 }
 
-static void file_update_sum (const KdtRect rect, KdtSum * n, int fd, long len)
+static long update_bounds (KdtRect rect, KdtHeap * h)
 {
-  KdtHeap h;
-  kdt_heap_create (&h, fd, LENMIN);
-  kdt_sum_init (n);
-  long i;
-  for (i = 0; i < len; i++) {
-    KdtPoint p;
-    assert (kdt_heap_get (&h, &p));
-    sum_add_point (rect, n, &p);
+  long len = 0;
+  rect[0].h = rect[1].h = -1e30;
+  rect[0].l = rect[1].l =  1e30;
+  kdt_heap_rewind (h);
+  KdtPoint p;
+  while (kdt_heap_get (h, &p)) {
+    if (p.x > rect[0].h) rect[0].h = p.x;
+    if (p.x < rect[0].l) rect[0].l = p.x;
+    if (p.y > rect[1].h) rect[1].h = p.y;
+    if (p.y < rect[1].l) rect[1].l = p.y;
+    len++;
   }
-  kdt_heap_free (&h);
+  return len;
+}
+
+static void kdt_rect_write (KdtRect rect, FILE * fp)
+{
+  fprintf (fp, "%f %f\n%f %f\n%f %f\n%f %f\n%f %f\n\n",
+	   rect[0].l, rect[1].l, rect[0].h, rect[1].l,
+	   rect[0].h, rect[1].h, rect[0].l, rect[1].h,
+	   rect[0].l, rect[1].l);	   
 }
 
 static void progress (void * data)
@@ -423,64 +466,62 @@ static void progress (void * data)
     (* kdt->progress) (++kdt->i/(float) kdt->m, kdt->data);
 }
 
-static void splitfile (int fd, KdtRect bound, long len, int index, Kdt * kdt)
+static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt)
 {
 #if TIMING
   struct timeval start;
   gettimeofday (&start, NULL);
 #endif
-  assert (lseek (fd, 0, SEEK_SET) == 0);
-  if (len > LENMIN) {
+  int ns = 0;
+  if (h1->len > kdt->h.np) {
     //    fprintf (stderr, " splitting: %ld      \r", len);
-    KdtSum s;
-    file_update_sum (bound, &s, fd, len);
-    fwrite (&s, sizeof (KdtSum), 1, kdt->sums);
-
-    long len1 = len/2;
-    long len2 = len - len1;
-    fd = sort (fd, len,  index == 0 ? sort_x : sort_y, progress, kdt);
+    int nindex = (bound[0].h - bound[0].l < bound[1].h - bound[1].l);
+    assert (lseek (h1->fd, SEEK_SET, 0) == 0);
+    if (index != nindex)
+      mergesort (h1, nindex ? sort_y : sort_x, progress, kdt);
+    index = nindex;
+    KdtSumCore s;
+    int imax = update_sum (bound, &s, h1, index);
+    fwrite (&s, sizeof (KdtSumCore), 1, kdt->sums);
+    Node n;
+    n.len1 = imax > 0 ? imax : h1->len/2;
 #if TIMING
     struct timeval s1;
     gettimeofday (&s1, NULL);
 #endif
-    int fd2 = half (fd, len);
+    KdtHeap h2;
+    kdt_heap_split (h1, n.len1, &h2);
 #if TIMING
     struct timeval end;
     gettimeofday (&end, NULL);
-    fprintf (stderr, "half %ld %g\n", len, elapsed (&s1, &end));
+    fprintf (stderr, "half %ld %f\n", len, elapsed (&s1, &end));
 #endif
-    KdtPoint p;
-    assert (lseek (fd2, 0, SEEK_SET) == 0);
-    assert (read (fd2, &p, sizeof (KdtPoint)) == sizeof (KdtPoint));
-
-    Node n;
-    n.split = (&p.x)[index];
+    update_bounds (n.bound1, h1);
+    update_bounds (n.bound2, &h2);
+    long pos = ftell (kdt->nodes);
     fwrite (&n, sizeof (Node), 1, kdt->nodes);
-
-    KdtRect bound1;
-    bound1[0].l = bound[0].l; bound1[0].h = bound[0].h;
-    bound1[1].l = bound[1].l; bound1[1].h = bound[1].h;
-    bound1[index].h = n.split;
-    splitfile (fd, bound1, len1, (index + 1) % 2, kdt);
-    close (fd);
-
-    bound1[0].l = bound[0].l; bound1[0].h = bound[0].h;
-    bound1[1].l = bound[1].l; bound1[1].h = bound[1].h;
-    bound1[index].l = n.split;
-    splitfile (fd2, bound1, len2, (index + 1) % 2, kdt);
-    close (fd2);
+    n.n1 = split (h1, n.bound1, index, kdt);
+    fseek (kdt->nodes, pos, SEEK_SET);
+    fwrite (&n, sizeof (Node), 1, kdt->nodes);
+    fseek (kdt->nodes, 0, SEEK_END);
+    int n2 = split (&h2, n.bound2, index, kdt);
+    ns = n.n1 + n2 + 1;
   }
-  else if (len > 0) {
-    KdtPoint * a = malloc (len*sizeof (KdtPoint));
-    assert (read (fd, a, len*sizeof (KdtPoint)) == len*sizeof (KdtPoint));
-    split (a, bound, len, index, kdt);
-    free (a);
+  else {
+#if DEBUG
+    kdt_rect_write (bound, stderr);
+#endif
+    assert (h1->len <= h1->buflen);
+    if (h1->len > 0)
+      fwrite (h1->p, sizeof (KdtPoint), h1->len, kdt->leaves);
+    kdt_heap_free (h1);
   }
 #if TIMING
   struct timeval end;
   gettimeofday (&end, NULL);
-  fprintf (stderr, "splitfile %ld %g\n", len, elapsed (&start, &end));
+  fprintf (stderr, "splitfile %ld %f\n", len, elapsed (&start, &end));
 #endif
+  return ns;
 }
 
 Kdt * kdt_new (void)
@@ -515,9 +556,7 @@ static int kdt_init (Kdt * kdt, const char * name, int npmax, long len)
     return -1;
 
   kdt->h.len = len;
-  kdt->h.np = len;
-  while (kdt->h.np > npmax)
-    kdt->h.np /= 2;
+  kdt->h.np = npmax;
   kdt->h.np++;
   kdt->h.bound[0].l = kdt->h.bound[1].l =  1e30;
   kdt->h.bound[0].h = kdt->h.bound[1].h = -1e30;
@@ -529,63 +568,25 @@ static int kdt_init (Kdt * kdt, const char * name, int npmax, long len)
 }
 
 int kdt_create (Kdt * kdt, const char * name, int blksize,
-		KdtPoint * a, long len)
+		KdtHeap * h,
+		void (* progress) (float complete, void * data),
+		void * data)
 {
-  int npmax = blksize/sizeof (KdtPoint);
-  if (kdt_init (kdt, name, npmax, len))
-    return -1;
-  
-  long i;
-  for (i = 0; i < len; i++) {
-    if (a[i].x > kdt->h.bound[0].h) kdt->h.bound[0].h = a[i].x;
-    if (a[i].x < kdt->h.bound[0].l) kdt->h.bound[0].l = a[i].x;
-    if (a[i].y > kdt->h.bound[1].h) kdt->h.bound[1].h = a[i].y;
-    if (a[i].y < kdt->h.bound[1].l) kdt->h.bound[1].l = a[i].y;
-  }
-
-  fwrite (&kdt->h, sizeof (Header), 1, kdt->nodes);
-  split (a, kdt->h.bound, kdt->h.len, 0, kdt);
-
-  return 0;
-}
-
-int kdt_create_from_file (Kdt * kdt, const char * name, int blksize,
-			  int fd,
-			  void (* progress) (float complete, void * data),
-			  void * data)
-{
-  KdtHeap h;
-  kdt_heap_create (&h, fd, LENMIN);
-  long len = 0;
-  KdtPoint p;
-  KdtRect bound = {{ 1e30, -1e30}, {1e30, -1e30}};
-  while (kdt_heap_get (&h, &p)) {
-    if (p.x > bound[0].h) bound[0].h = p.x;
-    if (p.x < bound[0].l) bound[0].l = p.x;
-    if (p.y > bound[1].h) bound[1].h = p.y;
-    if (p.y < bound[1].l) bound[1].l = p.y;
-    len++;
-  }
-  kdt_heap_free (&h);
+  KdtRect bound;
+  long len = update_bounds (bound, h);
+  kdt_heap_resize (h, len);
 
   int npmax = blksize/sizeof (KdtPoint);
   if (kdt_init (kdt, name, npmax, len))
     return -1;
-  kdt->h.bound[0].l = bound[0].l; kdt->h.bound[0].h = bound[0].h;
-  kdt->h.bound[1].l = bound[1].l; kdt->h.bound[1].h = bound[1].h;
+  kdt->h.bound[0] = bound[0];
+  kdt->h.bound[1] = bound[1];
   
   fwrite (&kdt->h, sizeof (Header), 1, kdt->nodes);
   kdt->m = kdt->i = 0;
-  int m2 = 1;
-  while (len > LENMIN) {
-    kdt->m++;
-    len /= 2;
-    m2 *= 2;
-  }
-  kdt->m = kdt->m*m2;
   kdt->progress = progress;
   kdt->data = data;
-  splitfile (fd, kdt->h.bound, kdt->h.len, 0, kdt);
+  split (h, kdt->h.bound, -1, kdt);
 
   return 0;
 }
@@ -628,31 +629,48 @@ void kdt_destroy (Kdt * kdt)
   free (kdt);
 }
 
-static long query (const Kdt * kdt, const KdtRect rect, int index, long len)
+int kdt_intersects (const KdtRect rect, const KdtRect query)
+{
+  return (rect[0].l <= query[0].h && rect[1].l <= query[1].h &&
+	  rect[0].h >= query[0].l && rect[1].h >= query[1].l);
+}
+
+int kdt_includes (const KdtRect rect, const KdtRect query)
+{
+  return (rect[0].h <= query[0].h && rect[1].h <= query[1].h &&
+	  rect[0].l >= query[0].l && rect[1].l >= query[1].l);
+}
+
+static long query (const Kdt * kdt, const KdtRect rect, long len)
 {
   if (len > kdt->h.np) {
     Node node;
-    long len1 = len/2;
     if (fread (&node, sizeof (Node), 1, kdt->nodes) != 1)
       return -1;
     long pos = ftell (kdt->nodes), lpos = ftell (kdt->leaves);
     if (pos < 0 || lpos < 0)
       return -1;
     long n = 0;
-    if (rect[index].l < node.split) {
-      long n1 = query (kdt, rect, (index + 1) % 2, len1);
+    if (kdt_intersects (node.bound1, rect)) {
+#if DEBUG
+      kdt_rect_write (node.bound1, stderr);
+#endif
+      long n1 = query (kdt, rect, node.len1);
       if (n1 < 0)
 	return -1;
       n += n1;
     }
-    if (rect[index].h >= node.split) {
+    if (kdt_intersects (node.bound2, rect)) {
+#if DEBUG
+      kdt_rect_write (node.bound2, stderr);
+#endif
       long snodes, ssums, sleaves;
-      kdt_sizes (kdt, len1, &snodes, &ssums, &sleaves);
+      sizes (&node, &snodes, &ssums, &sleaves);
       if (fseek (kdt->nodes, pos + snodes, SEEK_SET))
 	return -1;
       if (fseek (kdt->leaves, lpos + sleaves, SEEK_SET))
 	return -1;
-      long n1 = query (kdt, rect, (index + 1) % 2, len - len1);
+      long n1 = query (kdt, rect, len - node.len1);
       if (n1 < 0)
 	return -1;
       n += n1;
@@ -666,7 +684,7 @@ static long query (const Kdt * kdt, const KdtRect rect, int index, long len)
     for (i = 0; i < len; i++)
       if (kdt->buffer[i].x >= rect[0].l && kdt->buffer[i].x <= rect[0].h && 
 	  kdt->buffer[i].y >= rect[1].l && kdt->buffer[i].y <= rect[1].h) {
-       	printf ("%.8f %.8f %g\n", kdt->buffer[i].x, kdt->buffer[i].y, kdt->buffer[i].z);
+       	printf ("%.8f %.8f %f\n", kdt->buffer[i].x, kdt->buffer[i].y, kdt->buffer[i].z);
 	n++;
       }
     return n;
@@ -681,10 +699,9 @@ long kdt_query (const Kdt * kdt, const KdtRect rect)
   Header h;
   if (fread (&h, sizeof (Header), 1, kdt->nodes) != 1)
     return -1;
-  if (rect[0].l > h.bound[0].h || rect[1].l > h.bound[1].h || 
-      rect[0].h < h.bound[0].l || rect[1].h < h.bound[1].l)
+  if (!kdt_intersects (rect, h.bound))
     return 0;
-  return query (kdt, rect, 0, h.len);
+  return query (kdt, rect, h.len);
 }
 
 typedef struct {
@@ -693,13 +710,12 @@ typedef struct {
 
 static long query_sum (const Kdt * kdt,
 		       KdtCheck includes, KdtCheck intersects, void * data, 
-		       KdtRect bound, int index, long len,
+		       KdtRect bound, long len,
 		       FilePointers * f,
 		       const KdtRect rect, KdtSum * sum)
 {
   if (len > kdt->h.np) {
     Node node;
-    long len1 = len/2;
     if (fseek (kdt->nodes, f->np, SEEK_SET))
       return -1;
     if (fread (&node, sizeof (Node), 1, kdt->nodes) != 1)
@@ -710,46 +726,39 @@ static long query_sum (const Kdt * kdt,
 #endif
 
     if ((* includes) (bound, data)) {
-      KdtSum s;
+      KdtSumCore s;
       if (fseek (kdt->sums, f->sp, SEEK_SET))
 	return -1;
-      if (fread (&s, sizeof (KdtSum), 1, kdt->sums) != 1)
+      if (fread (&s, sizeof (KdtSumCore), 1, kdt->sums) != 1)
 	return -1;
 #if DEBUG
-      fprintf (stderr, "read 1 sum %ld index %d\n", sizeof (KdtSum), index);
+      fprintf (stderr, "read 1 sum %ld index %d\n", sizeof (KdtSumCore), index);
 #endif
-      f->sp += sizeof (KdtSum);
+      f->sp += sizeof (KdtSumCore);
       sum_add_sum (rect, sum, bound, &s);
       return len;
     }
-    f->sp += sizeof (KdtSum);
+    f->sp += sizeof (KdtSumCore);
 
     long pos = f->np, lpos = f->lp, spos = f->sp;
     long n = 0;
 
-    KdtRect bound1;
-    bound1[0].l = bound[0].l; bound1[0].h = bound[0].h;
-    bound1[1].l = bound[1].l; bound1[1].h = bound[1].h;
-    bound1[index].h = node.split;
-    if ((* intersects) (bound1, data)) {
+    if ((* intersects) (node.bound1, data)) {
       long n1 = query_sum (kdt, includes, intersects, data, 
-			   bound1, (index + 1) % 2, len1, f, rect, sum);
+			   node.bound1, node.len1, f, rect, sum);
       if (n1 < 0)
 	return -1;
       n += n1;
     }
 
-    bound1[0].l = bound[0].l; bound1[0].h = bound[0].h;
-    bound1[1].l = bound[1].l; bound1[1].h = bound[1].h;
-    bound1[index].l = node.split;
-    if ((* intersects) (bound1, data)) {
+    if ((* intersects) (node.bound2, data)) {
       long snodes, ssums, sleaves;
-      kdt_sizes (kdt, len1, &snodes, &ssums, &sleaves);
+      sizes (&node, &snodes, &ssums, &sleaves);
       f->np = pos + snodes;
       f->sp = spos + ssums;
       f->lp = lpos + sleaves;
       long n1 = query_sum (kdt, includes, intersects, data, 
-			   bound1, (index + 1) % 2, len - len1, f, rect, sum);
+			   node.bound2, len - node.len1, f, rect, sum);
       if (n1 < 0)
 	return -1;
       n += n1;
@@ -757,25 +766,33 @@ static long query_sum (const Kdt * kdt,
     return n;
   }
   else if (len > 0) {
-    if (fseek (kdt->leaves, f->lp, SEEK_SET))
-      return -1;
-    if (fread (kdt->buffer, sizeof (KdtPoint), len, kdt->leaves) != len)
-      return -1;
+    double w = 1.; // area (bound)/len; /* representative area of a single sample */
 #if DEBUG
-    fprintf (stderr, "read %ld leaves %ld\n", len, sizeof (KdtPoint));
+    fprintf (stderr, "# area: %f %f\n", area (rect), w);
+    kdt_rect_write (bound, stderr);
 #endif
-    KdtRect boundp;
-    KdtPoint * a = kdt->buffer;
-    int i, n = 0;
-    for (i = 0; i < len; i++, a++) {
-      boundp[0].l = boundp[0].h = a->x;
-      boundp[1].l = boundp[1].h = a->y;
-      if ((* includes) (boundp, data)) {
-	sum_add_point (rect, sum, a);
-	n++;
+    if (1 /*w < area (rect)*/) {
+      if (fseek (kdt->leaves, f->lp, SEEK_SET))
+	return -1;
+      if (fread (kdt->buffer, sizeof (KdtPoint), len, kdt->leaves) != len)
+	return -1;
+#if DEBUG
+      fprintf (stderr, "read %ld leaves %ld\n", len, sizeof (KdtPoint));
+#endif
+      KdtRect boundp;
+      KdtPoint * a = kdt->buffer;
+      int i, n = 0;
+      for (i = 0; i < len; i++, a++) {
+	boundp[0].l = boundp[0].h = a->x;
+	boundp[1].l = boundp[1].h = a->y;
+	if ((* includes) (boundp, data)) {
+	  sum_add_point (rect, (KdtSumCore *) sum, a, w);
+	  sum->w += w;
+	  n++;
+	}
       }
+      return n;
     }
-    return n;
   }
   return 0;
 }
@@ -792,12 +809,11 @@ long kdt_query_sum (const Kdt * kdt,
   FilePointers f;
   f.np = sizeof (Header);
   f.sp = f.lp = 0;
-  return query_sum (kdt, includes, intersects, data, h.bound, 0, h.len, &f, rect, sum);
+  return query_sum (kdt, includes, intersects, data, h.bound, h.len, &f, rect, sum);
 }
 
 void kdt_sum_init (KdtSum * s)
 {
-  memset (s, 0, sizeof (KdtSum));
-  s->Hmax = - 1e30;
-  s->Hmin =   1e30;
+  kdt_sum_core_init ((KdtSumCore *) s);
+  s->w = 0.;
 }

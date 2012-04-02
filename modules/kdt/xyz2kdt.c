@@ -120,21 +120,17 @@ int main (int argc, char * argv[])
   if (verbose)
     fprintf (stderr, "xyz2kdt: reading points...");
   KdtHeap h;
-  kdt_heap_create (&h, fd, pagesize/sizeof (KdtPoint));
+  kdt_heap_create (&h, fd, 0, -1, 1000000);
   KdtPoint p;
   while (scanf ("%lf %lf %lf", &p.x, &p.y, &p.z) == 3)
     kdt_heap_put (&h, &p);
   kdt_heap_flush (&h);
-  kdt_heap_free (&h);
-  lseek (fd, 0, SEEK_SET);
 
   struct timeval start;
   gettimeofday (&start, NULL);
   Kdt * kdt = kdt_new ();
-  kdt_create_from_file (kdt, argv[optind], pagesize, fd,
-			verbose ? progress : NULL, &start);
+  kdt_create (kdt, argv[optind], pagesize, &h, verbose ? progress : NULL, &start);
   kdt_destroy (kdt);
-  close (fd);
 
   if (verbose) {
     Kdt * kdt = kdt_new ();
