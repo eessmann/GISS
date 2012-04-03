@@ -32,6 +32,36 @@
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
+/* refcounted buffer */
+
+typedef struct {
+  KdtPoint * p;
+  int ref;
+} Buffer;
+
+static Buffer * buffer_new (long len)
+{
+  Buffer * b = malloc (sizeof (Buffer));
+  b->p = malloc (len*sizeof (KdtPoint));
+  b->ref = 1;
+  return b;
+}
+
+static Buffer * buffer_ref (Buffer * b)
+{
+  b->ref++;
+  return b;
+}
+
+static void buffer_unref (Buffer * b)
+{
+  b->ref--;
+  if (b->ref == 0) {
+    free (b->p);
+    free (b);
+  }
+}
+
 /* KdtHeap */
 
 void kdt_heap_resize (KdtHeap * h, long len)
@@ -39,12 +69,10 @@ void kdt_heap_resize (KdtHeap * h, long len)
   assert (h->len < 0 || len < h->len);
   if (h->len == h->buflen) {
     h->buflen = len;
-    h->p = realloc (h->p, h->buflen*sizeof (KdtPoint));
     h->end = h->buflen;
   }
   else if (len <= h->buflen) {
     h->buflen = len;
-    h->p = realloc (h->p, h->buflen*sizeof (KdtPoint));
     kdt_heap_rewind (h);
     assert (h->end == len);
   }
@@ -60,9 +88,10 @@ void kdt_heap_create (KdtHeap * h, int fd, long start, long len, long buflen)
   h->len = len;
   h->buflen = buflen;
   h->i = 0;
-  h->p = malloc (buflen*sizeof (KdtPoint));
+  h->buf = buffer_new (buflen);
+  h->p = ((Buffer *) h->buf)->p;
   if (fd >= 0) {
-    assert (lseek (fd, start, SEEK_SET) == start);
+    assert (lseek (fd, start*sizeof (KdtPoint), SEEK_SET) == start*sizeof (KdtPoint));
     h->end = read (fd, h->p, buflen*sizeof (KdtPoint));
     assert (h->end >= 0);
     h->end /= sizeof (KdtPoint);
@@ -78,7 +107,7 @@ void kdt_heap_rewind (KdtHeap * h)
     assert (h->end == h->buflen);
   }
   else {
-    assert (lseek (h->fd, h->start, SEEK_SET) == h->start);
+    assert (lseek (h->fd, h->start*sizeof (KdtPoint), SEEK_SET) == h->start*sizeof (KdtPoint));
     h->i = 0;
     h->end = read (h->fd, h->p, h->buflen*sizeof (KdtPoint));
     assert (h->end >= 0);
@@ -114,11 +143,16 @@ static int fdtemp (void)
 
 void kdt_heap_split (KdtHeap * h1, long len1, KdtHeap * h2)
 {
+  assert (len1 < h1->len);
   if (h1->len == h1->buflen) {
-    kdt_heap_create (h2, -1, 0, h1->len - len1, h1->buflen);
-    memcpy (h2->p, &h1->p[len1], h2->len*sizeof (KdtPoint));
+    h2->fd = -1;
+    h2->start = 0;
+    h2->len = h1->len - len1;
+    h2->buflen = h2->len;
+    h2->i = 0;
+    h2->p = &h1->p[len1];
+    h2->buf = buffer_ref (h1->buf);
     h2->end = h2->len;
-    h2->fd = fdtemp ();
   }
   else {
     assert (lseek (h1->fd, len1*sizeof (KdtPoint), SEEK_SET) == len1*sizeof (KdtPoint));
@@ -144,14 +178,15 @@ void kdt_heap_put (KdtHeap * h, KdtPoint * p)
 
 void kdt_heap_flush (KdtHeap * h)
 {
-  if (h->i > 0)
+  if (h->i > 0 && h->fd >= 0)
     assert (write (h->fd, h->p, h->i*sizeof (KdtPoint)) == h->i*sizeof (KdtPoint));
 }
 
 void kdt_heap_free (KdtHeap * h)
 {
-  free (h->p);
-  assert (close (h->fd) == 0);
+  buffer_unref (h->buf);
+  if (h->fd >= 0)
+    assert (close (h->fd) == 0);
 }
 
 /* sort */
@@ -195,18 +230,6 @@ static double elapsed (const struct timeval * start, const struct timeval * end)
   return (double) (end->tv_usec - start->tv_usec) + 1e6*(double) (end->tv_sec - start->tv_sec);
 }
 #endif
-
-static int half (int fd, long len1)
-{
-  assert (lseek (fd, len1*sizeof (KdtPoint), SEEK_SET) > 0);
-  int fd1 = fd, fd2 = fdtemp ();
-  char a[4096];
-  ssize_t size;
-  while ((size = read (fd1, a, 4096)) > 0)
-    assert (write (fd2, a, size) == size);
-  assert (ftruncate (fd1, len1*sizeof (KdtPoint)) == 0);
-  return fd2;
-}
 
 static void mergesort (KdtHeap * h,
 		       int  (*compar)   (const void *, const void *),
@@ -476,10 +499,10 @@ static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt)
   if (h1->len > kdt->h.np) {
     //    fprintf (stderr, " splitting: %ld      \r", len);
     int nindex = (bound[0].h - bound[0].l < bound[1].h - bound[1].l);
-    assert (lseek (h1->fd, SEEK_SET, 0) == 0);
-    if (index != nindex)
+    if (index != nindex) {
       mergesort (h1, nindex ? sort_y : sort_x, progress, kdt);
-    index = nindex;
+      index = nindex;
+    }
     KdtSumCore s;
     int imax = update_sum (bound, &s, h1, index);
     fwrite (&s, sizeof (KdtSumCore), 1, kdt->sums);

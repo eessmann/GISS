@@ -39,6 +39,7 @@ typedef struct {
   KdtPoint * p;
   long start, len, i, end, buflen;
   int fd;
+  void * buf;
 } KdtHeap;
 
 void kdt_heap_create (KdtHeap * h, int fd, long start, long len, long buflen);
