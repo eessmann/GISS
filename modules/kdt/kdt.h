@@ -25,6 +25,8 @@
   #define PADDING_32_BITS int padding
 #endif
 
+FILE * kdt_tmpfile (void);
+
 typedef struct {
   double x, y, z;
 } KdtPoint;
@@ -37,12 +39,12 @@ typedef KdtInterval KdtRect[2];
 
 typedef struct {
   KdtPoint * p;
-  long start, len, i, end, buflen;
-  int fd;
+  long start, len, i, end, buflen, current;
+  FILE * fp;
   void * buf;
 } KdtHeap;
 
-void kdt_heap_create (KdtHeap * h, int fd, long start, long len, long buflen);
+void kdt_heap_create (KdtHeap * h, FILE * fp, long start, long len, long buflen);
 void kdt_heap_resize (KdtHeap * h, long len);
 int  kdt_heap_get    (KdtHeap * h, KdtPoint * p);
 void kdt_heap_split  (KdtHeap * h1, long len1, KdtHeap * h2);
@@ -65,8 +67,8 @@ typedef struct { /* needs to be identical to RSurfaceSum in rsurface.h */
   double H0, H1, H2, H3, H4;
   double H5, H6;
   float Hmin, Hmax;
+  float coverage;
   int n;
-  PADDING_32_BITS;
 #endif
 } KdtSumCore;
 
@@ -84,6 +86,7 @@ typedef struct {
   double H0, H1, H2, H3, H4;
   double H5, H6;
   float Hmin, Hmax;
+  float coverage;
   int n;
 #endif
   double w;

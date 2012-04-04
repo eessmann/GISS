@@ -32,6 +32,24 @@
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
+/* same as the system tmpfile() but uses the working directory (rather than /tmp) */
+FILE * kdt_tmpfile (void)
+{
+  char name[] = "kdtXXXXXX";
+  int fd = mkstemp (name);
+  if (fd == -1) {
+    perror ("kdt_tmpfile");
+    exit (1);
+  }
+  FILE * fp = fdopen (fd, "r+w");
+  assert (unlink (name) == 0);
+  if (fp == NULL) {
+    perror ("kdt_tmpfile");
+    exit (1);
+  }
+  return fp;
+}
+
 /* refcounted buffer */
 
 typedef struct {
@@ -79,9 +97,37 @@ void kdt_heap_resize (KdtHeap * h, long len)
   h->len = len;
 }
 
-void kdt_heap_create (KdtHeap * h, int fd, long start, long len, long buflen)
+static long heap_read (KdtHeap * h, long len)
 {
-  h->fd = fd;
+  if (ftell (h->fp) != h->current)
+    assert (fseek (h->fp, h->current, SEEK_SET) == 0);
+  if (h->len > 0) {
+    long maxlen = h->start + h->len - h->current/sizeof (KdtPoint);
+    if (len > maxlen)
+      len = maxlen;
+  }
+  long n = 0;
+  if (len > 0) {
+    n = fread (h->p, sizeof (KdtPoint), len, h->fp);
+    h->current = ftell (h->fp);
+  }
+  return n;
+}
+
+static void heap_write (KdtHeap * h, long len)
+{
+  if (ftell (h->fp) != h->current)
+    assert (fseek (h->fp, h->current, SEEK_SET) == 0);
+  if (fwrite (h->p, sizeof (KdtPoint), len, h->fp) != len) {
+    perror ("heap_write");
+    exit (1);
+  }
+  h->current = ftell (h->fp);
+}
+
+void kdt_heap_create (KdtHeap * h, FILE * fp, long start, long len, long buflen)
+{
+  h->fp = fp;
   h->start = start;
   if (len > 0 && len < buflen)
     buflen = len;
@@ -90,14 +136,16 @@ void kdt_heap_create (KdtHeap * h, int fd, long start, long len, long buflen)
   h->i = 0;
   h->buf = buffer_new (buflen);
   h->p = ((Buffer *) h->buf)->p;
-  if (fd >= 0) {
-    assert (lseek (fd, start*sizeof (KdtPoint), SEEK_SET) == start*sizeof (KdtPoint));
-    h->end = read (fd, h->p, buflen*sizeof (KdtPoint));
-    assert (h->end >= 0);
-    h->end /= sizeof (KdtPoint);
+  h->current = start*sizeof (KdtPoint);
+  if (fp != NULL) {
+    assert (fseek (fp, start*sizeof (KdtPoint), SEEK_SET) == 0);
+    assert (ftell (fp) == h->current);
+    h->end = heap_read (h, buflen);
     if (buflen == len)
       assert (h->end == len);
   }
+  else
+    h->end = 0;
 }
 
 void kdt_heap_rewind (KdtHeap * h)
@@ -107,11 +155,10 @@ void kdt_heap_rewind (KdtHeap * h)
     assert (h->end == h->buflen);
   }
   else {
-    assert (lseek (h->fd, h->start*sizeof (KdtPoint), SEEK_SET) == h->start*sizeof (KdtPoint));
+    assert (fseek (h->fp, h->start*sizeof (KdtPoint), SEEK_SET) == 0);
+    h->current = ftell (h->fp);
+    h->end = heap_read (h, h->buflen);
     h->i = 0;
-    h->end = read (h->fd, h->p, h->buflen*sizeof (KdtPoint));
-    assert (h->end >= 0);
-    h->end /= sizeof (KdtPoint);
   }
 }
 
@@ -125,27 +172,16 @@ int kdt_heap_get (KdtHeap * h, KdtPoint * p)
   }
   if (h->end < h->buflen)
     return 0;
-  h->end = read (h->fd, h->p, h->buflen*sizeof (KdtPoint));
-  assert (h->end >= 0);
-  h->end /= sizeof (KdtPoint);
+  h->end = heap_read (h, h->buflen);
   h->i = 0;
   return kdt_heap_get (h, p);
-}
-
-static int fdtemp (void)
-{
-  char name[] = "XXXXXX";
-  int fd = mkstemp (name);
-  assert (fd >= 0);
-  assert (unlink (name) == 0);
-  return fd;
 }
 
 void kdt_heap_split (KdtHeap * h1, long len1, KdtHeap * h2)
 {
   assert (len1 < h1->len);
   if (h1->len == h1->buflen) {
-    h2->fd = -1;
+    h2->fp = NULL;
     h2->start = 0;
     h2->len = h1->len - len1;
     h2->buflen = h2->len;
@@ -153,24 +189,36 @@ void kdt_heap_split (KdtHeap * h1, long len1, KdtHeap * h2)
     h2->p = &h1->p[len1];
     h2->buf = buffer_ref (h1->buf);
     h2->end = h2->len;
+    kdt_heap_resize (h1, len1);
   }
   else {
-    assert (lseek (h1->fd, len1*sizeof (KdtPoint), SEEK_SET) == len1*sizeof (KdtPoint));
-    char a[4096];
-    ssize_t size;
-    int fd2 = fdtemp ();
-    while ((size = read (h1->fd, a, 4096)) > 0)
-      assert (write (fd2, a, size) == size);
-    assert (ftruncate (h1->fd, len1*sizeof (KdtPoint)) == 0);
-    kdt_heap_create (h2, fd2, 0, h1->len - len1, h1->buflen);
+    kdt_heap_create (h2, h1->fp, h1->start + len1, h1->len - len1, h1->buflen);
+
+    KdtHeap h;
+    kdt_heap_create (&h, NULL, 0, len1, h1->buflen);
+    if (len1 > h1->buflen)
+      h.fp = kdt_tmpfile ();
+    else
+      h.end = h.len;
+
+    kdt_heap_rewind (h1);
+    long i;
+    for (i = 0; i < len1; i++) {
+      KdtPoint p;
+      assert (kdt_heap_get (h1, &p));
+      kdt_heap_put (&h, &p);
+    }
+    kdt_heap_flush (&h);
+    h1->fp = NULL;
+    kdt_heap_free (h1);
+    *h1 = h;
   }
-  kdt_heap_resize (h1, len1);
 }
 
 void kdt_heap_put (KdtHeap * h, KdtPoint * p)
 {
   if (h->i == h->buflen) {
-    assert (write (h->fd, h->p, h->buflen*sizeof (KdtPoint)) == h->buflen*sizeof (KdtPoint));
+    heap_write (h, h->buflen);
     h->i = 0;
   }
   h->p[h->i++] = *p;
@@ -178,15 +226,15 @@ void kdt_heap_put (KdtHeap * h, KdtPoint * p)
 
 void kdt_heap_flush (KdtHeap * h)
 {
-  if (h->i > 0 && h->fd >= 0)
-    assert (write (h->fd, h->p, h->i*sizeof (KdtPoint)) == h->i*sizeof (KdtPoint));
+  if (h->i > 0 && h->fp != NULL)
+    heap_write (h, h->i);
 }
 
 void kdt_heap_free (KdtHeap * h)
 {
   buffer_unref (h->buf);
-  if (h->fd >= 0)
-    assert (close (h->fd) == 0);
+  if (h->fp != NULL)
+    assert (fclose (h->fp) == 0);
 }
 
 /* sort */
@@ -197,13 +245,25 @@ static int put (KdtHeap * h, KdtPoint * p, KdtHeap * merged)
   return kdt_heap_get (h, p);
 }
 
+static void kdt_write (KdtHeap * h, FILE * fp)
+{
+  kdt_heap_rewind (h);
+  long i = 0;
+  KdtPoint p;
+  while (kdt_heap_get (h, &p)) {
+    fprintf (fp, "%ld %g %g\n", i, p.x, p.y);
+    i++;
+  }
+}
+
 static void merge (KdtHeap * h1, KdtHeap * h2, 
 		   int (*compar) (const void *, const void *),
 		   long buflen)
 {
   KdtHeap hm;
-  int merged = fdtemp ();
-  kdt_heap_create (&hm, merged, 0, h1->len + h2->len, buflen);
+  assert (h1->len + h2->len > buflen);
+  kdt_heap_create (&hm, NULL, h2->start - h1->len, h1->len + h2->len, buflen);
+  hm.fp = h2->fp;
   KdtPoint p1, p2;
   kdt_heap_rewind (h1);
   int r1 = kdt_heap_get (h1, &p1);
@@ -220,6 +280,8 @@ static void merge (KdtHeap * h1, KdtHeap * h2,
   while (r2)
     r2 = put (h2, &p2, &hm);
   kdt_heap_free (h1);
+  h2->fp = NULL;
+  kdt_heap_free (h2);
   kdt_heap_flush (&hm);
   *h1 = hm;
 }
@@ -251,13 +313,23 @@ static void mergesort (KdtHeap * h,
     mergesort (h, compar, progress, data);
     mergesort (&h2, compar, progress, data);
     merge (h, &h2, compar, buflen);
-    kdt_heap_free (&h2);
   }
 #if TIMING
   struct timeval end;
   gettimeofday (&end, NULL);
   fprintf (stderr, "mergesort %ld %g\n", len, elapsed (&start, &end));
 #endif
+}
+
+/* number of qsort() calls for a given mergesort() */
+static int mergesort_cost (long len, long buflen)
+{
+  int m = 1;
+  while (len > buflen) {
+    m *= 2;
+    len /= 2;
+  }
+  return m;
 }
 
 /* Kdt */
@@ -410,6 +482,11 @@ static void sum_add_sum (const KdtRect parent, KdtSum * sum,
   sum->H5 += w*(oap0*(2.*ha*a->H1 + oap0*a->H0) + ha2*a->H5)/hp2;
   sum->H6 += w*(oap1*(2.*ha*a->H2 + oap1*a->H0) + ha2*a->H6)/hp2;
   sum->n += a->n;
+  float aparent = area (parent);
+  if (aparent > 0.)
+    sum->coverage += a->coverage*area (rect)/aparent;
+  else
+    sum->coverage = 1.;
   sum->w += w*a->n;
   if (a->Hmin < sum->Hmin) sum->Hmin = a->Hmin;
   if (a->Hmax > sum->Hmax) sum->Hmax = a->Hmax;
@@ -485,11 +562,19 @@ static void kdt_rect_write (KdtRect rect, FILE * fp)
 static void progress (void * data)
 {
   Kdt * kdt = data;
-  if (kdt->progress)
+  if (kdt->progress && kdt->m > 0)
     (* kdt->progress) (++kdt->i/(float) kdt->m, kdt->data);
 }
 
-static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt)
+static void fwrite_check (const void * ptr, size_t size, size_t nmemb, FILE * stream)
+{
+  if (fwrite (ptr, size, nmemb, stream) != nmemb) {
+    perror ("kdt_write");
+    exit (1);
+  }
+}
+
+static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt, float * coverage)
 {
 #if TIMING
   struct timeval start;
@@ -503,9 +588,13 @@ static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt)
       mergesort (h1, nindex ? sort_y : sort_x, progress, kdt);
       index = nindex;
     }
+    else
+      /* update cost estimate */
+      kdt->m -= mergesort_cost (h1->len, h1->buflen);
     KdtSumCore s;
     int imax = update_sum (bound, &s, h1, index);
-    fwrite (&s, sizeof (KdtSumCore), 1, kdt->sums);
+    long spos = ftell (kdt->sums);
+    fwrite_check (&s, sizeof (KdtSumCore), 1, kdt->sums);
     Node n;
     n.len1 = imax > 0 ? imax : h1->len/2;
 #if TIMING
@@ -522,13 +611,24 @@ static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt)
     update_bounds (n.bound1, h1);
     update_bounds (n.bound2, &h2);
     long pos = ftell (kdt->nodes);
-    fwrite (&n, sizeof (Node), 1, kdt->nodes);
-    n.n1 = split (h1, n.bound1, index, kdt);
-    fseek (kdt->nodes, pos, SEEK_SET);
-    fwrite (&n, sizeof (Node), 1, kdt->nodes);
+    fwrite_check (&n, sizeof (Node), 1, kdt->nodes);
+    float coverage1;
+    n.n1 = split (h1, n.bound1, index, kdt, &coverage1);
+    fseek (kdt->nodes, pos + ((long) &n.n1 - (long) &n), SEEK_SET);
+    fwrite_check (&n.n1, sizeof (int), 1, kdt->nodes);
     fseek (kdt->nodes, 0, SEEK_END);
-    int n2 = split (&h2, n.bound2, index, kdt);
+    float coverage2;
+    int n2 = split (&h2, n.bound2, index, kdt, &coverage2);
     ns = n.n1 + n2 + 1;
+    double a = area (bound);
+    if (a > 0.)
+      s.coverage = (coverage1*area (n.bound1) + coverage2*area (n.bound2))/a;
+    else
+      s.coverage = 1.;
+    fseek (kdt->sums, spos + ((long) &s.coverage - (long) &s), SEEK_SET);
+    fwrite_check (&s.coverage, sizeof (float), 1, kdt->sums);
+    fseek (kdt->sums, 0, SEEK_END);
+    *coverage = s.coverage;
   }
   else {
 #if DEBUG
@@ -536,8 +636,9 @@ static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt)
 #endif
     assert (h1->len <= h1->buflen);
     if (h1->len > 0)
-      fwrite (h1->p, sizeof (KdtPoint), h1->len, kdt->leaves);
+      fwrite_check (h1->p, sizeof (KdtPoint), h1->len, kdt->leaves);
     kdt_heap_free (h1);
+    *coverage = 1.;
   }
 #if TIMING
   struct timeval end;
@@ -605,11 +706,21 @@ int kdt_create (Kdt * kdt, const char * name, int blksize,
   kdt->h.bound[0] = bound[0];
   kdt->h.bound[1] = bound[1];
   
-  fwrite (&kdt->h, sizeof (Header), 1, kdt->nodes);
+  fwrite_check (&kdt->h, sizeof (Header), 1, kdt->nodes);
+
+  /* cost estimate kdt->m (number of qsort() calls) based on balanced
+     binary tree */
   kdt->m = kdt->i = 0;
+  int m2 = 1;
+  while (len > kdt->h.np) {
+    kdt->m += mergesort_cost (len, h->buflen)*m2;
+    len /= 2;
+    m2 *= 2;
+  }
   kdt->progress = progress;
   kdt->data = data;
-  split (h, kdt->h.bound, -1, kdt);
+  float coverage;
+  split (h, kdt->h.bound, -1, kdt, &coverage);
 
   return 0;
 }

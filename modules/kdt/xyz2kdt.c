@@ -49,11 +49,11 @@ static void progress (float complete, void * data)
   int mins = remaining/1e6/60. - 60.*hours;
   int secs = remaining/1e6 - 3600.*hours - 60.*mins;
   fprintf (stderr, "\rxyz2kdt: %3.0f%% complete %02d:%02d:%02d remaining", 
-	   complete*100.,
+	   (complete > 1. ? 1. : complete)*100.,
 	   hours, mins, secs);
 #else
   fprintf (stderr, "\rxyz2kdt: %3.0f%% complete    ", 
-	   complete*100.);
+	   (complete > 1. ? 1. : complete)*100.);
 #endif
 }
 
@@ -112,19 +112,21 @@ int main (int argc, char * argv[])
     return 1; /* failure */
   }
 
-  char name[] = "XXXXXX";
-  int fd = mkstemp (name);
-  assert (fd >= 0);
-  assert (unlink (name) == 0);
-
   if (verbose)
-    fprintf (stderr, "xyz2kdt: reading points...");
+    fprintf (stderr, "xyz2kdt: reading points...\r");
   KdtHeap h;
-  kdt_heap_create (&h, fd, 0, -1, 1000000);
+  kdt_heap_create (&h, kdt_tmpfile (), 0, -1, 1000000);
+  long n = 0;
   KdtPoint p;
-  while (scanf ("%lf %lf %lf", &p.x, &p.y, &p.z) == 3)
+  while (scanf ("%lf %lf %lf", &p.x, &p.y, &p.z) == 3) {
     kdt_heap_put (&h, &p);
+    if (verbose && n % 3571 == 0)
+      fprintf (stderr, "xyz2kdt: reading points... %ld\r", n);
+    n++;
+  }
   kdt_heap_flush (&h);
+  if (verbose)
+    fprintf (stderr, "xyz2kdt:   0%% complete              ");
 
   struct timeval start;
   gettimeofday (&start, NULL);
@@ -134,7 +136,7 @@ int main (int argc, char * argv[])
 
   if (verbose) {
     Kdt * kdt = kdt_new ();
-    KdtRect rect = {{-0.5,-0.5},{0.5,0.5}};
+    KdtRect rect = {{-0.5,0.5},{-0.5,0.5}};
     KdtSum sum;
 
     kdt_sum_init (&sum);
@@ -143,7 +145,7 @@ int main (int argc, char * argv[])
 			    (KdtCheck) includes_true, (KdtCheck) includes_true, NULL,
 			    rect, &sum);
     fprintf (stderr,
-	     "\n%ld points Height min: %g average: %g max: %g\n", 
+	     "\r%ld points Height min: %g average: %g max: %g\n",
 	     n, sum.Hmin, sum.H0/sum.n, sum.Hmax);
     kdt_destroy (kdt);
   }
