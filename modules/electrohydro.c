@@ -368,13 +368,13 @@ static void poisson_electric (GfsElectroHydro * elec, gdouble dt)
     gfs_domain_surface_bc (domain, phi);
     gfs_diffusion_coefficients (domain, d, dt, rhoc, NULL, NULL, d->D->par.beta);
     gfs_diffusion_rhs (domain, phi, dive, rhoc, NULL, d->D->par.beta);
-    gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered, FALSE);
+    gfs_poisson_coefficients (domain, elec->perm, FALSE, phi->centered, FALSE);
     gts_object_destroy (GTS_OBJECT (rhoc));
     par = &d->D->par;
   }
   else {
     gfs_domain_surface_bc (domain, phi);
-    gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered, TRUE);
+    gfs_poisson_coefficients (domain, elec->perm, FALSE, phi->centered, TRUE);
   }
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) rescale_div, dive);
 
@@ -399,7 +399,7 @@ static void poisson_electric (GfsElectroHydro * elec, gdouble dt)
 
   /* Compute the charge density from the electric potential */
   if (d) {
-    gfs_poisson_coefficients (domain, elec->perm, TRUE, phi->centered, TRUE);
+    gfs_poisson_coefficients (domain, elec->perm, FALSE, phi->centered, TRUE);
     charge_density_update (domain, phi, rhoe);
     /* fixme: update elec->rhoe bc ? */
   }

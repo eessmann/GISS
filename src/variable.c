@@ -589,7 +589,7 @@ static void variable_diagonal (FttCell * cell, gpointer * data)
       g.b += ng.b;
     }
   }
-  if (g.a > 0.)
+  if (g.a != 0.)
     GFS_VALUE (cell, v) = g.b/g.a;
   else
     GFS_VALUE (cell, v) = G_MAXDOUBLE;

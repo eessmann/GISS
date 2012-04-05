@@ -264,7 +264,7 @@ static void relax_stencil (FttCell * cell, RelaxStencilParams * p)
     }
   }
 
-  if (g.a > 0.)
+  if (g.a != 0.)
     gfs_stencil_add_element (stencil, cell, p->lp, -g.a);
   else {
     gfs_stencil_destroy (stencil);
@@ -298,7 +298,7 @@ static void relax_dirichlet_stencil (FttCell * cell, RelaxStencilParams * p)
     gfs_face_cm_weighted_gradient_stencil (&f, &ng, p->maxlevel, p->lp, stencil);
     g.a += ng.a;
   }
-  if (g.a > 0.)
+  if (g.a != 0.)
     gfs_stencil_add_element (stencil, cell, p->lp, -g.a);
   else {
     gfs_stencil_destroy (stencil);
@@ -523,7 +523,7 @@ static void relax (FttCell * cell, RelaxParams * p)
       g.b += ng.b;
     }
   }
-  if (g.a > 0.)
+  if (g.a != 0.)
     GFS_VALUEI (cell, p->u) = (g.b - GFS_VALUEI (cell, p->rhs))/g.a;
   else
     GFS_VALUEI (cell, p->u) = 0.;
@@ -548,7 +548,7 @@ static void relax2D (FttCell * cell, RelaxParams * p)
       g.b += ng.b;
     }
   }
-  if (g.a > 0.)
+  if (g.a != 0.)
     GFS_VALUEI (cell, p->u) = 
       (1. - p->omega)*GFS_VALUEI (cell, p->u) 
       + p->omega*(g.b - GFS_VALUEI (cell, p->rhs))/g.a;
@@ -579,7 +579,7 @@ static void relax_dirichlet (FttCell * cell, RelaxParams * p)
     g.a += ng.a;
     g.b += ng.b;
   }
-  if (g.a > 0.)
+  if (g.a != 0.)
     GFS_VALUEI (cell, p->u) = (g.b - GFS_VALUEI (cell, p->rhs))/g.a;
   else
     GFS_VALUEI (cell, p->u) = 0.;
@@ -839,9 +839,11 @@ static void face_coeff_from_below (FttCell * cell)
       if (child.c[i])
 	f[d].v += GFS_STATE (child.c[i])->f[d].v;
     f[d].v /= n;
-
+    /* fixme: this stuff may not be necessary anymore? The 'dumbell'
+       test case seems to work fine without this */
     FttCell * neighbor;
-    if (f[d].v > 0. && (neighbor = ftt_cell_neighbor (cell, d)) && !GFS_CELL_IS_BOUNDARY (neighbor))
+    if (f[d].v != 0. && 
+	(neighbor = ftt_cell_neighbor (cell, d)) && !GFS_CELL_IS_BOUNDARY (neighbor))
       neighbors++;
   }
 
@@ -1487,11 +1489,11 @@ static void diffusion_relax (FttCell * cell, RelaxParams * p)
     g.b += ng.b;
   }
   gdouble a = GFS_VALUEI (cell, p->dia)*h*h;
-  g_assert (a > 0.);
+  g_assert (a != 0.);
   g.a = 1. + g.a/a;
   if (p->metric)
     g.a += GFS_VALUEI (cell, p->metric);
-  g_assert (g.a > 0.);
+  g_assert (g.a != 0.);
   GFS_VALUEI (cell, p->u) = (g.b/a + GFS_VALUEI (cell, p->res))/g.a;
 }
 
@@ -1519,11 +1521,11 @@ static void diffusion_relax_stencil (FttCell * cell, RelaxStencilParams * p)
     g.a += ng.a;
   }
   gdouble a = GFS_VALUE (cell, p->dia)*h*h;
-  g_assert (a > 0.);
+  g_assert (a != 0.);
   g.a = 1. + g.a/a;
   if (p->metric)
     g.a += GFS_VALUE (cell, p->metric);
-  g_assert (g.a > 0.);
+  g_assert (g.a != 0.);
   gfs_stencil_add_element (stencil, cell, p->lp, - a*g.a);
 
   gfs_linear_problem_add_stencil (p->lp, stencil);
@@ -1558,7 +1560,7 @@ static void diffusion_residual (FttCell * cell, RelaxParams * p)
     g.b += ng.b;
   }
   a *= h*h;
-  g_assert (a > 0.);
+  g_assert (a != 0.);
   g.a = 1. + g.a/a;
   if (p->metric)
     g.a += GFS_VALUEI (cell, p->metric);
