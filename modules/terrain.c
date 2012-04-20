@@ -24,34 +24,44 @@
 #endif
 #include "refine.h"
 #include "solid.h"
-#include "rsurface.h"
+#include "kdt/kdt.h"
 #include "river.h"
 
 static gchar * default_path = ".";
 
-/* RSurfaces */
+/* Kdtrees */
 
 typedef struct {
-  RSurface ** rs;
+  Kdt ** rs;
   gdouble * weight;
   guint nrs;
   gchar * path, * basename;
-} RSurfaces;
+} Kdtrees;
 
-static void rsurfaces_destroy (RSurfaces * rs)
+static void kdtrees_destroy (Kdtrees * rs)
 {
   g_free (rs->path);
   g_free (rs->basename);
   if (rs->rs) {
     guint i;
     for (i = 0; i < rs->nrs; i++)
-      g_assert (r_surface_close (rs->rs[i]));
+      kdt_destroy (rs->rs[i]);
     g_free (rs->rs);
   }
   g_free (rs->weight);
 }
 
-static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
+static Kdt * open_kdt (const gchar * fname)
+{
+  Kdt * kdt = kdt_new ();
+  if (kdt_open (kdt, fname)) {
+    kdt_destroy (kdt);
+    return NULL;
+  }
+  return kdt;
+}
+
+static void kdtrees_read (Kdtrees * rs, GtsFile * fp)
 {
   gchar * path = NULL;
   if (fp->type == '{') {
@@ -81,9 +91,9 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
     guint i;
     for (i = 0; i < pglob.gl_pathc; i++) {
       pglob.gl_pathv[i][strlen (pglob.gl_pathv[i]) - 5] = '\0';
-      rs->rs = g_realloc (rs->rs, (rs->nrs + 1)*sizeof (RSurface *));
+      rs->rs = g_realloc (rs->rs, (rs->nrs + 1)*sizeof (Kdt *));
       rs->weight = g_realloc (rs->weight, (rs->nrs + 1)*sizeof (double));
-      rs->rs[rs->nrs] = r_surface_open (pglob.gl_pathv[i], "r", -1);
+      rs->rs[rs->nrs] = open_kdt (pglob.gl_pathv[i]);
       if (!rs->rs[rs->nrs]) {
 	gts_file_error (fp, "cannot open terrain database `%s'", pglob.gl_pathv[i]);
 	globfree (&pglob);
@@ -101,7 +111,7 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
     while (*s) {
       /* look for weight */
       gchar ** wname = g_strsplit (*s, ":", 2);
-      rs->rs = g_realloc (rs->rs, (rs->nrs + 1)*sizeof (RSurface *));
+      rs->rs = g_realloc (rs->rs, (rs->nrs + 1)*sizeof (Kdt *));
       rs->weight = g_realloc (rs->weight, (rs->nrs + 1)*sizeof (double));
       if (path) {
 	/* search path */
@@ -110,12 +120,12 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
 	g_assert (*spath);
 	do {
 	  fname = (*wname)[0] == '/' ? g_strdup (*wname) : g_strconcat (*spath, "/", *wname, NULL);
-	  rs->rs[rs->nrs] = r_surface_open (fname, "r", -1);
+	  rs->rs[rs->nrs] = open_kdt (fname);
 	} while (rs->rs[rs->nrs] == NULL && *(++spath));
 	g_strfreev (pathes);
       }
       else
-	rs->rs[rs->nrs] = r_surface_open (*wname, "r", -1);
+	rs->rs[rs->nrs] = open_kdt (*wname);
       if (!rs->rs[rs->nrs]) {
 	if (path)
 	  gts_file_error (fp, "cannot find/open terrain database `%s' in path:\n%s", *wname, path);
@@ -139,7 +149,7 @@ static void rsurfaces_read (RSurfaces * rs, GtsFile * fp)
   g_free (path);
 }
 
-static void rsurfaces_write (RSurfaces * rs, FILE * fp)
+static void kdtrees_write (Kdtrees * rs, FILE * fp)
 {
   if (rs->path || rs->basename) {
     fputs (" {\n", fp);
@@ -169,7 +179,7 @@ struct _GfsRefineTerrain {
   gdouble front, scale;
 #endif
 
-  RSurfaces rs;
+  Kdtrees rs;
 
   /*< public >*/
   gchar * name;
@@ -191,11 +201,11 @@ typedef struct {
   FttVector c;
   FttVector p[4];
   gdouble min[2], max[2], h;
-  RSurfaces * rs;
+  Kdtrees * rs;
   FttCell * cell;
 } Polygon;
 
-static void polygon_init (GfsSimulation * sim, Polygon * poly, FttCell * cell, RSurfaces * rs)
+static void polygon_init (GfsSimulation * sim, Polygon * poly, FttCell * cell, Kdtrees * rs)
 {
   FttVector q;
   ftt_cell_pos (cell, &q);
@@ -242,7 +252,7 @@ static gboolean polygon_contains (Polygon * p, gdouble q[2])
   return TRUE;
 }
 
-static gboolean polygon_includes (RSurfaceRect rect, Polygon * p)
+static gboolean polygon_includes (KdtRect rect, Polygon * p)
 {
   gdouble q[2];
   q[0] = rect[0].l; q[1] = rect[1].l;
@@ -260,7 +270,7 @@ static gboolean polygon_includes (RSurfaceRect rect, Polygon * p)
   return TRUE;
 }
 
-static gboolean polygon_intersects (RSurfaceRect rect, Polygon * p)
+static gboolean polygon_intersects (KdtRect rect, Polygon * p)
 {
   /* fixme: this could be improved? */
   return (rect[0].l <= p->max[0] && rect[0].h >= p->min[0] &&
@@ -368,7 +378,7 @@ static void variance_check (RMS * rms)
   function_from_corners (rms->h, H);
 }
 
-static void rms_update (RMS * rms)
+static int rms_update (RMS * rms)
 {
   guint i;
   if (rms->m[0][0] == 0.) {
@@ -416,7 +426,7 @@ static void rms_update (RMS * rms)
       gfs_matrix_free (m);
       variance_check (rms);
       rms->he = rms_minimum (rms);
-      return;
+      return 1;
     }
     gfs_matrix_free (m);
 #endif
@@ -425,6 +435,7 @@ static void rms_update (RMS * rms)
   for (i = 1; i < NM; i++)
     rms->h[i] = 0.;
   rms->he = rms_minimum (rms);
+  return 0;
 }
 
 #if DEBUG
@@ -496,8 +507,7 @@ static void projection_matrix (Polygon * poly, double m[2][2])
   m[1][1] = (y[0] + y[1] - y[3] - y[2])/4.;
 }
 
-static void add_weighted_rsurface_sum  (RSurfaceSum * s, double * tw,
-					const RSurfaceSum * stmp, double w)
+static void add_weighted_kdt_sum  (KdtSum * s, const KdtSum * stmp, double w)
 {
   s->m01 += w*stmp->m01;
   s->m02 += w*stmp->m02;
@@ -532,40 +542,40 @@ static void add_weighted_rsurface_sum  (RSurfaceSum * s, double * tw,
   if (stmp->Hmin < s->Hmin)
     s->Hmin = stmp->Hmin;
   s->n += stmp->n;
-  *tw += w*stmp->n;
+  s->w += w*stmp->w;
+  s->coverage += stmp->coverage;
 }
 
 static void update_terrain_rms (GfsRefineTerrain * t, Polygon * poly, gboolean relative, RMS * rms)
 {
   rms_init (t, rms, poly, relative);
-  RSurfaceSum s;
-  r_surface_sum_init (&s);
-  double tn = 0.;
+  KdtSum s;
+  kdt_sum_init (&s);
   guint i;
-  RSurfaceRect rect;
-  rect[0].l = poly->c.x - poly->h/2.; rect[0].h = poly->c.x + poly->h/2.; 
-  rect[1].l = poly->c.y - poly->h/2.; rect[1].h = poly->c.y + poly->h/2.; 
+  KdtRect rect;
+  rect[0].l = poly->c.x - poly->h; rect[0].h = poly->c.x + poly->h; 
+  rect[1].l = poly->c.y - poly->h; rect[1].h = poly->c.y + poly->h; 
   for (i = 0; i < poly->rs->nrs; i++) {
-    RSurfaceSum stmp;
-    r_surface_sum_init (&stmp);
-    r_surface_query_region_sum (poly->rs->rs[i],
-				(RSurfaceCheck) polygon_includes,
-				(RSurfaceCheck) polygon_intersects, poly, 
-				rect, &stmp);
-    add_weighted_rsurface_sum (&s, &tn, &stmp, poly->rs->weight[i]);
+    KdtSum stmp;
+    kdt_sum_init (&stmp);
+    kdt_query_sum (poly->rs->rs[i],
+		   (KdtCheck) polygon_includes,
+		   (KdtCheck) polygon_intersects, poly, 
+		   rect, &stmp);
+    add_weighted_kdt_sum (&s, &stmp, poly->rs->weight[i]);
   }
   
-  rms->m[0][0] = tn;
+  rms->m[0][0] = s.w;
   rms->n = s.n;
-  if (tn > 0.) {
-    RSurfaceSum sp;
+  if (s.w > 0.) {
+    KdtSum sp;
 
     sp.H0 = s.H0;
     sp.H4 = s.H4;
     sp.Hmin = s.Hmin;
     sp.Hmax = s.Hmax;
 
-    /* The sums returned by r_surface_query_region_sum are defined in
+    /* The sums returned by kdt_query_region_sum are defined in
        a (lon,lat) coordinate system, we need to project these into
        the local Cartesian coordinate system. The corresponding
        transform is given by matrix p below. */
@@ -622,7 +632,7 @@ static void update_terrain_rms (GfsRefineTerrain * t, Polygon * poly, gboolean r
       double hp[NM];
 
       parent_cell_coefficients (rms->cell, rms->t->h, hp);
-      rms->H[0] = sp.H0 - tn*hp[0] - sp.m01*hp[1] - sp.m02*hp[2] - sp.m03*hp[3];
+      rms->H[0] = sp.H0 - s.w*hp[0] - sp.m01*hp[1] - sp.m02*hp[2] - sp.m03*hp[3];
 
       /* See terrain.mac for a "maxima" derivation of the terms below */
       rms->H[1] = sp.H1 - hp[0]*sp.m01 - hp[1]*sp.m11 - hp[2]*sp.m03 - hp[3]*sp.m13;
@@ -637,7 +647,7 @@ static void update_terrain_rms (GfsRefineTerrain * t, Polygon * poly, gboolean r
 		   + 2.*(hp[0]*hp[3] + hp[1]*hp[2])*sp.m03
 		   + 2.*hp[0]*hp[2]*sp.m02
 		   + 2.*hp[0]*hp[1]*sp.m01
-		   + hp[0]*hp[0]*tn);
+		   + hp[0]*hp[0]*s.w);
     }
     else {
       rms->H[0] = sp.H0;
@@ -1106,7 +1116,7 @@ static void refine_terrain_destroy (GtsObject * object)
   }
   g_free (t->name);
 
-  rsurfaces_destroy (&t->rs);
+  kdtrees_destroy (&t->rs);
   
   gts_object_destroy (GTS_OBJECT (t->criterion));  
   (* GTS_OBJECT_CLASS (gfs_refine_terrain_class ())->parent_class->destroy) (object);
@@ -1164,7 +1174,7 @@ static void refine_terrain_read (GtsObject ** o, GtsFile * fp)
   t->name = g_strdup (fp->token->str);
   gts_file_next_token (fp);
 
-  rsurfaces_read (&t->rs, fp);
+  kdtrees_read (&t->rs, fp);
   if (fp->type == GTS_ERROR)
     return;
 
@@ -1225,7 +1235,7 @@ static void refine_terrain_write (GtsObject * o, FILE * fp)
   GfsRefineTerrain * t = GFS_REFINE_TERRAIN (o);
   (* GTS_OBJECT_CLASS (gfs_refine_terrain_class ())->parent_class->write) (o, fp);
   fprintf (fp, " %s", t->name);
-  rsurfaces_write (&t->rs, fp);
+  kdtrees_write (&t->rs, fp);
   gfs_function_write (t->criterion, fp);
 }
 
@@ -1485,7 +1495,7 @@ struct _GfsVariableTerrain {
 
   /*< public >*/
   GfsVariable * p, * H, * n, * dmin, * dmax;
-  RSurfaces rs;
+  Kdtrees rs;
 };
 
 #define GFS_VARIABLE_TERRAIN(obj)            GTS_OBJECT_CAST (obj,\
@@ -1500,7 +1510,7 @@ GfsVariableClass * gfs_variable_terrain_class  (void);
 
 static void variable_terrain_destroy (GtsObject * o)
 {
-  rsurfaces_destroy (&GFS_VARIABLE_TERRAIN (o)->rs);
+  kdtrees_destroy (&GFS_VARIABLE_TERRAIN (o)->rs);
 
   (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->destroy) (o);
 }
@@ -1693,7 +1703,7 @@ static void variable_terrain_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GfsVariableTerrain * v = GFS_VARIABLE_TERRAIN (*o);
-  rsurfaces_read (&v->rs, fp);
+  kdtrees_read (&v->rs, fp);
   if (fp->type == GTS_ERROR)
     return;
 
@@ -1706,7 +1716,7 @@ static void variable_terrain_read (GtsObject ** o, GtsFile * fp)
 
   GfsSimulation * sim = gfs_object_simulation (*o);
   gchar * name = g_strjoin (NULL, v1->name, "n", NULL);
-  v->n = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), name, "Terrain samples #");
+  v->n = gfs_domain_get_or_add_variable (GFS_DOMAIN (sim), name, "Terrain samples # (weighted)");
   v->n->coarse_fine = none;
   v->n->fine_coarse = none;
   g_free (name);
@@ -1747,7 +1757,7 @@ static void variable_terrain_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->write) (o, fp);
 
-  rsurfaces_write (&GFS_VARIABLE_TERRAIN (o)->rs, fp);
+  kdtrees_write (&GFS_VARIABLE_TERRAIN (o)->rs, fp);
   if (GFS_VARIABLE_TERRAIN (o)->H)
     fputs (" { reconstruct = 1 }", fp);
 }
