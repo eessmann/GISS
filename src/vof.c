@@ -3262,6 +3262,8 @@ static void contact_angle_height (FttCell * cell, GfsVariable * h, HFState * hf)
 {
   if (GFS_HAS_DATA (cell, h)) {
     FttCell * neighbor = ftt_cell_neighbor (cell, hf->d);
+    if (!neighbor) /* boundary cell is a one-sided solid boundary: give up */
+      return;
     g_assert (GFS_CELL_IS_BOUNDARY (neighbor));
     /* fixme: 
      * The boundary condition is not evaluated in the cell
