@@ -296,9 +296,9 @@ static double elapsed (const struct timeval * start, const struct timeval * end)
 }
 #endif
 
-static void mergesort (KdtHeap * h,
-		       int  (*compar)   (const void *, const void *),
-		       void (*progress) (void *), void * data)
+static void kdt_heap_sort (KdtHeap * h,
+			   int  (*compar)   (const void *, const void *),
+			   void (*progress) (void *), void * data)
 {
 #if TIMING
   struct timeval start;
@@ -313,19 +313,19 @@ static void mergesort (KdtHeap * h,
     KdtHeap h2;
     long buflen = h->buflen;
     kdt_heap_split (h, h->len/2, &h2);
-    mergesort (h, compar, progress, data);
-    mergesort (&h2, compar, progress, data);
+    kdt_heap_sort (h, compar, progress, data);
+    kdt_heap_sort (&h2, compar, progress, data);
     merge (h, &h2, compar, buflen);
   }
 #if TIMING
   struct timeval end;
   gettimeofday (&end, NULL);
-  fprintf (stderr, "mergesort %ld %g\n", len, elapsed (&start, &end));
+  fprintf (stderr, "kdt_heap_sort %ld %g\n", len, elapsed (&start, &end));
 #endif
 }
 
-/* number of qsort() calls for a given mergesort() */
-static int mergesort_cost (long len, long buflen)
+/* number of qsort() calls for a given kdt_heap_sort() */
+static int kdt_heap_sort_cost (long len, long buflen)
 {
   int m = 1;
   while (len > buflen) {
@@ -545,12 +545,12 @@ static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt, float * cov
     //    fprintf (stderr, " splitting: %ld      \r", len);
     int nindex = (bound[0].h - bound[0].l < bound[1].h - bound[1].l);
     if (index != nindex) {
-      mergesort (h1, nindex ? sort_y : sort_x, progress, kdt);
+      kdt_heap_sort (h1, nindex ? sort_y : sort_x, progress, kdt);
       index = nindex;
     }
     else
       /* update cost estimate */
-      kdt->m -= mergesort_cost (h1->len, h1->buflen);
+      kdt->m -= kdt_heap_sort_cost (h1->len, h1->buflen);
     KdtSumCore s;
     int imax = update_sum (bound, &s, h1, index);
     long spos = ftell (kdt->sums);
@@ -686,7 +686,7 @@ int kdt_create (Kdt * kdt, const char * name, int blksize,
   kdt->m = kdt->i = 0;
   int m2 = 1;
   while (len > kdt->h.np) {
-    kdt->m += mergesort_cost (len, h->buflen)*m2;
+    kdt->m += kdt_heap_sort_cost (len, h->buflen)*m2;
     len /= 2;
     m2 *= 2;
   }

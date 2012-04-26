@@ -76,7 +76,7 @@ libmap2D_la_SOURCES = map.c
 libmap2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 libmap2D_la_LIBADD = $(GFS2D_LIBS) -lproj
 
-KDTLIBS = -Lkdt -lkdt
+KDTLIBS = -Lkdt -lkdt -lm
 KDTDEPS = kdt/libkdt.la
 
 libterrain3D_la_SOURCES = terrain.c
