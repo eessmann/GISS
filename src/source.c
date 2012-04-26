@@ -691,7 +691,7 @@ static void extrapolate (FttCell * cell, ExtraData * p)
 
 static void extrapolate_field (FttCell * root, GfsSourceControlField * f)
 {
-  gdouble corners[4*(FTT_DIMENSION - 1)];
+  gdouble corners[4*(FTT_DIMENSION - 1) + 1];
   ExtraData p = { root, corners, f->s };
   gfs_cell_corner_values (root, f->s, f->level, corners);
   g_assert (!FTT_CELL_IS_LEAF (root));
