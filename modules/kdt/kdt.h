@@ -110,5 +110,5 @@ void kdt_destroy    (Kdt * kdt);
 long kdt_query      (const Kdt * kdt, const KdtRect rect);
 long kdt_query_sum  (const Kdt * kdt,
 		     KdtCheck includes, KdtCheck intersects, void * data,
-		     const KdtRect rect, KdtSum * sum);
+		     const KdtRect query, KdtSum * sum);
 void kdt_sum_init   (KdtSum * s);

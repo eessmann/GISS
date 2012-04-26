@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -396,7 +396,8 @@ static int rms_update (RMS * rms)
     rms->h[0] = GFS_NODATA;
     rms->he = 0.;
     rms->cond = GFS_NODATA;
-    return;
+    rms->n = 0;
+    return 0;
   }
   else if (rms->n >= NM) {
     guint j;
@@ -419,7 +420,7 @@ static int rms_update (RMS * rms)
       gsl_linalg_SV_solve (&gm.matrix, &gv.matrix, &gs.vector, &gH.vector, &gh.vector);
       variance_check (rms);
       rms->he = rms_minimum (rms);
-      return;
+      return 1;
     }
 #else
     gdouble ** m = gfs_matrix_new (NM, NM, sizeof (gdouble));
@@ -562,8 +563,8 @@ static void update_terrain_rms (GfsRefineTerrain * t, Polygon * poly, gboolean r
   kdt_sum_init (&s);
   guint i;
   KdtRect rect;
-  rect[0].l = poly->c.x - poly->h; rect[0].h = poly->c.x + poly->h; 
-  rect[1].l = poly->c.y - poly->h; rect[1].h = poly->c.y + poly->h; 
+  rect[0].l = poly->min[0]; rect[0].h = poly->max[0];
+  rect[1].l = poly->min[1]; rect[1].h = poly->max[1];
   for (i = 0; i < poly->rs->nrs; i++) {
     KdtSum stmp;
     kdt_sum_init (&stmp);
@@ -1524,53 +1525,60 @@ static void variable_terrain_destroy (GtsObject * o)
   (* GTS_OBJECT_CLASS (gfs_variable_terrain_class ())->parent_class->destroy) (o);
 }
 
+static double reconstruct_terrain (FttCell * cell, GfsVariableTerrain * t)
+{
+  GfsVariable * v = GFS_VARIABLE (t);
+  GfsSimulation * sim = GFS_SIMULATION (v->domain);
+  Polygon poly;
+  KdtRect rect;
+  KdtSum s;
+  guint i;
+  polygon_init (sim, &poly, cell, &t->rs);
+  kdt_sum_init (&s);
+  rect[0].l = poly.min[0]; rect[0].h = poly.max[0];
+  rect[1].l = poly.min[1]; rect[1].h = poly.max[1]; 
+  for (i = 0; i < poly.rs->nrs; i++) {
+    KdtSum stmp;
+    kdt_sum_init (&stmp);
+    kdt_query_sum (poly.rs->rs[i],
+		   (KdtCheck) polygon_includes,
+		   (KdtCheck) polygon_intersects, &poly, 
+		   rect, &stmp);
+    add_weighted_kdt_sum (&s, &stmp, poly.rs->weight[i]);
+  }
+  GFS_VALUE (cell, t->n) = s.n;
+  if (s.w > 0.) {
+    GfsVariable * v = GFS_VARIABLE (t);
+    GFS_VALUE (cell, v) = s.H0/s.w/sim->physical_params.L;
+    GFS_VALUE (cell, t->dmin) = s.Hmin;
+    GFS_VALUE (cell, t->dmax) = s.Hmax;
+    return s.w;
+  }
+  return 0.;
+}
+
 static void variable_terrain_coarse_fine (FttCell * parent, GfsVariable * v)
 {
   GfsVariableTerrain * t = GFS_VARIABLE_TERRAIN (v);
   GfsSimulation * sim = GFS_SIMULATION (v->domain);
   FttCellChildren child;
+  gdouble f[4*(FTT_DIMENSION - 1) + 1] = { GFS_NODATA };
   guint n;
 
   /* Reconstruct terrain */
   ftt_cell_children (parent, &child);
   for (n = 0; n < FTT_CELLS; n++)
-    if (child.c[n]) {
-      Polygon poly;
-      RSurfaceRect rect;
-      RSurfaceSum s;
-      double tn = 0.;
-      guint i;
-      polygon_init (sim, &poly, child.c[n], &t->rs);
-      r_surface_sum_init (&s);
-      rect[0].l = poly.c.x - poly.h/2.; rect[0].h = poly.c.x + poly.h/2.; 
-      rect[1].l = poly.c.y - poly.h/2.; rect[1].h = poly.c.y + poly.h/2.; 
-      for (i = 0; i < poly.rs->nrs; i++) {
-	RSurfaceSum stmp;
-	r_surface_sum_init (&stmp);
-	r_surface_query_region_sum (poly.rs->rs[i],
-				    (RSurfaceCheck) polygon_includes,
-				    (RSurfaceCheck) polygon_intersects, &poly, 
-				    rect, &stmp);
-	add_weighted_rsurface_sum (&s, &tn, &stmp, poly.rs->weight[i]);
-      }
-      GFS_VALUE (child.c[n], t->n) = tn;
-      if (tn > 0.) {
-	GFS_VALUE (child.c[n], v) = s.H0/tn/sim->physical_params.L;
-	GFS_VALUE (child.c[n], t->dmin) = s.Hmin;
-	GFS_VALUE (child.c[n], t->dmax) = s.Hmax;
-      }
-      else {
+    if (child.c[n] && !reconstruct_terrain (child.c[n], t)) {
+      GFS_VALUE (child.c[n], t->dmin) = GFS_NODATA;
+      GFS_VALUE (child.c[n], t->dmax) = GFS_NODATA;
+      if (GFS_CELL_IS_BOUNDARY (parent))
 	GFS_VALUE (child.c[n], v) = GFS_VALUE (parent, v);
-	GFS_VALUE (child.c[n], t->dmin) = GFS_NODATA;
-	GFS_VALUE (child.c[n], t->dmax) = GFS_NODATA;
-	if (!GFS_CELL_IS_BOUNDARY (parent)) {
-	  FttVector p;
-	  FttComponent c;
-	  
-	  ftt_cell_relative_pos (child.c[n], &p);
-	  for (c = 0; c < FTT_DIMENSION; c++)
-	    GFS_VALUE (child.c[n], v) += (&p.x)[c]*gfs_center_minmod_gradient (parent, c, v->i);
-	}
+      else {
+	FttVector p;
+	ftt_cell_pos (child.c[n], &p);
+	if (f[0] == GFS_NODATA)
+	  gfs_cell_corner_values (parent, v, ftt_cell_level (parent), f);
+	GFS_VALUE (child.c[n], v) = gfs_interpolate_from_corners (parent, p, f);
       }
     }
 

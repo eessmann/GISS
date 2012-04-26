@@ -136,7 +136,7 @@ int main (int argc, char * argv[])
 
   if (verbose) {
     Kdt * kdt = kdt_new ();
-    KdtRect rect = {{-0.5,0.5},{-0.5,0.5}};
+    KdtRect rect = {{-1e30,1e30},{-1e30,1e30}};
     KdtSum sum;
 
     kdt_sum_init (&sum);
@@ -146,7 +146,7 @@ int main (int argc, char * argv[])
 			    rect, &sum);
     fprintf (stderr,
 	     "\r%ld points Height min: %g average: %g max: %g\n",
-	     n, sum.Hmin, sum.H0/sum.n, sum.Hmax);
+	     n, sum.Hmin, sum.H0/sum.w, sum.Hmax);
     kdt_destroy (kdt);
   }
 
