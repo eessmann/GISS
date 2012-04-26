@@ -218,7 +218,8 @@ static void gfs_init_okada_write (GtsObject * o, FILE * fp)
 static double delta (double theta1, double theta2)
 {
   double d = theta1 - theta2;
-  if (d > 180.) d -= 180.;
+  if (d > 180.) d -= 360.;
+  if (d < -180.) d += 360.;
   return d;
 }
 
@@ -253,9 +254,7 @@ static gboolean gfs_init_okada_event (GfsEvent * event,
 {
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_init_okada_class ())->parent_class)->event) 
       (event, sim)) {
-    gfs_domain_cell_traverse (GFS_DOMAIN (sim), 
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) init_okada, event);
+    gfs_domain_traverse_leaves (GFS_DOMAIN (sim), (FttCellTraverseFunc) init_okada, event);
     return TRUE;
   }
   return FALSE;
