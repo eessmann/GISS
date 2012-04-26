@@ -64,10 +64,7 @@ pkglib_LTLIBRARIES = \
 	$(FFT)
 
 bin_PROGRAMS = \
-	xyz2rsurface \
-	rsurfacequery \
-	rsurfacedraw \
-	rsurfaceinfo
+	rsurface2kdt
 
 AM_LDFLAGS = $(NO_UNDEFINED)\
         -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)\
@@ -79,15 +76,15 @@ libmap2D_la_SOURCES = map.c
 libmap2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 libmap2D_la_LIBADD = $(GFS2D_LIBS) -lproj
 
-KDTLIBS = -LRStarTree -lcSmRST -Lkdt -lkdt
-KDTDEPS = RStarTree/libcSmRST.la kdt/libkdt.la
+KDTLIBS = -Lkdt -lkdt
+KDTDEPS = kdt/libkdt.la
 
-libterrain3D_la_SOURCES = terrain.c rsurface.c rsurface.h
+libterrain3D_la_SOURCES = terrain.c
 libterrain3D_la_LIBADD = $(GFS3D_LIBS) $(KDTLIBS)
 libterrain3D_la_DEPENDENCIES = $(KDTDEPS)
 
 libterrain2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
-libterrain2D_la_SOURCES = terrain.c rsurface.c rsurface.h
+libterrain2D_la_SOURCES = terrain.c
 libterrain2D_la_LIBADD = $(GFS2D_LIBS) $(KDTLIBS)
 libterrain2D_la_DEPENDENCIES = $(KDTDEPS)
 
@@ -119,25 +116,10 @@ libode2D_la_SOURCES = ode.c
 libode2D_la_CFLAGS = $(AM_CFLAGS) $(ODE_CFLAGS) -DFTT_2D=1
 libode2D_la_LIBADD = $(GFS2D_LIBS) $(ODE_LIBS)
 
-xyz2rsurface_SOURCES = xyz2rsurface.c rsurface.c rsurface.h
-xyz2rsurface_LDADD = $(KDTLIBS)
-xyz2rsurface_CFLAGS = $(AM_CFLAGS)
-xyz2rsurface_DEPENDENCIES = $(KDTDEPS)
-
-rsurfacequery_SOURCES = rsurfacequery.c rsurface.c rsurface.h
-rsurfacequery_LDADD = -LRStarTree -lcSmRST -Lkdt -lkdt
-rsurfacequery_CFLAGS = $(AM_CFLAGS)
-rsurfacequery_DEPENDENCIES = $(KDTDEPS)
-
-rsurfacedraw_SOURCES = rsurfacedraw.c rsurface.c rsurface.h
-rsurfacedraw_LDADD = $(KDTLIBS)
-rsurfacedraw_CFLAGS = $(AM_CFLAGS)
-rsurfacedraw_DEPENDENCIES = $(KDTDEPS)
-
-rsurfaceinfo_SOURCES = rsurfaceinfo.c rsurface.c rsurface.h
-rsurfaceinfo_LDADD = $(KDTLIBS)
-rsurfaceinfo_CFLAGS = $(AM_CFLAGS)
-rsurfaceinfo_DEPENDENCIES = $(KDTDEPS)
+rsurface2kdt_SOURCES = rsurface2kdt.c rsurface.c rsurface.h
+rsurface2kdt_LDADD = -LRStarTree -lcSmRST $(KDTLIBS)
+rsurface2kdt_CFLAGS = $(AM_CFLAGS)
+rsurface2kdt_DEPENDENCIES = $(KDTDEPS)
 
 noinst_LTLIBRARIES = libparticulatecommon2D.la libparticulatecommon3D.la
 

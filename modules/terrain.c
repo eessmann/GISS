@@ -56,6 +56,15 @@ static Kdt * open_kdt (const gchar * fname)
   Kdt * kdt = kdt_new ();
   if (kdt_open (kdt, fname)) {
     kdt_destroy (kdt);
+    gchar * name = g_strconcat (fname, ".DataPD", NULL);
+    FILE * fp = fopen (name, "r");
+    g_free (name);
+    if (fp != NULL) {
+      fclose (fp);
+      g_warning ("\nFound obsolete R*-tree terrain database. Use:\n"
+		 "%% rsurface2kdt -v %s\n"
+		 "to convert to the new KDT format.\n", fname);
+    }
     return NULL;
   }
   return kdt;
