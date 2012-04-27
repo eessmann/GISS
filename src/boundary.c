@@ -1702,8 +1702,10 @@ void gfs_gedge_link_boxes (GfsGEdge * edge)
 				 FTT_OPPOSITE_DIRECTION (edge->d), b1);
     }
     else {
-      ftt_cell_set_neighbor (b1->root, b2->root, edge->d, 
-			     (FttCellInitFunc) gfs_cell_init, gfs_box_domain (b1));
+      GfsDomain * domain = gfs_box_domain (b1);
+      if (domain->pid < 0 || b1->pid == b2->pid)
+	ftt_cell_set_neighbor (b1->root, b2->root, edge->d, 
+			       (FttCellInitFunc) gfs_cell_init, domain);
       b1->neighbor[edge->d] = GTS_OBJECT (b2);
       b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] = GTS_OBJECT (b1);
     }
