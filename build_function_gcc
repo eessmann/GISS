@@ -6,8 +6,8 @@ DIMENSION=$2  # gerris2D or gerris3D
 WDIR=$3       # simulation directory
               # remaining arguments are line numbers for GfsGlobal
 
-CC=gcc
-LD=gcc
+CC=COMPILER
+LD=COMPILER
 CFLAGS="-O -fpic -Wall -Wno-unused -Werror -I$WDIR"
 LDFLAGS="-O -fpic MODULE_FLAGS"
 

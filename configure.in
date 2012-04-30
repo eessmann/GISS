@@ -205,7 +205,7 @@ if test "$have_gmodule" = "yes"; then
          "-bundle"
      do
 	if test x"$module_flags" = x; then
-	   if echo "void test(){}" | gcc $flags $gcc_flags - 2> /dev/null; then
+	   if echo "void test(){}" | $CC $flags $gcc_flags - 2> /dev/null; then
 	      module_flags="$flags"
 	   fi
 	fi
@@ -215,7 +215,7 @@ if test "$have_gmodule" = "yes"; then
        # use libtool if not using gcc
        sed -e "s|PREFIX|$prefix|g" -e "s|COMPILER|$CC|g" < build_function_libtool > build_function
    else
-       sed "s/MODULE_FLAGS/$module_flags/" < build_function_gcc > build_function
+       sed -e "s|MODULE_FLAGS|$module_flags|" -e "s|COMPILER|$CC|g" < build_function_gcc > build_function
    fi
 else
    # cannot use modules
