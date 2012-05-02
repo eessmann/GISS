@@ -1127,10 +1127,10 @@ static void source_pipe_write (GtsObject * o, FILE * fp)
 #define DQ (1e-4/L3)
 
 static double flow_rate_Q (double z1, double h1, double z2, double h2,
-			   double l, GfsSourcePipe * p,
+			   double l, double g, GfsSourcePipe * p,
 			   double a1, double a2, double Q)
 {
-  double Q1 = (*p->flow_rate) (z1, h1 - Q/a1, z2, h2 + Q/a2, l, p);
+  double Q1 = (*p->flow_rate) (z1, h1 - Q/a1, z2, h2 + Q/a2, l, g, p);
   if (Q1 > 0.) Q1 = MIN (Q1, a1*h1);
   if (Q1 < 0.) Q1 = MAX (Q1, - a2*h2);
   return Q1;
@@ -1149,7 +1149,7 @@ static gboolean source_pipe_event (GfsEvent * event, GfsSimulation * sim)
     p->ecell = gfs_domain_locate (domain, end, -1, NULL);
     p->Q = 0.;
     if (p->scell && p->ecell && p->scell != p->ecell) {
-      gdouble L = sim->physical_params.L;
+      gdouble L = sim->physical_params.L, g = sim->physical_params.g;
       GfsVariable * h = GFS_RIVER (sim)->v[0], * zb = GFS_RIVER (sim)->zb;
       gdouble h1 = L*GFS_VALUE (p->scell, h), z1 = L*GFS_VALUE (p->scell, zb);
       gdouble h2 = L*GFS_VALUE (p->ecell, h), z2 = L*GFS_VALUE (p->ecell, zb);      
@@ -1162,9 +1162,9 @@ static gboolean source_pipe_event (GfsEvent * event, GfsSimulation * sim)
       gdouble a2 = L2*gfs_cell_volume (p->ecell, GFS_DOMAIN (sim))/sim->advection_params.dt;
 
       /* secant-bisection root-finding: solves flow_rate(h, l, Q) - Q = 0 for the flow rate Q */
-      p->Q = (*p->flow_rate) (z1, h1, z2, h2, l, p)/L3;
+      p->Q = (*p->flow_rate) (z1, h1, z2, h2, l, g, p)/L3;
       gdouble Q1 = p->Q*2.;
-      gdouble v1 = flow_rate_Q (z1, h1, z2, h2, l, p, a1, a2, Q1*L3)/L3 - Q1;
+      gdouble v1 = flow_rate_Q (z1, h1, z2, h2, l, g, p, a1, a2, Q1*L3)/L3 - Q1;
       gdouble Q2 = 0.;
       gdouble v2 = p->Q;
       if (fabs (v1) > DQ && fabs (v2) > DQ) {
@@ -1182,7 +1182,7 @@ static gboolean source_pipe_event (GfsEvent * event, GfsSimulation * sim)
 	  p->Q = (v1*Q2 - v2*Q1)/(v1 - v2);
 	  do {
 	    Qb = p->Q;
-	    gdouble v = flow_rate_Q (z1, h1, z2, h2, l, p, a1, a2, p->Q*L3)/L3 - p->Q;
+	    gdouble v = flow_rate_Q (z1, h1, z2, h2, l, g, p, a1, a2, p->Q*L3)/L3 - p->Q;
 	    if (v < 0.) {
 	      v1 = v; Q1 = p->Q;
 	    }
@@ -1228,6 +1228,7 @@ static gdouble source_pipe_value (GfsSourceGeneric * s,
 static double pipe_flow_rate (double z1, double h1, /* terrain elevation and flow depth at inlet */
 			      double z2, double h2, /* terrain elevation and flow depth at outlet */
 			      double l,             /* pipe length */
+			      double g,             /* acceleration of gravity */
 			      GfsSourcePipe * p)
 {
   gdouble r = p->diameter/2.;

@@ -389,6 +389,7 @@ modules/RStarTree/Makefile
 modules/kdt/Makefile
 modules/fes2004/Makefile
 modules/wavewatch/Makefile
+modules/culvert/Makefile
 test/Makefile
 doc/Makefile
 doc/tutorial/Makefile
