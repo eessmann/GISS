@@ -61,6 +61,33 @@ static gboolean strmatch (const gchar * s, const gchar * s1)
   return m;
 }
 
+static GfsSourceDiffusion * source_implicit_ohmic (GfsVariable * v)
+{
+  if (v->sources) {
+    GSList * i = GTS_SLIST_CONTAINER (v->sources)->items;
+    while (i) {
+      GtsObject * o = i->data;
+      if (GFS_IS_SOURCE_DIFFUSION (o) &&
+	  !GFS_IS_SOURCE_DIFFUSION_EXPLICIT (o) &&
+	  GFS_SOURCE_DIFFUSION (o)->phi == GFS_ELECTRO_HYDRO (v->domain)->phi)
+	return GFS_SOURCE_DIFFUSION (o);
+      i = i->next;
+    }
+  }
+  return NULL;
+}
+
+static GfsVariable * has_source_implicit_ohmic (GfsDomain * domain)
+{
+  GSList * i = domain->variables;
+  while (i) {
+    if (source_implicit_ohmic(i->data))
+      return i->data;
+    i = i->next;
+  }
+  return NULL;
+}
+
 static void gfs_electro_hydro_read (GtsObject ** o, GtsFile * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_electro_hydro_class ())->parent_class->read) (o, fp);
@@ -106,6 +133,11 @@ static void gfs_electro_hydro_read (GtsObject ** o, GtsFile * fp)
       else {
 	gts_file_next_token (fp);
 	gfs_function_read (elec->charge, sim, fp);
+	GfsVariable * rhoe ;
+	if(!gfs_function_get_variable (elec->charge) &&
+	   (rhoe = has_source_implicit_ohmic(GFS_DOMAIN (sim))))
+	   g_warning("%s can not be updated unless `charge' were a variable equal to %s",
+		     rhoe->name, rhoe->name);
       }
     }
 
@@ -278,22 +310,6 @@ static void has_dirichlet (FttCell * cell, GfsVariable * p)
 {
   if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
     p->centered = FALSE;
-}
-
-static GfsSourceDiffusion * source_implicit_ohmic (GfsVariable * v)
-{
-  if (v->sources) {
-    GSList * i = GTS_SLIST_CONTAINER (v->sources)->items;
-    while (i) {
-      GtsObject * o = i->data;
-      if (GFS_IS_SOURCE_DIFFUSION (o) && 
-	  !GFS_IS_SOURCE_DIFFUSION_EXPLICIT (o) &&
-	  GFS_SOURCE_DIFFUSION (o)->phi == GFS_ELECTRO_HYDRO (v->domain)->phi)
-	return GFS_SOURCE_DIFFUSION (o);
-      i = i->next;
-    }
-  }
-  return NULL;
 }
 
 typedef struct {
