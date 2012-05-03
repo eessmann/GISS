@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2010-2011 Jose M. López-Herrera Sánchez
+ * Copyright (C) 2010-2012 Jose M. López-Herrera Sánchez
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -81,7 +81,7 @@ static GfsVariable * has_source_implicit_ohmic (GfsDomain * domain)
 {
   GSList * i = domain->variables;
   while (i) {
-    if (source_implicit_ohmic(i->data))
+    if (source_implicit_ohmic (i->data))
       return i->data;
     i = i->next;
   }
@@ -134,10 +134,10 @@ static void gfs_electro_hydro_read (GtsObject ** o, GtsFile * fp)
 	gts_file_next_token (fp);
 	gfs_function_read (elec->charge, sim, fp);
 	GfsVariable * rhoe ;
-	if(!gfs_function_get_variable (elec->charge) &&
-	   (rhoe = has_source_implicit_ohmic(GFS_DOMAIN (sim))))
-	   g_warning("%s can not be updated unless `charge' were a variable equal to %s",
-		     rhoe->name, rhoe->name);
+	if (!gfs_function_get_variable (elec->charge) &&
+	    (rhoe = has_source_implicit_ohmic (GFS_DOMAIN (sim))))
+	  gts_file_error (fp, "for implicit charge diffusion, 'charge' must be equal to %s", 
+			  rhoe->name);
       }
     }
 
