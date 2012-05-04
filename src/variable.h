@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -291,6 +291,13 @@ struct _GfsVariablePoisson {
 					     gfs_variable_poisson_class ()))
 
 GfsVariableClass * gfs_variable_poisson_class  (void);
+
+/* GfsVariableLaplacian: Header */
+
+#define GFS_IS_VARIABLE_LAPLACIAN(obj)         (gts_object_is_from_class (obj,\
+					     gfs_variable_laplacian_class ()))
+
+GfsVariableClass * gfs_variable_laplacian_class  (void);
 
 /* GfsHydrostaticPressure: Header */
 

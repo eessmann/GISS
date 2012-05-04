@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -66,7 +66,6 @@ static void gfs_variable_read (GtsObject ** o, GtsFile * fp)
     if ((i = g_slist_find (domain->variables_io, old)))
       i->data = v;
     domain->variables = g_slist_remove (domain->variables, old);
-    v->units = old->units;
     gts_object_destroy (GTS_OBJECT (old));
   }
   variable_init_domain (v, domain);
@@ -1083,6 +1082,102 @@ GfsVariableClass * gfs_variable_poisson_class (void)
 }
 
 /** \endobject{GfsVariablePoisson} */
+
+/**
+ * The Laplacian of a function.
+ * \beginobject{GfsVariableLaplacian}
+ */
+
+typedef struct {
+  GfsVariable * lap;
+  GfsFunction * f;
+  GfsVariable * u;
+} LapData;
+
+static void evaluate_function (FttCell * cell, LapData * p)
+{
+  GFS_VALUE (cell, p->u) = gfs_function_value (p->f, cell);
+}
+
+static void laplacian (FttCell * cell, LapData * p)
+{
+  GfsGradient g;
+  FttCellNeighbors neighbor;
+  FttCellFace f;
+  GfsGradient ng;
+
+  g.a = g.b = 0.;
+  f.cell = cell;
+  ftt_cell_neighbors (cell, &neighbor);
+  for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++) {
+    f.neighbor = neighbor.c[f.d];
+    if (f.neighbor) {
+      gfs_face_weighted_gradient (&f, &ng, p->u->i, -1);
+      g.a += ng.a;
+      g.b += ng.b;
+    }
+  }
+
+  gdouble h = ftt_cell_size (cell);
+  GFS_VALUE (cell, p->lap) = (g.b - g.a*GFS_VALUE (cell, p->u))/
+    (h*h*gfs_domain_cell_fraction (p->lap->domain, cell));
+}
+
+static gboolean variable_laplacian_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (gfs_variable_class ())->event) (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    LapData p = { GFS_VARIABLE (event), GFS_VARIABLE_FUNCTION (event)->f };
+    p.u = gfs_function_get_variable (p.f);
+    if (p.u == NULL) {
+      p.u = gfs_temporary_variable (domain);
+      gfs_function_set_units (p.f, 0.);
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) evaluate_function, &p);
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.u);
+    }
+    gfs_poisson_coefficients (domain, NULL, TRUE, TRUE, TRUE);
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) laplacian, &p);
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.lap);
+    if (!gfs_function_get_variable (p.f))
+      gts_object_destroy (GTS_OBJECT (p.u));
+    return TRUE;
+  }
+  return FALSE;  
+}
+
+static void variable_laplacian_class_init (GtsObjectClass * klass)
+{
+  GFS_EVENT_CLASS (klass)->event = variable_laplacian_event;
+}
+
+static void variable_laplacian_init (GfsVariable * v)
+{
+  v->units = -2.;
+  v->centered = TRUE;
+  v->coarse_fine = (GfsVariableFineCoarseFunc) gfs_cell_coarse_fine;
+}
+
+GfsVariableClass * gfs_variable_laplacian_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsVariableLaplacian",
+      sizeof (GfsVariableFunction),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) variable_laplacian_class_init,
+      (GtsObjectInitFunc) variable_laplacian_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_variable_function_class ()), &info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsVariableLaplacian} */
 
 /**
  * How old is this cell?.
