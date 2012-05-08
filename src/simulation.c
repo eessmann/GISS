@@ -873,6 +873,26 @@ static gdouble cell_id (FttCell * cell)
   return GFS_BOX (FTT_ROOT_CELL (cell)->parent)->id;
 }
 
+static gdouble cell_orthogonality (FttCell * cell, FttCellFace * face, GfsDomain * domain)
+{
+  FttVector p;
+  if (cell)
+    ftt_cell_pos (cell, &p);
+  else
+    ftt_face_pos (face, &p);
+  FttVector p1 = p, p2 = p;
+  p1.x += 1e-6;
+  p2.y += 1e-6;
+  gfs_simulation_map_inverse (GFS_SIMULATION (domain), &p);
+  gfs_simulation_map_inverse (GFS_SIMULATION (domain), &p1);
+  gfs_simulation_map_inverse (GFS_SIMULATION (domain), &p2);
+  p1.x -= p.x; p1.y -= p.y; p1.z -= p.z;
+  p2.x -= p.x; p2.y -= p.y; p2.z -= p.z;
+  return acos ((p1.x*p2.x + p1.y*p2.y + p1.z*p2.z)/
+	       sqrt ((p1.x*p1.x + p1.y*p1.y + p1.z*p1.z)*
+		     (p2.x*p2.x + p2.y*p2.y + p2.z*p2.z)))*180./M_PI;
+}
+
 static void simulation_init (GfsSimulation * object)
 {
   GfsDomain * domain = GFS_DOMAIN (object);
@@ -915,6 +935,7 @@ static void simulation_init (GfsSimulation * object)
     { "D2", "Second principal invariant of the deformation tensor", cell_2nd_principal_invariant },
     { "Pid", "Parent box process ID", cell_pid },
     { "Id", "Parent box ID", cell_id },
+    { "Orthogonality", "Angle between coordinate lines", cell_orthogonality },
     { NULL, NULL, NULL}
   };
 
