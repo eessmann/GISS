@@ -147,6 +147,26 @@ GfsEventClass * gfs_metric_stretch_class  (void);
 
 GfsVariableClass * gfs_metric_cubed1_class  (void);
 
+/* GfsMetricLaplace: Header */
+
+typedef struct _GfsMetricLaplace GfsMetricLaplace;
+
+struct _GfsMetricLaplace {
+  /*< private >*/
+  GfsGenericMetric parent;
+
+  /*< public >*/
+  GfsVariable * x[FTT_DIMENSION];
+};
+
+#define GFS_METRIC_LAPLACE(obj)            GTS_OBJECT_CAST (obj,\
+					           GfsMetricLaplace,\
+					           gfs_metric_laplace_class ())
+#define GFS_IS_METRIC_LAPLACE(obj)         (gts_object_is_from_class (obj,\
+						   gfs_metric_laplace_class ()))
+
+GfsVariableClass * gfs_metric_laplace_class  (void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

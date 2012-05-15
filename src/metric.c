@@ -2100,3 +2100,197 @@ GfsVariableClass * gfs_metric_cubed1_class (void)
 
   return klass;
 }
+
+/* GfsMapLaplace: Header */
+
+#define GFS_IS_MAP_LAPLACE(obj)         (gts_object_is_from_class (obj,\
+						 gfs_map_laplace_class ()))
+
+static GfsMapClass * gfs_map_laplace_class      (void);
+
+/* GfsMapLaplace: Object */
+
+static void gfs_map_laplace_read (GtsObject ** o, GtsFile * fp)
+{
+  /* this mapping cannot be used independently from GfsMetricLaplace */
+}
+
+static void gfs_map_laplace_write (GtsObject * o, FILE * fp)
+{
+  /* this mapping cannot be used independently from GfsMetricLaplace */
+}
+
+static void gfs_map_laplace_class_init (GfsMapClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = gfs_map_laplace_read;
+  GTS_OBJECT_CLASS (klass)->write = gfs_map_laplace_write;
+}
+
+static void map_laplace_inverse (GfsMap * map, const FttVector * src, FttVector * dest)
+{
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (map));
+  FttVector p = *src;
+  FttCell * cell = gfs_domain_boundary_locate (domain, p, -1, NULL);
+  if (cell == NULL)
+    fprintf (stderr, "%g %g\n", p.x, p.y);
+  g_return_if_fail (cell != NULL);
+  GfsMetricLaplace * m = domain->metric_data;
+  dest->z = src->z;
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    (&dest->x)[c] = gfs_interpolate (cell, p, m->x[c]);
+}
+
+static void gfs_map_laplace_init (GfsMap * map)
+{
+  map->inverse = map_laplace_inverse;
+}
+
+static GfsMapClass * gfs_map_laplace_class (void)
+{
+  static GfsMapClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsMapLaplace",
+      sizeof (GfsMap),
+      sizeof (GfsMapClass),
+      (GtsObjectClassInitFunc) gfs_map_laplace_class_init,
+      (GtsObjectInitFunc) gfs_map_laplace_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_map_class ()), &info);
+  }
+
+  return klass;
+}
+
+/* GfsMetricLaplace: Object */
+
+static void metric_laplace_coarse_fine (FttCell * parent, GfsVariable * a)
+{
+  if (GFS_CELL_IS_BOUNDARY (parent))
+    return;
+
+  GfsGenericMetric * m = GFS_GENERIC_METRIC (a);
+  FttCellChildren child;
+  ftt_cell_children (parent, &child);
+  int i;
+  for (i = 0; i < FTT_CELLS; i++) {
+    FttComponent d;
+    for (d = 0; d < 4; d++)
+      GFS_VALUE (child.c[i], m->h[d]) = 1.;
+    GFS_VALUE (child.c[i], a) = 1.;
+  }
+}
+
+static void metric_laplace_read (GtsObject ** o, GtsFile * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_metric_laplace_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsMetricLaplace * m = GFS_METRIC_LAPLACE (*o);
+  GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (m));
+  GfsVariable * v = GFS_VARIABLE1 (*o);
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++) {
+    gchar cname[3][2] = {"x", "y", "z"};
+    gchar * name = g_strdup_printf ("%s%s", v->name, cname[c]);
+    m->x[c] = gfs_domain_get_or_add_variable (domain, name, "coordinate for Laplace metric");
+    g_free (name);
+  }
+
+  v->coarse_fine = metric_laplace_coarse_fine;
+}
+
+static void update_metric (FttCell * cell, GfsMetricLaplace * ml)
+{
+  gdouble h = ftt_cell_size (cell);
+  gdouble x[4*(FTT_DIMENSION - 1)], y[4*(FTT_DIMENSION - 1)], dx, dy;
+  gfs_cell_corner_values (cell, ml->x[0], -1, x);
+  gfs_cell_corner_values (cell, ml->x[1], -1, y);
+  GfsGenericMetric * m = GFS_GENERIC_METRIC (ml);
+  dx = x[1] - x[2]; dy = y[1] - y[2];
+  GFS_VALUE (cell, m->h[0]) = sqrt(dx*dx + dy*dy)/h;
+  dx = x[3] - x[0]; dy = y[3] - y[0];
+  GFS_VALUE (cell, m->h[1]) = sqrt(dx*dx + dy*dy)/h;
+  dx = x[2] - x[3]; dy = y[2] - y[3];
+  GFS_VALUE (cell, m->h[2]) = sqrt(dx*dx + dy*dy)/h;
+  dx = x[0] - x[1]; dy = y[0] - y[1];
+  GFS_VALUE (cell, m->h[3]) = sqrt(dx*dx + dy*dy)/h;
+
+  GFS_VALUE (cell, GFS_VARIABLE1 (m)) = 
+    fabs ((x[2] - x[1])*(y[0] - y[1]) - (x[0] - x[1])*(y[2] - y[1]) + 
+	  (x[0] - x[3])*(y[2] - y[3]) - (x[2] - x[3])*(y[0] - y[3]))/(2.*h*h);
+}
+
+static gboolean metric_laplace_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (gfs_generic_metric_class())->event) (event, sim)) {
+    GfsDomain * domain = GFS_DOMAIN (sim);
+    GfsVariable * dia = gfs_temporary_variable (domain);
+    GfsVariable * div = gfs_temporary_variable (domain);
+    GfsVariable * res = gfs_temporary_variable (domain);
+    GfsMetricLaplace * m = GFS_METRIC_LAPLACE (event);
+
+    GfsMultilevelParams par;
+    gfs_multilevel_params_init (&par);
+
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) gfs_cell_reset, div);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+			      (FttCellTraverseFunc) gfs_cell_reset, dia);
+
+    int niter = 100;
+    while (niter--) {
+      gfs_poisson_coefficients (domain, NULL, FALSE, TRUE, TRUE);
+      par.poisson_solve (domain, &par, m->x[0], div, res, dia, 1.);
+      par.poisson_solve (domain, &par, m->x[1], div, res, dia, 1.);
+      //    gfs_multilevel_params_stats_write (&par, stderr);
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) update_metric, m);
+    }
+
+    gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+			      (FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
+
+    gts_object_destroy (GTS_OBJECT (dia));
+    gts_object_destroy (GTS_OBJECT (div));
+    gts_object_destroy (GTS_OBJECT (res));
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void metric_laplace_class_init (GtsObjectClass * klass)
+{
+  klass->read = metric_laplace_read;
+  GFS_EVENT_CLASS (klass)->event = metric_laplace_event;
+}
+
+static void metric_laplace_init (GfsGenericMetric * m)
+{
+  GFS_EVENT (m)->start = 0.;
+  GFS_EVENT (m)->istep = G_MAXINT/2;
+  m->map_class = gfs_map_laplace_class ();
+}
+
+GfsVariableClass * gfs_metric_laplace_class (void)
+{
+  static GfsVariableClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsMetricLaplace",
+      sizeof (GfsMetricLaplace),
+      sizeof (GfsVariableClass),
+      (GtsObjectClassInitFunc) metric_laplace_class_init,
+      (GtsObjectInitFunc) metric_laplace_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_metric_class ()), &info);
+  }
+
+  return klass;
+}
