@@ -876,21 +876,27 @@ static gdouble cell_id (FttCell * cell)
 static gdouble cell_orthogonality (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 {
   FttVector p;
-  if (cell)
+  gdouble h;
+  if (cell) {
     ftt_cell_pos (cell, &p);
-  else
+    h = ftt_cell_size (cell)/2;
+  }
+  else {
     ftt_face_pos (face, &p);
-  FttVector p1 = p, p2 = p;
-  p1.x += 1e-6;
-  p2.y += 1e-6;
-  gfs_simulation_map_inverse (GFS_SIMULATION (domain), &p);
+    h = ftt_cell_size (face->cell)/2;
+  }
+  FttVector p1 = p, p2 = p, p3 = p, p4 = p;
+  p1.x += h; p2.x -= h;
+  p3.y += h; p4.y -= h;
   gfs_simulation_map_inverse (GFS_SIMULATION (domain), &p1);
   gfs_simulation_map_inverse (GFS_SIMULATION (domain), &p2);
-  p1.x -= p.x; p1.y -= p.y; p1.z -= p.z;
-  p2.x -= p.x; p2.y -= p.y; p2.z -= p.z;
-  return acos ((p1.x*p2.x + p1.y*p2.y + p1.z*p2.z)/
-	       sqrt ((p1.x*p1.x + p1.y*p1.y + p1.z*p1.z)*
-		     (p2.x*p2.x + p2.y*p2.y + p2.z*p2.z)))*180./M_PI;
+  gfs_simulation_map_inverse (GFS_SIMULATION (domain), &p3);
+  gfs_simulation_map_inverse (GFS_SIMULATION (domain), &p4);
+  GtsVector p1p2, p3p4;
+  gts_vector_init (p1p2, &p1, &p2);
+  gts_vector_init (p3p4, &p3, &p4);
+  return fabs (acos (gts_vector_scalar (p1p2, p3p4)/(gts_vector_norm (p1p2)*gts_vector_norm (p3p4)))
+	       - M_PI/2.)*180./M_PI;
 }
 
 static void simulation_init (GfsSimulation * object)
@@ -935,7 +941,7 @@ static void simulation_init (GfsSimulation * object)
     { "D2", "Second principal invariant of the deformation tensor", cell_2nd_principal_invariant },
     { "Pid", "Parent box process ID", cell_pid },
     { "Id", "Parent box ID", cell_id },
-    { "Orthogonality", "Angle between coordinate lines", cell_orthogonality },
+    { "Orthogonality", "Deviation from orthogonality", cell_orthogonality },
     { NULL, NULL, NULL}
   };
 
