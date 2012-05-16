@@ -153,10 +153,11 @@ typedef struct _GfsMetricLaplace GfsMetricLaplace;
 
 struct _GfsMetricLaplace {
   /*< private >*/
-  GfsGenericMetric parent;
+  GfsStoredMetric parent;
 
   /*< public >*/
-  GfsVariable * x[FTT_DIMENSION];
+  GfsVariable * x[3];
+  gboolean conformal, spherical;
 };
 
 #define GFS_METRIC_LAPLACE(obj)            GTS_OBJECT_CAST (obj,\

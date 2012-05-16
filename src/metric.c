@@ -801,7 +801,7 @@ GfsVariableClass * gfs_metric_class (void)
 /* Conformal mapping Taylor coefficients: from Rancic et al, 1996, Table B.1 */
 
 static double A[N] = {
-   1.47713062600964, -0.38183510510174, -0.05573058001191, -0.01895883606818, -0.00791315785221,
+   1.47713062600964, -0.38183510510174, -0.05573058001191, -0.00895883606818, -0.00791315785221,
   -0.00486625437708, -0.00329251751279, -0.00235481488325, -0.00175870527475, -0.00135681133278,
   -0.00107459847699, -0.00086944475948, -0.00071607115121, -0.00059867100093, -0.00050699063239,
   -0.00043415191279, -0.00037541003286, -0.00032741060100, -0.00028773091482, -0.00025458777519,
@@ -822,7 +822,7 @@ static double B[N] = {
 /* Conformal mapping Taylor coefficients: from map_xy2xyz.m from mitgcm */
 
 static double A[N] = {
-  1.47713057321600, -0.38183513110512, -0.05573055466344, -0.01895884801823, -0.00791314396396,
+  1.47713057321600, -0.38183513110512, -0.05573055466344, -0.00895884801823, -0.00791314396396,
   -0.00486626515498, -0.00329250387158, -0.00235482619663, -0.00175869000970, -0.00135682443774,
   -0.00107458043205, -0.00086946107050, -0.00071604933286, -0.00059869243613, -0.00050696402446,
   -0.00043418115349, -0.00037537743098, -0.00032745130951, -0.00028769063795, -0.00025464473946,
@@ -2135,10 +2135,10 @@ static void map_laplace_inverse (GfsMap * map, const FttVector * src, FttVector 
     fprintf (stderr, "%g %g\n", p.x, p.y);
   g_return_if_fail (cell != NULL);
   GfsMetricLaplace * m = domain->metric_data;
-  dest->z = src->z;
   FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
+  for (c = 0; c < 2; c++)
     (&dest->x)[c] = gfs_interpolate (cell, p, m->x[c]);
+  dest->z = m->x[2] ? gfs_interpolate (cell, p, m->x[2]) : src->z;
 }
 
 static void gfs_map_laplace_init (GfsMap * map)
@@ -2168,12 +2168,20 @@ static GfsMapClass * gfs_map_laplace_class (void)
 
 /* GfsMetricLaplace: Object */
 
+static gdouble conformal_face_scale_metric (const GfsDomain * domain, const FttCellFace * face,
+					    FttComponent c)
+{
+  if (c > FTT_Y)
+    return 1.;
+  return GFS_VALUE (face->cell, GFS_STORED_METRIC (domain->metric_data)->h[face->d]);
+}
+
 static void metric_laplace_coarse_fine (FttCell * parent, GfsVariable * a)
 {
   if (GFS_CELL_IS_BOUNDARY (parent))
     return;
 
-  GfsGenericMetric * m = GFS_GENERIC_METRIC (a);
+  GfsStoredMetric * m = GFS_STORED_METRIC (a);
   FttCellChildren child;
   ftt_cell_children (parent, &child);
   int i;
@@ -2192,43 +2200,95 @@ static void metric_laplace_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GfsMetricLaplace * m = GFS_METRIC_LAPLACE (*o);
+  if (fp->type == '{') {
+    GtsFileVariable var[] = {
+      {GTS_INT, "conformal", TRUE, &m->conformal},
+      {GTS_INT, "spherical", TRUE, &m->spherical},
+      {GTS_NONE}
+    };
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;
+  }
+
   GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (m));
-  GfsVariable * v = GFS_VARIABLE1 (*o);
+  GfsVariable * v = GFS_VARIABLE (*o);
   FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++) {
+  for (c = 0; c < 3; c++) {
     gchar cname[3][2] = {"x", "y", "z"};
     gchar * name = g_strdup_printf ("%s%s", v->name, cname[c]);
-    m->x[c] = gfs_domain_get_or_add_variable (domain, name, "coordinate for Laplace metric");
+    if (FTT_DIMENSION > 2 || c < 2 || m->spherical)
+      m->x[c] = gfs_domain_get_or_add_variable (domain, name, "coordinate for Laplace metric");
     g_free (name);
   }
 
   v->coarse_fine = metric_laplace_coarse_fine;
+  if (m->conformal)
+    v->domain->face_scale_metric = conformal_face_scale_metric;
 }
 
-static void update_metric (FttCell * cell, GfsMetricLaplace * ml)
+static void metric_laplace_write (GtsObject * o, FILE * fp)
+{
+  (* GTS_OBJECT_CLASS (gfs_metric_laplace_class ())->parent_class->write) (o, fp);
+  GfsMetricLaplace * m = GFS_METRIC_LAPLACE (o);
+  fprintf (fp, " { conformal = %d spherical = %d }", m->conformal, m->spherical);
+}
+
+typedef struct {
+  GfsMetricLaplace * m;
+  gdouble max;
+} UpdateData;
+
+static void update_z (FttCell * cell, GfsMetricLaplace * m)
+{
+  gdouble x = GFS_VALUE (cell, m->x[0]), y = GFS_VALUE (cell, m->x[1]);
+  GFS_VALUE (cell, m->x[2]) = sqrt (1. - x*x - y*y);
+}
+
+static void update_metric (FttCell * cell, UpdateData * p)
 {
   gdouble h = ftt_cell_size (cell);
-  gdouble x[4*(FTT_DIMENSION - 1)], y[4*(FTT_DIMENSION - 1)], dx, dy;
-  gfs_cell_corner_values (cell, ml->x[0], -1, x);
-  gfs_cell_corner_values (cell, ml->x[1], -1, y);
-  GfsGenericMetric * m = GFS_GENERIC_METRIC (ml);
-  dx = x[1] - x[2]; dy = y[1] - y[2];
-  GFS_VALUE (cell, m->h[0]) = sqrt(dx*dx + dy*dy)/h;
-  dx = x[3] - x[0]; dy = y[3] - y[0];
-  GFS_VALUE (cell, m->h[1]) = sqrt(dx*dx + dy*dy)/h;
-  dx = x[2] - x[3]; dy = y[2] - y[3];
-  GFS_VALUE (cell, m->h[2]) = sqrt(dx*dx + dy*dy)/h;
-  dx = x[0] - x[1]; dy = y[0] - y[1];
-  GFS_VALUE (cell, m->h[3]) = sqrt(dx*dx + dy*dy)/h;
+  gdouble x[4*(FTT_DIMENSION - 1) + 1], y[4*(FTT_DIMENSION - 1) + 1], dx, dy, dz;
+  gfs_cell_corner_values (cell, p->m->x[0], -1, x);
+  gfs_cell_corner_values (cell, p->m->x[1], -1, y);
+  gdouble z[4*(FTT_DIMENSION - 1) + 1];
+  if (p->m->x[2])
+    gfs_cell_corner_values (cell, p->m->x[2], -1, z);
+  else
+    z[0] = z[1] = z[2] = z[3] = 0.;
+  GfsStoredMetric * m = GFS_STORED_METRIC (p->m);
+  dx = x[1] - x[2]; dy = y[1] - y[2]; dz = z[1] - z[2]; 
+  GFS_VALUE (cell, m->h[0]) = sqrt(dx*dx + dy*dy + dz*dz)/h;
+  dx = x[3] - x[0]; dy = y[3] - y[0]; dz = z[3] - z[0];
+  GFS_VALUE (cell, m->h[1]) = sqrt(dx*dx + dy*dy + dz*dz)/h;
+  dx = x[2] - x[3]; dy = y[2] - y[3]; dz = z[2] - z[3];
+  GFS_VALUE (cell, m->h[2]) = sqrt(dx*dx + dy*dy + dz*dz)/h;
+  dx = x[0] - x[1]; dy = y[0] - y[1]; dz = z[0] - z[1];
+  GFS_VALUE (cell, m->h[3]) = sqrt(dx*dx + dy*dy + dz*dz)/h;
 
-  GFS_VALUE (cell, GFS_VARIABLE1 (m)) = 
-    fabs ((x[2] - x[1])*(y[0] - y[1]) - (x[0] - x[1])*(y[2] - y[1]) + 
-	  (x[0] - x[3])*(y[2] - y[3]) - (x[2] - x[3])*(y[0] - y[3]))/(2.*h*h);
+  GtsVector v02, v01, v03;
+  v01[0] = x[1] - x[0]; v01[1] = y[1] - y[0]; v01[2] = z[1] - z[0];
+  v02[0] = x[2] - x[0]; v02[1] = y[2] - y[0]; v02[2] = z[2] - z[0];
+  v03[0] = x[3] - x[0]; v03[1] = y[3] - y[0]; v03[2] = z[3] - z[0];
+  GtsVector c012, c023;
+  gts_vector_cross (c012, v01, v02);
+  gts_vector_cross (c023, v02, v03);
+  gdouble am = (gts_vector_norm (c012) + gts_vector_norm (c023))/(2.*h*h);
+  gdouble change = fabs (GFS_VALUE (cell, GFS_VARIABLE (m)) - am);
+  if (change > p->max)
+    p->max = change;
+  GFS_VALUE (cell, GFS_VARIABLE (m)) = am;
+}
+
+static void spherical_laplacian (FttCell * cell, GfsVariable * dia)
+{
+  gdouble h = ftt_cell_size (cell);
+  GFS_VALUE (cell, dia) = -2.*h*h*gfs_domain_cell_fraction (dia->domain, cell);
 }
 
 static gboolean metric_laplace_event (GfsEvent * event, GfsSimulation * sim)
 {
-  if ((* GFS_EVENT_CLASS (gfs_generic_metric_class())->event) (event, sim)) {
+  if ((* GFS_EVENT_CLASS (gfs_stored_metric_class())->event) (event, sim)) {
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsVariable * dia = gfs_temporary_variable (domain);
     GfsVariable * div = gfs_temporary_variable (domain);
@@ -2237,22 +2297,35 @@ static gboolean metric_laplace_event (GfsEvent * event, GfsSimulation * sim)
 
     GfsMultilevelParams par;
     gfs_multilevel_params_init (&par);
+    par.tolerance = 1e-3;
+    par.nitermin = 1;
 
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) gfs_cell_reset, div);
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-			      (FttCellTraverseFunc) gfs_cell_reset, dia);
+    if (!m->spherical)
+      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+				(FttCellTraverseFunc) gfs_cell_reset, dia);
 
+    UpdateData p = { m, 1e6 };
     int niter = 100;
-    while (niter--) {
+    while (niter-- && p.max > 1e-3) {
       gfs_poisson_coefficients (domain, NULL, FALSE, TRUE, TRUE);
+      if (m->spherical)
+	gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
+				  (FttCellTraverseFunc) spherical_laplacian, dia);
       par.poisson_solve (domain, &par, m->x[0], div, res, dia, 1.);
       par.poisson_solve (domain, &par, m->x[1], div, res, dia, 1.);
-      //    gfs_multilevel_params_stats_write (&par, stderr);
-      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) update_metric, m);
+      if (m->spherical) {
+	gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) update_z, m);
+	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, m->x[2]);
+      }
+      //      gfs_multilevel_params_stats_write (&par, stderr);
+      p.max = 0.;
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) update_metric, &p);
+      //      fprintf (stderr, "%g\n", p.max);
     }
 
     gfs_domain_cell_traverse (domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) GFS_VARIABLE1 (event)->fine_coarse, event);
+			      (FttCellTraverseFunc) GFS_VARIABLE (event)->fine_coarse, event);
 
     gts_object_destroy (GTS_OBJECT (dia));
     gts_object_destroy (GTS_OBJECT (div));
@@ -2265,10 +2338,11 @@ static gboolean metric_laplace_event (GfsEvent * event, GfsSimulation * sim)
 static void metric_laplace_class_init (GtsObjectClass * klass)
 {
   klass->read = metric_laplace_read;
+  klass->write = metric_laplace_write;
   GFS_EVENT_CLASS (klass)->event = metric_laplace_event;
 }
 
-static void metric_laplace_init (GfsGenericMetric * m)
+static void metric_laplace_init (GfsStoredMetric * m)
 {
   GFS_EVENT (m)->start = 0.;
   GFS_EVENT (m)->istep = G_MAXINT/2;
@@ -2289,7 +2363,7 @@ GfsVariableClass * gfs_metric_laplace_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_generic_metric_class ()), &info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_stored_metric_class ()), &info);
   }
 
   return klass;
