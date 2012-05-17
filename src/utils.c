@@ -370,10 +370,12 @@ static GfsCartesianGrid * read_cartesian_grid (gchar * name, GtsFile * fp)
   return grid;
 }
 
+#define INDEX_T 6
+
 static gboolean fit_index_dimension (GfsCartesianGrid * grid, guint * val, GtsFile * fp)
 {
   guint i, j;
-  gchar list[] = {'x','y','z','t'};
+  gchar * list[INDEX_T + 2] = {"x", "y", "z", "rx", "ry", "rz", "t", NULL};
 
   if (grid->N > 4) {
     gts_file_error (fp, "Cartesian grids can only use four dimensions or less");
@@ -381,8 +383,11 @@ static gboolean fit_index_dimension (GfsCartesianGrid * grid, guint * val, GtsFi
   }
 
   for (i = 0; i < grid->N; i++) {
-    for (j = 0; j < 4 && *grid->name[i] != list[j]; j++);
-    if (j == 4) {
+    gchar ** name = list; j = 0;
+    while (*name != NULL && strcmp (*name, grid->name[i])) {
+      name++; j++;
+    }
+    if (!name) {
       gts_file_error (fp, "unknown Cartesian grid index `%s'", grid->name[i]);
       return FALSE;
     }
@@ -395,25 +400,32 @@ static gboolean cgd_is_spatial (GfsFunction * f)
 {
   guint i;
   for (i = 0; i < f->g->N; i++)
-    if (f->index[i] < 3)
+    if (f->index[i] < INDEX_T)
       return TRUE;
   return FALSE;
 }
 
-static gdouble interpolated_cgd (GfsFunction * f, FttVector * p)
+static gdouble interpolated_cgd (const GfsFunction * f, const FttVector * r)
 {
   gdouble vector[4];
   gdouble val;
   guint i;
 
-  gfs_simulation_map_inverse (gfs_object_simulation (f), p);
+  FttVector p = *r;
+  gboolean mapped = FALSE;
   for (i = 0; i < f->g->N; i++)
-    switch (f->index[i]) {
-    case 0: vector[i] = p->x; break;
-    case 1: vector[i] = p->y; break;
-    case 2: vector[i] = p->z; break;
-    case 3: vector[i] = gfs_object_simulation (f)->time.t; break;
-    default: g_assert_not_reached ();
+    if (f->index[i] < 3) { /* x,y,z */
+      if (!mapped) {
+	gfs_simulation_map_inverse (gfs_object_simulation (f), &p);
+	mapped = TRUE;
+      }
+      vector[i] = (&p.x)[f->index[i]];
+    }
+    else if (f->index[i] < 6) /* rx,ry,rz */
+      vector[i] = (&r->x)[f->index[i] - 3];
+    else { /* t */
+      g_assert (f->index[i] == INDEX_T);
+      vector[i] = gfs_object_simulation (f)->time.t;
     }
 
   if (!gfs_cartesian_grid_interpolate (f->g, vector, &val))
