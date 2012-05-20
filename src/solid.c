@@ -945,6 +945,10 @@ void gfs_init_solid_fractions_from_children (GfsDomain * domain,
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) foreach_box, &p);
   g_slist_foreach (p.solid_boxes, (GFunc) gts_object_destroy, NULL);
   g_slist_free (p.solid_boxes);
+  if (p.solid_boxes) {
+    gfs_locate_array_destroy (domain->array);
+    domain->array = gfs_locate_array_new (domain);
+  }
 }
 
 /**

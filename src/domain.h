@@ -27,6 +27,21 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* GfsLocateArray: Header */
+
+typedef struct {
+  GSList ** root;
+  gdouble h, min[FTT_DIMENSION], max[FTT_DIMENSION];
+  gint n[FTT_DIMENSION], size;
+} GfsLocateArray;
+
+GfsLocateArray * gfs_locate_array_new     (GfsDomain * domain);
+GSList *         gfs_locate_array_locate  (GfsLocateArray * a, 
+					   FttVector * p);
+void             gfs_locate_array_destroy (GfsLocateArray * a);
+
+/* GfsDomain: Header */
+
 typedef struct _GfsDomainClass     GfsDomainClass;
 typedef struct _GfsDiffusion       GfsDiffusion;
 typedef struct _GfsSourceDiffusion GfsSourceDiffusion;

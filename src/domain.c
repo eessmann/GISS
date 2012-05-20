@@ -39,22 +39,16 @@
 
 #include "config.h"
 
-/* LocateArray */
+/* GfsLocateArray: Object */
 
-typedef struct {
-  GSList ** root;
-  gdouble h, min[FTT_DIMENSION], max[FTT_DIMENSION];
-  gint n[FTT_DIMENSION], size;
-} LocateArray;
-
-static void locate_index (FttVector * p, LocateArray * a, gint i[FTT_DIMENSION])
+static void locate_index (FttVector * p, GfsLocateArray * a, gint i[FTT_DIMENSION])
 {
   gint c;
   for (c = 0; c < FTT_DIMENSION; c++)
     i[c] = floor (((&p->x)[c] - a->min[c])/a->h);
 }
 
-static void root_bounds (FttCell * root, LocateArray * a)
+static void root_bounds (FttCell * root, GfsLocateArray * a)
 {
   FttVector p;
   ftt_cell_pos (root, &p);
@@ -65,7 +59,7 @@ static void root_bounds (FttCell * root, LocateArray * a)
   }
 }
 
-static void box_bounds (GfsBox * box, LocateArray * a)
+static void box_bounds (GfsBox * box, GfsLocateArray * a)
 {
   root_bounds (box->root, a);
   FttDirection d;
@@ -74,7 +68,7 @@ static void box_bounds (GfsBox * box, LocateArray * a)
       root_bounds (GFS_BOUNDARY (box->neighbor[d])->root, a);
 }
 
-static gint locate_linear_index (FttVector * p, LocateArray * a)
+static gint locate_linear_index (FttVector * p, GfsLocateArray * a)
 {
   gint i[FTT_DIMENSION], index = 0, c;
   locate_index (p, a, i);
@@ -86,7 +80,7 @@ static gint locate_linear_index (FttVector * p, LocateArray * a)
   return index;
 }
 
-static void box_index (GfsBox * b, LocateArray * a)
+static void box_index (GfsBox * b, GfsLocateArray * a)
 {
   FttVector p;
   ftt_cell_pos (b->root, &p);
@@ -105,13 +99,19 @@ static void box_index (GfsBox * b, LocateArray * a)
     }
 }
 
-/*
+/**
+ * @domain: a #GfsDomain.
+ *
  * Creates a rectangular array for fast location of which GfsBox
  * contains a given point.
+ *
+ * Returns: a new #GfsLocateArray.
  */
-static LocateArray * locate_array_new (GfsDomain * domain)
+GfsLocateArray * gfs_locate_array_new (GfsDomain * domain)
 {
-  LocateArray * a = g_malloc (sizeof (LocateArray));
+  g_return_val_if_fail (domain != NULL, NULL);
+  
+  GfsLocateArray * a = g_malloc (sizeof (GfsLocateArray));
   guint i;
   a->h = ftt_level_size (domain->rootlevel);
   for (i = 0; i < FTT_DIMENSION; i++) {
@@ -131,13 +131,26 @@ static LocateArray * locate_array_new (GfsDomain * domain)
   return a;
 }
 
-static GSList * locate_array_locate (LocateArray * a, FttVector * p)
+/**
+ * @a: a #GfsLocateArray.
+ * @p: a #FttVector.
+ *
+ * Returns: a list of objects containing @p or %NULL.
+ */
+GSList * gfs_locate_array_locate (GfsLocateArray * a, FttVector * p)
 {
+  g_return_val_if_fail (a != NULL, NULL);
+  g_return_val_if_fail (p != NULL, NULL);
   gint i = locate_linear_index (p, a);
   return i < 0 ? NULL : a->root[i];
 }
 
-static void locate_array_destroy (LocateArray * a)
+/**
+ * @a: a #GfsLocateArray.
+ *
+ * Frees the memory allocated to @a.
+ */
+void gfs_locate_array_destroy (GfsLocateArray * a)
 {
   if (a) {
     gint i;
@@ -476,8 +489,8 @@ static void domain_post_read (GfsDomain * domain, GtsFile * fp)
 
   gfs_domain_match (domain);
 
-  locate_array_destroy (domain->array);
-  domain->array = locate_array_new (domain);
+  gfs_locate_array_destroy (domain->array);
+  domain->array = gfs_locate_array_new (domain);
 
   domain->version = atoi (GFS_BUILD_VERSION);
 }
@@ -532,7 +545,7 @@ static void domain_destroy (GtsObject * o)
 
   g_slist_free (domain->variables_io);
 
-  locate_array_destroy (domain->array);
+  gfs_locate_array_destroy (domain->array);
   domain->array = NULL;
 
   g_hash_table_destroy (domain->objects);
@@ -1273,7 +1286,7 @@ void gfs_domain_forget_boundary (GfsDomain * domain, GfsBoundary * boundary)
   g_return_if_fail (boundary != NULL);
   g_return_if_fail (gfs_box_domain (boundary->box) == domain);
 
-  LocateArray * a = domain->array;
+  GfsLocateArray * a = domain->array;
   if (a == NULL)
     return;
 
@@ -2567,7 +2580,7 @@ FttCell * gfs_domain_locate (GfsDomain * domain,
   g_return_val_if_fail (domain != NULL, NULL);
   g_return_val_if_fail (domain->array != NULL, NULL);
 
-  GSList * b = locate_array_locate (domain->array, &target);
+  GSList * b = gfs_locate_array_locate (domain->array, &target);
   if (b && GFS_IS_BOX (b->data)) {
     if (where)
       *where = b->data;
@@ -2600,7 +2613,7 @@ FttCell * gfs_domain_boundary_locate (GfsDomain * domain,
   g_return_val_if_fail (domain != NULL, NULL);
   g_return_val_if_fail (domain->array != NULL, NULL);
 
-  GSList * b = locate_array_locate (domain->array, &target);
+  GSList * b = gfs_locate_array_locate (domain->array, &target);
   if (!b)
     return NULL;
   if (GFS_IS_BOX (b->data)) {
@@ -4567,8 +4580,8 @@ GfsRequest * gfs_send_boxes (GfsDomain * domain, GSList * boxes, int dest)
   setup_binary_IO (domain);
   GfsRequest * r = gfs_send_objects (boxes, dest);
   g_slist_foreach (boxes, (GFunc) gts_object_destroy, NULL);
-  locate_array_destroy (domain->array);
-  domain->array = locate_array_new (domain);
+  gfs_locate_array_destroy (domain->array);
+  domain->array = gfs_locate_array_new (domain);
   return r;
 }
 
@@ -4596,9 +4609,9 @@ GSList * gfs_receive_boxes (GfsDomain * domain, int src)
     g_slist_foreach (boxes, (GFunc) convert_boundary_mpi_into_edges, ids);
     g_ptr_array_free (ids, TRUE);
 
-    /* Update LocateArray */
-    locate_array_destroy (domain->array);
-    domain->array = locate_array_new (domain);
+    /* Update GfsLocateArray */
+    gfs_locate_array_destroy (domain->array);
+    domain->array = gfs_locate_array_new (domain);
   }
   return boxes;
 }

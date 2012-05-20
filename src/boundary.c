@@ -1786,7 +1786,8 @@ static void gfs_box_destroy (GtsObject * object)
     if (GFS_IS_BOUNDARY (box->neighbor[d]))
       gts_object_destroy (box->neighbor[d]);
     else if (GFS_IS_BOX (box->neighbor[d])) {
-      g_assert (GFS_BOX (box->neighbor[d])->neighbor[FTT_OPPOSITE_DIRECTION (d)] == GTS_OBJECT (box));
+      g_assert (GFS_BOX (box->neighbor[d])->neighbor[FTT_OPPOSITE_DIRECTION (d)] == 
+		GTS_OBJECT (box));
       GFS_BOX (box->neighbor[d])->neighbor[FTT_OPPOSITE_DIRECTION (d)] = NULL;
     }
 
