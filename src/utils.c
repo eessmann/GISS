@@ -668,7 +668,15 @@ static gchar * find_identifier (const gchar * s, const gchar * i)
 /* fixme: eventually this could be replaced with g_mkdtemp() */
 static char * mkdtemp (char * template)
 {
-  if (!tmpnam (template))
+  /* make sure template is at least L_tmpnam long */
+  if (strlen (template) < L_tmpnam) {
+    char template1[L_tmpnam];
+    strcpy (template1, template);
+    if (!tmpnam (template1))
+      return NULL;
+    strcpy (template, template1);
+  }
+  else if (!tmpnam (template))
     return NULL;
   if (mkdir (template, S_IRWXU))
     return NULL;
@@ -681,11 +689,13 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
   GfsSimulation * sim = gfs_object_simulation (f);
   GfsDomain * domain = GFS_DOMAIN (sim);
   GSList * lv = NULL, * ldv = NULL, * i;
-  gchar dirname[L_tmpnam] = "/tmp/gfsXXXXXX";
+  gchar * tmpdir = getenv ("TMPDIR");
+  gchar * dirname = tmpdir ? g_strconcat (tmpdir, "/gfsXXXXXX", NULL) : g_strdup ("/tmp/gfsXXXXXX");
   FILE * fin;
 
   if (mkdtemp (dirname) == NULL) {
     gts_file_error (fp, "cannot create temporary directory\n%s", strerror (errno));
+    g_free (dirname);
     return;
   }
   gchar * finname = g_strdup_printf ("%s/function.c", dirname);
@@ -826,6 +836,7 @@ static void function_compile (GfsFunction * f, GtsFile * fp)
     if (rmdir (dirname))
       g_warning ("could not remove directory %s\n%s", dirname, strerror (errno));
   }
+  g_free (dirname);
 }
 
 static void function_read (GtsObject ** o, GtsFile * fp)
