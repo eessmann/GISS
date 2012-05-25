@@ -404,7 +404,8 @@ void gfs_advance_tracers (GfsSimulation * sim, gdouble dt)
 {
   g_return_if_fail (sim != NULL);
 
-  GSList * i = domain->variables;
+  GfsDomain * domain = GFS_DOMAIN (sim);
+  GSList * i = sim->events->items;
   while (i) {
     if (GFS_IS_VARIABLE_TRACER_VOF (i->data)) {
       GfsVariableTracer * t = i->data;
@@ -875,15 +876,15 @@ static gdouble cell_id (FttCell * cell)
 
 static gdouble cell_orthogonality (FttCell * cell, FttCellFace * face, GfsDomain * domain)
 {
-  FttVector p;
   gdouble h;
+  FttVector p;
   if (cell) {
     ftt_cell_pos (cell, &p);
-    h = ftt_cell_size (cell)/2;
+    h = ftt_cell_size (cell)/2.;
   }
   else {
     ftt_face_pos (face, &p);
-    h = ftt_cell_size (face->cell)/2;
+    h = ftt_cell_size (face->cell)/2.;
   }
   FttVector p1 = p, p2 = p, p3 = p, p4 = p;
   p1.x += h; p2.x -= h;
@@ -1801,8 +1802,7 @@ void gfs_simulation_run (GfsSimulation * sim)
  * @sim: a #GfsSimulation.
  * @p: a #FttVector.
  *
- * Applies the mapping transformations associated with @sim to
- * coordinates @p.
+ * Maps the physical space coordinates @p into computational space.
  */
 void gfs_simulation_map (GfsSimulation * sim, FttVector * p)
 {
@@ -1825,8 +1825,7 @@ void gfs_simulation_map (GfsSimulation * sim, FttVector * p)
  * @sim: a #GfsSimulation.
  * @p: a #FttVector.
  *
- * Applies the inverse mapping transformations associated with @sim to
- * coordinates @p.
+ * Maps the computational coordinates @p into physical space.
  */
 void gfs_simulation_map_inverse (GfsSimulation * sim, FttVector * p)
 {
