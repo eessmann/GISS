@@ -36,10 +36,30 @@ static double dd (const gchar * name, FttComponent c) {
 				(_sim->physical_params.L*ftt_cell_size (_cell)));
 }
 
+static double dd2 (const gchar * name, FttComponent c) {
+  GfsVariable * v = gfs_variable_from_name (GFS_DOMAIN (_sim)->variables, name);
+  if (v == NULL)
+    return 0.;
+  g_return_val_if_fail (_cell != NULL, 0.);
+  FttCellFace f1 = ftt_cell_face (_cell, 2*c);
+  FttCellFace f2 = ftt_cell_face (_cell, 2*c + 1);
+  if (f1.neighbor && f2.neighbor) {
+    GfsGradient g1, g2;
+    gfs_face_gradient (&f1, &g1, v->i, -1);
+    gfs_face_gradient (&f2, &g2, v->i, -1);
+    return gfs_dimensional_value (v, (g1.b + g2.b - (g1.a + g2.a)*GFS_VALUE (_cell, v))
+				  /pow (_sim->physical_params.L*ftt_cell_size (_cell), 2.));
+  }
+  return 0.;
+}
+
 static double dx (const gchar * name) { return dd (name, FTT_X); }
 static double dy (const gchar * name) { return dd (name, FTT_Y); }
+static double dx2 (const gchar * name) { return dd2 (name, FTT_X); }
+static double dy2 (const gchar * name) { return dd2 (name, FTT_Y); }
 #if !FTT_2D
 static double dz (const gchar * name) { return dd (name, FTT_Z); }
+static double dz2 (const gchar * name) { return dd2 (name, FTT_Z); }
 #endif /* 3D */
 
 static double area (const gchar * name)
