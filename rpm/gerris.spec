@@ -29,12 +29,12 @@ Requires: hdf5-openmpi
 %if %{?fedora_version} > 15
 BuildRequires: atlas
 %endif
-Requires: proj gsl netcdf
-BuildRequires: netcdf-devel proj-devel gcc-gfortran
+Requires: proj gsl
+BuildRequires: proj-devel gcc-gfortran
 %endif
 # Suse
 %if 0%{?suse_version}
-BuildRequires: libnetcdf-devel libproj-devel gcc-fortran python
+BuildRequires: libproj-devel gcc-fortran python
 %endif
 # For all distros
 Requires: pkgconfig gcc sed gawk m4 gerris-snapshot-devel
@@ -84,7 +84,6 @@ source /etc/profile.d/mpi-selector.sh
 %endif
 
 RPM_OPT_FLAGS="$RPM_OPT_FLAGS -fPIC -DPIC"
-%if 0%{?suse_version}
 if [ -x ./configure ]; then
     CFLAGS="$RPM_OPT_FLAGS" ./configure \
 	--prefix=%{_prefix} \
@@ -98,23 +97,6 @@ else
 	--mandir=%{_mandir} \
 	--disable-static
 fi
-%else
-if [ -x ./configure ]; then
-    CFLAGS="$RPM_OPT_FLAGS" \
-    CPPFLAGS="-I%{_includedir}/netcdf-3" ./configure \
-    --prefix=%{_prefix} \
-    --libdir=%{_prefix}/%_lib \
-    --mandir=%{_mandir} \
-    --disable-static
-else
-    CFLAGS="$RPM_OPT_FLAGS" \
-    CPPFLAGS="-I%{_includedir}/netcdf-3" sh autogen.sh \
-    --prefix=%{_prefix} \
-    --libdir=%{_prefix}/%_lib \
-    --mandir=%{_mandir} \
-    --disable-static
-fi
-%endif
 
 %{__make}
 
