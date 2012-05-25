@@ -3023,23 +3023,36 @@ void gfs_cell_corner_interpolator (FttCell * cell,
   if (t_junction)
     return;
 
-  {
-    FttVector c;
-    gdouble w = 0.;
+  FttVector c;
+  gdouble w = 0.;
+  int boundaries = 0;
+  
+  inter->n = 0;
+  ftt_corner_pos (cell, d, &c);
+  for (i = 0; i < N_CELLS; i++)
+    if (n[i]) {
+      gdouble a;
+      a = 1./(distance (&c, n[i], centered) + 1e-12);
+      inter->c[inter->n] = n[i];
+      inter->w[inter->n++] = a;
+      w += a;
+      if (GFS_CELL_IS_BOUNDARY (n[i]))
+	boundaries++;
+    }
 
-    inter->n = 0;
-    ftt_corner_pos (cell, d, &c);
-    for (i = 0; i < N_CELLS; i++)
-      if (n[i]) {
-	gdouble a;
-	a = 1./(distance (&c, n[i], centered) + 1e-12);
-	inter->c[inter->n] = n[i];
-	inter->w[inter->n++] = a;
-	w += a;
-      }
-    g_assert (w > 0.);
-    interpolator_scale (inter, 1./w);
+  /* corners of domain receive special treatment */
+  if (inter->n == FTT_DIMENSION + 1 && boundaries == FTT_DIMENSION) {
+    /* remove central cell from interpolator */
+    w -= inter->w[0];
+    for (i = 0; i < inter->n - 1; i++) {
+      inter->c[i] = inter->c[i + 1];
+      inter->w[i] = inter->w[i + 1];
+    }
+    inter->n--;
   }
+
+  g_assert (w > 0.);
+  interpolator_scale (inter, 1./w);
 }
 
 /**
