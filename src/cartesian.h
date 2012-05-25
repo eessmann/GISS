@@ -52,6 +52,8 @@ struct _GfsCartesianGrid {
 
 GtsObjectClass *    gfs_cartesian_grid_class         (void);
 GfsCartesianGrid *  gfs_cartesian_grid_new           (GtsObjectClass * klass);
+GfsCartesianGrid *  gfs_cartesian_grid_read          (const gchar * name, 
+						      GtsFile * fp);
 gboolean            gfs_cartesian_grid_interpolate   (GfsCartesianGrid * g, 
 						      gdouble * p, 
 						      gdouble * val);

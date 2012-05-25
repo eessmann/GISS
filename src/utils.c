@@ -340,36 +340,6 @@ static GtsSurface * read_surface (gchar * name, GtsFile * fp)
   return s;
 }
 
-static GfsCartesianGrid * read_cartesian_grid (gchar * name, GtsFile * fp)
-{
-  FILE * fptr = fopen (name, "r");
-  GtsFile * fp1;
-  GfsCartesianGrid * grid;
-  GtsObjectClass * klass;
-
-  if (fptr == NULL) {
-    gts_file_error (fp, "cannot open file `%s'", name);
-    return NULL;
-  }
-
-  fp1 = gts_file_new (fptr);
-
-  klass = gfs_cartesian_grid_class ();
-
-  grid = gfs_cartesian_grid_new (klass);
-  GtsObject * o = GTS_OBJECT (grid);
-  (* klass->read) (&o, fp1);
-
-  if (fp1->type == GTS_ERROR) {
-    gts_file_error (fp, "%s:%d:%d: %s", name, fp1->line, fp1->pos, fp1->error);
-    gts_object_destroy (GTS_OBJECT(grid));
-    grid = NULL;
-  }
-  gts_file_destroy (fp1);
-  fclose (fptr);
-  return grid;
-}
-
 #define INDEX_T 6
 
 static gboolean fit_index_dimension (GfsCartesianGrid * grid, guint * val, GtsFile * fp)
@@ -867,7 +837,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
       return;
     }
     else if (!strcmp (&(fp->token->str[strlen (fp->token->str) - 4]), ".cgd")) {
-      if ((f->g = read_cartesian_grid (fp->token->str, fp)) == NULL)
+      if ((f->g = gfs_cartesian_grid_read (fp->token->str, fp)) == NULL)
 	return;
       if (!fit_index_dimension (f->g, f->index, fp))
 	return;

@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2007 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2007-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -28,7 +28,7 @@
  * \beginobject{GfsCartesianGrid}
  */
 
-static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
+static void cartesian_grid_read (GtsObject ** o, GtsFile * fp)
 {
   GfsCartesianGrid * cgd = GFS_CARTESIAN_GRID (*o);
   guint i, j, size = 1;
@@ -105,7 +105,7 @@ static void gfs_cartesian_grid_read (GtsObject ** o, GtsFile * fp)
   }
 }
 
-static void gfs_cartesian_grid_write (GtsObject * o, FILE * fp)
+static void cartesian_grid_write (GtsObject * o, FILE * fp)
 {
   GfsCartesianGrid * cgd = GFS_CARTESIAN_GRID (o);
   guint i, j, size = 1;
@@ -132,7 +132,7 @@ static void gfs_cartesian_grid_write (GtsObject * o, FILE * fp)
     fprintf (fp, "%f\n", cgd->v[i]);  
 }
 
-static void gfs_cartesian_grid_destroy (GtsObject * object)
+static void cartesian_grid_destroy (GtsObject * object)
 {
   GfsCartesianGrid * cgd = GFS_CARTESIAN_GRID (object);  
 
@@ -153,12 +153,12 @@ static void gfs_cartesian_grid_destroy (GtsObject * object)
   (* GTS_OBJECT_CLASS (gfs_cartesian_grid_class ())->parent_class->destroy) (object);
 }
 
-static void gfs_cartesian_grid_class_init (GtsObjectClass * klass)
+static void cartesian_grid_class_init (GtsObjectClass * klass)
 {
   /* define new methods and overload inherited methods here */
-  GTS_OBJECT_CLASS (klass)->read = gfs_cartesian_grid_read;
-  GTS_OBJECT_CLASS (klass)->write = gfs_cartesian_grid_write;
-  GTS_OBJECT_CLASS (klass)->destroy = gfs_cartesian_grid_destroy;
+  GTS_OBJECT_CLASS (klass)->read = cartesian_grid_read;
+  GTS_OBJECT_CLASS (klass)->write = cartesian_grid_write;
+  GTS_OBJECT_CLASS (klass)->destroy = cartesian_grid_destroy;
 }
 
 GtsObjectClass * gfs_cartesian_grid_class (void)
@@ -166,17 +166,16 @@ GtsObjectClass * gfs_cartesian_grid_class (void)
   static GtsObjectClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_cartesian_grid_info = {
+    GtsObjectClassInfo info = {
       "GfsCartesianGrid",
       sizeof (GfsCartesianGrid),
       sizeof (GtsObjectClass),
-      (GtsObjectClassInitFunc) gfs_cartesian_grid_class_init,
+      (GtsObjectClassInitFunc) cartesian_grid_class_init,
       (GtsObjectInitFunc) NULL,
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_object_class ()),
- 			  &gfs_cartesian_grid_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gts_object_class ()), &info);
   }
 
   return klass;
@@ -255,6 +254,49 @@ gboolean gfs_cartesian_grid_interpolate (GfsCartesianGrid * g, gdouble * p, gdou
   g_assert (g->x[0][i + 1] -  g->x[0][i] != 0.);
   *val = v1 + (v2 - v1)*(p[0] - g->x[0][i])/(g->x[0][i + 1] -  g->x[0][i]);
   return TRUE;
+}
+
+/**
+ * gfs_cartesian_grid_read:
+ * @name: a .cgd filename.
+ * @fp: a #GtsFile or %NULL.
+ *
+ * Returns: the #GfsCartesianGrid stored in @name, or %NULL if an
+ * error occured, in which case an error message is set in @fp (if not
+ * %NULL).
+ */
+GfsCartesianGrid * gfs_cartesian_grid_read (const gchar * name, GtsFile * fp)
+{
+  g_return_val_if_fail (name != NULL, NULL);
+
+  FILE * fptr = fopen (name, "r");
+  GtsFile * fp1;
+  GfsCartesianGrid * grid;
+  GtsObjectClass * klass;
+
+  if (fptr == NULL) {
+    if (fp)
+      gts_file_error (fp, "cannot open file `%s'", name);
+    return NULL;
+  }
+
+  fp1 = gts_file_new (fptr);
+
+  klass = gfs_cartesian_grid_class ();
+
+  grid = gfs_cartesian_grid_new (klass);
+  GtsObject * o = GTS_OBJECT (grid);
+  (* klass->read) (&o, fp1);
+
+  if (fp1->type == GTS_ERROR) {
+    if (fp)
+      gts_file_error (fp, "%s:%d:%d: %s", name, fp1->line, fp1->pos, fp1->error);
+    gts_object_destroy (GTS_OBJECT(grid));
+    grid = NULL;
+  }
+  gts_file_destroy (fp1);
+  fclose (fptr);
+  return grid;
 }
 
 /** \endobject{GfsCartesianGrid} */
