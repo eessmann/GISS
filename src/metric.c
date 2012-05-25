@@ -258,7 +258,7 @@ static double kpu_2d_l4[17][3] = {
   { .9802456, .5, .052328105232810528 },
 };
 
-#define EPS 1e-8
+#define EPS 1e-6
 
 static double ru_rv (FttVector r, GfsMap * map)
 {
@@ -294,10 +294,6 @@ static double integration2d (GfsMap * map,
   return a*du*dv;
 }
 
-/* we set the error to one but the QNG code will use at least
-   21 points which is enough */
-#define QNG_21 1.
-
 typedef struct {
   FttVector * r;
   GfsMap * map;
@@ -323,6 +319,7 @@ static double rv (FttVector r, GfsMap * map)
 }
 
 /* Returns: \sqrt{(r_u.r_u)} */
+
 #if USE_GSL
 static double ru_gsl (double u, void * data)
 {
@@ -343,7 +340,9 @@ static gdouble integration (const gsl_function * f, double a, double b)
 {
   double result, abserr;
   size_t neval;
-  gsl_integration_qng (f, a, b, QNG_21, 0., &result, &abserr, &neval);
+  /* we set the error to one but the QNG code will use at least
+     21 points which is enough */
+  gsl_integration_qng (f, a, b, 1., 0., &result, &abserr, &neval);
   //  fprintf (stderr, "neval: %d abserr: %g result: %g\n", neval, abserr, result);
   return result;
 }
@@ -736,7 +735,7 @@ static void metric_read (GtsObject ** o, GtsFile * fp)
   GtsFileVariable var[] = {
     {GTS_OBJ, "x", TRUE, &m->x},
     {GTS_OBJ, "y", TRUE, &m->y},
-    /* {GTS_OBJ, "z", TRUE, &m->z}, fixme: z metric does not work yet */
+    {GTS_OBJ, "z", TRUE, &m->z},
     {GTS_NONE}
   };
   FttComponent c;
@@ -797,7 +796,7 @@ GfsVariableClass * gfs_metric_class (void)
 
 #define N 30
 
-#if 0
+#if 1
 /* Conformal mapping Taylor coefficients: from Rancic et al, 1996, Table B.1 */
 
 static double A[N] = {
@@ -890,8 +889,7 @@ static void fmap_xy2XYZ (double x, double y, double * X, double * Y, double * Z)
   complex double z = (x + I*y)/2.;
   complex double W;
   if (cabs (z) > 0.) {
-    z = z*z*z*z;
-    W = WofZ (z);
+    W = WofZ (z*z*z*z);
     W = I3*cpow (W*I, 1./3.);
   }
   else
@@ -1347,9 +1345,7 @@ static gdouble cubed_face_scale_metric (const GfsDomain * domain, const FttCellF
 {
   if (c > FTT_Y)
     return 1.;
-  /* fixme: here we assume that the metric is perfectly isotropic:
-     this is not strictly the case numerically (0.08% difference), but
-     is it the case theoretically? */
+  /* The transformation is conformal so the metric is isotropic */
   return GFS_VALUE (face->cell, GFS_STORED_METRIC (domain->metric_data)->h[face->d]);
 }
 
@@ -1492,10 +1488,12 @@ static void metric_cubed_read (GtsObject ** o, GtsFile * fp)
     return;
 
   GfsMetricCubed * cubed = GFS_METRIC_CUBED (*o);
-  if (fp->type == GTS_INT) {
-    cubed->level = atoi (fp->token->str);
-    gts_file_next_token (fp);
+  if (fp->type != GTS_INT) {
+    gts_file_error (fp, "expecting an integer (level)");
+    return;
   }
+  cubed->level = atoi (fp->token->str);
+  gts_file_next_token (fp);
 
   GfsVariable * a = GFS_VARIABLE (*o);
   a->coarse_fine = cubed_coarse_fine;
