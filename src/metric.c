@@ -1261,17 +1261,25 @@ static void normalized_jacobian (const FttVector * p, GtsMatrix * J)
 static void map_cubed_inverse_vector (GfsMap * map, const FttVector * p,
 				      const FttVector * src, FttVector * dest)
 {
-  g_assert_not_implemented ();
-
   GtsMatrix J[4];
   normalized_jacobian (p, J);
-  FttVector src1 = *src; /* in case src and dest are identical */
+  FttVector src1;
+
   int i, j;
   for (i = 0; i < 3; i++) {
-    (&dest->x)[i] = 0.;
+    (&src1.x)[i] = 0.;
     for (j = 0; j < 3; j++)
-      (&dest->x)[i] += (&src1.x)[j]*J[i][j];
+      (&src1.x)[i] += (&src->x)[j]*J[i][j];
   }
+  
+  FttVector p1;
+  map_cubed_inverse (map, p, &p1);
+  GfsSimulation * sim = gfs_object_simulation (map);
+  gdouble lon = p1.x*sim->physical_params.L*M_PI/180.;
+  gdouble lat = p1.y*sim->physical_params.L*M_PI/180.;
+  dest->x = (src1.x + tan (lat)*sin (lon)*src1.y)/cos (lon);
+  dest->y = src1.y/cos (lat);
+  dest->z = src1.z;
 }
 
 static void map_cubed_transform_vector (GfsMap * map, const FttVector * p,
@@ -1285,7 +1293,7 @@ static void map_cubed_transform_vector (GfsMap * map, const FttVector * p,
     g_assert_not_reached ();
   }
 
-  FttVector src1 = * src;
+  FttVector src1 = *src;
   FttVector p1;
   map_cubed_inverse (map, p, &p1);
   GfsSimulation * sim = gfs_object_simulation (map);
