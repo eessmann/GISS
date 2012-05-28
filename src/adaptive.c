@@ -613,8 +613,8 @@ static void gfs_adapt_error_read (GtsObject ** o, GtsFile * fp)
 
 static void compute_gradient (FttCell * cell, GfsAdaptError * a)
 {
-  GFS_VALUE (cell, a->dv) = gfs_center_regular_gradient (cell, a->dv->component, 
-							 GFS_ADAPT_GRADIENT (a)->v);
+  GFS_VALUE (cell, a->dv[a->c]) = gfs_center_regular_gradient (cell, a->c, 
+							       GFS_ADAPT_GRADIENT (a)->v);
 }
 
 static void add_hessian_norm (FttCell * cell, GfsAdaptError * a)
@@ -622,12 +622,12 @@ static void add_hessian_norm (FttCell * cell, GfsAdaptError * a)
   /* off-diagonal */
   FttComponent j;
   for (j = 0; j < FTT_DIMENSION; j++)
-    if (j != a->dv->component) {
-      gdouble g = gfs_center_regular_gradient (cell, j, a->dv);
+    if (j != a->c) {
+      gdouble g = gfs_center_regular_gradient (cell, j, a->dv[a->c]);
       GFS_VALUE (cell, a->v) += g*g;
     }
   /* diagonal */
-  gdouble g = gfs_center_regular_2nd_derivative (cell, a->dv->component, GFS_ADAPT_GRADIENT (a)->v);
+  gdouble g = gfs_center_regular_2nd_derivative (cell, a->c, GFS_ADAPT_GRADIENT (a)->v);
   GFS_VALUE (cell, a->v) += g*g;
 }
 
@@ -647,17 +647,21 @@ static gboolean gfs_adapt_error_event (GfsEvent * event,
     gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1,  GFS_ADAPT_GRADIENT (a)->v);
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) gfs_cell_reset, a->v);
-    a->dv = gfs_temporary_variable (domain);
-    for (a->dv->component = 0; a->dv->component < FTT_DIMENSION; a->dv->component++) {
+    for (a->c = 0; a->c < FTT_DIMENSION; a->c++) {
+      a->dv[a->c] = gfs_temporary_variable (domain);
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 				(FttCellTraverseFunc) compute_gradient, a);
-      gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, a->dv);
+    }
+    gfs_variable_set_vector (a->dv, FTT_DIMENSION);
+    for (a->c = 0; a->c < FTT_DIMENSION; a->c++) {
+      gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, a->dv[a->c]);
       gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 				(FttCellTraverseFunc) add_hessian_norm, a);
     }
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) scale, a);
-    gts_object_destroy (GTS_OBJECT (a->dv));
+    for (a->c = 0; a->c < FTT_DIMENSION; a->c++)
+      gts_object_destroy (GTS_OBJECT (a->dv[a->c]));
     return TRUE;
   }
   return FALSE;

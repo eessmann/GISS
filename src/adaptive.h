@@ -136,7 +136,8 @@ typedef struct _GfsAdaptError         GfsAdaptError;
 struct _GfsAdaptError {
   /*< private >*/
   GfsAdaptGradient parent;
-  GfsVariable * dv;
+  GfsVariable * dv[FTT_DIMENSION];
+  FttComponent c;
 
   /*< public >*/
   GfsVariable * v;
