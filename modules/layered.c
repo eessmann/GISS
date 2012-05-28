@@ -41,9 +41,9 @@ struct _GfsLayered {
   guint l;
 
   /*< public >*/
-  LayeredVariable * u, * v;
-  GSList * tracers;
-  GfsVariable ** w, ** pr, ** un[FTT_NEIGHBORS];
+  LayeredVariable * u, * v, * lgmac[2], * lg[2];
+  GSList * tracers, * variables;
+  GfsVariable ** w, ** pr, ** un[FTT_NEIGHBORS], * gmac[FTT_DIMENSION], * g[FTT_DIMENSION];
   gdouble * dz, H;
   guint nl;        /**< number of layers */
   GfsFunction * b; /**< buoyancy */
@@ -66,9 +66,13 @@ static LayeredVariable * layered_variable_new (GfsVariable * v)
   lv->v = v;
   lv->vl = g_malloc (nl*sizeof (LayeredVariable));
   for (l = 0; l < nl; l++) {
-    gchar * name = g_strdup_printf ("%s%d", v->name, l);
-    lv->vl[l] = gfs_variable_clone (v, name);
-    g_free (name);
+    if (v->name) {
+      gchar * name = g_strdup_printf ("%s%d", v->name, l);
+      lv->vl[l] = gfs_variable_clone (v, name);
+      g_free (name);
+    }
+    else
+      lv->vl[l] = gfs_temporary_variable (v->domain);
   }
   lv->v = v;
   return lv;
@@ -81,7 +85,7 @@ static void layered_variable_average (FttCell * cell, LayeredVariable * lv)
   gdouble v = 0., * dz = layered->dz;
   for (l = 0; l < nl; l++)
     v += GFS_VALUE (cell, lv->vl[l])*dz[l];
-  GFS_VALUE (cell, lv->v) = v/layered->H;
+  GFS_VALUE (cell, lv->v) = v;
 }
 
 static void layered_variable_swap (LayeredVariable * lv)
@@ -140,6 +144,25 @@ static void layered_read (GtsObject ** o, GtsFile * fp)
     gfs_variable_set_vector (u, 2);
   }
 
+  layered->gmac[0] = gfs_domain_add_variable (domain, NULL, NULL);
+  layered->gmac[1] = gfs_domain_add_variable (domain, NULL, NULL);
+  layered->g[0] = gfs_domain_add_variable (domain, NULL, NULL);
+  layered->g[1] = gfs_domain_add_variable (domain, NULL, NULL);
+  gfs_variable_set_vector (layered->gmac, FTT_DIMENSION);
+  gfs_variable_set_vector (layered->g, FTT_DIMENSION);
+
+  layered->lgmac[0] = layered_variable_new (layered->gmac[0]);
+  layered->lgmac[1] = layered_variable_new (layered->gmac[1]);
+  layered->lg[0] = layered_variable_new (layered->g[0]);
+  layered->lg[1] = layered_variable_new (layered->g[1]);
+  for (l = 0; l < layered->nl; l++) {
+    GfsVariable * u[2] = { layered->lg[0]->vl[l], layered->lg[1]->vl[l] };
+    gfs_variable_set_vector (u, 2);
+    u[0] = layered->lgmac[0]->vl[l];
+    u[1] = layered->lgmac[1]->vl[l];
+    gfs_variable_set_vector (u, 2);
+  }
+
   layered->w = g_malloc (layered->nl*sizeof (GfsVariable *));
   for (l = 0; l < layered->nl; l++) {
     gchar * name = g_strdup_printf ("W%d", l);
@@ -163,6 +186,17 @@ static void layered_read (GtsObject ** o, GtsFile * fp)
   while (i) {
     if (GFS_IS_VARIABLE_TRACER (i->data))
       layered->tracers = g_slist_prepend (layered->tracers, layered_variable_new (i->data));
+    else if (GFS_IS_SOURCE_CORIOLIS (i->data)) {
+      GfsSourceCoriolis * s = i->data;
+      if (s->u[0]) {
+	layered->variables = g_slist_prepend (layered->variables, layered_variable_new (s->u[0]));
+	layered->variables = g_slist_prepend (layered->variables, layered_variable_new (s->u[1]));
+      }
+    }
+    else if (GFS_IS_EVENT_SUM (i->data)) {
+      GfsEventSum * s = i->data;
+      layered->variables = g_slist_prepend (layered->variables, layered_variable_new (s->sv));
+    }
     i = i->next;
   }
 }
@@ -172,7 +206,9 @@ static void layered_write (GtsObject * o, FILE * fp)
   (* GTS_OBJECT_CLASS (gfs_layered_class ())->parent_class->write) (o, fp);
 
   GfsLayered * layered = GFS_LAYERED (o);
-  fprintf (fp, " { nl = %d H = %g }", layered->nl, layered->H);
+  fprintf (fp, " { nl = %d H = %g b =", layered->nl, layered->H);
+  gfs_function_write (layered->b, fp);
+  fputs (" }", fp);
 }
 
 static void layered_destroy (GtsObject * object)
@@ -185,6 +221,10 @@ static void layered_destroy (GtsObject * object)
   
   layered_variable_destroy (layered->u);
   layered_variable_destroy (layered->v);
+  layered_variable_destroy (layered->lgmac[0]);
+  layered_variable_destroy (layered->lgmac[1]);
+  layered_variable_destroy (layered->lg[0]);
+  layered_variable_destroy (layered->lg[1]);
   g_free (layered->w);
   g_free (layered->pr);
 
@@ -192,6 +232,8 @@ static void layered_destroy (GtsObject * object)
 
   g_slist_foreach (layered->tracers, (GFunc) layered_variable_destroy, NULL);
   g_slist_free (layered->tracers);
+  g_slist_foreach (layered->variables, (GFunc) layered_variable_destroy, NULL);
+  g_slist_free (layered->variables);
 
   (* GTS_OBJECT_CLASS (gfs_layered_class ())->parent_class->destroy) (object);
 }
@@ -213,6 +255,15 @@ static void swap_velocities (GfsLayered * layered)
 			      (FttCellTraverseFunc) swap_face_velocities, layered);
   layered_variable_swap (layered->u);
   layered_variable_swap (layered->v);
+  g_slist_foreach (layered->variables, (GFunc) layered_variable_swap, NULL);
+}
+
+static void swap_gradients (GfsLayered * layered)
+{
+  layered_variable_swap (layered->lg[0]);
+  layered_variable_swap (layered->lg[1]);
+  layered_variable_swap (layered->lgmac[0]);
+  layered_variable_swap (layered->lgmac[1]);
 }
 
 static void swap_layer (GfsLayered * layered)
@@ -220,6 +271,7 @@ static void swap_layer (GfsLayered * layered)
   layered_variable_swap (layered->u);
   layered_variable_swap (layered->v);
   g_slist_foreach (layered->tracers, (GFunc) layered_variable_swap, NULL);
+  g_slist_foreach (layered->variables, (GFunc) layered_variable_swap, NULL);
 }
 
 static void traverse_layers (GfsDomain * domain, FttCellTraverseFunc func, gpointer data)
@@ -235,6 +287,7 @@ static void traverse_layers (GfsDomain * domain, FttCellTraverseFunc func, gpoin
 static gdouble cell_z (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
 {
   GfsLayered * layered = GFS_LAYERED (sim);
+  g_assert (layered->l < layered->nl);
   double z = layered->dz[layered->l]/2.;
   int i;
   for (i = 0; i < layered->l; i++)
@@ -267,7 +320,8 @@ static void sum_face_velocities (FttCell * cell, GfsLayered * layered)
 
 static void compute_vertical_velocity (FttCell * cell, GfsLayered * layered)
 {
-  gdouble w = 0., size = ftt_cell_size (cell);
+  gdouble w = 0.;
+  gdouble a = ftt_cell_size (cell)*gfs_domain_cell_fraction (GFS_DOMAIN (layered), cell)/layered->H;
   for (layered->l = 0; layered->l < layered->nl; layered->l++) {
     FttCellFace face;
     gdouble div = 0.;
@@ -276,7 +330,7 @@ static void compute_vertical_velocity (FttCell * cell, GfsLayered * layered)
       div += (FTT_FACE_DIRECT (&face) ? 1. : -1.)*
 	GFS_VALUE (cell, layered->un[face.d][layered->l])*
 	gfs_domain_face_fraction (GFS_DOMAIN (layered), &face);
-    w -= div*layered->dz[layered->l]*layered->H/size;
+    w -= div*layered->dz[layered->l]/a;
     GFS_VALUE (cell, layered->w[layered->l]) = w;
   }
 }
@@ -291,7 +345,7 @@ static void compute_hydrostatic_potential (FttCell * cell, GfsLayered * layered)
   }
   double * p = &GFS_VALUE (cell, layered->pr[0]), pr;
   int l, top = layered->nl - 1;
-  pr = p[top] = ab[top]*dz[top]*H/2.;
+  pr = p[top] = 0.; //ab[top]*dz[top]*H/2.;
   for (l = top; l > 0; l--) {
     pr += (ab[l]*dz[l - 1] + ab[l - 1]*dz[l])*H/2.;
     p[l - 1] = pr;
@@ -301,7 +355,7 @@ static void compute_hydrostatic_potential (FttCell * cell, GfsLayered * layered)
 static void mac_projection (GfsLayered * layered, 
 			    GfsMultilevelParams * par,
 			    gdouble dt,
-			    GfsVariable * p, 
+			    GfsVariable * p,
 			    GfsVariable ** g)
 {
   GfsSimulation * sim = GFS_SIMULATION (layered);
@@ -316,12 +370,30 @@ static void mac_projection (GfsLayered * layered,
     gfs_correct_normal_velocities (domain, FTT_DIMENSION, p, NULL, dt);
     swap_velocities (layered);
   }
-  
+
   /* compute vertical velocity */
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) compute_vertical_velocity, layered);
 }
 
-static void approximate_projection (GfsLayered * layered, GfsVariable * p, GfsVariable ** g)
+static void add_barotropic_gradient (FttCell * cell, GfsLayered * layered)
+{
+  int l;
+  for (l = 0; l < layered->nl; l++) {
+    GFS_VALUE (cell, layered->lg[0]->vl[l]) += GFS_VALUE (cell, layered->lg[0]->v);
+    GFS_VALUE (cell, layered->lg[1]->vl[l]) += GFS_VALUE (cell, layered->lg[1]->v);
+  }
+}
+
+static void add_barotropic_gmac (FttCell * cell, GfsLayered * layered)
+{
+  int l;
+  for (l = 0; l < layered->nl; l++) {
+    GFS_VALUE (cell, layered->lgmac[0]->vl[l]) += GFS_VALUE (cell, layered->lgmac[0]->v);
+    GFS_VALUE (cell, layered->lgmac[1]->vl[l]) += GFS_VALUE (cell, layered->lgmac[1]->v);
+  }
+}
+
+static void approximate_projection (GfsLayered * layered, GfsVariable * p)
 {
   GfsSimulation * sim = GFS_SIMULATION (layered);
   GfsDomain * domain = GFS_DOMAIN (sim);
@@ -333,6 +405,7 @@ static void approximate_projection (GfsLayered * layered, GfsVariable * p, GfsVa
   gfs_poisson_coefficients (domain, NULL, TRUE, TRUE, TRUE);
   for (layered->l = 0; layered->l < layered->nl; layered->l++) {
     swap_velocities (layered);
+    swap_gradients (layered);
     /* compute MAC velocities from centered velocities */
     gfs_domain_face_traverse (domain, FTT_XYZ,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -342,23 +415,27 @@ static void approximate_projection (GfsLayered * layered, GfsVariable * p, GfsVa
 			      (FttFaceTraverseFunc) gfs_face_interpolated_normal_velocity, 
 			      gfs_domain_velocity (domain));
     /* gradient of hydrostatic potential */
-    gfs_reset_gradients (domain, FTT_DIMENSION, g);
+    gfs_reset_gradients (domain, FTT_DIMENSION, layered->g);
     gfs_correct_normal_velocities (domain, FTT_DIMENSION, layered->pr[layered->l],
-				   g, sim->advection_params.dt);
-    gfs_scale_gradients (domain, FTT_DIMENSION, g);
-    gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, sim->advection_params.dt);
+				   layered->g, sim->advection_params.dt);
+    gfs_scale_gradients (domain, FTT_DIMENSION, layered->g);
+    gfs_correct_centered_velocities (domain, FTT_DIMENSION, layered->g, sim->advection_params.dt);
+    swap_gradients (layered);
     swap_velocities (layered);
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) sum_face_velocities, layered);
   }
   
-  mac_projection (layered, &sim->approx_projection_params, sim->advection_params.dt, p, g);
-  
+  mac_projection (layered, &sim->approx_projection_params, sim->advection_params.dt, p, layered->g);
+
   /* apply barotropic pressure gradient to the centered velocity field on each layer */
   for (layered->l = 0; layered->l < layered->nl; layered->l++) {
     swap_velocities (layered);
-    gfs_correct_centered_velocities (domain, FTT_DIMENSION, g, sim->advection_params.dt);
+    gfs_correct_centered_velocities (domain, FTT_DIMENSION, layered->g, sim->advection_params.dt);
     swap_velocities (layered);
   }
+
+  /* add barotropic pressure gradient to hydrostatic potential gradient on each level */
+  gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_barotropic_gradient, layered);
 
   /* store depth-averaged velocity in (U,V) */
   gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) layered_variable_average, layered->u);
@@ -445,37 +522,23 @@ static void advance_tracers (GfsLayered * layered, gdouble dt)
 
 static void layered_run (GfsSimulation * sim)
 {
-  GfsVariable * p, * pmac, * g[FTT_DIMENSION], * gmac[FTT_DIMENSION];
-  GfsVariable ** gc = sim->advection_params.gc ? g : NULL;
   GfsDomain * domain = GFS_DOMAIN (sim);
   GfsLayered * layered = GFS_LAYERED (sim);
 
-  p = gfs_variable_from_name (domain->variables, "P");
+  GfsVariable * p = gfs_variable_from_name (domain->variables, "P");
   g_assert (p);
-  pmac = gfs_variable_from_name (domain->variables, "Pmac");
+  GfsVariable * pmac = gfs_variable_from_name (domain->variables, "Pmac");
   g_assert (pmac);
-  FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    gmac[c] = gfs_temporary_variable (domain);
-    if (sim->advection_params.gc)
-      g[c] = gfs_temporary_variable (domain);
-    else
-      g[c] = gmac[c];
-  }
-  gfs_variable_set_vector (gmac, FTT_DIMENSION);
-  gfs_variable_set_vector (g, FTT_DIMENSION);
 
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);
 
   gfs_simulation_set_timestep (sim);
   if (sim->time.i == 0) {
-    approximate_projection (layered, p, g);
+    approximate_projection (layered, p);
     gfs_simulation_set_timestep (sim);
     advance_tracers (layered, sim->advection_params.dt/2.);
   }
-  else if (sim->advection_params.gc)
-    gfs_update_gradients (domain, p, sim->physical_params.alpha, g);
 
   while (sim->time.t < sim->time.end &&
 	 sim->time.i < sim->time.iend) {
@@ -489,7 +552,8 @@ static void layered_run (GfsSimulation * sim)
 			      (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
     for (layered->l = 0; layered->l < layered->nl; layered->l++) {
       swap_velocities (layered);
-      
+      swap_gradients (layered);
+
       if (sim->advection_params.linear) {
 	/* linearised advection */
 	gfs_domain_face_traverse (domain, FTT_XYZ,
@@ -502,16 +566,30 @@ static void layered_run (GfsSimulation * sim)
       }
       else
 	gfs_predicted_face_velocities (domain, FTT_DIMENSION, &sim->advection_params);
+
       /* gradient of hydrostatic potential */
       gfs_poisson_coefficients (domain, NULL, TRUE, TRUE, TRUE);
+      gfs_reset_gradients (domain, FTT_DIMENSION, layered->gmac);
       gfs_correct_normal_velocities (domain, FTT_DIMENSION, layered->pr[layered->l], 
-				     NULL, sim->advection_params.dt/2.);
+				     layered->gmac, sim->advection_params.dt/2.);
+      gfs_scale_gradients (domain, FTT_DIMENSION, layered->gmac);
+      swap_gradients (layered);
       swap_velocities (layered);
       gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) sum_face_velocities, layered);
     }
 
     gfs_variables_swap (p, pmac);
-    mac_projection (layered, &sim->projection_params, sim->advection_params.dt/2., p, gmac);
+    mac_projection (layered, &sim->projection_params, sim->advection_params.dt/2., p, 
+		    layered->gmac);
+    /* add barotropic pressure gradient to hydrostatic potential gradient on each level */
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_barotropic_gmac, layered);
+    int l;
+    for (l = 0; l < layered->nl; l++) {
+      /* we need to apply BC because
+	 gfs_face_velocity_advection_flux() interpolates gmac on faces */
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, layered->lgmac[0]->vl[l]);
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, layered->lgmac[1]->vl[l]);
+    }
     gfs_variables_swap (p, pmac);
 
     gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_half_do, sim);
@@ -519,12 +597,14 @@ static void layered_run (GfsSimulation * sim)
     /* compute horizontal velocity at t + dt for each layer */
     for (layered->l = 0; layered->l < layered->nl; layered->l++) {
       swap_velocities (layered);
+      swap_gradients (layered);
       gfs_centered_velocity_advection_diffusion (domain,
 						 FTT_DIMENSION,
 						 &sim->advection_params,
-						 gmac,
-						 sim->time.i > 0 || !gc ? gc : gmac,
+						 layered->gmac, 
+						 sim->time.i > 0 ? layered->g : layered->gmac,
 						 sim->physical_params.alpha);
+      swap_gradients (layered);
       swap_velocities (layered);
     }
 
@@ -536,24 +616,21 @@ static void layered_run (GfsSimulation * sim)
     /* Coriolis */
     for (layered->l = 0; layered->l < layered->nl; layered->l++) {
       swap_velocities (layered);
-      if (gc) {
-	gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
-	gfs_correct_centered_velocities (domain, FTT_DIMENSION, sim->time.i > 0 ? gc : gmac, 
-					 -sim->advection_params.dt);
-      }
-      else if (gfs_has_source_coriolis (domain)) {
-	gfs_correct_centered_velocities (domain, FTT_DIMENSION, gmac, sim->advection_params.dt);
-	gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
-	gfs_correct_centered_velocities (domain, FTT_DIMENSION, gmac, -sim->advection_params.dt);
-      }
+      swap_gradients (layered);
+      gfs_source_coriolis_implicit (domain, sim->advection_params.dt);
+      gfs_correct_centered_velocities (domain, FTT_DIMENSION, 
+				       sim->time.i > 0 ? layered->g : layered->gmac, 
+				       -sim->advection_params.dt);
+      swap_gradients (layered);
       swap_velocities (layered);
     }
+
     gfs_domain_cell_traverse (domain,
 			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 			      (FttCellTraverseFunc) gfs_cell_coarse_init, domain);
     gfs_simulation_adapt (sim);
 
-    approximate_projection (layered, p, g);
+    approximate_projection (layered, p);
 
     sim->time.t = sim->tnext;
     sim->time.i++;
@@ -568,12 +645,6 @@ static void layered_run (GfsSimulation * sim)
   }
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gfs_event_do, sim);  
   gts_container_foreach (GTS_CONTAINER (sim->events), (GtsFunc) gts_object_destroy, NULL);
-
-  for (c = 0; c < FTT_DIMENSION; c++) {
-    gts_object_destroy (GTS_OBJECT (gmac[c]));
-    if (sim->advection_params.gc)
-      gts_object_destroy (GTS_OBJECT (g[c]));
-  }
 }
 
 typedef struct {
@@ -600,9 +671,16 @@ static void w_cfl (FttCell * cell, CflData * p)
 
 static gdouble layered_cfl (GfsSimulation * sim)
 {
-  CflData p = { GFS_LAYERED (sim) };
-  p.cfl = 
-    (* GFS_SIMULATION_CLASS (GTS_OBJECT_CLASS (gfs_layered_class ())->parent_class)->cfl) (sim);
+  GfsLayered * layered = GFS_LAYERED (sim);
+  CflData p = { layered, G_MAXDOUBLE };
+  for (layered->l = 0; layered->l < layered->nl; layered->l++) {
+    swap_velocities (layered);
+    gdouble cfl = 
+      (* GFS_SIMULATION_CLASS (GTS_OBJECT_CLASS (gfs_layered_class ())->parent_class)->cfl) (sim);
+    if (cfl < p.cfl)
+      p.cfl = cfl;
+    swap_velocities (layered);
+  }
   gfs_domain_traverse_leaves (GFS_DOMAIN (sim), (FttCellTraverseFunc) w_cfl, &p);
   return p.cfl;
 }

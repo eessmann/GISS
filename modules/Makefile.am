@@ -53,6 +53,8 @@ pkglib_LTLIBRARIES = \
 	libskewsymmetric3D.la \
 	libtopics2D.la \
 	libtopics3D.la \
+	libculvert2D.la \
+	liblayered2D.la \
 	$(TIDE) \
 	$(STOKES) \
 	$(WAVEWATCH) \
@@ -205,3 +207,12 @@ libtopics3D_la_LIBADD = $(GFS3D_LIBS)
 libtopics2D_la_SOURCES = topics.c
 libtopics2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
 libtopics2D_la_LIBADD = $(GFS2D_LIBS)
+
+libculvert2D_la_SOURCES = culvert.c
+libculvert2D_la_CFLAGS = $(AM_CFLAGS)
+libculvert2D_la_LIBADD = $(GFS2D_LIBS) -Lculvert -lboyd87 -lm
+libculvert2D_la_DEPENDENCIES = culvert/libboyd87.la
+
+liblayered2D_la_SOURCES = layered.c
+liblayered2D_la_CFLAGS = $(AM_CFLAGS) -DFTT_2D=1
+liblayered2D_la_LIBADD = $(GFS2D_LIBS)

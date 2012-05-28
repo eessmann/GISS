@@ -1220,15 +1220,11 @@ static gboolean gfs_event_sum_event (GfsEvent * event, GfsSimulation * sim)
     GfsEventSum * s = GFS_EVENT_SUM (event);
 
     if (s->last < 0.)
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim),
-				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) gfs_cell_reset, s->sv);
+      gfs_domain_traverse_layers (GFS_DOMAIN (sim), (FttCellTraverseFunc) gfs_cell_reset, s->sv);
     else {
       s->dt = sim->time.t - s->last;
       gfs_catch_floating_point_exceptions ();
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim),
-				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				s->sum, s);
+      gfs_domain_traverse_layers (GFS_DOMAIN (sim), s->sum, s);
       gfs_restore_fpe_for_function (s->v);
     }
     s->last = sim->time.t;

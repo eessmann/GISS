@@ -426,7 +426,8 @@ static void source_read (GtsObject ** o, GtsFile * fp)
     if (fp->type != GTS_ERROR) {
       GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
       gchar * name = GFS_SOURCE_SCALAR (s)->v->name;
-      if (!strcmp (name, "U") || !strcmp (name, "V") || !strcmp (name, "W")) {
+      if (!strcmp (name, "U") || !strcmp (name, "V") || 
+	  (FTT_DIMENSION > 2 && !strcmp (name, "W"))) {
 	s->mac_value = s->centered_value = NULL;
 	s->face_value = source_face_value;
       }
@@ -1801,8 +1802,7 @@ static gboolean gfs_source_coriolis_event (GfsEvent * event, GfsSimulation * sim
       (event, sim)) {
     if (GFS_SOURCE_CORIOLIS (event)->beta < 1.) {
       gfs_catch_floating_point_exceptions ();
-      gfs_domain_cell_traverse (GFS_DOMAIN (sim), FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) save_coriolis, event);
+      gfs_domain_traverse_layers (GFS_DOMAIN (sim), (FttCellTraverseFunc) save_coriolis, event);
       if (gfs_restore_floating_point_exceptions ()) {
 	GfsSourceCoriolis * c = GFS_SOURCE_CORIOLIS (event);
 	gchar * s = g_strconcat ("\n", gfs_function_description (c->omegaz, FALSE), NULL);
