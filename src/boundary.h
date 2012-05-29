@@ -276,6 +276,9 @@ GfsBoundaryPeriodic * gfs_boundary_periodic_new      (GfsBoundaryClass * klass,
 						      GfsBox * box,
 						      FttDirection d,
 						      GfsBox * matching);
+void                  gfs_boundary_periodic_rotate   (GfsBoundaryPeriodic * boundary,
+						      FttDirection rotate,
+						      gdouble orientation);
 GfsBoundaryPeriodic * gfs_boundary_periodic_rotate_new (GfsBoundaryClass * klass,
 							GfsBox * box,
 							FttDirection d,

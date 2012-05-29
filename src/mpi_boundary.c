@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2012 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -34,6 +34,10 @@ static void boundary_mpi_write (GtsObject * o, FILE * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_boundary_mpi_class ())->parent_class->write) (o, fp);
   fprintf (fp, " %d %d", GFS_BOUNDARY_MPI (o)->process, GFS_BOUNDARY_MPI (o)->id);
+  GfsBoundaryPeriodic * b = GFS_BOUNDARY_PERIODIC (o);
+  if (b->d != GFS_BOUNDARY (b)->d)
+    /* rotated boundary */
+    fprintf (fp, " %d %d", b->d, (int) b->rotate);
 }
 
 static void boundary_mpi_read (GtsObject ** o, GtsFile * fp)
@@ -47,6 +51,21 @@ static void boundary_mpi_read (GtsObject ** o, GtsFile * fp)
     }
     GFS_BOUNDARY_MPI (*o)->id = atoi (fp->token->str);
     gts_file_next_token (fp);
+    if (fp->type != GTS_INT)
+      /* standard boundary */
+      GFS_BOUNDARY_PERIODIC (*o)->d = GFS_BOUNDARY(*o)->d;
+    else {
+      /* rotated boundary */
+      FttDirection rotate = atoi (fp->token->str);
+      gts_file_next_token (fp);
+      if (fp->type != GTS_INT) {
+	gts_file_error (fp, "expecting an integer (orientation)");
+	return;
+      }
+      gdouble orientation = atoi (fp->token->str);
+      gts_file_next_token (fp);
+      gfs_boundary_periodic_rotate (GFS_BOUNDARY_PERIODIC (*o), rotate, orientation);
+    }
   }
   else
     GFS_BOUNDARY_MPI (*o)->process = GFS_BOUNDARY_MPI (*o)->id = -1;
@@ -59,8 +78,9 @@ static void boundary_mpi_read (GtsObject ** o, GtsFile * fp)
 static guint tag_shift = 32767/FTT_NEIGHBORS;
 
 #define TAG(boundary)           (tag_shift*(boundary)->d + (boundary)->box->id)
-#define MATCHING_TAG(boundary)  (tag_shift*FTT_OPPOSITE_DIRECTION ((boundary)->d) +\
-                                 GFS_BOUNDARY_MPI (boundary)->id)
+#define MATCHING_TAG(boundary)  (tag_shift*FTT_OPPOSITE_DIRECTION \
+				 (GFS_BOUNDARY_PERIODIC (boundary)->d) \
+				 + GFS_BOUNDARY_MPI (boundary)->id)
 
 #ifdef DEBUG
 FILE * mpi_debug = NULL;
@@ -76,32 +96,33 @@ static void send (GfsBoundary * bb)
     return;
 
   g_assert (boundary->sndcount <= boundary->sndbuf->len);
-  if (GFS_BOUNDARY (boundary)->type == GFS_BOUNDARY_MATCH_VARIABLE) {
+  if (bb->type == GFS_BOUNDARY_MATCH_VARIABLE) {
 #ifdef DEBUG
-fprintf (DEBUG, "%d send to %d with tag %d match variable size\n",
+fprintf (DEBUG, "%d send to %d with tag %d match variable size: bid: %d mid: %d d: %d dp: %d\n",
 	 domain->pid, 
 	 mpi->process,
-	 TAG (GFS_BOUNDARY (boundary)));
+	 TAG (bb),
+	 bb->box->id, GFS_BOUNDARY_MPI (bb)->id, bb->d, boundary->d);
 fflush (DEBUG);
 #endif
     MPI_Isend (&boundary->sndcount, 1, MPI_UNSIGNED,
 	       mpi->process,
-	       TAG (GFS_BOUNDARY (boundary)),
+	       TAG (bb),
 	       mpi->comm,
 	       &(mpi->request[mpi->nrequest++]));
     gts_range_add_value (&domain->mpi_messages, sizeof (guint));
   }
 #ifdef DEBUG
-fprintf (DEBUG, "%d send to %d with tag %d, size %d\n",
+fprintf (DEBUG, "    %d send to %d with tag %d, size %d\n",
 	 domain->pid, 
 	 mpi->process,
-	 TAG (GFS_BOUNDARY (boundary)),
+	 TAG (bb),
 	 boundary->sndcount);
 fflush (DEBUG);
 #endif
   MPI_Isend (boundary->sndbuf->data, boundary->sndcount, MPI_DOUBLE,
 	     mpi->process,
-	     TAG (GFS_BOUNDARY (boundary)),
+	     TAG (bb),
 	     mpi->comm,
 	     &(mpi->request[mpi->nrequest++]));
   gts_range_add_value (&domain->mpi_messages, 
@@ -127,17 +148,18 @@ static void receive (GfsBoundary * bb,
   start = MPI_Wtime ();
 #endif /* PROFILE_MPI */
 
-  if (GFS_BOUNDARY (boundary)->type == GFS_BOUNDARY_MATCH_VARIABLE) {
+  if (bb->type == GFS_BOUNDARY_MATCH_VARIABLE) {
 #ifdef DEBUG
-fprintf (DEBUG, "%d wait on %d with tag %d for match variable size\n",
+fprintf (DEBUG, "%d wait on %d with tag %d for match variable size: bid: %d mid: %d d: %d dp: %d\n",
 	 gfs_box_domain (bb->box)->pid,
 	 mpi->process,
-	 MATCHING_TAG (GFS_BOUNDARY (boundary)));
+	 MATCHING_TAG (bb),
+	 bb->box->id, GFS_BOUNDARY_MPI (bb)->id, bb->d, boundary->d);
 fflush (DEBUG);
 #endif
     MPI_Recv (&boundary->rcvcount, 1, MPI_UNSIGNED,
 	      mpi->process,
-	      MATCHING_TAG (GFS_BOUNDARY (boundary)),
+	      MATCHING_TAG (bb),
 	      mpi->comm,
 	      &status);
 #ifdef PROFILE_MPI
@@ -151,10 +173,10 @@ fflush (DEBUG);
   else
     boundary->rcvcount = boundary->sndcount;
 #ifdef DEBUG
-  fprintf (DEBUG, "%d wait on %d with tag %d\n",
+  fprintf (DEBUG, "    %d wait on %d with tag %d\n",
 	   gfs_box_domain (bb->box)->pid,
 	   mpi->process,
-	   MATCHING_TAG (GFS_BOUNDARY (boundary)));
+	   MATCHING_TAG (bb));
 fflush (DEBUG);
 #endif
   g_assert (boundary->rcvcount <= boundary->rcvbuf->len);
@@ -162,23 +184,23 @@ fflush (DEBUG);
 	    boundary->rcvcount,
 	    MPI_DOUBLE,
 	    mpi->process,
-	    MATCHING_TAG (GFS_BOUNDARY (boundary)),
+	    MATCHING_TAG (bb),
 	    mpi->comm,
 	    &status);
   MPI_Get_count (&status, MPI_DOUBLE, &count);
 #ifdef DEBUG
-  fprintf (DEBUG, "src: %d tag: %d error: %d\n", 
+  fprintf (DEBUG, "    src: %d tag: %d error: %d\n", 
 	   status.MPI_SOURCE, status.MPI_TAG, status.MPI_ERROR);
   if (count == MPI_UNDEFINED) {
-    fprintf (DEBUG, "%d on tag %d: count is undefined!\n",
+    fprintf (DEBUG, "    %d on tag %d: count is undefined!\n",
 	     gfs_box_domain (bb->box)->pid,
-	     MATCHING_TAG (GFS_BOUNDARY (boundary)));
+	     MATCHING_TAG (bb));
     g_assert_not_reached ();
   }
   else if (count != boundary->rcvcount) {
-    fprintf (DEBUG, "%d on tag %d: count = %d boundary->rcvcount = %d\n",
+    fprintf (DEBUG, "    %d on tag %d: count = %d boundary->rcvcount = %d\n",
 	     gfs_box_domain (bb->box)->pid,
-	     MATCHING_TAG (GFS_BOUNDARY (boundary)),
+	     MATCHING_TAG (bb),
 	     count, boundary->rcvcount);
     g_assert_not_reached ();
   }

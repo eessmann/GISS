@@ -1559,6 +1559,7 @@ static void face_periodic_rotate (FttCellFace * face, GfsBc * b)
   if (b->v->component < 2) { /* 2D-vector-rotation only */
     FttComponent c = FTT_ORTHOGONAL_COMPONENT (b->v->component);
     g_assert (d < 4);
+    g_assert (b->v->domain->has_rotated_bc);
     g_assert (b->v->face[c][d]);
     g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =
       (2.*c - 1.)*boundary_periodic->rotate*GFS_VALUE (face->neighbor, b->v->face[c][d]);
@@ -1566,6 +1567,29 @@ static void face_periodic_rotate (FttCellFace * face, GfsBc * b)
   else
     g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =
       GFS_STATE (face->neighbor)->f[d].v;
+}
+
+/**
+ * gfs_boundary_periodic_rotate:
+ * @boundary: a #GfsBoundaryPeriodic.
+ * @rotate: a #FttDirection.
+ * @orientation: the orientation (+1 or -1).
+ *
+ * Rotates #boundary according to @rotate and @orientation.
+ */
+void gfs_boundary_periodic_rotate (GfsBoundaryPeriodic * boundary,
+				   FttDirection rotate,
+				   gdouble orientation)
+{
+  g_return_if_fail (boundary != NULL);
+
+  boundary->d = rotate;
+  boundary->rotate = orientation;
+  gfs_box_domain (GFS_BOUNDARY (boundary)->box)->has_rotated_bc = TRUE;
+
+  GfsBc * b = GFS_BOUNDARY (boundary)->default_bc;
+  b->bc = b->homogeneous_bc = (FttFaceTraverseFunc) center_periodic_rotate;
+  b->face_bc = (FttFaceTraverseFunc) face_periodic_rotate;
 }
 
 /**
@@ -1591,12 +1615,7 @@ GfsBoundaryPeriodic * gfs_boundary_periodic_rotate_new (GfsBoundaryClass * klass
   GfsBoundaryPeriodic * boundary;
 
   boundary = gfs_boundary_periodic_new (klass, box, d, matching);
-  boundary->d = rotate;
-  boundary->rotate = orientation;
-
-  GfsBc * b = GFS_BOUNDARY (boundary)->default_bc;
-  b->bc = b->homogeneous_bc = (FttFaceTraverseFunc) center_periodic_rotate;
-  b->face_bc = (FttFaceTraverseFunc) face_periodic_rotate;
+  gfs_boundary_periodic_rotate (boundary, rotate, orientation);
 
   return boundary;
 }
@@ -1701,7 +1720,6 @@ void gfs_gedge_link_boxes (GfsGEdge * edge)
 				      b1, edge->d, b2, edge->rotate,  1.);
     gfs_boundary_periodic_rotate_new (gfs_boundary_periodic_class (),
 				      b2, edge->rotate, b1, edge->d, -1.);
-    gfs_box_domain (b1)->has_rotated_bc = TRUE;
   }
   else {
     g_return_if_fail (b2->neighbor[FTT_OPPOSITE_DIRECTION (edge->d)] == NULL);
@@ -1741,7 +1759,7 @@ void gfs_gedge_link_boxes (GfsGEdge * edge)
  * @d: a direction.
  *
  * Returns: a new #GfsGEdge linking @b1 to @b2 in direction @d. The
- * boxes are linked using gfs_gedge_link_boxes().
+ * boxes then need to be linked using gfs_gedge_link_boxes().
  */
 GfsGEdge * gfs_gedge_new (GfsGEdgeClass * klass,
 			  GfsBox * b1, GfsBox * b2,
@@ -1757,8 +1775,6 @@ GfsGEdge * gfs_gedge_new (GfsGEdgeClass * klass,
   edge = GFS_GEDGE (gts_gedge_new (GTS_GEDGE_CLASS (klass),
 				   GTS_GNODE (b1), GTS_GNODE (b2)));
   edge->d = d;
-  
-  gfs_gedge_link_boxes (edge);
 
   return edge;
 }

@@ -370,8 +370,14 @@ static void removed_list (GfsBox * box, RemovedData * p)
       if (GFS_IS_BOUNDARY_PERIODIC (box->neighbor[d]) &&
 	  !GFS_IS_BOUNDARY_MPI (box->neighbor[d]) &&
 	  (matching = GFS_BOUNDARY_PERIODIC (box->neighbor[d])->matching)->pid != p->pid) {
-	gts_object_destroy (GTS_OBJECT (box->neighbor[d]));
-	gfs_boundary_mpi_new (gfs_boundary_mpi_class (), box, d, matching->pid, matching->id);
+	GfsBoundaryPeriodic * b = GFS_BOUNDARY_PERIODIC (box->neighbor[d]);
+	FttDirection rotate = b->d;
+	gdouble orientation = b->rotate;
+	gts_object_destroy (GTS_OBJECT (b));
+	b = GFS_BOUNDARY_PERIODIC (gfs_boundary_mpi_new (gfs_boundary_mpi_class (), 
+							 box, d, matching->pid, matching->id));
+	if (orientation != 0.)
+	  gfs_boundary_periodic_rotate (b, rotate, orientation);
       }
   }
 }
@@ -422,17 +428,34 @@ static void convert_boundary_mpi_into_edges (GfsBox * box, GPtrArray * ids)
       GfsBoundaryMpi * b = GFS_BOUNDARY_MPI (box->neighbor[d]);
       GfsBox * nbox;
       if (b->id >= 0 && b->id <= ids->len && (nbox = g_ptr_array_index (ids, b->id - 1))) {
-	FttDirection od = FTT_OPPOSITE_DIRECTION (d);
-	if (!GFS_IS_BOUNDARY_MPI (nbox->neighbor[od]))
-	  g_warning ("!GFS_IS_BOUNDARY_MPI (nbox->neighbor[FTT_OPPOSITE_DIRECTION (d)])");
+	FttDirection nd = GFS_BOUNDARY_PERIODIC (b)->d;
+	if (!GFS_IS_BOUNDARY_MPI (nbox->neighbor[nd]))
+	  g_warning ("!GFS_IS_BOUNDARY_MPI (nbox->neighbor[nd])");
 	else {
-	  GfsBoundaryMpi * nb = GFS_BOUNDARY_MPI (nbox->neighbor[od]);
+	  GfsBoundaryMpi * nb = GFS_BOUNDARY_MPI (nbox->neighbor[nd]);
 	  if (box->id != nb->id)
 	    g_warning ("box->id != nb->id");
 	  else {
+	    int rotate = GFS_BOUNDARY_PERIODIC (b)->rotate;
 	    gts_object_destroy (GTS_OBJECT (b));
 	    gts_object_destroy (GTS_OBJECT (nb));
-	    gfs_gedge_new (gfs_gedge_class (), nbox, box, od);
+	    GfsGEdge * edge;
+	    if (nd == FTT_OPPOSITE_DIRECTION (d))
+	      /* standard edge */
+	      edge = gfs_gedge_new (gfs_gedge_class (), box, nbox, d);
+	    else {
+	      /* rotated edge */
+	      g_assert (rotate);
+	      if (rotate > 0) {
+		edge = gfs_gedge_new (gfs_gedge_class (), box, nbox, d);
+		edge->rotate = nd;		
+	      }
+	      else {
+		edge = gfs_gedge_new (gfs_gedge_class (), nbox, box, nd);
+		edge->rotate = d;
+	      }
+	    }
+	    gfs_gedge_link_boxes (edge);
 	  }
 	}
       }
