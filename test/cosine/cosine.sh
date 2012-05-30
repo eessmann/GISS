@@ -35,6 +35,18 @@ plot 'error-$alpha' u (2**\$1):4 t 'L2' w lp ps 2,  exp(f2(log(x))) t ftitle(a2,
      'error-$alpha' u (2**\$1):5 t 'Max' w lp ps 2, exp(fm(log(x))) t ftitle(am,bm), \
      'rossmanith$alpha' u 1:3 t 'L2 (Rossmanith)' w lp ps 2, \
      'rossmanith$alpha' u 1:4 t 'Max (Rossmanith)' w lp ps 2 lt 1
+
+set output 'error-$alpha.eps'
+unset logscale
+set logscale y
+set xtics auto
+set key spacing 1
+set xlabel 'Time'
+set ylabel 'Maximum relative error'
+plot 'error-4-$alpha' u 2:5 t '4 levels' w l,\
+     'error-5-$alpha' u 2:5 t '5 levels' w l,\
+     'error-6-$alpha' u 2:5 t '6 levels' w l,\
+     'error-7-$alpha' u 2:5 t '7 levels' w l
 EOF
     else
 	exit 1
