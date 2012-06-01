@@ -2340,21 +2340,22 @@ void gfs_normal_divergence_2D (FttCell * cell,
 gdouble gfs_divergence (FttCell * cell,
 			GfsVariable ** v)
 {
-  FttComponent c;
-  gdouble div = 0.;
-
   g_return_val_if_fail (cell != NULL, 0.);
   g_return_val_if_fail (v != NULL, 0.);
 
-  if (v[0]->domain->scale_metric)
-    for (c = 0; c < FTT_DIMENSION; c++)
-      div += gfs_center_gradient (cell, c, v[c]->i)
-	/(* v[0]->domain->scale_metric) (v[0]->domain, cell, c);
-  else
-    for (c = 0; c < FTT_DIMENSION; c++)
-      div += gfs_center_gradient (cell, c, v[c]->i);
-
-  return div/ftt_cell_size (cell);
+  GfsDomain * domain = v[0]->domain;
+  gdouble div = 0.;
+  FttCellNeighbors n;
+  ftt_cell_neighbors (cell, &n);
+  FttCellFace f;
+  f.cell = cell;
+  for (f.d = 0; f.d < FTT_NEIGHBORS; f.d++)
+    if (n.c[f.d]) {
+      f.neighbor = n.c[f.d];
+      div += gfs_domain_face_fraction (domain, &f)*
+	(FTT_FACE_DIRECT (&f) ? 1. : -1.)*gfs_face_interpolated_value_generic (&f, v[f.d/2]);
+    }
+  return div/(gfs_domain_cell_fraction (domain, cell)*ftt_cell_size (cell));
 }
 
 /**
