@@ -703,24 +703,20 @@ void gfs_write_ppm (GfsDomain * domain,
 
 typedef struct {
   FttVector min;
-  guint width, height, size;
+  gdouble cellsize;
+  guint width, height;
   gfloat * buf, ** data;
-  gdouble xll, yll, cellsize;
 } Grid;
 
-static Grid * grid_new (FttVector min, FttVector max, guint size, 
-			gdouble xc, gdouble yc, gdouble length)
+static Grid * grid_new (FttVector min, FttVector max, FttVector step) 
 {
   Grid * im = g_malloc0 (sizeof (Grid));
   guint i;
 
   im->min = min;
-  im->size = size;
-  im->cellsize = length/size;
-  im->width = (max.x - min.x)*size;
-  im->height = (max.y - min.y)*size;
-  im->xll = xc + min.x*length;
-  im->yll = yc + min.y*length;
+  im->cellsize = MIN (step.x, step.y);
+  im->width = (max.x - min.x)/im->cellsize;
+  im->height = (max.y - min.y)/im->cellsize;
   im->buf = g_malloc (sizeof (gfloat)*im->width*im->height);
   for (i = 0; i < im->height*im->width; i++)
     im->buf[i] = NODATA;
@@ -740,7 +736,7 @@ static void grid_write (Grid * im, FILE * fp)
 	   "cellsize\t%.10f\n"
 	   "nodata_value\t%d\n",
 	   im->width, im->height, 
-	   im->xll, im->yll, im->cellsize,
+	   im->min.x, im->min.y, im->cellsize,
 	   NODATA);
   guint i, j;
   for (i = 0; i < im->height; i++)
@@ -755,110 +751,93 @@ static void grid_destroy (Grid * im)
   g_free (im);
 }
 
-static void grid_draw_square (Grid * im,
-			      FttVector * p1, FttVector * p2,
-			      gfloat c)
+static void max_physical_extent (FttCell * cell, gpointer * data)
 {
-  gint i1, j1, i2, j2, i, j;
-
-  i1 = (p1->x - im->min.x)*im->size;
-  i2 = (p2->x - im->min.x)*im->size;
-  j1 = (p1->y - im->min.y)*im->size;
-  j2 = (p2->y - im->min.y)*im->size;
-
-  j1 = im->height - 1 - j1;
-  j2 = im->height - 1 - j2;
-  for (i = i1; i <= i2; i++)
-    for (j = j2; j <= j1; j++) 
-      if (i >= 0 && i < im->width && j >= 0 && j < im->height)
-	im->data[j][i] = c;
-}
-
-static void write_grid_square (FttCell * cell, gpointer * data)
-{
-  GfsVariable * v = data[3];
-  Grid * grid = data[4];
-  FttVector * lambda = data[5];
-  FttVector p;
-  gdouble size = ftt_cell_size (cell)/2.;
-  FttVector p1, p2;
-
+  FttVector * extent = data[0];
+  GfsSimulation * sim = data[1];
+  gdouble h = ftt_cell_size (cell)/2.;
+  FttVector p, 
+    max = { -G_MAXDOUBLE, -G_MAXDOUBLE, -G_MAXDOUBLE },
+    min = { G_MAXDOUBLE, G_MAXDOUBLE, G_MAXDOUBLE };
   ftt_cell_pos (cell, &p);
-  p1.x = (p.x - size)/lambda->x + 1e-9;
-  p1.y = (p.y - size)/lambda->y + 1e-9;
-  p2.x = (p.x + size)/lambda->x - 1e-9;
-  p2.y = (p.y + size)/lambda->y - 1e-9;
-  grid_draw_square (grid, &p1, &p2, GFS_HAS_DATA (cell, v) ? GFS_VALUE (cell, v) : NODATA);
+  double x, y;
+  for (x = -1; x <= 1.; x += 2.)
+    for (y = -1; y <= 1.; y += 2.) {
+      FttVector c = p;
+      c.x += x*h; c.y += y*h;
+      gfs_simulation_map_inverse (sim, &c);
+      int i;
+      for (i = 0; i < FTT_DIMENSION; i++) {
+	if ((&c.x)[i] > (&max.x)[i]) (&max.x)[i] = (&c.x)[i];
+	if ((&c.x)[i] < (&min.x)[i]) (&min.x)[i] = (&c.x)[i];
+      }
+    }
+
+  int i;
+  for (i = 0; i < 2; i++) {
+    if ((&max.x)[i] > (&extent[1].x)[i]) (&extent[1].x)[i] = (&max.x)[i];
+    if ((&min.x)[i] < (&extent[0].x)[i]) (&extent[0].x)[i] = (&min.x)[i];
+    if ((&max.x)[i] - (&min.x)[i] < (&extent[2].x)[i]) 
+      (&extent[2].x)[i] = (&max.x)[i] - (&min.x)[i];
+  }
 }
 
-void gfs_write_grd (GfsDomain * domain, 
+void gfs_write_grd (GfsSimulation * sim, 
 		    GfsFunction * condition,
 		    GfsVariable * v,
-		    gdouble xc, gdouble yc, gdouble length,
 		    FttTraverseFlags flags,
 		    gint level,
 		    FILE * fp,
-		    gboolean parallel)
+		    gboolean parallel,
+		    gboolean interpolate)
 {
-  guint depth, size = 1;
-  Grid * grid;
-  FttVector extent[2] = {{ G_MAXDOUBLE, G_MAXDOUBLE, G_MAXDOUBLE },
-			 { - G_MAXDOUBLE, - G_MAXDOUBLE, - G_MAXDOUBLE }};
-  gpointer data[6];
-
-  g_return_if_fail (domain != NULL);
+  g_return_if_fail (sim != NULL);
   g_return_if_fail (fp != NULL);
 
-  if (level < 0)
-    depth = gfs_domain_depth (domain);
-  else
-    depth = level;
-  while (depth-- > 0)
-    size *= 2;
-
+  GfsDomain * domain = GFS_DOMAIN (sim);
+  FttVector extent[3] = {{ G_MAXDOUBLE, G_MAXDOUBLE, G_MAXDOUBLE },
+			 { - G_MAXDOUBLE, - G_MAXDOUBLE, - G_MAXDOUBLE },
+			 { G_MAXDOUBLE, G_MAXDOUBLE, G_MAXDOUBLE }};
+  gpointer data[2] = { extent, sim };
   if (condition) {
     gfs_catch_floating_point_exceptions ();
     gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
-					(FttCellTraverseFunc) max_extent, extent,
+					(FttCellTraverseFunc) max_physical_extent, data,
 					cell_condition, condition);
     gfs_restore_fpe_for_function (condition);
   }
   else
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
-			      (FttCellTraverseFunc) max_extent, extent);
+			      (FttCellTraverseFunc) max_physical_extent, data);
     
   gfs_all_reduce (domain, extent[0].x, MPI_DOUBLE, MPI_MIN);
   gfs_all_reduce (domain, extent[0].y, MPI_DOUBLE, MPI_MIN);
   gfs_all_reduce (domain, extent[1].x, MPI_DOUBLE, MPI_MAX);
   gfs_all_reduce (domain, extent[1].y, MPI_DOUBLE, MPI_MAX);
+  gfs_all_reduce (domain, extent[2].x, MPI_DOUBLE, MPI_MIN);
+  gfs_all_reduce (domain, extent[2].y, MPI_DOUBLE, MPI_MIN);
     
   if (extent[0].x == G_MAXDOUBLE)
     return;
 
-  extent[0].x /= domain->lambda.x; 
-  extent[0].y /= domain->lambda.y;
-  extent[1].x /= domain->lambda.x; 
-  extent[1].y /= domain->lambda.y;
+  Grid * grid = grid_new (extent[0], extent[1], extent[2]);
 
-  grid = grid_new (extent[0], extent[1], size, xc, yc, length);
-  data[3] = v;
-  data[4] = grid;
-  data[5] = &domain->lambda;
-  if (condition) {
-    gfs_catch_floating_point_exceptions ();
-    gfs_domain_cell_traverse_condition (domain, FTT_PRE_ORDER, flags, level,
-					(FttCellTraverseFunc) write_grid_square, data,
-					cell_condition, condition);
-    gfs_restore_fpe_for_function (condition);
-  }
-  else
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, flags, level,
-			      (FttCellTraverseFunc) write_grid_square, data);
+  int i, j;
+  for (i = 0; i < grid->width; i++)
+    for (j = 0; j < grid->height; j++) {
+      FttVector p = { grid->min.x + (0.5 + i)*grid->cellsize, 
+		      grid->min.y + grid->height*grid->cellsize - (0.5 + j)*grid->cellsize, 
+		      0. };
+      gfs_simulation_map (sim, &p);
+      FttCell * cell = gfs_domain_locate (domain, p, level, NULL);
+      if (cell && GFS_HAS_DATA (cell, v))
+	grid->data[j][i] = interpolate ? gfs_interpolate (cell, p, v) : GFS_VALUE (cell, v);
+    }
 
 #ifdef HAVE_MPI
   if (!parallel && domain->pid >= 0) {
     if (domain->pid == 0) {
-      Grid * im = grid_new (extent[0], extent[1], size, xc, yc, length);
+      Grid * im = grid_new (extent[0], extent[1], extent[2]);
       int n, np;
       MPI_Comm_size (MPI_COMM_WORLD, &np);
       for (n = 1; n < np; n++) {

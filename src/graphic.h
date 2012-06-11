@@ -20,7 +20,7 @@
 #ifndef __GRAPHIC_H__
 #define __GRAPHIC_H__
 
-#include "domain.h"
+#include "simulation.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,14 +51,14 @@ void               gfs_write_ppm               (GfsDomain * domain,
 						gint level,
 						FILE * fp,
 						gboolean parallel);
-void               gfs_write_grd               (GfsDomain * domain, 
+void               gfs_write_grd               (GfsSimulation * sim, 
 						GfsFunction * condition,
 						GfsVariable * v,
-						gdouble xc, gdouble yc, gdouble length,
 						FttTraverseFlags flags,
 						gint level,
 						FILE * fp,
-						gboolean parallel);
+						gboolean parallel,
+						gboolean interpolate);
 gint               gfs_combine_ppm             (gchar ** fname, 
 						guint nname, 
 						FILE * fp);

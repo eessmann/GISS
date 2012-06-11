@@ -1879,16 +1879,14 @@ static gboolean gfs_output_scalar_event (GfsEvent * event,
 	gfs_variable_is_dimensional (output->v)) {
       output->v = gfs_temporary_variable (domain);
       gfs_catch_floating_point_exceptions ();
-      output_scalar_traverse (output,
-			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) update_v, output);
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) update_v, output);
       gfs_restore_fpe_for_function (output->f);
     }
     if (output->maxlevel >= 0)
-      output_scalar_traverse (output,
-			      FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
-			      (FttCellTraverseFunc) output->v->fine_coarse,
-			      output->v);
+      gfs_domain_cell_traverse (domain,
+				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
+				(FttCellTraverseFunc) output->v->fine_coarse,
+				output->v);
     if (output->autoscale) {
       GtsRange stats = gfs_domain_stats_variable (domain, output->v, 
 						  FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
@@ -3290,20 +3288,13 @@ static gboolean gfs_output_grd_event (GfsEvent * event, GfsSimulation * sim)
   if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_output_grd_class ())->parent_class)->event) 
       (event, sim)) {
     GfsOutputScalar * output = GFS_OUTPUT_SCALAR (event);
-#if FTT_2D
-    GfsDomain * domain = GFS_DOMAIN (sim);
-#else /* 3D */
-    GfsDomain * domain = GFS_IS_OCEAN (sim) ? GFS_OCEAN (sim)->toplayer : GFS_DOMAIN (sim);
-#endif /* 3D */
-    FttVector o = {0.,0.,0.};
-    gfs_simulation_map_inverse (sim, &o);
-    gfs_write_grd (domain,
+    gfs_write_grd (sim,
 		   output->condition,
 		   output->v,
-		   o.x, o.y, sim->physical_params.L,
 		   FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, output->maxlevel,
 		   GFS_OUTPUT (event)->file->fp,
-		   GFS_OUTPUT (event)->parallel);
+		   GFS_OUTPUT (event)->parallel,
+		   TRUE);
     return TRUE;
   }
   return FALSE;
