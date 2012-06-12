@@ -66,7 +66,7 @@ EOF
 	else
 	    status=$GFS_STOP;
 	fi
-	if awk '{if ($9 > 1e-6) { print "u: " $9 > "/dev/stderr"; exit (1); }}' < u ; then :
+	if awk '{if ($9 > 1.5e-6) { print "u: " $9 > "/dev/stderr"; exit (1); }}' < u ; then :
         else
             status=$GFS_STOP;
         fi
