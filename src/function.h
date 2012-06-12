@@ -173,4 +173,25 @@ static double flux (const gchar * name)
 					     FTT_DIMENSION - 2.));
 }
 
+static gboolean overlaps (double x1, double y1, double x2, double y2)
+{
+  double h = ftt_cell_size (_cell)/2.;
+  FttVector p, min = { G_MAXDOUBLE, G_MAXDOUBLE }, max = { -G_MAXDOUBLE, -G_MAXDOUBLE };
+  ftt_cell_pos (_cell, &p);
+  FttVector q[4];
+  q[0] = p; q[0].x += h; q[0].y += h; 
+  q[1] = p; q[1].x -= h; q[1].y += h; 
+  q[2] = p; q[2].x -= h; q[2].y -= h; 
+  q[3] = p; q[3].x += h; q[3].y -= h; 
+  gfs_simulation_map_inverse_cell (_sim, q);
+  int i;
+  for (i = 0; i < 4; i++) {
+    if (q[i].x < min.x) min.x = q[i].x;
+    if (q[i].y < min.y) min.y = q[i].y;
+    if (q[i].x > max.x) max.x = q[i].x;
+    if (q[i].y > max.y) max.y = q[i].y;
+  }
+  return (min.x <= x2 && min.y <= y2 && max.x >= x1 && max.y >= y1);
+}
+
 #endif /* __FUNCTION_H__ */
