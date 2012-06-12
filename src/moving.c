@@ -1093,7 +1093,7 @@ static void moving_mac_projection (GfsSimulation * sim,
 {
   if (apar->moving_order == 2)
     swap_face_fractions (sim);
-  gfs_mac_projection (GFS_DOMAIN (sim), par, apar->dt, p, alpha, g, 
+  gfs_mac_projection (GFS_DOMAIN (sim), par, apar->dt/2., p, alpha, g, 
 		      (apar->moving_order == 2 ? 
 		       divergence_mac_hook_order_2 : divergence_mac_hook_order_1));
   if (apar->moving_order == 2)

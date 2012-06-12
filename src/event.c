@@ -1043,7 +1043,7 @@ static void stream_from_vorticity (GfsDomain * domain,
   while (norm.infty > tolerance && maxit) {
     gfs_poisson_cycle (domain, &par, stream, vorticity, dia, res);
     norm = gfs_domain_norm_residual (domain, FTT_TRAVERSE_LEAFS, -1, 1., res);
-    fprintf (stderr, "maxit: %d infty: %g\n", maxit, norm.infty);
+    // fprintf (stderr, "maxit: %d infty: %g\n", maxit, norm.infty);
     maxit--;
   }
   if (maxit == 0)
