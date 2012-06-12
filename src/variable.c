@@ -1003,6 +1003,12 @@ static void variable_poisson_write (GtsObject * o, FILE * fp)
   gfs_multilevel_params_write (&GFS_VARIABLE_POISSON (o)->par, fp);
 }
 
+static void has_dirichlet (FttCell * cell, GfsVariable * p)
+{
+  if (((cell)->flags & GFS_FLAG_DIRICHLET) != 0)
+    p->centered = FALSE;
+}
+
 typedef struct {
   GfsFunction * f;
   GfsVariable * div;
@@ -1026,6 +1032,8 @@ static gboolean variable_poisson_event (GfsEvent * event, GfsSimulation * sim)
     GfsVariablePoisson * pv = GFS_VARIABLE_POISSON (v);
 
     gfs_domain_surface_bc (domain, v);
+    gfs_domain_traverse_mixed (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS,
+			       (FttCellTraverseFunc) has_dirichlet, v);
     DivData p = { GFS_VARIABLE_FUNCTION (event)->f, div };
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) rescale_div, &p);
     gfs_poisson_coefficients (domain, NULL, FALSE, TRUE, TRUE);
