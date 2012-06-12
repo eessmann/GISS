@@ -862,8 +862,8 @@ static void match_fractions (FttCell * cell, GfsVariable * status)
 	      s += GFS_IS_MIXED (child.c[i]) ? GFS_STATE (child.c[i])->solid->s[od] : 1.;
 	  solid->s[d] = s/n;
 	}
-	else if (GFS_VALUE (neighbor.c[d], status) != 1.) {
-	  if (!GFS_IS_MIXED (neighbor.c[d]) && solid->s[d] < 1.)
+	else if (GFS_VALUE (neighbor.c[d], status) != GFS_STATUS_SOLID) {
+	  if (!GFS_IS_MIXED (neighbor.c[d]))
 	    solid->s[d] = 1.;
 	  else if (neighbor.c[d]->flags & GFS_FLAG_THIN)
 	    solid->s[d] = GFS_STATE (neighbor.c[d])->solid->s[FTT_OPPOSITE_DIRECTION (d)];
