@@ -125,14 +125,16 @@ GtsObjectClass ** gfs_classes (void)
   if (classes == NULL) { gpointer klass[] = {
 
   gfs_global_class (),
-  gfs_simulation_class (),
-    gfs_ocean_class (),
-    gfs_advection_class (),
-    gfs_poisson_class (),
-    gfs_simulation_moving_class (),
-    gfs_axi_class (),
-    gfs_wave_class (),
-    gfs_river_class (),
+  gfs_domain_class (),
+    gfs_simulation_class (),
+      gfs_ocean_class (),
+      gfs_advection_class (),
+      gfs_poisson_class (),
+      gfs_simulation_moving_class (),
+      gfs_axi_class (),
+      gfs_wave_class (),
+      gfs_river_class (),
+    gfs_domain_projection_class (),
 
   gfs_surface_bc_class (),
 
@@ -174,6 +176,7 @@ GtsObjectClass ** gfs_classes (void)
 #if FTT_2D
         gfs_variable_stream_function_class (),
 #endif /* FTT_2D */
+        gfs_variable_average_class (),
         gfs_variable_poisson_class (),
         gfs_variable_laplacian_class (),
       gfs_hydrostatic_pressure_class (),
