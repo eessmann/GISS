@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2004 Stéphane Popinet
+ * Copyright (C) 2004-2012 Stéphane Popinet
  * National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
@@ -152,10 +152,10 @@ static void scale_divergence_helmoltz (FttCell * cell, FreeSurfaceParams * p)
   gdouble h = ftt_cell_size (cell);
   gdouble c = 2.*h*h/(THETA*p->G*p->dt*p->dt);
 
-  if (GFS_IS_MIXED (cell))
 #if FTT_2D
-    c *= GFS_STATE (cell)->solid->a;
+  c *= gfs_domain_cell_fraction (p->dia->domain, cell);
 #else /* 3D */
+  if (GFS_IS_MIXED (cell)) /* fixme: no metric yet */
     c *= GFS_STATE (cell)->solid->s[FTT_FRONT];
 #endif /* 3D */
 
@@ -250,9 +250,6 @@ static void gfs_free_surface_pressure (GfsDomain * toplayer,
 
 static void normal_velocities (GfsDomain * domain, GfsVariable ** u)
 {
-  g_return_if_fail (domain != NULL);
-  g_return_if_fail (div != NULL);
-
   gfs_domain_face_traverse (domain, FTT_XY,
 			    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			    (FttFaceTraverseFunc) gfs_face_reset_normal_velocity, NULL);
@@ -298,8 +295,7 @@ static void ocean_run (GfsSimulation * sim)
     gfs_simulation_set_timestep (sim);
 
     normal_velocities (domain, gfs_domain_velocity (domain));
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_normal_divergence_2D, div);
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) gfs_normal_divergence_2D, div);
 
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p);
 
@@ -323,8 +319,8 @@ static void ocean_run (GfsSimulation * sim)
     gfs_domain_timer_start (domain, "free_surface_pressure");
     GfsVariable * divn = gfs_temporary_variable (domain);
     normal_velocities (domain, gfs_domain_velocity (domain));
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_normal_divergence_2D, divn);
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) gfs_normal_divergence_2D, divn);
+    gfs_poisson_coefficients (domain, fH, TRUE, TRUE, TRUE);
     gfs_free_surface_pressure (domain, &sim->approx_projection_params, &sim->advection_params,
 			       p, divn, div, res, sim->physical_params.g);
     gts_object_destroy (GTS_OBJECT (divn));

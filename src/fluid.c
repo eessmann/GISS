@@ -2304,29 +2304,16 @@ void gfs_normal_divergence (FttCell * cell,
 void gfs_normal_divergence_2D (FttCell * cell,
 			       GfsVariable * v)
 {
-  FttComponent c;
+  FttCellFace face;
   gdouble div = 0.;
 
   g_return_if_fail (cell != NULL);
   g_return_if_fail (v != NULL);
-
-  if (GFS_IS_MIXED (cell)) {
-    GfsSolidVector * solid = GFS_STATE (cell)->solid;
-    
-    for (c = 0; c < 2; c++) {
-      FttDirection d = 2*c;
-      
-      div += (solid->s[d]*GFS_STATE (cell)->f[d].un - 
-	      solid->s[d + 1]*GFS_STATE (cell)->f[d + 1].un);
-    }
-  }
-  else
-    for (c = 0; c < 2; c++) {
-      FttDirection d = 2*c;
-      
-      div += (GFS_STATE (cell)->f[d].un - 
-	      GFS_STATE (cell)->f[d + 1].un);
-    }
+  
+  face.cell = cell;
+  for (face.d = 0; face.d < 4; face.d++)
+    div += (FTT_FACE_DIRECT (&face) ? 1. : -1.)*
+      GFS_STATE (cell)->f[face.d].un*gfs_domain_face_fraction (v->domain, &face);
   GFS_VALUE (cell, v) = div*ftt_cell_size (cell);
 }
 

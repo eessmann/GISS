@@ -604,7 +604,9 @@ static void save_face_values (FttCell * cell, GfsVariable * f[4])
 
 static void face_values_init (FttCellTraverseFunc face_values, GfsAdvectionParams * par)
 {
-  if (par->v->component < FTT_DIMENSION && par->v->domain->has_rotated_bc) {
+  if (par->scheme == GFS_GODUNOV &&
+      par->v->component < FTT_DIMENSION && 
+      par->v->domain->has_rotated_bc) {
     /* store normal and tangential face values for vector
        quantities. This is required to apply boundary conditions for
        rotated topologies (e.g. cubed sphere) */
@@ -961,9 +963,7 @@ static void copy_v_rhs (FttCell * cell, GfsAdvectionParams * apar)
  * can then be used within the @par->flux function.
  *
  * "Small" cut cells are treated using a cell-merging approach to
- * avoid any restrictive CFL stability condition.  
- *
- * The @g[] variables are freed by this function.
+ * avoid any restrictive CFL stability condition.
  */
 void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
 						guint dimension,
@@ -993,18 +993,18 @@ void gfs_centered_velocity_advection_diffusion (GfsDomain * domain,
       GfsVariable * rhs;
 
       par->fv = rhs = gfs_temporary_variable (domain);
-      gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-				(FttCellTraverseFunc) copy_v_rhs, par);
+      gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) copy_v_rhs, par);
       variable_sources (domain, par, rhs, gmac, g);
       variable_diffusion (domain, d, par, rhs, alpha);
       gts_object_destroy (GTS_OBJECT (rhs));
     }
-    else {
+    else
       variable_sources (domain, par, par->v, gmac, g);
-      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, par->v);
-    }
   }
+  for (c = 0; c < dimension; c++)
+    gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, v[c]);
   face_values_free (par->v);
+
   gfs_domain_timer_stop (domain, "centered_velocity_advection_diffusion");
 }
 
