@@ -156,6 +156,10 @@ void         gfs_domain_cell_traverse         (GfsDomain * domain,
 					       gpointer data);
 #define gfs_domain_traverse_leaves(d,f,data)  (gfs_domain_cell_traverse(d, \
 					    FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1, f,data))
+FttCellTraverse * gfs_domain_cell_traverse_new (GfsDomain * domain,
+						FttTraverseType order,
+						FttTraverseFlags flags,
+						gint max_depth);
 void         gfs_domain_traverse_layers       (GfsDomain * domain,
 					       FttCellTraverseFunc func,
 					       gpointer data);

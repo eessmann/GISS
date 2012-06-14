@@ -1401,6 +1401,40 @@ void gfs_domain_cell_traverse (GfsDomain * domain,
   gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_traverse, &d);
 }
 
+static void cell_traverse_add (FttCell * cell, GPtrArray * a)
+{
+  g_ptr_array_add (a, cell);
+}
+
+/**
+ * gfs_domain_cell_traverse_new:
+ * @domain: a #GfsDomain.
+ * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
+ * %FTT_POST_ORDER. 
+ * @flags: which types of children are to be visited.
+ * @max_depth: the maximum depth of the traversal. Cells below this
+ * depth will not be traversed. If @max_depth is -1 all cells in the
+ * tree are visited.
+ *
+ * Returns: a new #FttCellTraverse.
+ */
+FttCellTraverse * gfs_domain_cell_traverse_new (GfsDomain * domain,
+						FttTraverseType order,
+						FttTraverseFlags flags,
+						gint max_depth)
+{
+  g_return_val_if_fail (domain != NULL, NULL);
+
+  GPtrArray * a = g_ptr_array_new ();
+  gfs_domain_cell_traverse (domain, order, flags, max_depth,
+			    (FttCellTraverseFunc) cell_traverse_add, a);
+  g_ptr_array_add (a, NULL);
+  FttCellTraverse * t = g_malloc (sizeof (FttCellTraverse));
+  t->current = t->cells = (FttCell **) a->pdata;
+  g_ptr_array_free (a, FALSE);
+  return t;
+}
+
 /**
  * gfs_domain_traverse_layers:
  * @domain: a #GfsDomain.
