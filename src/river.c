@@ -262,6 +262,41 @@ static void riemann_hllc (const gdouble * uL, const gdouble * uR,
   }
 }
 
+/*
+ * uL: left state vector [h,u,v,zb].
+ * uR: right state vector.
+ * g: acceleration of gravity.
+ * f: flux vector.
+ *
+ * Fills @f by solving an approximate Riemann problem using the kinetic
+ * scheme. See Audusse & Bristeau, JCP, 206, 2005.
+ */
+
+#define SQRT3 1.73205080756888
+
+static void riemann_kinetic (const gdouble * uL, const gdouble * uR,
+			     gdouble g,
+			     gdouble * f)
+{
+  gdouble ci, Mp, Mm, cig;
+
+  ci = sqrt (g*uL[0]/2.);
+  Mp = MAX (uL[1] + ci*SQRT3, 0.);
+  Mm = MAX (uL[1] - ci*SQRT3, 0.);
+  cig = ci/(6.*g*SQRT3);
+  f[0] = cig*3.*(Mp*Mp - Mm*Mm);
+  f[1] = cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
+
+  ci = sqrt (g*uR[0]/2.);
+  Mp = MIN (uR[1] + ci*SQRT3, 0.);
+  Mm = MIN (uR[1] - ci*SQRT3, 0.);
+  cig = ci/(6.*g*SQRT3);
+  f[0] += cig*3.*(Mp*Mp - Mm*Mm);
+  f[1] += cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
+
+  f[2] = (f[0] > 0. ? uL[2] : uR[2])*f[0];
+}
+
 #define U 1
 #define V 2
 
@@ -355,7 +390,7 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   uL[2] = CFL_CLAMP (uL[2], umax);
   uR[2] = CFL_CLAMP (uR[2], umax);
 
-  riemann_hllc (uL, uR, r->g, f);
+  (* r->scheme) (uL, uR, r->g, f);
 
   gdouble dt = gfs_domain_face_fraction (GFS_DOMAIN (r), face)*r->dt/h;
   f[0] *= dt;
@@ -670,9 +705,11 @@ static void river_read (GtsObject ** o, GtsFile * fp)
   GfsRiver * river = GFS_RIVER (*o);
   if (fp->type == '{') {
     double dry;
+    gchar * scheme = NULL;
     GtsFileVariable var[] = {
       {GTS_UINT,   "time_order", TRUE, &river->time_order},
       {GTS_DOUBLE, "dry",        TRUE, &dry},
+      {GTS_STRING, "scheme",     TRUE, &scheme},
       {GTS_NONE}
     };
     gts_file_assign_variables (fp, var);
@@ -680,6 +717,15 @@ static void river_read (GtsObject ** o, GtsFile * fp)
       return;
     if (var[1].set)
       river->dry = dry/GFS_SIMULATION (river)->physical_params.L;
+    if (scheme) {
+      if (!strcmp (scheme, "hllc"))
+	river->scheme = riemann_hllc;
+      else if (!strcmp (scheme, "kinetic"))
+	river->scheme = riemann_kinetic;
+      else
+	gts_file_error (fp, "unknown scheme '%s'", scheme);
+      g_free (scheme);
+    }
   }
 }
 
@@ -691,9 +737,11 @@ static void river_write (GtsObject * o, FILE * fp)
   fprintf (fp, " {\n"
 	   "  time_order = %d\n"
 	   "  dry = %g\n"
+	   "  scheme = %s\n"
 	   "}",
 	   river->time_order,
-	   river->dry*GFS_SIMULATION (river)->physical_params.L);
+	   river->dry*GFS_SIMULATION (river)->physical_params.L,
+	   river->scheme == riemann_hllc ? "hllc" : "kinetic");
 }
 
 static void river_class_init (GfsSimulationClass * klass)
@@ -797,6 +845,7 @@ static void river_init (GfsRiver * r)
 
   r->time_order = 2;
   r->dry = 1e-6;
+  r->scheme = riemann_hllc;
 }
 
 GfsSimulationClass * gfs_river_class (void)

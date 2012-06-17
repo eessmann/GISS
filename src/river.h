@@ -45,6 +45,7 @@ struct _GfsRiver {
   GfsCenterGradient gradient;
   guint time_order;
   gdouble dry;
+  void (* scheme) (const gdouble * uL, const gdouble * uR, gdouble g, gdouble * f);
 };
 
 #define GFS_RIVER(obj)            GTS_OBJECT_CAST (obj,\
