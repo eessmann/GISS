@@ -28,24 +28,26 @@ extern "C" {
 
 /* GfsRiver: Header */
 
-#define GFS_RIVER_NVAR 3
-
 typedef struct _GfsRiver GfsRiver;
 
 struct _GfsRiver {
   /*< private >*/
   GfsSimulation parent;
-  gdouble cfl;
+  gdouble * uL, * uR, * f, cfl;
 
   /*< public >*/
-  GfsVariable * v[GFS_RIVER_NVAR + 1], * v1[GFS_RIVER_NVAR], * zb, * H;
-  GfsVariable * dv[FTT_DIMENSION][GFS_RIVER_NVAR + 1];
-  GfsVariable * flux[GFS_RIVER_NVAR];
+  GfsVariable ** v, ** v1, * zb, * h, * qx, * qy;
+  GfsVariable ** dv[FTT_DIMENSION];
+  GfsVariable ** flux, ** massflux;
+  gdouble * dz;
+  int nlayers, nvar;
   gdouble g, dt;
   GfsCenterGradient gradient;
   guint time_order;
   gdouble dry;
-  void (* scheme) (const gdouble * uL, const gdouble * uR, gdouble g, gdouble * f);
+  void (* scheme) (const GfsRiver * r,
+		   const gdouble * uL, const gdouble * uR, 
+		   gdouble * f);
 };
 
 #define GFS_RIVER(obj)            GTS_OBJECT_CAST (obj,\

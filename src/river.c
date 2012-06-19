@@ -16,6 +16,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
+
+/*
+ * An implementation of:
+ * 
+ * E. Audusse, M.-O. Bristeau, M. Pelanti,
+ * J. Sainte-Marie. Approximation of the hydrostatic Navier-Stokes
+ * system for density stratified flows by a multilayer model. Kinetic
+ * interpretation and numerical solution, JCP, 2011.
+ */
+
 /*! \file
  * \brief GfsRiver model.
  */
@@ -200,11 +210,17 @@ static gdouble center_sweby_gradient (FttCell * cell,
  * \beginobject{GfsRiver}
  */
 
+#define H  0
+#define U  1
+#define V  2
+#define HL 3
+#define ZB (r->nvar)
+
 static void flux (const gdouble * u, gdouble g, gdouble * f)
 {
-  f[0] = u[0]*u[1];                                     /* h*u */
-  f[1] = u[0]*u[1]*u[1] + g*(u[0]*u[0] - u[3]*u[3])/2.; /* h*u*u + g*(h*h - zb*zb)/2 */
-  f[2] = u[0]*u[1]*u[2];                                /* h*u*v */
+  f[H] = u[H]*u[U];                       /* h*u */
+  f[U] = u[H]*(u[U]*u[U] + g*u[H]/2.);    /* h*(u*u + g*h/2) */
+  f[V] = u[H]*u[U]*u[V];                  /* h*u*v */
 }
 
 static gdouble min (gdouble a, gdouble b)
@@ -226,36 +242,36 @@ static gdouble max (gdouble a, gdouble b)
  * Fills @f by solving an approximate Riemann problem using the HLLC
  * scheme. See e.g. Liang, Borthwick, Stelling, IJNMF, 2004.
  */
-static void riemann_hllc (const gdouble * uL, const gdouble * uR,
-			  gdouble g,
+static void riemann_hllc (const GfsRiver * r,
+			  const gdouble * uL, const gdouble * uR,
 			  gdouble * f)
 {
-  gdouble cL = sqrt (g*uL[0]), cR = sqrt (g*uR[0]);
-  gdouble ustar = (uL[1] + uR[1])/2. + cL - cR;
-  gdouble cstar = (cL + cR)/2. + (uL[1] - uR[1])/4.;
-  gdouble SL = uL[0] == 0. ? uR[1] - 2.*cR : min (uL[1] - cL, ustar - cstar);
-  gdouble SR = uR[0] == 0. ? uL[1] + 2.*cL : max (uR[1] + cR, ustar + cstar);
+  gdouble cL = sqrt (r->g*uL[H]), cR = sqrt (r->g*uR[H]);
+  gdouble ustar = (uL[U] + uR[U])/2. + cL - cR;
+  gdouble cstar = (cL + cR)/2. + (uL[U] - uR[U])/4.;
+  gdouble SL = uL[H] == 0. ? uR[U] - 2.*cR : min (uL[U] - cL, ustar - cstar);
+  gdouble SR = uR[H] == 0. ? uL[U] + 2.*cL : max (uR[U] + cR, ustar + cstar);
 
   if (0. <= SL)
-    flux (uL, g, f);
+    flux (uL, r->g, f);
   else if (0. >= SR)
-    flux (uR, g, f);
+    flux (uR, r->g, f);
   else {
     gdouble fL[3], fR[3];
-    flux (uL, g, fL);
-    flux (uR, g, fR);
-    f[0] = (SR*fL[0] - SL*fR[0] + SL*SR*(uR[0] - uL[0]))/(SR - SL);
-    f[1] = (SR*fL[1] - SL*fR[1] + SL*SR*(uR[0]*uR[1] - uL[0]*uL[1]))/(SR - SL);
-    gdouble SM = ((SL*uR[0]*(uR[1] - SR) - SR*uL[0]*(uL[1] - SL))/
-		  (uR[0]*(uR[1] - SR) - uL[0]*(uL[1] - SL)));
+    flux (uL, r->g, fL);
+    flux (uR, r->g, fR);
+    f[H] = (SR*fL[H] - SL*fR[H] + SL*SR*(uR[H] - uL[H]))/(SR - SL);
+    f[U] = (SR*fL[U] - SL*fR[U] + SL*SR*(uR[H]*uR[U] - uL[H]*uL[U]))/(SR - SL);
+    gdouble SM = ((SL*uR[H]*(uR[U] - SR) - SR*uL[H]*(uL[U] - SL))/
+		  (uR[H]*(uR[U] - SR) - uL[H]*(uL[U] - SL)));
     if (SL <= 0. && 0. <= SM)
-      f[2] = uL[2]*f[0];
+      f[V] = uL[V]*f[H];
     else if (SM <= 0. && 0. <= SR)
-      f[2] = uR[2]*f[0];
+      f[V] = uR[V]*f[H];
     else {
       fprintf (stderr, "L: %g %g %g R: %g %g %g\n",
-	       uL[0], uL[1], uL[2],
-	       uR[0], uR[1], uR[2]);
+	       uL[H], uL[U], uL[V],
+	       uR[H], uR[U], uR[V]);
       fprintf (stderr, "SL: %g SR: %g SM: %g\n", SL, SR, SM);
       g_assert_not_reached ();
     }
@@ -269,36 +285,60 @@ static void riemann_hllc (const gdouble * uL, const gdouble * uR,
  * f: flux vector.
  *
  * Fills @f by solving an approximate Riemann problem using the kinetic
- * scheme. See Audusse & Bristeau, JCP, 206, 2005.
+ * scheme. See Audusse et al JCP, 2011 and Audusse & Bristeau, JCP, 206:311-333, 2005.
  */
 
 #define SQRT3 1.73205080756888
 
-static void riemann_kinetic (const gdouble * uL, const gdouble * uR,
-			     gdouble g,
-			     gdouble * f)
+static gdouble hydrostatic_pressure (const GfsRiver * r, int l, const gdouble * u, gdouble g)
 {
-  gdouble ci, Mp, Mm, cig;
-
-  ci = sqrt (g*uL[0]/2.);
-  Mp = MAX (uL[1] + ci*SQRT3, 0.);
-  Mm = MAX (uL[1] - ci*SQRT3, 0.);
-  cig = ci/(6.*g*SQRT3);
-  f[0] = cig*3.*(Mp*Mp - Mm*Mm);
-  f[1] = cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
-
-  ci = sqrt (g*uR[0]/2.);
-  Mp = MIN (uR[1] + ci*SQRT3, 0.);
-  Mm = MIN (uR[1] - ci*SQRT3, 0.);
-  cig = ci/(6.*g*SQRT3);
-  f[0] += cig*3.*(Mp*Mp - Mm*Mm);
-  f[1] += cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
-
-  f[2] = (f[0] > 0. ? uL[2] : uR[2])*f[0];
+  double p = r->dz[l]/2.;
+  int j;
+  for (j = l + 1; j < r->nlayers; j++)
+    p += r->dz[j];
+  return g*u[H]*p;
 }
 
-#define U 1
-#define V 2
+static void riemann_kinetic (const GfsRiver * r,
+			     const gdouble * uL, const gdouble * uR,
+			     gdouble * f)
+{
+  gdouble * dz = r->dz;
+  f[H] = 0.;
+  int l;
+  for (l = 0; l < r->nlayers; l++) {
+    gdouble pi, ci, Mp, Mm, cig, fHl;
+
+#if 0
+    pi = hydrostatic_pressure (r, l, uL, g);
+    ci = sqrt (pi);
+#else
+    ci = sqrt (r->g*uL[H]/2.);
+#endif
+    Mp = MAX (uL[U + 2*l] + ci*SQRT3, 0.);
+    Mm = MAX (uL[U + 2*l] - ci*SQRT3, 0.);
+    cig = ci/(6.*r->g*SQRT3);
+    fHl = dz[l]*cig*3.*(Mp*Mp - Mm*Mm);
+    f[U + 3*l] = dz[l]*cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
+
+#if 0    
+    pi = hydrostatic_pressure (r, l, uR, g);
+    ci = sqrt (pi);
+#else
+    ci = sqrt (r->g*uR[H]/2.);
+#endif
+    Mp = MIN (uR[U + 2*l] + ci*SQRT3, 0.);
+    Mm = MIN (uR[U + 2*l] - ci*SQRT3, 0.);
+    cig = ci/(6.*r->g*SQRT3);
+    fHl += dz[l]*cig*3.*(Mp*Mp - Mm*Mm);
+    f[U + 3*l] += dz[l]*cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
+    
+    f[V + 3*l] = (fHl > 0. ? uL[V + 2*l] : uR[V + 2*l])*fHl;
+
+    f[HL + 3*l] = fHl;
+    f[H] += fHl;
+  }
+}
 
 typedef struct {
   FttComponent u;
@@ -311,18 +351,10 @@ typedef struct {
 
 static void face_fluxes (FttCellFace * face, GfsRiver * r)
 {
-  gdouble eta = GFS_VALUE (face->cell, r->v1[0]), etan = GFS_VALUE (face->neighbor, r->v1[0]);
+  gdouble eta = GFS_VALUE (face->cell, r->v1[H]), etan = GFS_VALUE (face->neighbor, r->v1[H]);
 
   if (eta <= r->dry && etan <= r->dry)
     return;
-
-  static Sym sym[4] = {
-    {U,  1., V,  1.},
-    {U, -1., V, -1.},
-    {V,  1., U, -1.},
-    {V, -1., U,  1.}
-  };
-  Sym * s = &sym[face->d];
 
   gdouble a = 1., b = 1.;
   if (GFS_IS_MIXED (face->cell)) {
@@ -340,90 +372,106 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     b = fabs (2.*((&ca.x)[c] - (&cm.x)[c])/ftt_cell_size (face->neighbor));
   } 
 
-  gdouble etaL = (eta <= r->dry ? 0. : 
-		  eta + a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][0]));
-  gdouble zbL = (GFS_VALUE (face->cell, r->v[3])
-		 + a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][3]));
-  gdouble zbR = (GFS_VALUE (face->neighbor, r->v[3])
-		 - b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][3])); 
-  gdouble zbLR = MAX (zbL, zbR);
-  gdouble uL[4], uR[4], f[3];
+  static Sym sym[4] = {
+    {U,  1., V,  1.},
+    {U, -1., V, -1.},
+    {V,  1., U, -1.},
+    {V, -1., U,  1.}
+  };
+  Sym * s = &sym[face->d];
 
-  if (etaL > r->dry) {
-    uL[1] = s->du*(GFS_VALUE (face->cell, r->v1[s->u]) +
-		   a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->u]))/etaL; /* u = uh/h */
-    uL[2] = s->dv*(GFS_VALUE (face->cell, r->v1[s->v]) +
-		   a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->v]))/etaL; /* v = vh/h */
-  }
+  gdouble etaL = (eta <= r->dry ? 0. : 
+		  eta + a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][H]));
+  gdouble zbL = (GFS_VALUE (face->cell, r->zb)
+		 + a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][ZB]));
+  gdouble zbR = (GFS_VALUE (face->neighbor, r->zb)
+		 - b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][ZB])); 
+  gdouble zbLR = MAX (zbL, zbR);
+
+  gdouble * uL = r->uL, * uR = r->uR;
+  int l;
+  if (etaL > r->dry)
+    for (l = 0; l < r->nlayers; l++) {
+      gdouble etal = etaL*r->dz[l];
+      /* ul = uhl/hl */
+      uL[U + 2*l] = s->du*(GFS_VALUE (face->cell, r->v1[s->u + 2*l]) +
+			   a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->u + 2*l]))/etal;
+      /* vl = vhl/hl */
+      uL[V + 2*l] = s->dv*(GFS_VALUE (face->cell, r->v1[s->v + 2*l]) +
+			   a*s->du*GFS_VALUE (face->cell, r->dv[face->d/2][s->v + 2*l]))/etal;
+    }
   else
-    uL[1] = uL[2] = 0.;
-  uL[0] = MAX (0., etaL + zbL - zbLR);
-  uL[3] = 0.;
+    for (l = 0; l < r->nlayers; l++)
+      uL[U + 2*l] = uL[V + 2*l] = 0.;
+  uL[H] = MAX (0., etaL + zbL - zbLR);
 
   gdouble etaR = (etan <= r->dry ? 0. :
-		  etan - b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][0]));
-  switch (ftt_face_type (face)) {
-  case FTT_FINE_FINE: case FTT_FINE_COARSE:
-    /* fixme: this is only first-order accurate for fine/coarse */
-    if (etaR > r->dry) {
-      /* u = uh/h */
-      uR[1] = s->du*(GFS_VALUE (face->neighbor, r->v1[s->u]) -
-		     b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->u]))/etaR; 
-      /* v = vh/h */
-      uR[2] = s->dv*(GFS_VALUE (face->neighbor, r->v1[s->v]) -
-		     b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->v]))/etaR;
+		  etan - b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][H]));
+  /* fixme: this is only first-order accurate for fine/coarse */
+  if (etaR > r->dry)
+    for (l = 0; l < r->nlayers; l++) {
+      gdouble etal = etaR*r->dz[l];
+      /* ul = uhl/hl */
+      uR[U + 2*l] = s->du*(GFS_VALUE (face->neighbor, r->v1[s->u + 2*l]) -
+			   b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->u + 2*l]))/etal;
+      /* vl = vhl/hl */
+      uR[V + 2*l] = s->dv*(GFS_VALUE (face->neighbor, r->v1[s->v + 2*l]) -
+			   b*s->du*GFS_VALUE (face->neighbor, r->dv[face->d/2][s->v + 2*l]))/etal;
     }
-    else
-      uR[1] = uR[2] = 0.;
-    uR[0] = MAX (0., etaR + zbR - zbLR);
-    uR[3] = 0.;
-    break;
-
-  default:
-    g_assert_not_reached ();
-  }
+  else
+    for (l = 0; l < r->nlayers; l++)
+      uR[U + 2*l] = uR[V + 2*l] = 0.;
+  uR[H] = MAX (0., etaR + zbR - zbLR);
 
   gdouble h = ftt_cell_size (face->cell);
   gdouble umax = GFS_SIMULATION (r)->advection_params.cfl*h/r->dt;
-  uL[1] = CFL_CLAMP (uL[1], umax);
-  uR[1] = CFL_CLAMP (uR[1], umax);
-  uL[2] = CFL_CLAMP (uL[2], umax);
-  uR[2] = CFL_CLAMP (uR[2], umax);
+  for (l = 0; l < r->nlayers; l++) {
+    uL[U + 2*l] = CFL_CLAMP (uL[U + 2*l], umax);
+    uR[U + 2*l] = CFL_CLAMP (uR[U + 2*l], umax);
+    uL[V + 2*l] = CFL_CLAMP (uL[V + 2*l], umax);
+    uR[V + 2*l] = CFL_CLAMP (uR[V + 2*l], umax);
+  }
 
-  (* r->scheme) (uL, uR, r->g, f);
+  gdouble * f = r->f;
+  (* r->scheme) (r, uL, uR, f);
 
   gdouble dt = gfs_domain_face_fraction (GFS_DOMAIN (r), face)*r->dt/h;
-  f[0] *= dt;
-  f[2] = s->dv*dt*f[2];
-  GFS_VALUE (face->cell, r->flux[0]) -= f[0];
+  GFS_VALUE (face->cell, r->flux[H]) -= dt*f[H];
+  gdouble nn = (ftt_face_type (face) == FTT_FINE_COARSE ? FTT_CELLS : 1.);
+  GFS_VALUE (face->neighbor, r->flux[H]) += dt*f[H]/nn;
+
+  if (eta <= r->dry) eta = 0.;
+  gdouble zb = GFS_VALUE (face->cell, r->zb);
+  if (etan <= r->dry) etan = 0.;
+  gdouble zbn = GFS_VALUE (face->neighbor, r->zb);
   /* see Audusse and Bristeau, 2005, JCP, 206:311-333 */
   /* Slope source term "S_{i,j,p}" and second-order correction for
      slope source term "Sc_{i,j,p}" of An et al. 2012, Advances in
      Water Resources. 39:60-70, equations (11) and (12) */
-  if (eta <= r->dry) eta = 0.;
-  gdouble zb = GFS_VALUE (face->cell, r->v[3]);
-  GFS_VALUE (face->cell, r->flux[s->u]) -= 
-    s->du*dt*(f[1] - r->g/2.*(uL[0]*uL[0] - etaL*etaL - (etaL + eta)*(zbL - zb)));
-  GFS_VALUE (face->cell, r->flux[s->v]) -= f[2];
+  gdouble SbL = r->g/2.*(uL[H]*uL[H] - etaL*etaL - (etaL + eta)*(zbL - zb));
+  gdouble SbR = r->g/2.*(uR[H]*uR[H] - etaR*etaR - (etaR + etan)*(zbR - zbn));
 
-  if (etan <= r->dry) etan = 0.;
-  zb = GFS_VALUE (face->neighbor, r->v[3]);
-  f[1] = s->du*dt*(f[1] - r->g/2.*(uR[0]*uR[0] - etaR*etaR - (etaR + etan)*(zbR - zb)));
-  if (ftt_face_type (face) == FTT_FINE_COARSE) {
-    f[0] /= FTT_CELLS;
-    f[1] /= FTT_CELLS;
-    f[2] /= FTT_CELLS;
+  gdouble G = 0.;
+  for (l = 0; l < r->nlayers; l++) {
+    gdouble dz = r->dz[l];
+    GFS_VALUE (face->cell, r->flux[s->u + 2*l]) -= s->du*dt*(f[U + 3*l] - dz*SbL);
+    GFS_VALUE (face->cell, r->flux[s->v + 2*l]) -= s->dv*dt*f[V + 3*l];
+    GFS_VALUE (face->neighbor, r->flux[s->u + 2*l]) += s->du*dt*(f[U + 3*l] - dz*SbR)/nn;
+    GFS_VALUE (face->neighbor, r->flux[s->v + 2*l]) += s->dv*dt*f[V + 3*l]/nn;
+    /* mass flux between layers */
+    G += dt*(f[HL + 3*l] - dz*f[H]); /* eq. (5.109) of Audusse, Bristeau, Perthame, Sainte-Marie */
+    GFS_VALUE (face->cell, r->massflux[l]) += G;
+    GFS_VALUE (face->neighbor, r->massflux[l]) -= G/nn;
   }
-  GFS_VALUE (face->neighbor, r->flux[0])    += f[0];
-  GFS_VALUE (face->neighbor, r->flux[s->u]) += f[1];
-  GFS_VALUE (face->neighbor, r->flux[s->v]) += f[2];
 }
 
 static void reset_fluxes (FttCell * cell, const GfsRiver * r)
 {
-  guint v;
-  for (v = 0; v < GFS_RIVER_NVAR; v++)
-    GFS_VALUE (cell, r->flux[v]) = 0.;
+  int i;
+  for (i = 0; i < r->nvar; i++)
+    GFS_VALUE (cell, r->flux[i]) = 0.;
+  for (i = 0; i < r->nlayers; i++)
+    GFS_VALUE (cell, r->massflux[i]) = 0.;
 }
 
 static void solid_boundary_fluxes (FttCell * cell, GfsRiver * r)
@@ -432,12 +480,12 @@ static void solid_boundary_fluxes (FttCell * cell, GfsRiver * r)
   GfsSolidVector * s = GFS_STATE (cell)->solid;
   FttVector cm;
 
-  gdouble hh = MAX (GFS_VALUE (cell, r->v1[0]), 0.);
+  gdouble hh = MAX (GFS_VALUE (cell, r->v1[H]), 0.);
   gfs_cell_cm (cell, &cm);
-  gdouble hs = hh + 2.*((s->ca.x - cm.x)*GFS_VALUE (cell, r->dv[0][0]) + 
-			(s->ca.y - cm.y)*GFS_VALUE (cell, r->dv[1][0]))/h;
-  gdouble zbs = 2.*((s->ca.x - cm.x)*GFS_VALUE (cell, r->dv[0][3]) +
-		    (s->ca.y - cm.y)*GFS_VALUE (cell, r->dv[1][3]))/h;
+  gdouble hs = hh + 2.*((s->ca.x - cm.x)*GFS_VALUE (cell, r->dv[0][H]) + 
+			(s->ca.y - cm.y)*GFS_VALUE (cell, r->dv[1][H]))/h;
+  gdouble zbs = 2.*((s->ca.x - cm.x)*GFS_VALUE (cell, r->dv[0][ZB]) +
+		    (s->ca.y - cm.y)*GFS_VALUE (cell, r->dv[1][ZB]))/h;
   gdouble hszbs = 
     r->dt/h*r->g/2.*(
 		     /* the normal component of the velocity is zero at the solid boundary. */  
@@ -447,14 +495,14 @@ static void solid_boundary_fluxes (FttCell * cell, GfsRiver * r)
 		     (hs + hh)*zbs);
   FttVector n;
   gfs_solid_normal (cell, &n);
-  GFS_VALUE (cell, r->flux[1]) -= n.x*hszbs;
-  GFS_VALUE (cell, r->flux[2]) -= n.y*hszbs;
+  GFS_VALUE (cell, r->flux[U]) -= n.x*hszbs;
+  GFS_VALUE (cell, r->flux[V]) -= n.y*hszbs;
 }
 
 /* Metric source terms (see doc/figures/lonlat.tm) */
 static void metric_sources (FttCell * cell, GfsRiver * r)
 {
-  if (GFS_VALUE (cell, r->v1[0]) > r->dry) {
+  if (GFS_VALUE (cell, r->v1[H]) > r->dry) {
     /* fixme: this will probably not work when combined with solids */
     GfsDomain * domain = GFS_DOMAIN (r);
     gdouble fm[FTT_NEIGHBORS], cm;
@@ -466,14 +514,14 @@ static void metric_sources (FttCell * cell, GfsRiver * r)
     cm = (* domain->cell_metric) (domain, cell)*ftt_cell_size (cell);
     gdouble dldh = cm*GFS_SIMULATION (r)->physical_params.L;
     gdouble 
-      phiu = GFS_VALUE (cell, r->v1[1]), 
-      phiv = GFS_VALUE (cell, r->v1[2]);
+      phiu = GFS_VALUE (cell, r->v1[U]), 
+      phiv = GFS_VALUE (cell, r->v1[V]);
     gdouble fG = phiv*dh_dl - phiu*dh_dt;
     gdouble g = GFS_SIMULATION (r)->physical_params.g;
 
-    gdouble eta = GFS_VALUE (cell, r->v1[0]);
-    GFS_VALUE (cell, r->v[1]) += r->dt*(g*eta*eta/2.*dh_dl + fG*phiv)/dldh;
-    GFS_VALUE (cell, r->v[2]) += r->dt*(g*eta*eta/2.*dh_dt - fG*phiu)/dldh;
+    gdouble eta = GFS_VALUE (cell, r->v1[H]);
+    GFS_VALUE (cell, r->v[U]) += r->dt*(g*eta*eta/2.*dh_dl + fG*phiv)/dldh;
+    GFS_VALUE (cell, r->v[V]) += r->dt*(g*eta*eta/2.*dh_dt - fG*phiu)/dldh;
   }
 }
 
@@ -492,7 +540,7 @@ static void advance (GfsRiver * r, gdouble dt)
   			     (FttCellTraverseFunc) solid_boundary_fluxes, domain);
   if (domain->cell_metric)
     gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) metric_sources, r);
-  for (i = 0; i < GFS_RIVER_NVAR; i++) {
+  for (i = 0; i < r->nvar; i++) {
     GfsAdvectionParams par;
     par.v = r->v[i];
     par.fv = r->flux[i];
@@ -501,21 +549,28 @@ static void advance (GfsRiver * r, gdouble dt)
     gfs_domain_variable_centered_sources (domain, par.v, par.v, dt);
   }
   gfs_source_coriolis_implicit (domain, dt);
-  for (i = 0; i < GFS_RIVER_NVAR; i++)
+  for (i = 0; i < r->nvar; i++)
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->v[i]);
 }
 
 static void copy (FttCell * cell, const GfsRiver * r)
 {
   guint v;
-  for (v = 0; v < GFS_RIVER_NVAR; v++)
+  for (v = 0; v < r->nvar; v++)
     GFS_VALUE (cell, r->v1[v]) = GFS_VALUE (cell, r->v[v]);
 }
 
-static void cell_H (FttCell * cell,
-		    const GfsRiver * r)
+static void cell_H (FttCell * cell, const GfsRiver * r)
 {
-  GFS_VALUE (cell, r->H) = GFS_VALUE (cell, r->zb) + GFS_VALUE (cell, r->v[0]);
+  GFS_VALUE (cell, r->h) = GFS_VALUE (cell, r->zb) + GFS_VALUE (cell, r->v[H]);
+  gdouble u = 0., v = 0.;
+  int l;
+  for (l = 0; l < r->nlayers; l++) {
+    u += GFS_VALUE (cell, r->v[U + 2*l]);
+    v += GFS_VALUE (cell, r->v[V + 2*l]);
+  }
+  GFS_VALUE (cell, r->qx) = u;
+  GFS_VALUE (cell, r->qy) = v;
 }
 
 static void cell_gradients (FttCell * cell,
@@ -524,21 +579,21 @@ static void cell_gradients (FttCell * cell,
   FttComponent c;
   guint v;
 
-  if (GFS_VALUE (cell, r->v[0]) <= r->dry) {
+  if (GFS_VALUE (cell, r->v[H]) <= r->dry) {
     for (c = 0; c < FTT_DIMENSION; c++) {
-      for (v = 0; v < GFS_RIVER_NVAR; v++)
+      for (v = 0; v < r->nvar; v++)
 	GFS_VALUE (cell, r->dv[c][v]) = 0.;
-      GFS_VALUE (cell, r->dv[c][3]) = 0.;
+      GFS_VALUE (cell, r->dv[c][ZB]) = 0.;
     }
   }
   else { /* wet */
     for (c = 0; c < FTT_DIMENSION; c++) {
-      for (v = 0; v < GFS_RIVER_NVAR; v++)
+      for (v = 0; v < r->nvar; v++)
 	GFS_VALUE (cell, r->dv[c][v]) = (* r->gradient) (cell, c, r->v[v]->i)/2.;
       /* recontruct Zb + eta rather than Zb: see Theorem 3.1 of Audusse et al, 2004 */
-      GFS_VALUE (cell, r->dv[c][3]) =
-	(* r->gradient) (cell, c, r->H->i)/2.
-	- GFS_VALUE (cell, r->dv[c][0]);
+      GFS_VALUE (cell, r->dv[c][ZB]) =
+	(* r->gradient) (cell, c, r->h->i)/2.
+	- GFS_VALUE (cell, r->dv[c][H]);
     }
   }
 }
@@ -576,7 +631,7 @@ static void river_run (GfsSimulation * sim)
   GfsDomain * domain = GFS_DOMAIN (sim);
   GfsRiver * r = GFS_RIVER (sim);
 
-  r->v[3] = r->zb = gfs_variable_from_name (domain->variables, "Zb");
+  r->v[ZB] = r->zb = gfs_variable_from_name (domain->variables, "Zb");
 
   r->g = sim->physical_params.g/sim->physical_params.L;
 
@@ -611,7 +666,7 @@ static void river_run (GfsSimulation * sim)
     FttComponent c;
     guint v;
     for (c = 0; c < FTT_DIMENSION; c++)
-      for (v = 0; v < GFS_RIVER_NVAR + 1; v++)
+      for (v = 0; v < r->nvar + 1; v++)
 	gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->dv[c][v]);
     gfs_domain_timer_stop (domain, "gradients");
 
@@ -619,10 +674,10 @@ static void river_run (GfsSimulation * sim)
     domain_traverse_all_leaves (domain, (FttCellTraverseFunc) copy, r);
     if (r->time_order == 2) {
       gfs_domain_timer_start (domain, "predictor");
-      for (v = 0; v < GFS_RIVER_NVAR; v++)
+      for (v = 0; v < r->nvar; v++)
 	gfs_variables_swap (r->v[v], r->v1[v]);
       advance (r, sim->advection_params.dt/2.);
-      for (v = 0; v < GFS_RIVER_NVAR; v++)
+      for (v = 0; v < r->nvar; v++)
 	gfs_variables_swap (r->v[v], r->v1[v]);
       gfs_domain_timer_stop (domain, "predictor");
     }
@@ -669,7 +724,7 @@ static gdouble maximum_face_metric (FttCell * cell, GfsDomain * domain, FttCompo
 
 static void minimum_cfl (FttCell * cell, GfsRiver * r)
 {
-  gdouble h = GFS_VALUE (cell, r->v[0]);
+  gdouble h = GFS_VALUE (cell, r->v[H]);
   if (h > r->dry) {
     GfsDomain * domain = GFS_DOMAIN (r);
     gdouble vol = ftt_cell_size (cell);
@@ -678,11 +733,14 @@ static void minimum_cfl (FttCell * cell, GfsRiver * r)
     gdouble cg = sqrt (r->g*h);
     FttComponent c;
     for (c = FTT_X; c <= FTT_Y; c++) {
-      gdouble uh = fabs (GFS_VALUE (cell, r->v[c + 1]));
       gdouble fm = maximum_face_metric (cell, domain, c);
-      gdouble cfl = vol/(fm*(uh/h + cg));
-      if (cfl < r->cfl)
-	r->cfl = cfl;
+      int l;
+      for (l = 0; l < r->nlayers; l++) {
+	gdouble uh = fabs (GFS_VALUE (cell, r->v[c + 1 + 2*l]));
+	gdouble cfl = vol/(fm*(uh/(r->dz[l]*h) + cg));
+	if (cfl < r->cfl)
+	  r->cfl = cfl;
+      }
     }
   }
 }
@@ -718,8 +776,12 @@ static void river_read (GtsObject ** o, GtsFile * fp)
     if (var[1].set)
       river->dry = dry/GFS_SIMULATION (river)->physical_params.L;
     if (scheme) {
-      if (!strcmp (scheme, "hllc"))
-	river->scheme = riemann_hllc;
+      if (!strcmp (scheme, "hllc")) {
+	if (river->nlayers > 1)
+	  gts_file_error (fp, "HLLC solver can only be used for a single layer");
+	else
+	  river->scheme = riemann_hllc;
+      }
       else if (!strcmp (scheme, "kinetic"))
 	river->scheme = riemann_kinetic;
       else
@@ -744,8 +806,27 @@ static void river_write (GtsObject * o, FILE * fp)
 	   river->scheme == riemann_hllc ? "hllc" : "kinetic");
 }
 
+static void river_destroy (GtsObject * o)
+{
+  GfsRiver * r = GFS_RIVER (o);
+
+  g_free (r->v);
+  g_free (r->v1);
+  g_free (r->flux);
+  g_free (r->massflux);
+  g_free (r->uL);
+  g_free (r->uR);
+  g_free (r->f);
+  int i;
+  for (i = 0; i < FTT_DIMENSION; i++)
+    g_free (r->dv[i]);
+
+  (* GTS_OBJECT_CLASS (gfs_river_class ())->parent_class->destroy) (o);
+}
+
 static void river_class_init (GfsSimulationClass * klass)
 {
+  GTS_OBJECT_CLASS (klass)->destroy = river_destroy;
   GTS_OBJECT_CLASS (klass)->read = river_read;
   GTS_OBJECT_CLASS (klass)->write = river_write;
   klass->run = river_run;
@@ -756,7 +837,7 @@ static gdouble cell_velocity (FttCell * cell, FttCellFace * face, GfsRiver * r)
 {
   g_return_val_if_fail (cell != NULL, 0.);
 
-  gdouble D = GFS_VALUE (cell, r->v[0]);
+  gdouble D = GFS_VALUE (cell, r->v[H]);
   gdouble L = GFS_SIMULATION (r)->physical_params.L;
   return D > r->dry ? L*gfs_vector_norm (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/D : 0.;
 }
@@ -765,7 +846,7 @@ static gdouble cell_velocity2 (FttCell * cell, FttCellFace * face, GfsRiver * r)
 {
   g_return_val_if_fail (cell != NULL, 0.);
 
-  gdouble D = GFS_VALUE (cell, r->v[0]);
+  gdouble D = GFS_VALUE (cell, r->v[H]);
   gdouble L = GFS_SIMULATION (r)->physical_params.L;
   return D > r->dry ? 
     L*L*gfs_vector_norm2 (cell, gfs_domain_velocity (GFS_DOMAIN (r)))/(D*D) : 0.;
@@ -778,7 +859,7 @@ static void momentum_coarse_fine (FttCell * parent, GfsVariable * v)
      shallow cells, childrens' initial momentum defaults to zero. This
      prevents creating spurious large velocities. */
   GfsRiver * r = GFS_RIVER (v->domain);
-  if (GFS_VALUE (parent, r->v[0]) > 2.*r->dry)
+  if (GFS_VALUE (parent, r->v[H]) > 2.*r->dry)
     gfs_cell_coarse_fine (parent, v);
 }
 
@@ -788,54 +869,96 @@ static void river_init (GfsRiver * r)
 
   gts_object_destroy (GTS_OBJECT (gfs_variable_from_name (domain->variables, "Pmac")));
 
-  r->v[0] = gfs_variable_from_name (domain->variables, "P");
-  r->v[0]->units = 1.;
-  g_free (r->v[0]->description);
-  r->v[0]->description = g_strdup ("Fluid depth");
+  r->nlayers = 1;
+  r->dz = g_malloc (r->nlayers*sizeof (gdouble));
+  int l;
+  for (l = 0; l < r->nlayers; l++)
+    r->dz[l] = 1./r->nlayers;
+  r->nvar = 2*r->nlayers + 1;
+  r->v = g_malloc ((r->nvar + 1)*sizeof (GfsVariable *));
+  r->v1 = g_malloc (r->nvar*sizeof (GfsVariable *));
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    r->dv[c] = g_malloc ((r->nvar + 1)*sizeof (GfsVariable *));
+  r->flux = g_malloc (r->nvar*sizeof (GfsVariable *));
+  r->massflux = g_malloc (r->nlayers*sizeof (GfsVariable *));
 
-  r->v[1] = gfs_variable_from_name (domain->variables, "U");
-  r->v[1]->units = 2.;
-  g_free (r->v[1]->description);
-  r->v[1]->description = g_strdup ("x-component of the fluid flux");
-  r->v[1]->coarse_fine = momentum_coarse_fine;
+  r->uL = g_malloc (r->nvar*sizeof (gdouble));
+  r->uR = g_malloc (r->nvar*sizeof (gdouble));
+  r->f = g_malloc ((r->nvar + 1)*sizeof (gdouble));
 
-  r->v[2] = gfs_variable_from_name (domain->variables, "V");
-  r->v[2]->units = 2.;
-  g_free (r->v[2]->description);
-  r->v[2]->description = g_strdup ("y-component of the fluid flux");
-  r->v[2]->coarse_fine = momentum_coarse_fine;
+  r->v[H] = gfs_variable_from_name (domain->variables, "P");
+  r->v[H]->units = 1.;
+  g_free (r->v[H]->description);
+  r->v[H]->description = g_strdup ("Fluid depth");
+  r->v1[H] = gfs_domain_add_variable (domain, NULL, NULL);
+  r->flux[H] = gfs_domain_add_variable (domain, NULL, NULL);
 
   r->zb = gfs_domain_add_variable (domain, "Zb", "Bed elevation above datum");
   r->zb->units = 1.;
 
-  r->H = gfs_domain_add_variable (domain, "H", "Elevation above datum (Zb + P)");
-  r->H->units = 1.;
+  r->h = gfs_domain_add_variable (domain, "H", "Elevation above datum (Zb + P)");
+  r->h->units = 1.;
 
-  r->flux[0] = gfs_domain_add_variable (domain, NULL, NULL);
-  r->flux[1] = gfs_domain_add_variable (domain, NULL, NULL);
-  r->flux[2] = gfs_domain_add_variable (domain, NULL, NULL);
+  r->dv[0][H] = gfs_domain_add_variable (domain, "Px", "x-component of the depth gradient");
+  r->dv[1][H] = gfs_domain_add_variable (domain, "Py", "y-component of the depth gradient");
+  r->dv[0][ZB] = gfs_domain_add_variable (domain, "Zbx", "x-component of the bed slope");
+  r->dv[1][ZB] = gfs_domain_add_variable (domain, "Zby", "y-component of the bed slope");
 
-  r->v1[0] = gfs_domain_add_variable (domain, NULL, NULL);
-  r->v1[1] = gfs_domain_add_variable (domain, NULL, NULL);
-  r->v1[2] = gfs_domain_add_variable (domain, NULL, NULL);
-  gfs_variable_set_vector (&r->v1[1], 2);
+  GfsVariable * v;
+  r->v[U] = r->qx = v = gfs_variable_from_name (domain->variables, "U");
+  v->units = 2.;
+  g_free (v->description);
+  v->description = g_strdup ("x-component of the (depth-integrated) fluid flux");
+  v->coarse_fine = momentum_coarse_fine;
+  
+  r->v[V] = r->qy = v = gfs_variable_from_name (domain->variables, "V");
+  v->units = 2.;
+  g_free (v->description);
+  v->description = g_strdup ("y-component of the (depth-integrated) fluid flux");
+  v->coarse_fine = momentum_coarse_fine;
 
-  r->dv[0][0] = gfs_domain_add_variable (domain, "Px", "x-component of the depth gradient");
-  r->dv[1][0] = gfs_domain_add_variable (domain, "Py", "y-component of the depth gradient");
-  r->dv[0][1] = gfs_domain_add_variable (domain, "Ux", "x-component of the flux gradient");
-  r->dv[1][1] = gfs_domain_add_variable (domain, "Uy", "y-component of the flux gradient");
-  r->dv[0][2] = gfs_domain_add_variable (domain, "Vx", "x-component of the flux gradient");
-  r->dv[1][2] = gfs_domain_add_variable (domain, "Vy", "y-component of the flux gradient");
-  r->dv[0][3] = gfs_domain_add_variable (domain, "Zbx", "x-component of the bed slope");
-  r->dv[1][3] = gfs_domain_add_variable (domain, "Zby", "y-component of the bed slope");
+  if (r->nlayers > 1)
+    for (l = 0; l < r->nlayers; l++) {
+      gchar * name = g_strdup_printf ("U%d", l);
+      r->v[U + 2*l] = v = gfs_domain_add_variable (domain, name, "x-component of the fluid flux");
+      g_free (name);
+      v->units = 2.;
+      v->coarse_fine = momentum_coarse_fine;
+
+      name = g_strdup_printf ("V%d", l);
+      r->v[V + 2*l] = v = gfs_domain_add_variable (domain, name, "y-component of the fluid flux");
+      g_free (name);
+      v->units = 2.;
+      v->coarse_fine = momentum_coarse_fine;
+
+      gfs_variable_set_vector (&r->v[U + 2*l], 2);
+    }
+
+  for (l = 0; l < r->nlayers; l++) {
+    r->flux[U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->flux[V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    gchar * name = g_strdup_printf ("G%d", l);
+    r->massflux[l] = gfs_domain_add_variable (domain, name, "Mass flux between layers");
+    g_free (name);
+
+    r->v1[U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->v1[V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    gfs_variable_set_vector (&r->v1[U + 2*l], 2);
+
+    r->dv[0][U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->dv[1][U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->dv[0][V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->dv[1][V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+  }
 
   GFS_SIMULATION (r)->advection_params.gradient = gfs_center_minmod_gradient;
   GFS_SIMULATION (r)->advection_params.cfl = 0.5;
 
-  GfsDerivedVariable * v = gfs_derived_variable_from_name (domain->derived_variables, "Velocity");
-  v->func = cell_velocity;
-  v = gfs_derived_variable_from_name (domain->derived_variables, "Velocity2");
-  v->func = cell_velocity2;
+  GfsDerivedVariable * dv = gfs_derived_variable_from_name (domain->derived_variables, "Velocity");
+  dv->func = cell_velocity;
+  dv = gfs_derived_variable_from_name (domain->derived_variables, "Velocity2");
+  dv->func = cell_velocity2;
 
   gfs_domain_remove_derived_variable (domain, "Vorticity");
   gfs_domain_remove_derived_variable (domain, "Divergence");
@@ -845,7 +968,7 @@ static void river_init (GfsRiver * r)
 
   r->time_order = 2;
   r->dry = 1e-6;
-  r->scheme = riemann_hllc;
+  r->scheme = r->nlayers > 1 ? riemann_kinetic : riemann_hllc;
 }
 
 GfsSimulationClass * gfs_river_class (void)
@@ -853,7 +976,7 @@ GfsSimulationClass * gfs_river_class (void)
   static GfsSimulationClass * klass = NULL;
 
   if (klass == NULL) {
-    GtsObjectClassInfo gfs_river_info = {
+    GtsObjectClassInfo info = {
       "GfsRiver",
       sizeof (GfsRiver),
       sizeof (GfsSimulationClass),
@@ -862,8 +985,7 @@ GfsSimulationClass * gfs_river_class (void)
       (GtsArgSetFunc) NULL,
       (GtsArgGetFunc) NULL
     };
-    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_simulation_class ()), 
-				  &gfs_river_info);
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_simulation_class ()), &info);
   }
 
   return klass;
@@ -880,7 +1002,7 @@ static void subcritical (FttCellFace * f, GfsBc * b)
 {
   gdouble hb = gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
   GfsRiver * river = GFS_RIVER (b->v->domain);
-  gdouble hi = GFS_VALUE (f->neighbor, river->v[0]);
+  gdouble hi = GFS_VALUE (f->neighbor, river->v[H]);
 
   g_assert (hi >= 0.);
   GFS_VALUE (f->cell, b->v) = GFS_VALUE (f->neighbor, b->v) + 
@@ -971,7 +1093,7 @@ static void discharge_elevation_read (GtsObject ** o, GtsFile * fp)
   else
     gfs_object_simulation_set (bd->profile, domain);
 
-  bd->P = GFS_RIVER (domain)->v[0];
+  bd->P = GFS_RIVER (domain)->v[H];
   g_free (GFS_CONSTANT (bd)->derived->description);
   GFS_CONSTANT (bd)->derived->description = g_strdup ("Elevation for a given discharge");
 }
@@ -989,18 +1111,18 @@ static void boundary_flux (FttCellFace * f, GfsDischargeElevation * b)
   gdouble profile = gfs_function_face_value (b->profile, f);
   if (profile != GFS_NODATA) {
     GfsRiver * river = GFS_RIVER (gfs_object_simulation (b));
-    GFS_VALUE (f->cell, river->flux[0]) = 0.;
-    gdouble v1 = GFS_VALUE (f->cell, river->v1[0]);
-    GFS_VALUE (f->cell, river->v1[0]) = MAX (0.,
+    GFS_VALUE (f->cell, river->flux[H]) = 0.;
+    gdouble v1 = GFS_VALUE (f->cell, river->v1[H]);
+    GFS_VALUE (f->cell, river->v1[H]) = MAX (0.,
 					     profile + GFS_CONSTANT (b)->val - 
 					     gfs_face_interpolated_value (f, river->zb->i));
     gdouble dt = river->dt;
     river->dt = 1.;
     face_fluxes (f, river);
     river->dt = dt;
-    GFS_VALUE (f->cell, river->v1[0]) = v1;
+    GFS_VALUE (f->cell, river->v1[H]) = v1;
     double h = ftt_cell_size (f->cell);
-    b->flow -= GFS_VALUE (f->cell, river->flux[0])*h*h;
+    b->flow -= GFS_VALUE (f->cell, river->flux[H])*h*h;
   }
 }
 
@@ -1028,7 +1150,7 @@ static gboolean discharge_elevation_event (GfsEvent * event, GfsSimulation * sim
     GfsRiver * r = GFS_RIVER (sim);
     guint v;
       
-    for (v = 0; v < GFS_RIVER_NVAR; v++)
+    for (v = 0; v < r->nvar; v++)
       gfs_variables_swap (r->v[v], r->v1[v]);
       
     gfs_catch_floating_point_exceptions ();
@@ -1067,7 +1189,7 @@ static gboolean discharge_elevation_event (GfsEvent * event, GfsSimulation * sim
     c->val *= L;
     /* g_message ("### flow: %g H: %g nitermax: %d\n", bd->flow*pow(L,3), c->val, n); */
 
-    for (v = 0; v < GFS_RIVER_NVAR; v++)
+    for (v = 0; v < r->nvar; v++)
       gfs_variables_swap (r->v[v], r->v1[v]);
 
     return TRUE;
@@ -1147,7 +1269,7 @@ static void source_pipe_read (GtsObject ** o, GtsFile * fp)
 		    (*o)->klass->info.name);
     return;
   }
-  GfsVariable * v = GFS_RIVER (sim)->v[0];
+  GfsVariable * v = GFS_RIVER (sim)->v[H];
   if (v->sources == NULL)
     v->sources = gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
   gts_container_add (v->sources, GTS_CONTAINEE (*o));
@@ -1199,7 +1321,7 @@ static gboolean source_pipe_event (GfsEvent * event, GfsSimulation * sim)
     p->Q = 0.;
     if (p->scell && p->ecell && p->scell != p->ecell) {
       gdouble L = sim->physical_params.L, g = sim->physical_params.g;
-      GfsVariable * h = GFS_RIVER (sim)->v[0], * zb = GFS_RIVER (sim)->zb;
+      GfsVariable * h = GFS_RIVER (sim)->v[H], * zb = GFS_RIVER (sim)->zb;
       gdouble h1 = L*GFS_VALUE (p->scell, h), z1 = L*GFS_VALUE (p->scell, zb);
       gdouble h2 = L*GFS_VALUE (p->ecell, h), z2 = L*GFS_VALUE (p->ecell, zb);      
       /* fixme: the length below does not take into account metric

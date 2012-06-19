@@ -1759,7 +1759,7 @@ static void variable_terrain_read (GtsObject ** o, GtsFile * fp)
       return;
     if (reconstruct) {
       v->p = GFS_RIVER (sim)->v[0];
-      v->H = GFS_RIVER (sim)->H;
+      v->H = GFS_RIVER (sim)->h;
       /* the coarse -> fine and fine -> coarse interpolations of p and H
 	 are taken over by variable_terrain_coarse_fine (below )*/
       v->p->coarse_fine = none;
