@@ -18,8 +18,23 @@
  */
 
 /*
- * An implementation of:
+ * Relevant references:
+ *
+ * Saint-Venant:
  * 
+ * E. Audusse and M.-O. Bristeau. A well-balanced,
+ * positivity-preserving second-order scheme for shallow-water flows
+ * on unstructured meshes, JCP, 2005, 311-333.
+ *
+ * Multi-layer Saint-Venant, constant density:
+ *
+ * E. Audusse, M.-O. Bristeau, B. Perthame and J. Sainte-Marie. A
+ * multilayer Saint-Venant system with mass exchanges for
+ * shallow-water flows. Derivation and numerical
+ * validation. Mathematical Modelling and Numerical analysis, 2011.
+ * 
+ * Multi-layer Saint-Venant, variable density:
+ *
  * E. Audusse, M.-O. Bristeau, M. Pelanti,
  * J. Sainte-Marie. Approximation of the hydrostatic Navier-Stokes
  * system for density stratified flows by a multilayer model. Kinetic
@@ -525,6 +540,116 @@ static void metric_sources (FttCell * cell, GfsRiver * r)
   }
 }
 
+typedef struct {
+  double * a; /* sub-diagonal indexed from 1..n-1 */
+  double * b; /* diagonal (destroyed) */
+  double * c; /* sup-diagonal indexed from 0..n-2 */
+  double * v; /* rhs (destroyed) */
+  int n;
+} Tridiagonal;
+
+static void tridiagonal_init (Tridiagonal * t, int n)
+{
+  t->a = g_malloc (sizeof (double)*n);
+  t->b = g_malloc (sizeof (double)*n);
+  t->c = g_malloc (sizeof (double)*(n - 1));
+  t->v = g_malloc (sizeof (double)*n);
+  t->n = n;
+}
+
+static void tridiagonal_solve (Tridiagonal * t, double * x)
+{
+  int n = t->n;
+  double * a = t->a, * b = t->b, * c = t->c, * v = t->v;
+  for (int i = 1; i < n; i++) {
+    double m = a[i]/b[i-1];
+    b[i] -= m*c[i-1];
+    v[i] -= m*v[i-1];
+  }
+  x[n-1] = v[n-1]/b[n-1];  
+  for (int i = n - 2; i >= 0; i--)
+    x[i] = (v[i] - c[i]*x[i+1])/b[i];  
+}
+
+static void tridiagonal_free (Tridiagonal * t)
+{
+  g_free (t->a);
+  g_free (t->b);
+  g_free (t->c);
+  g_free (t->v);
+}
+
+/* see doc/figures/diffusion.tm */
+static void vertical_diffusion (double * u, 
+				const double * mu, const double * dz,
+				int N, double dt,
+				double dut, 
+				double lambdab, double ub,
+				Tridiagonal * t,
+				/* working array of size N */
+				double * a)
+{
+  for (int l = 0; l < N - 1; l++)
+    a[l] = dt*(mu[l] + mu[l+1])/(dz[l]*(dz[l] + dz[l+1]));
+  a[N-1] = dt*mu[N-1]/(dz[N-1]*dz[N-1]);
+  double am = dt*mu[0]/(dz[0]*dz[0]);
+  t->b[0] = 1. + a[0] + (1. - (2.*lambdab - dz[0])/(2.*lambdab + dz[0]))*am;
+  t->c[0] = - a[0];
+  t->v[0] = u[0] + 2.*dz[0]/(2.*lambdab + dz[0])*ub*am;
+  for (int l = 1; l < N - 1; l++) {
+    t->a[l] = - a[l-1];
+    t->b[l] = 1. + a[l] + a[l-1];
+    t->c[l] = - a[l];
+    t->v[l] = u[l];
+  }
+  t->a[N-1] = - a[N-2];
+  t->b[N-1] = 1. + a[N-2];
+  t->v[N-1] = u[N-1] + dut*dz[N-1]*a[N-1];
+  tridiagonal_solve (t, u);
+}
+
+static void domain_vertical_diffusion (GfsRiver * r, double dt)
+{
+  Tridiagonal tri;
+  int n = r->nlayers;
+  tridiagonal_init (&tri, n);
+  double * a = g_malloc (n*sizeof (double));
+  double * u = g_malloc (n*sizeof (double));
+  double * mu = g_malloc (n*sizeof (double));
+  double * dz = g_malloc (n*sizeof (double));
+
+  FttCellTraverse * t = gfs_domain_cell_traverse_new (GFS_DOMAIN (r), 
+						      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1);
+  FttCell * cell;
+  while ((cell = ftt_cell_traverse_next (t))) {
+    double h = GFS_VALUE (cell, r->v[H]);
+    if (h > r->dry) {
+      double nu = gfs_function_value (r->nu, cell);
+      for (int l = 0; l < n; l++) {
+	mu[l] = nu;
+	dz[l] = r->dz[l]*h;
+	u[l] = GFS_VALUE (cell, r->v[U + 2*l])/dz[l];
+      }
+      double lambdab = 0., ub = 0., dut = 0.;
+      vertical_diffusion (u, mu, dz, n, dt, dut, lambdab, ub, &tri, a);
+      for (int l = 0; l < n; l++) {
+	GFS_VALUE (cell, r->v[U + 2*l]) = u[l]*dz[l];
+	u[l] = GFS_VALUE (cell, r->v[V + 2*l])/dz[l];
+      }
+      vertical_diffusion (u, mu, dz, n, dt, dut, lambdab, ub, &tri, a);
+      for (int l = 0; l < n; l++)
+	GFS_VALUE (cell, r->v[V + 2*l]) = u[l]*dz[l];
+    }
+  }
+  ftt_cell_traverse_destroy (t);
+
+  g_free (a);
+  g_free (u);
+  g_free (mu);
+  g_free (dz);
+  tridiagonal_free (&tri);
+}
+
 static void advance (GfsRiver * r, gdouble dt)
 {
   GfsDomain * domain = GFS_DOMAIN (r);
@@ -549,6 +674,8 @@ static void advance (GfsRiver * r, gdouble dt)
     gfs_domain_variable_centered_sources (domain, par.v, par.v, dt);
   }
   gfs_source_coriolis_implicit (domain, dt);
+  if (r->nu)
+    domain_vertical_diffusion (r, dt);
   for (i = 0; i < r->nvar; i++)
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->v[i]);
 }
@@ -764,10 +891,13 @@ static void river_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == '{') {
     double dry;
     gchar * scheme = NULL;
+    if (!river->nu)
+      river->nu = gfs_function_new (gfs_function_class (), 1.);
     GtsFileVariable var[] = {
       {GTS_UINT,   "time_order", TRUE, &river->time_order},
       {GTS_DOUBLE, "dry",        TRUE, &dry},
       {GTS_STRING, "scheme",     TRUE, &scheme},
+      {GTS_OBJ,    "nu",         TRUE, &river->nu},
       {GTS_NONE}
     };
     gts_file_assign_variables (fp, var);
@@ -775,6 +905,14 @@ static void river_read (GtsObject ** o, GtsFile * fp)
       return;
     if (var[1].set)
       river->dry = dry/GFS_SIMULATION (river)->physical_params.L;
+    if (var[3].set && river->nlayers > 1) {
+      gfs_function_set_units (river->nu, 2.);
+      gfs_object_simulation_set (river->nu, river);
+    }
+    else {
+      gts_object_destroy (GTS_OBJECT (river->nu));
+      river->nu = NULL;
+    }
     if (scheme) {
       if (!strcmp (scheme, "hllc")) {
 	if (river->nlayers > 1)
@@ -799,11 +937,15 @@ static void river_write (GtsObject * o, FILE * fp)
   fprintf (fp, " {\n"
 	   "  time_order = %d\n"
 	   "  dry = %g\n"
-	   "  scheme = %s\n"
-	   "}",
+	   "  scheme = %s\n",
 	   river->time_order,
 	   river->dry*GFS_SIMULATION (river)->physical_params.L,
 	   river->scheme == riemann_hllc ? "hllc" : "kinetic");
+  if (river->nu) {
+    fputs ("  nu = ", fp);
+    gfs_function_write (river->nu, fp);
+  }
+  fputs ("\n }", fp);
 }
 
 static void river_destroy (GtsObject * o)
@@ -820,6 +962,8 @@ static void river_destroy (GtsObject * o)
   int i;
   for (i = 0; i < FTT_DIMENSION; i++)
     g_free (r->dv[i]);
+  if (r->nu)
+    gts_object_destroy (GTS_OBJECT (r->nu));
 
   (* GTS_OBJECT_CLASS (gfs_river_class ())->parent_class->destroy) (o);
 }
@@ -885,7 +1029,7 @@ static void river_init (GfsRiver * r)
 
   r->uL = g_malloc (r->nvar*sizeof (gdouble));
   r->uR = g_malloc (r->nvar*sizeof (gdouble));
-  r->f = g_malloc ((r->nvar + 1)*sizeof (gdouble));
+  r->f = g_malloc ((3*r->nlayers + 1)*sizeof (gdouble));
 
   r->v[H] = gfs_variable_from_name (domain->variables, "P");
   r->v[H]->units = 1.;
@@ -918,22 +1062,27 @@ static void river_init (GfsRiver * r)
   v->description = g_strdup ("y-component of the (depth-integrated) fluid flux");
   v->coarse_fine = momentum_coarse_fine;
 
-  if (r->nlayers > 1)
+  if (r->nlayers > 1) {
+    /* allocate (Ul,Vl) in separate loops so that values are contiguous in memory */
     for (l = 0; l < r->nlayers; l++) {
       gchar * name = g_strdup_printf ("U%d", l);
       r->v[U + 2*l] = v = gfs_domain_add_variable (domain, name, "x-component of the fluid flux");
       g_free (name);
       v->units = 2.;
       v->coarse_fine = momentum_coarse_fine;
-
-      name = g_strdup_printf ("V%d", l);
+    }
+    for (l = 0; l < r->nlayers; l++) {
+      gchar * name = g_strdup_printf ("V%d", l);
       r->v[V + 2*l] = v = gfs_domain_add_variable (domain, name, "y-component of the fluid flux");
       g_free (name);
       v->units = 2.;
       v->coarse_fine = momentum_coarse_fine;
-
-      gfs_variable_set_vector (&r->v[U + 2*l], 2);
     }
+    for (l = 0; l < r->nlayers; l++) {
+      GfsVariable * u[2] = { r->v[U + 2*l], r->v[V + 2*l] };
+      gfs_variable_set_vector (u, 2);
+    }
+  }
 
   for (l = 0; l < r->nlayers; l++) {
     r->flux[U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
