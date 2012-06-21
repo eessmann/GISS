@@ -28,7 +28,6 @@
 #include "simulation.h"
 #include "adaptive.h"
 #include "vof.h"
-#include "river.h"
 
 static FttVector rpos[FTT_NEIGHBORS] = {
 #if FTT_2D
@@ -290,10 +289,6 @@ static void bc_dirichlet_read (GtsObject ** o, GtsFile * fp)
 
   gfs_function_set_units (GFS_BC_VALUE (bc)->val, bc->v->units);
   if (GFS_IS_VARIABLE_TRACER_VOF (bc->v))
-    bc->bc = (FttFaceTraverseFunc) dirichlet_vof;
-  
-  if (GFS_IS_RIVER (bc->v->domain) && bc->v == GFS_RIVER (bc->v->domain)->v[0])
-    /* use first-order BC for P in GfsRiver */
     bc->bc = (FttFaceTraverseFunc) dirichlet_vof;
 }
 

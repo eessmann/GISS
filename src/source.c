@@ -24,7 +24,6 @@
 #include <math.h>
 #include "source.h"
 #include "simulation.h"
-#include "river.h"
 #include "solid.h"
 #include "init.h"
 
@@ -425,9 +424,7 @@ static void source_read (GtsObject ** o, GtsFile * fp)
     gfs_function_read (GFS_SOURCE (s)->intensity, gfs_object_simulation (s), fp);
     if (fp->type != GTS_ERROR) {
       GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
-      gchar * name = GFS_SOURCE_SCALAR (s)->v->name;
-      if (!strcmp (name, "U") || !strcmp (name, "V") || 
-	  (FTT_DIMENSION > 2 && !strcmp (name, "W"))) {
+      if (GFS_SOURCE_SCALAR (s)->v->face_source) {
 	s->mac_value = s->centered_value = NULL;
 	s->face_value = source_face_value;
       }
@@ -438,7 +435,7 @@ static void source_read (GtsObject ** o, GtsFile * fp)
     if (!gfs_read_function_vector (fp, s->vector, GFS_SOURCE (s)->intensity_v, 
 				   gfs_object_simulation (s)))
       return;
-    if (!strcmp (s->vector[0]->name, "U")) {
+    if (s->vector[0]->face_source) {
       GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
       s->mac_value = s->centered_value = NULL;
       s->face_value = source_vector_face_value;
@@ -655,8 +652,7 @@ static void source_control_field_read (GtsObject ** o, GtsFile * fp)
   f->s = gfs_temporary_variable (GFS_DOMAIN (gfs_object_simulation (*o)));
 
   GfsSourceGeneric * s = GFS_SOURCE_GENERIC (*o);
-  gchar * name = GFS_SOURCE_SCALAR (s)->v->name;
-  if (!strcmp (name, "U") || !strcmp (name, "V") || !strcmp (name, "W")) {
+  if (GFS_SOURCE_SCALAR (s)->v->face_source) {
     s->mac_value = s->centered_value = NULL;
     s->face_value = source_control_field_face_value;
   }
@@ -1665,9 +1661,6 @@ static void gfs_source_coriolis_read (GtsObject ** o, GtsFile * fp)
   }
 
   GfsSourceCoriolis * s = GFS_SOURCE_CORIOLIS (*o);
-
-  if (GFS_IS_RIVER (domain))
-    s->beta = 1.; /* backward Euler */
 
   s->omegaz = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (s->omegaz, gfs_object_simulation (s), fp);

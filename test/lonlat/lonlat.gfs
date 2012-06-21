@@ -89,7 +89,7 @@ Define LENGTH (150./180.*M_PI)
                 sum += d*d;
               }
               scatter = sqrt(sum/n1);
-              if (scatter > 0.012) {
+              if (scatter > 0.013) {
                 print scatter > "/dev/stderr";
                 exit (1);
               }

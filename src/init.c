@@ -161,6 +161,7 @@ GtsObjectClass ** gfs_classes (void)
     gfs_refine_surface_class (),
       gfs_refine_distance_class (),
       gfs_refine_height_class (),
+    gfs_layers_class (),
 
   gfs_event_class (),
     gfs_variable_class (),

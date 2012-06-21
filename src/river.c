@@ -673,6 +673,13 @@ static void advance (GfsRiver * r, gdouble dt)
     gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) gfs_advection_update, &par);
     gfs_domain_variable_centered_sources (domain, par.v, par.v, dt);
   }
+  if (r->nlayers > 1) {
+    /* also add "global" sources specified through U,V to momentum on each layer */
+    GfsVariable ** u = gfs_domain_velocity (domain);
+    for (int l = 0; l < r->nlayers; l++)
+      for (FttComponent c = 0; c < 2; c++)
+	gfs_domain_variable_centered_sources (domain, u[c], r->v[U + c + 2*l], dt);
+  }
   gfs_source_coriolis_implicit (domain, dt);
   if (r->nu)
     domain_vertical_diffusion (r, dt);
@@ -881,6 +888,24 @@ static gdouble river_cfl (GfsSimulation * sim)
   return r->cfl;
 }
 
+static void dirichlet_p (FttCellFace * f, GfsBc * b)
+{
+  GFS_VALUE (f->cell, b->v) = gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
+}
+
+static void box_p_bc (GfsBox * box, GfsRiver * r)
+{
+  for (FttDirection d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, r->v[0]);
+      if (bc && GFS_IS_BC_DIRICHLET (bc)) {
+	/* use first-order Dirichlet BC for P in GfsRiver */
+	bc->bc = (FttFaceTraverseFunc) dirichlet_p;
+      }
+    }
+}
+
 static void river_read (GtsObject ** o, GtsFile * fp)
 {
   (* GTS_OBJECT_CLASS (gfs_river_class ())->parent_class->read) (o, fp);
@@ -927,6 +952,13 @@ static void river_read (GtsObject ** o, GtsFile * fp)
       g_free (scheme);
     }
   }
+
+  GfsSourceCoriolis * s = gfs_has_source_coriolis (GFS_DOMAIN (river));
+  if (s)
+    s->beta = 1.; /* backward Euler */
+
+  /* fix dirichlet BCs for depth */
+  gts_container_foreach (GTS_CONTAINER (river), (GtsFunc) box_p_bc, river);
 }
 
 static void river_write (GtsObject * o, FILE * fp)
@@ -942,10 +974,10 @@ static void river_write (GtsObject * o, FILE * fp)
 	   river->dry*GFS_SIMULATION (river)->physical_params.L,
 	   river->scheme == riemann_hllc ? "hllc" : "kinetic");
   if (river->nu) {
-    fputs ("  nu = ", fp);
+    fputs ("  nu =", fp);
     gfs_function_write (river->nu, fp);
   }
-  fputs ("\n }", fp);
+  fputs ("\n}", fp);
 }
 
 static void river_destroy (GtsObject * o)
@@ -1007,29 +1039,51 @@ static void momentum_coarse_fine (FttCell * parent, GfsVariable * v)
     gfs_cell_coarse_fine (parent, v);
 }
 
+static void allocate_river (GfsRiver * r, int start, int nl)
+{
+  r->nlayers = nl;
+  r->dz = g_realloc (r->dz, r->nlayers*sizeof (gdouble));
+  int l;
+  for (l = 0; l < r->nlayers; l++)
+    r->dz[l] = 1./r->nlayers;
+  r->nvar = 2*r->nlayers + 1;
+  r->v = g_realloc (r->v, (r->nvar + 1)*sizeof (GfsVariable *));
+  r->v1 = g_realloc (r->v1, r->nvar*sizeof (GfsVariable *));
+  for (FttComponent c = 0; c < FTT_DIMENSION; c++)
+    r->dv[c] = g_realloc (r->dv[c], (r->nvar + 1)*sizeof (GfsVariable *));
+  r->dv[0][ZB] = r->dv[0][3];
+  r->dv[1][ZB] = r->dv[1][3];
+  r->flux = g_realloc (r->flux, r->nvar*sizeof (GfsVariable *));
+  r->massflux = g_realloc (r->massflux, r->nlayers*sizeof (GfsVariable *));
+
+  r->uL = g_realloc (r->uL, r->nvar*sizeof (gdouble));
+  r->uR = g_realloc (r->uR, r->nvar*sizeof (gdouble));
+  r->f = g_realloc (r->f, (3*r->nlayers + 1)*sizeof (gdouble));
+
+  GfsDomain * domain = GFS_DOMAIN (r);
+  for (l = start; l < r->nlayers; l++) {
+    r->flux[U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->flux[V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->massflux[l] = gfs_domain_add_variable (domain, NULL, NULL);
+
+    r->v1[U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->v1[V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    gfs_variable_set_vector (&r->v1[U + 2*l], 2);
+
+    r->dv[0][U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->dv[1][U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->dv[0][V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->dv[1][V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+  }
+}
+
 static void river_init (GfsRiver * r)
 {
   GfsDomain * domain = GFS_DOMAIN (r);
 
   gts_object_destroy (GTS_OBJECT (gfs_variable_from_name (domain->variables, "Pmac")));
 
-  r->nlayers = 1;
-  r->dz = g_malloc (r->nlayers*sizeof (gdouble));
-  int l;
-  for (l = 0; l < r->nlayers; l++)
-    r->dz[l] = 1./r->nlayers;
-  r->nvar = 2*r->nlayers + 1;
-  r->v = g_malloc ((r->nvar + 1)*sizeof (GfsVariable *));
-  r->v1 = g_malloc (r->nvar*sizeof (GfsVariable *));
-  FttComponent c;
-  for (c = 0; c < FTT_DIMENSION; c++)
-    r->dv[c] = g_malloc ((r->nvar + 1)*sizeof (GfsVariable *));
-  r->flux = g_malloc (r->nvar*sizeof (GfsVariable *));
-  r->massflux = g_malloc (r->nlayers*sizeof (GfsVariable *));
-
-  r->uL = g_malloc (r->nvar*sizeof (gdouble));
-  r->uR = g_malloc (r->nvar*sizeof (gdouble));
-  r->f = g_malloc ((3*r->nlayers + 1)*sizeof (gdouble));
+  allocate_river (r, 0, 1); /* one layer by default */
 
   r->v[H] = gfs_variable_from_name (domain->variables, "P");
   r->v[H]->units = 1.;
@@ -1052,54 +1106,17 @@ static void river_init (GfsRiver * r)
   GfsVariable * v;
   r->v[U] = r->qx = v = gfs_variable_from_name (domain->variables, "U");
   v->units = 2.;
+  v->face_source = FALSE;
   g_free (v->description);
   v->description = g_strdup ("x-component of the (depth-integrated) fluid flux");
   v->coarse_fine = momentum_coarse_fine;
   
   r->v[V] = r->qy = v = gfs_variable_from_name (domain->variables, "V");
   v->units = 2.;
+  v->face_source = FALSE;
   g_free (v->description);
   v->description = g_strdup ("y-component of the (depth-integrated) fluid flux");
   v->coarse_fine = momentum_coarse_fine;
-
-  if (r->nlayers > 1) {
-    /* allocate (Ul,Vl) in separate loops so that values are contiguous in memory */
-    for (l = 0; l < r->nlayers; l++) {
-      gchar * name = g_strdup_printf ("U%d", l);
-      r->v[U + 2*l] = v = gfs_domain_add_variable (domain, name, "x-component of the fluid flux");
-      g_free (name);
-      v->units = 2.;
-      v->coarse_fine = momentum_coarse_fine;
-    }
-    for (l = 0; l < r->nlayers; l++) {
-      gchar * name = g_strdup_printf ("V%d", l);
-      r->v[V + 2*l] = v = gfs_domain_add_variable (domain, name, "y-component of the fluid flux");
-      g_free (name);
-      v->units = 2.;
-      v->coarse_fine = momentum_coarse_fine;
-    }
-    for (l = 0; l < r->nlayers; l++) {
-      GfsVariable * u[2] = { r->v[U + 2*l], r->v[V + 2*l] };
-      gfs_variable_set_vector (u, 2);
-    }
-  }
-
-  for (l = 0; l < r->nlayers; l++) {
-    r->flux[U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-    r->flux[V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-    gchar * name = g_strdup_printf ("G%d", l);
-    r->massflux[l] = gfs_domain_add_variable (domain, name, "Mass flux between layers");
-    g_free (name);
-
-    r->v1[U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-    r->v1[V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-    gfs_variable_set_vector (&r->v1[U + 2*l], 2);
-
-    r->dv[0][U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-    r->dv[1][U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-    r->dv[0][V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-    r->dv[1][V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-  }
 
   GFS_SIMULATION (r)->advection_params.gradient = gfs_center_minmod_gradient;
   GFS_SIMULATION (r)->advection_params.cfl = 0.5;
@@ -1117,7 +1134,7 @@ static void river_init (GfsRiver * r)
 
   r->time_order = 2;
   r->dry = 1e-6;
-  r->scheme = r->nlayers > 1 ? riemann_kinetic : riemann_hllc;
+  r->scheme = riemann_kinetic;
 }
 
 GfsSimulationClass * gfs_river_class (void)
@@ -1141,6 +1158,100 @@ GfsSimulationClass * gfs_river_class (void)
 }
 
 /** \endobject{GfsRiver} */
+
+/**
+ * Add multiple layers.  
+ * \beginobject{GfsLayers}
+ */
+
+static void gfs_layers_read (GtsObject ** o, GtsFile * fp)
+{
+  gts_file_next_token (fp);
+  if (fp->type != GTS_INT) {
+    gts_file_error (fp, "expecting an integer (number of layers)");
+    return;
+  }
+  GfsLayers * layers = GFS_LAYERS (*o);
+  layers->nl = atoi (fp->token->str);
+  if (layers->nl < 1) {
+    gts_file_error (fp, "number of layers must be > 0)");
+    return;
+  }
+  gts_file_next_token (fp);
+
+  /* this is specific to GfsRiver for the moment */
+  GfsSimulation * sim = gfs_object_simulation (layers);
+  if (!GFS_IS_RIVER (sim)) {
+    gts_file_error (fp, "layering is only valid for GfsRiver");
+    return;
+  }
+  if (layers->nl < 2)
+    return;
+
+  GfsRiver * r = GFS_RIVER (sim);
+  GfsDomain * domain = GFS_DOMAIN (r);
+
+  allocate_river (r, 1, layers->nl);
+
+  /* allocate (Ul,Vl) in separate loops so that values are contiguous in memory */
+  for (FttComponent c = 0; c < 2; c++)
+    for (int l = 0; l < r->nlayers; l++) {
+      gchar * name = g_strdup_printf ("%s%d", c ? "V" : "U", l);
+      gchar * description = g_strdup_printf ("%s-component of the fluid flux for layer %d",
+					     c ? "y" : "x", l);
+      GfsVariable * v = gfs_domain_get_or_add_variable (domain, name, description);
+      g_free (name);
+      g_free (description);
+      r->v[U + c + 2*l] = v;
+      v->units = 2.;
+      v->coarse_fine = momentum_coarse_fine;
+    }
+  for (int l = 0; l < r->nlayers; l++) {
+    GfsVariable * u[2] = { r->v[U + 2*l], r->v[V + 2*l] };
+    gfs_variable_set_vector (u, 2);
+  }
+}
+
+static void gfs_layers_write (GtsObject * o, FILE * fp)
+{
+  fprintf (fp, " %d", GFS_LAYERS (o)->nl);
+}
+
+static void gfs_layers_class_init (GtsObjectClass * klass)
+{
+  GFS_REFINE_CLASS (klass)->refine = NULL;
+  klass->read = gfs_layers_read;
+  klass->write = gfs_layers_write;
+}
+
+static void gfs_layers_init (GfsLayers * l)
+{
+  l->nl = 1;
+}
+
+GtsObjectClass * gfs_layers_class (void)
+{
+  static GtsObjectClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo info = {
+      "GfsLayers",
+      sizeof (GfsLayers),
+      sizeof (GfsRefineClass),
+      (GtsObjectClassInitFunc) gfs_layers_class_init,
+      (GtsObjectInitFunc) gfs_layers_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_refine_class ()), &info);
+  }
+
+  return klass;
+}
+
+/**
+ * \endobject{GfsLayers}
+ */
 
 /**
  * 

@@ -956,11 +956,14 @@ static void simulation_init (GfsSimulation * object)
   GfsVariable * u[FTT_DIMENSION];
   u[0] = gfs_domain_add_variable (domain, "U",    "x-component of the velocity");
   u[0]->units = 1.;
+  u[0]->face_source = TRUE;
   u[1] = gfs_domain_add_variable (domain, "V",    "y-component of the velocity");
   u[1]->units = 1.;
+  u[1]->face_source = TRUE;
 #if (!FTT_2D)
   u[2] = gfs_domain_add_variable (domain, "W",    "z-component of the velocity");
   u[2]->units = 1.;
+  u[2]->face_source = TRUE;
 #endif /* FTT_3D */
   gfs_variable_set_vector (u, FTT_DIMENSION);
 
@@ -1205,10 +1208,9 @@ void gfs_simulation_refine (GfsSimulation * sim)
   i = sim->refines->items;
   while (i) {
     GfsRefine * refine = i->data;
-    GSList * next = i->next;
-    
-    g_assert (GFS_REFINE_CLASS (GTS_OBJECT (refine)->klass)->refine);
-    (* GFS_REFINE_CLASS (GTS_OBJECT (refine)->klass)->refine) (refine, sim);
+    GSList * next = i->next;    
+    if (GFS_REFINE_CLASS (GTS_OBJECT (refine)->klass)->refine)
+      (* GFS_REFINE_CLASS (GTS_OBJECT (refine)->klass)->refine) (refine, sim);
     i = next;
   }
 

@@ -25,6 +25,27 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "source.h"
+#include "refine.h"
+
+/* GfsLayers: Header */
+
+typedef struct _GfsLayers         GfsLayers;
+
+struct _GfsLayers {
+  /*< private >*/
+  GfsRefine parent;
+
+  /*< public >*/
+  int nl;
+};
+
+#define GFS_LAYERS(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsLayers,\
+					         gfs_layers_class ())
+#define GFS_IS_LAYERS(obj)         (gts_object_is_from_class (obj,\
+						 gfs_layers_class ()))
+
+GtsObjectClass * gfs_layers_class  (void);
 
 /* GfsRiver: Header */
 

@@ -51,6 +51,7 @@ struct _GfsVariable {
   FttCellCleanupFunc cleanup;
   gdouble units;
   GfsVariable * face[2][4];
+  gboolean face_source; /* whether source terms should be evaluated at cell faces only */
 };
 
 typedef struct _GfsVariableClass    GfsVariableClass;

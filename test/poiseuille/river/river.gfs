@@ -19,8 +19,8 @@
 # Required files: river.sh error.ref
 # Generated files: convergence.eps
 #
-GModule river { nlayers = NL }
 1 1 GfsRiver GfsBox GfsGEdge {} {
+    Layers NL
     PhysicalParams { L = 1. }
     Init {} { P = 0.5 }
     Source U A*P/NL
