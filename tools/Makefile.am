@@ -21,7 +21,8 @@ bin_SCRIPTS = \
 	ppm2theora \
 	ppm2video \
 	gfs2gfs \
-	gfsjoin
+	gfsjoin \
+	gfsplot
 
 EXTRA_DIST = $(bin_SCRIPTS)
 

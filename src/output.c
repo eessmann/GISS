@@ -1399,7 +1399,7 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
 	  fprintf (fp, " %d:%s", nv++, GFS_VARIABLE (i->data)->name);
 	  i = i->next;
 	}
-	fputc ('\n', fp);
+	fprintf (fp, " %g\n", sim->time.t);
       }
       gpointer data[2];
       data[0] = output;

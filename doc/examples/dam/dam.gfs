@@ -56,28 +56,30 @@
     OutputScalarSum { istep = 10 } vol { v = P }
     OutputScalarNorm { istep = 10 } u { v = (P > 0. ? U/P : 0.) }
 
-    # Save a text-formatted simulation
-    OutputSimulation { step = 0.5 } sim-%g.txt { format = text }
-
-    # Use gnuplot to create gif images
-    EventScript { step = 0.5 } {
-	time=`echo $GfsTime | awk '{printf("%4.1f\n", $1);}'`
-	cat <<EOF | gnuplot
-load 'dam.plot'
-set title "t = $time"
-set term postscript eps color 14
-set output "sim.eps"
-plot [-4.:4.]'sim-$GfsTime.txt' u 1:7:8 w filledcu lc 3, 'sim-0.txt' u 1:7 w l lw 4 lc 1 lt 1
-EOF
-	time=`echo $GfsTime | awk '{printf("%04.1f\n", $1);}'`
-	convert -density 300 sim.eps -trim +repage -bordercolor white -border 10 -resize 640x282! sim-$time.gif
-	rm -f sim.eps
-    }
+    # use gfsplot/gnuplot for online visualisation and generation of figures
+    OutputSimulation { step = 0.3 } {
+	gfsplot "
+          load 'dam.plot'
+          set title sprintf('t = %4.1f', (t))
+          plot [-4.:4.]'-' u (x):(Zb):(H) w filledcu lc 3, \
+                       '-' u (x):(Zb) w l lw 4 lc 1 lt 1
+          set term pngcairo size 800,600
+          set output sprintf('sim-%04.1f.png', (t))
+          replot
+          set term wxt noraise
+        "
+    } { format = text }
 
     # Combine all the gif images into a gif animation using gifsicle
     EventScript { start = end } {
-	gifsicle --colors 256 --optimize --delay 25 --loopcount=0 sim-*.gif > dam.gif
-	rm -f sim-*.gif sim-*.txt
+	echo "\rcreating animation...            " > /dev/stderr
+        sleep 10 # give a chance to gnuplot to catch up
+	for f in sim-*.png; do
+	    convert $f -trim +repage -bordercolor white \
+		-border 10 -resize 640x282! `basename $f .png`.gif && rm -f $f
+	done
+	gifsicle --colors 256 --optimize --delay 12 --loopcount=0 sim-*.gif > dam.gif && \
+	    rm -f sim-*.gif
     }
 }
 GfsBox {
