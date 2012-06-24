@@ -61,7 +61,7 @@ struct _GfsRiver {
   GfsVariable ** dv[FTT_DIMENSION];
   GfsVariable ** flux, ** massflux;
   gdouble * dz;
-  int nlayers, nvar;
+  int nlayers, nvar, nt;
   gdouble g, dt;
   GfsCenterGradient gradient;
   guint time_order;
@@ -69,7 +69,7 @@ struct _GfsRiver {
   void (* scheme) (const GfsRiver * r,
 		   const gdouble * uL, const gdouble * uR, 
 		   gdouble * f);
-  GfsFunction * nu;
+  GfsFunction * nu, * dut;
 };
 
 #define GFS_RIVER(obj)            GTS_OBJECT_CAST (obj,\
