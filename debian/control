@@ -13,7 +13,7 @@ Homepage: http://gfs.sourceforge.net/
 Package: gerris-snapshot
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
-	 mpi-default-bin [i386 amd64],
+	 mpi-default-dev [i386 amd64], mpi-default-bin [i386 amd64],
 	 libgts-snapshot-dev,
 	 pkg-config, gcc, sed, gawk, m4
 Conflicts: gerris, libgfs-1.3-1, libgfs-1.3-2, libgfs-mpi-1.3-2, libgfs-dev, libgfs-mpi-dev
