@@ -35,8 +35,8 @@ for start in sys.argv[1:]:
 
 print "DOCS = " + docs + dists
 print ""
-print "EXTRA_DIST += " + dists
-print ""
 print "TESTS = " + tests
+print ""
+print "EXTRA_DIST += $(TESTS)" + dists
 print ""
 print "examples.tex: " + depends

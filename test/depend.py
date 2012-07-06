@@ -40,10 +40,10 @@ for start in sys.argv[1:]:
 
 print "DOCS = " + docs + dists
 print ""
-print "EXTRA_DIST += " + dists
-print ""
 print "TESTS = " + tests + "\\\n\tsummary.sh"
 os.chmod("summary.sh",0755)
+print ""
+print "EXTRA_DIST += $(TESTS)" + dists
 print ""
 print "TESTS_ENVIRONMENT = TESTS=\"" + reps + "\""
 print "TEST_EXTENSIONS = .sh"
