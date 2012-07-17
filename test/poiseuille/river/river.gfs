@@ -30,13 +30,20 @@
     OutputSimulation { start = end } {
 	awk '{
   	  nl = NL;
-          if ($1 != "#") {
+          if ($1 == "#") {
+            for (i = 2; i <= NF; i++) {
+              split($i,a,":")
+              if (a[2] == "U0")
+                start = a[1];
+            }
+          }
+          else {
             dz = $4/nl;
             emax = 0.;
   	    for (i = 0; i < nl; i++) {
               z = dz*(0.5+i)
               u = A/(2.*NU)*(1./4 - (0.5 - z)*(0.5 - z))
-              eu = u - $(13+i)/dz
+              eu = u - $(start+i)/dz
               if (eu < 0.)
                 eu = -eu;
               if (eu > emax)
