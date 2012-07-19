@@ -516,7 +516,7 @@ static void vertical_advection (FttCell * cell, const GfsRiver * r)
 	  G*GFS_VALUE (cell, r->v1[c + 2*l])/dz1 : 
 	  G*GFS_VALUE (cell, r->v1[c + 2*(l + 1)])/dz2;
 	GFS_VALUE (cell, r->flux[c + 2*l]) += flux;
-	GFS_VALUE (cell, r->flux[c + (2*l + 1)]) -= flux;
+	GFS_VALUE (cell, r->flux[c + 2*(l + 1)]) -= flux;
       }
       for (int i = 0; i < r->nt; i++) {
 	double flux = G < 0. ? 
@@ -684,6 +684,7 @@ static void domain_vertical_diffusion (GfsRiver * r, double dt)
 	GFS_VALUE (cell, r->v[U + 2*l]) = u[l]*dz[l];
 	u[l] = GFS_VALUE (cell, r->v[V + 2*l])/dz[l];
       }
+      dut = 0.;
       vertical_diffusion (u, mu, dz, n, dt, dut, lambdab, ub, &tri, a);
       for (int l = 0; l < n; l++)
 	GFS_VALUE (cell, r->v[V + 2*l]) = u[l]*dz[l];
@@ -1009,10 +1010,14 @@ static void river_read (GtsObject ** o, GtsFile * fp)
   if (fp->type == '{') {
     double dry;
     gchar * scheme = NULL;
-    if (!river->nu)
+    if (!river->nu) {
       river->nu = gfs_function_new (gfs_function_class (), 1.);
-    if (!river->dut)
+      gfs_object_simulation_set (river->nu, river);
+    }
+    if (!river->dut) {
       river->dut = gfs_function_new (gfs_function_class (), 0.);
+      gfs_object_simulation_set (river->dut, river);
+    }
     GtsFileVariable var[] = {
       {GTS_UINT,   "time_order", TRUE, &river->time_order},
       {GTS_DOUBLE, "dry",        TRUE, &dry},
@@ -1333,7 +1338,7 @@ static void gfs_layers_read (GtsObject ** o, GtsFile * fp)
 
 static void gfs_layers_write (GtsObject * o, FILE * fp)
 {
-  fprintf (fp, " %d", GFS_LAYERS (o)->nl);
+  fprintf (fp, "%s %d", o->klass->info.name, GFS_LAYERS (o)->nl);
 }
 
 static void gfs_layers_class_init (GtsObjectClass * klass)

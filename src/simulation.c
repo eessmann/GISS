@@ -33,6 +33,7 @@
 #include "vof.h"
 #include "tension.h"
 #include "map.h"
+#include "river.h"
 #include "version.h"
 
 /**
@@ -75,6 +76,7 @@ static void simulation_destroy (GtsObject * object)
 static void simulation_write (GtsObject * object, FILE * fp)
 {
   GfsSimulation * sim = GFS_SIMULATION (object);
+  GfsDomain * domain = GFS_DOMAIN (sim);
   GSList * i;
   GfsVariable * v;
 
@@ -107,17 +109,16 @@ static void simulation_write (GtsObject * object, FILE * fp)
   gfs_time_write (&sim->time, fp);
   fputc ('\n', fp);
 
-  if (GFS_DOMAIN (sim)->max_depth_write < -1) {
-    i = sim->refines->items;
-    while (i) {
-      GtsObject * object = i->data;
-      
+  i = sim->refines->items;
+  while (i) {
+    GtsObject * object = i->data;
+    if (GFS_IS_LAYERS (object) || domain->max_depth_write < -1) {
       fputs ("  ", fp);
       g_assert (object->klass->write);
       (* object->klass->write) (object, fp);
       fputc ('\n', fp);
-      i = i->next;
     }
+    i = i->next;
   }
 
   i = sim->events->items;
@@ -134,7 +135,7 @@ static void simulation_write (GtsObject * object, FILE * fp)
     i = i->next;
   }
 
-  i = GFS_DOMAIN (sim)->variables;
+  i = domain->variables;
   while (i) {
     v = i->data;
     if (v->surface_bc) {
