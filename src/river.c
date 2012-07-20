@@ -811,6 +811,35 @@ static void domain_traverse_all_leaves (GfsDomain * domain,
 				       (FttCellTraverseFunc) face_traverse, &p);
 }
 
+static void dirichlet_p (FttCellFace * f, GfsBc * b)
+{
+  GFS_VALUE (f->cell, b->v) = gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
+}
+
+static void fix_box_bc (GfsBox * box, GfsRiver * r)
+{
+  for (FttDirection d = 0; d < FTT_NEIGHBORS; d++)
+    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
+      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
+      GfsBc * bc = gfs_boundary_lookup_bc (b, r->v[0]);
+      if (bc && GFS_IS_BC_DIRICHLET (bc)) {
+	/* use first-order Dirichlet BC for P in GfsRiver */
+	bc->bc = (FttFaceTraverseFunc) dirichlet_p;
+      }
+      if (r->nlayers > 1) {
+	GfsBc * bc = g_hash_table_lookup (b->bc, r->qx->name);
+	if (bc) {
+	  /* applies explicit BC on global flux on all layer fluxes which have no explicit BCs */
+	  for (int l = 0; l < r->nlayers; l++) {
+	    GfsVariable * v = r->v[U + 2*l];
+	    if (!g_hash_table_lookup (b->bc, v->name))
+	      g_hash_table_insert (b->bc, v->name, bc);
+	  }
+	}
+      }
+    }
+}
+
 static void river_run (GfsSimulation * sim)
 {
   GfsDomain * domain = GFS_DOMAIN (sim);
@@ -828,6 +857,7 @@ static void river_run (GfsSimulation * sim)
   else if (r->gradient == gfs_center_sweby_gradient)
     r->gradient = center_sweby_gradient;
 
+  gts_container_foreach (GTS_CONTAINER (r), (GtsFunc) fix_box_bc, r);
   gfs_simulation_refine (sim);
   gfs_simulation_init (sim);
 
@@ -937,24 +967,6 @@ static gdouble river_cfl (GfsSimulation * sim)
   gfs_domain_traverse_leaves (GFS_DOMAIN (sim), (FttCellTraverseFunc) minimum_cfl, r);
   gfs_all_reduce (GFS_DOMAIN (sim), r->cfl, MPI_DOUBLE, MPI_MIN);
   return r->cfl;
-}
-
-static void dirichlet_p (FttCellFace * f, GfsBc * b)
-{
-  GFS_VALUE (f->cell, b->v) = gfs_function_face_value (GFS_BC_VALUE (b)->val, f);
-}
-
-static void box_p_bc (GfsBox * box, GfsRiver * r)
-{
-  for (FttDirection d = 0; d < FTT_NEIGHBORS; d++)
-    if (GFS_IS_BOUNDARY (box->neighbor[d])) {
-      GfsBoundary * b = GFS_BOUNDARY (box->neighbor[d]);
-      GfsBc * bc = gfs_boundary_lookup_bc (b, r->v[0]);
-      if (bc && GFS_IS_BC_DIRICHLET (bc)) {
-	/* use first-order Dirichlet BC for P in GfsRiver */
-	bc->bc = (FttFaceTraverseFunc) dirichlet_p;
-      }
-    }
 }
 
 static void (* default_tracer_read) (GtsObject ** o, GtsFile * fp) = NULL;

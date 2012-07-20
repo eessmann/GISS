@@ -540,9 +540,9 @@ GfsBcClass * gfs_bc_navier_class (void)
  * \beginobject{GfsBoundary}
  */
 
-static void destroy_bc (GfsVariable * v, GtsObject * o)
+static void insert_bc (GfsVariable * v, GtsObject * o, GHashTable * unique)
 {
-  gts_object_destroy (o);
+  g_hash_table_insert (unique, o, o);
 }
 
 static void gfs_boundary_destroy (GtsObject * object)
@@ -562,7 +562,11 @@ static void gfs_boundary_destroy (GtsObject * object)
 
   gts_object_destroy (GTS_OBJECT (boundary->default_bc));
   if (boundary->bc) {
-    g_hash_table_foreach (boundary->bc, (GHFunc) destroy_bc, NULL);
+    GHashTable * unique = g_hash_table_new (NULL, NULL);
+    /* make sure that the pointers are unique before destroying them */
+    g_hash_table_foreach (boundary->bc, (GHFunc) insert_bc, unique);
+    g_hash_table_foreach (unique, (GHFunc) gts_object_destroy, NULL);
+    g_hash_table_destroy (unique);
     g_hash_table_destroy (boundary->bc);
   }
 
