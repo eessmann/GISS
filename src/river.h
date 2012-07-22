@@ -69,7 +69,7 @@ struct _GfsRiver {
   void (* scheme) (const GfsRiver * r,
 		   const gdouble * uL, const gdouble * uR, 
 		   gdouble * f);
-  GfsFunction * nu, * dut;
+  GfsFunction * nu, * dut, * k;
 };
 
 #define GFS_RIVER(obj)            GTS_OBJECT_CAST (obj,\

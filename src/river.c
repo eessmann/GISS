@@ -632,11 +632,15 @@ static void vertical_diffusion (double * u,
 				const double * mu, const double * dz,
 				int N, double dt,
 				double dut, 
-				double lambdab, double ub,
+				double lambdab, double ub, double k,
 				Tridiagonal * t,
 				/* working array of size N */
 				double * a)
 {
+  if (k > 0.) { /* use Navier coefficient k rather than slip length */
+    lambdab = mu[0]/k;
+    ub = 0.;
+  }
   for (int l = 0; l < N - 1; l++)
     a[l] = dt*(mu[l] + mu[l+1])/(dz[l]*(dz[l] + dz[l+1]));
   a[N-1] = dt*mu[N-1]/(dz[N-1]*dz[N-1]);
@@ -654,6 +658,20 @@ static void vertical_diffusion (double * u,
   t->b[N-1] = 1. + a[N-2];
   t->v[N-1] = u[N-1] + dut*dz[N-1]*a[N-1];
   tridiagonal_solve (t, u);
+}
+
+/* bottom friction for a single layer. For more than one layer, bottom
+   friction is a boundary condition for vertical_diffusion() above  */
+static void bottom_friction (FttCell * cell, GfsRiver * r)
+{
+  double h = GFS_VALUE (cell, r->v[H]);
+  if (h > r->dry) {
+    double a = 1. + gfs_function_value (r->k, cell)/h*r->dt;
+    GFS_VALUE (cell, r->v[U]) /= a;
+    GFS_VALUE (cell, r->v[V]) /= a;
+  }
+  else
+    GFS_VALUE (cell, r->v[U]) = GFS_VALUE (cell, r->v[V]) = 0.;
 }
 
 static void domain_vertical_diffusion (GfsRiver * r, double dt)
@@ -679,16 +697,22 @@ static void domain_vertical_diffusion (GfsRiver * r, double dt)
 	u[l] = GFS_VALUE (cell, r->v[U + 2*l])/dz[l];
       }
       double lambdab = 0., ub = 0., dut = r->dut ? gfs_function_value (r->dut, cell) : 0.;
-      vertical_diffusion (u, mu, dz, n, dt, dut, lambdab, ub, &tri, a);
+      double k = r->k ? gfs_function_value (r->k, cell) : 0.;
+      vertical_diffusion (u, mu, dz, n, dt, dut, lambdab, ub, k, &tri, a);
       for (int l = 0; l < n; l++) {
 	GFS_VALUE (cell, r->v[U + 2*l]) = u[l]*dz[l];
 	u[l] = GFS_VALUE (cell, r->v[V + 2*l])/dz[l];
       }
       dut = 0.;
-      vertical_diffusion (u, mu, dz, n, dt, dut, lambdab, ub, &tri, a);
+      vertical_diffusion (u, mu, dz, n, dt, dut, lambdab, ub, k, &tri, a);
       for (int l = 0; l < n; l++)
 	GFS_VALUE (cell, r->v[V + 2*l]) = u[l]*dz[l];
     }
+    else
+      for (int l = 0; l < n; l++) {
+	GFS_VALUE (cell, r->v[U + 2*l]) = 0.;
+	GFS_VALUE (cell, r->v[V + 2*l]) = 0.;
+      }
   }
   ftt_cell_traverse_destroy (t);
 
@@ -734,6 +758,10 @@ static void advance (GfsRiver * r, gdouble dt)
   gfs_source_coriolis_implicit (domain, dt);
   if (r->nu)
     domain_vertical_diffusion (r, dt);
+  else if (r->k) {
+    g_assert (r->nlayers == 1);
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) bottom_friction, r);
+  }
   for (i = 0; i < r->nvar; i++)
     gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, r->v[i]);
 }
@@ -1024,11 +1052,17 @@ static void river_read (GtsObject ** o, GtsFile * fp)
     gchar * scheme = NULL;
     if (!river->nu) {
       river->nu = gfs_function_new (gfs_function_class (), 1.);
+      gfs_function_set_units (river->nu, 2.);
       gfs_object_simulation_set (river->nu, river);
     }
     if (!river->dut) {
       river->dut = gfs_function_new (gfs_function_class (), 0.);
       gfs_object_simulation_set (river->dut, river);
+    }
+    if (!river->k) {
+      river->k = gfs_function_new (gfs_function_class (), 0.);
+      gfs_function_set_units (river->k, 1.);
+      gfs_object_simulation_set (river->k, river);
     }
     GtsFileVariable var[] = {
       {GTS_UINT,   "time_order", TRUE, &river->time_order},
@@ -1036,6 +1070,7 @@ static void river_read (GtsObject ** o, GtsFile * fp)
       {GTS_STRING, "scheme",     TRUE, &scheme},
       {GTS_OBJ,    "nu",         TRUE, &river->nu},
       {GTS_OBJ,    "dut",        TRUE, &river->dut},
+      {GTS_OBJ,    "k",          TRUE, &river->k},
       {GTS_NONE}
     };
     gts_file_assign_variables (fp, var);
@@ -1043,19 +1078,23 @@ static void river_read (GtsObject ** o, GtsFile * fp)
       return;
     if (var[1].set)
       river->dry = dry/GFS_SIMULATION (river)->physical_params.L;
-    if (var[3].set && river->nlayers > 1) {
-      gfs_function_set_units (river->nu, 2.);
-      gfs_object_simulation_set (river->nu, river);
-    }
-    else {
+    if (!var[3].set || river->nlayers < 2) {
       gts_object_destroy (GTS_OBJECT (river->nu));
       river->nu = NULL;
     }
-    if (var[4].set && river->nlayers > 1)
-      gfs_object_simulation_set (river->dut, river);
-    else {
+    if (!var[4].set || river->nlayers < 2) {
       gts_object_destroy (GTS_OBJECT (river->dut));
       river->dut = NULL;
+    }
+    if (var[5].set) {
+      if (river->nlayers > 1 && !river->nu) {
+	gts_file_variable_error (fp, var, "k", "Navier condition requires viscosity to be set");
+	return;
+      }
+    }
+    else {
+      gts_object_destroy (GTS_OBJECT (river->k));
+      river->k = NULL;
     }
     if (scheme) {
       if (!strcmp (scheme, "hllc")) {
@@ -1075,9 +1114,6 @@ static void river_read (GtsObject ** o, GtsFile * fp)
   GfsSourceCoriolis * s = gfs_has_source_coriolis (GFS_DOMAIN (river));
   if (s)
     s->beta = 1.; /* backward Euler */
-
-  /* fix dirichlet BCs for depth */
-  gts_container_foreach (GTS_CONTAINER (river), (GtsFunc) box_p_bc, river);
 }
 
 static void river_write (GtsObject * o, FILE * fp)
@@ -1117,6 +1153,8 @@ static void river_destroy (GtsObject * o)
     gts_object_destroy (GTS_OBJECT (r->nu));
   if (r->dut)
     gts_object_destroy (GTS_OBJECT (r->dut));
+  if (r->k)
+    gts_object_destroy (GTS_OBJECT (r->k));
 
   /* restore the default read() method for tracers */
   GTS_OBJECT_CLASS (gfs_variable_tracer_class ())->read = default_tracer_read;
