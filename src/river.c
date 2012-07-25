@@ -429,10 +429,16 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
       uL[U + 2*l] = s->du*left (r, face, s->u + 2*l, a*s->du)/etal;
       /* vl = vhl/hl */
       uL[V + 2*l] = s->dv*left (r, face, s->v + 2*l, a*s->du)/etal;
+      /* tl = thl/hl */
+      for (int i = 0; i < r->nt; i++)
+	uL[T(i,l)] = left (r, face, T(i,l), a*s->du)/etal;
     }
   else
-    for (l = 0; l < r->nlayers; l++)
+    for (l = 0; l < r->nlayers; l++) {
       uL[U + 2*l] = uL[V + 2*l] = 0.;
+      for (int i = 0; i < r->nt; i++)
+	uL[T(i,l)] = 0.;
+    }
   uL[H] = MAX (0., etaL + zbL - zbLR);
 
   gdouble etaR = (etan <= r->dry ? 0. : right (r, face, H, b*s->du));
@@ -444,10 +450,16 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
       uR[U + 2*l] = s->du*right (r, face, s->u + 2*l, b*s->du)/etal;
       /* vl = vhl/hl */
       uR[V + 2*l] = s->dv*right (r, face, s->v + 2*l, b*s->du)/etal;
+      /* tl = thl/hl */
+      for (int i = 0; i < r->nt; i++)
+	uR[T(i,l)] = right (r, face, T(i,l), a*s->du)/etal;
     }
   else
-    for (l = 0; l < r->nlayers; l++)
+    for (l = 0; l < r->nlayers; l++) {
       uR[U + 2*l] = uR[V + 2*l] = 0.;
+      for (int i = 0; i < r->nt; i++)
+	uR[T(i,l)] = 0.;
+    }
   uR[H] = MAX (0., etaR + zbR - zbLR);
 
   gdouble h = ftt_cell_size (face->cell);
@@ -492,36 +504,54 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     /* horizontal tracer advection */
     for (int i = 0; i < r->nt; i++) {
       double flux = dt*f[HL + 3*l];
-      if (flux > 0.)
-	flux *= left (r, face, T(i,l), a*s->du);
-      else
-	/* fixme: this is only first-order accurate for fine/coarse */
-	flux *= right (r, face, T(i,l), b*s->du);
+      flux *= flux > 0. ? uL[T(i,l)] : uR[T(i,l)];
       GFS_VALUE (face->cell, r->flux[T(i,l)]) -= flux;
       GFS_VALUE (face->neighbor, r->flux[T(i,l)]) += flux/nn;
     }
   }
 }
 
+static gdouble limited_gradient (const FttCell * cell, const GfsRiver * r, 
+				 int i0, int i1, int i2, 
+				 int l,
+				 gdouble (* limiter) (gdouble))
+{
+  if (l < 1 || l > r->nlayers - 2)
+    return 0.;
+  gdouble v0 = GFS_VALUE (cell, r->v1[i0]);
+  gdouble v1 = GFS_VALUE (cell, r->v1[i1]);
+  if (v0 == v1)
+    return 0.;
+
+  gdouble x1 = (r->dz[l] + r->dz[l - 1])/(2.*r->dz[l]);
+  gdouble v2 = GFS_VALUE (cell, r->v1[i2]);
+  gdouble x2 = (r->dz[l] + r->dz[l + 1])/(2.*r->dz[l]);
+  return (* limiter) ((v2 - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
+}
+
+#define limited_gradient_u(l) limited_gradient(cell, r, c+2*(l), c+2*((l)-1), c+2*((l)+1), l, \
+					       minmod_limiter)
+#define limited_gradient_t(l) limited_gradient(cell, r, T(i,l), T(i,(l)-1), T(i,(l)+1), l, \
+					       minmod_limiter)
+
 static void vertical_advection (FttCell * cell, const GfsRiver * r)
 {
   double eta = GFS_VALUE (cell, r->v1[H]);
   if (eta > r->dry)
     for (int l = 0; l < r->nlayers - 1; l++) {
-      double dz1 = eta*r->dz[l];
-      double dz2 = eta*r->dz[l + 1];
-      double G = GFS_VALUE (cell, r->massflux[l]);
+      double dz = eta*(r->dz[l] + r->dz[l + 1])/2.;
+      double G = GFS_VALUE (cell, r->massflux[l])/dz;
       for (FttComponent c = U; c <= V; c++) {
-	double flux = G < 0. ? 
-	  G*GFS_VALUE (cell, r->v1[c + 2*l])/dz1 : 
-	  G*GFS_VALUE (cell, r->v1[c + 2*(l + 1)])/dz2;
+	double flux = G < 0. ?
+	  G*(GFS_VALUE (cell, r->v1[c + 2*l]) + limited_gradient_u (l)/2.) :
+	  G*(GFS_VALUE (cell, r->v1[c + 2*(l + 1)]) - limited_gradient_u (l + 1)/2.);
 	GFS_VALUE (cell, r->flux[c + 2*l]) += flux;
 	GFS_VALUE (cell, r->flux[c + 2*(l + 1)]) -= flux;
       }
       for (int i = 0; i < r->nt; i++) {
 	double flux = G < 0. ? 
-	  G*GFS_VALUE (cell, r->v1[T(i,l)])/dz1 : 
-	  G*GFS_VALUE (cell, r->v1[T(i,l + 1)])/dz2;
+	  G*(GFS_VALUE (cell, r->v1[T(i,l)]) +  limited_gradient_t (l)/2.) :
+	  G*(GFS_VALUE (cell, r->v1[T(i,l + 1)]) - limited_gradient_t (l + 1)/2.);
 	GFS_VALUE (cell, r->flux[T(i,l)]) += flux;
 	GFS_VALUE (cell, r->flux[T(i,l + 1)]) -= flux;
       }
@@ -1018,6 +1048,8 @@ static void river_tracer_read (GtsObject ** o, GtsFile * fp)
   r->dv[0][ZB] = r->dv[0][oldn];
   r->dv[1][ZB] = r->dv[1][oldn];
   r->flux = g_realloc (r->flux, r->nvar*sizeof (GfsVariable *));
+  r->uL = g_realloc (r->uL, r->nvar*sizeof (gdouble));
+  r->uR = g_realloc (r->uR, r->nvar*sizeof (gdouble));
 
   if (r->nlayers > 1)
     for (int l = 0; l < r->nlayers; l++) {
