@@ -499,8 +499,10 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     GFS_VALUE (face->neighbor, r->flux[s->v + 2*l]) += s->dv*dt*f[V + 3*l]/nn;
     /* mass flux between layers */
     G += dt*(f[HL + 3*l] - dz*f[H]); /* eq. (5.109) of Audusse2011a */
-    GFS_VALUE (face->cell, r->massflux[l]) += G;
-    GFS_VALUE (face->neighbor, r->massflux[l]) -= G/nn;
+    if (l < r->nlayers - 1) {
+      GFS_VALUE (face->cell, r->massflux[l]) += G;
+      GFS_VALUE (face->neighbor, r->massflux[l]) -= G/nn;
+    }
     /* horizontal tracer advection */
     for (int i = 0; i < r->nt; i++) {
       double flux = dt*f[HL + 3*l];
@@ -563,7 +565,7 @@ static void reset_fluxes (FttCell * cell, const GfsRiver * r)
   int i;
   for (i = 0; i < r->nvar; i++)
     GFS_VALUE (cell, r->flux[i]) = 0.;
-  for (i = 0; i < r->nlayers; i++)
+  for (i = 0; i < r->nlayers - 1; i++)
     GFS_VALUE (cell, r->massflux[i]) = 0.;
 }
 
@@ -1233,6 +1235,16 @@ static void momentum_coarse_fine (FttCell * parent, GfsVariable * v)
     gfs_cell_coarse_fine (parent, v);
 }
 
+static GfsVariable * massflux (GfsDomain * domain, int l)
+{
+  gchar * name = g_strdup_printf ("G%d", l);
+  gchar * description = g_strdup_printf ("Mass flux between layer %d and %d", l + 1, l);
+  GfsVariable * v = gfs_domain_get_or_add_variable (domain, name, description);
+  g_free (name);
+  g_free (description);
+  return v;
+}
+
 static void allocate_river (GfsRiver * r, int start, int nl)
 {
   r->nlayers = nl;
@@ -1248,22 +1260,22 @@ static void allocate_river (GfsRiver * r, int start, int nl)
   r->dv[0][ZB] = r->dv[0][3];
   r->dv[1][ZB] = r->dv[1][3];
   r->flux = g_realloc (r->flux, r->nvar*sizeof (GfsVariable *));
-  r->massflux = g_realloc (r->massflux, r->nlayers*sizeof (GfsVariable *));
+  r->massflux = g_realloc (r->massflux, (r->nlayers - 1)*sizeof (GfsVariable *));
 
   r->uL = g_realloc (r->uL, r->nvar*sizeof (gdouble));
   r->uR = g_realloc (r->uR, r->nvar*sizeof (gdouble));
   r->f = g_realloc (r->f, (3*r->nlayers + 1)*sizeof (gdouble));
 
   GfsDomain * domain = GFS_DOMAIN (r);
+  if (r->nlayers > 1)
+    r->massflux[0] = massflux (domain, 0);
+
   for (l = start; l < r->nlayers; l++) {
     r->flux[U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
     r->flux[V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
 
-    gchar * name = g_strdup_printf ("G%d", l);
-    gchar * description = g_strdup_printf ("Mass flux between layer %d and %d", l + 1, l);
-    r->massflux[l] = gfs_domain_get_or_add_variable (domain, name, description);
-    g_free (name);
-    g_free (description);
+    if (l < r->nlayers - 1)
+      r->massflux[l] = massflux (domain, l);
 
     r->v1[U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
     r->v1[V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
