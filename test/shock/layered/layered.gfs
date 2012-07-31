@@ -89,7 +89,7 @@
     OutputLocation { start = end } { awk -v nl=NL -f uprof.awk > uprof-15-LEVEL-NL } 15. 10.49 0
     OutputLocation { start = end } { awk -v nl=NL -f uprof.awk > uprof-20-LEVEL-NL } 20. 10.49 0
     OutputSimulation { start = end } {
-	awk '{ if ($1 != "#") print $1,$9; }' > prof-LEVEL-NL
+	awk '{ if ($1 != "#") print $1,$8; }' > prof-LEVEL-NL
     } { format = text }
     OutputSimulation { start = end } { awk -v name="U" -f field.awk > u-LEVEL-NL } {
 	format = text

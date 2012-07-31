@@ -22,7 +22,6 @@ plot 0.2*(1. - 1./(5.75/2.)**2*(x - 10.)**2) t 'topography' w l, \
      'prof-8-5' w l t '5 layers', \
      'prof-8-15' w l t '15 layers'
 
-
 set term postscript eps lw 2 24 color enhanced solid
 
 set xrange [0:0.6]
