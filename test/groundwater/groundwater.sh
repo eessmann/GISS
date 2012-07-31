@@ -14,7 +14,7 @@ else
     exit 1
 fi
 if cat <<EOF | gnuplot ; then :
-    set title 'Convergence for groundwater flow with uniform permeability'
+    set title 'Convergence for groundwater flow'
     set xlabel 'Refinement level'
     set ylabel 'Error norm'
     set logscale y
