@@ -44,7 +44,7 @@ Vectors {
   amax = 1
   cmap = Jet
 } U V {
-  scale = 0.1
+  scale = 0.03
   use_scalar = 0
 }
 Solid {

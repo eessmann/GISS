@@ -6,30 +6,31 @@ if test x$donotrun != xtrue; then
 	    exit 1
 	fi
     done
-    if echo Save solution.eps '{ format = EPS line_width = 0.25 }' | gfsview-batch2D solution.gfs `basename $1 .gfs`.gfv ; then :
+    if echo Save solution.eps '{ format = EPS }' | \
+	gfsview-batch2D solution.gfs `basename $1 .gfs`.gfv ; then :
     else
 	exit 1
     fi
 else
     exit 1
 fi
+
 if cat <<EOF | gnuplot ; then :
-    set title 'Convergence for groundwater flow'
     set xlabel 'Refinement level'
     set ylabel 'Error norm'
     set logscale y
-    set terminal postscript eps color lw 3 solid 20
+    set terminal postscript eps color lw 2 solid 18 enhanced
     set output 'convergence.eps'
     set style data lp
+    set key bottom left
     plot 'p' t '1 (p)', \
-        '' u 1:3 t '2 (p)', \
         '' u 1:4 t 'max (p)', \
-        'U' t '1 (U)' w l lt 4, \
-        '' u 1:3 t '2 (U)' w l lt 5, \
-        '' u 1:4 t 'max (U)' w l lt 6, \
-        'V' t '1 (V)' w p lt 4, \
-        '' u 1:3 t '2 (V)' w p lt 5, \
-        '' u 1:4 t 'max (V)' w p lt 6
+        'U' t '1 (U)' w l, \
+        '' u 1:4 t 'max (U)' w l, \
+        'V' t '1 (V)' w p, \
+        '' u 1:4 t 'max (V)' w p lt 2, \
+        5./2**x t '1/x', \
+        5e-2/2**(2*x) t '1/x^2'
 EOF
 else
     exit 1

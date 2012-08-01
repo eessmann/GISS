@@ -36,26 +36,30 @@
 # angle.
 #
 # \begin{figure}[htbp]
-# \caption{\label{groundwater}Isobars and velocity vectors for Darcy flow in a confined annular sector aquifer with separate reservoir and drain.}
+# \caption{Isobars and velocity vectors for Darcy
+# flow in a confined annular sector aquifer with separate reservoir
+# and drain.}
 # \begin{center}
-# \includegraphics[width=\hsize]{groundwater/solution.eps}
+# \includegraphics[width=0.6\hsize]{solution.eps}
 # \end{center}
 # \end{figure}
 #
 # \begin{figure}[htbp] 
-# \caption{\label{groundwater}Grid-convergence of the pressure and velocity, for Darcy flow in a confined annular sector aquifer with separate reservoir and drain.}  
+# \caption{Grid-convergence of the pressure and
+# velocity, for Darcy flow in a confined annular sector aquifer with
+# separate reservoir and drain.}
 # \begin{center}
-# \includegraphics[width=\hsize]{groundwater/convergence.eps}
+# \includegraphics[width=0.8\hsize]{convergence.eps}
 # \end{center} 
 # \end{figure}
 #
 # Author: G. D. McBain
 # Command: sh groundwater.sh groundwater.gfs
-# Version: 120706-112703
-# Required files: groundwater.sh groundwater.gfs groundwater.gfv p.ref U.ref
+# Version: 120706
+# Required files: groundwater.sh groundwater.gfv p.ref U.ref
 # Running time: 46 s
-# Generated files: p U V solution.eps convergence.eps
-
+# Generated files: solution.eps convergence.eps
+#
 1 0 GfsSimulation GfsBox GfsGEdge { x = 0.5 y = -0.5 } {
     Time { dtmax = 1 }
     Refine LEVEL
@@ -74,11 +78,11 @@
 	OutputErrorNorm {} { awk '{print LEVEL, $5, $7, $9}' >> V } { v = V } {
 	    s = -x / (x*x + y*y)
 	}
-	OutputSimulation {} solution.gfs	
+	OutputSimulation solution.gfs
     }
 }
 Box { 
-    top = Boundary { 
+    top = Boundary {
 	BcDirichlet P 0
 	BcDirichlet U 0
 	BcNeumann V 0

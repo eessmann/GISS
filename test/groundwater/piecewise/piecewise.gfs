@@ -16,7 +16,8 @@
 # which closely resembles the projection Poisson equation used in
 # Gerris~\cite[eq.~7]{popinet2009}:
 # \begin{displaymath}
-#   \nabla\cdot\left[\frac{\Delta t}{\rho_{n+\frac{1}{2}}} \nabla p_{n+\frac{1}{2}}\right] = \nabla\cdot\mathbf u_{*}.
+#   \nabla\cdot\left[\frac{\Delta t}{\rho_{n+\frac{1}{2}}} \nabla
+#   p_{n+\frac{1}{2}}\right] = \nabla\cdot\mathbf u_{*}.
 # \end{displaymath}
 # noting that the (here false) time-step $\Delta t$ will be uniform in
 # space and so can be taken outside the divergence, all that is
@@ -36,32 +37,36 @@
 # the seepage velocity times the porosity~\cite[p.~23]{bear88}.
 #
 # Here we modify the first example by halving the porosity in the last
-# third the aquifer (so that it has the same total hydraulic
+# third of the aquifer (so that it has the same total hydraulic
 # resistance as the first two thirds).  The exact solution has the
 # velocity field exactly as before, but with a steeper azimuthal
 # pressure gradient beyond porosity jump at $\theta < -\pi/3$.
 #
 # \begin{figure}[htbp]
-# \caption{\label{groundwater}Isobars and velocity vectors, for Darcy flow in a confined annular sector aquifer with separate reservoir and drain, and halved permeability in the most-clockwise third sector.}
+# \caption{Isobars and velocity vectors, for Darcy
+# flow in a confined annular sector aquifer with separate reservoir
+# and drain, and halved permeability in the most-clockwise third
+# sector.}
 # \begin{center}
-# \includegraphics[width=\hsize]{piecewise/solution.eps}
+# \includegraphics[width=0.6\hsize]{solution.eps}
 # \end{center}
 # \end{figure}
 #
 # \begin{figure}[htbp] 
-# \caption{\label{groundwater}Grid-convergence of the pressure and velocity, for Darcy flow with piecewise constant permeability.}  
+# \caption{Grid-convergence of the pressure and
+# velocity, for Darcy flow with piecewise constant permeability.}
 # \begin{center}
-# \includegraphics[width=\hsize]{piecewise/convergence.eps}
+# \includegraphics[width=0.8\hsize]{convergence.eps}
 # \end{center} 
 # \end{figure}
 #
 # Author: G. D. McBain
 # Command: sh ../groundwater.sh piecewise.gfs
-# Version: 120731-073248
-# Required files: piecewise.gfs piecewise.gfv p.ref U.ref
+# Version: 120731
+# Required files: piecewise.gfv p.ref U.ref
 # Running time: 52 s
-# Generated files: p U V convergence.eps piecewise.eps
-
+# Generated files: convergence.eps solution.eps
+#
 Define THETA atan2(y,x) 
 1 0 GfsSimulation GfsBox GfsGEdge { x = 0.5 y = -0.5 } {
     Time { dtmax = 1 }
