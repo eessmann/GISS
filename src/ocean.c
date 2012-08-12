@@ -260,8 +260,7 @@ static void normal_velocities (GfsDomain * domain, GfsVariable ** u)
 
 static void ocean_run (GfsSimulation * sim)
 {
-  GfsVariable * p, * div, * H, * res = NULL;
-  GfsFunction * fH;
+  GfsVariable * p, * div, * res = NULL;
   GfsDomain * domain;
   GSList * i;
 
@@ -279,9 +278,18 @@ static void ocean_run (GfsSimulation * sim)
 
   p = gfs_variable_from_name (domain->variables, "P");
   g_assert (p);
-  H = gfs_variable_from_name (domain->variables, "H");
+#if 1
+  GfsVariable * H = gfs_variable_from_name (domain->variables, "H");
   g_assert (H);
-  fH = gfs_function_new_from_variable (gfs_function_class (), H);
+  GfsFunction * fH = gfs_function_new_from_variable (gfs_function_class (), H);
+#else
+  /* non-linear free surface */
+  GtsFile * fp = gts_file_new_from_string ("(H + P)");
+  GfsFunction * fH = gfs_function_new (gfs_function_class (), 0.);
+  gfs_function_read (fH, domain, fp);
+  g_assert (fp->type != GTS_ERROR);
+  gts_file_destroy (fp);
+#endif
 
   div = gfs_temporary_variable (domain);
 
@@ -366,7 +374,7 @@ GfsSimulationClass * gfs_ocean_class (void)
   if (klass == NULL) {
     GtsObjectClassInfo gfs_ocean_info = {
       "GfsOcean",
-      sizeof (GfsSimulation),
+      sizeof (GfsOcean),
       sizeof (GfsSimulationClass),
       (GtsObjectClassInitFunc) gfs_ocean_class_init,
       (GtsObjectInitFunc) gfs_ocean_init,
