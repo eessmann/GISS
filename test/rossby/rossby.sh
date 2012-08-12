@@ -1,15 +1,17 @@
+levels="4 5"
+
 if test x$donotrun != xtrue; then
-    for level in 4 5; do
+    cp -f eh-6.ref eh-6
+    for level in $levels; do
 	rm -f eh-$level
 	if gerris2D -DLEVEL=$level $1; then :
 	else
 	    exit 1
 	fi
     done
-    cp -f eh-6.ref eh-6
 fi
 
-for level in 4 5; do
+for level in $levels; do
     if gnuplot <<EOF; then :
 set term postscript eps lw 2 18 color
 
