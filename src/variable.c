@@ -252,7 +252,7 @@ void gfs_variable_set_vector (GfsVariable ** v, guint n)
   guint i, j;
 
   g_return_if_fail (v != NULL);
-  g_return_if_fail (n <= FTT_DIMENSION);
+  g_return_if_fail (n > 1 && n <= FTT_DIMENSION);
 
   for (i = 0; i < n; i++) {
     g_return_if_fail (v[i] != NULL);
@@ -260,6 +260,31 @@ void gfs_variable_set_vector (GfsVariable ** v, guint n)
     for (j = 0; j < n; j++)
       v[i]->vector[j] = v[j];
   }
+  
+  /* for rotated boundary conditions i.e. gfs_boundary_periodic_rotate() */
+  v[0]->orientation =  1.;
+  v[1]->orientation = -1.;
+}
+
+/**
+ * gfs_variable_set_tensor:
+ * @t: the components of the 2x2 tensor.
+ *
+ * Sets @t[0][0],...,@t[1][1] as components of a tensor.
+ */
+void gfs_variable_set_tensor (GfsVariable * t[2][2])
+{
+  g_return_if_fail (t != NULL);
+
+  /* for rotated boundary conditions i.e. gfs_boundary_periodic_rotate() */
+  t[0][0]->component = 0; t[0][0]->vector[0] = t[0][0]; t[0][0]->vector[1] = t[1][1];
+  t[0][0]->orientation = + 1.; t[0][0]->even = TRUE;
+  t[1][1]->component = 1; t[1][1]->vector[0] = t[0][0]; t[1][1]->vector[1] = t[1][1];
+  t[1][1]->orientation = + 1.; t[1][1]->even = TRUE;
+  t[0][1]->component = 0; t[0][1]->vector[0] = t[0][1]; t[0][1]->vector[1] = t[1][0];
+  t[0][1]->orientation = - 1.; t[0][1]->even = TRUE;
+  t[1][0]->component = 1; t[1][0]->vector[0] = t[0][1]; t[1][0]->vector[1] = t[1][0];
+  t[1][0]->orientation = - 1.; t[1][0]->even = TRUE;
 }
 
 /**

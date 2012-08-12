@@ -52,6 +52,8 @@ struct _GfsVariable {
   gdouble units;
   GfsVariable * face[2][4];
   gboolean face_source; /* whether source terms should be evaluated at cell faces only */
+  gdouble orientation;   /* orientation of rotated variable */
+  gboolean even;         /* "eveness" of rotated variable */
 };
 
 typedef struct _GfsVariableClass    GfsVariableClass;
@@ -89,6 +91,7 @@ void                  gfs_variables_swap            (GfsVariable * v1,
 						     GfsVariable * v2);
 void                  gfs_variable_set_vector       (GfsVariable ** v,
 						     guint n);
+void                  gfs_variable_set_tensor       (GfsVariable * t[2][2]);
 GfsVariable *         gfs_variable_clone            (GfsVariable * v, 
 						     gchar * name);
 

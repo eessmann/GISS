@@ -1542,7 +1542,8 @@ static void center_periodic_rotate (FttCellFace * face, GfsBc * b)
     FttComponent c = FTT_ORTHOGONAL_COMPONENT (b->v->component);
     g_assert (b->v->vector[c]);
     g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =
-      (2.*c - 1.)*boundary_periodic->rotate*GFS_VALUE (face->neighbor, b->v->vector[c]);
+      b->v->orientation*(b->v->even ? 1. : boundary_periodic->rotate)*
+      GFS_VALUE (face->neighbor, b->v->vector[c]);
   }
   else
     g_array_index (boundary_periodic->sndbuf, gdouble, boundary_periodic->sndcount++) =

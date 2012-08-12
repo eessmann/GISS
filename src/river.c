@@ -1067,8 +1067,10 @@ static void river_tracer_read (GtsObject ** o, GtsFile * fp)
   for (int l = 0; l < r->nlayers; l++) {
     int i = T(r->nt,l);
     r->v1[i] =    gfs_domain_add_variable (domain, NULL, NULL);
-    r->dv[0][i] = gfs_domain_add_variable (domain, NULL, NULL);
-    r->dv[1][i] = gfs_domain_add_variable (domain, NULL, NULL);
+    GfsVariable * v[2];
+    r->dv[0][i] = v[0] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->dv[1][i] = v[1] = gfs_domain_add_variable (domain, NULL, NULL);
+    gfs_variable_set_vector (v, 2);
     r->flux[i] =  gfs_domain_add_variable (domain, NULL, NULL);
   }
   r->nt++;
@@ -1289,10 +1291,12 @@ static void allocate_river (GfsRiver * r, int start, int nl)
     r->v1[V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
     gfs_variable_set_vector (&r->v1[U + 2*l], 2);
 
-    r->dv[0][U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-    r->dv[1][U + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-    r->dv[0][V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
-    r->dv[1][V + 2*l] = gfs_domain_add_variable (domain, NULL, NULL);
+    GfsVariable * tensor[2][2];
+    r->dv[0][U + 2*l] = tensor[0][0] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->dv[1][U + 2*l] = tensor[0][1] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->dv[0][V + 2*l] = tensor[1][0] = gfs_domain_add_variable (domain, NULL, NULL);
+    r->dv[1][V + 2*l] = tensor[1][1] = gfs_domain_add_variable (domain, NULL, NULL);
+    gfs_variable_set_tensor (tensor);
   }
 }
 
@@ -1317,10 +1321,14 @@ static void river_init (GfsRiver * r)
   r->h = gfs_domain_add_variable (domain, "H", "Elevation above datum (Zb + P)");
   r->h->units = 1.;
 
-  r->dv[0][H] = gfs_domain_add_variable (domain, "Px", "x-component of the depth gradient");
-  r->dv[1][H] = gfs_domain_add_variable (domain, "Py", "y-component of the depth gradient");
-  r->dv[0][ZB] = gfs_domain_add_variable (domain, "Zbx", "x-component of the bed slope");
-  r->dv[1][ZB] = gfs_domain_add_variable (domain, "Zby", "y-component of the bed slope");
+  GfsVariable * u[2];
+  r->dv[0][H] = u[0] = gfs_domain_add_variable (domain, "Px", "x-component of the depth gradient");
+  r->dv[1][H] = u[1] = gfs_domain_add_variable (domain, "Py", "y-component of the depth gradient");
+  gfs_variable_set_vector (u, 2);
+
+  r->dv[0][ZB] = u[0] = gfs_domain_add_variable (domain, "Zbx", "x-component of the bed slope");
+  r->dv[1][ZB] = u[1] = gfs_domain_add_variable (domain, "Zby", "y-component of the bed slope");
+  gfs_variable_set_vector (u, 2);
 
   GfsVariable * v;
   r->v[U] = r->qx = v = gfs_variable_from_name (domain->variables, "U");
