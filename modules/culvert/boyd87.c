@@ -108,27 +108,17 @@ double Q_inlet_pipe (double HW, double D, int type, double g)
 
 /**** Section 5: outlet control ****/
 
-static double Q_outlet (double HW, double TW,
-			double area, double perimeter,
-			double S0, double L,
-			double n, double ke,
-			double g)
+static double Q_Bernoulli (double HW, double TW,
+			   double area, double Rh,
+			   double S0, double L,
+			   double n, double ke,
+			   double g)
 {
-  /* equations (11) and (12a) */
-  double Rh = area/perimeter;
-  assert (HW + S0*L >= TW);
-  double v2 = (HW + S0*L - TW)/(0.5/g + n*n/pow(Rh, 1.333)*L + ke/2./g);
-  return area*sqrt (v2);
-}
-
-static double Q_outlet_box_effective (double HW, double TW,
-				      double B, double D,
-				      double S0, double L,
-				      double n, double ke,
-				      double g)
-{
-  if (B*D > 0.)
-    return Q_outlet (HW, TW, B*D, 2.*(B + D), S0, L, n, ke, g);
+  if (area > 0.) {
+    /* equations (11) and (12a) */
+    double v2 = 2.*g*fabs (HW + S0*L - TW)/(ke + 1. + 2.*g*n*n*L/pow(Rh, 1.333));
+    return area*sqrt (v2);
+  }
   return 0.;
 }
 
@@ -150,44 +140,32 @@ double Q_outlet_box (double HW, double TW,
 		     double n, double ke,
 		     double g)
 {
-  double Q = Q_outlet_box_effective (HW, TW, B, D, S0, L, n, ke, g);
+  double area = B*D;
+  double Rh = B*D/(2.*(B + D));
+  /* Solve Bernoulli equation based on HW and TW */
+  double Q = Q_Bernoulli (HW, TW, area, Rh, S0, L, n, ke, g);
+  /* if outlet submerged, Bernoulli equation solution based on HW and TW is valid */
   if (TW > D)
     return Q;
-  /* outlet not submerged */
-  int nmax = 10;
+  /* else outlet not submerged, Bernoulli should be solved with HW and
+     flow dependent outlet waterlevel h0 */
+  int nmax = 50;
   double Q0;
   do {
+    /* calculate the critical flow depth in the culvert */
     double dc = dc_box (B, Q);
+    /* assume that outlet waterlevel is subcritical and at least above TW */
     double h0 = MAX ((dc + D)/2., TW);
+    /* assume also that outlet waterlevel is below crown */
     if (h0 > D) h0 = D;
-    if (h0 > HW + S0*L) h0 = HW + S0*L;
     Q0 = Q;
-    /* assume that the effective culvert cross-section is B*h0 */
-    Q = Q_outlet_box_effective (HW, h0, B, h0, S0, L, n, ke, g);
-  } while (nmax-- && fabs (Q - Q0) > 0.0001);
+    area = B*h0;
+    Rh = B*h0/(B + 2.*h0);
+    /* for a box culvert assume that the effective flow cross-section is B*h0 */
+    Q = Q_Bernoulli (HW, h0, area, Rh, S0, L, n, ke, g);
+  } while (nmax-- && ((fabs (Q - Q0) > 0.001) && fabs (Q/Q0) > 1.05));
   assert (nmax > 0);
   return Q;
-}
-
-static double Q_outlet_pipe_effective (double HW, double TW,
-				       double D,
-				       double S0, double L,
-				       double n, double ke,
-				       double g)
-{
-  if (TW > D)
-    /* outlet submerged */  
-    return Q_outlet (HW, TW, M_PI*D*D/4., M_PI*D, S0, L, n, ke, g);
-  else if (TW > 0.) {
-    /* outlet not submerged */
-    double theta = acos (1. - 2.*TW/D);               /* equation (3a) */
-    double B = D*sin (theta);                         /* equation (3b) */
-    double area = D*D*(theta - sin (2.*theta)/2.)/4.; /* equation (3c) */
-    double perimeter = B + theta*D;
-    return Q_outlet (HW, TW, area, perimeter, S0, L, n, ke, g);
-  }
-  else
-    return 0.;
 }
 
 /**
@@ -207,22 +185,33 @@ double Q_outlet_pipe (double HW, double TW,
 		      double n, double ke,
 		      double g)
 {
-  double Q = Q_outlet_pipe_effective (HW, TW, D, S0, L, n, ke, g);
+  double area = M_PI*D*D/4.;
+  double Rh = D/4.;
+  /* Solve Bernoulli equation based on HW and TW */
+  double Q = Q_Bernoulli (HW, TW, area, Rh, S0, L, n, ke, g);
+  /* if outlet submerged, Bernoulli equation solution based on HW and TW is valid */
   if (TW > D)
-    /* outlet submerged */
     return Q;
-  /* outlet not submerged */
-  int nmax = 10;
+  /* else outlet not submerged, Bernoulli should be solved with HW and
+     flow dependent outlet waterlevel h0 */
+  int nmax = 50;
   double Q0;
   do {
+    /* calculate the critical flow depth in the culvert */
     double dc = dc_pipe (D, Q, g);
+    /* assume that outlet waterlevel is subcritical and at least above TW */
     double h0 = MAX ((dc + D)/2., TW);
+    /* assume also that outlet waterlevel is below crown */
     if (h0 > D) h0 = D;
-    if (h0 > HW + S0*L) h0 = HW + S0*L;
     Q0 = Q;
-    /* assume that the effective area/perimeter is controled by h0 */
-    Q = Q_outlet_pipe_effective (HW, h0, D, S0, L, n, ke, g);
-  } while (nmax-- && fabs (Q - Q0) > 0.0001);
+    double theta = acos (1. - 2.*h0/D);               /* equation (3a) */
+    double B = D*sin (theta);                         /* equation (3b) */
+    double area = D*D*(theta - sin (2.*theta)/2.)/4.; /* equation (3c) */
+    double perimeter = B + theta*D;
+    Rh = area/perimeter;
+    /* for pipe culvert assume that the effective area/perimeter is controlled by h0 */
+    Q = Q_Bernoulli (HW, h0, area, Rh, S0, L, n, ke, g);
+  } while (nmax-- && ((fabs (Q - Q0) > 0.001) && fabs (Q/Q0) > 1.05));
   assert (nmax > 0);
   return Q;
 }
