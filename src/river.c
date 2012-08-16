@@ -1166,6 +1166,14 @@ static void river_write (GtsObject * o, FILE * fp)
     fputs ("  nu =", fp);
     gfs_function_write (river->nu, fp);
   }
+  if (river->dut) {
+    fputs ("  dut =", fp);
+    gfs_function_write (river->dut, fp);
+  }
+  if (river->k) {
+    fputs ("  k =", fp);
+    gfs_function_write (river->k, fp);
+  }
   fputs ("\n}", fp);
 }
 
