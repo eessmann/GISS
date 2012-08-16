@@ -257,14 +257,13 @@ static void source_scalar_read (GtsObject ** o, GtsFile * fp)
     if (source->v->sources == NULL)
       source->v->sources = 
 	gts_container_new (GTS_CONTAINER_CLASS (gts_slist_container_class ()));
-    gts_container_add (source->v->sources, GTS_CONTAINEE (source));    
+    gts_container_add (source->v->sources, GTS_CONTAINEE (source));
+    gts_file_next_token (fp);
   }
   else {
     gts_file_error (fp, "expecting a scalar or vector");
     return;
   }
-
-  gts_file_next_token (fp);
 }
 
 static void source_scalar_class_init (GfsSourceGenericClass * klass)
