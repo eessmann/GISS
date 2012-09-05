@@ -44,7 +44,7 @@ static FttVector rpos[FTT_NEIGHBORS] = {
 
 static void symmetry (FttCellFace * f, GfsBc * b)
 {
-  if (b->v->component == f->d/2)
+  if (b->v->component == f->d/2 && !b->v->even)
     GFS_VALUE (f->cell, b->v) = - GFS_VALUE (f->neighbor, b->v);
   else
     GFS_VALUE (f->cell, b->v) =   GFS_VALUE (f->neighbor, b->v);
@@ -58,12 +58,12 @@ static void set_stencil_neighbor (FttCellFace * f, GfsBc * b, gdouble w)
 
 static void symmetry_stencil (FttCellFace * f, GfsBc * b)
 {
-  set_stencil_neighbor (f, b, (b->v->component == f->d/2) ? -1. : 1.);
+  set_stencil_neighbor (f, b, (b->v->component == f->d/2 && !b->v->even) ? -1. : 1.);
 }
 
 static void face_symmetry (FttCellFace * f, GfsBc * b)
 {
-  if (b->v->component == f->d/2)
+  if (b->v->component == f->d/2 && !b->v->even)
     GFS_STATE (f->cell)->f[f->d].v = 
       GFS_STATE (f->neighbor)->f[FTT_OPPOSITE_DIRECTION (f->d)].v = 0.;
   else if (GFS_IS_VARIABLE_TRACER_VOF (b->v))
