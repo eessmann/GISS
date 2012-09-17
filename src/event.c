@@ -279,11 +279,6 @@ static void gfs_event_read (GtsObject ** o, GtsFile * fp)
 			       event->end, event->start);
       return;
     }
-    if (event->start < 0. && var[1].set) {
-      gts_file_variable_error (fp, var, "end",
-			       "end cannot be specified for an `init' event");
-      return;
-    }
     if (event->start < 0. && var[2].set)
       event->start = 0.;
     if (var[0].set || !var[3].set)
