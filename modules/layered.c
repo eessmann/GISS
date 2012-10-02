@@ -463,7 +463,7 @@ static void cell_vertical_advection (FttCell * cell, AdvectionParams * p)
     double unorm = dt*((i > 0 ? u[i - 1] : 0.) + u[i])/(2.*dz[i]*H);
     if (fabs (unorm) > 1.)
       g_warning ("W CFL: %g", unorm);
-    double g = 0.;
+    double g = i == 0 ? a[i + 1] - a[i] : i == n - 1 ? a[i] - a[i-1] : (a[i + 1] - a[i - 1])/2.;
     al[i] = a[i] + MIN ((1. - unorm)/2., 0.5)*g;
     ar[i] = a[i] + MAX ((- 1. - unorm)/2., -0.5)*g;
   }
