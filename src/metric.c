@@ -1089,7 +1089,8 @@ static void map_cubed_transform (GfsMap * map, const FttVector * src, FttVector 
   GfsSimulation * sim = gfs_object_simulation (map);
   double lon = src->x*sim->physical_params.L*M_PI/180.;
   double lat = src->y*sim->physical_params.L*M_PI/180.;
-  double X = cos (lat)*sin (lon), Y = sin (lat), Z = cos(lat)*cos(lon);
+  double coslat = cos (lat), sinlat = sin (lat), coslon = cos (lon);
+  double X = coslat*sin (lon), Y = sinlat, Z = coslat*coslon;
   double x, y;
 
   /* Maybe not the most elegant but works */
@@ -1101,8 +1102,7 @@ static void map_cubed_transform (GfsMap * map, const FttVector * src, FttVector 
     dest->z = src->z;
     break;
   case 2:
-    lon = (src->x - 90.)*M_PI/180.;
-    X = cos (lat)*sin (lon);
+    X = - coslat*coslon;
     Z = sqrt (1. - X*X - Y*Y);
     fmap_XYZ2xy (X, Y, Z, &x, &y);
     dest->x = (1. + x/2.);
@@ -1110,15 +1110,12 @@ static void map_cubed_transform (GfsMap * map, const FttVector * src, FttVector 
     dest->z = src->z;
     break;
   case 3:
-    if (45. < fabs(src->x) && fabs(src->x) < 135.) {
-      lon = (src->x - 90.)*M_PI/180.;
-      lat = src->y*M_PI/180.;
-      Y = sin (lat);
-      X = cos (lat)*sin (lon);
+    if (M_PI/4. < fabs(lon) && fabs(lon) < 3.*M_PI/4.) {
+      X = - coslat*coslon;
       Z = sqrt (1. - X*X - Y*Y);
       fmap_XYZ2xy (X, Y, Z, &x, &y);
       dest->x = (1. + x/2.);
-      if (src->x < 0.)
+      if (lon < 0.)
 	dest->y = (1. + y/2.);
       else
 	dest->y = (1. - y/2.);
@@ -1126,7 +1123,7 @@ static void map_cubed_transform (GfsMap * map, const FttVector * src, FttVector 
     }
     else {
       fmap_XYZ2xy (X, Y, fabs(Z), &x, &y);
-      if (src->x > -135. && src->x < 135.)
+      if (lon > -3.*M_PI/4. && lon < 3.*M_PI/4.)
 	dest->x = (1. - y/2.);
       else
 	dest->x = (1. + y/2.);
@@ -1141,8 +1138,7 @@ static void map_cubed_transform (GfsMap * map, const FttVector * src, FttVector 
     dest->z = src->z;
     break;
   case 5:
-    lon = (src->x + 90.)*M_PI/180.;
-    X = cos (lat)*sin (lon);
+    X = coslat*coslon;
     Z = sqrt (1. - X*X - Y*Y);
     fmap_XYZ2xy (X, Y, Z, &x, &y);
     dest->x = (2. - y/2.);
@@ -1150,15 +1146,12 @@ static void map_cubed_transform (GfsMap * map, const FttVector * src, FttVector 
     dest->z = src->z;
     break;
   case 6:
-    if (45. < fabs(src->x) && fabs(src->x) < 135.) {
-      lon = (src->x - 90.)*M_PI/180.;
-      lat = src->y*M_PI/180.;
-      Y = sin (lat);
-      X = cos (lat)*sin (lon);
+    if (M_PI/4. < fabs(lon) && fabs(lon) < 3.*M_PI/4.) {
+      X = - coslat*coslon;
       Z = sqrt (1. - X*X - Y*Y);
       fmap_XYZ2xy (X, Y, Z, &x, &y);
       dest->y = (2. - x/2.);
-      if (src->x < 0.)
+      if (lon < 0.)
 	dest->x = (3. + y/2.);
       else
 	dest->x = (3. - y/2.);
@@ -1166,7 +1159,7 @@ static void map_cubed_transform (GfsMap * map, const FttVector * src, FttVector 
     }
     else {
       fmap_XYZ2xy (X, Y, fabs(Z), &x, &y);
-      if (src->x > -135. && src->x < 135.)
+      if (lon > -3.*M_PI/4. && lon < 3.*M_PI/4.)
 	dest->y = (2. - y/2.);
       else
 	dest->y = (2. + y/2.);
