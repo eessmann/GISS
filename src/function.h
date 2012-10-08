@@ -194,4 +194,15 @@ static gboolean overlaps (double x1, double y1, double x2, double y2)
   return (min.x <= x2 && min.y <= y2 && max.x >= x1 && max.y >= y1);
 }
 
+static double mapv (double u, double v, FttComponent c) {
+  FttVector p, q = {u, v, 0.};
+  g_return_val_if_fail (_cell != NULL, 0.);
+  ftt_cell_pos (_cell, &p);
+  gfs_simulation_map_inverse_vector (_sim, &p, &q);
+  return (&q.x)[c];
+}
+
+static double mapvx (double u, double v) { return mapv (u, v, FTT_X); }
+static double mapvy (double u, double v) { return mapv (u, v, FTT_Y); }
+
 #endif /* __FUNCTION_H__ */
