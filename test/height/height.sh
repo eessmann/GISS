@@ -1,13 +1,17 @@
-for f in height.gfs height1.gfs height2.gfs height3.gfs height4.gfs; do
+for f in height*.gfs; do
     if gerris2D $f > ref.gfs; then :
     else
 	echo "  FAIL: gerris2D $f"
 	exit 1
     fi
-    
-    if mpirun -np 2 gerris2D $f > run.gfs; then :
+
+    np=`awk 'BEGIN{max = 0}{ 
+               if ($3 == "pid" && $4 == "=" && $5 > max) 
+                 max = $5;
+             }END{print max+1}' < $f`
+    if mpirun -np $np gerris2D $f > run.gfs; then :
     else
-	echo "  FAIL: mpirun -np 2 gerris2D $f"
+	echo "  FAIL: mpirun -np $np gerris2D $f"
 	exit 1
     fi
     
