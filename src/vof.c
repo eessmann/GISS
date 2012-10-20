@@ -3301,29 +3301,28 @@ static void height_contact_tangential_bc (FttCell * cell, HFState * hf)
   }
 }
 
-static void box_height_bc (GfsBox * box, HFState * hf)
+static void box_periodic_bc (GfsBox * box, HFState * hf)
 {
   for (hf->d = 2*hf->c; hf->d <= 2*hf->c + 1; hf->d++)
     if (GFS_IS_BOUNDARY_PERIODIC (box->neighbor[hf->d]))
       ftt_cell_traverse_boundary (box->root, hf->d, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 				  (FttCellTraverseFunc) height_periodic_bc, hf);
-    else if (GFS_IS_BOUNDARY (box->neighbor[hf->d])) {
-      hf->angle = gfs_boundary_lookup_bc (GFS_BOUNDARY (box->neighbor[hf->d]), hf->f);
-      if (!GFS_IS_BC_ANGLE (hf->angle))
-	hf->angle = NULL; /* symmetry i.e. angle = PI/2 */
-      ftt_cell_traverse_boundary (box->root, hf->d, FTT_POST_ORDER, FTT_TRAVERSE_ALL, -1,
-				  (FttCellTraverseFunc) height_contact_normal_bc, hf);
-    }
+}
 
-  FttComponent oc = FTT_ORTHOGONAL_COMPONENT (hf->c);
-  for (hf->d = 2*oc; hf->d <= 2*oc + 1; hf->d++)
+static void box_contact_bc (GfsBox * box, HFState * hf)
+{
+  /* fixme: 2D only */
+  for (hf->d = 0; hf->d < FTT_NEIGHBORS; hf->d++)
     if (GFS_IS_BOUNDARY (box->neighbor[hf->d]) && 
 	!GFS_IS_BOUNDARY_PERIODIC (box->neighbor[hf->d])) {
       hf->angle = gfs_boundary_lookup_bc (GFS_BOUNDARY (box->neighbor[hf->d]), hf->f);
       if (!GFS_IS_BC_ANGLE (hf->angle))
 	hf->angle = NULL; /* symmetry i.e. angle = PI/2 */
-      ftt_cell_traverse_boundary (box->root, hf->d, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
-				  (FttCellTraverseFunc) height_contact_tangential_bc, hf);
+      FttCellTraverseFunc contact_bc = 
+	(FttCellTraverseFunc) (hf->d/2 == hf->c ? 
+			       height_contact_normal_bc : height_contact_tangential_bc);
+      ftt_cell_traverse_boundary (box->root, hf->d, FTT_POST_ORDER, FTT_TRAVERSE_ALL, -1,
+				  contact_bc, hf);
     }
 }
 
@@ -3433,7 +3432,13 @@ static void variable_tracer_vof_height_update (GfsVariable * v, GfsDomain * doma
     
     gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, hf.hb);
     gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, hf.ht);
-    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_height_bc, &hf);
+    /* update periodic boundaries first */
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_periodic_bc, &hf);
+    /* apply bc again to make sure periodic bcs are in sync */
+    gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, hf.hb);
+    gfs_domain_bc (domain, FTT_TRAVERSE_ALL, -1, hf.ht);
+    /* apply contact angle bcs */
+    gts_container_foreach (GTS_CONTAINER (domain), (GtsFunc) box_contact_bc, &hf);
 
     gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
 			      (FttCellTraverseFunc) remaining_boundary_height_undefined, &hf);
