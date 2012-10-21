@@ -2546,8 +2546,11 @@ gdouble gfs_height_curvature (FttCell * cell, GfsVariableTracerVOF * t, gdouble 
   /* Could not compute curvature from the simple algorithm along any direction:
    * Try parabola fitting of the collected interface positions */
 
-  if (independent_positions (interface, n) < 3*(FTT_DIMENSION - 1))
+  if (independent_positions (interface, n) < 3*(FTT_DIMENSION - 1)) {
+    if (kmax)
+      *kmax = GFS_NODATA;
     return GFS_NODATA;
+  }
 
   gdouble h = ftt_cell_size (cell);
   ParabolaFit fit;
