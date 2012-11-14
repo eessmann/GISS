@@ -8,7 +8,7 @@ WDIR=$3       # simulation directory
 
 CC=COMPILER
 LD=COMPILER
-CFLAGS="-O -fpic -Wall -Wno-unused -Werror -I$WDIR"
+CFLAGS="-O -fpic -Wall -Wno-unused -Werror"
 LDFLAGS="-O -fpic MODULE_FLAGS"
 
 touch links
@@ -38,7 +38,7 @@ while test $# -gt 0; do
     shift
 done
 
-if $CC `pkg-config $DIMENSION --cflags` -D_GFSLINE_=$LINENO $globals $CFLAGS \
+if $CC `pkg-config $DIMENSION --cflags` -D_GFSLINE_=$LINENO $globals $CFLAGS -I"$WDIR" \
     -c -o module.o module.c; then
     if $LD `pkg-config $DIMENSION --libs` $LDFLAGS -o module.so `cat links` module.o; then :
     else

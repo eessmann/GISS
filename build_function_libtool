@@ -8,7 +8,7 @@ WDIR=$3       # simulation directory
 
 CC="PREFIX/share/gerris/libtool --tag=CC --silent --mode=compile COMPILER"
 LD="PREFIX/share/gerris/libtool --tag=CC --silent --mode=link COMPILER"
-CFLAGS="-O -I$WDIR"
+CFLAGS="-O"
 LDFLAGS="-O -rpath PREFIX/lib/gerris"
 
 touch links
@@ -38,7 +38,7 @@ while test $# -gt 0; do
     shift
 done
 
-if $CC `pkg-config $DIMENSION --cflags` -D_GFSLINE_=$LINENO $globals $CFLAGS \
+if $CC `pkg-config $DIMENSION --cflags` -D_GFSLINE_=$LINENO $globals $CFLAGS -I"$WDIR" \
     -c module.c; then :
     if $LD `pkg-config $DIMENSION --libs` $LDFLAGS -o libmodule.la `cat links` module.lo; then :
     else
