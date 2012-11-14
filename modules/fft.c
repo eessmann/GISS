@@ -313,7 +313,8 @@ static void output_spectra_write (GtsObject * o, FILE * fp)
 
 static void output_spectra_destroy ( GtsObject * o )
 {
-  gts_object_destroy (GTS_OBJECT (GFS_OUTPUT_SPECTRA (o)->cgd));
+  if (GFS_OUTPUT_SPECTRA (o)->cgd)
+    gts_object_destroy (GTS_OBJECT (GFS_OUTPUT_SPECTRA (o)->cgd));
 
   (* GTS_OBJECT_CLASS (gfs_output_spectra_class ())->parent_class->destroy) (o);
 }
