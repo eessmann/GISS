@@ -505,7 +505,7 @@ GfsVariableClass * gfs_variable_residual_class (void)
 /** \endobject{GfsVariableResidual} */
 
 /**
- * Spatial filtering .
+ * Spatial filtering.
  * \beginobject{GfsVariableFiltered}
  */
 
