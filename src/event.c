@@ -719,8 +719,13 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
     while (i) {
       VarFunc * vf = i->data;
       gfs_catch_floating_point_exceptions ();
-      gfs_domain_traverse_layers (GFS_DOMAIN (sim), (FttCellTraverseFunc) 
-				  (vf->n == 1 ? init_scalar : init_vector), vf);
+      /* fixme: the check for "layered" variables is messy */
+      if (!gfs_char_in_string (vf->v[0]->name[strlen (vf->v[0]->name) - 1], "0123456789"))
+	gfs_domain_traverse_layers (GFS_DOMAIN (sim), (FttCellTraverseFunc) 
+				    (vf->n == 1 ? init_scalar : init_vector), vf);
+      else
+	gfs_domain_traverse_leaves (GFS_DOMAIN (sim), (FttCellTraverseFunc) 
+				    (vf->n == 1 ? init_scalar : init_vector), vf);
       gfs_restore_fpe_for_function (vf->f[0]);
       if (vf->v[0]->component == FTT_DIMENSION)
 	gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v[0]);
