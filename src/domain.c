@@ -3759,7 +3759,7 @@ guint gfs_domain_tag_droplets (GfsDomain * domain,
   if (domain->pid >= 0) {
     guint * gtouch = g_malloc0 ((p.tag + 1)*sizeof (guint));
     MPI_Op op;    
-    MPI_Op_create (reduce_touching_regions, TRUE, &op);
+    MPI_Op_create (reduce_touching_regions, FALSE, &op);
     MPI_Allreduce (p.touch, gtouch, p.tag + 1, MPI_UNSIGNED, op, MPI_COMM_WORLD);
     MPI_Op_free (&op);
     g_free (p.touch);
