@@ -70,6 +70,7 @@ struct _GfsRiver {
 		   const gdouble * uL, const gdouble * uR, 
 		   gdouble * f);
   GfsFunction * nu, * dut, * k;
+  gboolean variable_density;
 };
 
 #define GFS_RIVER(obj)            GTS_OBJECT_CAST (obj,\

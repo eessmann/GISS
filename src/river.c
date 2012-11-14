@@ -237,6 +237,9 @@ static gdouble center_sweby_gradient (FttCell * cell,
 #define V  2
 #define HL 3
 #define T(i,l) ((2 + (i))*r->nlayers + 1 + (l))
+#define RHO(l) ((2 + r->nt)*r->nlayers + 3*(l) + 1)
+#define HP(l)  ((2 + r->nt)*r->nlayers + 3*(l) + 2)
+#define HPT(l) ((2 + r->nt)*r->nlayers + 3*(l) + 3)
 #define ZB (r->nvar)
 
 static void flux (const gdouble * u, gdouble g, gdouble * f)
@@ -313,13 +316,29 @@ static void riemann_hllc (const GfsRiver * r,
 
 #define SQRT3 1.73205080756888
 
-static gdouble hydrostatic_pressure (const GfsRiver * r, int l, const gdouble * u, gdouble g)
+static double density (const GfsRiver * r, int l, const gdouble * u)
 {
-  double p = r->dz[l]/2.;
-  int j;
-  for (j = l + 1; j < r->nlayers; j++)
-    p += r->dz[j];
-  return g*u[H]*p;
+  return 1. + u[T(0,l)];
+  // return 1.;
+  static double rho0 = 1e3, alphaT = 6.63e-6, T0 = 4.;
+  double dT = u[T(0,l)] - T0;
+  double rho = (1. - alphaT*dT*dT);
+  return CLAMP (rho, 0.5, 2.); /* fixme! */
+}
+
+static void hydrostatic_pressure (const GfsRiver * r, double * u)
+{
+  double pa = 0.; /* pressure at the top */
+  u[HPT(r->nlayers)] = pa;
+  for (int l = r->nlayers - 1; l >= 0; l--) {
+    u[RHO(l)] = density (r, l, u);
+    double dp = r->g*u[RHO(l)]*u[H]*r->dz[l];
+    u[HP(l)] = pa + dp/2.; /* midlayer pressure i.e. p_\alpha */
+    pa += dp;
+    u[HPT(l)] = pa; /* pressure at bottom of layer i.e. p_\alpha-1/2 */
+    /* Boussinesq */
+    u[RHO(l)] = 1.;
+  }
 }
 
 static void riemann_kinetic (const GfsRiver * r,
@@ -330,32 +349,40 @@ static void riemann_kinetic (const GfsRiver * r,
   f[H] = 0.;
   int l;
   for (l = 0; l < r->nlayers; l++) {
-    gdouble pi, ci, Mp, Mm, cig, fHl;
+    gdouble ci, Mp, Mm, cig, fHl;
 
-#if 0
-    pi = hydrostatic_pressure (r, l, uL, g);
-    ci = sqrt (pi);
-#else
-    ci = sqrt (r->g*uL[H]/2.);
-#endif
-    Mp = MAX (uL[U + 2*l] + ci*SQRT3, 0.);
-    Mm = MAX (uL[U + 2*l] - ci*SQRT3, 0.);
-    cig = ci/(6.*r->g*SQRT3);
-    fHl = dz[l]*cig*3.*(Mp*Mp - Mm*Mm);
-    f[U + 3*l] = dz[l]*cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
+    if (uL[H] > r->dry) {
+      if (r->variable_density)
+	ci = sqrt (uL[HP(l)]/uL[RHO(l)]);
+      else
+	ci = sqrt (r->g*uL[H]/2.);
+      Mp = MAX (uL[U + 2*l] + ci*SQRT3, 0.);
+      Mm = MAX (uL[U + 2*l] - ci*SQRT3, 0.);
+      if (r->variable_density)
+	cig = dz[l]*uL[H]/(12.*SQRT3*ci);
+      else
+	cig = dz[l]*ci/(6.*r->g*SQRT3);      
+      fHl = cig*3.*(Mp*Mp - Mm*Mm);
+      f[U + 3*l] = cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
+    }
+    else
+      fHl = f[U + 3*l] = 0.;
 
-#if 0    
-    pi = hydrostatic_pressure (r, l, uR, g);
-    ci = sqrt (pi);
-#else
-    ci = sqrt (r->g*uR[H]/2.);
-#endif
-    Mp = MIN (uR[U + 2*l] + ci*SQRT3, 0.);
-    Mm = MIN (uR[U + 2*l] - ci*SQRT3, 0.);
-    cig = ci/(6.*r->g*SQRT3);
-    fHl += dz[l]*cig*3.*(Mp*Mp - Mm*Mm);
-    f[U + 3*l] += dz[l]*cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
-    
+    if (uR[H] > r->dry) {
+      if (r->variable_density)
+	ci = sqrt (uR[HP(l)]/uR[RHO(l)]);
+      else
+	ci = sqrt (r->g*uR[H]/2.);
+      Mp = MIN (uR[U + 2*l] + ci*SQRT3, 0.);
+      Mm = MIN (uR[U + 2*l] - ci*SQRT3, 0.);
+      if (r->variable_density)
+	cig = dz[l]*uR[H]/(12.*SQRT3*ci);
+      else
+	cig = dz[l]*ci/(6.*r->g*SQRT3);
+      fHl += cig*3.*(Mp*Mp - Mm*Mm);
+      f[U + 3*l] += cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
+    }
+
     f[V + 3*l] = (fHl > 0. ? uL[V + 2*l] : uR[V + 2*l])*fHl;
 
     f[HL + 3*l] = fHl;
@@ -437,7 +464,7 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     for (l = 0; l < r->nlayers; l++) {
       uL[U + 2*l] = uL[V + 2*l] = 0.;
       for (int i = 0; i < r->nt; i++)
-	uL[T(i,l)] = 0.;
+	uL[T(i,l)] = 0.; /* fixme! */
     }
   uL[H] = MAX (0., etaL + zbL - zbLR);
 
@@ -458,7 +485,7 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     for (l = 0; l < r->nlayers; l++) {
       uR[U + 2*l] = uR[V + 2*l] = 0.;
       for (int i = 0; i < r->nt; i++)
-	uR[T(i,l)] = 0.;
+	uR[T(i,l)] = 0.; /* fixme! */
     }
   uR[H] = MAX (0., etaR + zbR - zbLR);
 
@@ -471,6 +498,28 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
     uR[V + 2*l] = CFL_CLAMP (uR[V + 2*l], umax);
   }
 
+  gdouble * u, * un;
+  if (r->variable_density) {
+    hydrostatic_pressure (r, uL);
+    hydrostatic_pressure (r, uR);
+
+    u = g_malloc ((r->nvar + 3*(r->nlayers + 1))*sizeof (gdouble));
+    un = g_malloc ((r->nvar + 3*(r->nlayers + 1))*sizeof (gdouble));
+    u[H] = eta; un[H] = etan;
+    for (l = 0; l < r->nlayers; l++) {
+      gdouble etal = eta*r->dz[l];
+      gdouble etanl = etan*r->dz[l];
+      for (int i = 0; i < r->nt; i++) {
+	u[T(i,l)] = etal > 0. ? GFS_VALUE (face->cell, r->v1[T(i,l)])/etal : 0.; /* fixme! */
+	un[T(i,l)] = etanl > 0. ? GFS_VALUE (face->neighbor, r->v1[T(i,l)])/etanl : 0.; /* fixme! */
+      }
+    }
+    hydrostatic_pressure (r, u);
+    hydrostatic_pressure (r, un);
+  }
+  else
+    u = un = NULL;
+
   /* Riemann solver */
   gdouble * f = r->f;
   (* r->scheme) (r, uL, uR, f);
@@ -480,25 +529,55 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
   gdouble nn = (ftt_face_type (face) == FTT_FINE_COARSE ? FTT_CELLS : 1.);
   GFS_VALUE (face->neighbor, r->flux[H]) += dt*f[H]/nn;
 
-  if (eta <= r->dry) eta = 0.;
   gdouble zb = GFS_VALUE (face->cell, r->zb);
-  if (etan <= r->dry) etan = 0.;
   gdouble zbn = GFS_VALUE (face->neighbor, r->zb);
-  /* see Audusse2005 */
-  /* Slope source term "S_{i,j,p}" and second-order correction for
-     slope source term "Sc_{i,j,p}" of An2012, equations (11) and (12) */
-  gdouble SbL = r->g/2.*(uL[H]*uL[H] - etaL*etaL - (etaL + eta)*(zbL - zb));
-  gdouble SbR = r->g/2.*(uR[H]*uR[H] - etaR*etaR - (etaR + etan)*(zbR - zbn));
+  gdouble SbL0, SbR0, SbL, SbR;
+  if (r->variable_density) {
+    /* eq. (89) of Audusse2011b (corrected) */
+    SbL0 = (uL[HPT(0)] + u[HPT(0)])*(zbLR - zb)/2.;
+    SbR0 = (uR[HPT(0)] + un[HPT(0)])*(zbLR - zbn)/2.;
+    SbL = SbR = 0.;
+  }
+  else { /* constant density */
+    if (eta <= r->dry) eta = 0.;
+    if (etan <= r->dry) etan = 0.;
+    /* see Audusse2005, equations 4.4 and 5.13 */
+    /* Slope source term "S_{i,j,p}" and second-order correction for
+       slope source term "Sc_{i,j,p}" of An2012, equations (11) and (12) */
+    SbL = r->g/2.*(uL[H]*uL[H] - etaL*etaL - (etaL + eta)*(zbL - zb));
+    SbR = r->g/2.*(uR[H]*uR[H] - etaR*etaR - (etaR + etan)*(zbR - zbn));
+    SbL0 = SbR0 = 0.;
+  }
 
   gdouble G = 0.;
   for (l = 0; l < r->nlayers; l++) {
     gdouble dz = r->dz[l];
-    GFS_VALUE (face->cell, r->flux[s->u + 2*l]) -= s->du*dt*(f[U + 3*l] - dz*SbL);
+    if (r->variable_density) {
+      /* eq. (84-85) of Audusse2011b (corrected) */
+      zbLR += (uL[H] + uR[H])*dz/2.;
+      zb += u[H]*dz; zbn += un[H]*dz;
+      /* eq. (89) of Audusse2011b (corrected) */
+      gdouble SbL = (uL[HPT(l + 1)] + u[HPT(l + 1)])*(zbLR - zb)/2.;
+      gdouble SbR = (uR[HPT(l + 1)] + un[HPT(l + 1)])*(zbLR - zbn)/2.;
+      GFS_VALUE (face->cell, r->flux[s->u + 2*l]) -= s->du*dt*(
+							       f[U + 3*l] 
+							       - SbL + SbL0
+							       );
+      GFS_VALUE (face->neighbor, r->flux[s->u + 2*l]) += s->du*dt*(
+								   f[U + 3*l] 
+								   - SbR + SbR0
+								   )/nn;
+      SbL0 = SbL;
+      SbR0 = SbR;
+    }
+    else { /* constant density */
+      GFS_VALUE (face->cell, r->flux[s->u + 2*l]) -= s->du*dt*(f[U + 3*l] - dz*SbL);
+      GFS_VALUE (face->neighbor, r->flux[s->u + 2*l]) += s->du*dt*(f[U + 3*l] - dz*SbR)/nn;
+    }
     GFS_VALUE (face->cell, r->flux[s->v + 2*l]) -= s->dv*dt*f[V + 3*l];
-    GFS_VALUE (face->neighbor, r->flux[s->u + 2*l]) += s->du*dt*(f[U + 3*l] - dz*SbR)/nn;
     GFS_VALUE (face->neighbor, r->flux[s->v + 2*l]) += s->dv*dt*f[V + 3*l]/nn;
     /* mass flux between layers */
-    G += dt*(f[HL + 3*l] - dz*f[H]); /* eq. (5.109) of Audusse2011a */
+    G += dt*(f[HL + 3*l] - dz*f[H]); /* eq. (5.109) of Audusse2011a and (75) of Audusse2011b */
     if (l < r->nlayers - 1) {
       GFS_VALUE (face->cell, r->massflux[l]) += G;
       GFS_VALUE (face->neighbor, r->massflux[l]) -= G/nn;
@@ -510,6 +589,11 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
       GFS_VALUE (face->cell, r->flux[T(i,l)]) -= flux;
       GFS_VALUE (face->neighbor, r->flux[T(i,l)]) += flux/nn;
     }
+  }
+
+  if (r->variable_density) {
+    g_free (u);
+    g_free (un);
   }
 }
 
@@ -1050,14 +1134,16 @@ static void river_tracer_read (GtsObject ** o, GtsFile * fp)
   r->dv[0][ZB] = r->dv[0][oldn];
   r->dv[1][ZB] = r->dv[1][oldn];
   r->flux = g_realloc (r->flux, r->nvar*sizeof (GfsVariable *));
-  r->uL = g_realloc (r->uL, r->nvar*sizeof (gdouble));
-  r->uR = g_realloc (r->uR, r->nvar*sizeof (gdouble));
+  r->uL = g_realloc (r->uL, (r->nvar + 3*(r->nlayers + 1))*sizeof (gdouble));
+  r->uR = g_realloc (r->uR, (r->nvar + 3*(r->nlayers + 1))*sizeof (gdouble));
 
+  v->units += 1.; /* depth-integrated concentration */
   if (r->nlayers > 1)
     for (int l = 0; l < r->nlayers; l++) {
       gchar * name = g_strdup_printf ("%s%d", v->name, l);
       gchar * description = g_strdup_printf ("%s for layer %d", v->description, l);
       r->v[T(r->nt,l)] = gfs_domain_get_or_add_variable (domain, name, description);
+      r->v[T(r->nt,l)]->units = v->units;
       g_free (name);
       g_free (description);
     }
@@ -1272,8 +1358,8 @@ static void allocate_river (GfsRiver * r, int start, int nl)
   r->flux = g_realloc (r->flux, r->nvar*sizeof (GfsVariable *));
   r->massflux = g_realloc (r->massflux, (r->nlayers - 1)*sizeof (GfsVariable *));
 
-  r->uL = g_realloc (r->uL, r->nvar*sizeof (gdouble));
-  r->uR = g_realloc (r->uR, r->nvar*sizeof (gdouble));
+  r->uL = g_realloc (r->uL, (r->nvar + 3*(r->nlayers + 1))*sizeof (gdouble));
+  r->uR = g_realloc (r->uR, (r->nvar + 3*(r->nlayers + 1))*sizeof (gdouble));
   r->f = g_realloc (r->f, (3*r->nlayers + 1)*sizeof (gdouble));
 
   GfsDomain * domain = GFS_DOMAIN (r);
