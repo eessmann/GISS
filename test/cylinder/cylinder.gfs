@@ -10,7 +10,9 @@
 # $$
 # Q(t)= \int_{\Sigma} \rho_e({\bf x},t) \, d \Sigma = Q_o= \pi R_o^2 \, \rho_e({\bf x},0).
 # $$
-# The outer electric field reaches a steady-state (Figure
+# If a VariableVOFConcentration is used instead of a VariableTracer the
+# total charge is also preserved.
+## The outer electric field reaches a steady-state (Figure
 # \ref{efield}).
 #
 # A more detailed discussion of this simulation is given in
@@ -62,20 +64,29 @@ GModule electrohydro
 
     VariableTracerVOF T
     VariableTracer Rhoe
+    VariableVOFConcentration C T
     InitFraction T (R0 - y)
     AdaptGradient { istep = 1 } { cmax = 1e-4 minlevel = 5 maxlevel = LEVEL } T
-    Init {} { Rhoe = rhoinic*T }
+    Init {} {
+	Rhoe = rhoinic*T
+	C = rhoinic*T
+    }
  
     EventStop { istep = 10 } Ex 0.001
 
     SourceDiffusionExplicit Rhoe K*T Phi
+    SourceDiffusionExplicit C  K*T/(T+1.e9*(1.-T)) Phi
 
 #    OutputTime { istep = 1 } stderr
     OutputScalarSum { step = 1 } {
 	awk 'BEGIN { R0 = 0.1 ; rhoinic = 0.5 ; L =1.0 ; Q = 0.5*R0*R0*L*rhoinic }
 	     { print $3,$5,100*sqrt((1.0 - $5/Q)*(1.0 - $5/Q)) }' > rhoe-LEVEL 
     } { v = Rhoe }
-    OutputSimulation { start = end } {
+    OutputScalarSum { step = 1 } {
+	awk 'BEGIN { R0 = 0.1 ; rhoinic = 0.5 ; L =1.0 ; Q = 0.5*R0*R0*L*rhoinic }
+	     { print $3,$5,100*sqrt((1.0 - $5/Q)*(1.0 - $5/Q)) }' > C-LEVEL
+    } { v = C }
+     OutputSimulation { start = end } {
 	awk '{ if ($1 != "#") print $2,sqrt($4*$4+$5*$5); }' > prof-LEVEL
     } { 
 	format = text 
@@ -89,6 +100,7 @@ GModule electrohydro
     # Electric parameters
     perm = E1*T+E2*(1.-T)
     charge = Rhoe
+#    charge = C
     ElectricProjectionParams { tolerance = 1e-7 }
 }
 GfsBox {
