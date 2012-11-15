@@ -1616,6 +1616,19 @@ static void concentration_over_dV (FttCell * cell, VofParms * p)
     GFS_VALUE (cell, p->par->v) = GFS_NODATA;
 }
 
+static void per_vof_volume (FttCell * cell, GfsVariable * v)
+{
+  GfsVariable * vof = GFS_VARIABLE(GFS_VARIABLE_VOF_CONCENTRATION (v)->vof);
+  gdouble f = GFS_VALUE(cell, vof);
+  GFS_VALUE (cell, v) = f > 0. ? GFS_VALUE (cell, v)/f : GFS_NODATA;
+}
+
+static void per_cell_volume (FttCell * cell, GfsVariable * v)
+{
+  GfsVariable * vof = GFS_VARIABLE(GFS_VARIABLE_VOF_CONCENTRATION (v)->vof);
+  GFS_VALUE (cell, v) = GFS_VALUE (cell, v)*GFS_VALUE(cell, vof);
+}
+
 /**
  * gfs_tracer_vof_advection:
  * @domain: a #GfsDomain.
@@ -1652,6 +1665,8 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   j = concentrations;
   while (j) {
     GFS_VARIABLE_TRACER (j->data)->advection.fv = gfs_temporary_variable (domain);
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) per_vof_volume, j->data);
     j = j->next;
   }
   for (c = 0; c < FTT_DIMENSION; c++) {
@@ -1704,6 +1719,8 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
   while (j) {
     gts_object_destroy (GTS_OBJECT (GFS_VARIABLE_TRACER (j->data)->advection.fv));
     GFS_VARIABLE_TRACER (j->data)->advection.fv = NULL;
+    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttCellTraverseFunc) per_cell_volume, j->data);
     j = j->next;
   }
   gts_object_destroy (GTS_OBJECT (p.vpar.v));
