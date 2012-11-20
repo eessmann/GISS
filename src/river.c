@@ -316,22 +316,26 @@ static void riemann_hllc (const GfsRiver * r,
 
 #define SQRT3 1.73205080756888
 
-static double density (const GfsRiver * r, int l, const gdouble * u)
+#define PARENT_TRACER(v) ((v)->vector[0]) /* hack: use vector[0] to store parent tracer */
+
+static double density (GfsRiver * r, int l, const gdouble * u, FttCell * cell)
 {
-  return 1. + u[T(0,l)];
-  // return 1.;
-  static double rho0 = 1e3, alphaT = 6.63e-6, T0 = 4.;
-  double dT = u[T(0,l)] - T0;
-  double rho = (1. - alphaT*dT*dT);
-  return CLAMP (rho, 0.5, 2.); /* fixme! */
+  /* set parent tracer values to values for this level (stored in u) */
+  GfsSimulation * sim = GFS_SIMULATION (r);
+  for (int i = 0; i < r->nt; i++)
+    GFS_VALUE (cell, PARENT_TRACER (r->v[T(i,l)])) = u[T(i,l)]/sim->physical_params.L;
+  /* evaluate density for this level */
+  r->l = l;
+  return 1./gfs_function_value (sim->physical_params.alpha, cell);
 }
 
-static void hydrostatic_pressure (const GfsRiver * r, double * u)
+static void hydrostatic_pressure (GfsRiver * r, double * u, FttCell * cell)
 {
   double pa = 0.; /* pressure at the top */
   u[HPT(r->nlayers)] = pa;
   for (int l = r->nlayers - 1; l >= 0; l--) {
-    u[RHO(l)] = density (r, l, u);
+    u[RHO(l)] = density (r, l, u, cell);
+    g_assert (u[RHO(l)] > 0.);
     double dp = r->g*u[RHO(l)]*u[H]*r->dz[l];
     u[HP(l)] = pa + dp/2.; /* midlayer pressure i.e. p_\alpha */
     pa += dp;
@@ -361,7 +365,7 @@ static void riemann_kinetic (const GfsRiver * r,
       if (r->variable_density)
 	cig = dz[l]*uL[H]/(12.*SQRT3*ci);
       else
-	cig = dz[l]*ci/(6.*r->g*SQRT3);      
+	cig = dz[l]*ci/(6.*r->g*SQRT3);
       fHl = cig*3.*(Mp*Mp - Mm*Mm);
       f[U + 3*l] = cig*2.*(Mp*Mp*Mp - Mm*Mm*Mm);
     }
@@ -500,8 +504,8 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
 
   gdouble * u, * un;
   if (r->variable_density) {
-    hydrostatic_pressure (r, uL);
-    hydrostatic_pressure (r, uR);
+    hydrostatic_pressure (r, uL, face->cell);
+    hydrostatic_pressure (r, uR, face->cell);
 
     u = g_malloc ((r->nvar + 3*(r->nlayers + 1))*sizeof (gdouble));
     un = g_malloc ((r->nvar + 3*(r->nlayers + 1))*sizeof (gdouble));
@@ -514,8 +518,8 @@ static void face_fluxes (FttCellFace * face, GfsRiver * r)
 	un[T(i,l)] = etanl > 0. ? GFS_VALUE (face->neighbor, r->v1[T(i,l)])/etanl : 0.; /* fixme! */
       }
     }
-    hydrostatic_pressure (r, u);
-    hydrostatic_pressure (r, un);
+    hydrostatic_pressure (r, u, face->cell);
+    hydrostatic_pressure (r, un, face->cell);
   }
   else
     u = un = NULL;
@@ -615,6 +619,7 @@ static gdouble limited_gradient (const FttCell * cell, const GfsRiver * r,
   return (* limiter) ((v2 - v0)*x1/((v0 - v1)*x2))*(v0 - v1)/x1;
 }
 
+/* fixme: minmod limiter for vertical advection may be too diffusive */
 #define limited_gradient_u(l) limited_gradient(cell, r, c+2*(l), c+2*((l)-1), c+2*((l)+1), l, \
 					       minmod_limiter)
 #define limited_gradient_t(l) limited_gradient(cell, r, T(i,l), T(i,(l)-1), T(i,(l)+1), l, \
@@ -870,6 +875,12 @@ static void advance (GfsRiver * r, gdouble dt)
     for (int l = 0; l < r->nlayers; l++)
       for (FttComponent c = 0; c < 2; c++)
 	gfs_domain_variable_centered_sources (domain, u[c], r->v[U + c + 2*l], dt);
+    /* and "global" sources on tracers */
+    for (int i = 0; i < r->nt; i++)
+      for (r->l = 0; r->l < r->nlayers; r->l++)
+	gfs_domain_variable_centered_sources (domain, 
+					      PARENT_TRACER(r->v[T(i,r->l)]), r->v[T(i,r->l)], 
+					      dt);
   }
   gfs_source_coriolis_implicit (domain, dt);
   if (r->nu)
@@ -992,6 +1003,7 @@ static void river_run (GfsSimulation * sim)
   r->v[ZB] = r->zb = gfs_variable_from_name (domain->variables, "Zb");
 
   r->g = sim->physical_params.g/sim->physical_params.L;
+  r->variable_density = (r->nlayers > 1 && sim->physical_params.alpha != NULL);
 
   r->gradient = sim->advection_params.gradient;
   if (r->gradient == gfs_center_minmod_gradient)
@@ -1144,6 +1156,7 @@ static void river_tracer_read (GtsObject ** o, GtsFile * fp)
       gchar * description = g_strdup_printf ("%s for layer %d", v->description, l);
       r->v[T(r->nt,l)] = gfs_domain_get_or_add_variable (domain, name, description);
       r->v[T(r->nt,l)]->units = v->units;
+      PARENT_TRACER (r->v[T(r->nt,l)]) = v;
       g_free (name);
       g_free (description);
     }
@@ -1152,12 +1165,12 @@ static void river_tracer_read (GtsObject ** o, GtsFile * fp)
 
   for (int l = 0; l < r->nlayers; l++) {
     int i = T(r->nt,l);
-    r->v1[i] =    gfs_domain_add_variable (domain, NULL, NULL);
+    r->v1[i] = gfs_domain_add_variable (domain, NULL, NULL);
     GfsVariable * v[2];
     r->dv[0][i] = v[0] = gfs_domain_add_variable (domain, NULL, NULL);
     r->dv[1][i] = v[1] = gfs_domain_add_variable (domain, NULL, NULL);
     gfs_variable_set_vector (v, 2);
-    r->flux[i] =  gfs_domain_add_variable (domain, NULL, NULL);
+    r->flux[i] = gfs_domain_add_variable (domain, NULL, NULL);
   }
   r->nt++;
 }
@@ -1484,6 +1497,41 @@ GfsSimulationClass * gfs_river_class (void)
  * \beginobject{GfsLayers}
  */
 
+static void traverse_layers (GfsDomain * domain, FttCellTraverseFunc func, gpointer data)
+{
+  GfsRiver * r = GFS_RIVER (domain);
+  GfsVariable ** u = gfs_domain_velocity (domain);
+  for (r->l = 0; r->l < r->nlayers; r->l++) {
+    for (int i = 0; i < r->nt; i++)
+      gfs_variables_swap (r->v[T(i,r->l)], PARENT_TRACER (r->v[T(i,r->l)]));
+    for (FttComponent c = 0; c < FTT_DIMENSION; c++)
+      gfs_variables_swap (r->v[U + c + 2*r->l], u[c]);
+    gfs_domain_traverse_leaves (domain, func, data);
+    for (FttComponent c = 0; c < FTT_DIMENSION; c++)
+      gfs_variables_swap (r->v[U + c + 2*r->l], u[c]);
+    for (int i = 0; i < r->nt; i++)
+      gfs_variables_swap (r->v[T(i,r->l)], PARENT_TRACER (r->v[T(i,r->l)]));
+  }
+}
+
+static gdouble cell_sigma (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
+{
+  GfsRiver * r = GFS_RIVER (sim);
+  g_assert (r->l < r->nlayers);
+  double sigma = r->dz[r->l]/2.;
+  for (int i = 0; i < r->l; i++)
+    sigma += r->dz[i];
+  return sigma;
+}
+
+static gdouble cell_z (FttCell * cell, FttCellFace * face, GfsSimulation * sim)
+{
+  GfsRiver * r = GFS_RIVER (sim);
+  double zb = cell ? GFS_VALUE (cell, r->zb) : gfs_face_interpolated_value (face, r->zb->i);
+  double h = cell ? GFS_VALUE (cell, r->v[H]) : gfs_face_interpolated_value (face, r->v[H]->i);
+  return (zb + cell_sigma (cell, face, sim)*h)*sim->physical_params.L;
+}
+
 static void gfs_layers_read (GtsObject ** o, GtsFile * fp)
 {
   gts_file_next_token (fp);
@@ -1530,6 +1578,13 @@ static void gfs_layers_read (GtsObject ** o, GtsFile * fp)
     GfsVariable * u[2] = { r->v[U + 2*l], r->v[V + 2*l] };
     gfs_variable_set_vector (u, 2);
   }
+
+  /* configure layers traversal */
+  domain->traverse_layers = traverse_layers;
+  GfsDerivedVariable * z = gfs_derived_variable_from_name (domain->derived_variables, "z");
+  z->func = cell_z;
+  GfsDerivedVariableInfo info = { "sigma", "vertical coordinate", cell_sigma };
+  gfs_domain_add_derived_variable (domain, info);
 }
 
 static void gfs_layers_write (GtsObject * o, FILE * fp)

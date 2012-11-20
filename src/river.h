@@ -61,7 +61,7 @@ struct _GfsRiver {
   GfsVariable ** dv[FTT_DIMENSION];
   GfsVariable ** flux, ** massflux;
   gdouble * dz;
-  int nlayers, nvar, nt;
+  int l, nlayers, nvar, nt;
   gdouble g, dt;
   GfsCenterGradient gradient;
   guint time_order;
