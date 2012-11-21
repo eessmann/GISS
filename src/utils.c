@@ -554,8 +554,18 @@ static gboolean lookup_function (GfsFunction * f, const gchar * finname)
   return FALSE;
 }
 
+static double current_time (void)
+{
+  GTimeVal r;
+  g_get_current_time (&r);
+  return r.tv_sec + 1e-6*r.tv_usec;
+}
+
 static gint compile (GtsFile * fp, GfsFunction * f, const gchar * dirname, const gchar * finname)
 {
+  GfsSimulation * sim = gfs_object_simulation (f);
+  gfs_debug ("starting compilation");
+  double start = current_time ();
   char pwd[512];
   g_assert (getcwd (pwd, 512));
   GString * build_command = g_string_new ("");
@@ -568,7 +578,6 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * dirname, const
 #endif
 		   " \"%s\""
 		   , dirname, GFS_DATA_DIR, fp->line, pwd);
-  GfsSimulation * sim = gfs_object_simulation (f);
   GSList * i = sim->globals;
   while (i) {
     g_string_append_printf (build_command, " %d", GFS_GLOBAL (i->data)->line);
@@ -616,6 +625,7 @@ static gint compile (GtsFile * fp, GfsFunction * f, const gchar * dirname, const
 #else
   g_warning ("not cleaning up %s", dirname);
 #endif
+  gfs_debug ("compilation completed in %g s", current_time () - start);
   return status;
 }
 
