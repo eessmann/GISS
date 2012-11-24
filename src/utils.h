@@ -88,12 +88,6 @@ typedef struct _GfsGlobal         GfsGlobal;
 
 GtsObjectClass * gfs_global_class  (void);
   
-/* GfsModule: Header */
-
-typedef struct _GfsModule GfsModule;
-
-void gfs_module_unref (GfsModule * m, GHashTable * cache);
-
 /* GfsFunction: Header */
 
 typedef struct _GfsFunction         GfsFunction;
@@ -137,6 +131,7 @@ void               gfs_function_write       (GfsFunction * f,
 					     FILE * fp);
 GString *          gfs_function_expression  (GtsFile * fp, 
 					     gboolean * is_expression);
+void               gfs_pending_functions_compilation (GtsFile * fp);
 
 /* GfsFunctionSpatial: Header */
 

@@ -184,11 +184,13 @@ GtsObjectClass * gfs_global_class (void)
 
 /* GfsModule: Header */
 
+typedef struct _GfsModule GfsModule;
+
 struct _GfsModule {
+  gchar * key;
+  guint id;
   GModule * module;
-  gchar * expression;
-  guint refcount;
-  GfsFunctionFunc f;
+  GSList * l; /* list of GfsFunctions */
 };
 
 /* GfsFunction: Header */
@@ -216,99 +218,408 @@ struct _GfsFunction {
 
 /* GfsModule: object */
 
-static GfsModule * gfs_module_new (GtsFile * fp, const gchar * mname,
-				   GHashTable * cache, const gchar * finname)
+static gchar * function_key (const GfsFunction * f)
 {
-  GModule * module;
-  GfsFunctionFunc f;
-  gchar * path = g_module_build_path (GFS_MODULES_DIR, mname);
-  module = g_module_open (path, 0);
-  g_free (path);
-  if (module == NULL)
-    module = g_module_open (mname, 0);
-  if (module == NULL) {
-    gts_file_error (fp, "cannot load module: %s", g_module_error ());
-    return NULL;
+  GString * s = g_string_new (f->expr->str);
+  if (f->spatial)
+    g_string_append (s, "spatial");
+  else if (f->constant)
+    g_string_append (s, "constant");
+  GfsSimulation * sim = gfs_object_simulation (f);
+  GSList * i = sim->globals;
+  while (i) {
+    g_string_append (s, GFS_GLOBAL (i->data)->s);
+    i = i->next;
   }
-  if (!g_module_symbol (module, "f", (gpointer) &f)) {
-    gts_file_error (fp, "module `%s' does not export function `f'", mname);
-    g_module_close (module);
-    return NULL;
-  }
-  GfsModule * m = g_malloc (sizeof (GfsModule));
-  m->module = module;
-  m->f = f;
-  m->refcount = 1;
-
-  g_assert (g_file_get_contents (finname, &m->expression, NULL, NULL));
-  g_hash_table_insert (cache, m->expression, m);
-
-  return m;
+  gchar * key = s->str;
+  g_string_free (s, FALSE);
+  return key;
 }
 
-static void gfs_module_ref (GfsModule * m, GfsFunction * f)
+static gchar * find_identifier (const gchar * s, const gchar * i)
 {
+  gchar * f = strstr (s, i);
+  static gchar allowed[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_1234567890";
+
+  while (f) {
+    if (gfs_char_in_string (f[strlen(i)], allowed) ||
+	(f > s && gfs_char_in_string (f[-1], allowed)))
+      f = strstr (++f, i);
+    else
+      return f;
+  }
+  return NULL;
+}
+
+/* source code for functions pending compilation */
+static GString * pending_functions = NULL;
+static guint n_pending_functions = 0;
+
+/* append source code for @f to pending compilations */
+static void append_pending_function (const GfsFunction * f, guint line, guint id)
+{
+  GfsSimulation * sim = gfs_object_simulation (f);
+  GfsDomain * domain = GFS_DOMAIN (sim);
+  GSList * lv = NULL, * ldv = NULL, * i;
+
+  if (!pending_functions) {
+    pending_functions = g_string_new ("#include <stdlib.h>\n"
+				      "#include <stdio.h>\n"
+				      "#include <math.h>\n"
+				      "#include <gfs.h>\n"
+				      "#include <gerris/spatial.h>\n"
+				      "#include <gerris/function.h>\n"
+				      "typedef double (* Func) (const FttCell * cell,\n"
+				      "                         const FttCellFace * face,\n"
+				      "                         GfsSimulation * sim,\n"
+				      "                         gpointer data);\n");
+    guint ng = 0;
+    i = sim->globals;
+    while (i) {
+      g_string_append_printf (pending_functions, 
+			      "#line %d \"GfsGlobal\"\n", GFS_GLOBAL (i->data)->line);
+      g_string_append (pending_functions, GFS_GLOBAL (i->data)->s);
+      g_string_append_c (pending_functions, '\n');
+      i = i->next; ng++;
+    }
+  }
+  if (f->spatial)
+    g_string_append_printf (pending_functions, 
+			    "double f%u (double x, double y, double z, double t) {\n"
+			    "  _x = x; _y = y; _z = z;\n", id);
+  else if (f->constant)
+    g_string_append_printf (pending_functions, "double f%u (void) {\n", id);
+  else {
+    g_string_append_printf (pending_functions, "char * variables%u[] = {", id);
+    i = domain->variables;
+    while (i) {
+      if (GFS_VARIABLE (i->data)->name && 
+	  find_identifier (f->expr->str, GFS_VARIABLE (i->data)->name)) {
+	lv = g_slist_prepend (lv, i->data);
+	g_string_append_printf (pending_functions, "\"%s\", ", GFS_VARIABLE (i->data)->name);
+      }
+      i = i->next;
+    }
+    g_string_append (pending_functions, "NULL};\n");
+    lv = g_slist_reverse (lv);
+
+    g_string_append_printf (pending_functions, "char * dvariables%u[] = {", id);
+    i = domain->derived_variables;
+    while (i) {
+      GfsDerivedVariable * v = i->data;
+      if (find_identifier (f->expr->str, v->name)) {
+	ldv = g_slist_prepend (ldv, v);
+	g_string_append_printf (pending_functions, "\"%s\", ", v->name);
+      }
+      i = i->next;
+    }
+    g_string_append (pending_functions, "NULL};\n");
+    ldv = g_slist_reverse (ldv);
+
+    g_string_append_printf (pending_functions,
+			    "double f%u (FttCell * cell, FttCellFace * face,\n"
+			    "            GfsSimulation * sim, GfsVariable ** var,\n"
+			    "            GfsDerivedVariable ** dvar) {\n"
+			    "  _sim = sim; _cell = cell;\n",
+			    id);
+    if (lv || ldv) {
+      GSList * i = lv;
+
+      while (i) {
+	GfsVariable * v = i->data;
+	g_string_append_printf (pending_functions, "  double %s;\n", v->name);
+	i = i->next;
+      }
+      i = ldv;
+      while (i) {
+	GfsDerivedVariable * v = i->data;
+	g_string_append_printf (pending_functions, "  double %s;\n", v->name);
+	i = i->next;
+      }
+      if (lv) {
+	int index = 0;
+	g_string_append (pending_functions, "  if (cell) {\n");
+	i = lv;
+	while (i) {
+	  GfsVariable * v = i->data;
+	  g_string_append_printf (pending_functions,
+		   "    %s = gfs_dimensional_value (var[%d], GFS_VALUE (cell, var[%d]));\n", 
+				  v->name, index, index);
+	  i = i->next; index++;
+	}
+	g_string_append (pending_functions, "  } else {\n");
+	i = lv; index = 0;
+	while (i) {
+	  GfsVariable * v = i->data;
+	  g_string_append_printf (pending_functions,
+		   "    %s = gfs_dimensional_value (var[%d],\n"
+		   "           gfs_face_interpolated_value_generic (face, var[%d]));\n", 
+		   v->name, index, index);
+	  i = i->next; index++;
+	}
+	g_string_append (pending_functions, "  }\n");
+	g_slist_free (lv);
+      }
+      if (ldv) {
+	i = ldv; int index = 0;
+	while (i) {
+	  GfsDerivedVariable * v = i->data;
+	  g_string_append_printf (pending_functions,
+		   "  %s = (* (Func) dvar[%d]->func) (cell, face, sim, dvar[%d]->data);\n", 
+		   v->name, index, index);
+	  i = i->next; index++;
+	}
+	g_slist_free (ldv);
+      }
+    }
+  }
+  g_string_append_printf (pending_functions, "#line %d \"GfsFunction\"\n", line);
+
+  if (f->isexpr)
+    g_string_append_printf (pending_functions, "return %s;\n}\n", f->expr->str);
+  else {
+    gchar * s = f->expr->str;
+    guint len = strlen (s);
+    g_assert (s[0] == '{' && s[len-1] == '}');
+    s[len-1] = '\0';
+    g_string_append_printf (pending_functions, "%s\n}\n", &s[1]);
+    s[len-1] = '}';
+  }
+}
+
+static GHashTable * get_function_cache (void)
+{
+  static GHashTable * function_cache = NULL;
+  if (!function_cache)
+    function_cache = g_hash_table_new (g_str_hash, g_str_equal);
+  return function_cache;
+}
+
+static void link_module (GfsFunction * f)
+{
+  g_assert (f->module);
+  GModule * module = f->module->module;
+  g_assert (module);
+  guint id = f->module->id;
+  gchar * name = g_strdup_printf ("f%u", id);
+  g_assert (g_module_symbol (module, name, (gpointer) &f->f));
+  g_free (name);
   if (f->constant) {
-    f->val = (* m->f) (NULL, NULL, NULL, NULL, NULL);
+    f->val = (* f->f) (NULL, NULL, NULL, NULL, NULL);
     f->f = NULL;
     if (f->expr) g_string_free (f->expr, TRUE);
     f->expr = NULL;
   }
-  else {
-    f->f = m->f;
-    if (!f->spatial) {
-      char ** variables;
-      g_assert (g_module_symbol (m->module, "variables", (gpointer) &variables));
-      char ** s = variables;
-      int n = 0;
-      while (*s) { n++; s++; }
-      if (n > 0) {
-	f->var = g_malloc (n*sizeof (GfsVariable *));
-	GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (f));
-	s = variables; n = 0;
-	while (*s) {
-	  g_assert ((f->var[n] = gfs_variable_from_name (domain->variables, *s)));
-	  n++; s++;
-	}
+  else if (!f->spatial) {
+    char ** variables;
+    name = g_strdup_printf ("variables%u", id);
+    g_assert (g_module_symbol (module, name, (gpointer) &variables));
+    g_free (name);
+    char ** s = variables;
+    int n = 0;
+    while (*s) { n++; s++; }
+    if (n > 0) {
+      f->var = g_malloc (n*sizeof (GfsVariable *));
+      GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (f));
+      s = variables; n = 0;
+      while (*s) {
+	g_assert ((f->var[n] = gfs_variable_from_name (domain->variables, *s)));
+	n++; s++;
       }
-
-      g_assert (g_module_symbol (m->module, "dvariables", (gpointer) &variables));
-      s = variables;
-      n = 0;
-      while (*s) { n++; s++; }
-      if (n > 0) {
-	f->dvar = g_malloc (n*sizeof (GfsDerivedVariable *));
-	GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (f));
-	s = variables; n = 0;
-	while (*s) {
-	  g_assert ((f->dvar[n] = gfs_derived_variable_from_name (domain->derived_variables, *s)));
-	  n++; s++;
-	}
+    }
+    name = g_strdup_printf ("dvariables%u", id);
+    g_assert (g_module_symbol (module, name, (gpointer) &variables));
+    g_free (name);
+    s = variables;
+    n = 0;
+    while (*s) { n++; s++; }
+    if (n > 0) {
+      f->dvar = g_malloc (n*sizeof (GfsDerivedVariable *));
+      GfsDomain * domain = GFS_DOMAIN (gfs_object_simulation (f));
+      s = variables; n = 0;
+      while (*s) {
+	g_assert ((f->dvar[n] = 
+		   gfs_derived_variable_from_name (domain->derived_variables, *s)));
+	n++; s++;
       }
     }
   }
+}
+
+static void gfs_module_ref (GfsModule * m, GfsFunction * f)
+{
   f->module = m;
-  m->refcount++;
+  m->l = g_slist_prepend (m->l, f);
+  if (m->module)
+    link_module (f);
+}
+
+static void gfs_module_unref (GfsModule * m, GfsFunction * f)
+{
+  m->l = g_slist_remove (m->l, f);
+  if (m->l == NULL) {
+    g_assert (g_hash_table_remove (get_function_cache (), m->key));
+    g_free (m->key);
+    g_free (m);
+  }
+}
+static gboolean lookup_function (GfsFunction * f)
+{
+  GHashTable * function_cache = get_function_cache ();
+  gchar * key = function_key (f);
+  GfsModule * module = g_hash_table_lookup (function_cache, key);
+  g_free (key);
+  if (module) {
+    gfs_module_ref (module, f);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void gfs_module_new (GfsFunction * f, guint line)
+{
+  if (!lookup_function (f)) {
+    GfsModule * m = g_malloc0 (sizeof (GfsModule));
+    m->key = function_key (f);
+    m->id = n_pending_functions++;
+    g_hash_table_insert (get_function_cache (), m->key, m);
+    append_pending_function (f, line, m->id);
+    gfs_module_ref (m, f);
+  }
+}
+
+static double current_time (void)
+{
+  GTimeVal r;
+  g_get_current_time (&r);
+  return r.tv_sec + 1e-6*r.tv_usec;
+}
+
+static GModule * compile (GtsFile * fp, const gchar * dirname, const gchar * finname)
+{
+  GModule * module = NULL;
+  gfs_debug ("starting compilation");
+  double start = current_time ();
+  char pwd[512];
+  g_assert (getcwd (pwd, 512));
+  GString * build_command = g_string_new ("");
+  g_string_printf (build_command,
+		   "cd %s && %s/build_function %d "
+#if FTT_2D
+		   "gerris2D"
+#else /* 3D */
+		   "gerris3D"
+#endif
+		   " \"%s\""
+		   , dirname, GFS_DATA_DIR, fp->line, pwd);
+  g_string_append (build_command, " > log 2>&1");
+  gint status = system (build_command->str);
+  g_string_free (build_command, TRUE);
+  if (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || WTERMSIG (status) == SIGQUIT))
+    status = SIGQUIT;
+  else if (status == -1 || WEXITSTATUS (status) != 0) {
+    gchar * errname = g_strconcat (dirname, "/log", NULL);
+    FILE * ferr = fopen (errname, "r");
+    g_free (errname);
+    gchar * needle;
+    GString * msg = g_string_new ("");
+    gint c;
+
+    while ((c = fgetc (ferr)) != EOF)
+      g_string_append_c (msg, c);
+    fclose (ferr);
+    while ((needle = strstr (msg->str, "GfsFunction:")))
+      g_string_erase (msg, needle - msg->str, strlen ("GfsFunction:"));
+    gts_file_error (fp, "error compiling expression\n%s", msg->str);
+    g_string_free (msg, TRUE);
+    status = SIGABRT;
+  }
+  else {
+    gchar * mname = g_strconcat (dirname, "/module.so", NULL);
+    gchar * path = g_module_build_path (GFS_MODULES_DIR, mname);
+    module = g_module_open (path, 0);
+    g_free (path);
+    if (module == NULL)
+      module = g_module_open (mname, 0);
+    if (module == NULL)
+      gts_file_error (fp, "cannot load module: %s", g_module_error ());
+    g_free (mname);
+  }
+#if 1
+  gchar * cleanup = g_strconcat ("rm -r -f ", dirname, NULL);
+  gint status1 = system (cleanup);
+  g_free (cleanup);
+  if (status1 == -1 || WEXITSTATUS (status1) != 0)
+    g_warning ("error when cleaning up %s", dirname);
+#else
+  g_warning ("not cleaning up %s", dirname);
+#endif
+  gfs_debug ("compilation completed in %g s", current_time () - start);
+  return module;
+}
+
+#if !HAVE_MKDTEMP
+/* fixme: eventually this could be replaced with g_mkdtemp() */
+static char * mkdtemp (char * template)
+{
+  /* make sure template is at least L_tmpnam long */
+  if (strlen (template) < L_tmpnam) {
+    char template1[L_tmpnam];
+    strcpy (template1, template);
+    if (!tmpnam (template1))
+      return NULL;
+    strcpy (template, template1);
+  }
+  else if (!tmpnam (template))
+    return NULL;
+  if (mkdir (template, S_IRWXU))
+    return NULL;
+  return template;
+}
+#endif /* !HAVE_MKDTEMP */
+
+static void update_module (gchar * key, GfsModule * m, GModule * module)
+{
+  if (m->module == NULL) {
+    m->module = module;
+    g_slist_foreach (m->l, (GFunc) link_module, module);
+  }
 }
 
 /**
- * @m: a #GfsModule.
- * @cache: a function cache.
+ * gfs_pending_functions_compilation:
+ * @fp: a #GtsFile.
  *
- * Unrefs @m from @cache.
+ * Compiles and links pending #GfsFunction definitions.
+ *
+ * Compilation errors are reported in @fp.
  */
-void gfs_module_unref (GfsModule * m, GHashTable * cache)
+void gfs_pending_functions_compilation (GtsFile * fp)
 {
-  g_return_if_fail (m != NULL);
-  g_return_if_fail (cache != NULL);
+  g_return_if_fail (fp != NULL);
 
-  m->refcount--;
-  if (m->refcount == 0) {
-    if (!g_module_close (m->module))
-      g_warning ("%s: %s", g_module_name (m->module), g_module_error ());
-    g_assert (g_hash_table_remove (cache, m->expression));
-    g_free (m->expression);
-    g_free (m);
+  if (pending_functions && fp->type != GTS_ERROR) {
+    gchar * tmpdir = getenv ("TMPDIR");
+    gchar * dirname = 
+      tmpdir ? g_strconcat (tmpdir, "/gfsXXXXXX", NULL) : g_strdup ("/tmp/gfsXXXXXX");
+    if (mkdtemp (dirname) == NULL) {
+      gts_file_error (fp, "cannot create temporary directory\n%s", strerror (errno));
+      g_free (dirname);
+      return;
+    }
+    gchar * finname = g_strdup_printf ("%s/function.c", dirname);
+    FILE * fin = fopen (finname, "w");
+    fputs (pending_functions->str, fin);
+    fclose (fin);
+    GModule * module = compile (fp, dirname, finname);
+    if (module) {
+      g_hash_table_foreach (get_function_cache (), (GHFunc) update_module, module);
+      g_string_free (pending_functions, TRUE);
+      pending_functions = NULL;
+      n_pending_functions = 0;
+    }
+    g_free (dirname);
+    g_free (finname);
   }
 }
 
@@ -531,294 +842,6 @@ GString * gfs_function_expression (GtsFile * fp, gboolean * is_expression)
   }
 }
 
-static GHashTable * get_function_cache (void)
-{
-  static GHashTable * function_cache = NULL;
-  if (!function_cache)
-    function_cache = g_hash_table_new (g_str_hash, g_str_equal);
-  return function_cache;
-}
-
-static gboolean lookup_function (GfsFunction * f, const gchar * finname)
-{
-  GHashTable * function_cache = get_function_cache ();
-  gchar * contents;
-  if (!g_file_get_contents (finname, &contents, NULL, NULL))
-    return FALSE;
-  GfsModule * module = g_hash_table_lookup (function_cache, contents);
-  g_free (contents);
-  if (module) {
-    gfs_module_ref (module, f);
-    return TRUE;
-  }
-  return FALSE;
-}
-
-static double current_time (void)
-{
-  GTimeVal r;
-  g_get_current_time (&r);
-  return r.tv_sec + 1e-6*r.tv_usec;
-}
-
-static gint compile (GtsFile * fp, GfsFunction * f, const gchar * dirname, const gchar * finname)
-{
-  GfsSimulation * sim = gfs_object_simulation (f);
-  gfs_debug ("starting compilation");
-  double start = current_time ();
-  char pwd[512];
-  g_assert (getcwd (pwd, 512));
-  GString * build_command = g_string_new ("");
-  g_string_printf (build_command,
-		   "cd %s && %s/build_function %d "
-#if FTT_2D
-		   "gerris2D"
-#else /* 3D */
-		   "gerris3D"
-#endif
-		   " \"%s\""
-		   , dirname, GFS_DATA_DIR, fp->line, pwd);
-  GSList * i = sim->globals;
-  while (i) {
-    g_string_append_printf (build_command, " %d", GFS_GLOBAL (i->data)->line);
-    i = i->next;
-  }
-  g_string_append (build_command, " > log 2>&1");
-  gint status = system (build_command->str);
-  g_string_free (build_command, TRUE);
-  if (WIFSIGNALED (status) && (WTERMSIG (status) == SIGINT || WTERMSIG (status) == SIGQUIT))
-    status = SIGQUIT;
-  else if (status == -1 || WEXITSTATUS (status) != 0) {
-    gchar * errname = g_strconcat (dirname, "/log", NULL);
-    FILE * ferr = fopen (errname, "r");
-    g_free (errname);
-    gchar * needle;
-    GString * msg = g_string_new ("");
-    gint c;
-
-    while ((c = fgetc (ferr)) != EOF)
-      g_string_append_c (msg, c);
-    fclose (ferr);
-    while ((needle = strstr (msg->str, "GfsFunction:")))
-      g_string_erase (msg, needle - msg->str, strlen ("GfsFunction:"));
-    gts_file_error (fp, "error compiling expression\n%s", msg->str);
-    g_string_free (msg, TRUE);
-    status = SIGABRT;
-  }
-  else {
-    gchar * mname = g_strconcat (dirname, "/module.so", NULL);
-    GfsModule * module = gfs_module_new (fp, mname, get_function_cache (), finname);
-    g_free (mname);
-    if (module) {
-      gfs_module_ref (module, f);
-      status = SIGCONT;
-    }
-    else
-      status = SIGABRT;
-  }
-#if 1
-  gchar * cleanup = g_strconcat ("rm -r -f ", dirname, NULL);
-  gint status1 = system (cleanup);
-  g_free (cleanup);
-  if (status1 == -1 || WEXITSTATUS (status1) != 0)
-    g_warning ("error when cleaning up %s", dirname);
-#else
-  g_warning ("not cleaning up %s", dirname);
-#endif
-  gfs_debug ("compilation completed in %g s", current_time () - start);
-  return status;
-}
-
-static gchar * find_identifier (const gchar * s, const gchar * i)
-{
-  gchar * f = strstr (s, i);
-  static gchar allowed[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_1234567890";
-
-  while (f) {
-    if (gfs_char_in_string (f[strlen(i)], allowed) ||
-	(f > s && gfs_char_in_string (f[-1], allowed)))
-      f = strstr (++f, i);
-    else
-      return f;
-  }
-  return NULL;
-}
-
-#if !HAVE_MKDTEMP
-/* fixme: eventually this could be replaced with g_mkdtemp() */
-static char * mkdtemp (char * template)
-{
-  /* make sure template is at least L_tmpnam long */
-  if (strlen (template) < L_tmpnam) {
-    char template1[L_tmpnam];
-    strcpy (template1, template);
-    if (!tmpnam (template1))
-      return NULL;
-    strcpy (template, template1);
-  }
-  else if (!tmpnam (template))
-    return NULL;
-  if (mkdir (template, S_IRWXU))
-    return NULL;
-  return template;
-}
-#endif /* !HAVE_MKDTEMP */
-
-static void function_compile (GfsFunction * f, GtsFile * fp)
-{
-  GfsSimulation * sim = gfs_object_simulation (f);
-  GfsDomain * domain = GFS_DOMAIN (sim);
-  GSList * lv = NULL, * ldv = NULL, * i;
-  gchar * tmpdir = getenv ("TMPDIR");
-  gchar * dirname = tmpdir ? g_strconcat (tmpdir, "/gfsXXXXXX", NULL) : g_strdup ("/tmp/gfsXXXXXX");
-  FILE * fin;
-
-  if (mkdtemp (dirname) == NULL) {
-    gts_file_error (fp, "cannot create temporary directory\n%s", strerror (errno));
-    g_free (dirname);
-    return;
-  }
-  gchar * finname = g_strdup_printf ("%s/function.c", dirname);
-  fin = fopen (finname, "w");
-  fputs ("#include <stdlib.h>\n"
-	 "#include <stdio.h>\n"
-	 "#include <math.h>\n"
-	 "#include <gfs.h>\n",
-	 fin);
-  if (f->spatial)
-    fputs ("#include <gerris/spatial.h>\n", fin);
-  else if (!f->constant)
-    fputs ("#include <gerris/function.h>\n", fin);
-  guint ng = 0;
-  i = sim->globals;
-  while (i) {
-    fprintf (fin, "#line _GFSLINE%d_ \"GfsGlobal\"\n", ng);
-    fputs (GFS_GLOBAL (i->data)->s, fin);
-    fputc ('\n', fin);
-    i = i->next; ng++;
-  }
-  if (f->spatial)
-    fputs ("double f (double x, double y, double z, double t) {\n"
-	   "  _x = x; _y = y; _z = z;\n", 
-	   fin);
-  else if (f->constant)
-    fputs ("double f (void) {\n", fin);
-  else {
-
-    fputs ("char * variables[] = {", fin);
-    i = domain->variables;
-    while (i) {
-      if (GFS_VARIABLE (i->data)->name && 
-	  find_identifier (f->expr->str, GFS_VARIABLE (i->data)->name)) {
-	lv = g_slist_prepend (lv, i->data);
-	fprintf (fin, "\"%s\", ", GFS_VARIABLE (i->data)->name);
-      }
-      i = i->next;
-    }
-    fputs ("NULL};\n", fin);
-    lv = g_slist_reverse (lv);
-
-    fputs ("char * dvariables[] = {", fin);
-    i = domain->derived_variables;
-    while (i) {
-      GfsDerivedVariable * v = i->data;
-      if (find_identifier (f->expr->str, v->name)) {
-	ldv = g_slist_prepend (ldv, v);
-	fprintf (fin, "\"%s\", ", v->name);
-      }
-      i = i->next;
-    }
-    fputs ("NULL};\n", fin);
-    ldv = g_slist_reverse (ldv);
-
-    fputs ("typedef double (* Func) (const FttCell * cell,\n"
-	   "                         const FttCellFace * face,\n"
-	   "                         GfsSimulation * sim,\n"
-	   "                         gpointer data);\n"
-	   "double f (FttCell * cell, FttCellFace * face,\n"
-	   "          GfsSimulation * sim, GfsVariable ** var, GfsDerivedVariable ** dvar) {\n"
-	   "  _sim = sim; _cell = cell;\n",
-	   fin);
-    if (lv || ldv) {
-      GSList * i = lv;
-
-      while (i) {
-	GfsVariable * v = i->data;
-	fprintf (fin, "  double %s;\n", v->name);
-	i = i->next;
-      }
-      i = ldv;
-      while (i) {
-	GfsDerivedVariable * v = i->data;
-	fprintf (fin, "  double %s;\n", v->name);
-	i = i->next;
-      }
-      if (lv) {
-	int index = 0;
-	fputs ("  if (cell) {\n", fin);
-	i = lv;
-	while (i) {
-	  GfsVariable * v = i->data;
-	  fprintf (fin,
-		   "    %s = gfs_dimensional_value (var[%d], GFS_VALUE (cell, var[%d]));\n", 
-		   v->name, index, index);
-	  i = i->next; index++;
-	}
-	fputs ("  } else {\n", fin);
-	i = lv; index = 0;
-	while (i) {
-	  GfsVariable * v = i->data;
-	  fprintf (fin,
-		   "    %s = gfs_dimensional_value (var[%d],\n"
-		   "           gfs_face_interpolated_value_generic (face, var[%d]));\n", 
-		   v->name, index, index);
-	  i = i->next; index++;
-	}
-	fputs ("  }\n", fin);
-	g_slist_free (lv);
-      }
-      if (ldv) {
-	i = ldv; int index = 0;
-	while (i) {
-	  GfsDerivedVariable * v = i->data;
-	  fprintf (fin,
-		   "  %s = (* (Func) dvar[%d]->func) (cell, face, sim, dvar[%d]->data);\n", 
-		   v->name, index, index);
-	  i = i->next; index++;
-	}
-	g_slist_free (ldv);
-      }
-    }
-  }
-  fputs ("#line _GFSLINE_ \"GfsFunction\"\n", fin);
-
-  if (f->isexpr)
-    fprintf (fin, "return %s;\n}\n", f->expr->str);
-  else {
-    gchar * s = f->expr->str;
-    guint len = strlen (s);
-    g_assert (s[0] == '{' && s[len-1] == '}');
-    s[len-1] = '\0';
-    fprintf (fin, "%s\n}\n", &s[1]);
-    s[len-1] = '}';
-  }
-  fclose (fin);
-
-  if (!lookup_function (f, finname)) {
-    gint status = compile (fp, f, dirname, finname);
-    g_free (finname);
-    if (status == SIGQUIT)
-      exit (0);
-  }
-  else {
-    remove (finname);
-    g_free (finname);
-    if (rmdir (dirname))
-      g_warning ("could not remove directory %s\n%s", dirname, strerror (errno));
-  }
-  g_free (dirname);
-}
-
 static void function_read (GtsObject ** o, GtsFile * fp)
 {
   GfsFunction * f = GFS_FUNCTION (*o);
@@ -877,7 +900,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     }
   }
 
-  function_compile (f, fp);
+  gfs_module_new (f, fp->line);
 
   if (fp->type == GTS_ERROR)
     return;
@@ -893,8 +916,6 @@ static void function_write (GtsObject * o, FILE * fp)
 
   if (f->expr)
     fprintf (fp, " %s", f->expr->str);
-  else if (f->module)
-    fprintf (fp, " %s", g_module_name (f->module->module));
   else if (f->v)
     fprintf (fp, " %s", f->v->name);
   else if (f->s || f->g)
@@ -908,7 +929,7 @@ static void function_destroy (GtsObject * object)
   GfsFunction * f = GFS_FUNCTION (object);
 
   if (f->module)
-    gfs_module_unref (f->module, get_function_cache ());
+    gfs_module_unref (f->module, f);
   if (f->expr) g_string_free (f->expr, TRUE);
   if (f->s) {
     gts_object_destroy (GTS_OBJECT (f->s));
@@ -1069,6 +1090,7 @@ static gdouble adimensional_value (GfsFunction * f, gdouble v)
 gdouble gfs_function_value (GfsFunction * f, FttCell * cell)
 {
   g_return_val_if_fail (f != NULL, 0.);
+  g_assert (!pending_functions);
 
   gdouble dimensional;
   if (f->s) {
@@ -1106,6 +1128,7 @@ gdouble gfs_function_face_value (GfsFunction * f, FttCellFace * fa)
 {
   g_return_val_if_fail (f != NULL, 0.);
   g_return_val_if_fail (fa != NULL, 0.);
+  g_assert (!pending_functions);
 
   gdouble dimensional;
   if (f->s) {
@@ -1157,6 +1180,7 @@ void gfs_function_set_constant_value (GfsFunction * f, gdouble val)
 gdouble gfs_function_get_constant_value (GfsFunction * f)
 {
   g_return_val_if_fail (f != NULL, G_MAXDOUBLE);
+  g_assert (!pending_functions);
 
   if (f->f || f->s || f->v || f->dv)
     return G_MAXDOUBLE;
@@ -1258,6 +1282,7 @@ gdouble gfs_function_spatial_value (GfsFunction * f, const FttVector * p)
   g_return_val_if_fail (f != NULL, 0.);
   g_return_val_if_fail (GFS_IS_FUNCTION_SPATIAL (f), 0.);
   g_return_val_if_fail (p != NULL, 0.);
+  g_assert (!pending_functions);
 
   gdouble dimensional;  
   if (f->f) {
@@ -1368,6 +1393,7 @@ gdouble gfs_read_constant (GtsFile * fp, gpointer domain)
 
   GfsFunction * f = gfs_function_new (gfs_function_constant_class (), 0.);
   gfs_function_read (f, domain, fp);
+  gfs_pending_functions_compilation (fp);
   if (fp->type == GTS_ERROR)
     return G_MAXDOUBLE;
   gdouble val = gfs_function_get_constant_value (f);

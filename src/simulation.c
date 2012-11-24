@@ -1293,8 +1293,16 @@ GfsSimulation * gfs_simulation_read (GtsFile * fp)
     g_slist_free (ml);
     return NULL;
   }
-  if (d)
-    GFS_SIMULATION (d)->preloaded_modules = g_slist_reverse (ml);
+  if (d) {
+    gfs_pending_functions_compilation (fp);
+    if (fp->type == GTS_ERROR) {
+      gts_object_destroy (GTS_OBJECT (d));
+      g_slist_free (ml);
+      return NULL;
+    }
+    else
+      GFS_SIMULATION (d)->preloaded_modules = g_slist_reverse (ml);
+  }
   else
     g_slist_free (ml);
   return GFS_SIMULATION (d);

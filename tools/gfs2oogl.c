@@ -986,6 +986,7 @@ int main (int argc, char * argv[])
       GfsFunction * f = gfs_function_new (gfs_function_class (), 0.);
  
       gfs_function_read (f, domain, fp);
+      gfs_pending_functions_compilation (fp);
       if (fp->type == GTS_ERROR) {
 	fprintf (stderr, 
 		 "gfs2oogl: incorrect `color' argument\n"
