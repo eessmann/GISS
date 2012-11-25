@@ -2360,7 +2360,7 @@ gdouble gfs_vorticity (FttCell * cell,
   g_return_val_if_fail (v != NULL, 0.);
 
 #if FTT_2D
-  if (GFS_IS_MIXED (cell))
+  if (GFS_IS_MIXED (cell) || GFS_IS_AXI (v[0]->domain))
     /* fixme: the formulation below should also work (better) for solid cells */
     return (gfs_center_gradient (cell, FTT_X, v[1]->i) -
 	    gfs_center_gradient (cell, FTT_Y, v[0]->i))/ftt_cell_size (cell);
