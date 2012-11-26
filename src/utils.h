@@ -123,6 +123,7 @@ gdouble            gfs_function_value       (GfsFunction * f,
 void               gfs_function_set_constant_value (GfsFunction * f, 
 						    gdouble val);
 gdouble            gfs_function_get_constant_value (GfsFunction * f);
+gboolean           gfs_function_is_constant  (const GfsFunction * f);
 GfsVariable *      gfs_function_get_variable (GfsFunction * f);
 void               gfs_function_read        (GfsFunction * f, 
 					     gpointer domain,

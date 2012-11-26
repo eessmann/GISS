@@ -114,6 +114,7 @@ struct _GfsGlobal {
   /*< public >*/
   gchar * s;
   guint line;
+  gboolean appended;
 };
 
 static void global_destroy (GtsObject * object)
@@ -180,6 +181,14 @@ GtsObjectClass * gfs_global_class (void)
   }
 
   return klass;
+}
+
+static void gfs_global_append (GfsGlobal * g, GString * s)
+{
+  g_string_append_printf (s, "#line %d \"GfsGlobal\"\n", g->line);
+  g_string_append (s, g->s);
+  g->appended = TRUE;
+  g_string_append_c (s, '\n');
 }
 
 /* GfsModule: Header */
@@ -273,22 +282,23 @@ static void append_pending_function (const GfsFunction * f, guint line, guint id
 				      "                         const FttCellFace * face,\n"
 				      "                         GfsSimulation * sim,\n"
 				      "                         gpointer data);\n");
-    guint ng = 0;
+    g_slist_foreach (sim->globals, (GFunc) gfs_global_append, pending_functions);
+  }
+  else {
     i = sim->globals;
     while (i) {
-      g_string_append_printf (pending_functions, 
-			      "#line %d \"GfsGlobal\"\n", GFS_GLOBAL (i->data)->line);
-      g_string_append (pending_functions, GFS_GLOBAL (i->data)->s);
-      g_string_append_c (pending_functions, '\n');
-      i = i->next; ng++;
+      if (!GFS_GLOBAL (i->data)->appended)
+	gfs_global_append (i->data, pending_functions);
+      i = i->next;
     }
   }
+    
   if (f->spatial)
     g_string_append_printf (pending_functions, 
-			    "double f%u (double x, double y, double z, double t) {\n"
+			    "\ndouble f%u (double x, double y, double z, double t) {\n"
 			    "  _x = x; _y = y; _z = z;\n", id);
   else if (f->constant)
-    g_string_append_printf (pending_functions, "double f%u (void) {\n", id);
+    g_string_append_printf (pending_functions, "\ndouble f%u (void) {\n", id);
   else {
     g_string_append_printf (pending_functions, "char * variables%u[] = {", id);
     i = domain->variables;
@@ -317,7 +327,7 @@ static void append_pending_function (const GfsFunction * f, guint line, guint id
     ldv = g_slist_reverse (ldv);
 
     g_string_append_printf (pending_functions,
-			    "double f%u (FttCell * cell, FttCellFace * face,\n"
+			    "\ndouble f%u (FttCell * cell, FttCellFace * face,\n"
 			    "            GfsSimulation * sim, GfsVariable ** var,\n"
 			    "            GfsDerivedVariable ** dvar) {\n"
 			    "  _sim = sim; _cell = cell;\n",
@@ -504,14 +514,14 @@ static GModule * compile (GtsFile * fp, const gchar * dirname, const gchar * fin
   g_assert (getcwd (pwd, 512));
   GString * build_command = g_string_new ("");
   g_string_printf (build_command,
-		   "cd %s && %s/build_function %d "
+		   "cd %s && %s/build_function "
 #if FTT_2D
 		   "gerris2D"
 #else /* 3D */
 		   "gerris3D"
 #endif
 		   " \"%s\""
-		   , dirname, GFS_DATA_DIR, fp->line, pwd);
+		   , dirname, GFS_DATA_DIR, pwd);
   g_string_append (build_command, " > log 2>&1");
   gint status = system (build_command->str);
   g_string_free (build_command, TRUE);
@@ -887,6 +897,7 @@ static void function_read (GtsObject ** o, GtsFile * fp)
     if (fp->type == GTS_INT || fp->type == GTS_FLOAT) {
       if (!strcmp (fp->token->str, f->expr->str)) {
 	f->val = atof (fp->token->str);
+	f->constant = TRUE;
 	gts_file_next_token (fp);
 	return;
       }
@@ -1168,6 +1179,7 @@ void gfs_function_set_constant_value (GfsFunction * f, gdouble val)
   g_return_if_fail (!f->f && !f->s && !f->v && !f->dv);
 
   f->val = val;
+  f->constant = TRUE;
 }
 
 /**
@@ -1186,6 +1198,19 @@ gdouble gfs_function_get_constant_value (GfsFunction * f)
     return G_MAXDOUBLE;
   else
     return adimensional_value (f, f->val);
+}
+
+/**
+ * gfs_function_is_constant:
+ * @f: a #GfsFunction.
+ *
+ * Returns: %TRUE if @f is a constant, %FALSE otherwise.
+ */
+gboolean gfs_function_is_constant (const GfsFunction * f)
+{
+  g_return_val_if_fail (f != NULL, FALSE);
+
+  return f->constant;
 }
 
 /**

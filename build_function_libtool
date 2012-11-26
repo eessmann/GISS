@@ -1,10 +1,8 @@
 #!/bin/sh
 # file generated automatically by configure from 'build_function_libtool'
 
-LINENO=$1     # line number
-DIMENSION=$2  # gerris2D or gerris3D
-WDIR=$3       # simulation directory
-              # remaining arguments are line numbers for GfsGlobal
+DIMENSION=$1  # gerris2D or gerris3D
+WDIR=$2       # simulation directory
 
 CC="PREFIX/share/gerris/libtool --tag=CC --silent --mode=compile COMPILER"
 LD="PREFIX/share/gerris/libtool --tag=CC --silent --mode=link COMPILER"
@@ -27,18 +25,7 @@ else
     exit 1
 fi
 
-shift
-shift
-shift
-i=0
-globals=""
-while test $# -gt 0; do
-    globals="$globals -D_GFSLINE"$i"_="$1
-    i=`expr $i + 1`
-    shift
-done
-
-if $CC `pkg-config $DIMENSION --cflags` -D_GFSLINE_=$LINENO $globals $CFLAGS -I"$WDIR" \
+if $CC `pkg-config $DIMENSION --cflags` $CFLAGS -I"$WDIR" \
     -c module.c; then :
     if $LD `pkg-config $DIMENSION --libs` $LDFLAGS -o libmodule.la `cat links` module.lo; then :
     else

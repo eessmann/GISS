@@ -911,7 +911,7 @@ static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
 {
   GfsDiffusion * d = GFS_DIFFUSION (event);
 
-  if (gfs_function_get_constant_value (d->val) == G_MAXDOUBLE) {
+  if (!gfs_function_is_constant (d->val)) {
     if (d->mu == NULL && (d->mu = gfs_function_get_variable (d->val)) == NULL)
       d->mu = gfs_domain_add_variable (GFS_DOMAIN (sim), NULL, NULL);
     if (d->mu != gfs_function_get_variable (d->val)) {
@@ -1057,8 +1057,7 @@ static void source_diffusion_read (GtsObject ** o, GtsFile * fp)
 			    2. + GFS_SOURCE_SCALAR (*o)->v->units - d->phi->units);
   }
 
-  if (GFS_SOURCE_SCALAR (d)->v->component < FTT_DIMENSION &&
-      gfs_function_get_constant_value (d->D->val) == G_MAXDOUBLE)
+  if (GFS_SOURCE_SCALAR (d)->v->component < FTT_DIMENSION && !gfs_function_is_constant (d->D->val))
     g_warning ("%d:%d: Terms may be missing when using variable diffusion\n"
 	       "on vector quantities",
 	       fp->line, fp->pos);
