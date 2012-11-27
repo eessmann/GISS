@@ -467,12 +467,10 @@ static void gfs_module_ref (GfsModule * m, GfsFunction * f)
 static void gfs_module_unref (GfsModule * m, GfsFunction * f)
 {
   m->l = g_slist_remove (m->l, f);
-  if (m->l == NULL) {
-    g_assert (g_hash_table_remove (get_function_cache (), m->key));
-    g_free (m->key);
-    g_free (m);
-  }
+  /* modules are kept "forever" in case they come up again e.g. during
+     dynamic load-balancing */
 }
+
 static gboolean lookup_function (GfsFunction * f)
 {
   GHashTable * function_cache = get_function_cache ();
