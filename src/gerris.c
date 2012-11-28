@@ -465,6 +465,16 @@ int main (int argc, char * argv[])
       l = g_slist_append (l, object);
       gts_file_destroy (fp);
     }
+    GtsFile * fp = gts_file_new_from_string ("");
+    gfs_pending_functions_compilation (fp);
+    if (fp->type == GTS_ERROR) {
+      gfs_error (-1,
+		 "gerris: invalid event\n"
+		 "%d:%d: %s\n",
+		 fp->line, fp->pos, fp->error);
+      return 1;
+    }
+    gts_file_destroy (fp);
     gfs_clock_start (domain->timer);
     GSList * j = domain->variables;
     while (j) {
