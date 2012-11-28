@@ -1,4 +1,4 @@
-AC_INIT(configure.in)
+AC_INIT(configure.ac)
 AC_CONFIG_MACRO_DIR([m4])
 
 dnl we to AC_DIVERT_PUSH/AC_DIVERT_POP these variable definitions so they
