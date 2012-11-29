@@ -37,6 +37,135 @@
 #include "simulation.h"
 #include "cartesian.h"
 
+/*
+ * get_tmp_file based on the mkstemp implementation from the GNU C library.
+ * Copyright (C) 1991,92,93,94,95,96,97,98,99 Free Software Foundation, Inc.
+ */
+typedef gint (*GTmpFileCallback) (gchar *, gint, gint);
+
+static gint get_tmp_file (gchar            *tmpl,
+			  GTmpFileCallback  f,
+			  int               flags,
+			  int               mode)
+{
+  char *XXXXXX;
+  int count, fd;
+  static const char letters[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  static const int NLETTERS = sizeof (letters) - 1;
+  glong value;
+  GTimeVal tv;
+  static int counter = 0;
+
+  g_return_val_if_fail (tmpl != NULL, -1);
+
+  /* find the last occurrence of "XXXXXX" */
+  XXXXXX = g_strrstr (tmpl, "XXXXXX");
+
+  if (!XXXXXX || strncmp (XXXXXX, "XXXXXX", 6))
+    {
+      errno = EINVAL;
+      return -1;
+    }
+
+  /* Get some more or less random data.  */
+  g_get_current_time (&tv);
+  value = (tv.tv_usec ^ tv.tv_sec) + counter++;
+
+  for (count = 0; count < 100; value += 7777, ++count)
+    {
+      glong v = value;
+
+      /* Fill in the random bits.  */
+      XXXXXX[0] = letters[v % NLETTERS];
+      v /= NLETTERS;
+      XXXXXX[1] = letters[v % NLETTERS];
+      v /= NLETTERS;
+      XXXXXX[2] = letters[v % NLETTERS];
+      v /= NLETTERS;
+      XXXXXX[3] = letters[v % NLETTERS];
+      v /= NLETTERS;
+      XXXXXX[4] = letters[v % NLETTERS];
+      v /= NLETTERS;
+      XXXXXX[5] = letters[v % NLETTERS];
+
+      fd = f (tmpl, flags, mode);
+
+      if (fd >= 0)
+        return fd;
+      else if (errno != EEXIST)
+        /* Any other error will apply also to other names we might
+         *  try, and there are 2^32 or so of them, so give up now.
+         */
+        return -1;
+    }
+
+  /* We got out of the loop because we ran out of combinations to try.  */
+  errno = EEXIST;
+  return -1;
+}
+
+#if !HAVE_G_MKDTEMP
+#  if HAVE_MKDTEMP
+#    define g_mkdtemp mkdtemp
+#  else /* !HAVE_MKDTEMP */
+
+static gint wrap_mkdir (gchar *tmpl,
+			int    flags G_GNUC_UNUSED,
+			int    mode)
+{
+  return g_mkdir (tmpl, mode);
+}
+
+static gchar * g_mkdtemp (gchar *tmpl)
+{
+  if (get_tmp_file (tmpl, wrap_mkdir, 0, 0700) == -1)
+    return NULL;
+  else
+    return tmpl;
+}
+
+#  endif /* !HAVE_MKDTEMP */
+#endif /* !HAVE_G_MKDTEMP */
+
+static gint wrap_mkfifo (gchar *tmpl,
+			 int    flags G_GNUC_UNUSED,
+			 int    mode)
+{
+  return mkfifo (tmpl, mode);
+}
+
+/**
+ * gfs_mkftemp:
+ * @tmpl: template FIFO name
+ *
+ * Creates a temporary FIFO. See the mkfifo() documentation
+ * on most UNIX-like systems.
+ *
+ * Returns: A pointer to @tmpl, which has been modified
+ *     to hold the directory name.  In case of errors, %NULL is
+ *     returned and %errno will be set.
+ */
+gchar * gfs_mkftemp (gchar * tmpl)
+{
+  if (get_tmp_file (tmpl, wrap_mkfifo, 0, 0600) == -1)
+    return NULL;
+  else
+    return tmpl;
+}
+
+/**
+ * gfs_template:
+ *
+ * Returns: the template for a temporary file name.
+ */
+gchar * gfs_template (void)
+{
+  gchar * tmpdir = getenv ("TMPDIR");
+  return tmpdir ? g_strconcat (tmpdir, "/gfsXXXXXX", NULL) : g_strdup ("/tmp/gfsXXXXXX");
+}
+
+
 /**
  * @c: a character.
  * @s: a string.
@@ -566,26 +695,6 @@ static GModule * compile (GtsFile * fp, const gchar * dirname, const gchar * fin
   return module;
 }
 
-#if !HAVE_MKDTEMP
-/* fixme: eventually this could be replaced with g_mkdtemp() */
-static char * mkdtemp (char * template)
-{
-  /* make sure template is at least L_tmpnam long */
-  if (strlen (template) < L_tmpnam) {
-    char template1[L_tmpnam];
-    strcpy (template1, template);
-    if (!tmpnam (template1))
-      return NULL;
-    strcpy (template, template1);
-  }
-  else if (!tmpnam (template))
-    return NULL;
-  if (mkdir (template, S_IRWXU))
-    return NULL;
-  return template;
-}
-#endif /* !HAVE_MKDTEMP */
-
 static void update_module (gchar * key, GfsModule * m, GModule * module)
 {
   if (m->module == NULL) {
@@ -607,10 +716,8 @@ void gfs_pending_functions_compilation (GtsFile * fp)
   g_return_if_fail (fp != NULL);
 
   if (pending_functions && fp->type != GTS_ERROR) {
-    gchar * tmpdir = getenv ("TMPDIR");
-    gchar * dirname = 
-      tmpdir ? g_strconcat (tmpdir, "/gfsXXXXXX", NULL) : g_strdup ("/tmp/gfsXXXXXX");
-    if (mkdtemp (dirname) == NULL) {
+    gchar * dirname = gfs_template ();
+    if (g_mkdtemp (dirname) == NULL) {
       gts_file_error (fp, "cannot create temporary directory\n%s", strerror (errno));
       g_free (dirname);
       return;

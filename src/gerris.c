@@ -401,9 +401,10 @@ int main (int argc, char * argv[])
       
     if (domain->pid >= 0) { /* we are running a parallel job */
       /* write partitioned simulation in a temporary file */
-      gchar partname[] = "/tmp/gfspartXXXXXX";
+      gchar * partname = gfs_template ();
       gint fd = mkstemp (partname);
       remove (partname);
+      g_free (partname);
       FILE * fptr = fdopen (fd, "w+");
       gfs_simulation_write (simulation, maxlevel, fptr);
       gts_object_destroy (GTS_OBJECT (simulation));

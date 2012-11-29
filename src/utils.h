@@ -73,6 +73,9 @@ extern "C" {
 #define GFS_NODATA                   G_MAXDOUBLE
 #define GFS_HAS_DATA(cell,v)         (GFS_VALUE (cell, v) != GFS_NODATA)
 
+gchar * gfs_mkftemp  (gchar * tmpl);
+gchar * gfs_template (void);
+
 gboolean gfs_char_in_string (char c, const char * s);
 gchar *  gfs_file_statement (GtsFile * fp);
 

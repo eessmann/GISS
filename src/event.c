@@ -1933,14 +1933,11 @@ FILE * gfs_popen (GfsSimulation * sim, const char * command, const char * type)
 {
   g_return_val_if_fail (command != NULL, NULL);
   g_return_val_if_fail (type != NULL, NULL);
-  
-  gchar sname[] = "/tmp/gfsXXXXXX";
-  if (!mktemp (sname)) {
-    g_warning ("gfs_popen() cannot create unique temporary filename");
-    return NULL;
-  }
-  if (mkfifo (sname, 0666)) {
+
+  gchar * sname = gfs_template ();
+  if (!gfs_mkftemp (sname)) {
     g_warning ("gfs_popen() cannot create FIFO: %s", strerror (errno));
+    g_free (sname);
     return NULL;
   }
   /* When adding pre-defined shell variables please update this page:
@@ -1963,6 +1960,7 @@ FILE * gfs_popen (GfsSimulation * sim, const char * command, const char * type)
   else
     g_warning ("popen() command failed: %s", strerror (errno));
   remove (sname);
+  g_free (sname);
   return fp;
 }
 

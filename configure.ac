@@ -368,6 +368,13 @@ AC_CHECK_HEADERS(getopt.h, AC_DEFINE(HAVE_GETOPT_H))
 
 # functions checks
 AC_CHECK_FUNCS(getopt_long mkdtemp)
+OLD_CFLAGS=$CFLAGS
+CFLAGS=$GTS_CFLAGS
+OLD_LIBS=$LIBS
+LIBS=$GTS_LIBS
+AC_CHECK_FUNC(g_mkdtemp)
+CFLAGS=$OLD_CFLAGS
+LIBS=$OLD_LIBS
 
 # link flags
 GFS2D_LIBS="\$(top_builddir)/src/libgfs2D.la $GTS_LIBS"
