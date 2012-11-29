@@ -165,6 +165,33 @@ gchar * gfs_template (void)
   return tmpdir ? g_strconcat (tmpdir, "/gfsXXXXXX", NULL) : g_strdup ("/tmp/gfsXXXXXX");
 }
 
+/**
+ * gfs_object_clone:
+ * @object: the #GtsObject to clone.
+ * @clone: the clone of @object.
+ *
+ * Makes @clone the clone of @object using the write() and read()
+ * methods of @object.
+ */
+void gfs_object_clone (GtsObject * object, GtsObject * clone)
+{
+  g_return_if_fail (object != NULL);
+  g_return_if_fail (clone != NULL);
+  g_return_if_fail (gts_object_class_is_from_class (clone->klass, object->klass));
+  
+  char * buf;
+  size_t len;
+  FILE * fp = open_memstream (&buf, &len);
+  if (fp == NULL)
+    g_error ("open_memstream: %s", strerror (errno));
+  (* object->klass->write) (object, fp);
+  fclose (fp);
+  GtsFile * gfp = gts_file_new_from_buffer (buf, len);
+  (* object->klass->read) (&clone, gfp);
+  g_assert (gfp->type != GTS_ERROR);
+  gts_file_destroy (gfp);
+  free (buf);
+}
 
 /**
  * @c: a character.
@@ -1886,6 +1913,7 @@ void gfs_clock_destroy (GfsClock * t)
  * gfs_union_open:
  * @fp: a file pointer.
  * @rank: the rank of the current parallel process.
+ * @file: a #GfsUnionFile.
  *
  * Opens a "parallel" file which serialises multiple parallel (write)
  * accesses to the file pointed to by @fp.
@@ -1894,9 +1922,10 @@ void gfs_clock_destroy (GfsClock * t)
  *
  * Returns: a "parallel" file pointer associated with @fp.
  */
-FILE * gfs_union_open (FILE * fp, int rank)
+FILE * gfs_union_open (FILE * fp, int rank, GfsUnionFile * file)
 {
   g_return_val_if_fail (fp != NULL, NULL);
+  g_return_val_if_fail (file != NULL, NULL);
 
   if (rank <= 0) /* master */
     return fp;
@@ -1907,7 +1936,10 @@ FILE * gfs_union_open (FILE * fp, int rank)
     MPI_Recv (&pe, 1, MPI_INT, 0, rank, MPI_COMM_WORLD, &status);
     g_assert (rank == pe);
 #endif /* HAVE_MPI */
-    return tmpfile ();
+    file->fp = open_memstream (&file->buf, &file->len);
+    if (file->fp == NULL)
+      g_error ("gfs_union_open(): could not open_memstream:\n%s", strerror (errno));
+    return file->fp;
   }
 }
 
@@ -1915,14 +1947,14 @@ FILE * gfs_union_open (FILE * fp, int rank)
  * gfs_union_close:
  * @fp: a file pointer.
  * @rank: the rank of the current parallel process.
- * @fpp: a "parallel" file pointer returned by a call to gfs_union_open().
+ * @file: a #GfsUnionFile returned by a call to gfs_union_open().
  *
  * Closes a "parallel" file previously opened using gfs_union_open().
  */
-void gfs_union_close (FILE * fp, int rank, FILE * fpp)
+void gfs_union_close (FILE * fp, int rank, GfsUnionFile * file)
 {
   g_return_if_fail (fp != NULL);
-  g_return_if_fail (fpp != NULL);
+  g_return_if_fail (file != NULL);
 
   if (rank == 0) { /* master */
 #ifdef HAVE_MPI
@@ -1946,22 +1978,15 @@ void gfs_union_close (FILE * fp, int rank, FILE * fpp)
 #endif /* HAVE_MPI */
   }
   else if (rank > 0) { /* slaves */
+    fclose (file->fp);
+    long length = file->len;
 #ifdef HAVE_MPI
-    int fd = fileno (fpp);
-    struct stat sb;
-    fflush (fpp);
-    g_assert (fstat (fd, &sb) != -1);
-    long length = sb.st_size;
     MPI_Send (&length, 1, MPI_LONG, 0, rank, MPI_COMM_WORLD);
-    if (length > 0) {
-      void * buf = g_malloc (length);
-      rewind (fpp);
-      g_assert (fread (buf, 1, length, fpp) == length);
-      MPI_Send (buf, length, MPI_BYTE, 0, rank + 1, MPI_COMM_WORLD);
-      g_free (buf);
-    }
+    if (length > 0)
+      MPI_Send (file->buf, length, MPI_BYTE, 0, rank + 1, MPI_COMM_WORLD);
 #endif /* HAVE_MPI */
-    fclose (fpp);
+    if (length > 0)
+      g_free (file->buf);
   }
 }
 

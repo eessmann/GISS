@@ -1442,17 +1442,18 @@ void gfs_simulation_union_write (GfsSimulation * sim,
       nnode += nbox[i];
     g_free (nbox);
 
-    FILE * fpp = gfs_union_open (fp, domain->pid);
+    GfsUnionFile uf;
+    FILE * fpp = gfs_union_open (fp, domain->pid, &uf);
     data[0] = fpp;
     data[1] = &nnode;
     domain->max_depth_write = max_depth;
     gts_container_foreach (GTS_CONTAINER (g), (GtsFunc) write_node, data);
     domain->max_depth_write = depth;
-    gfs_union_close (fp, domain->pid, fpp);
+    gfs_union_close (fp, domain->pid, &uf);
 
-    fpp = gfs_union_open (fp, domain->pid);
+    fpp = gfs_union_open (fp, domain->pid, &uf);
     gts_graph_foreach_edge (g, (GtsFunc) write_edge, fpp);
-    gfs_union_close (fp, domain->pid, fpp);
+    gfs_union_close (fp, domain->pid, &uf);
 
     gts_container_foreach (GTS_CONTAINER (g), (GtsFunc) gts_object_reset_reserved, NULL);
 #endif /* HAVE_MPI */

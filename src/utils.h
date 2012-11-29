@@ -79,6 +79,9 @@ gchar * gfs_template (void);
 gboolean gfs_char_in_string (char c, const char * s);
 gchar *  gfs_file_statement (GtsFile * fp);
 
+void     gfs_object_clone   (GtsObject * object, 
+			     GtsObject * clone);
+
 /* GfsGlobal: Header */
 
 typedef struct _GfsGlobal         GfsGlobal;
@@ -189,11 +192,18 @@ void               gfs_clock_stop           (GfsClock * t);
 gdouble            gfs_clock_elapsed        (GfsClock * t);
 void               gfs_clock_destroy        (GfsClock * t);
 
+typedef struct {
+  FILE * fp;
+  char * buf;
+  size_t len;
+} GfsUnionFile;
+
 FILE *             gfs_union_open           (FILE * fp, 
-					     int rank);
+					     int rank,
+					     GfsUnionFile * file);
 void               gfs_union_close          (FILE * fp, 
 					     int rank, 
-					     FILE * fpp);
+					     GfsUnionFile * file);
 
 /* GfsFormat: Header */
 

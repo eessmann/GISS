@@ -108,7 +108,7 @@ fi
 AC_PROG_CC
 
 if test x$GCC = xyes ; then
-  CFLAGS="$CFLAGS -Wall -Werror-implicit-function-declaration -Wmissing-prototypes -Wmissing-declarations -pipe -std=c99 -D_XOPEN_SOURCE=500 -D_BSD_SOURCE"
+  CFLAGS="$CFLAGS -Wall -Werror-implicit-function-declaration -Wmissing-prototypes -Wmissing-declarations -pipe -std=c99 -D_XOPEN_SOURCE=700 -D_BSD_SOURCE"
 fi
 
 dnl Initialize libtool

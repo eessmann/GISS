@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/wait.h>
 #include <errno.h>
 #include <string.h>
@@ -1159,8 +1158,9 @@ static gboolean gfs_output_location_event (GfsEvent * event,
     GfsDomain * domain = GFS_DOMAIN (sim);
     GfsOutputLocation * location = GFS_OUTPUT_LOCATION (event);
     FILE * fp = GFS_OUTPUT (event)->file->fp;
+    GfsUnionFile uf;
     FILE * fpp = ((domain->pid < 0 || GFS_OUTPUT (event)->parallel) ? fp:
-		   gfs_union_open (GFS_OUTPUT (event)->file->fp, domain->pid));
+		  gfs_union_open (GFS_OUTPUT (event)->file->fp, domain->pid, &uf));
     guint i;
 
     if (GFS_OUTPUT (event)->first_call) {
@@ -1204,10 +1204,8 @@ static gboolean gfs_output_location_event (GfsEvent * event,
     g_free (pformat);
     g_free (vformat);
     fflush (fp);
-    if (!(domain->pid < 0 || GFS_OUTPUT (event)->parallel)) {
-      fflush (fpp);
-      gfs_union_close (GFS_OUTPUT (event)->file->fp, domain->pid, fpp);
-    }
+    if (!(domain->pid < 0 || GFS_OUTPUT (event)->parallel))
+      gfs_union_close (GFS_OUTPUT (event)->file->fp, domain->pid, &uf);
     return TRUE;
   }
   return FALSE;
@@ -1410,12 +1408,13 @@ static gboolean output_simulation_event (GfsEvent * event, GfsSimulation * sim)
 				  (FttCellTraverseFunc) write_text, data);
       }
       else {
-	FILE * fpp = gfs_union_open (GFS_OUTPUT (event)->file->fp, domain->pid);
+	GfsUnionFile uf;
+	FILE * fpp = gfs_union_open (GFS_OUTPUT (event)->file->fp, domain->pid, &uf);
 	data[1] = fpp;
 	gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL|FTT_TRAVERSE_LEAFS,
 				  output->max_depth,
 				  (FttCellTraverseFunc) write_text, data);
-	gfs_union_close (GFS_OUTPUT (event)->file->fp, domain->pid, fpp);
+	gfs_union_close (GFS_OUTPUT (event)->file->fp, domain->pid, &uf);
       }
       break;
     }

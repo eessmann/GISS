@@ -25,7 +25,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/stat.h>
 #include "domain.h"
 
 #include "advection.h"
@@ -2440,16 +2439,8 @@ static void box_split (GfsBox * box, SplitPar * p)
 	      GFS_BOUNDARY_PERIODIC (boundary)->matching;
 	    GFS_BOUNDARY_PERIODIC (newboundary)->d = GFS_BOUNDARY_PERIODIC (boundary)->d;
 	  }
-	  else {
-	    FILE * fp = tmpfile ();
-	    (* GTS_OBJECT_CLASS (klass)->write) (GTS_OBJECT (boundary), fp);
-	    rewind (fp);
-	    GtsFile * gfp = gts_file_new (fp);
-	    (* GTS_OBJECT_CLASS (klass)->read) (&newboundary, gfp);
-	    g_assert (gfp->type != GTS_ERROR);
-	    gts_file_destroy (gfp);
-	    fclose (fp);
-	  }
+	  else
+	    gfs_object_clone (GTS_OBJECT (boundary), GTS_OBJECT (newboundary));
 	}
       gts_object_destroy (GTS_OBJECT (boundary));
       box->neighbor[d] = NULL;
@@ -4470,9 +4461,11 @@ struct _GfsRequest {
 GfsRequest * gfs_send_objects (GSList * list, int dest)
 {
 #ifdef HAVE_MPI
-  FILE * fp = tmpfile ();
+  char * buf;
+  size_t len;
+  FILE * fp = open_memstream (&buf, &len);
   if (fp == NULL)
-    g_error ("gfs_send_objects(): could not create temporary file\n%s", strerror (errno));
+    g_error ("gfs_send_objects(): could not open_memstream:\n%s", strerror (errno));
   while (list) {
     GtsObject * object = list->data;
     g_assert (object->klass->write != NULL);
@@ -4480,21 +4473,15 @@ GfsRequest * gfs_send_objects (GSList * list, int dest)
     fputc ('\n', fp);
     list = list->next;
   }
-  fflush (fp);
-  int fd = fileno (fp);
-  struct stat sb;
-  g_assert (fstat (fd, &sb) != -1);
+  fclose (fp);
   GfsRequest * r = g_malloc0 (sizeof (GfsRequest));
-  long length = sb.st_size;
+  long length = len;
   MPI_Isend (&length, 1, MPI_LONG, dest, 0, MPI_COMM_WORLD, &r->request[0]);
   /*  g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, "sending %ld bytes to PE %d", length, dest); */
   if (length > 0) {
-    r->buf = g_malloc (length);
-    rewind (fp);
-    g_assert (fread (r->buf, 1, length, fp) == length);
+    r->buf = buf;
     MPI_Isend (r->buf, length, MPI_BYTE, dest, 1, MPI_COMM_WORLD, &r->request[1]);
   }
-  fclose (fp);
   return r;
 #else  /* not HAVE_MPI */
   return NULL;
@@ -4516,7 +4503,7 @@ void gfs_wait (GfsRequest * r)
   MPI_Wait (&r->request[0], &status);
   if (r->buf) {
     MPI_Wait (&r->request[1], &status);
-    g_free (r->buf);
+    free (r->buf);
   }
   g_free (r);
 #endif /* HAVE_MPI */
@@ -4543,10 +4530,7 @@ GSList * gfs_receive_objects (GfsDomain * domain, int src)
   if (length > 0) {
     char * buf = g_malloc (length);
     MPI_Recv (buf, length, MPI_BYTE, src, 1, MPI_COMM_WORLD, &status);
-    FILE * f = tmpfile ();
-    fwrite (buf, 1, length, f);
-    rewind (f);
-    GtsFile * fp = gts_file_new (f);
+    GtsFile * fp = gts_file_new_from_buffer (buf, length);
     GSList * list = NULL;
     while (fp->type == GTS_STRING) {
       GtsObjectClass * klass = gfs_object_class_from_name (fp->token->str);
@@ -4564,7 +4548,6 @@ GSList * gfs_receive_objects (GfsDomain * domain, int src)
 	gts_file_next_token (fp);
     }
     gts_file_destroy (fp);
-    fclose (f);
     g_free (buf);
     return list;
   }
@@ -4829,7 +4812,11 @@ GfsDomainProjection * gfs_domain_projection_new (GfsDomain * domain,
   g_return_val_if_fail (c < FTT_DIMENSION, NULL);
 
   /* clone domain */
-  FILE * f = tmpfile ();
+  char * buf;
+  size_t len;
+  FILE * f = open_memstream (&buf, &len);
+  if (f == NULL)
+    g_error ("gfs_domain_projection_new(): could not open_memstream:\n%s", strerror (errno));
   gint depth = domain->max_depth_write;
   domain->max_depth_write = -2; /* no variables, no cells */
   GtsObjectClass * klass = GTS_OBJECT (domain)->klass;
@@ -4837,14 +4824,14 @@ GfsDomainProjection * gfs_domain_projection_new (GfsDomain * domain,
   gts_graph_write (GTS_GRAPH (domain), f);
   GTS_OBJECT (domain)->klass = klass;
   domain->max_depth_write = depth;
+  fclose (f);
 
-  rewind (f);
-  GtsFile * fp = gts_file_new (f);
+  GtsFile * fp = gts_file_new_from_buffer (buf, len);
   GfsDomainProjection * proj = GFS_DOMAIN_PROJECTION (gfs_domain_read (fp));
   if (fp->type == GTS_ERROR)
     g_error ("gfs_domain_projection_new:\n%d:%d:%s", fp->line, fp->pos, fp->error);
   gts_file_destroy (fp);
-  fclose (f);
+  free (buf);
   gfs_clock_start (GFS_DOMAIN (proj)->timer);
 
   /* project domain */
