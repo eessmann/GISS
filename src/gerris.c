@@ -402,7 +402,7 @@ int main (int argc, char * argv[])
     if (domain->pid >= 0) { /* we are running a parallel job */
       /* write partitioned simulation in a temporary file */
       gchar * partname = gfs_template ();
-      gint fd = mkstemp (partname);
+      gint fd = g_mkstemp (partname);
       remove (partname);
       g_free (partname);
       FILE * fptr = fdopen (fd, "w+");

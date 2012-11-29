@@ -65,6 +65,10 @@ extern "C" {
 #  endif /* doesn't HAVE_MPI */
 #endif /* HAVE_CONFIG_H */
 
+#if !HAVE_G_MKDTEMP
+gchar * g_mkdtemp (gchar * tmpl);
+#endif
+
 #ifndef M_PI
 #  define M_PI 3.14159265358979323846
 #endif

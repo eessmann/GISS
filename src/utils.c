@@ -70,7 +70,7 @@ static gint get_tmp_file (gchar            *tmpl,
 
   /* Get some more or less random data.  */
   g_get_current_time (&tv);
-  value = (tv.tv_usec ^ tv.tv_sec) + counter++;
+  value = (tv.tv_usec ^ tv.tv_sec) + getpid () + counter++;
 
   for (count = 0; count < 100; value += 7777, ++count)
     {
@@ -106,26 +106,22 @@ static gint get_tmp_file (gchar            *tmpl,
 }
 
 #if !HAVE_G_MKDTEMP
-#  if HAVE_MKDTEMP
-#    define g_mkdtemp mkdtemp
-#  else /* !HAVE_MKDTEMP */
-
+/* we could use mkdtemp() but we don't trust some implementations
+   (e.g. on AIX) */
 static gint wrap_mkdir (gchar *tmpl,
 			int    flags G_GNUC_UNUSED,
 			int    mode)
 {
-  return g_mkdir (tmpl, mode);
+  return mkdir (tmpl, mode);
 }
 
-static gchar * g_mkdtemp (gchar *tmpl)
+gchar * g_mkdtemp (gchar * tmpl)
 {
   if (get_tmp_file (tmpl, wrap_mkdir, 0, 0700) == -1)
     return NULL;
   else
     return tmpl;
 }
-
-#  endif /* !HAVE_MKDTEMP */
 #endif /* !HAVE_G_MKDTEMP */
 
 static gint wrap_mkfifo (gchar *tmpl,
