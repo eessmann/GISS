@@ -4477,7 +4477,7 @@ GfsRequest * gfs_send_objects (GSList * list, int dest)
   GfsRequest * r = g_malloc0 (sizeof (GfsRequest));
   long length = len;
   MPI_Isend (&length, 1, MPI_LONG, dest, 0, MPI_COMM_WORLD, &r->request[0]);
-  /*  g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, "sending %ld bytes to PE %d", length, dest); */
+  gfs_debug ("sending %ld bytes to PE %d", length, dest);
   if (length > 0) {
     r->buf = buf;
     MPI_Isend (r->buf, length, MPI_BYTE, dest, 1, MPI_COMM_WORLD, &r->request[1]);
@@ -4526,7 +4526,7 @@ GSList * gfs_receive_objects (GfsDomain * domain, int src)
   MPI_Status status;
   long length;
   MPI_Recv (&length, 1, MPI_LONG, src, 0, MPI_COMM_WORLD, &status);
-  /*  g_log (G_LOG_DOMAIN, G_LOG_LEVEL_MESSAGE, "receiving %ld bytes from PE %d", length, src); */
+  gfs_debug ("receiving %ld bytes from PE %d", length, src);
   if (length > 0) {
     char * buf = g_malloc (length);
     MPI_Recv (buf, length, MPI_BYTE, src, 1, MPI_COMM_WORLD, &status);

@@ -107,8 +107,10 @@ fi
 
 AC_PROG_CC
 
+# -D_GNU_SOURCE is only necessary for old (< 2.10) glibc implementations of open_memstream()
+CFLAGS="$CFLAGS -D_XOPEN_SOURCE=700 -D_BSD_SOURCE -D_GNU_SOURCE"
 if test x$GCC = xyes ; then
-  CFLAGS="$CFLAGS -Wall -Werror-implicit-function-declaration -Wmissing-prototypes -Wmissing-declarations -pipe -std=c99 -D_XOPEN_SOURCE=700 -D_BSD_SOURCE"
+  CFLAGS="$CFLAGS -Wall -Werror-implicit-function-declaration -Wmissing-prototypes -Wmissing-declarations -pipe -std=c99"
 fi
 
 dnl Initialize libtool
