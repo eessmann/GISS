@@ -373,9 +373,15 @@ OLD_CFLAGS=$CFLAGS
 CFLAGS=$GTS_CFLAGS
 OLD_LIBS=$LIBS
 LIBS=$GTS_LIBS
-AC_CHECK_FUNCS(getopt_long g_mkdtemp)
+AC_CHECK_FUNCS(getopt_long g_mkdtemp open_memstream funopen)
 CFLAGS=$OLD_CFLAGS
 LIBS=$OLD_LIBS
+
+# use alternative implementation of open_memstream() if the system
+# (e.g. MacOS X 10.3, FreeBSD 6.0, NetBSD 3.0, OpenBSD 3.8.) does not
+# support POSIX 2008 natively
+AC_CHECK_FUNC(open_memstream, have_open_memstream=yes, have_open_memstream=no)
+AM_CONDITIONAL(OPEN_MEMSTREAM, test x$have_open_memstream = xno)
 
 # link flags
 GFS2D_LIBS="\$(top_builddir)/src/libgfs2D.la $GTS_LIBS"
@@ -426,6 +432,7 @@ echo "  m4                = $have_m4"
 if test x$have_m4 = xyes; then
    echo "  m4 options        = $options_m4"
 fi
+echo "  open_memstream    = $have_open_memstream"
 echo
 echo "Modules"
 echo

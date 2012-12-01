@@ -68,6 +68,9 @@ extern "C" {
 #if !HAVE_G_MKDTEMP
 gchar * g_mkdtemp (gchar * tmpl);
 #endif
+#if !HAVE_OPEN_MEMSTREAM
+FILE * open_memstream (char **buf, size_t *len);
+#endif
 
 #ifndef M_PI
 #  define M_PI 3.14159265358979323846
