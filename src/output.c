@@ -1880,12 +1880,15 @@ static gboolean gfs_output_scalar_event (GfsEvent * event,
       gfs_catch_floating_point_exceptions ();
       gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) update_v, output);
       gfs_restore_fpe_for_function (output->f);
+      gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, output->v);
     }
-    if (output->maxlevel >= 0)
+    if (output->maxlevel >= 0) {
       gfs_domain_cell_traverse (domain,
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 				(FttCellTraverseFunc) output->v->fine_coarse,
 				output->v);
+      gfs_domain_bc (domain, FTT_TRAVERSE_NON_LEAFS, -1, output->v);
+    }
     if (output->autoscale) {
       GtsRange stats = gfs_domain_stats_variable (domain, output->v, 
 						  FTT_TRAVERSE_LEAFS|FTT_TRAVERSE_LEVEL, 
