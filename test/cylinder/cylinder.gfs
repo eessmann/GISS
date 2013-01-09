@@ -10,10 +10,9 @@
 # $$
 # Q(t)= \int_{\Sigma} \rho_e({\bf x},t) \, d \Sigma = Q_o= \pi R_o^2 \, \rho_e({\bf x},0).
 # $$
-# If a VariableVOFConcentration is used instead of a VariableTracer the
-# total charge is also preserved.
-## The outer electric field reaches a steady-state (Figure
-# \ref{efield}).
+# If a VariableVOFConcentration is used instead of a VariableTracer
+# the total charge is also preserved.  The outer electric field
+# reaches a steady-state (Figure \ref{efield}).
 #
 # A more detailed discussion of this simulation is given in
 # \cite{lopez-herrera2011}.
