@@ -750,12 +750,14 @@ void gfs_pending_functions_compilation (GtsFile * fp)
     fputs (pending_functions->str, fin);
     fclose (fin);
     GModule * module = compile (fp, dirname, finname);
-    if (module) {
+    if (module)
       g_hash_table_foreach (get_function_cache (), (GHFunc) update_module, module);
-      g_string_free (pending_functions, TRUE);
-      pending_functions = NULL;
-      n_pending_functions = 0;
-    }
+    /* note that if there is an error in some pending functions
+       (i.e. fp->type == GTS_ERROR) something needs to be done to fix
+       this (e.g. abort the whole thing). */
+    g_string_free (pending_functions, TRUE);
+    pending_functions = NULL;
+    n_pending_functions = 0;
     g_free (dirname);
     g_free (finname);
   }
