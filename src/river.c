@@ -1957,8 +1957,8 @@ static gboolean source_pipe_event (GfsEvent * event, GfsSimulation * sim)
     if (p->scell && p->ecell && p->scell != p->ecell) {
       gdouble L = sim->physical_params.L, g = sim->physical_params.g;
       GfsVariable * h = GFS_RIVER (sim)->v[H], * zb = GFS_RIVER (sim)->zb;
-      gdouble h1 = L*GFS_VALUE (p->scell, h), z1 = L*GFS_VALUE (p->scell, zb);
-      gdouble h2 = L*GFS_VALUE (p->ecell, h), z2 = L*GFS_VALUE (p->ecell, zb);      
+      gdouble h1 = MAX (L*GFS_VALUE (p->scell, h), 0.), z1 = L*GFS_VALUE (p->scell, zb);
+      gdouble h2 = MAX (L*GFS_VALUE (p->ecell, h), 0.), z2 = L*GFS_VALUE (p->ecell, zb);      
       /* fixme: the length below does not take into account metric
 	 properly (e.g. won't work for MetricLonLat) */
       gdouble l = L*sqrt ((start.x - end.x)*(start.x - end.x) +
