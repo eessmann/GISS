@@ -528,8 +528,8 @@ static gboolean gfs_adapt_gradient_event (GfsEvent * event,
       gfs_domain_cell_traverse (GFS_DOMAIN (sim),
 				FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
 				(FttCellTraverseFunc) a->v->fine_coarse, a->v);
-      gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, a->v);
     }
+    gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_ALL, -1, a->v);
     return TRUE;
   }
   return FALSE;

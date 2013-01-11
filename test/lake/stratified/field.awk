@@ -2,12 +2,12 @@
 {
     if ($1 == "#") {
 	for (i = 2; i <= NF; i++) {
-            if (match($i,"(.*):([A-Z]+)([0-9]+)",a) && a[2] == name) {
+            if (match($i,"(.*):([a-zA-Z]+)([0-9]+)",a) && a[2] == name) {
 		layer[a[3]] = int(a[1]);
 		if (int(a[3]) > nl)
 		    nl = int(a[3]);
 	    }
-            else if (match($i,"(.*):([A-Z]+)",a) && a[2] == "Zb")
+            else if (match($i,"(.*):([a-zA-Z]+)",a) && a[2] == "Zb")
 		zb = int(a[1]);
 	}
 	nl++
