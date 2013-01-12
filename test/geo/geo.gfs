@@ -73,46 +73,47 @@
 # Generated files: geo_error.eps error-100.eps error-200.eps error-300.eps error-400.eps error-1500.eps
 #
 1 0 GfsOcean GfsBox GfsGEdge {} {
-  # dt = 1000 s
-  Time { iend = 1580 dtmax = 0.10285 }
+  Time { iend = 1580 dtmax = 1000 }
   Refine 6
-  # Lx = Ly = 1000 km
-  # H0 = 1000 m
-  # g = 0.01 m/s^2
-  PhysicalParams { g = 9.4534734306584e-4 }
-  AdvectionParams { scheme = none }
-  ApproxProjectionParams { tolerance = 1e-6 }
-  Solid (z + 1.)
+  Global {
+      #define L0 1000e3
+      #define H0 1000
+      #define G 0.01
+      #define R0 100e3
+      #define ETA0 599.5
+      #define F0 1.0285e-4
+  }
+  PhysicalParams { L = L0 g = G }
+  Solid (z + H0)
   Init {} {
     # e-folding radius = 100 km
     # umax = 0.5 m/s = sqrt(200)*exp(-1/2)
-    U = (5.667583815e-4*200.*y*exp (-100.*(x*x + y*y)))
-    V = (- 5.667583815e-4*200.*x*exp (-100.*(x*x + y*y)))
-    P = (5.667583815e-4*exp (-100.*(x*x + y*y)))
+    P = ETA0*exp (-(x*x + y*y)/(R0*R0))*G
+    U = 2.*G*ETA0*y/(F0*R0*R0)*exp (-(x*x + y*y)/(R0*R0))
+    V = - 2.*G*ETA0*x/(F0*R0*R0)*exp (-(x*x + y*y)/(R0*R0))
   }
-  # f0 = 1.0285e-4 s-1
-  SourceCoriolis 1
+  SourceCoriolis F0
+ 
+  AdvectionParams { scheme = none }
+  ApproxProjectionParams { tolerance = 1e-6 }
 
   OutputErrorNorm { istep = 1 } { 
-      awk '{print $3/1.0285e-4/3600./24. " " $9*1000e6*1.0285e-4*1.0285e-4/0.01;}' > e 
-  } { v = P } {
-    s = (5.667583815e-4*exp (-100.*(x*x + y*y)))
+      awk '{print $3/86400. " " $9; fflush (stdout); }' > e
+  } { v = P/G } {
+    s = ETA0*exp (-(x*x + y*y)/(R0*R0))
     unbiased = 1
     v = E
   }
-  OutputSimulation { istart = 100 iend = 500 istep = 100 } stdout
-  EventScript { istart = 100 iend = 500 istep = 100 } { 
-      echo "Save error-$GfsIter.eps { format = EPS }"
-  }
-  OutputSimulation { istart = 1500 } stdout
-  EventScript { istart = 1500 } { echo "Save error-$GfsIter.eps { format = EPS }"}
+  GModule gfsview
+  OutputView {  istart = 100 iend = 500 istep = 100 } error-%ld.eps { format = EPS } geo.gfv
+  OutputView {  istart = 1500 } error-%ld.eps { format = EPS } geo.gfv
   EventScript { start = end } {
     cat <<EOF | gnuplot
     set term postscript eps lw 3 color solid 20
     set output 'geo_error.eps'
     set xlabel 'Time (days)'
-    set ylabel 'Maximum error on surface height (cm)'
-    plot 'e.ref' u 1:(\$2*100.) t 'ref' w l, 'e' u 1:(\$2*100.) t '' w l
+    set ylabel 'Maximum error on surface height (m)'
+    plot 'e.ref' t 'ref' w l, 'e' t '' w l
 EOF
   }
 }
