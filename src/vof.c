@@ -1744,8 +1744,11 @@ static gdouble face_value (FttCell * cell, FttDirection d, GfsVariable * v)
     for (c = 0; c < FTT_DIMENSION; c++)
       (&m.x)[c] = GFS_VALUE (cell, t->m[c]);
     (&m.x)[d/2] /= 2.;
-    if (d % 2)
-      alpha -= (&m.x)[d/2];
+    if (d % 2 == 0) {
+      (&m.x)[d/2] = -(&m.x)[d/2];
+      alpha += (&m.x)[d/2];
+    }
+    (&m.x)[d/2] /= 2.;
     return gfs_plane_volume (&m, alpha);
   }
 }
@@ -1786,12 +1789,13 @@ gdouble gfs_vof_face_value (const FttCellFace * face, GfsVariableTracerVOF * t)
       (&p.x)[face->d/2] += face->d % 2 ? -h/4. : h/4.;
       for (c = 0; c < FTT_DIMENSION; c++)
 	alpha -= (&m.x)[c]*(0.25 - ((&p.x)[c] - (&o.x)[c])/h);
-      //      for (c = 0; c < FTT_DIMENSION; c++)
-      //	(&m.x)[c] /= 2.;
+      alpha *= 2.;
+      //      if (face->d % 2 == 0) {
+      //	(&m.x)[face->d/2] = -(&m.x)[face->d/2];
+      //	alpha += (&m.x)[face->d/2];
+      //      }
       //      (&m.x)[face->d/2] /= 2.;
-      //      if (!(face->d % 2))
-      //	alpha -= (&m.x)[face->d/2];
-      vright = gfs_plane_volume (&m, 2.*alpha);
+      vright = gfs_plane_volume (&m, alpha);
 #if 0
       if (vright > 0.2 && vright < 0.8) {
 	fprintf (stderr, "%d (%g,%g) (%g,%g) %g\n", face->d, p.x, p.y, o.x, o.y, vright);
