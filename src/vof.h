@@ -140,6 +140,8 @@ void     gfs_tracer_vof_advection  (GfsDomain * domain,
 				    GfsAdvectionParams * par);
 gdouble  gfs_vof_face_value        (const FttCellFace * face, 
 				    GfsVariableTracerVOF * t);
+gdouble  gfs_vof_face_fraction     (const FttCellFace * face,
+				    GfsVariableTracerVOF * t);
 guint    gfs_vof_facet             (FttCell * cell,
 				    GfsVariableTracerVOF * t,
 				    FttVector * p,

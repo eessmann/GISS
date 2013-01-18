@@ -3600,3 +3600,74 @@ GfsVariable * gfs_closest_height (FttCell * cell,
 }
 
 /** \endobject{GfsVariableTracerVOFHeight} */
+
+static gdouble interface_fractions (FttVector m, gdouble alpha, FttDirection d)
+{
+  gdouble f;
+#if FTT_2D
+  FttComponent c1 = d >1,c2 = !c1;
+  if((&m.x)[c2] == 0) {
+    gdouble sign =(d % 2 ? -1. : 1.);
+    f = (sign*(&m.x)[c1] > 0.) ? 0. : 1.;
+  }
+  else {
+    f = (alpha-(&m.x)[c1]*!(d % 2))/(&m.x)[c2];
+    if(f < 0.) f = 0.; else if (f > 1.) f = 1.;
+    if((&m.x)[c2] < 0.) f = 1.-f;
+  }
+#else /*3D*/
+  FttComponent c1 = (d/2+1) % 3, c2 = (d/2+2) % 3;
+  FttVector mp;
+  mp.x = (&m.x)[c1];
+  mp.y = (&m.x)[c2];
+  f = gfs_line_area (&mp, d % 2 ? alpha : alpha - (&m.x)[d/2]);
+#endif /*3D*/
+  return f;
+}
+
+gdouble gfs_vof_face_fraction (const FttCellFace * face,
+			       GfsVariableTracerVOF * t)
+{
+  g_return_val_if_fail (face != NULL, 0.);
+  g_return_val_if_fail (t != NULL, 0.);
+
+  GfsVariable * v = GFS_VARIABLE (t);
+  gdouble vright, vleft = GFS_VALUE (face->cell, v);
+
+  if (vleft == 0.)
+    return 0.;
+  else if (vleft != 1.0) {
+    FttComponent c;
+    FttVector m;
+    gdouble alpha;
+    for(c = 0; c < FTT_DIMENSION; c++)
+      (&m.x)[c] = GFS_VALUE(face->cell,t->m[c]);
+    alpha = GFS_VALUE(face->cell, t->alpha);
+    vleft = interface_fractions (m, alpha, face->d);
+  }
+
+  vright = GFS_VALUE (face->neighbor, v);
+  if (vright == 0.)
+    return 0.;
+  else if (vright != 1.0) {
+    FttComponent c;
+    FttVector m;
+    gdouble alpha;
+    for(c = 0; c < FTT_DIMENSION; c++)
+      (&m.x)[c] = GFS_VALUE(face->neighbor,t->m[c]);
+    alpha = GFS_VALUE(face->neighbor, t->alpha);
+    if (ftt_face_type (face) == FTT_FINE_COARSE) {
+      FttVector p, o, q;
+      ftt_face_pos (face, &p);
+      ftt_cell_pos (face->neighbor, &o);
+      ftt_cell_pos (face->cell, &q);
+      gdouble h = ftt_cell_size (face->neighbor);
+      (&p.x)[face->d/2] += face->d % 2 ? -h/4. : h/4.;
+      for (c = 0; c < FTT_DIMENSION; c++)
+	alpha -= (&m.x)[c]*(0.25 + ((&p.x)[c] - (&o.x)[c])/h);
+      alpha *= 2.;
+    }
+    vright = interface_fractions (m, alpha, FTT_OPPOSITE_DIRECTION (face->d));
+  }
+  return sqrt(vleft*vright);
+}
