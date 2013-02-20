@@ -212,7 +212,10 @@ struct _GfsDiffusion {
   /*< public >*/
   GfsFunction * val;
   GfsVariable * mu;
+  GfsVariable * phase;
   GfsMultilevelParams par;
+  gdouble (* face)  (GfsDiffusion *, FttCellFace *);
+  gdouble (* cell)  (GfsDiffusion *, FttCell *);
 };
 
 typedef struct _GfsDiffusionClass    GfsDiffusionClass;
@@ -222,8 +225,6 @@ struct _GfsDiffusionClass {
   GfsEventClass parent_class;
 
   /*< public >*/
-  gdouble (* face)  (GfsDiffusion *, FttCellFace *);
-  gdouble (* cell)  (GfsDiffusion *, FttCell *);
 };
 
 #define GFS_DIFFUSION(obj)            GTS_OBJECT_CAST (obj,\
