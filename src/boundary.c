@@ -693,9 +693,10 @@ static void is_extra (GfsVariable * v, GfsBc * bc, gboolean * extra)
 static void write_extra (GfsVariable * v, GfsBc * bc, FILE * fp)
 {
   if (bc->extra) {
-    g_assert (GTS_OBJECT (bc)->klass->write);
-    (* GTS_OBJECT (bc)->klass->write) (GTS_OBJECT (bc), fp);
-    fputc ('\n', fp);
+    if(GTS_OBJECT (bc)->klass->write) {
+      (* GTS_OBJECT (bc)->klass->write) (GTS_OBJECT (bc), fp);
+      fputc ('\n', fp);
+    }
   }
 }
 
