@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2013 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1067,7 +1067,7 @@ static void source_diffusion_read (GtsObject ** o, GtsFile * fp)
     gfs_function_set_units (d->D->val, 
 			    2. + GFS_SOURCE_SCALAR (*o)->v->units - d->phi->units);
   }
-  if(GFS_IS_VARIABLE_VOF_CONCENTRATION (GFS_SOURCE_SCALAR (d)->v)) {
+  if (GFS_IS_VARIABLE_VOF_CONCENTRATION (GFS_SOURCE_SCALAR (d)->v)) {
     d->D->phase = GFS_VARIABLE (GFS_VARIABLE_VOF_CONCENTRATION (GFS_SOURCE_SCALAR (d)->v)->vof);
     d->D->face = diffusion_concentration_face;
     d->D->cell = diffusion_concentration_cell;

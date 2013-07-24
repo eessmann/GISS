@@ -3605,9 +3605,9 @@ static gdouble interface_fractions (FttVector m, gdouble alpha, FttDirection d)
 {
   gdouble f;
 #if FTT_2D
-  FttComponent c1 = d >1,c2 = !c1;
-  if((&m.x)[c2] == 0) {
-    gdouble sign =(d % 2 ? -1. : 1.);
+  FttComponent c1 = d > 1, c2 = !c1;
+  if ((&m.x)[c2] == 0) {
+    gdouble sign = (d % 2 ? -1. : 1.);
     f = (sign*(&m.x)[c1] > 0.) ? 0. : 1.;
   }
   else {
@@ -3615,13 +3615,13 @@ static gdouble interface_fractions (FttVector m, gdouble alpha, FttDirection d)
     if(f < 0.) f = 0.; else if (f > 1.) f = 1.;
     if((&m.x)[c2] < 0.) f = 1.-f;
   }
-#else /*3D*/
+#else /* 3D */
   FttComponent c1 = (d/2+1) % 3, c2 = (d/2+2) % 3;
   FttVector mp;
   mp.x = (&m.x)[c1];
   mp.y = (&m.x)[c2];
   f = gfs_line_area (&mp, d % 2 ? alpha : alpha - (&m.x)[d/2]);
-#endif /*3D*/
+#endif /* 3D */
   return f;
 }
 
@@ -3641,8 +3641,8 @@ gdouble gfs_vof_face_fraction (const FttCellFace * face,
     FttVector m;
     gdouble alpha;
     for(c = 0; c < FTT_DIMENSION; c++)
-      (&m.x)[c] = GFS_VALUE(face->cell,t->m[c]);
-    alpha = GFS_VALUE(face->cell, t->alpha);
+      (&m.x)[c] = GFS_VALUE (face->cell, t->m[c]);
+    alpha = GFS_VALUE (face->cell, t->alpha);
     vleft = interface_fractions (m, alpha, face->d);
   }
 
@@ -3654,8 +3654,8 @@ gdouble gfs_vof_face_fraction (const FttCellFace * face,
     FttVector m;
     gdouble alpha;
     for(c = 0; c < FTT_DIMENSION; c++)
-      (&m.x)[c] = GFS_VALUE(face->neighbor,t->m[c]);
-    alpha = GFS_VALUE(face->neighbor, t->alpha);
+      (&m.x)[c] = GFS_VALUE (face->neighbor,t->m[c]);
+    alpha = GFS_VALUE (face->neighbor, t->alpha);
     if (ftt_face_type (face) == FTT_FINE_COARSE) {
       FttVector p, o, q;
       ftt_face_pos (face, &p);
