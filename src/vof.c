@@ -1579,10 +1579,14 @@ static void initialize_dV (FttCell * cell, GfsVariable * dV)
   GFS_VALUE (cell, dV) = 1.;
 }
 
-static void reset_fluxes (FttCell * cell, VofParms * p)
+static void reset_fluxes (FttCellFace * face, VofParms * p)
 {
-  GFS_VALUE (cell, p->par->fv) = 0.;
-  GFS_VALUE (cell, p->vpar.fv) = 0.;
+  GFS_VALUE (face->cell, p->par->fv) = GFS_VALUE (face->neighbor, p->par->fv) = 0.;
+  GFS_VALUE (face->cell, p->vpar.fv) = GFS_VALUE (face->neighbor, p->vpar.fv) = 0.;
+}
+
+static void grad_u (FttCell * cell, VofParms * p)
+{
   FttComponent c, d = FTT_ORTHOGONAL_COMPONENT (p->c);
   for (c = 0; c < FTT_DIMENSION - 1; c++) {
     GFS_VALUE (cell, p->du[c]) = gfs_center_gradient (cell, d, p->u->i)/ftt_cell_size (cell);
@@ -1672,7 +1676,10 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
     p.c = (cstart + c) % FTT_DIMENSION;
     fix_too_coarse (domain, &p);
     p.u = gfs_domain_velocity (domain)[p.c];
-    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) reset_fluxes, &p);
+    gfs_domain_face_traverse (domain, p.c,
+			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) reset_fluxes, &p);
+    gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) grad_u, &p);
     for (d = 0; d < FTT_DIMENSION - 1; d++)
       gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.du[d]);
     gfs_domain_face_traverse (domain, p.c,

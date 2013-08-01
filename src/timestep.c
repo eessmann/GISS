@@ -874,8 +874,8 @@ static void variable_sources (GfsDomain * domain,
     par->g = gmac;
     par->fv = gfs_temporary_variable (domain);
     par->upwinding = GFS_FACE_UPWINDING;
-    gfs_domain_cell_traverse (domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttCellTraverseFunc) gfs_cell_reset, par->fv);
+    gfs_domain_face_traverse (domain, FTT_XYZ, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
+			      (FttFaceTraverseFunc) gfs_face_reset, par->fv);
     gfs_add_sinking_velocity (domain, par->sink);
     face_values_set ((FttCellTraverseFunc) gfs_cell_advected_face_values, par);
     gfs_domain_face_traverse (domain, FTT_XYZ,

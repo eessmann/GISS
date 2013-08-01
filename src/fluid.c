@@ -1985,6 +1985,21 @@ void gfs_cell_reset (FttCell * cell, GfsVariable * v)
   GFS_VALUE (cell, v) = 0.;
 }
 
+/**
+ * gfs_face_reset:
+ * @face: a #FttCellFace.
+ * @v: a #GfsVariable to reset.
+ *
+ * Sets the value of the variable @v of @face to zero (on both sides).
+ */
+void gfs_face_reset (FttCellFace * face, GfsVariable * v)
+{
+  g_return_if_fail (face != NULL);
+  g_return_if_fail (v != NULL);
+
+  GFS_VALUE (face->cell, v) = GFS_VALUE (face->neighbor, v) = 0.;
+}
+
 static void add_stats (const FttCell * cell, gpointer * data)
 {
   GtsRange * s = data[0];
