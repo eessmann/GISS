@@ -22,7 +22,7 @@
 #if defined (__LP64__) || defined (__64BIT__) || defined (_LP64) || (__WORDSIZE == 64)
   #define PADDING_32_BITS
 #else
-  #define PADDING_32_BITS int padding
+  #define PADDING_32_BITS int padding;
 #endif
 
 FILE * kdt_tmpfile (void);
