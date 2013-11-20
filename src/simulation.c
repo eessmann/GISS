@@ -2340,3 +2340,31 @@ GfsSimulationClass * gfs_axi_class (void)
 }
 
 /** \endobject{GfsAxi} */
+
+/**
+ * The axisymmetric advection solver.
+ * \beginobject{GfsAdvectionAxi}
+ */
+
+GfsSimulationClass * gfs_advection_axi_class (void)
+{
+  static GfsSimulationClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_advection_axi_info = {
+      "GfsAdvectionAxi",
+      sizeof (GfsSimulation),
+      sizeof (GfsSimulationClass),
+      (GtsObjectClassInitFunc) gfs_advection_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_axi_class ()),
+				  &gfs_advection_axi_info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsAdvectionAxi} */
