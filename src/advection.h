@@ -58,7 +58,7 @@ struct _GfsAdvectionParams {
   gboolean average, gc;
   GfsMergedTraverseFunc update;
   guint moving_order;
-  GtsVector sink;
+  GfsFunction * sink[FTT_DIMENSION];
   gboolean linear;
   void (* diffusion_solve) (GfsDomain * domain,
 			    GfsMultilevelParams * par,

@@ -559,11 +559,11 @@ static gdouble simulation_cfl (GfsSimulation * sim)
     GfsVariable * v = i->data;
 
     if (GFS_IS_VARIABLE_TRACER (v) && 
-	GFS_VARIABLE_TRACER (v)->advection.scheme != GFS_NONE &&
-	gts_vector_norm (GFS_VARIABLE_TRACER (v)->advection.sink) > 0.) {
-      gfs_add_sinking_velocity (GFS_DOMAIN (sim), GFS_VARIABLE_TRACER (v)->advection.sink);
+ 	GFS_VARIABLE_TRACER (v)->advection.scheme != GFS_NONE &&
+	GFS_VARIABLE_TRACER (v)->advection.sink[0]) {
+      gfs_add_sinking_velocity (GFS_DOMAIN (sim), &GFS_VARIABLE_TRACER (v)->advection);
       gdouble cfl = gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
-      gfs_remove_sinking_velocity (GFS_DOMAIN (sim), GFS_VARIABLE_TRACER (v)->advection.sink);
+      gfs_remove_sinking_velocity (GFS_DOMAIN (sim), &GFS_VARIABLE_TRACER (v)->advection);
       if (cfl < cflmin)
 	cflmin = cfl;
     }

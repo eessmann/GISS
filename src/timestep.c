@@ -811,10 +811,10 @@ static void add_pressure_gradient (FttCell * cell, GfsAdvectionParams * par)
   GFS_VALUE (cell, par->fv) -= GFS_VALUE (cell, par->g[par->v->component])*par->dt;
 }
 
-static void add_sinking (FttCellFace * face, GtsVector sink)
+static void add_sinking (FttCellFace * face, GfsAdvectionParams * par)
 {
-  GFS_FACE_NORMAL_VELOCITY_LEFT (face) += sink[face->d/2];
-  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) += sink[face->d/2];
+  GFS_FACE_NORMAL_VELOCITY_LEFT (face) += gfs_function_face_value ( par->sink[face->d/2], face);
+  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) +=  gfs_function_face_value (par->sink[face->d/2], face);
 }
 
 /**
@@ -825,21 +825,21 @@ static void add_sinking (FttCellFace * face, GtsVector sink)
  * Adds the constant sinking velocity to the MAC
  * velocity field of @domain.
  */
-void gfs_add_sinking_velocity (GfsDomain * domain, GtsVector sinking)
+void gfs_add_sinking_velocity (GfsDomain * domain, GfsAdvectionParams * par)
 {
   g_return_if_fail (domain != NULL);
-  g_return_if_fail (sinking != NULL);
+  g_return_if_fail (par != NULL);
 
-  if (gts_vector_norm (sinking) > 0.)
+  if (par->sink[0])
     gfs_domain_face_traverse (domain, FTT_XYZ,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) add_sinking, sinking);
+			      (FttFaceTraverseFunc) add_sinking, par);
 }
 
-static void remove_sinking (FttCellFace * face, GtsVector sink)
+static void remove_sinking (FttCellFace * face, GfsAdvectionParams * par)
 {
-  GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= sink[face->d/2];
-  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= sink[face->d/2];
+  GFS_FACE_NORMAL_VELOCITY_LEFT (face) -= gfs_function_face_value (par->sink[face->d/2], face);
+  GFS_FACE_NORMAL_VELOCITY_RIGHT (face) -= gfs_function_face_value (par->sink[face->d/2], face);
 }
 
 /**
@@ -850,15 +850,15 @@ static void remove_sinking (FttCellFace * face, GtsVector sink)
  * Removes the constant sinking velocity from the MAC
  * velocity field of @domain.
  */
-void gfs_remove_sinking_velocity (GfsDomain * domain, GtsVector sinking)
+void gfs_remove_sinking_velocity (GfsDomain * domain, GfsAdvectionParams * par)
 {
   g_return_if_fail (domain != NULL);
-  g_return_if_fail (sinking != NULL);
+  g_return_if_fail (par != NULL);
 
-  if (gts_vector_norm (sinking) > 0.)
+  if (par->sink[0])
     gfs_domain_face_traverse (domain, FTT_XYZ,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
-			      (FttFaceTraverseFunc) remove_sinking, sinking);
+			      (FttFaceTraverseFunc) remove_sinking, par);
 }
 
 static void variable_sources (GfsDomain * domain,
@@ -876,12 +876,12 @@ static void variable_sources (GfsDomain * domain,
     par->upwinding = GFS_FACE_UPWINDING;
     gfs_domain_face_traverse (domain, FTT_XYZ, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) gfs_face_reset, par->fv);
-    gfs_add_sinking_velocity (domain, par->sink);
+    gfs_add_sinking_velocity (domain, par);
     face_values_set ((FttCellTraverseFunc) gfs_cell_advected_face_values, par);
     gfs_domain_face_traverse (domain, FTT_XYZ,
 			      FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 			      (FttFaceTraverseFunc) par->flux, par);
-    gfs_remove_sinking_velocity (domain, par->sink);
+    gfs_remove_sinking_velocity (domain, par);
     par->v = sv;
     gfs_domain_traverse_merged (domain, par->update, par);
     par->v = v;

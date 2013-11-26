@@ -98,6 +98,14 @@ static void gfs_variable_destroy (GtsObject * object)
     v->domain->variables = g_slist_remove (v->domain->variables, v);
   }
 
+  if (GFS_IS_VARIABLE_TRACER (v)) {
+    FttComponent c;
+    GfsVariableTracer * t = GFS_IS_VARIABLE_TRACER (v);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      if (t->advection.sink[c])
+	gts_object_destroy (GTS_OBJECT (t->advection.sink[c]));
+  }
+
   (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->destroy) (object);
 }
 
