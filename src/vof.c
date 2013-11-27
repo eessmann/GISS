@@ -1197,6 +1197,7 @@ typedef struct {
   GfsVariable * u, * du[FTT_DIMENSION - 1], * vof;
   FttComponent c;
   GfsDomain * domain;
+  GfsFunction * sink;
   guint depth, too_coarse;
 } VofParms;
 
@@ -1465,7 +1466,11 @@ static void concentration_face_values (FttCell * cell, VofParms * p)
 {
   GfsStateVector * s = GFS_STATE (cell);
   gdouble size = ftt_cell_size (cell);
+  if (p->domain->scale_metric)
+      size *= (* p->domain->scale_metric) (p->domain, cell, p->c);
   gdouble unorm = p->par->dt*(s->f[2*p->c].un + s->f[2*p->c + 1].un)/(2.*size);
+  if(p->sink)
+    unorm += p->par->dt*gfs_function_value (p->sink, cell)/size;
   gdouble g = (* p->par->gradient) (cell, p->c, p->par->v->i);
   gdouble v = GFS_VALUE (cell, p->par->v);
   s->f[2*p->c].v     = v + MIN ((  1. - unorm)/2.,  0.5)*g;
@@ -1477,6 +1482,8 @@ static void vof_flux (FttCellFace * face, VofParms * p)
 {
   gdouble size = ftt_cell_size (face->cell);
   gdouble un = GFS_FACE_NORMAL_VELOCITY (face)*p->par->dt/size, dun[FTT_DIMENSION - 1];
+  if(p->sink)
+    un += gfs_function_face_value (p->sink, face)*p->par->dt/size;
   FttComponent c;
 
   int n; /* loop over n "horizontal bands" */
@@ -1633,6 +1640,16 @@ static void per_cell_volume (FttCell * cell, GfsVariable * v)
   GFS_VALUE (cell, v) *= GFS_VALUE (cell, vof);
 }
 
+static void add_sink_velocity (FttCell * cell, VofParms * p)
+{
+    GFS_VALUE (cell, p->u) += gfs_function_value (p->sink, cell);
+}
+
+static void remove_sink_velocity (FttCell * cell, VofParms * p)
+{
+    GFS_VALUE (cell, p->u) -= gfs_function_value (p->sink, cell);
+}
+
 /**
  * gfs_tracer_vof_advection:
  * @domain: a #GfsDomain.
@@ -1657,6 +1674,7 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
 
   p.par = par;
   p.vof = par->v;
+  p.sink = NULL;
   gfs_advection_params_init (&p.vpar);
   for (d = 0; d < FTT_DIMENSION - 1; d++)
     p.du[d] = gfs_temporary_variable (domain);
@@ -1692,11 +1710,25 @@ void gfs_tracer_vof_advection (GfsDomain * domain,
       p.par->v = j->data;
       p.par->fv = par->fv;
       p.par->gradient = par->gradient;
+      if (par->sink[0]) {
+	p.sink = par->sink[p.c];
+	gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) add_sink_velocity, &p);
+	gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) grad_u, &p);
+	for (d = 0; d < FTT_DIMENSION - 1; d++)
+	  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.du[d]);
+      }
       gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) concentration_face_values, &p);
       gfs_domain_face_bc (domain, p.c, p.par->v);
       gfs_domain_face_traverse (domain, p.c,
 				FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
 				(FttFaceTraverseFunc) vof_flux, &p);
+      if (p.sink) {
+	gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) remove_sink_velocity, &p);
+	p.sink = NULL;
+	gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) grad_u, &p);
+	for (d = 0; d < FTT_DIMENSION - 1; d++)
+	  gfs_domain_bc (domain, FTT_TRAVERSE_LEAFS, -1, p.du[d]);
+      }
       gfs_domain_traverse_leaves (domain, (FttCellTraverseFunc) concentration_times_dV, &p);
       gfs_domain_traverse_merged (domain, (GfsMergedTraverseFunc) par->update, par);
       p.par->fv = fv;
