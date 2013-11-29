@@ -995,17 +995,17 @@ void gfs_advection_params_read (GfsAdvectionParams * par, GtsFile * fp)
 
   if (par->v) {
     FttComponent c;
-    for( c = 0; c < FTT_DIMENSION; c++)
+    for (c = 0; c < FTT_DIMENSION; c++)
       if (!var[7+c].set) {
 	gts_object_destroy (GTS_OBJECT (par->sink[c]));
 	par->sink[c] = NULL;
       }
- #if FTT_2D
-    if((var[7].set + var[8].set) % 2)
-      gts_file_error (fp, "It must be set either vx and vy.");
+#if FTT_2D
+    if ((var[7].set + var[8].set) % 2)
+      gts_file_error (fp, "either vx or vy must be set");
 #else
-    if((var[7].set + var[8].set + var[9].set) % 3)
-      gts_file_error (fp, "It must be set either vx, vy and vz.");
+    if ((var[7].set + var[8].set + var[9].set) % 3)
+      gts_file_error (fp, "either vx, vy or vz must be set");
 #endif
   }
 

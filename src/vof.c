@@ -1469,7 +1469,7 @@ static void concentration_face_values (FttCell * cell, VofParms * p)
   if (p->domain->scale_metric)
       size *= (* p->domain->scale_metric) (p->domain, cell, p->c);
   gdouble unorm = p->par->dt*(s->f[2*p->c].un + s->f[2*p->c + 1].un)/(2.*size);
-  if(p->sink)
+  if (p->sink)
     unorm += p->par->dt*gfs_function_value (p->sink, cell)/size;
   gdouble g = (* p->par->gradient) (cell, p->c, p->par->v->i);
   gdouble v = GFS_VALUE (cell, p->par->v);
@@ -1482,7 +1482,7 @@ static void vof_flux (FttCellFace * face, VofParms * p)
 {
   gdouble size = ftt_cell_size (face->cell);
   gdouble un = GFS_FACE_NORMAL_VELOCITY (face)*p->par->dt/size, dun[FTT_DIMENSION - 1];
-  if(p->sink)
+  if (p->sink)
     un += gfs_function_face_value (p->sink, face)*p->par->dt/size;
   FttComponent c;
 
@@ -1642,12 +1642,12 @@ static void per_cell_volume (FttCell * cell, GfsVariable * v)
 
 static void add_sink_velocity (FttCell * cell, VofParms * p)
 {
-    GFS_VALUE (cell, p->u) += gfs_function_value (p->sink, cell);
+  GFS_VALUE (cell, p->u) += gfs_function_value (p->sink, cell);
 }
 
 static void remove_sink_velocity (FttCell * cell, VofParms * p)
 {
-    GFS_VALUE (cell, p->u) -= gfs_function_value (p->sink, cell);
+  GFS_VALUE (cell, p->u) -= gfs_function_value (p->sink, cell);
 }
 
 /**

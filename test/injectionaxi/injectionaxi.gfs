@@ -2,12 +2,12 @@
 #
 # Description:
 #
-# A unipolar injection is stablished between an inner cylindrical core 
-# and an outer grounded cylinder by means of a voltage difference. 
-# The gap between cylinders is filled with a dielectric media. 
-# A front of charge traverse the dielectric medium and finally the 
-# steady solution shown in figure \ref{unipolar} is reached. 
-# The simulation uses the metric (polar coordinates).  
+# A unipolar injection is established between an inner cylindrical
+# core and an outer grounded cylinder by means of a voltage
+# difference.  The gap between cylinders is filled with a dielectric
+# medium. A front of charge traverses the dielectric medium and finally
+# the steady solution shown in figure \ref{unipolar} is reached.  The
+# simulation uses a polar coordinate metric.
 # \begin{figure}[htbp]
 # \caption{\label{unipolar} Radial distribution of the charge density 
 # and electric potential. (Continuous) analytical solution, (symbols)
