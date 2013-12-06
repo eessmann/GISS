@@ -16,9 +16,9 @@
 # \end{figure}
 # 
 # Author: Dustin Langewisch
-# Command: bash ../bubble.sh cap.gfs
+# Command: bash bubble.sh cap.gfs
 # Version: 130112
-# Required files: bubble.gfv
+# Required files: bubble.sh bubble.gfv
 # Running time: 7 min (4 processors)
 # Generated files: vel.eps
 
