@@ -820,10 +820,9 @@ static void add_sinking (FttCellFace * face, GfsAdvectionParams * par)
 /**
  * gfs_add_sinking_velocity:
  * @domain: a #GfsDomain.
- * @sinking: the sinking velocity vector.
+ * @par: the advection parameters.
  *
- * Adds the constant sinking velocity to the MAC
- * velocity field of @domain.
+ * Adds the sinking velocity to the MAC velocity field of @domain.
  */
 void gfs_add_sinking_velocity (GfsDomain * domain, GfsAdvectionParams * par)
 {
@@ -845,10 +844,9 @@ static void remove_sinking (FttCellFace * face, GfsAdvectionParams * par)
 /**
  * gfs_remove_sinking_velocity:
  * @domain: a #GfsDomain.
- * @sinking: the sinking velocity vector.
+ * @par: the advection parameters.
  *
- * Removes the constant sinking velocity from the MAC
- * velocity field of @domain.
+ * Removes the sinking velocity from the MAC velocity field of @domain.
  */
 void gfs_remove_sinking_velocity (GfsDomain * domain, GfsAdvectionParams * par)
 {
