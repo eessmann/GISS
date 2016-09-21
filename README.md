@@ -1,2 +1,2 @@
 # GISS
-The Gerrie based Solid-Fluid system solver
+The Gerris based Solid-Fluid system solver
