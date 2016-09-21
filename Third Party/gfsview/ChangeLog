@@ -1,0 +1,1540 @@
+Fri Nov 30 01:17:35 CET 2012  Release
+  tagged 2012-11-29
+
+Thu Nov 29 21:11:28 CET 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Added missing libgfs library dependencies
+  Ignore-this: 61a8ad032c9c0320e918e1e3152321bb
+
+Wed Nov 28 22:25:03 CET 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Renamed configure.in to configure.ac
+  Ignore-this: 3b64f55757b93b387423b3856adebdba
+
+Tue Nov 27 05:59:50 CET 2012  Release
+  tagged 2012-11-26
+
+Mon Nov 26 02:22:56 CET 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Apply pending GfsFunction compilations
+  Ignore-this: 29501f53730caad3da2e59121df3c33c
+
+Fri Jul  6 13:27:04 CEST 2012  Release
+  tagged 2012-07-06
+
+Fri Jul  6 08:26:55 CEST 2012  Stephane Popinet <popinet@users.sf.net>
+  * Floating-point exceptions are disabled completely for GfsView
+  Ignore-this: c844d51fa6ac46c5611b07e2d03e4b00
+  
+  Many external graphical libraries (not least those in Ubuntu) generate
+  floating-point exceptions which can cause gfsview to crash.
+
+Tue Jul  3 12:32:22 CEST 2012  Release
+  tagged 2012-06-17
+
+Sun Jun 17 11:51:28 CEST 2012  Stephane Popinet <popinet@users.sf.net>
+  * Fixed RPM dependencies
+  Ignore-this: 6250379d5d0c7cbb8fd1cf661e418723
+
+Fri Apr 27 10:29:31 CEST 2012  Release
+  tagged 2012-04-26
+
+Thu Apr 26 23:49:24 CEST 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Fix for compilation flags on Mac OSX
+  Ignore-this: 52b8f5c254dbf0fda00218c899f3e2af
+
+Mon Dec 19 08:49:17 CET 2011  stephane.zaleski@gmail.com
+  * Fixes to let autogen.sh work on MacOS X - Darwin
+  Ignore-this: c3e909db800702042118327ff1418cbe
+
+Thu Apr 26 11:30:05 CEST 2012  Release
+  tagged 2012-04-26
+
+Thu Apr 26 06:56:40 CEST 2012  Stephane Popinet <s.popinet@gmail.com>
+  * KML file format needs more precision for lon/lat
+  Ignore-this: d4d6cecdc754e2b1a21707ded5dcf40c
+
+Mon Mar 26 07:32:08 CEST 2012  Release
+  tagged 2012-03-26
+
+Mon Mar 26 05:09:15 CEST 2012  Stephane Popinet <s.popinet@gmail.com>
+  * New object GfsGlPipes
+  Ignore-this: fa990754515e0572367c26e330449ebc
+
+Sun Mar 25 08:54:01 CEST 2012  Stephane Popinet <s.popinet@gmail.com>
+  * RPM fixes for Fedora 16 and CentOS 6
+  Ignore-this: 51f47a9e327d10bb7b0665a8ae5575dc
+
+Wed Feb 29 08:57:34 CET 2012  Release
+  tagged 2012-02-29
+
+Wed Feb 29 03:23:50 CET 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Added two colormaps Gray and Cool-Warm
+  Ignore-this: 7a9034539f2d0470c5316a851acd64a0
+  
+  Thanks to Tim Divett for the suggestion.
+
+Fri Feb 24 07:38:17 CET 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Removed obsolete deferred compilation stuff
+  Ignore-this: 7ae908c71318dfeb92f505d20c0e1229
+
+Tue Feb 21 06:49:20 CET 2012  Release
+  tagged 2012-02-21
+
+Tue Feb 21 04:31:03 CET 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Fix for out-of-tree build breakage
+  Ignore-this: fd061abc037c89f6d589bf4a81fbfe8c
+
+Tue Feb 21 03:50:26 CET 2012  Release
+  tagged 2012-02-19
+
+Sun Feb 19 23:25:50 CET 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Google Earth KML file export
+  Ignore-this: e8f6cf1c8b42456adb2d14f56ef4c9ab
+
+Fri Feb 17 04:44:18 CET 2012  Jonathan Underwood <jonathan.underwood@gmail.com>
+  * fix errors in Makefile.am files which break out-of-tree builds
+  Ignore-this: 25c008e4743b4be7b1175273d7f8a9ab
+
+Tue Jan 31 05:46:31 CET 2012  Release
+  tagged 2012-01-30
+
+Mon Jan 30 22:44:16 CET 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Consistent use of GFS_VALUE and GFS_VARIABLE
+  Ignore-this: 968280a91f915914a5beaeff0255a028
+
+Tue Oct 18 06:43:00 CEST 2011  Release
+  tagged 2011-10-13
+
+Thu Oct 13 23:26:42 CEST 2011  Stephane Popinet <s.popinet@gmail.com>
+  * Turned off floating-point exceptions due to crappy OpenGL drivers
+  Ignore-this: 6c48310c69f2839c57a47e2c619afce1
+
+Tue Oct  4 01:39:05 CEST 2011  Release
+  tagged 2011-10-03
+
+Mon Oct  3 22:45:56 CEST 2011  Stephane Popinet <s.popinet@gmail.com>
+  * Gnuplot and OBJ outputs are always at finest resolution also in batch mode
+  Ignore-this: 61cf376069b1528117bb7a3251560e6e
+
+Tue Sep 20 13:32:14 CEST 2011  Release
+  tagged 2011-09-19
+
+Mon Sep 19 12:01:22 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * Removed useless recursion for connected isolines
+  Ignore-this: 617be11e8e0e15e95c99540db6e0661a
+
+Tue Sep 13 09:58:24 CEST 2011  Release
+  tagged 2011-09-11
+
+Mon Sep 12 00:52:47 CEST 2011  Stephane Popinet <s.popinet@gmail.com>
+  * New object GfsGlHeight to display height-functions
+  Ignore-this: 8628776312585b9f602c81f997b13cd5
+
+Sun Sep  4 11:26:12 CEST 2011  Release
+  tagged 2011-08-30
+
+Tue Aug 30 23:29:03 CEST 2011  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Gnuplot and OBJ outputs are always at finest resolution
+  Ignore-this: e2703867615e6861097d73c1e38826a2
+
+Tue Aug 30 06:34:10 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * updated gl2ps to 1.3.6
+  Ignore-this: 21913e6bc2126c3c490d18b66eb5da24
+
+Sat May 28 21:35:36 CEST 2011  Release
+  tagged 2011-05-28
+
+Sat May 28 13:00:47 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * Fix for isolines entering boundary cells
+  Ignore-this: a080c4f34acbdcb51d251e4fa4f304d9
+
+Fri May 27 22:59:06 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * Scripting implementation uses glib callbacks rather than X11 messages
+  Ignore-this: 96b679699ab26c651649ee5d4400f4f5
+
+Fri May 27 22:53:14 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * Updated gl2ps to 1.3.5
+  Ignore-this: dc5a515b8078c2050b79288c389adc6c
+
+Fri May 27 17:27:02 CEST 2011  Release
+  tagged 2011-05-27
+
+Fri May 27 15:15:31 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * Rotations are confined to the plane in 2D (unless the Shift key is held)
+  Ignore-this: 16fafabbe7f2d0174107ce4705a532a8
+
+Fri May 27 15:14:48 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * Better locking for scripting thread
+  Ignore-this: e6cb1662a02b03655ca83674c03a1a9f
+
+Fri May 27 15:11:31 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * Added support for line width
+  Ignore-this: 9cf26cb2362b3ccdf214e8d2910ea46c
+
+Fri May 27 02:30:29 CEST 2011  Release
+  tagged 2011-05-26
+
+Fri May 27 00:51:48 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * Isolines are now continuous (in 2D only)
+  Ignore-this: 5ecbe3c91140792efda8fcca7f60b39f
+
+Wed May 25 23:39:56 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * Cleanup of obsolete GFS_VARIABLE macro
+  Ignore-this: 3b0247e2ecfd75ee7778781f62284226
+
+Tue May 24 23:21:09 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * Moved library dependencies where they belong
+  Ignore-this: 7e6db24eea152939119fd6f1afda8276
+
+Thu May 26 16:32:06 CEST 2011  Release
+  tagged 2011-05-24
+
+Tue May 24 19:41:53 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  tagged 2011-05-23
+
+Mon May 23 22:23:21 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * We now assume that OSMesa works on Mac OSX.
+  Ignore-this: 8734164e325abfc14f3932f7feb50b7c
+
+Sun Jan 30 05:39:39 CET 2011  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2011-01-27
+  Ignore-this: 8db2daf3e35ea635db8835f01e4065f7
+
+Thu Jan 27 20:09:59 CET 2011  Stephane Popinet <s.popinet@niwa.co.nz>
+  * rpm spec file now builds MPI version on Centos
+  Ignore-this: 8aac7401e7fd669192a7bda92f41cc44
+
+Sat Jan 22 05:38:39 CET 2011  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2011-01-21
+  Ignore-this: a543c90fb0a93923a6694f56d239c34c
+
+Fri Jan 21 09:47:24 CET 2011  Stephane Popinet <popinet@users.sf.net>
+  * Fixed rpm spec file for libgfsgl distribution
+  Ignore-this: a3a357c6cca23835021d6aa213a0d343
+
+Fri Jan 21 05:41:06 CET 2011  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2011-01-19
+  Ignore-this: 562fd673256a1e8abe14d7d0d44a1bfd
+
+Wed Jan 19 12:08:56 CET 2011  Stephane Popinet <popinet@users.sf.net>
+  * libgfsgl.so is installed as a dynamic library
+  Ignore-this: 8d3e19e06e4221c809a2c3a6357d128c
+  
+  This should fix bugs when loading gerris files which also use the gfsview
+  module.
+
+Mon Jan 10 05:35:18 CET 2011  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2011-01-09
+  Ignore-this: 83a5d998588d4bc6cbabbab6e814dc1a
+
+Sun Jan  9 18:41:10 CET 2011  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Colorscale can be displayed
+  Ignore-this: 4c63222b78b646b08b56fe7bcbfa1c34
+
+Sat Dec  4 05:32:41 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-12-03
+  Ignore-this: 76f630b5547502ae3d232d8068da2c04
+
+Fri Dec  3 17:27:55 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  * MacOSX needs the '-module' flag for libtool
+  Ignore-this: ae3b6ea023c1f85ae69be8225036d0b0
+
+Thu Dec  2 09:58:24 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  * Added missing dependencies for interactive version
+  Ignore-this: d0d1cabdd686cf8bd403968afebb4c67
+
+Thu Dec  2 09:56:00 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  * Bug fix for double free in GfsGlLabel
+  Ignore-this: 2a3bacb1989d214da4824a40654abe8b
+
+Wed Dec  1 22:43:07 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Font textures need to be reset when contexts are switched
+  Ignore-this: c235f569fe13399630c955548b612bc4
+
+Mon Nov 29 09:52:59 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Labels can contain formatted time, pid, iteration
+  Ignore-this: efd3210ee549c161de1f789dfbbf20db
+
+Fri Nov 19 15:15:53 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  * batch mode and modules need to be linked with GLU
+  Ignore-this: 16236e6cef8fe183b0d74025263849ee
+
+Fri Nov 12 05:34:16 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-11-09
+  Ignore-this: 5c20dd0816cb5155576b5f24d255eb1f
+
+Tue Nov  9 15:30:34 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  * Fixed spec file for CentOS and Fedora
+  Ignore-this: 710e372b32849c2b9406a13687a242c
+
+Fri Nov  5 05:12:05 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Display simulation time in window title
+  Ignore-this: be9a4b50f31370710189f43c53de6ebd
+
+Thu Sep 23 14:23:36 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-09-22
+  Ignore-this: e25ce9dfe3cb0d0c39a24f4681b34e61
+
+Wed Sep 22 16:03:56 CEST 2010  Stephane Popinet <popinet@users.sf.net>
+  * Fix for gfs_sphere_in_frustum()
+  Ignore-this: e44aa8295d62714657ab921ff6767ba8
+
+Wed Sep 22 16:02:48 CEST 2010  Stephane Popinet <popinet@users.sf.net>
+  * Fix for leaked file descriptor in OutputView
+  Ignore-this: a9e28495535cd98da7e050c9bdde9758
+
+Thu Jul 22 07:29:41 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-07-21
+  Ignore-this: 2f12aacb82fdfcedb332cdf0b1f53a61
+
+Thu Jul 22 00:58:59 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added module name
+  Ignore-this: d9a90984fb4b36d1f3ab3cd4542a1399
+
+Wed Jul 21 06:20:24 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-07-20
+  Ignore-this: 3391c8a879141f0a16b5890b1946d7c4
+
+Tue Jul 20 03:00:07 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Uses general Gerris functions for filename formatting
+  Ignore-this: 77d5411ae29a402b4452def2181e2786
+
+Thu Jul  1 08:45:36 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-06-30
+  Ignore-this: 413a29ae36d0b6e6b22869df2e74b5f
+
+Wed Jun 30 12:06:42 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed rpm spec file for modules
+  Ignore-this: 648e81989327cbc5d1ac1abe93a92ba4
+
+Tue Jun 29 18:03:55 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-06-29
+  Ignore-this: a7a89e5255432fa678624e6b4ac47508
+
+Tue Jun 29 09:25:52 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added missing render.h to sources
+  Ignore-this: d3bfe10606ed25fc901c22fb4bd30547
+
+Tue Jun 29 01:36:56 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Support for OSMesa without pkgconfig
+  Ignore-this: 29716e6e835f3f0c7847806333f4b304
+
+Mon Jun 28 18:03:47 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-06-28
+  Ignore-this: b2d4d4c2ef1aa5ec21dda07cf8ab3517
+
+Mon Jun 28 11:32:42 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added openmpi dependencies for rpm and debian packages
+  Ignore-this: f44bddbcf6b828588d68eef4e1a4c030
+
+Mon Jun 28 10:54:15 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * OutputView works also in parallel!
+  Ignore-this: 400906631f4e1c0fb64a2af8f843243d
+
+Sun Jun 27 12:06:34 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New object GfsOutputView
+  Ignore-this: a7f3f5991e017d72c82e396db0bf9a6b
+
+Thu Jun 17 18:06:22 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-06-13
+  Ignore-this: 87410329dd7e262ef74960d95eeca82b
+
+Mon Jun 14 00:40:33 CEST 2010  Stephane Popinet <popinet@users.sf.net>
+  * configure uses pkg-config for OSMesa
+  Ignore-this: a63accb06917f666e9be09bd4803cbcb
+
+Mon Jun  7 17:16:10 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-06-07
+  Ignore-this: a3d16f6b9aa8e2b3bbf919f863e7c045
+
+Mon Jun  7 10:56:32 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Use new gfs_disable_floating_point_exceptions() function
+  Ignore-this: 8a582149db425851e05f6690e32d61ee
+
+Sun Jun  6 10:11:26 CEST 2010  Stephane Popinet <popinet@users.sf.net>
+  * Turn off FPE checking because OSMesa generates them!
+  Ignore-this: fefcb949707c45b17538cefd4fc782
+
+Wed May 26 18:22:41 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-05-20
+  Ignore-this: 2783cce2c57719052d7dabae26235ce7
+
+Thu May 20 11:14:42 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Ctrl-mouse reports NODATA areas
+  Ignore-this: 27459e3b8d4225b110a161e7c77cd5e2
+
+Thu May 20 01:34:29 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Dot not warn when quitting if pipe is broken
+  Ignore-this: 6d1fe744486f806e18f95e8bd5869e97
+
+Thu May 20 00:43:52 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Improved floating-point exceptions detection
+  Ignore-this: 6bfebc3298d055b8e1d9489c0ee5b2e3
+
+Wed May 19 14:01:24 CEST 2010  Stephane Popinet <popinet@users.sf.net>
+  * Fix for annoying error message when pipe quits prematurely
+  Ignore-this: 8253a9739bf5d8662742b1df069e1d27
+
+Wed May 19 14:00:39 CEST 2010  Stephane Popinet <popinet@users.sf.net>
+  * Catch user-generated floating-point exceptions and display a warning
+  Ignore-this: ffc5635f31bfc9f450fb6292095112b3
+
+Wed May 19 10:33:13 CEST 2010  Stephane Popinet <popinet@users.sf.net>
+  * Ask user before quitting when connected with a pipe
+  Ignore-this: 9f0822421f82873b5e874e857be9fe8c
+
+Tue May 18 06:15:11 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * G_MAXDOUBLE can be used to mask out parts of the fields
+  Ignore-this: dadb3b0aff86bdb0121fe7b8c4b1903d
+
+Wed Apr  7 17:44:01 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-04-07
+  Ignore-this: abeaf02486fa25a4cf0f5f62d56eb5f0
+
+Wed Apr  7 10:17:43 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * "Append" keyword now works also for non-batch gfsview
+  Ignore-this: 1ceb35e9680f12cc8a34e4bbf9012e50
+
+Sun Apr  4 06:43:54 CEST 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-03-26
+  Ignore-this: 8576e2f54f49b142913f60c87792ef56
+
+Fri Mar 26 12:06:39 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-03-25
+  Ignore-this: 9e5e678a43cb007b59ac996f664337bf
+
+Thu Mar 25 23:38:49 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Removed obsolete 2D3 version
+  Ignore-this: 12e3dd8e2fd75effdfb6a521c3f4e52b
+
+Thu Mar 25 23:30:39 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added OSMesa to debian dependencies
+  Ignore-this: cd1be6a551b5270e4ca0481f19f702c1
+
+Thu Mar 18 14:58:14 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2010-03-18
+
+Wed Mar 17 14:18:35 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * old tag: 2010-03-16
+
+Sat Jan 30 19:34:50 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * old tag: 2010-01-18
+
+Sat Dec 19 15:15:40 CET 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * old tag: 2009-12-18
+
+Thu Mar 18 10:34:32 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Do not use ftgl for SLE_10
+  Ignore-this: 6ef5a31cea55bf311563a0bf177e2a87
+
+Thu Mar 18 08:26:00 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated packaging rules for debian and buildservice
+  Ignore-this: 57c8f56bb0e8673bde542aafabe6deef
+
+Tue Mar 16 04:05:56 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added buildservice-snapshot makefile target
+  Ignore-this: 14108f7c9630376e7f96a7b81c2d39b7
+
+Mon Mar 15 23:47:05 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * RPM spec file updated for build service
+  Ignore-this: e3a2f8ec4be770123f38382a67cb13c6
+
+Wed Feb  3 08:58:48 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New GfsGlLabel object
+
+Wed Feb  3 08:46:57 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Changed ubuntu distribution to jaunty
+
+Fri Jan 29 12:42:39 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Forces vector font for PDF, SVG... outputs
+
+Fri Jan 29 09:51:11 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Use raster fonts by default
+
+Thu Jan 28 13:10:26 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * GfsGlLocation optionally displays labels
+  Ignore-this: e257dd378b4b7619191152fc283238e2
+
+Mon Jan 18 21:39:04 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * GfsGlLocation takes maxlevel into account
+
+Sat Dec 19 00:56:16 CET 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Bug fix for preloaded modules
+  Ignore-this: f81ef7d239ff51e0566a5b2b54eed14c
+
+Sat Oct 24 16:57:33 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged 2009-10-08
+
+Wed Sep 16 16:56:23 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * old tag: 2009-09-16
+
+Thu Oct  8 03:53:54 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Bug fix for empty simulation in gfsview-batch
+
+Wed Sep 16 10:40:14 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Removed confusing "Broken pipe" message
+
+Wed Sep 16 02:10:38 CEST 2009  Matthieu Castellazzi <m.castellazzi@niwa.co.nz>
+  * More directories defined in rpm spec file
+
+Wed Aug  5 17:39:05 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * old tag: 2009-07-24
+
+Sat Jul 25 00:50:39 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed execute permissions for debian/rules
+
+Fri Jul 24 01:24:59 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed debian changelog generation
+
+Thu Jul 23 23:31:07 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * old tag: 2009-07-22
+
+Wed Jul 22 23:40:44 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Adjusted calls to gfs_domain_locate() for new interface
+
+Tue Jul 14 23:56:18 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New object GfsGlPeriodic for periodic symmetries
+
+Mon Jun 22 03:54:04 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed debian version number
+
+Sun May 10 09:25:52 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added launchpad-snapshot Makefile target
+
+Sun May 10 08:01:35 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * autogen.sh copies missing files
+
+Thu Apr 30 11:03:39 CEST 2009  Stephane Popinet <popinet@users.sf.net>
+  * Updates for changes in gfs_simulation_get_solids() and gfs_cell_cleanup()
+  Ignore-this: c12e7b58bc300b525fb1fa70f52870d4
+
+Fri May  1 05:41:37 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated debian package build
+  Ignore-this: 1ce3d1514c9955683e83778eb88055cb
+
+Thu Jan 22 04:47:02 CET 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Bug fix for normals in GfsGlLinear
+
+Wed Dec 17 00:11:40 CET 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * In 2D Linear and Isoline objects can display 3D surfaces
+
+Thu Jan 22 04:48:13 CET 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for "substract" tool and variables with no name
+
+Sun Jan 11 10:23:00 CET 2009  Stephane Popinet <popinet@users.sf.net>
+  * Fixed obsolete GtkAdjustment page size
+
+Tue Dec 16 23:50:24 CET 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * OSMesa now uses 32 bits depth buffer
+
+Tue Dec 16 23:49:30 CET 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Clip planes can be used also in 2D
+
+Tue Nov 11 21:53:14 CET 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Centering of transient windows
+
+Wed Nov  5 22:29:11 CET 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Locate takes mapping into account
+
+Thu Oct 16 00:15:22 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * The length of object labels is limited to 16 characters
+
+Sat Oct 11 09:38:52 CEST 2008  Stephane Popinet <popinet@users.sf.net>
+  * Wavefront OBJ file export
+
+Sun Oct  5 01:54:56 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for versioning of debian package
+
+Wed Aug 13 04:16:58 CEST 2008  Stephane Popinet <popinet@users.sf.net>
+  * Added option to interpolate scalars used to color VOF surfaces
+
+Mon Aug 11 12:36:51 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New "Append" mode for gfsview-batch
+  
+  This allows for example a single instance of gfsview-batch to generate several
+  movies through named unix pipes.
+
+Fri Jul 25 06:17:36 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * L-dimension of variables are taken into account
+
+Wed Jul 16 04:32:38 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Minor fixes for RPM spec file (I. Vari)
+
+Fri Jul  4 04:41:16 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed typo in RPM spec file (I. Vari)
+
+Tue Jul  1 06:09:08 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * RPM spec update for Fedora (I. Vari)
+
+Sat Jun 21 23:44:26 CEST 2008  Stephane Popinet <popinet@users.sf.net>
+  * Fix for crash when computing isosurface for "marginal" values
+
+Sat Jun  7 17:16:41 CEST 2008  Stephane Popinet <popinet@users.sf.net>
+  * Updated version dependency for Gerris
+
+Sat Jun  7 15:37:48 CEST 2008  Stephane Popinet <popinet@users.sf.net>
+  * Properly checks whether files on command line can be opened
+
+Tue May  6 23:16:21 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Update for more generic GfsSurface extension
+
+Tue May  6 23:14:59 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Coordinates takes "mapping" into account
+
+Tue Jan 15 01:08:07 CET 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for overridden selection in variables list
+
+Mon Jan 14 04:27:21 CET 2008  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Force immediate compilation of GfsFunctions
+
+Mon Jan  7 21:43:57 CET 2008  Stephane Popinet <popinet@users.sf.net>
+  * RPM build fix (I. Vari)
+  
+  Removed %{?_smp_mflags} from make due to intermittent
+  build errors on some SMP systems.
+
+Wed Dec 19 00:12:19 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Changed linking order for OSMesa batch mode
+  
+  Amazingly this seems to fix a completely broken rendering on Ubuntu 7.10...
+  see also http://www.gnashdev.org/?q=node/46
+
+Mon Nov 12 03:55:50 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Fixed package (install) dependencies
+
+Tue Oct 30 03:51:22 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Added spec file for RPM packaging (thanks to Ivan Vari)
+
+Tue Oct 30 03:52:16 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Added sorting option for gl2ps output
+
+Sun Oct  7 02:08:19 CEST 2007  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Disabled picking on Symmetry objects
+
+Thu Oct  4 04:27:29 CEST 2007  Stephane Popinet <popinet@users.sf.net>
+  * Symmetry object should now work also in 2D
+
+Fri Sep 14 07:40:51 CEST 2007  Stephane Popinet <popinet@users.sf.net>
+  * Fix for "extent" computation with multiple boxes
+  
+  The "point of view" of gfsview parameter files older than this patch may change
+  as a result (only for domains composed of multiple boxes though).
+
+Sun Aug  5 09:43:18 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Remove obsolete code for GlSolid in 3D
+
+Sat Jun  9 06:19:27 CEST 2007  Stephane Popinet <popinet@users.sf.net>
+  * Symmetries are taken into account for visibility and extent
+
+Fri Jun  1 12:09:36 CEST 2007  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * New "Symmetry" object
+
+Wed May 30 05:40:54 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added option to draw the edges of VOF facets
+
+Sun Aug 12 05:04:15 CEST 2007  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Batch version can be built even when GTK libraries are absent
+
+Thu Jul  5 16:22:33 CEST 2007  Stephane Popinet <popinet@users.sf.net>
+  * Bug fix for representation of implicit solid boundaries
+
+Fri Jun  1 11:48:32 CEST 2007  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Bug fix for update of GFK_GL2D plane
+
+Wed Jul 25 22:41:20 CEST 2007  Stephane Popinet <popinet@users.sf.net>
+  * Optimised solid display
+  
+  Polygons are pre-computed and subsequent traversals do not use the GTS surface.
+  This makes a big difference for large GTS surfaces.
+
+Fri May 25 01:44:46 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Upgraded gl2ps to version 1.3.2 (adding SVG export)
+
+Fri May 25 00:53:53 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Bug fix for inconsistent interfacing of "line width" save option
+
+Mon May 21 10:59:01 CEST 2007  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * G_MAXDOUBLE values are ignored by gfs_gl_scalar bounds calculation
+
+Wed May  2 01:59:19 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed error message for unknown output format
+
+Mon Apr 30 23:33:37 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Does not change working directory according to arguments
+  
+  This was a silly idea in the first place and broke things when
+  storing simulation files on non-writable media (thanks to Francois
+  Blanc for reporting this).
+
+Fri Apr 27 05:44:28 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added missing 'gfsview' script to distribution
+
+Fri Apr 20 06:54:59 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * GfsView can now display implicit surfaces
+
+Fri Apr 20 06:11:47 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Made 'ChangeLog' darcs dependent
+
+Wed Apr 18 07:50:17 CEST 2007  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Minor error formatting fix
+
+Wed Apr 18 07:49:53 CEST 2007  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Desktop files are distributed in the tarball
+
+Wed Apr 18 07:47:56 CEST 2007  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Update for new GfsSolid implementation in gerris
+
+Fri Apr 13 03:07:56 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Update for new GfsSurface object
+
+Thu Mar 22 22:43:51 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Error message for scripting thread is displayed on screen
+
+Wed Feb 28 05:02:07 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added mime types and application icons
+
+Tue Feb 27 03:38:35 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for merge with CSF branch
+
+Fri Feb 23 05:26:23 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Scripting thread uses GThread
+  
+  Should be more portable. The "preference->scripting" dialog should now be 
+  consistent with the state of the scripting thread (on or off).
+
+Fri Feb 23 02:00:13 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Change working directory according to the files on the command line
+
+Fri Feb 23 01:20:43 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Added gzip dependency for Debian package
+
+Fri Feb 23 01:17:59 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Added missing classes in gfs_gl_init()
+
+Fri Feb 23 01:16:56 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Much simplified (and unified) pipe implementation
+
+Fri Feb 23 01:16:02 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Fix for infinite loop in gfsview-batch with unknown objects
+
+Wed Feb 21 23:16:55 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Bug fix for inconsistent GSList (uses GList instead)
+
+Tue Feb 13 00:59:36 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Clipping planes can be "composited"
+  
+  i.e. the order in which clipping planes appear is taken into account. This can
+  be used to create complex "cut-outs".
+
+Fri Feb  9 02:40:44 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Fix for min/max setting in GfkGlScalar
+
+Thu Feb  8 02:49:14 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * VOF surfaces can be coloured according to a scalar field
+
+Wed Feb  7 04:18:28 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * New "cut plane" object
+  
+  To do cross-sections of 3D surfaces. Only works for VOF surfaces for the moment.
+
+Wed Jan 31 23:05:02 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Axis can be scaled differently
+
+Sun Jan 28 09:17:08 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Updated VOF visualisation for using VariableTracerVOF
+
+Sun Jan 28 09:15:01 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Initialisation of simulations is done with gfs_simulation_init()
+
+Wed Dec  6 01:23:58 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * VOF display now works also in 3D
+
+Fri Nov 24 01:51:55 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * New "Locate" object
+  
+  Displays the cell containing a given point.
+
+Mon Oct 23 06:59:49 CEST 2006  Stephane Popinet <popinet@users.sf.net>
+  * GfGlVOF automatically looks for a VOF tracer in the simulation
+
+Tue Oct 17 01:25:29 CEST 2006  Stephane Popinet <popinet@users.sf.net>
+  * Moved VOF to scalar menu
+
+Wed Oct 11 23:26:54 CEST 2006  Stephane Popinet <popinet@users.sf.net>
+  * VOF uses new gfk_function() scalar input
+
+Mon Feb  6 02:14:19 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * New VOF reconstruction object
+
+Thu Feb 22 05:24:36 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Added mime-types and desktop entries
+
+Thu Feb 22 04:07:34 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Added freedesktop.org-compliant startup notification
+
+Thu Feb 22 02:53:23 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Change working directory according to the files on the command line
+
+Thu Feb 22 02:51:48 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * New 'gfsview' script
+  
+  Starts the 2D or 3D versions according to the file types.
+
+Wed Feb 14 02:52:51 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for getopt_long and unknown arguments
+
+Sun Jan 28 09:18:41 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * Rotation is disabled in 2D
+
+Sun Jan 28 08:33:53 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * New "Echo" command
+
+Wed Dec  6 01:30:49 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * Minimum resolution is set to 50
+
+Wed Dec  6 01:30:04 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * Properties of Isosurface object are properly updated
+
+Thu Nov 30 04:17:02 CET 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Using the "Cells" object, the mesh can be edited interactively
+
+Wed Oct 18 00:26:35 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Simplified Debian package dependencies
+  
+  To make them compatible with Ubuntu. It's a bit messy though as I am not sure
+  what the issues are with binary compatibility of Ubuntu/Debian libraries etc...
+
+Sat Oct 14 23:19:40 CEST 2006  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Bug fix for GfkGlScalar min/max setting
+
+Sat Oct 14 23:18:55 CEST 2006  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Bug fix for GfsGlEllipses scale setting
+
+Thu Oct  5 22:57:52 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed bug in handling of file names with spaces (thanks to Dennis Smith)
+
+Wed Aug  9 02:22:42 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New "Info" object (displays mesh statistics)
+
+Mon Jun 12 06:41:50 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Resizable columns for variables tree view
+
+Sun Jun 11 08:32:34 CEST 2006  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Variables window displays variable descriptions
+
+Mon Jun  5 10:54:28 CEST 2006  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * New variables menu for scalar selection dialog
+
+Mon Jun  5 06:04:10 CEST 2006  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Automatic completion of Variables and derived Variables
+
+Mon Jun  5 04:09:07 CEST 2006  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * All scalar definitions use new GfkFunction widget
+
+Sun Jun  4 10:38:05 CEST 2006  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Only properties or name are displayed in the left pane
+
+Sun Jun  4 10:37:39 CEST 2006  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Cleanup of Mac OSX fix
+
+Thu Jun  1 16:49:19 CEST 2006  zaleski@lmm.jussieu.fr (on Mac OS X 10.4)
+  * added functionality to determine the host/system type
+
+Thu Jun  1 10:24:17 CEST 2006  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Made scrollbars of the object list automatic
+
+Thu Jun  1 01:42:20 CEST 2006  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Various minor cleanups
+
+Wed May 31 19:53:49 CEST 2006  zaleski@lmm.jussieu.fr (on Mac OS X 10.4)
+  * Fixed autogen.sh and configure.in to work on Darwin with //sw/share/aclocal directory
+
+Wed May 31 14:18:22 CEST 2006  zaleski@lmm.jussieu.fr (on Mac OS X 10.4)
+  * Added a switch to use apple's OpenGL libraries instead of  the standard GL 
+
+Wed May 31 14:15:31 CEST 2006  zaleski@lmm.jussieu.fr (on linux)
+  * Patched autogen.sh to also work on Mac OSX
+
+Mon Apr  3 00:41:08 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged release_0_4_2
+
+Mon Apr  3 00:40:24 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated docs
+
+Fri Mar 24 01:14:43 CET 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Cell diagonal value is now defined by Gerris
+
+Mon Mar 20 23:09:44 CET 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Command thread is started only if stdin is not connected to a terminal
+
+Wed Mar 15 20:54:41 CET 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Debian package uses gfsview-batch for version info
+
+Tue Mar 14 00:01:05 CET 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New "Clipping" object for 3D clipping planes
+
+Thu Mar  9 22:50:41 CET 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Debian snapshot package was not correctly versioned
+
+Fri Feb 17 12:08:38 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * Bug fix for client events on 64 bits machines
+
+Mon Feb  6 02:10:46 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * update_interface() is now a method of GfkGl
+
+Mon Feb  6 02:08:08 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * New GfsGl method "relevant()"
+  
+  To check whether a GfsGl is relevant for a given simulation.
+
+Mon Feb  6 02:04:27 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * New function gfs_gl_cell_traverse_visible_condition
+
+Sat Feb  4 15:40:04 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * Serious bug fix for isolines levels parsing
+
+Sat Jan 28 11:01:36 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * Bounds on cut-plane position are computed correctly
+
+Sat Jan 28 10:36:26 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * Reorganised objects in a new "Objects" menu
+
+Sat Jan 28 00:40:54 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * Scale of vectors was not restored properly when reading params
+
+Thu Jan 19 18:48:58 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * Bug fix for gtk-2.8 handling of "client events"
+  
+  gtk-2.8 sends a client event called "GTK_LOAD_ICONTHEMES". This event was taken to be a gfsview event "GFS_SAVE_EVENT" which was causing the code to crash.
+  
+  A check has been added to verify that the event is of the correct type.
+
+Sun Dec  4 23:50:56 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated debian packaging
+
+Fri Dec  2 05:52:51 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Debian snapshots
+
+Mon Oct 17 03:45:41 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * old tag: 0.4
+
+Mon Oct 17 03:45:10 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Doc update for release 0.4
+
+Wed Oct 12 00:57:39 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Replaced gtk_entry_completion_get_text_column() with hardcoded column number
+  
+  Also made configure check for gtk+ >= 2.4.0.
+
+Tue Sep 27 07:14:57 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * "gnuplot" format outputs true coordinates (rather than screen coordinates)
+
+Fri Sep 23 06:29:14 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Scripting is detected automatically (option -S has been removed)
+
+Wed Sep 21 00:32:02 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for change in interface of gfs_cell_is_cut
+
+Mon Sep 19 06:18:35 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Removed "width_chars" from labels
+  
+  This had the undesirable side-effect of creating a depency on gtk-2.6
+  (rather than 2.4). Thanks to Vladimir Kolobov for reporting this.
+
+Fri Aug 19 07:55:44 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Scripting needs to be turned off when computing evenly-spaced streamlines
+
+Thu Aug 18 02:23:32 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added size option for PPM output
+
+Wed Aug 17 08:31:26 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Tubular streamlines in 3D
+
+Wed Aug 17 08:28:47 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Major fix for batch mode (which was not working at all in 3D...)
+
+Tue Aug 16 08:28:13 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Evenly-spaced streamlines
+  
+  Based on the algorithm of Jobard and Lefer.
+
+Tue Aug 16 00:27:17 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * "Snap to spacing" for streamlines
+
+Mon Aug 15 07:27:06 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New streamlines must be non-empty to be registered
+
+Mon Aug 15 06:53:08 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for crappy inheritance of Isolines on Scalar
+
+Mon Aug 15 06:40:32 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Streamlines use gfs_domain_cell_point_distance2 for constraining spacing
+  
+  This is exact (unlike the previous version) and is not limited to
+  a spacing smaller than the grid size.
+
+Fri Aug 12 06:59:32 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Streamlines!
+  
+  With interactive editing of seed points, control of minimum spacing etc...
+
+Thu Jul 28 12:53:50 CEST 2005  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Added automatic completion to scalar entries
+
+Wed Aug 10 04:49:35 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * For coplanar objects picking priority is given to the currently selected object
+
+Wed Aug 10 03:08:57 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Only linear, squares and cells support picking. Linear interpolates info.
+
+Wed Aug 10 02:11:46 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Picking is used to display position and values of scalar fields
+  
+  This is activated by holding the Control key while left-clicking.
+
+Tue Aug  9 12:21:54 CEST 2005  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Preliminary support for picking objects
+
+Mon Aug  8 05:27:25 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Zooming has been reworked
+  
+  It now changes the field of view (FOV) rather than the position of the
+  objects. This leads to much better scaling of the depth buffer and
+  works with the 16-bits mesa z-buffer.
+
+Tue Aug  2 06:55:40 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed version info
+
+Tue Jul 26 23:50:51 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * File globbing does not use POSIX GLOB_NOMATCH anymore (MacOSX/BSD glob() is not POSIX)
+
+Tue Jul 26 23:49:58 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for GL_CONSTANT mess (for MacOSX)
+
+Fri Jul 22 06:09:24 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Substract was ignoring the first variable in the simulation (P)
+
+Tue Jul 19 02:48:48 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added option to always display the finest level
+
+Tue Jul 19 02:07:40 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Object interfaces are updated only if fields are not being edited
+  
+  i.e. fields can be changed while simulations are updated in the
+  background in scripting mode.
+
+Wed Jul 13 01:25:50 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added ChangeLog make target
+
+Tue Jul 12 08:41:15 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Yet another fix for odd-width PPMs...
+
+Tue Jul 12 06:01:25 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Version set to 0.4 prior to release
+
+Mon Jul 11 07:14:37 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Bug fix for isosurfaces incorrect initialisation
+
+Thu Jul  7 08:51:22 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Gfsview objects creation can happen whether a simulation is defined or not
+  
+  This makes the whole code much cleaner. In practice this also means
+  that it is now possible to load a visualisation file first and delay
+  the display until a simulation is loaded. For example, gfsview can now
+  be started in interactive mode like this:
+  
+  % gerris2D stuff.gfs | gfsview2D -S stuff.gfv
+  
+  where stuff.gfv contains only the visualisation parameters.
+
+Wed Jul  6 23:29:14 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added dummy options to gfsview-batch for compatibility with gfsview
+
+Tue Jul  5 01:37:17 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Scalar entry fields are not modified when simulations are updated
+
+Tue Jul  5 01:07:28 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Scripting threaded is started/stopped by the main GTK loop
+  
+  This fixes a bug where the code would not stop on a broken pipe when
+  the pipe was broken early in the startup process (because of a faulty
+  parameter file for gerris for example).
+
+Mon Jul  4 03:34:10 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Incorrect gfsview parameter file were causing crashes
+
+Mon Jul  4 02:23:56 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for floating point errors in cut planes
+
+Mon Jul  4 01:44:39 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Checks for input of zero-length plane normal
+
+Mon Jul  4 01:28:25 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Update for new variable management in Gerris
+  
+  This changes quite a few things in gfsview. The "custom" variable
+  definition is gone, instead GfsFunction are used as a normal text
+  entry which means that formulas etc... can be written directly in the
+  input field.
+  
+  This also fixes the problem of allocating temporary variables
+  necessary for isosurfaces etc...
+  
+  What is missing at the moment is that "derived" variables are not
+  re-used by different objects. For example, if "Vorticity" is plotted
+  in 3D on different cross-sections, each cross-section uses in effect a
+  different 3D, re-allocated and re-computed vorticity field... This is
+  wasteful of both CPU and memory.
+
+Sun Jul  3 11:50:26 CEST 2005  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Scripting is not started by default
+  
+  This fixes the problem of not being able to use "&" or "Ctrl-Z ; bg" to put 
+  gfsview in the background.
+
+Thu Jun 23 23:39:06 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated gl2ps to 1.2.6
+
+Tue Jun 21 00:16:05 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated gl2ps to 1.2.5, uses tight EPS bounding boxes
+
+Tue Jul 12 05:51:55 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * old tag: 0.3
+
+Fri Jun 17 07:53:01 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Bug fix for isolines in batch mode
+
+Fri Jun 17 07:52:00 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New command interpreter for gfsview-batch
+
+Thu Jun 16 23:56:06 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for bug when reading multiple concatenated simulations
+
+Thu Jun 16 23:55:06 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New "Clear" command
+
+Mon Jun 13 07:22:14 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Further fix for odd-width PPM output
+
+Tue Jun  7 06:59:48 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Boundary representation uses new traversal function
+
+Mon Jun  6 06:07:09 CEST 2005  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * New function gfs_gl_cell_traverse_visible_boundary()
+
+Thu Jun  2 11:48:00 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New Boundaries representation
+
+Wed May 25 07:54:21 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * View parameters can be piped to standard input
+
+Fri Apr  8 06:45:51 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Bug fix for incorrect generation of PPMs with an odd width
+  
+  PPMs can now have only even widths and heights (this seems to be necessary for
+  MPEG generation with the MJpegTools).
+
+Wed May 25 03:40:49 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Bug fix for GlLinear postscript output
+
+Sun Apr  3 23:23:08 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Better handling of LDFLAGS by configure
+
+Sun Apr  3 13:31:52 CEST 2005  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Removed obsolete arch and CVS files
+
+Sun Apr  3 12:57:15 CEST 2005  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * configure checks for OSMesa in /usr/X11R6/lib
+
+Fri Apr  1 04:48:29 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Location display updated for new OutputLocation object
+
+Thu Mar 10 03:56:37 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed bug when using a derived variable several times
+
+Wed Feb  9 05:51:52 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Initial implementation of "height field" visualisation
+  
+  This works only in 2D for the moment.
+  There are also issues with shading and incorrect calculation of which cells
+  need to be traversed.
+
+Tue Feb  8 05:04:21 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Minor fix for reading GfsGlIsoline
+
+Sun Jan 30 08:19:03 CET 2005  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Broken pipe is not an error in batch mode
+
+Sat Jan 29 00:33:23 CET 2005  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * GL2PS support for batch mode
+
+Fri Jan 21 02:48:50 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Custom variables need to be compiled with optimization turned on
+  
+  To avoid problems when using inlined functions.
+
+Thu Jan 20 22:50:53 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * "Lines closer" default value was too large
+
+Thu Jan 20 05:52:27 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Isosurface uses set_variable_menu
+  
+  and isosurfaces work again after being broken by the gfsgl/gfkgl split.
+
+Thu Jan 20 05:33:07 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Removed multiple calls to gfs_gl_set_simulation in scalar and ellipses
+
+Thu Jan 20 03:33:34 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Scalar variable menu is reused rather than destroyed
+  
+  This is cleaner, and more importantly means that the menu can be used while 
+  standard input is processed.
+
+Thu Jan 20 00:55:18 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Improved calculation of number of decimal digits
+
+Thu Jan 20 00:19:11 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed vectors and ellipses default scale
+
+Wed Jan 19 04:59:25 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Offscreen rendering uses GtkGlExt pixmaps
+
+Tue Jan 18 05:46:36 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Automatic ChangeLog generation using darcs
+
+Tue Jan 18 01:18:56 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * libgfsgl is statically compiled
+
+Tue Jan 18 01:07:48 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added autoconf of OSMesa
+
+Tue Jan 18 00:24:06 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed isosurface scalar coloring bug
+
+Tue Jan 18 00:07:08 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Preliminary OSMesa PPM rendering in gfsview
+  
+  But this does not work yet.
+
+Mon Jan 17 09:18:35 CET 2005  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Checks if GLX SGIX pbuffer extension is supported
+
+Mon Jan 17 07:46:47 CET 2005  Stephane Popinet <stephane.popinet@paradise.net.nz>
+  * Fixed GL/glu.h header
+
+Mon Jan 17 06:02:37 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * First implementation of batch-mode gfsview
+
+Mon Jan 17 01:14:42 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixes for darcs/autogen problem and shell script permissions
+
+Sun Jan 16 23:43:42 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Split the code into GTK-dependent and GTK-independent parts
+  
+  The idea is to be able to use the OpenGL rendering part on its own to
+  do batch rendering (using OSMesa for example).
+  
+  It should also facilitate the implementation of visualisation codes
+  using other toolkits etc...
+
+Thu Jan 13 00:11:50 CET 2005  Stephane Popinet <popinet@users.sourceforge.net>
+  * PPM output works (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-29)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-29
+  Keywords: 
+  
+  Using the GLX SGI pbuffer extension for off-screen rendering.
+  
+
+Tue Jan 11 23:55:59 CET 2005  Stephane Popinet <popinet@users.sourceforge.net>
+  * Option to survive broken stdin scripting pipe (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-28)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-28
+  Keywords: 
+  
+  
+
+Tue Jan 11 23:03:53 CET 2005  Stephane Popinet <popinet@users.sourceforge.net>
+  * Scripting can be turned on or off (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-27)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-27
+  Keywords: 
+  
+  
+
+Tue Jan 11 07:00:45 CET 2005  Stephane Popinet <popinet@users.sourceforge.net>
+  * Multithreaded implemententation of standard input control flow (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-26)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-26
+  Keywords: 
+  
+  i.e. commands and simulation files can be sent to the code while it's
+  running.
+  
+
+Mon Jan 10 06:40:00 CET 2005  Stephane Popinet <popinet@users.sourceforge.net>
+  * Complete implementation of persistent objects (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-25)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-25
+  Keywords: 
+  
+  This includes 3D objects and view parameters.
+
+Mon Jan 10 00:43:49 CET 2005  Stephane Popinet <popinet@users.sourceforge.net>
+  * First implementation of persistent objects (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-24)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-24
+  Keywords: 
+  
+  Only works for 2D objects, GfsGlEllipses excepted.
+  
+
+Thu Jan  6 01:02:03 CET 2005  Stephane Popinet <popinet@users.sourceforge.net>
+  * Main window is displayed before loading simulation (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-23)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-23
+  Keywords: 
+  
+  This fixes the "transient play window" problem and gives the feel of
+  faster startup time.
+  
+
+Wed Dec 22 04:30:27 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * GfsGlVectors was resetting derived vectors... (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-22)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-22
+  Keywords: 
+  
+  ... whenever a new simulation was loaded.
+  
+
+Wed Dec 22 03:35:28 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Bug fix for misuse of temporary variable by GfsGlVectors (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-21)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-21
+  Keywords: 
+  
+  
+
+Tue Dec 21 02:28:54 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Made play window transient (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-20)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-20
+  Keywords:
+  
+  
+
+Wed Dec  8 06:00:23 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Support for "playing" a list of files (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-19)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-19
+  Keywords:
+  
+  
+
+Wed Dec  8 01:18:34 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Initial implementation of "substract" function (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-18)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-18
+  Keywords:
+  
+  Still preliminary. In particular, interpolation is not done properly
+  yet.
+  
+
+Mon Nov 29 03:47:18 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Fixed bug in the way hiding notebook pages works (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-17)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-17
+  Keywords:
+  
+  
+
+Mon Nov 29 00:22:04 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Proper pointer arithmetic in GfsGlIsosurface (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-16)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-16
+  Keywords:
+  
+  
+
+Mon Nov 29 00:21:29 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Isosurfaces can be coloured with a scalar (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-15)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-15
+  Keywords:
+  
+  
+
+Mon Nov 29 00:20:42 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * GfsGlSolid can be coloured with a scalar (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-14)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-14
+  Keywords:
+  
+  
+
+Mon Nov 29 00:19:48 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * New GfsGlSolid implementation (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-13)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-13
+  Keywords:
+  
+  Represents the solid boundaries as they are used in the embedded
+  boundary code i.e. through intersections of the "real" GTS surface
+  with the faces/edges of each cell.
+  
+
+Wed Nov 24 23:52:49 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * New GfsGlLocation entity (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-12)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-12
+  Keywords: 
+  
+  Displays positions of GfsOutputLocation probes.
+  
+
+Wed Nov 24 02:53:35 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * New (tidal) ellipses display (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-11)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-11
+  Keywords: 
+  
+  Together with some reorganisation of the scalar object.
+  
+
+Thu Nov 18 03:12:31 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Zoom with scrolling wheel + parameter changes in panning/zooming (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-10)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-10
+  Keywords: 
+  
+  
+
+Thu Nov 18 02:41:48 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Updating a custom variable updates the dependent displayed entities (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-9)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-9
+  Keywords: 
+  
+  Two new methods have been added for GfsGl objects: uses_variable() and
+  add_variable().
+  
+
+Thu Nov 18 00:49:42 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Fix for memory deallocation issue in GfsVariableCustom  (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-8)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-8
+  Keywords: 
+  
+  gfs_variable_custom_update() would free the function pointer when
+  called by gfs_gl_custom_variable_set_simulation().
+  
+
+Fri Nov 12 06:31:45 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Cleaner/simpler custom variable interface (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-7)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-7
+  Keywords: 
+  
+  
+
+Fri Nov 12 05:28:44 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Support for user-defined derived variables (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-6)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-6
+  Keywords: custom variable
+  
+  There is at least one bug in this first implementation: the displayed
+  entities affected by an update of a custom variable are not updated
+  and redrawn.
+  
+
+Thu Nov 11 23:13:59 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Miscellaneous small changes (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-5)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-5
+  Keywords: 
+  
+  Vector scaling
+  Clipping planes
+  Quits properly
+  
+
+Wed Nov  3 22:17:22 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Added gfsview2D3 build target (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-4)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-4
+  Keywords: 
+  
+  
+
+Mon Nov  1 22:21:15 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Derived variables are re-used (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-3)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-3
+  Keywords: 
+  
+  Derived variables are stored in a new reference-counted
+  GfsVariableDerived type. Each GfsGlScalar or GfsGlIso then re-uses
+  (and references or dereferences) any derived variable.
+  
+
+Thu Oct 28 07:44:37 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Changed GL_CONSTANT to GL_CONSTANT_EXT (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-2)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-2
+  Keywords: 
+  
+  This seems to be necessary for compatibility with (older?) versions of
+  openGL (on RedHat 8 for example).
+  
+
+Tue Oct 19 23:59:29 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Started new development branch 0.3 (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-1)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.3--patch-1
+  Keywords: 
+  
+  
+
+Tue Oct 19 04:43:10 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Updates for release 0.2.0 (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-9)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-9
+  Keywords: 0.2.0
+  
+  Automatic ChangeLog generation.
+  NEWS file.
+  
+
+Mon Oct 18 00:16:57 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * "Caching" of normal values improves speed by ~20%. (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-8)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-8
+  Keywords: 
+  
+  
+
+Fri Oct 15 07:53:05 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Improved isosurface algorithm (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-7)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-7
+  Keywords: octree cracks
+  
+  Modification of the isosurface algorithm to eliminate the cracks
+  between levels of refinement. This seems to work fine but the code is
+  a bit messy (euphemism). The performance penalty is about 20%
+  (compared with the "cracked" version). This could be optimized (by
+  computing only the required normals as before instead of computing all
+  the normals in case there are cracks).
+  
+
+Fri Oct 15 01:32:09 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * PDF cannot do textures (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-6)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-6
+  Keywords: 
+  
+  
+
+Thu Oct 14 23:31:44 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Replaced linear color interpolation with 1D texture. (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-5)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-5
+  Keywords: 
+  
+  This improves the smoothness of the color field a lot (essentially
+  because color interpolation is buggy in openGL).
+  Also added support for different display formats (i.e. screen, postscript etc..).
+  
+
+Tue Oct 12 02:04:16 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Added controls for all viewing directions (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-4)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-4
+  Keywords: 
+  
+  
+
+Sun Oct 10 23:12:56 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * 3D cut-plane isolines implementation (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-3)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-3
+  Keywords: 
+  
+  This initial implementation can have cracks when the cut plane is not
+  orthogonal to Cartesian axis.
+  
+
+Fri Oct  8 08:04:32 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Updated .arch-inventories (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-1)
+  s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1--patch-1
+  Keywords: 
+  
+  
+
+Sun Jan 16 23:34:08 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Initial commit (s.popinet@niwa.co.nz--2004/gfsview--mainline--0.1)

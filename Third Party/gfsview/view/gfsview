@@ -1,0 +1,75 @@
+#!/bin/sh
+
+GFS2D="^# Gerris Flow Solver 2D "
+GFS3D="^# Gerris Flow Solver 3D "
+GFV2D="^# GfsView 2D"
+GFV3D="^# GfsView 3D"
+
+usage()
+{
+    cat <<EOF
+Usage: gfsview [OPTIONS] FILE1 FILE2 ...
+
+Opens Gerris and/or GfsView files using the appropriate (2D or 3D)
+version of GfsView. All the files must have the same dimension (2D or
+3D).
+
+Options:
+        [......]    any valid option of GfsView
+        [--help]    display this message and exits
+EOF
+    exit $1
+}
+
+format="Unknown"
+
+twod()
+{
+    if [ $format = "3D" ] ; then
+	zenity --error --title="gfsview" --text="Error: All files must have the same dimension\n\n'$1' is 2D, all the other files are 3D"
+	exit 1
+    fi
+    format="2D"
+}
+
+threed()
+{
+    if [ $format = "2D" ] ; then
+	zenity --error --title="gfsview" --text="Error: All files must have the same dimension\n\n'$1' is 3D, all the other files are 2D"
+	exit 1
+    fi
+    format="3D"
+}
+
+if test $# -lt 1; then
+    usage 1 1>&2
+fi
+
+for f in "$@"; do
+    case $f in
+	--help) 
+	    usage 0 1>&2 
+	    ;;
+	*.gfs)
+	    if head "$f" | grep -q "$GFS2D"; then twod "$f"; 
+	    elif head "$f" | grep -q "$GFS3D"; then threed "$f"; fi
+	    ;;
+	*.gfs.gz)
+	    if zcat "$f" | head | grep -q "$GFS2D"; then twod "$f"; 
+	    elif zcat "$f" | head | grep -q "$GFS3D"; then threed "$f"; fi
+	    ;;
+	*.gfv)
+	    if head "$f" | grep -q "$GFV2D"; then twod "$f"; 
+	    elif head "$f" | grep -q "$GFV3D"; then threed "$f"; fi
+	    ;;
+    esac
+done
+
+case $format in
+    3D)
+	gfsview3D "$@"
+	;;
+    *)
+	gfsview2D "$@"
+	;;
+esac

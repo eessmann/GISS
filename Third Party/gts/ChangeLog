@@ -1,0 +1,465 @@
+Fri Nov 30 01:17:32 CET 2012  Release
+  tagged 2012-07-08
+
+Sun Jul  8 02:17:44 CEST 2012  Stephane Popinet <popinet@users.sf.net>
+  * Updated gts.spec for distribution of gts2xyz
+  Ignore-this: efa10e0038bb56c88545fa77ad4e0ed3
+
+Wed Nov 28 22:26:21 CET 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Renamed configure.in to configure.ac
+  Ignore-this: 33404c9648b7cc3a20fffe3ea4dcde29
+
+Thu Nov 29 11:06:14 CET 2012  Stephane Popinet <s.popinet@gmail.com>
+  * New function gts_file_new_from_buffer()
+  Ignore-this: f0e8f65445082791c2978bedcadda658
+
+Fri Jul  6 13:27:01 CEST 2012  Release
+  tagged 2012-07-01
+
+Sun Jul  1 06:36:19 CEST 2012  Stephane Popinet <popinet@users.sf.net>
+  * Gnuplot output for meshes in gts2oogl
+  Ignore-this: 601620293013066815a9a7f918aa48c2
+
+Sun Jul  1 06:33:49 CEST 2012  Stephane Popinet <popinet@users.sf.net>
+  * New tool 'gts2xyz'
+  Ignore-this: 68d93c5dc0dadd288b2cda79bc516a8b
+
+Sun Jul  1 06:33:28 CEST 2012  Stephane Popinet <popinet@users.sf.net>
+  * New 'slope maximization' option for delaunay
+  Ignore-this: d9324d96e017b1872a92c7ee3ff3e46
+
+Fri Apr 27 10:29:28 CEST 2012  Release
+  tagged 2012-04-26
+
+Thu Apr 26 23:54:05 CEST 2012  Stephane Popinet <s.popinet@gmail.com>
+  * Cleanup of Mac OSX autogen patch
+  Ignore-this: 8c9fff4bbf9c2dac276365c491883c
+
+Mon Dec 19 08:56:13 CET 2011  stephane.zaleski@gmail.com
+  * Fixes to let autogen.sh work on MacOS X - Darwin with macports
+  Ignore-this: 78e989ace253e7ccbcace2564fd071a4
+
+Tue Oct 25 00:58:11 CEST 2011  Stephane Popinet <s.popinet@gmail.com>
+  * Fix for reading objects with "assign"
+  Ignore-this: 76ac1d5ac6a35b02ab0f2921d5368fd4
+
+Mon Mar 28 21:41:27 CEST 2011  Stephane Popinet <popinet@users.sf.net>
+  * gts_file_assign_variables() can read GtsObjects.
+  Ignore-this: e9fb5cf6d9b0cbf42a77e88bc2f98ce9
+
+Fri Jan 21 05:40:28 CET 2011  Stephane Popinet <popinet@users.sf.net>
+  tagged 2011-01-08
+  Ignore-this: 6c994ba8a5b9f819334ce1093e0848bb
+
+Sat Jan  8 19:32:21 CET 2011  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Applied manpages patch from Benoit Knecht
+  Ignore-this: ad1395e04314b53d39c390bcf2f84226
+
+Fri Nov 12 05:33:49 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  tagged 2010-11-11
+  Ignore-this: e6f88624cca361c064457b7ddecc7c8d
+
+Thu Nov 11 17:48:28 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added missing -lm library
+  Ignore-this: 9a717673c7bf1b358fd2fcbc3823a9ff
+
+Fri Nov  5 05:00:33 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed hanging last read for gts_graph_read()
+  Ignore-this: 61cf97c47d424ca6a83c2a0e2569e89d
+
+Thu Mar 25 12:58:09 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  tagged 2010-03-21
+  Ignore-this: a15108ffd296c68adf3fa80c554f3054
+
+Sun Mar 21 22:06:14 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed typo in debian control file
+  Ignore-this: 28e44e8068291caabc6bb641207ce29d
+
+Sun Mar 21 14:56:48 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  tagged 2010-03-21
+
+Sun Mar 21 08:34:30 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed conflicts with default debian package
+  Ignore-this: bb5a0f540259d966a0250b59fd342f76
+
+Thu Mar 18 14:57:32 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  * old tag: 2010-03-18
+
+Thu Mar 18 08:21:23 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated packaging rules for debian and buildservice
+  Ignore-this: aa37b682d66f45fbdb6a8c5b7030b029
+
+Wed Mar 17 08:32:50 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * gts.spec supports SLED10 rather than openSUSE 11.0
+  Ignore-this: 602099f4860001ae9a863789b00f6833
+
+Wed Mar 17 14:17:57 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  tagged 2010-03-17
+
+Wed Mar 17 02:07:03 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed incomplete netpbm library check
+  Ignore-this: df601bcb7a6403b84db0d2c1bcfee1ed
+
+Tue Mar 16 04:04:08 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added buildservice-snapshot makefile target
+  Ignore-this: 8d308ac08d4a5ffd3ebace5cce92040c
+
+Mon Mar 15 22:42:00 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added configure support for netpbm include directory
+  Ignore-this: db2365fc0cdd8c40a7edf0f579d7a5ec
+
+Mon Mar 15 22:04:44 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated RPM spec file for use with buildservice
+  Ignore-this: 57b2c25def646536fa5518104e251ef6
+
+Fri Mar 12 03:39:04 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Changed DTD definition for docs
+  Ignore-this: 875dbf923b9ae8d29597e622ba34006d
+
+Wed Feb  3 08:48:14 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Changed ubuntu distribution to jaunty
+
+Sat Jan 30 19:34:13 CET 2010  Stephane Popinet <popinet@users.sf.net>
+  * old tag: 2010-01-29
+
+Fri Jan 29 11:42:41 CET 2010  Stephane Popinet <s.popinet@niwa.co.nz>
+  * gts_file_assign_variables() supports quoted GTS_STRINGs
+
+Wed Sep  9 17:03:53 CEST 2009  Stephane Popinet <popinet@users.sf.net>
+  * old tag: 2009-09-08
+
+Wed Sep  9 00:39:16 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed incorrect man pages install directory in RPM spec
+
+Tue Sep  8 00:03:56 CEST 2009  Matthieu Castellazzi <m.castellazzi@niwa.co.nz>
+  * add man pages to rpm spec file
+
+Sun May 10 07:53:23 CEST 2009  Stephane Popinet <popinet@users.sf.net>
+  * Added 'launchpad-snapshot' Makefile target
+
+Sat May  9 01:32:01 CEST 2009  Stephane Popinet <popinet@users.sf.net>
+  * autogen.sh copies missing files
+
+Sat May  2 01:24:22 CEST 2009  Stephane Popinet <popinet@users.sf.net>
+  * Man pages need to be distributed
+  Ignore-this: c842267e75ff47e0870d0446d818de67
+
+Fri May  1 06:20:54 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added man pages from debian (thanks Ruben!)
+  Ignore-this: 6219302d9f3660f284b855e0f3ef68cb
+
+Fri May  1 03:27:40 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated debian package build (based on Ruben Molina's)
+  Ignore-this: 96eda30e02f7132cf5c8629410c0455d
+
+Fri May  1 02:59:11 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * stl2gts ignores degenerate facets
+  Ignore-this: 76dfa27e377ad0544249b11e3d9e16a2
+
+Wed Apr 29 13:09:24 CEST 2009  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for debian package symbols generation
+
+Sun Oct  5 02:06:14 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for versioning of debian packages
+
+Wed Jul 16 04:31:11 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Minor fixes for RPM spec file (I. Vari)
+
+Fri Jul  4 04:40:33 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed typos in RPM spec file (I. Vari)
+
+Tue Jul  1 06:02:02 CEST 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * RPM spec updated for Fedora (I. Vari)
+
+Mon Jan  7 21:45:25 CET 2008  Stephane Popinet <s.popinet@niwa.co.nz>
+  * RPM build fix (I. Vari)
+  
+  Removed %{?_smp_mflags} from make due to intermittent
+  build errors on some SMP systems.
+
+Wed Dec 19 00:31:01 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * RPM spec file fix (Ivan Vari)
+
+Mon Nov 12 03:48:48 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed package (install) dependencies
+
+Tue Oct 30 02:53:14 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added specs for RPM packaging (thanks to Ivan Vari)
+
+Tue Oct 30 03:53:28 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added math library for netpbm library check.
+
+Thu Sep 13 23:56:41 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Explicit check when trying to partition a graph with too few nodes
+
+Wed Sep 12 06:23:28 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * example/volume also computes the area
+
+Wed Sep 12 06:22:39 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * New "all" option for example/set
+  
+  For outputting all combinations of boolean operations.
+
+Fri Apr 13 06:02:10 CEST 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added math lib to gts.pc
+
+Thu Feb 22 05:01:21 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Force regeneration of ChangeLog before creating debian package
+
+Wed Feb 14 02:50:50 CET 2007  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for getopt_long and unknown arguments
+
+Mon Jan 22 23:48:30 CET 2007  Stephane Popinet <popinet@users.sf.net>
+  * New function gts_point_in_sphere()
+
+Fri Nov 24 04:04:32 CET 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed function inlining mess
+  
+  I made all inlined functions "static inline" in the gts.h header file.
+  This should fix the problem when linking GTS with non-optimised objects.
+
+Wed Oct 25 04:28:12 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Removed g_ptr_array_foreach() call for compatibility with glib-1.2
+
+Wed Oct 18 23:32:43 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Simplified Debian package dependencies
+  
+  To make them compatible with Ubuntu. It's a bit messy though as I am not sure
+  what the issues are with binary compatibility of Ubuntu/Debian libraries etc...
+
+Wed Oct 18 05:45:35 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for memory leak in GtsEHeap with glib >= 2.10
+  
+  The GMemChunk glib structure previously used for allocating GtsEHeapPair is 
+  deprecated in glib 2.10.
+  
+  Furthermore, it seems that the new slice allocator in glib 2.10 is not 
+  backward compatible with GMemChunk (despite what is said in the doc). This 
+  causes massive memory leaks.
+  
+  The solution is to use good old g_malloc instead.
+
+Fri Oct  6 02:20:31 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed autogen.sh for Mac OSX
+
+Thu Jul 13 00:00:55 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Bug fix in gts_edge_swap() (thanks to Oliver Burghard)
+
+Wed Mar 29 06:43:17 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  tagged release_0_7_6
+
+Wed Mar 29 06:03:21 CEST 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated NEWS for release 0.7.6
+
+Fri Mar 24 00:47:26 CET 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Changed 'gtstransform' to 'transform' in Debian package
+
+Fri Mar 10 00:48:43 CET 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Marcello's debian patch for ARM and Alpha was breaking floating-point control!
+
+Thu Mar  9 22:41:16 CET 2006  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Debian snapshot packages were not correctly versioned
+
+Sun Mar  5 09:11:09 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * Removed 'arch' junk
+
+Fri Feb  3 11:50:14 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * Updated macros for automake 1.8
+
+Wed Jan 25 18:48:18 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * predicates_init.h has nothing to do in darcs
+
+Wed Jan 25 18:45:30 CET 2006  Stephane Popinet <popinet@users.sf.net>
+  * LC_ALL is set to POSIX in all executables
+  
+  This fixes problems when running the tools/examples on non-English systems.
+
+Sun Dec  4 22:34:17 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Changelog is manual for debian package
+
+Thu Dec  1 21:58:57 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Debian packages use correct versioning
+
+Thu Dec  1 06:11:53 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updated macro docs for new version of gtk-doc
+
+Thu Dec  1 05:12:38 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Floating-point control for Alpha and ARM (from M. Magallon debian port)
+
+Thu Dec  1 05:07:48 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Debian snapshot creation (based on Marcelo Magalon official debian packages)
+
+Tue Nov 29 03:44:36 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed doc for gts_triangle_quality()
+
+Tue Nov 29 01:17:28 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Removed USE_ROBUST_PREDICATES option (predicates are always robust now)
+
+Mon Oct 17 00:21:35 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * old tag: 0.7.4
+
+Mon Oct 17 00:19:49 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Doc updates for release 0.7.4
+
+Fri Aug 26 01:07:41 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixes for compilation warnings (thanks to Omar Cornut)
+
+Mon Aug 15 06:01:28 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Cleanup
+
+Sun Aug 14 12:07:41 CEST 2005  Stephane Popinet <popinet@users.sf.net>
+  * New function gts_bbox_overlaps_segment()
+  
+  Using the same fast routine as gts_bbox_overlaps_triangle() but with a
+  degenerate triangle as input.
+
+Wed Jul 20 06:26:02 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Removed attribute byte count check for stl2gts
+
+Wed Jul 13 01:27:25 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added ChangeLog target
+
+Tue Jul 12 06:02:33 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Version set to 0.7.4 prior to release
+
+Fri Jul  1 00:53:59 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * GtsFile now reports errors starting at column number 1
+
+Fri Jul  1 00:53:09 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for comments not being fully ignored by GtsFile
+
+Thu Jun 30 07:44:52 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for customised handling of parsing of GtsFile
+
+Thu Jun 30 07:44:00 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * gts_file_new_from_string() makes a copy of the string
+
+Wed Jun 29 03:27:34 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Small change to interface of gts_file_new_from_string()
+
+Sun Jun 12 11:00:09 CEST 2005  Stephane Popinet <popinet@users.sf.net>
+  * new gts_file_new_from_string() function
+
+Fri Jun 10 02:26:49 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * added const qualifier to gts_object_class_from_name()
+
+Tue Jun  7 05:52:53 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed bug in gts_delaunay_remove_vertex
+
+Tue Jun  7 05:41:56 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fix for degenerate case in isotetra_bcl()
+  
+  It handles the degenerate case where an interpolated point
+  falls directly on a mesh vertex (the previous code would generate
+  edges with length zero).
+
+Tue Jun  7 05:41:30 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added Magnus to thanks
+
+Tue Jun  7 05:40:46 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Fixed gts.def
+
+Tue Jun  7 05:28:20 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Support binary STL files in stl2gts on win32
+
+Thu May 26 05:19:54 CEST 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Added autogen.sh
+
+Wed Mar  9 03:26:55 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * delaunay is installed
+
+Wed Jan 19 06:41:50 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Updates for switch to darcs
+
+Mon Nov 15 00:44:04 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Bug fixes for gts_delaunay_add_constraint (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-12)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-12
+  Keywords: 
+  
+  This function was returning destroyed conflicting constraints.
+  Improper handling of special cases in remove_intersected_edge was
+  causing failure in some cases.
+  
+
+Tue Nov  9 06:20:14 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * closest face for glib >= 2.4 did not use planar distance (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-11)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-11
+  Keywords: 
+  
+  This was fixed for the glib 1.2 version a while ago.
+  
+
+Thu Nov  4 03:12:42 CET 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * New function gts_triangle_interpolate_height() (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-10)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-10
+  Keywords: 
+  
+  
+
+Thu Oct 28 07:46:25 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Added fast triangle-box intersection test (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-9)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-9
+  Keywords: 
+  
+  Written by Tomas Akenine-Moller.
+  
+
+Tue Oct 26 06:21:27 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * New "closed" option for happrox (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-8)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-8
+  Keywords: 
+  
+  
+
+Tue Oct 26 06:20:51 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * happrox is installed (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-7)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-7
+  Keywords: 
+  
+  
+
+Tue Oct 26 06:20:06 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * New function gts_face_is_compatible (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-6)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-6
+  Keywords: 
+  
+  
+
+Mon Oct 18 02:43:55 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Updates before release 0.7.3 (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-5)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-5
+  Keywords: 
+  
+  
+
+Mon Oct 18 02:20:36 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Added vertex indices in doc/isocube.fig (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-4)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-4
+  Keywords: 
+  
+  
+
+Thu Oct 14 00:06:27 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Simpler and more efficient gts_file_read function (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-3)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-3
+  Keywords: 
+  
+  
+
+Mon Oct 11 02:00:09 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Glib-2.0 and mingwin support (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-2)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-2
+  Keywords: 
+  
+  Based on patches by Tim Fenn and others.
+  
+
+Mon Oct 11 00:32:18 CEST 2004  Stephane Popinet <popinet@users.sourceforge.net>
+  * Interoperability with CVS (s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-1)
+  s.popinet@niwa.co.nz--2004/gts--mainline--0.7--patch-1
+  Keywords: 
+  
+  
+
+Wed Jan 19 05:47:16 CET 2005  Stephane Popinet <s.popinet@niwa.co.nz>
+  * Initial commit (s.popinet@niwa.co.nz--2004/gts--mainline--0.7)
