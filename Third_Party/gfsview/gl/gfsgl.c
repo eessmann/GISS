@@ -1847,7 +1847,6 @@ GtsFile * gfs_gl_var_func_set (GfsGlVarFunc * vf,
   fp = gts_file_new_from_string (func);
   f = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (f, domain, fp);
-  gfs_pending_functions_compilation (fp);
   if (fp->type == GTS_ERROR) {
     gts_object_destroy (GTS_OBJECT (f));
     return fp;

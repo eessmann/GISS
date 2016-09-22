@@ -39,7 +39,7 @@ bin_PROGRAMS = gfsview2D$(EXEEXT) gfsview3D$(EXEEXT)
 subdir = view
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -193,7 +193,6 @@ LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
-MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -225,7 +224,6 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
-ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
@@ -258,6 +256,7 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
+lt_ECHO = @lt_ECHO@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
@@ -302,14 +301,14 @@ gfsview2D_SOURCES = $(SRC) gfkgl2D.h
 gfsview2D_CFLAGS = @SN_CFLAGS@ @GTK_CFLAGS@ @GERRIS2D_CFLAGS@
 gfsview2D_LDADD = -L$(top_builddir)/gl2ps -lgl2ps \
                   -L$(top_builddir)/gl -lgfsgl2D \
-	          @SN_LIBS@ @GTK_LIBS@ @GERRIS2D_LIBS@
+	          @SN_LIBS@ @GTK_LIBS@
 
 gfsview2D_DEPENDENCIES = $(top_builddir)/gl2ps/libgl2ps.la $(top_builddir)/gl/libgfsgl2D.la
 gfsview3D_SOURCES = $(SRC) gfkgl3D.h
 gfsview3D_CFLAGS = @SN_CFLAGS@ @GTK_CFLAGS@ @GERRIS3D_CFLAGS@
 gfsview3D_LDADD = -L$(top_builddir)/gl2ps -lgl2ps \
                   -L$(top_builddir)/gl -lgfsgl3D \
-                  @SN_LIBS@ @GTK_LIBS@ @GERRIS3D_LIBS@
+                  @SN_LIBS@ @GTK_LIBS@
 
 gfsview3D_DEPENDENCIES = $(top_builddir)/gl2ps/libgl2ps.la $(top_builddir)/gl/libgfsgl3D.la
 all: $(BUILT_SOURCES)
