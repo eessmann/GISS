@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:16.10
 RUN apt update && apt full-upgrade -y
 RUN apt install -y build-essential \
                 automake \
@@ -7,7 +7,7 @@ RUN apt install -y build-essential \
                 gfortran \
                 wget \
                 git \
-                darcs \
+                zip \
                 openmpi-bin \
                 libopenmpi-dev \
                 libglib2.0-dev \
@@ -39,7 +39,7 @@ RUN export HYPRE=/usr/local/hypre &&  \
     /sbin/ldconfig
 
 RUN cd /GISS/Third_Party/gts &&./configure && make -j6 && make install
-RUN cd /GISS && export HYPRE=/usr/local/hypre && bash autogen.sh \
+RUN cd /GISS && export HYPRE=/usr/local/hypre \
     && CPPFLAGS=-I$HYPRE/include LDFLAGS="-L$HYPRE/lib" ./configure \
     && make -j8 && make install
 RUN cd /GISS/Third_Party/gfsview-stable && ./configure && make -j6 && \
