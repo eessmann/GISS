@@ -4,10 +4,9 @@ The Gerris based Solid-Fluid system solver
 General Information
 ===================
 
-GISS also known as the GNU Flow Solver (GFS) aims to be a generic
-tool for the numerical simulation of fluid flows.
+GISS also known as the Gerris Immersed Solid Solver aims to be a generic tool for the numerical simulation of solid-fluid flows.
 
-The official web site is: http://gfs.sourceforge.net
+The official web site is: http://??????
 
 Copying
 =======

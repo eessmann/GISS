@@ -1,4 +1,4 @@
-FROM ubuntu:16.10
+FROM ubuntu:16.04
 RUN apt update && apt full-upgrade -y
 RUN apt install -y build-essential \
                 automake \
