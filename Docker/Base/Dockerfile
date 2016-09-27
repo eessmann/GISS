@@ -48,7 +48,7 @@ RUN source /GISS/Docker/GISS_PATH.sh && \
 
 RUN cd /GISS/Third_Party/gts && ./configure --prefix=/Deployment/GISS && make -j6 && make install
 
-RUN source /GISS/Docker/GISS_PATH.sh && cd /GISS && /sbin/ldconfig -v && \
+RUN source /GISS/Docker/GISS_PATH.sh && cd /GISS/Third_Party/gerris_Inuse && /sbin/ldconfig -v && \
     CPPFLAGS=-I$HYPRE/include LDFLAGS="-L$HYPRE/lib" ./configure --prefix=$GISS && \
     make -j8 && make install
 
