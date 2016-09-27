@@ -36,4 +36,4 @@ dnf -y install ffmpeg \
 
 RUN git clone https://eessmann:2A10e20s@github.com/eessmann/GISS.git
 
-RUN bash /GISS/Docker/GISS_PATH.sh
+RUN cd /GISS/Docker && bash GISS_PATH.sh
