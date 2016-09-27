@@ -178,7 +178,6 @@ GfsOutputSquares
 GfsOutputStreamline
 GfsOutputTime
 GfsOutputTiming
-GfsOutputView
 GfsParticle
 GfsParticleForce
 GfsParticleList
@@ -303,7 +302,6 @@ OutputSquares
 OutputStreamline
 OutputTime
 OutputTiming
-OutputView
 Particle
 ParticleForce
 ParticleList
