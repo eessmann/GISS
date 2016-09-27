@@ -1,7 +1,4 @@
  #!/bin/bash
-/usr/bin/modulecmd bash
-/usr/bin/modulecmd bash load mpi/openmpi-x86_64
-/usr/bin/modulecmd bash list
 
 export GISS=/Deployment/GISS 
 export PATH=$PATH:$GISS/bin
@@ -18,6 +15,16 @@ export PATH=$PATH:$HYPRE/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HYPRE/lib
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HYPRE/lib/pkgconfig
 
+export MPI=/Deployment/MPI 
+export PATH=$PATH:$GISS/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GISS/lib
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$GISS/lib/pkgconfig
+
+cd /GISS/Third_Party/openmpi-2.0.1
+bash configure --prefix=$MPI
+make -j6
+make install
+mpiexec -v
 
 cd /GISS/Third_Party/ode
 bash bootstrap
