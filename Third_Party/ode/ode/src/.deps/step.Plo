@@ -1,0 +1,316 @@
+step.lo: step.cpp /usr/include/stdc-predef.h \
+ ../../include/ode/odeconfig.h \
+ /usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/stddef.h \
+ /usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/limits.h \
+ /usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/syslimits.h \
+ /usr/include/limits.h /usr/include/features.h /usr/include/sys/cdefs.h \
+ /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
+ /usr/include/gnu/stubs-64.h /usr/include/bits/posix1_lim.h \
+ /usr/include/bits/local_lim.h /usr/include/linux/limits.h \
+ /usr/include/bits/posix2_lim.h /usr/include/bits/xopen_lim.h \
+ /usr/include/bits/stdio_lim.h /usr/include/stdio.h \
+ /usr/include/bits/types.h /usr/include/bits/typesizes.h \
+ /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h \
+ /usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/stdarg.h \
+ /usr/include/bits/sys_errlist.h /usr/include/bits/stdio.h \
+ /usr/include/c++/6.2.1/stdlib.h /usr/include/c++/6.2.1/cstdlib \
+ /usr/include/c++/6.2.1/x86_64-redhat-linux/bits/c++config.h \
+ /usr/include/c++/6.2.1/x86_64-redhat-linux/bits/os_defines.h \
+ /usr/include/c++/6.2.1/x86_64-redhat-linux/bits/cpu_defines.h \
+ /usr/include/stdlib.h /usr/include/bits/waitflags.h \
+ /usr/include/bits/waitstatus.h /usr/include/endian.h \
+ /usr/include/bits/endian.h /usr/include/bits/byteswap.h \
+ /usr/include/bits/byteswap-16.h /usr/include/xlocale.h \
+ /usr/include/sys/types.h /usr/include/time.h /usr/include/sys/select.h \
+ /usr/include/bits/select.h /usr/include/bits/sigset.h \
+ /usr/include/bits/time.h /usr/include/sys/sysmacros.h \
+ /usr/include/bits/pthreadtypes.h /usr/include/alloca.h \
+ /usr/include/bits/stdlib-bsearch.h /usr/include/bits/stdlib-float.h \
+ /usr/include/c++/6.2.1/math.h /usr/include/c++/6.2.1/cmath \
+ /usr/include/c++/6.2.1/bits/cpp_type_traits.h \
+ /usr/include/c++/6.2.1/ext/type_traits.h /usr/include/math.h \
+ /usr/include/bits/math-vector.h /usr/include/bits/libm-simd-decl-stubs.h \
+ /usr/include/bits/huge_val.h /usr/include/bits/huge_valf.h \
+ /usr/include/bits/huge_vall.h /usr/include/bits/inf.h \
+ /usr/include/bits/nan.h /usr/include/bits/mathdef.h \
+ /usr/include/bits/mathcalls.h /usr/include/bits/mathinline.h \
+ /usr/include/string.h \
+ /usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/float.h \
+ ../../include/ode/precision.h ../../include/ode/rotation.h \
+ ../../include/ode/common.h ../../include/ode/error.h \
+ ../../include/ode/compatibility.h ../../include/ode/timer.h config.h \
+ /usr/include/malloc.h \
+ /usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/stdint.h \
+ /usr/include/stdint.h /usr/include/bits/wchar.h /usr/include/inttypes.h \
+ typedefs.h odemath.h ../../include/ode/odemath.h \
+ ../../include/ode/odemath_legacy.h error.h matrix.h \
+ ../../include/ode/matrix.h objects.h ../../include/ode/memory.h \
+ ../../include/ode/mass.h array.h threading_base.h \
+ ../../include/ode/threading.h /usr/include/bits/timex.h joints/joint.h \
+ ../../include/ode/contact.h joints/../objects.h joints/../obstack.h \
+ joints/../objects.h lcp.h util.h threadingutils.h odeou.h \
+ ../../ou/include/ou/assert.h ../../ou/include/ou/customization.h \
+ ../../ou/include/ou/namespace.h ../../ou/include/ou/inttypes.h \
+ ../../ou/include/ou/platform.h /usr/include/assert.h \
+ ../../ou/include/ou/enumarrays.h ../../ou/include/ou/macros.h \
+ ../../ou/include/ou/templates.h ../../ou/include/ou/typewrapper.h \
+ ../../ou/include/ou/simpleflags.h ../../ou/include/ou/flagsdefines.h \
+ ../../ou/include/ou/atomic.h ../../ou/include/ou/atomicflags.h \
+ /usr/include/c++/6.2.1/new /usr/include/c++/6.2.1/exception \
+ /usr/include/c++/6.2.1/bits/atomic_lockfree_defines.h \
+ /usr/include/c++/6.2.1/bits/exception_ptr.h \
+ /usr/include/c++/6.2.1/bits/exception_defines.h \
+ /usr/include/c++/6.2.1/bits/nested_exception.h \
+ /usr/include/c++/6.2.1/bits/move.h \
+ /usr/include/c++/6.2.1/bits/concept_check.h \
+ /usr/include/c++/6.2.1/type_traits
+
+/usr/include/stdc-predef.h:
+
+../../include/ode/odeconfig.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/stddef.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/limits.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/syslimits.h:
+
+/usr/include/limits.h:
+
+/usr/include/features.h:
+
+/usr/include/sys/cdefs.h:
+
+/usr/include/bits/wordsize.h:
+
+/usr/include/gnu/stubs.h:
+
+/usr/include/gnu/stubs-64.h:
+
+/usr/include/bits/posix1_lim.h:
+
+/usr/include/bits/local_lim.h:
+
+/usr/include/linux/limits.h:
+
+/usr/include/bits/posix2_lim.h:
+
+/usr/include/bits/xopen_lim.h:
+
+/usr/include/bits/stdio_lim.h:
+
+/usr/include/stdio.h:
+
+/usr/include/bits/types.h:
+
+/usr/include/bits/typesizes.h:
+
+/usr/include/libio.h:
+
+/usr/include/_G_config.h:
+
+/usr/include/wchar.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/stdarg.h:
+
+/usr/include/bits/sys_errlist.h:
+
+/usr/include/bits/stdio.h:
+
+/usr/include/c++/6.2.1/stdlib.h:
+
+/usr/include/c++/6.2.1/cstdlib:
+
+/usr/include/c++/6.2.1/x86_64-redhat-linux/bits/c++config.h:
+
+/usr/include/c++/6.2.1/x86_64-redhat-linux/bits/os_defines.h:
+
+/usr/include/c++/6.2.1/x86_64-redhat-linux/bits/cpu_defines.h:
+
+/usr/include/stdlib.h:
+
+/usr/include/bits/waitflags.h:
+
+/usr/include/bits/waitstatus.h:
+
+/usr/include/endian.h:
+
+/usr/include/bits/endian.h:
+
+/usr/include/bits/byteswap.h:
+
+/usr/include/bits/byteswap-16.h:
+
+/usr/include/xlocale.h:
+
+/usr/include/sys/types.h:
+
+/usr/include/time.h:
+
+/usr/include/sys/select.h:
+
+/usr/include/bits/select.h:
+
+/usr/include/bits/sigset.h:
+
+/usr/include/bits/time.h:
+
+/usr/include/sys/sysmacros.h:
+
+/usr/include/bits/pthreadtypes.h:
+
+/usr/include/alloca.h:
+
+/usr/include/bits/stdlib-bsearch.h:
+
+/usr/include/bits/stdlib-float.h:
+
+/usr/include/c++/6.2.1/math.h:
+
+/usr/include/c++/6.2.1/cmath:
+
+/usr/include/c++/6.2.1/bits/cpp_type_traits.h:
+
+/usr/include/c++/6.2.1/ext/type_traits.h:
+
+/usr/include/math.h:
+
+/usr/include/bits/math-vector.h:
+
+/usr/include/bits/libm-simd-decl-stubs.h:
+
+/usr/include/bits/huge_val.h:
+
+/usr/include/bits/huge_valf.h:
+
+/usr/include/bits/huge_vall.h:
+
+/usr/include/bits/inf.h:
+
+/usr/include/bits/nan.h:
+
+/usr/include/bits/mathdef.h:
+
+/usr/include/bits/mathcalls.h:
+
+/usr/include/bits/mathinline.h:
+
+/usr/include/string.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/float.h:
+
+../../include/ode/precision.h:
+
+../../include/ode/rotation.h:
+
+../../include/ode/common.h:
+
+../../include/ode/error.h:
+
+../../include/ode/compatibility.h:
+
+../../include/ode/timer.h:
+
+config.h:
+
+/usr/include/malloc.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/6.2.1/include/stdint.h:
+
+/usr/include/stdint.h:
+
+/usr/include/bits/wchar.h:
+
+/usr/include/inttypes.h:
+
+typedefs.h:
+
+odemath.h:
+
+../../include/ode/odemath.h:
+
+../../include/ode/odemath_legacy.h:
+
+error.h:
+
+matrix.h:
+
+../../include/ode/matrix.h:
+
+objects.h:
+
+../../include/ode/memory.h:
+
+../../include/ode/mass.h:
+
+array.h:
+
+threading_base.h:
+
+../../include/ode/threading.h:
+
+/usr/include/bits/timex.h:
+
+joints/joint.h:
+
+../../include/ode/contact.h:
+
+joints/../objects.h:
+
+joints/../obstack.h:
+
+joints/../objects.h:
+
+lcp.h:
+
+util.h:
+
+threadingutils.h:
+
+odeou.h:
+
+../../ou/include/ou/assert.h:
+
+../../ou/include/ou/customization.h:
+
+../../ou/include/ou/namespace.h:
+
+../../ou/include/ou/inttypes.h:
+
+../../ou/include/ou/platform.h:
+
+/usr/include/assert.h:
+
+../../ou/include/ou/enumarrays.h:
+
+../../ou/include/ou/macros.h:
+
+../../ou/include/ou/templates.h:
+
+../../ou/include/ou/typewrapper.h:
+
+../../ou/include/ou/simpleflags.h:
+
+../../ou/include/ou/flagsdefines.h:
+
+../../ou/include/ou/atomic.h:
+
+../../ou/include/ou/atomicflags.h:
+
+/usr/include/c++/6.2.1/new:
+
+/usr/include/c++/6.2.1/exception:
+
+/usr/include/c++/6.2.1/bits/atomic_lockfree_defines.h:
+
+/usr/include/c++/6.2.1/bits/exception_ptr.h:
+
+/usr/include/c++/6.2.1/bits/exception_defines.h:
+
+/usr/include/c++/6.2.1/bits/nested_exception.h:
+
+/usr/include/c++/6.2.1/bits/move.h:
+
+/usr/include/c++/6.2.1/bits/concept_check.h:
+
+/usr/include/c++/6.2.1/type_traits:

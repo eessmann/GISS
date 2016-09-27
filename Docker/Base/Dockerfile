@@ -1,46 +1,55 @@
-FROM ubuntu:16.04
-RUN apt update && apt full-upgrade -y
-RUN apt install -y build-essential \
-                automake \
-                autoconf \
-                libtool \
-                gfortran \
-                wget \
-                git \
-                zip \
-                openmpi-bin \
-                libopenmpi-dev \
-                libglib2.0-dev \
-                libnetpbm10-dev \
-                libproj-dev \
-                libgsl0-dev \
-                libnetcdf-dev \
-                libfftw3-dev \
-                libgtkglext1-dev \
-                libstartup-notification0-dev \
-                libgtk2.0-dev \
-                libstartup-notification0-dev \
-                libftgl-dev \
-                libosmesa6-dev \
-                ffmpeg
+FROM fedora:24
+RUN dnf -y update && \
+    dnf -y groupinstall "Development Tools" && \
+    dnf -y groupinstall "C Development Tools and Libraries" && \
+    dnf -y install gcc-gfortran \
+                    environment-modules \
+                    openmpi \
+                    openmpi-devel \
+                    glib2 \
+                    glib2-devel \
+                    netpbm \
+                    netpbm-devel \
+                    proj \
+                    proj-devel \
+                    gsl \
+                    gsl-devel \
+                    netcdf \
+                    netcdf-openmpi \
+                    netcdf-devel \
+                    netcdf-fortran \
+                    netcdf-openmpi-devel \
+                    netcdf-fortran-openmpi \
+                    netcdf-fortran-devel \
+                    netcdf-fortran-openmpi-devel \
+                    fftw \
+                    fftw-devel \
+                    gtkglext-devel \
+                    startup-notification \
+                    startup-notification-devel && \
+               
+rpm -Uvh http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-stable.noarch.rpm http://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-stable.noarch.rpm && \
+
+dnf -y update && \
+dnf -y install ffmpeg \
+               ffmpeg-devel
 
 RUN git clone https://eessmann:2A10e20s@github.com/eessmann/GISS.git
 
 RUN cd /GISS/Third_Party/ode && bash bootstrap && \
     bash configure --enable-shared=yes --enable-double-precision \
-                  --enable-builtin-threading-impl --enable-libccd \
-                && make -j6 && make install
+                  --enable-builtin-threading-impl --enable-libccd --prefix=/Deployment/ODE && \
+    make -j6 && make install
 
-RUN export HYPRE=/usr/local/hypre &&  \
-    export LD_LIBRARY_PATH=${HYPRE}/lib:$LD_LIBRARY_PATH && \
-    cd /GISS/Third_Party/hypre/src && \
-    ./configure --prefix=$HYPRE --enable-shared && \
+RUN cd /GISS/Third_Party/hypre/src && \
+    ./configure --prefix=/Deployment/hypre --enable-shared && \
     make -j6 && make install && \
-    /sbin/ldconfig
 
-RUN cd /GISS/Third_Party/gts &&./configure && make -j6 && make install
-RUN cd /GISS && export HYPRE=/usr/local/hypre \
-    && CPPFLAGS=-I$HYPRE/include LDFLAGS="-L$HYPRE/lib" ./configure \
-    && make -j8 && make install
+RUN cd /GISS/Third_Party/gts && ./configure --prefix=/Deployment/GISS && make -j6 && make install
+
+RUN cd /GISS && /sbin/ldconfig -v && \
+    CPPFLAGS=-I$HYPRE/include LDFLAGS="-L$HYPRE/lib" ./configure --prefix=/Deployment/GISS && \
+    make -j8 && make install
+
 RUN cd /GISS/Third_Party/gfsview-stable && ./configure && make -j6 && \
     make install && rm -rfv /GISS
