@@ -1,6 +1,7 @@
  #!/bin/bash
- 
+module avail
 module load mpi/openmpi-x86_64
+module list
 
 export GISS=/Deployment/GISS 
 export PATH=$PATH:$GISS/bin
