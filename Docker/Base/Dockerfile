@@ -36,21 +36,4 @@ dnf -y install ffmpeg \
 
 RUN git clone https://eessmann:2A10e20s@github.com/eessmann/GISS.git
 
-RUN source /GISS/Docker/GISS_PATH.sh && cd /GISS/Third_Party/ode && bash bootstrap && \
-    bash configure --enable-shared=yes --enable-double-precision \
-                  --enable-builtin-threading-impl --enable-libccd --prefix=/Deployment/ODE && \
-    make -j6 && make install
-
-RUN source /GISS/Docker/GISS_PATH.sh && \
-    cd /GISS/Third_Party/hypre/src && \
-    ./configure --prefix=$HYPRE --enable-shared && \
-    make -j6 && make install && \
-
-RUN cd /GISS/Third_Party/gts && ./configure --prefix=/Deployment/GISS && make -j6 && make install
-
-RUN source /GISS/Docker/GISS_PATH.sh && cd /GISS/Third_Party/gerris_Inuse && /sbin/ldconfig -v && \
-    CPPFLAGS=-I$HYPRE/include LDFLAGS="-L$HYPRE/lib" ./configure --prefix=$GISS && \
-    make -j8 && make install
-
-RUN source /GISS/Docker/GISS_PATH.sh && cd /GISS/Third_Party/gfsview-stable && ./configure --prefix=$GISS && \ 
-    make -j6 && make install && rm -rfv /GISS
+RUN bash /GISS/Docker/GISS_PATH.sh
