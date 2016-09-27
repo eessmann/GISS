@@ -2,10 +2,10 @@
  
 module load mpi/openmpi-x86_64
 
-export GHC=/Deployment/GHC 
-export PATH=$PATH:$GHC/bin
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GHC/lib
-export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$GHC/lib/pkgconfig
+export GISS=/Deployment/GISS 
+export PATH=$PATH:$GISS/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GISS/lib
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$GISS/lib/pkgconfig
 
 export ODE=/Deployment/ODE
 export PATH=$PATH:$ODE/bin
