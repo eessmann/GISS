@@ -1,4 +1,7 @@
  #!/bin/bash
+ 
+module load mpi/openmpi-x86_64
+
 export GHC=/Deployment/GHC 
 export PATH=$PATH:$GHC/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GHC/lib
