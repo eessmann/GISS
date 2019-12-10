@@ -1,0 +1,1 @@
+sed 's/ *gtk_window_set_title *(GTK_WINDOW *([a-zA-Z0-9]*_params), "[a-zA-Z0-9]*");$//g' | sed 's/\( *\)\([a-zA-Z0-9]\)_params = gtk_window_new (GTK_WINDOW_TOPLEVEL);/\1\2_params = gtk_vbox_new (FALSE, 0);/g'

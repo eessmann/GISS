@@ -1,0 +1,27 @@
+General Information
+===================
+
+GfsView is a graphical viewer for Gerris simulation files.
+
+The official web site of Gerris is: http://gfs.sourceforge.net
+
+Copying
+=======
+
+GfsView is distributed under the terms of the General Public License which
+is compliant with the guidelines of the Open Source and Free Software
+Fundations. See the file COPYING for details.
+
+Installation
+============
+
+You will need a working version of gtk+-2.0, the gtkglext-1.0 OpenGL
+extension and the Gerris libraries.
+
+Unix users (including Windows users under Cygwin):
+
+./configure
+make
+make install
+
+See the file 'INSTALL' for generic configure instructions.

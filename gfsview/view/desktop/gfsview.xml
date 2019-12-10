@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/gfsview">
+    <sub-class-of type="text/plain"/>
+    <comment xml:lang="en">GfsView parameters</comment>
+    <glob pattern="*.gfv"/>
+  </mime-type>
+  <mime-type type="application/gfsview-2D">
+    <sub-class-of type="application/gfsview"/>
+    <comment xml:lang="en">GfsView 2D parameters</comment>
+    <magic priority="80">
+      <match type="string" value="# GfsView 2D" offset="0"/>
+    </magic>
+  </mime-type>
+  <mime-type type="application/gfsview-3D">
+    <sub-class-of type="application/gfsview"/>
+    <comment xml:lang="en">GfsView 3D parameters</comment>
+    <magic priority="80">
+      <match type="string" value="# GfsView 3D" offset="0"/>
+    </magic>
+  </mime-type>
+</mime-info>

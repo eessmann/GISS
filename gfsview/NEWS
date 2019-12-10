@@ -1,0 +1,51 @@
+03/04/2006: Release 0.4.2
+
+- Bug fix for gtk-2.8 handling of "client events".
+- New "Clipping" object for 3D clipping planes.
+- Reorganised objects in a new "Objects" menu.
+- Serious bug fix for isolines levels parsing.
+- Debian snapshots.
+
+17/10/2005: Release 0.4
+
+Important changes and new features:
+
+- (Tidal) ellipse display
+- GfsOutputLocation display
+- Embedded boundaries are represented as they are seen by Gerris
+(i.e. resolution dependent).
+- Embedded boundaries and isosurfaces can be coloured according to a scalar.
+- "Substract" function.
+- Visualisations can be saved/restored.
+- GfsView is scriptable and multithreaded (i.e. reads and reacts to
+standard input instructions).
+- Batch mode version of GfsView does not need an openGL display. This
+is useful for offline image/animation generation.
+- More general input of scalars: functions (e.g. U/10, sin(U+V)
+etc...) can be specified directly.
+- GfsView objects can be "picked". This is used to implement display of
+pointer 3D positions and scalar values etc... (hold control key to activate picking)
+- Streamlines 2D and 3D with interactive selection of seed points.
+- Automatic evenly-spaced streamline generation in 2D.
+
+20/10/2004: Release 0.2.0
+
+This is the first "official" release of GfsView. It's still a bit
+rough around the edges but one can already do quite a bit with it:
+
+- Isosurfaces
+- Arbitrary cut planes
+- Efficient use of the octree data structure for fast computation and
+  display
+- High-quality Postscript and PDF output
+
+The main bugs currently are:
+
+- A (very) limited number of "derived variables" (e.g. Vorticity,
+  Velocity, Lambda2 etc..) are currently allowed
+- Some Z-buffer openGL issues
+
+Desirable missing features include:
+
+- Streamlines
+- Volume visualisation
