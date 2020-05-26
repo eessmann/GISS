@@ -32,8 +32,8 @@ gerris.dic: classes modulesyms.sh $(top_srcdir)/modules/Makefile.am modules.list
 gfs.lang: gerris.dic
 	echo "# Language file for source-highlight" > gfs.lang
 	echo "# Generated automatically by classes.c" >> gfs.lang
-	awk '{ printf ("gfs_keyword = \"%s\"\n", $$1) }' < gerris.dic >> gfs.lang
-	echo "include \"cpp.lang\"" >> gfs.lang
+	awk '{ printf ("classname = \"%s\"\n", $$1) }' < gerris.dic >> gfs.lang
+	echo "include \"/usr/share/source-highlight/cpp.lang\"" >> gfs.lang
 	echo "comment start \"#\"" >> gfs.lang
 	echo "redef preproc = \"C preprocessor command is not compatible with the use of # as comment character in GTS\"" >> gfs.lang
 

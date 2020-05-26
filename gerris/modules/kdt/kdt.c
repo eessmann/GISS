@@ -35,7 +35,8 @@
 
 #define VERSION 20120405 /* the file format version */
 
-/* same as the system tmpfile() but uses the working directory (rather than /tmp) */
+/* same as the system tmpfile() but uses the working directory (rather
+   than /tmp) */
 FILE * kdt_tmpfile (void)
 {
   char name[] = "kdtXXXXXX";
@@ -292,7 +293,8 @@ static void merge (KdtHeap * h1, KdtHeap * h2,
 #if TIMING
 static double elapsed (const struct timeval * start, const struct timeval * end)
 {
-  return (double) (end->tv_usec - start->tv_usec) + 1e6*(double) (end->tv_sec - start->tv_sec);
+  return (double) (end->tv_usec - start->tv_usec) + 
+    1e6*(double) (end->tv_sec - start->tv_sec);
 }
 #endif
 
@@ -349,7 +351,7 @@ typedef struct {
 typedef struct {
   KdtRect bound;
   long len;
-  PADDING_32_BITS;
+  PADDING_32_BITS
   long np;
   int version;
 } Header;
@@ -369,7 +371,8 @@ static int check_32_bits (const Kdt * kdt)
 #if SYSTEM_32_BITS
   long maxlen = (1 << 31)/sizeof (KdtPoint);
   if (kdt->h.len > maxlen) {
-    fprintf (stderr, "kdt: 32-bits systems are limited to %ld data points\n", maxlen);
+    fprintf (stderr, "kdt: 32-bits systems are limited to %ld data points\n", 
+	     maxlen);
     return 1;
   }
 #endif
@@ -392,7 +395,8 @@ static void relative (const KdtRect rect, double * o, double * h)
     *h = ((double)rect[1].h) - ((double)rect[1].l);
 }
 
-static void sum_add_point (const KdtRect parent, KdtSumCore * sum, const KdtPoint * a, double w)
+static void sum_add_point (const KdtRect parent, KdtSumCore * sum, 
+			   const KdtPoint * a, double w)
 {
   double p[3], o[2], h;
 
@@ -453,12 +457,12 @@ static void kdt_rect_write (const KdtRect rect, FILE * fp)
 
 static int sort_x (const void * p1, const void * p2)
 {
-  return ((KdtPoint *) p1)->x > ((KdtPoint *) p2)->x;
+  return ((KdtPoint *) p1)->x > ((KdtPoint *) p2)->x ? 1 : -1;
 }
 
 static int sort_y (const void * p1, const void * p2)
 {
-  return ((KdtPoint *) p1)->y > ((KdtPoint *) p2)->y;
+  return ((KdtPoint *) p1)->y > ((KdtPoint *) p2)->y ? 1 : -1;
 }
 
 static void kdt_sum_core_init (KdtSumCore * s)
@@ -471,7 +475,8 @@ static void kdt_sum_core_init (KdtSumCore * s)
 #define GAP 0.2
 #define MINLEN 6
 
-static int update_sum (const KdtRect rect, KdtSumCore * n, KdtHeap * h, int index)
+static int update_sum (const KdtRect rect, KdtSumCore * n, KdtHeap * h, 
+		       int index)
 {
   kdt_sum_core_init (n);
   long i, imax = 0;
@@ -518,7 +523,8 @@ static void progress (void * data)
     (* kdt->progress) (++kdt->i/(float) kdt->m, kdt->data);
 }
 
-static void fwrite_check (const void * ptr, size_t size, size_t nmemb, FILE * stream)
+static void fwrite_check (const void * ptr, size_t size, size_t nmemb, 
+			  FILE * stream)
 {
   if (fwrite (ptr, size, nmemb, stream) != nmemb) {
     perror ("kdt_write");
@@ -534,7 +540,8 @@ static void union_bound (KdtRect b, const KdtRect b1, const KdtRect b2)
   b[1].h = MAX (b1[1].h, b2[1].h);
 }
 
-static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt, float * coverage)
+static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt, 
+		  float * coverage)
 {
 #if TIMING
   struct timeval start;
@@ -587,7 +594,8 @@ static int split (KdtHeap * h1, KdtRect bound, int index, Kdt * kdt, float * cov
       s.coverage = (coverage1*area (n.bound1) + coverage2*area (n.bound2))/a;
     else
       s.coverage = 1.;
-    assert (fseek (kdt->sums, spos + ((long) &s.coverage - (long) &s), SEEK_SET) == 0);
+    assert (fseek (kdt->sums, spos + ((long) &s.coverage - (long) &s), 
+		   SEEK_SET) == 0);
     fwrite_check (&s.coverage, sizeof (float), 1, kdt->sums);
     assert (fseek (kdt->sums, 0, SEEK_END) == 0);
     *coverage = s.coverage;
@@ -803,7 +811,8 @@ static long query (const Kdt * kdt, const KdtRect rect, long len)
     for (i = 0; i < len; i++)
       if (kdt->buffer[i].x >= rect[0].l && kdt->buffer[i].x <= rect[0].h && 
 	  kdt->buffer[i].y >= rect[1].l && kdt->buffer[i].y <= rect[1].h) {
-       	printf ("%.8f %.8f %f\n", kdt->buffer[i].x, kdt->buffer[i].y, kdt->buffer[i].z);
+       	printf ("%.8f %.8f %f\n", 
+		kdt->buffer[i].x, kdt->buffer[i].y, kdt->buffer[i].z);
 	n++;
       }
     return n;
@@ -823,7 +832,8 @@ long kdt_query (const Kdt * kdt, const KdtRect rect)
   return query (kdt, rect, h.len);
 }
 
-static void intersection (const KdtRect rect1, const KdtRect rect2, KdtRect inter)
+static void intersection (const KdtRect rect1, const KdtRect rect2, 
+			  KdtRect inter)
 {
   inter[0].l = MAX (rect1[0].l, rect2[0].l);
   inter[0].h = MIN (rect1[0].h, rect2[0].h);
@@ -864,21 +874,26 @@ static void sum_add_sum (const KdtRect parent, KdtSum * sum,
   sum->m13 += w*(oap1*m11 + m13)/hp;
   double m22 = (oap1*(an*oap1 + 2.*a->m02*ha) + a->m22*ha2)/hp2;
   sum->m22 += w*m22;
-  sum->m23 += w*(oap0*m22 + ha*(oap1*(oap1*a->m01 + 2.*a->m03*ha) + a->m23*ha2)/hp2)/hp;
+  sum->m23 += w*(oap0*m22 + ha*(oap1*(oap1*a->m01 + 2.*a->m03*ha) + 
+				a->m23*ha2)/hp2)/hp;
   sum->m33 += w*(oap1*(oap1*m11 + 2.*m13) + 
 		 ha2*(oap0*(oap0*a->m22 + 2.*a->m23*ha) + ha2*a->m33)/hp2)/hp2;
   double ha3 = ha2*ha, hp3 = hp2*hp;
-  sum->m44 += w*(oap0*(oap0*(oap0*an + 3.*ha*a->m01) + 3.*ha2*a->m11) + ha3*a->m44)/hp3;
-  sum->m55 += w*(oap1*(oap1*(oap1*an + 3.*ha*a->m02) + 3.*ha2*a->m22) + ha3*a->m55)/hp3;
+  sum->m44 += w*(oap0*(oap0*(oap0*an + 3.*ha*a->m01) + 3.*ha2*a->m11) + 
+		 ha3*a->m44)/hp3;
+  sum->m55 += w*(oap1*(oap1*(oap1*an + 3.*ha*a->m02) + 3.*ha2*a->m22) + 
+		 ha3*a->m55)/hp3;
   double ha4 = ha3*ha, hp4 = hp3*hp;
   sum->m66 += w*(oap0*(oap0*(oap0*(oap0*an + 4.*ha*a->m01) + 6.*ha2*a->m11) 
 		       + 4.*ha3*a->m44) + ha4*a->m66)/hp4;
   sum->m77 += w*(oap1*(oap1*(oap1*(oap1*an + 4.*ha*a->m02) + 6.*ha2*a->m22)
 		       + 4.*ha3*a->m55) + ha4*a->m77)/hp4;
-  sum->m67 += w*(oap1*(oap0*(oap0*(oap0*an + 3.*ha*a->m01) + 3.*ha2*a->m11) + ha3*a->m44)
+  sum->m67 += w*(oap1*(oap0*(oap0*(oap0*an + 3.*ha*a->m01) + 3.*ha2*a->m11) + 
+		       ha3*a->m44)
 		 + oap0*(oap0*(ha*a->m02*oap0 + 3.*ha2*a->m03) + 3.*ha3*a->m13) 
 		 + ha4*a->m67)/hp4;
-  sum->m76 += w*(oap0*(oap1*(oap1*(oap1*an + 3.*ha*a->m02) + 3.*ha2*a->m22) + ha3*a->m55)
+  sum->m76 += w*(oap0*(oap1*(oap1*(oap1*an + 3.*ha*a->m02) + 3.*ha2*a->m22) + 
+		       ha3*a->m55)
 		 + oap1*(oap1*(ha*a->m01*oap1 + 3.*ha2*a->m03) + 3.*ha3*a->m23)
 		 + ha4*a->m76)/hp4;
   sum->H0 += w*a->H0;
@@ -917,7 +932,7 @@ static long query_sum (const Kdt * kdt,
       if (fread (&s, sizeof (KdtSumCore), 1, kdt->sums) != 1)
 	return -1;
 #if DEBUG
-      fprintf (stderr, "read 1 sum %ld index %d\n", sizeof (KdtSumCore), index);
+      fprintf (stderr, "read 1 sum %ld\n", sizeof (KdtSumCore));
 #endif
       f->sp += sizeof (KdtSumCore);
       sum_add_sum (query, sum, bound, &s);
@@ -1010,7 +1025,8 @@ long kdt_query_sum (const Kdt * kdt,
   f.sp = f.lp = 0;
   if (!(* intersects) (h.bound, data))
     return 0;
-  return query_sum (kdt, includes, intersects, data, h.bound, h.len, &f, query, sum);
+  return query_sum (kdt, includes, intersects, data, h.bound, h.len, &f, 
+		    query, sum);
 }
 
 void kdt_sum_init (KdtSum * s)

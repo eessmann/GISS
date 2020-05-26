@@ -1,11 +1,5 @@
 /* padding on 32 bits systems (to match automatic 64 bits padding) */
 
-#if defined (__LP64__) || defined (__64BIT__) || defined (_LP64) || (__WORDSIZE == 64)
-  #define PADDING_32_BITS
-#else
-  #define PADDING_32_BITS int padding
-#endif
-
 typedef struct _RSurface RSurface;
 
 typedef struct { /* needs to be identical to typdirinfo in RStarTree.h */
@@ -18,7 +12,7 @@ typedef struct { /* needs to be identical to typdirinfo in RStarTree.h */
   double H5, H6;
   float Hmin, Hmax;
   int n;
-  PADDING_32_BITS;
+  PADDING_32_BITS
 } RSurfaceSum;
 
 typedef struct {

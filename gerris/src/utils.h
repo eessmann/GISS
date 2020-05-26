@@ -65,6 +65,13 @@ extern "C" {
 #  endif /* doesn't HAVE_MPI */
 #endif /* HAVE_CONFIG_H */
 
+#if !HAVE_G_MKDTEMP
+gchar * g_mkdtemp (gchar * tmpl);
+#endif
+#if !HAVE_OPEN_MEMSTREAM
+FILE * open_memstream (char **buf, size_t *len);
+#endif
+
 #ifndef M_PI
 #  define M_PI 3.14159265358979323846
 #endif
@@ -73,8 +80,14 @@ extern "C" {
 #define GFS_NODATA                   G_MAXDOUBLE
 #define GFS_HAS_DATA(cell,v)         (GFS_VALUE (cell, v) != GFS_NODATA)
 
+gchar * gfs_mkftemp  (gchar * tmpl);
+gchar * gfs_template (void);
+
 gboolean gfs_char_in_string (char c, const char * s);
 gchar *  gfs_file_statement (GtsFile * fp);
+
+void     gfs_object_clone   (GtsObject * object, 
+			     GtsObject * clone);
 
 /* GfsGlobal: Header */
 
@@ -88,12 +101,6 @@ typedef struct _GfsGlobal         GfsGlobal;
 
 GtsObjectClass * gfs_global_class  (void);
   
-/* GfsModule: Header */
-
-typedef struct _GfsModule GfsModule;
-
-void gfs_module_unref (GfsModule * m, GHashTable * cache);
-
 /* GfsFunction: Header */
 
 typedef struct _GfsFunction         GfsFunction;
@@ -129,6 +136,7 @@ gdouble            gfs_function_value       (GfsFunction * f,
 void               gfs_function_set_constant_value (GfsFunction * f, 
 						    gdouble val);
 gdouble            gfs_function_get_constant_value (GfsFunction * f);
+gboolean           gfs_function_is_constant  (const GfsFunction * f);
 GfsVariable *      gfs_function_get_variable (GfsFunction * f);
 void               gfs_function_read        (GfsFunction * f, 
 					     gpointer domain,
@@ -137,6 +145,7 @@ void               gfs_function_write       (GfsFunction * f,
 					     FILE * fp);
 GString *          gfs_function_expression  (GtsFile * fp, 
 					     gboolean * is_expression);
+void               gfs_pending_functions_compilation (GtsFile * fp);
 
 /* GfsFunctionSpatial: Header */
 
@@ -190,11 +199,18 @@ void               gfs_clock_stop           (GfsClock * t);
 gdouble            gfs_clock_elapsed        (GfsClock * t);
 void               gfs_clock_destroy        (GfsClock * t);
 
+typedef struct {
+  FILE * fp;
+  char * buf;
+  size_t len;
+} GfsUnionFile;
+
 FILE *             gfs_union_open           (FILE * fp, 
-					     int rank);
+					     int rank,
+					     GfsUnionFile * file);
 void               gfs_union_close          (FILE * fp, 
 					     int rank, 
-					     FILE * fpp);
+					     GfsUnionFile * file);
 
 /* GfsFormat: Header */
 

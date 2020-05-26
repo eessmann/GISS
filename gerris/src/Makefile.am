@@ -65,6 +65,10 @@ pkginclude_HEADERS = \
 include_HEADERS = \
 	gfs.h
 
+if OPEN_MEMSTREAM
+MEMSTREAM = open_memstream.c
+endif
+
 SRC = \
 	ftt.c \
 	fluid.c \
@@ -101,7 +105,8 @@ SRC = \
 	balance.c \
 	metric.c \
         particle.c \
-	$(GFS_HDS)
+	$(GFS_HDS) \
+	$(MEMSTREAM)
 
 domain.c: version.h
 
@@ -123,6 +128,8 @@ CLEANFILES = $(BUILT_SOURCES)
 EXTRA_DIST = \
 	ftt_internal.c \
 	moving2.c \
+	open_memstream.c \
+	verify.h \
 	m4.awk
 
 bin_PROGRAMS = gerris2D gerris3D

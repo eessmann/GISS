@@ -1,0 +1,2 @@
+- Isolines in 3D can have cracks (when cut plane is not orthogonal to
+  Cartesian axis).

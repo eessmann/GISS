@@ -39,7 +39,6 @@ struct _GfsTime {
   gdouble t, start, end;
   guint i, istart, iend;
   gdouble dtmax;
-  gdouble step; //SPODE
 };
 
 struct _GfsPhysicalParams {
@@ -159,6 +158,13 @@ GfsSimulationClass * gfs_poisson_class            (void);
 #define GFS_IS_AXI(obj)          (gts_object_is_from_class (obj, gfs_axi_class ()))
 
 GfsSimulationClass * gfs_axi_class                (void);
+
+/* GfsAdvectionAxi: Header */
+
+#define GFS_IS_ADVECTION_AXI(obj)      (gts_object_is_from_class (obj,\
+					           gfs_advection_axi_class ()))
+
+GfsSimulationClass * gfs_advection_axi_class                (void);
 
 #ifdef __cplusplus
 }

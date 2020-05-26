@@ -1985,6 +1985,21 @@ void gfs_cell_reset (FttCell * cell, GfsVariable * v)
   GFS_VALUE (cell, v) = 0.;
 }
 
+/**
+ * gfs_face_reset:
+ * @face: a #FttCellFace.
+ * @v: a #GfsVariable to reset.
+ *
+ * Sets the value of the variable @v of @face to zero (on both sides).
+ */
+void gfs_face_reset (FttCellFace * face, GfsVariable * v)
+{
+  g_return_if_fail (face != NULL);
+  g_return_if_fail (v != NULL);
+
+  GFS_VALUE (face->cell, v) = GFS_VALUE (face->neighbor, v) = 0.;
+}
+
 static void add_stats (const FttCell * cell, gpointer * data)
 {
   GtsRange * s = data[0];
@@ -2360,7 +2375,7 @@ gdouble gfs_vorticity (FttCell * cell,
   g_return_val_if_fail (v != NULL, 0.);
 
 #if FTT_2D
-  if (GFS_IS_MIXED (cell))
+  if (GFS_IS_MIXED (cell) || GFS_IS_AXI (v[0]->domain))
     /* fixme: the formulation below should also work (better) for solid cells */
     return (gfs_center_gradient (cell, FTT_X, v[1]->i) -
 	    gfs_center_gradient (cell, FTT_Y, v[0]->i))/ftt_cell_size (cell);

@@ -45,7 +45,7 @@
     OutputView { start = end } still.eps { format = EPS } still.gfv
     EventScript { start = end } {
 	status=0
-	if awk '{if ($9 > 9e-6) { print "u: " $9 > "/dev/stderr"; exit (1); }}' < u ; then :
+	if awk '{if ($9 > 1e-5) { print "u: " $9 > "/dev/stderr"; exit (1); }}' < u ; then :
         else
             status=$GFS_STOP;
         fi

@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2001-2011 National Institute of Water and Atmospheric Research
+ * Copyright (C) 2001-2013 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -26,6 +26,7 @@
 #include "simulation.h"
 #include "solid.h"
 #include "init.h"
+#include "vof.h"
 
 /**
  * gfs_variable_mac_source:
@@ -911,7 +912,7 @@ static gboolean diffusion_event (GfsEvent * event, GfsSimulation * sim)
 {
   GfsDiffusion * d = GFS_DIFFUSION (event);
 
-  if (gfs_function_get_constant_value (d->val) == G_MAXDOUBLE) {
+  if (!gfs_function_is_constant (d->val)) {
     if (d->mu == NULL && (d->mu = gfs_function_get_variable (d->val)) == NULL)
       d->mu = gfs_domain_add_variable (GFS_DOMAIN (sim), NULL, NULL);
     if (d->mu != gfs_function_get_variable (d->val)) {
@@ -944,14 +945,22 @@ static gdouble diffusion_cell (GfsDiffusion * d, FttCell * cell)
   return val < G_MAXDOUBLE ? val : 0.;
 }
 
+static gdouble diffusion_concentration_face (GfsDiffusion * d, FttCellFace * face)
+{
+  return diffusion_face (d, face)*gfs_vof_face_fraction (face, GFS_VARIABLE_TRACER_VOF (d->phase));
+}
+
+static gdouble diffusion_concentration_cell (GfsDiffusion * d, FttCell * cell)
+{
+  return diffusion_cell (d, cell)*GFS_VALUE (cell, d->phase);
+}
+
 static void diffusion_class_init (GfsDiffusionClass * klass)
 {
   GTS_OBJECT_CLASS (klass)->destroy = diffusion_destroy;
   GTS_OBJECT_CLASS (klass)->read = diffusion_read;
   GTS_OBJECT_CLASS (klass)->write = diffusion_write;
   GFS_EVENT_CLASS (klass)->event = diffusion_event;
-  klass->face = diffusion_face;
-  klass->cell = diffusion_cell;
 }
 
 static void diffusion_init (GfsDiffusion * d)
@@ -960,6 +969,8 @@ static void diffusion_init (GfsDiffusion * d)
   d->par.tolerance = 1e-6;
   d->val = gfs_function_new (gfs_function_class (), 0.);
   d->mu = NULL;
+  d->face = diffusion_face;
+  d->cell = diffusion_cell;
 }
 
 GfsDiffusionClass * gfs_diffusion_class (void)
@@ -985,12 +996,12 @@ GfsDiffusionClass * gfs_diffusion_class (void)
 
 gdouble gfs_diffusion_face (GfsDiffusion * d, FttCellFace * f)
 {
-  return (* GFS_DIFFUSION_CLASS (GTS_OBJECT (d)->klass)->face) (d, f);
+  return (* d->face) (d, f);
 }
 
 gdouble gfs_diffusion_cell (GfsDiffusion * d, FttCell * cell)
 {
-  return (* GFS_DIFFUSION_CLASS (GTS_OBJECT (d)->klass)->cell) (d, cell);
+  return (* d->cell) (d, cell);
 }
 
 /** \endobject{GfsDiffusion} */
@@ -1056,9 +1067,13 @@ static void source_diffusion_read (GtsObject ** o, GtsFile * fp)
     gfs_function_set_units (d->D->val, 
 			    2. + GFS_SOURCE_SCALAR (*o)->v->units - d->phi->units);
   }
+  if (GFS_IS_VARIABLE_VOF_CONCENTRATION (GFS_SOURCE_SCALAR (d)->v)) {
+    d->D->phase = GFS_VARIABLE (GFS_VARIABLE_VOF_CONCENTRATION (GFS_SOURCE_SCALAR (d)->v)->vof);
+    d->D->face = diffusion_concentration_face;
+    d->D->cell = diffusion_concentration_cell;
+  }
 
-  if (GFS_SOURCE_SCALAR (d)->v->component < FTT_DIMENSION &&
-      gfs_function_get_constant_value (d->D->val) == G_MAXDOUBLE)
+  if (GFS_SOURCE_SCALAR (d)->v->component < FTT_DIMENSION && !gfs_function_is_constant (d->D->val))
     g_warning ("%d:%d: Terms may be missing when using variable diffusion\n"
 	       "on vector quantities",
 	       fp->line, fp->pos);

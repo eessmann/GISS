@@ -1,6 +1,6 @@
 if test x$donotrun != xtrue; then
     for level in 5 6 7 8; do
-	if $INSTALL/bin/gerris2D -DLEVEL=$level $1; then :
+	if gerris2D -DLEVEL=$level $1; then :
 	else
 	    exit 1
 	fi

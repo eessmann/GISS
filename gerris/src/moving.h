@@ -59,7 +59,6 @@ struct _GfsSolidMoving {
   GfsFunction * level;
   gboolean active;
   glong nvertex;
-  gint bdnum;
 };
 
 GfsEventClass * gfs_solid_moving_class (void);

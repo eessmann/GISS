@@ -406,23 +406,23 @@ static guint topology (CellCube * cube)
   }
   return nl;
 }
-//  cube_new (&cube, cell, surface, &o, &h); cube is a new one waiting for input, cell and surface is the input, o is position, h is size
+
 static void cube_new (CellCube * cube, FttCell * cell, GfsGenericSurface * s, FttVector * o, FttVector * h)
 {
   guint i;
 
   for (i = 0; i < FTT_DIMENSION; i++)
-    (&o->x)[i] -= (&h->x)[i]/2.;//position of one corner, may be the new origin
-  for (i = 0; i < 8; i++){ /* for each vertex of the cube */
+    (&o->x)[i] -= (&h->x)[i]/2.;
+  for (i = 0; i < 8; i++) { /* for each vertex of the cube */
     cube->p[i].x = o->x + h->x*vertex[i].x;
     cube->p[i].y = o->y + h->y*vertex[i].y;
     cube->p[i].z = o->z + h->z*vertex[i].z;
-  }//same as the cell now
+  }
 
   for (i = 0; i < 12; i++) {
     cube->s[i].E = &cube->p[edge1[i][0]];
-    cube->s[i].D = &cube->p[edge1[i][1]];//setting segment, now the cell edge
-    gfs_surface_segment_intersection (s, cell, &cube->s[i]);//Returns: the number of times @s intersects @I of cell.
+    cube->s[i].D = &cube->p[edge1[i][1]];
+    gfs_surface_segment_intersection (s, cell, &cube->s[i]);
   }
 }
 
@@ -431,18 +431,18 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 					      InitSolidParams * p)
 {
   GfsSolidVector * solid = GFS_STATE (cell)->solid;
-  CellCube cube;//8 point, 12 edge
-  FttVector o, ca = {0., 0., 0.}, h;//ca: surface center
+  CellCube cube;
+  FttVector o, ca = {0., 0., 0.}, h;
   guint i, n1 = 0;
   gint inside[8] = {0,0,0,0,0,0,0,0};
   gboolean planar = TRUE;
 
-  ftt_cell_pos (cell, &o);// o point to the center of the cell
-  cell_size (cell, &h);//h is the three sizes of the x y z, and they are same currently
+  ftt_cell_pos (cell, &o);
+  cell_size (cell, &h);
   cube_new (&cube, cell, surface, &o, &h);
 
   for (i = 0; i < 12; i++) { /* for each edge of the cube */
-    GfsSegment * s = &cube.s[i]; 
+    GfsSegment * s = &cube.s[i];
     if (cube.s[i].n % 2 != 0) { /* only for odd number of intersections */
       guint j = edge1[i][0], k = edge1[i][1];
 
@@ -496,13 +496,6 @@ static void set_solid_fractions_from_surface (FttCell * cell,
 	f.s[j].inside = s->inside;
       }
     }
-/*
-
-typedef struct {
-  GtsPoint p[4];
-  GfsSegment s[4];
-} CellFace;
-*/
 
     switch (n2) {
     case 0: { /* the face is not cut */
@@ -547,7 +540,7 @@ typedef struct {
   ca.x /= n1; ca.y /= n1; ca.z /= n1; 
   solid->ca = ca;
   if (planar && topology (&cube) == 1) {
-    FttVector m; // @m: normal to the plane.
+    FttVector m;
     gdouble alpha, n = 0.;
     gboolean sym[FTT_DIMENSION];
     FttComponent c;

@@ -59,7 +59,7 @@ url=$3
 
 wrkdir=`mktemp -d /tmp/darcs2dist.XXXXXX`
 cd $wrkdir
-if darcs get --partial $repo $package > msg 2>&1 ; then
+if darcs get $repo $package > msg 2>&1 ; then
     cd $package
     version=`darcsversion`
     login=`echo $url | awk 'BEGIN{FS=":"}{print $1}'`

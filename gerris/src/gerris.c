@@ -401,9 +401,10 @@ int main (int argc, char * argv[])
       
     if (domain->pid >= 0) { /* we are running a parallel job */
       /* write partitioned simulation in a temporary file */
-      gchar partname[] = "/tmp/gfspartXXXXXX";
-      gint fd = mkstemp (partname);
+      gchar * partname = gfs_template ();
+      gint fd = g_mkstemp (partname);
       remove (partname);
+      g_free (partname);
       FILE * fptr = fdopen (fd, "w+");
       gfs_simulation_write (simulation, maxlevel, fptr);
       gts_object_destroy (GTS_OBJECT (simulation));
@@ -465,6 +466,16 @@ int main (int argc, char * argv[])
       l = g_slist_append (l, object);
       gts_file_destroy (fp);
     }
+    GtsFile * fp = gts_file_new_from_string ("");
+    gfs_pending_functions_compilation (fp);
+    if (fp->type == GTS_ERROR) {
+      gfs_error (-1,
+		 "gerris: invalid event\n"
+		 "%d:%d: %s\n",
+		 fp->line, fp->pos, fp->error);
+      return 1;
+    }
+    gts_file_destroy (fp);
     gfs_clock_start (domain->timer);
     GSList * j = domain->variables;
     while (j) {

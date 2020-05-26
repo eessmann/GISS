@@ -1,0 +1,14 @@
+- Stalled convergence for point Jacobi relaxation ? (martin's thesis).
+
+- Boundary conditions when interpolating velocities using interpolate_2D1() in neighbor_value() in fl_center_gradient() ?
+
+- Solid interface must be all at the same level of refinement (because of the mixed cell refinement criterium: topology.fig).
+
+- Only FTT_FINE_FINE faces at domain boundaries.
+
+- What happens if a "small cell" is right next to the domain boundary ? (fixed)
+
+- What happens if a "box->root" gets destroyed by a "solid" operation? 
+  (i.e. it is entirely inside the solid) (assertion has been added).
+
+- Tag values calculations for messages could be improved.

@@ -138,7 +138,6 @@ struct _FttCell {
 
   /*< private >*/
   struct _FttOct * parent, * children;
-  gint bdnum; //SPODE
 };
 
 struct _FttRootCell {

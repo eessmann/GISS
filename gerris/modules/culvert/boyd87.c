@@ -122,6 +122,11 @@ static double Q_Bernoulli (double HW, double TW,
   return 0.;
 }
 
+static int close_enough (double Q0, double Q)
+{
+  return fabs(Q - Q0) < 1e-3 || (Q0 > 1e-3 && fabs(Q - Q0)/Q0 < 5e-2);
+}
+
 /**
  * Flow rate for box culvert, outlet control.
  * HW: headwater depth
@@ -163,8 +168,9 @@ double Q_outlet_box (double HW, double TW,
     Rh = B*h0/(B + 2.*h0);
     /* for a box culvert assume that the effective flow cross-section is B*h0 */
     Q = Q_Bernoulli (HW, h0, area, Rh, S0, L, n, ke, g);
-  } while (nmax-- && ((fabs (Q - Q0) > 0.001) && fabs (Q/Q0) > 1.05));
-  assert (nmax > 0);
+  } while (nmax-- && !close_enough (Q0, Q));
+  if (nmax == 0)
+    fprintf (stderr, "boyd87.c: Q_outlet_box(): warning: iterations did not converge\n");
   return Q;
 }
 
@@ -211,8 +217,9 @@ double Q_outlet_pipe (double HW, double TW,
     Rh = area/perimeter;
     /* for pipe culvert assume that the effective area/perimeter is controlled by h0 */
     Q = Q_Bernoulli (HW, h0, area, Rh, S0, L, n, ke, g);
-  } while (nmax-- && ((fabs (Q - Q0) > 0.001) && fabs (Q/Q0) > 1.05));
-  assert (nmax > 0);
+  } while (nmax-- && !close_enough (Q0, Q));
+  if (nmax == 0)
+    fprintf (stderr, "boyd87.c: Q_outlet_pipe(): warning: iterations did not converge\n");
   return Q;
 }
 

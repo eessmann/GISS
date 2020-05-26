@@ -110,7 +110,7 @@ static double surface_value (FttCell * cell, GfsVariable * v, FttVector * ca)
       oldca = GFS_STATE (cell)->solid->ca;
       GFS_STATE (cell)->solid->ca = *ca;
     }
-    (* GFS_SURFACE_GENERIC_BC_CLASS (GTS_OBJECT (v->surface_bc)->klass)->bc) (cell, v->surface_bc);//surface_bc_ode(cell, v->surface_bc)
+    (* GFS_SURFACE_GENERIC_BC_CLASS (GTS_OBJECT (v->surface_bc)->klass)->bc) (cell, v->surface_bc);
     if (ca)
       GFS_STATE (cell)->solid->ca = oldca;
     val = GFS_STATE (cell)->solid->fv;
@@ -270,8 +270,6 @@ static void create_new_cells (FttCell * cell, GfsSurface * s, SolidInfo * solid_
 {
   GfsSolidMoving * solid = solid_info->s;
   gint maxlevel = gfs_function_value (solid->level, cell);
-
-  cell->bdnum = solid->bdnum;//SPODE: the cell will be assigned to the related body
 
   if (FTT_CELL_IS_DESTROYED (cell) && ftt_cell_level (cell) <= maxlevel) {
     cell->flags &= ~FTT_FLAG_DESTROYED;
@@ -687,8 +685,8 @@ static void reinit_solid_fractions (GfsSimulation * sim)
       i = i->next;
     }
     if (diffusion)
-       /*g_warning ("the solid surface cuts %d boundary cells,\n"
-		 "this may cause errors for diffusion terms\n", nf)*/;
+      g_warning ("the solid surface cuts %d boundary cells,\n"
+		 "this may cause errors for diffusion terms\n", nf);
   }
 }
 
@@ -707,7 +705,7 @@ static void moving_advection_update (GSList * merged, const GfsAdvectionParams *
 
     GFS_VALUE (cell, par->v) = (olda*GFS_VALUE (cell, par->v) + GFS_VALUE (cell, par->fv))/a;
   }
-  else if (1==1/* par->average */) {
+  else if (1 /* par->average */) {
     /* average value */
     GSList * i = merged;
     gdouble w = 0., total_vol = 0.;

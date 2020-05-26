@@ -49,7 +49,7 @@ set key top right
 set ylabel 'Maximum relative error on height'
 set logscale y
 set grid
-plot [0:24][:] 'eh-6' u (\$3/86400.):9 w l t '6 levels', 'eh-5' u (\$3/86400.):9 w l t '5 levels', 'eh-4' u (\$3/86400.):9 w l t '4 levels'
+plot [0:24][1e-3:] 'eh-6' u (\$3/86400.):9 w l t '6 levels', 'eh-5' u (\$3/86400.):9 w l t '5 levels', 'eh-4' u (\$3/86400.):9 w l t '4 levels'
 
 set output 'order.eps'
 set logscale

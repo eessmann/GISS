@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <unistd.h>
 #include <math.h>
@@ -277,11 +276,6 @@ static void gfs_event_read (GtsObject ** o, GtsFile * fp)
       gts_file_variable_error (fp, var, "end",
 			       "end `%g' must be larger than start `%g'", 
 			       event->end, event->start);
-      return;
-    }
-    if (event->start < 0. && var[1].set) {
-      gts_file_variable_error (fp, var, "end",
-			       "end cannot be specified for an `init' event");
       return;
     }
     if (event->start < 0. && var[2].set)
@@ -724,8 +718,13 @@ static gboolean gfs_init_event (GfsEvent * event, GfsSimulation * sim)
     while (i) {
       VarFunc * vf = i->data;
       gfs_catch_floating_point_exceptions ();
-      gfs_domain_traverse_layers (GFS_DOMAIN (sim), (FttCellTraverseFunc) 
-				  (vf->n == 1 ? init_scalar : init_vector), vf);
+      /* fixme: the check for "layered" variables is messy */
+      if (!gfs_char_in_string (vf->v[0]->name[strlen (vf->v[0]->name) - 1], "0123456789"))
+	gfs_domain_traverse_layers (GFS_DOMAIN (sim), (FttCellTraverseFunc) 
+				    (vf->n == 1 ? init_scalar : init_vector), vf);
+      else
+	gfs_domain_traverse_leaves (GFS_DOMAIN (sim), (FttCellTraverseFunc) 
+				    (vf->n == 1 ? init_scalar : init_vector), vf);
       gfs_restore_fpe_for_function (vf->f[0]);
       if (vf->v[0]->component == FTT_DIMENSION)
 	gfs_domain_bc (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1, vf->v[0]);
@@ -1933,14 +1932,11 @@ FILE * gfs_popen (GfsSimulation * sim, const char * command, const char * type)
 {
   g_return_val_if_fail (command != NULL, NULL);
   g_return_val_if_fail (type != NULL, NULL);
-  
-  gchar sname[] = "/tmp/gfsXXXXXX";
-  if (!mktemp (sname)) {
-    g_warning ("gfs_popen() cannot create unique temporary filename");
-    return NULL;
-  }
-  if (mkfifo (sname, 0666)) {
+
+  gchar * sname = gfs_template ();
+  if (!gfs_mkftemp (sname)) {
     g_warning ("gfs_popen() cannot create FIFO: %s", strerror (errno));
+    g_free (sname);
     return NULL;
   }
   /* When adding pre-defined shell variables please update this page:
@@ -1963,6 +1959,7 @@ FILE * gfs_popen (GfsSimulation * sim, const char * command, const char * type)
   else
     g_warning ("popen() command failed: %s", strerror (errno));
   remove (sname);
+  g_free (sname);
   return fp;
 }
 

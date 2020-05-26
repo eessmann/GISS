@@ -248,17 +248,18 @@ static double new_solid_old_solid (FttCell * cell, FttDirection d1,
 
 static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * sim)
 {
-/*#ifndef FTT_2D /* 3D 
+#ifndef FTT_2D /* 3D */
   g_assert_not_implemented ();
-#endif*/
+#endif
 
   GfsVariable * old_solid_v = sim->old_solid;
   GfsVariable ** sold2 = sim->sold2;
-  gdouble dt, s1, s2;
-  gint d, d1, d2, d3, do1, do2, do3;
+  gdouble dt1, dt2, dto1, dto2, s1, s2;
+  gint d1, d2, d, do1, do2;
   FttCellNeighbors neighbors;
-  dt = GFS_SIMULATION(sim)->advection_params.dt; 
-  d1 = d2 = d3 = do1 = do2 = do3 =-1;
+
+  dt1 = dt2 = dto1 = dto2 = -2;
+  d1 = d2 = do1 = do2 = -1;
   s1 = s2 = -1;
 
   g_assert(cell);
@@ -286,7 +287,7 @@ static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * s
       else if (GFS_STATE(cell)->solid->s[d] != 1. && GFS_STATE(cell)->solid->s[d] != 0 && d2 == -1)
 	d2 = d;
       else if (GFS_STATE(cell)->solid->s[d] != 1. && GFS_STATE(cell)->solid->s[d] != 0.)
-	d3 = d; 
+	g_assert_not_reached (); 
     }
   
   for (d = 0; d < FTT_NEIGHBORS; d ++) {
@@ -295,7 +296,7 @@ static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * s
     else if (SOLD2 (cell, d) != 1. && SOLD2 (cell, d) != 0 && do2 == -1)
       do2 = d;
     else if (SOLD2 (cell, d) != 1. && SOLD2 (cell, d) != 0.)
-      do3 = d;
+      g_assert_not_reached (); 
   }
 
   /* Treats easy cases */
@@ -303,17 +304,114 @@ static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * s
     OLD_SOLID (cell)->s[d1] = SOLD2 (cell, d1);
   if (d2 != -1 && d2 == do2)
     OLD_SOLID (cell)->s[d2] = SOLD2 (cell, d2);
-  if (d3 != -1 && d3 == do3)
-    OLD_SOLID (cell)->s[d3] = SOLD2 (cell, d3);
 
-  if (d1 == do1 && d2 == do2 && d3 == do3)
+  if (d1 == do1 && d2 == do2)
     return;
     
+  /* Finds timescale for d1/do1 */
+  if (d1 != -1) {
+    if (SOLD2 (cell, d1) == 1.) {
+      dt1 = new_solid_old_fluid (cell, d1, old_solid_v, sold2);
+      if (dt1 == -1)
+	if (neighbors.c[d1]){
+	  FttDirection dop = ftt_opposite_direction[d1];
+	  dt1 = new_solid_old_fluid (neighbors.c[d1], dop, old_solid_v, sold2);
+	}
+    }   
+    else if (SOLD2 (cell, d1) == 0.){
+      dt1 = new_solid_old_solid (cell, d1, old_solid_v, sold2);
+    }  
+  }
+  
+  if (do1 != -1 && do1 != d1 && do1 != d2) {
+    if (GFS_IS_MIXED(cell) && GFS_STATE(cell)->solid->s[do1] == 0.)
+      dto1 = new_solid_old_solid (cell, do1, old_solid_v, sold2);
+    else
+      dto1 = new_fluid_old_solid (cell, do1, old_solid_v, sold2);
+  }
+
+  /* Finds timescale for d2/do2 */
+
+  if (d2 != -1) {
+    if (SOLD2 (cell, d2) == 1.) {
+      dt2 = new_solid_old_fluid (cell, d2, old_solid_v, sold2);
+      if (dt2 == -1 && neighbors.c[d2]) {
+	FttDirection dop = ftt_opposite_direction[d2];
+	dt2 = new_solid_old_fluid (neighbors.c[d2], dop, old_solid_v, sold2);
+      }
+    }
+    else if (SOLD2 (cell, d2) == 0.)
+      dt2 = new_solid_old_solid (cell, d2, old_solid_v, sold2);
+  }
  
+  if (do2 != -1 && do2 != d1 && do2 != d2) {
+    if (GFS_IS_MIXED(cell) && GFS_STATE(cell)->solid->s[do2] == 0.)
+      dto2 = new_solid_old_solid (cell, do2, old_solid_v, sold2);
+    else
+      dto2 = new_fluid_old_solid (cell, do2, old_solid_v, sold2);
+  }
+ 
+  /* Uses time-scale from other faces if one is missing */
+  if (dt1 == -1) {
+    if (dto1 != -2)
+      dt1 = dto1;
+    else if (dt2 != -2)
+      dt1 = dt2;
+    else if (dto2 != -2)
+      dt1 = dto2;
+  }
+
+  if (dt2 == -1) {
+    if (dt1 != -2)
+      dt2 = dt1;
+    else if (dto2 != -2)
+      dt2 = dto2;
+    else if (dto1 != -2)
+      dt2 = dto1;
+  }
+
+  if (dto1 == -1) {
+    if (dt1 != -2)
+      dto1 = dt1;
+    else if (dt2 != -2)
+      dto1 = dt2;
+    else if (dto2 != -2)
+      dto1 = dto2;
+  }
+
+  if (dto2 == -1) {
+    if (dt1 != -2)
+      dto2 = dt1;
+    else if (dt2 != -2)
+      dto2 = dt2;
+    else if (dto1 != -2)
+      dto2 = dto1;
+  }
+
+  /* Treats cell is corner */
+  if (dt1 != -2 && dt2 != -2) {
+    if (dt1 != dt2 && d1/2 != d2/2) {
+      if (cell_is_corner (cell)) {
+	if (dt1 < dt2)
+	  dt2 = dt1;
+	else
+	  dt1 = dt2;
+      }}}
+
+  /* Treats cell was corner */
+  if (dto1 != -2 && dto2 != -2 && 
+      dto1 != dto2 && do1/2 != do2/2 &&
+      cell_was_corner (cell, old_solid_v, sold2)) {
+    if (dto1 < dto2)
+      dto2 = dto1;
+    else
+      dto1 = dto2;
+  }
+  
   /* Compute the t^n+1/2 contribution of the face */
   if (do1 > -1)
     if (do1 != d1 && do1 != d2) {
-      OLD_SOLID (cell)->s[do1]=SOLD2 (cell, do1)*(1-dt)+dt;
+      OLD_SOLID (cell)->s[do1]=SOLD2 (cell, do1)*(1-dto1)+dto1;
       if (neighbors.c[do1])
 	if (!OLD_SOLID (neighbors.c[do1]) || !GFS_IS_MIXED(neighbors.c[do1])) {
 	  if (!OLD_SOLID (neighbors.c[do1])) {
@@ -324,13 +422,13 @@ static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * s
 	      OLD_SOLID (neighbors.c[do1])->s[c] = 1.;
 	  }	  
 	  OLD_SOLID (neighbors.c[do1])->s[ftt_opposite_direction[do1]] = 
-	    SOLD2 (cell, do1)*(1-dt)+dt;
+	    SOLD2 (cell, do1)*(1-dto1)+dto1;
 	}
     }
 
   if (do2 > -1)
     if (do2 != d1 && do2 != d2) {
-      OLD_SOLID (cell)->s[do2]=SOLD2 (cell, do2)*(1-dt)+dt;
+      OLD_SOLID (cell)->s[do2]=SOLD2 (cell, do2)*(1-dto2)+dto2;
       if (neighbors.c[do2])
 	if (!OLD_SOLID (neighbors.c[do2]) || !GFS_IS_MIXED(neighbors.c[do2])) {
 	  if (!OLD_SOLID (neighbors.c[do2])) {
@@ -341,60 +439,36 @@ static void second_order_face_fractions (FttCell * cell, GfsSimulationMoving * s
 	      OLD_SOLID (neighbors.c[do2])->s[c] = 1.;
 	  }	  
 	  OLD_SOLID (neighbors.c[do2])->s[ftt_opposite_direction[do2]] = 
-	    SOLD2 (cell, do2)*(1-dt)+dt;
-	}
-    }
-
-  if (do3 > -1)
-    if (do3 != d1 && do3 != d2 && do3 != d2) {
-      OLD_SOLID (cell)->s[do3]=SOLD2 (cell, do3)*(1-dt)+dt;
-      if (neighbors.c[do3])
-	if (!OLD_SOLID (neighbors.c[do3]) || !GFS_IS_MIXED(neighbors.c[do3])) {
-	  if (!OLD_SOLID (neighbors.c[do3])) {
-	    FttDirection c;
-	    OLD_SOLID (neighbors.c[do3]) = g_malloc0 (sizeof (GfsSolidVector));
-	    OLD_SOLID (neighbors.c[do3])->a = 1.;
-	    for (c = 0; c < FTT_NEIGHBORS; c++)
-	      OLD_SOLID (neighbors.c[do3])->s[c] = 1.;
-	  }	  
-	  OLD_SOLID (neighbors.c[do3])->s[ftt_opposite_direction[do3]] = 
-	    SOLD2 (cell, do3)*(1-dt)+dt;
+	    SOLD2 (cell, do2)*(1-dto2)+dto2;
 	}
     }
 
 
   if (d1 > -1) {
     if (SOLD2 (cell, d1) == 0.)
-      OLD_SOLID (cell)->s[d1] = GFS_STATE(cell)->solid->s[d1]*(dt-1.); 
+      OLD_SOLID (cell)->s[d1] = GFS_STATE(cell)->solid->s[d1]*(dt1-1.); 
     else if (SOLD2 (cell, d1) == 1.)
-      OLD_SOLID (cell)->s[d1] = (dt-1.)*GFS_STATE(cell)->solid->s[d1]+2.-dt;
+      OLD_SOLID (cell)->s[d1] = (dt1-1.)*GFS_STATE(cell)->solid->s[d1]+2.-dt1;
   }
 
   if (d2 > -1) {
     if (SOLD2 (cell, d2) == 0.)
-      OLD_SOLID (cell)->s[d2] = GFS_STATE(cell)->solid->s[d2]*(dt-1.); 
+      OLD_SOLID (cell)->s[d2] = GFS_STATE(cell)->solid->s[d2]*(dt2-1.); 
     else if (SOLD2 (cell, d2) == 1.)
-      OLD_SOLID (cell)->s[d2] = (dt-1.)*GFS_STATE(cell)->solid->s[d2]+2.-dt;
+      OLD_SOLID (cell)->s[d2] = (dt2-1.)*GFS_STATE(cell)->solid->s[d2]+2.-dt2;
   }
 
-  if (d3 > -1) {
-    if (SOLD2 (cell, d3) == 0.)
-      OLD_SOLID (cell)->s[d3] = GFS_STATE(cell)->solid->s[d3]*(dt-1.); 
-    else if (SOLD2 (cell, d3) == 1.)
-      OLD_SOLID (cell)->s[d3] = (dt-1.)*GFS_STATE(cell)->solid->s[d3]+2.-dt;
-  }
-
-  if (d1/2 == d2/2 && d2/2== d3/2 && do1 == -1 && do2 == -1 && do3 == -1)  /* third face has to be treated for 
+  if (d1/2 == d2/2 && do1 == -1 && do2 == -1)  /* third face has to be treated for 
 						  the timescale determined on the other faces */  
     for (d = 0; d < FTT_NEIGHBORS; d ++)
       if (d/2 != d1/2 && SOLD2 (cell, d) == 0.)
-	OLD_SOLID (cell)->s[d] = -1.+dt+dt;
+	OLD_SOLID (cell)->s[d] = -1.+dt1+dt2;
     
 
-  if (do1/2 == do2/2 == do3/2 && d1 == -1 && d2 == -1 && d3 == -1)
+  if (do1/2 == do2/2 && d1 == -1 && d2 == -1)
     for (d = 0; d < FTT_NEIGHBORS; d++)
       if (d/2 != do1/2 && SOLD2 (cell, d) == 0.)
-	OLD_SOLID (cell)->s[d] = -1.+dt+dt;
+	OLD_SOLID (cell)->s[d] = -1.+dto1+dto2;
 }
 
 static void set_sold2 (FttCell * cell, GfsSimulationMoving * sim)

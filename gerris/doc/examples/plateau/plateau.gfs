@@ -58,7 +58,7 @@
 # (2009), Journal of Computational Physics, 228.
 #
 # Author: St\'ephane Popinet
-# Command: gerris3D -m plateau.gfs | gfsview-batch3D
+# Command: gerris3D -m plateau.gfs
 # Version: 100529
 # Required files: plateau.gfv white.gfv closeup.gfv
 # Running time: 2 hours
@@ -124,23 +124,16 @@ Define MUR(T)           VAR(T, MU_G/MU_L, 1.)
     EventScript { istep = 1000 } { gzip -f -q plateau-*.gfs }
 
     # Generate three movies on the fly
-    EventScript { start = 0 } {
-	movies="plateau closeup white"
-	rm -f $movies
-	mkfifo $movies
-	for movie in $movies; do
-	    ppm2theora -s 480x480 < $movie > $movie.ogv &
-	done
-    }
-    OutputSimulation { istep = 7 } stdout
-    EventScript { istep = 7 } {
-	movies="plateau closeup white"
-	for movie in $movies; do
-	    echo "Clear"
-	    cat $movie.gfv
-	    echo "Append $movie { width = 960 height = 960 }"
-	done
-    }
+    GModule gfsview
+    OutputView { istep = 7 } { ppm2theora -s 480x480 > plateau.ogv } { 
+    	width = 960 height = 960 
+    } plateau.gfv
+    OutputView { istep = 7 } { ppm2theora -s 480x480 > closeup.ogv } { 
+    	width = 960 height = 960 
+    } closeup.gfv
+    OutputView { istep = 7 } { ppm2theora -s 480x480 > white.ogv } { 
+    	width = 960 height = 960 
+    } white.gfv
 
     # Generate figures
     EventScript { start = end } {

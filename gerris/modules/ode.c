@@ -1,4 +1,4 @@
-/* Gerris - The GNU Flow Solver                       (-*-C-*-)
+/* Gerris - The GNU Flow Solver
  * Copyright (C) 2009 National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
@@ -19,71 +19,215 @@
 
 #include <ode/ode.h>
 #include "moving.h"
-#include "output.h"
 
-#include "domain.c" //SPODE: the calculating part needs supports from domain.c
+static dWorldID world = 0;
 
-#define BDMAX 100 //SPODE: maximum solid numbers supported
-#define _I(i,j) I[(i)*4+(j)-5] //SPODE: for moment of inertia calculation
-#define PI 3.14159265359
-static dWorldID world = 0; //SPODE: Initiating the world using in ODE
-static gint K = 0, BUFF = 1; //SPODE: buffer time steps, solid will stay K steps
-static gdouble Step_SP=0.;
-static gint AF_Flag = 0;//Artificial force
-static gdouble AF_Stf = 1e9; //SPODE: Stiffness factor
-static gdouble L = 1., Ln = 1.;
-typedef struct {
-	gint buff_count;
-	FttVector c,v,e,o;
-	FttVector pf,vf,f,pm,vm,m;
-	FttVector Mark;
-} Oinfo;
+/* GfsSurfaceBcODE: Header */
 
-typedef struct {
+typedef struct _GfsSurfaceBcODE         GfsSurfaceBcODE;
+
+struct _GfsSurfaceBcODE {
   /*< private >*/
-  dBodyID body; //SPODE: a number refer to the body for the ode solver 
-  dMass mass; //SPODE: this is a structure including the mass and the moment of inertia, refer ode manual to get the detail.
-  FttVector c,ctmp; //SPODE: the center of the mass
-  FttVector a_ex; // SPODE: addtional acceleration of the body
-  FttVector m_ex; // SPODE: addtional angular acceleration of the body
-  FttVector max, min;
-  FttVector pf, vf, pm, vm; //SPODE: store the force and momentum applied on the body
-  FttVector Mark;
-  gdouble cradius; //SPODE: character length of the body
-  gint f_tx, f_ty, f_tz, f_rx, f_ry, f_rz; //SPODE: trigger for the traslational and rotational degrees of freedom
-  gint type; //SPODE: tell the type of the solid wall boundary
-  gint axis; //SPODE: tell the axis of the solid wall boundary
-  gint count;//mesh number
-  Oinfo OPInfo;
-} Bodyinfo; //SPODE: Used to store the body information
+  GfsSurfaceGenericBc parent;
 
-static Bodyinfo BDInfo[BDMAX]; //SPODE: the array to store the solids information, the BDInfo[0] refers to no solid
-static gint BDNUM = 1; //SPODE: the number of bodys
-static FttVector Mark, MarkOld;//Mark. marked cell, MarlNew,new cell, MarkOld,old cell
-static gdouble MKDisOld=0.;//locate marked cell
-static gint MKSWITCH = 0;//locate marked cell
+  /*< public >*/
+  dBodyID body;
+  FttComponent c;
+};
 
-/*SPODE:  ODEFoceCalculatior*/
-#include "ode_calc.c"
-/*SPODE:  GfsSurfaceBcODE*/
-#include "ode_surf.c"
-/*SPODE:  GfsSolidMovingODE*/
-#include "ode_main.c"
-/*SPODE:  GfsOutputSolidMovingODE*/
-#include "ode_output.c"
+#define GFS_SURFACE_BC_ODE(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSurfaceBcODE,\
+					         gfs_surface_bc_ode_class ())
+#define GFS_IS_SURFACE_BC_ODE(obj)         (gts_object_is_from_class (obj,\
+						 gfs_surface_bc_ode_class ()))
+
+static GfsSurfaceGenericBcClass * gfs_surface_bc_ode_class (void);
+
+/* GfsSurfaceBcODE: Object */
+
+static void surface_bc_ode_read (GtsObject ** o, GtsFile * fp)
+{
+  /* defined only through SolidMovingODE */
+}
+
+static void surface_bc_ode_write (GtsObject * o, FILE * fp)
+{
+  /* defined only through SolidMovingODE */
+}
+
+static void surface_bc_ode_bc (FttCell * cell, GfsSurfaceGenericBc * b)
+{
+  GfsSurfaceBcODE * bc = GFS_SURFACE_BC_ODE (b);
+  FttVector * p = &GFS_STATE (cell)->solid->ca;
+  dVector3 v;
+  cell->flags |= GFS_FLAG_DIRICHLET;
+  dBodyGetPointVel (bc->body, p->x, p->y, p->z, v);
+  GFS_STATE (cell)->solid->fv = v[bc->c];
+}
+
+static void surface_bc_ode_class_init (GfsSurfaceGenericBcClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->read = surface_bc_ode_read;
+  GTS_OBJECT_CLASS (klass)->write = surface_bc_ode_write;
+  klass->bc = surface_bc_ode_bc;
+}
+
+static GfsSurfaceGenericBcClass * gfs_surface_bc_ode_class (void)
+{
+  static GfsSurfaceGenericBcClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_surface_bc_info = {
+      "GfsSurfaceBcODE",
+      sizeof (GfsSurfaceBcODE),
+      sizeof (GfsSurfaceGenericBcClass),
+      (GtsObjectClassInitFunc) surface_bc_ode_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_surface_generic_bc_class ()),
+				  &gfs_surface_bc_info);
+  }
+
+  return klass;
+}
+
+/* GfsSolidMovingODE: Header */
+
+typedef struct _GfsSolidMovingODE         GfsSolidMovingODE;
+
+struct _GfsSolidMovingODE {
+  /*< private >*/
+  GfsSolidMoving parent;
+  dBodyID body;
+
+  /*< public >*/  
+};
+
+static GfsEventClass * gfs_solid_moving_ode_class (void);
+
+#define GFS_SOLID_MOVING_ODE(obj)            GTS_OBJECT_CAST (obj,\
+					         GfsSolidMovingODE,\
+					         gfs_solid_moving_ode_class ())
+#define GFS_IS_SOLID_MOVING_ODE(obj)         (gts_object_is_from_class (obj,\
+						 gfs_solid_moving_ode_class ()))
+
+/* GfsSolidMovingODE: Object */
+
+static void solid_moving_ode_destroy (GtsObject * object)
+{
+  dBodyDestroy (GFS_SOLID_MOVING_ODE (object)->body);
+
+  (* GTS_OBJECT_CLASS (gfs_solid_moving_ode_class ())->parent_class->destroy) (object);
+}
+
+static void solid_moving_ode_read (GtsObject ** o, GtsFile * fp)
+{
+  GfsSolidMovingODE * solid = GFS_SOLID_MOVING_ODE (*o);
+  
+  (* GTS_OBJECT_CLASS (gfs_solid_moving_ode_class ())->parent_class->read) (o, fp);
+  if (fp->type == GTS_ERROR)
+    return;
+
+  GfsVariable ** v = gfs_domain_velocity (GFS_DOMAIN (gfs_object_simulation (solid)));
+  FttComponent c;
+  for (c = 0; c < FTT_DIMENSION; c++)
+    if (v[c]->surface_bc) {
+      gts_file_error (fp, "variable `%s' already has a surface boundary condition", v[c]->name);
+      return;
+    }
+    else {
+      GfsSurfaceGenericBc * bc = 
+	GFS_SURFACE_GENERIC_BC (gts_object_new (GTS_OBJECT_CLASS (gfs_surface_bc_ode_class ())));
+      bc->v = v[c];
+      bc->v->surface_bc = bc;
+      GFS_SURFACE_BC_ODE (bc)->body = solid->body;
+      GFS_SURFACE_BC_ODE (bc)->c = c;
+    }
+
+  if (fp->type == '{') {
+    gdouble vx = 0., vy = 0., vz = 0.;
+    gdouble gx = 0., gy = 0., gz = 0.;
+    GtsFileVariable var[] = {
+      {GTS_DOUBLE, "vx", TRUE, &vx},
+      {GTS_DOUBLE, "vy", TRUE, &vy},
+      {GTS_DOUBLE, "vz", TRUE, &vz},
+      {GTS_DOUBLE, "gx", TRUE, &gx},
+      {GTS_DOUBLE, "gy", TRUE, &gy},
+      {GTS_DOUBLE, "gz", TRUE, &gz},
+      {GTS_NONE}
+    };
+    gts_file_assign_variables (fp, var);
+    if (fp->type == GTS_ERROR)
+      return;
+    dBodySetLinearVel (solid->body, vx, vy, vz);
+    dWorldSetGravity (world, gx, gy, gz);
+  }
+}
+
+static gboolean solid_moving_ode_event (GfsEvent * event, GfsSimulation * sim)
+{
+  if ((* GFS_EVENT_CLASS (GTS_OBJECT_CLASS (gfs_solid_moving_ode_class ())->parent_class)->event) 
+      (event, sim)) {
+    FttVector pf, vf, pm, vm;
+    dBodyID body = GFS_SOLID_MOVING_ODE (event)->body;
+    gfs_domain_solid_force (GFS_DOMAIN (sim), &pf, &vf, &pm, &vm, NULL);
+    dBodyAddForce (body, pf.x + vf.x, pf.y + vf.y, pf.z + vf.z);
+    dBodyAddTorque (body, pm.x + vm.x, pm.y + vm.y, pm.z + vm.z);
+    dWorldStep (world, sim->advection_params.dt);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+static void solid_moving_ode_class_init (GfsEventClass * klass)
+{
+  GTS_OBJECT_CLASS (klass)->destroy = solid_moving_ode_destroy;
+  GTS_OBJECT_CLASS (klass)->read = solid_moving_ode_read;
+  klass->event = solid_moving_ode_event;
+}
+
+static void solid_moving_ode_init (GfsSolidMovingODE * solid)
+{
+  solid->body = dBodyCreate (world);
+  dMass mass;
+  dMassSetSphereTotal (&mass, 1., 0.25*0.3);
+  dBodySetMass (solid->body, &mass);
+}
+
+static GfsEventClass * gfs_solid_moving_ode_class (void)
+{
+  static GfsEventClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo solid_moving_ode_info = {
+      "GfsSolidMovingODE",
+      sizeof (GfsSolidMovingODE),
+      sizeof (GfsEventClass),
+      (GtsObjectClassInitFunc) solid_moving_ode_class_init,
+      (GtsObjectInitFunc) solid_moving_ode_init,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_solid_moving_class ()), 
+				  &solid_moving_ode_info);
+  }
+
+  return klass;
+}
 
 /* Initialize module */
 
-/* only define gfs_module_name for "official" modules (i.e. those installed in GFS_MODULES_DIR) */
+/* only define gfs_module_name for "official" modules (i.e. those installed in
+   GFS_MODULES_DIR) */
 const gchar gfs_module_name[] = "ode";
 const gchar * g_module_check_init (void);
 
 const gchar * g_module_check_init (void)
 {
-  dInitODE (); //SPODE:  Initiate the ode solver
-  world = dWorldCreate (); //SPODE:  Initiate the world
-  dWorldSetGravity (world, 0.0,0.0,0.0); //SPODE: the gravity(as accerleration) will be applied individually to each solid
-  gfs_solid_moving_ode_class (); //SPODE: the main calculating part of this module
-  gfs_output_solid_moving_ode_class (); //SPODE: the outputing part
+  dInitODE ();
+  world = dWorldCreate ();
+  gfs_solid_moving_ode_class ();
   return NULL;
 }

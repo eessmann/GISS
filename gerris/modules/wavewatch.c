@@ -179,31 +179,23 @@ static void initialize (GfsWave * wave)
   if (!initialized) {
 
     /* Creates temporary directory */
-#if 0 /* mkdtemp() is not defined on all systems (only POSIX 2008-compliant systems) */
-    char template[] = "/tmp/gfswavewatch.XXXXXX", * tmp;
-    tmp = mkdtemp (template);
-#else /* use C89 functions */
-    char template[L_tmpnam], * tmp;
-    tmp = tmpnam (template);
-    if (mkdir (tmp, S_IRUSR | S_IWUSR | S_IXUSR))
-      tmp = NULL;
-#endif
-    if (tmp == NULL) {
+    gchar * template = gfs_template ();
+    if (!g_mkdtemp (template)) {
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR, 
-	     "wavewatch module: could not create temporary directory\n"
-	     "%s\n", strerror (errno));
+	     "wavewatch module: could not create temporary directory\n%s",
+	     strerror (errno));
       return;
     }
 
     /* Creates wavewatch ww3_grid.inp input file */
-    gchar * sinput = g_strconcat (tmp, "/ww3_grid.inp", NULL);
+    gchar * sinput = g_strconcat (template, "/ww3_grid.inp", NULL);
     FILE * input = fopen (sinput, "w");
     g_free (sinput);
     if (input == NULL) {
       g_log (G_LOG_DOMAIN, G_LOG_LEVEL_ERROR, 
 	     "wavewatch module: could not create input file\n"
 	     "%s\n", strerror (errno));
-      deletedir (tmp);
+      deletedir (template);
       return;      
     }
     fprintf (input,
@@ -239,15 +231,16 @@ static void initialize (GfsWave * wave)
     /* Calls 'ww3_grid' of wavewatch to generate 'mod_def.w3'
      * required to initialize wavewatch. */
     char * wdir = getcwd (NULL, 0);
-    char * command = g_strconcat ("cd ",  tmp, " && "
+    char * command = g_strconcat ("cd ",  template, " && "
 				  "test -f $HOME/.wwatch3.env && "
 				  "`grep WWATCH3_DIR $HOME/.wwatch3.env | "
 				  "awk '{print $2}'`/exe/ww3_grid > ", wdir, "/log_grid.ww3 && "
 				  "mv mod_def.ww3 ", wdir, " && "
-				  "rm -r -f ", tmp,
+				  "rm -r -f ", template,
 				  NULL);
     int status = system (command);
-    deletedir (tmp);
+    deletedir (template);
+    g_free (template);
     free (wdir);
     g_free (command);
     if (status == -1 || WEXITSTATUS (status) != 0) {

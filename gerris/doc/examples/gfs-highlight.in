@@ -88,9 +88,9 @@ awk -v comment=$comment 'BEGIN{ infile=comment } {
 source-highlight --lang-def=$file --out-format=html-css | \
 (
 if test $bold = "1"; then
-    sed "s/\"gfs_keyword\">\(Gfs\)\{0,1\}\([a-zA-Z0-9_]*\)<\/span>/"gfs_keyword"><b>\1\2<\/b><\/span>/g"
+    sed "s/\"classname\">\(Gfs\)\{0,1\}\([a-zA-Z0-9_]*\)<\/span>/"classname"><b>\1\2<\/b><\/span>/g"
 else
-    sed "s/\"gfs_keyword\">\(Gfs\)\{0,1\}\([a-zA-Z0-9_]*\)<\/span>/"gfs_keyword"><a href=\"$wiki\/Gfs\2\">\1\2<\/a><\/span>/g"
+    sed "s/\"classname\">\(Gfs\)\{0,1\}\([a-zA-Z0-9_]*\)<\/span>/"classname"><a href=\"$wiki\/Gfs\2\">\1\2<\/a><\/span>/g"
 fi
 )
 

@@ -284,7 +284,7 @@ static void ocean_run (GfsSimulation * sim)
   GfsFunction * fH = gfs_function_new_from_variable (gfs_function_class (), H);
 #else
   /* non-linear free surface */
-  GtsFile * fp = gts_file_new_from_string ("(H + P)");
+  GtsFile * fp = gts_file_new_from_string ("(H + P)"); /* fixme: should be H + P/g */
   GfsFunction * fH = gfs_function_new (gfs_function_class (), 0.);
   gfs_function_read (fH, domain, fp);
   g_assert (fp->type != GTS_ERROR);

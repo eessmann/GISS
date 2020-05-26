@@ -6,7 +6,7 @@
 # solver.
 #
 # Figure \ref{uprof} illustrates the velocity profile at the center of
-# lake and Figure \ref{error} the rate of convergence with an
+# the lake and Figure \ref{error} the rate of convergence with an
 # increasing number of layers.
 #
 # \begin{figure}[htbp]

@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Stephane Popinet <popinet@users.sf.net>
 Build-Depends: cdbs, debhelper (>= 5), autotools-dev, libglib2.0-dev,
 	       libgts-snapshot-dev,
-	       libnetcdf-dev, libgsl0-dev, proj, libfftw3-dev,
+	       libnetcdf-dev, libgsl0-dev, libproj-dev, libfftw3-dev,
                mpi-default-dev [i386 amd64], mpi-default-bin [i386 amd64],
 	       libhypre-dev [i386 amd64],
 	       python, g77 | gfortran, chrpath

@@ -21,6 +21,8 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include "variable.h"
 #include "vof.h"
 #include "source.h"
@@ -94,6 +96,14 @@ static void gfs_variable_destroy (GtsObject * object)
   if (v->domain) {
     gfs_domain_free (v->domain, v->i);
     v->domain->variables = g_slist_remove (v->domain->variables, v);
+  }
+
+  if (GFS_IS_VARIABLE_TRACER (v)) {
+    FttComponent c;
+    GfsVariableTracer * t = GFS_IS_VARIABLE_TRACER (v);
+    for (c = 0; c < FTT_DIMENSION; c++)
+      if (t->advection.sink[c])
+	gts_object_destroy (GTS_OBJECT (t->advection.sink[c]));
   }
 
   (* GTS_OBJECT_CLASS (gfs_variable_class ())->parent_class->destroy) (object);
@@ -299,21 +309,25 @@ GfsVariable * gfs_variable_clone (GfsVariable * v, gchar * name)
   g_return_val_if_fail (v != NULL, NULL);
   g_return_val_if_fail (name != NULL, NULL);
 
-  FILE * f = tmpfile ();
+  char * buf;
+  size_t len;
+  FILE * f = open_memstream (&buf, &len);
+  if (f == NULL)
+    g_error ("gfs_variable_clone(): could not open_memstream:\n%s", strerror (errno));
   gchar * s = v->name;
   v->name = name;
   GtsObject * o = GTS_OBJECT (v);
   (* o->klass->write) (o, f);
-  rewind (f);
+  fclose (f);
   v->name = s;
-  GtsFile * fp = gts_file_new (f);
+  GtsFile * fp = gts_file_new_from_buffer (buf, len);
   GtsObject * clone = gts_object_new (o->klass);
   gfs_object_simulation_set (clone, gfs_object_simulation (o));
   (* o->klass->read) (&clone, fp);
   if (fp->type == GTS_ERROR)
     g_error ("gfs_variable_clone:\n%d:%d:%s", fp->line, fp->pos, fp->error);
   gts_file_destroy (fp);
-  fclose (f);
+  free (buf);
   GFS_VARIABLE (clone)->units = v->units;
   GFS_VARIABLE (clone)->fine_coarse = v->fine_coarse;
   GFS_VARIABLE (clone)->coarse_fine = v->coarse_fine;
@@ -505,7 +519,7 @@ GfsVariableClass * gfs_variable_residual_class (void)
 /** \endobject{GfsVariableResidual} */
 
 /**
- * Spatial filtering .
+ * Spatial filtering.
  * \beginobject{GfsVariableFiltered}
  */
 

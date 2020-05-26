@@ -98,6 +98,8 @@ void                  gfs_cell_cleanup              (FttCell * cell,
 						     GfsDomain * domain);
 void                  gfs_cell_reset                (FttCell * cell, 
 						     GfsVariable * v);
+void                  gfs_face_reset                (FttCellFace * face,
+						     GfsVariable * v);
 void                  gfs_get_from_below_intensive  (FttCell * cell, 
 						     const GfsVariable * v);
 void                  gfs_cell_coarse_fine          (FttCell * cell,

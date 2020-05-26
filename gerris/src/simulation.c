@@ -559,11 +559,11 @@ static gdouble simulation_cfl (GfsSimulation * sim)
     GfsVariable * v = i->data;
 
     if (GFS_IS_VARIABLE_TRACER (v) && 
-	GFS_VARIABLE_TRACER (v)->advection.scheme != GFS_NONE &&
-	gts_vector_norm (GFS_VARIABLE_TRACER (v)->advection.sink) > 0.) {
-      gfs_add_sinking_velocity (GFS_DOMAIN (sim), GFS_VARIABLE_TRACER (v)->advection.sink);
+ 	GFS_VARIABLE_TRACER (v)->advection.scheme != GFS_NONE &&
+	GFS_VARIABLE_TRACER (v)->advection.sink[0]) {
+      gfs_add_sinking_velocity (GFS_DOMAIN (sim), &GFS_VARIABLE_TRACER (v)->advection);
       gdouble cfl = gfs_domain_cfl (GFS_DOMAIN (sim), FTT_TRAVERSE_LEAFS, -1);
-      gfs_remove_sinking_velocity (GFS_DOMAIN (sim), GFS_VARIABLE_TRACER (v)->advection.sink);
+      gfs_remove_sinking_velocity (GFS_DOMAIN (sim), &GFS_VARIABLE_TRACER (v)->advection);
       if (cfl < cflmin)
 	cflmin = cfl;
     }
@@ -1293,8 +1293,16 @@ GfsSimulation * gfs_simulation_read (GtsFile * fp)
     g_slist_free (ml);
     return NULL;
   }
-  if (d)
-    GFS_SIMULATION (d)->preloaded_modules = g_slist_reverse (ml);
+  if (d) {
+    gfs_pending_functions_compilation (fp);
+    if (fp->type == GTS_ERROR) {
+      gts_object_destroy (GTS_OBJECT (d));
+      g_slist_free (ml);
+      return NULL;
+    }
+    else
+      GFS_SIMULATION (d)->preloaded_modules = g_slist_reverse (ml);
+  }
   else
     g_slist_free (ml);
   return GFS_SIMULATION (d);
@@ -1434,17 +1442,18 @@ void gfs_simulation_union_write (GfsSimulation * sim,
       nnode += nbox[i];
     g_free (nbox);
 
-    FILE * fpp = gfs_union_open (fp, domain->pid);
+    GfsUnionFile uf;
+    FILE * fpp = gfs_union_open (fp, domain->pid, &uf);
     data[0] = fpp;
     data[1] = &nnode;
     domain->max_depth_write = max_depth;
     gts_container_foreach (GTS_CONTAINER (g), (GtsFunc) write_node, data);
     domain->max_depth_write = depth;
-    gfs_union_close (fp, domain->pid, fpp);
+    gfs_union_close (fp, domain->pid, &uf);
 
-    fpp = gfs_union_open (fp, domain->pid);
+    fpp = gfs_union_open (fp, domain->pid, &uf);
     gts_graph_foreach_edge (g, (GtsFunc) write_edge, fpp);
-    gfs_union_close (fp, domain->pid, fpp);
+    gfs_union_close (fp, domain->pid, &uf);
 
     gts_container_foreach (GTS_CONTAINER (g), (GtsFunc) gts_object_reset_reserved, NULL);
 #endif /* HAVE_MPI */
@@ -1486,15 +1495,10 @@ static gdouble min_cfl (GfsSimulation * sim)
 void gfs_simulation_set_timestep (GfsSimulation * sim)
 {
   gdouble t, cfl;
-  static gint Start =1;
+
   g_return_if_fail (sim != NULL);
 
   t = sim->time.t;
-  if (sim->time.step != 0.) {
-  if(Start==1){sim->advection_params.dt = sim->time.step;Start--;}
-  sim->tnext = t + sim->advection_params.dt;
-  return;
-  }//SPODE
   if ((cfl = min_cfl (sim)) < G_MAXDOUBLE)
     sim->advection_params.dt = cfl*(* GFS_SIMULATION_CLASS (GTS_OBJECT (sim)->klass)->cfl) (sim);
   else
@@ -1616,7 +1620,6 @@ void gfs_time_read (GfsTime * t, GtsFile * fp)
     {GTS_UINT,   "istart", TRUE},
     {GTS_UINT,   "iend",   TRUE},
     {GTS_DOUBLE, "dtmax",  TRUE},
-    {GTS_DOUBLE, "step",   TRUE},//SPODE
     {GTS_NONE}
   };
 
@@ -1630,7 +1633,6 @@ void gfs_time_read (GfsTime * t, GtsFile * fp)
   var[4].data = &t->istart;
   var[5].data = &t->iend;
   var[6].data = &t->dtmax;
-  var[7].data = &t->step;//SPODE
 
   gts_file_assign_variables (fp, var);
 
@@ -2338,3 +2340,31 @@ GfsSimulationClass * gfs_axi_class (void)
 }
 
 /** \endobject{GfsAxi} */
+
+/**
+ * The axisymmetric advection solver.
+ * \beginobject{GfsAdvectionAxi}
+ */
+
+GfsSimulationClass * gfs_advection_axi_class (void)
+{
+  static GfsSimulationClass * klass = NULL;
+
+  if (klass == NULL) {
+    GtsObjectClassInfo gfs_advection_axi_info = {
+      "GfsAdvectionAxi",
+      sizeof (GfsSimulation),
+      sizeof (GfsSimulationClass),
+      (GtsObjectClassInitFunc) gfs_advection_class_init,
+      (GtsObjectInitFunc) NULL,
+      (GtsArgSetFunc) NULL,
+      (GtsArgGetFunc) NULL
+    };
+    klass = gts_object_class_new (GTS_OBJECT_CLASS (gfs_axi_class ()),
+				  &gfs_advection_axi_info);
+  }
+
+  return klass;
+}
+
+/** \endobject{GfsAdvectionAxi} */

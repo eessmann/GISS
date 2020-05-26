@@ -25,7 +25,7 @@
 
 /**
  * Abstract class for surfaces (an oriented surface (in 3D) or an
- * oriented curve (in 2D)).r
+ * oriented curve (in 2D)).
  * \beginobject{GfsGenericSurface}
  */
 
@@ -294,9 +294,10 @@ void gfs_surface_transformation (GtsSurface * surface,
 {
   GtsMatrix * m;
   gint c;
+
   g_return_if_fail (matrix != NULL);
   
-  m = gts_matrix_translate (NULL, translate);
+  m = gts_matrix_translate (NULL, translate);    
   for (c = 2; c >= 0; c--)
     if (rotate[c] != 0.) {
       GtsVector r = {0.,0.,0.};
@@ -435,8 +436,9 @@ static void surface_read (GtsObject ** o, GtsFile * fp)
 	surface->scale[2] *= scale;
       }
       GtsVector translate;
+      gdouble L = gfs_object_simulation (surface)->physical_params.L;
       for (i = 0; i < FTT_DIMENSION; i++)
-	translate[i] = surface->translate[i];
+	translate[i] = surface->translate[i]/L;
       gfs_surface_transformation (surface->s, 
 				  surface->rotate, translate, surface->scale,
 				  surface->flip, 
