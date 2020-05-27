@@ -1,0 +1,145 @@
+/* Maxima code to compute coefficients used in terrain.mod:update_terrain() */
+
+/* usage: 
+   % maxima -p cform.lisp 
+   (%i1) batchload("terrain.mac"); 
+*/
+
+/* load("cform"); */
+
+hfactor(expr):=
+  block (
+    [a: expand(expr)],
+    a: ratsubst(s_H4,z*z,a),
+    a: ratsubst(s_H3,x*y*z,a),
+    a: expand(a),
+    a: ratsubst(s_m33,x^2*y^2,a),
+    a: expand(a),
+    a: ratsubst(s_m13,x^2*y,a),
+    a: expand(a),
+    a: ratsubst(s_m23,y^2*x,a),
+    a: expand(a),
+    a: ratsubst(s_m11,x^2,a),
+    a: expand(a),
+    a: ratsubst(s_m22,y^2,a),
+    a: expand(a),
+    a: ratsubst(s_m03,x*y,a),
+    a: expand(a),
+    a: ratsubst(s_H1,x*z,a),
+    a: expand(a),
+    a: ratsubst(s_H2,y*z,a),
+    a: expand(a),
+    a: ratsubst(s_m01,x,a),
+    a: expand(a),
+    a: ratsubst(s_m02,y,a),
+    a: expand(a),
+    a: ratsubst(s_H0,z,a),
+    a: expand(a),
+    factorfacsum(a,s_H0,s_H1,s_H2,s_H3,s_H4,s_m01,s_m02,s_m03,s_m13,s_m23,s_m11,s_m22,s_m33)
+  );
+
+/* We want to "recenter" the H coefficient on (xc,yc,hp(x)) where
+   hp(x) is the height on the coarser mesh (i.e. the parent cell) */
+
+H1: (x-xc)*(z-hp[0]-hp[1]*x-hp[2]*y-hp[3]*x*y);
+print("H1=",H1);
+H1: hfactor(H1);
+print("C code:");
+cform(H1);
+print("----------------------------------------------------------------");
+
+H2: (y-yc)*(z-hp[0]-hp[1]*x-hp[2]*y-hp[3]*x*y);
+print("H2=",H2);
+H2: hfactor(H2);
+print("C code:");
+cform(H2);
+print("----------------------------------------------------------------");
+
+H3: (x-xc)*(y-yc)*(z-hp[0]-hp[1]*x-hp[2]*y-hp[3]*x*y);
+print("H3=",H3);
+H3: hfactor(H3);
+print("C code:");
+cform(H3);
+print("----------------------------------------------------------------");
+
+H4: (z-hp[0]-hp[1]*x-hp[2]*y-hp[3]*x*y)^2;
+print("H4=",H4);
+H4: hfactor(H4);
+print("C code:");
+cform(H4);
+print("----------------------------------------------------------------");
+
+/* We want to "recenter" the m coefficient on (xc,yc) */
+
+m03: (x - xc)*(y - yc);
+print("m03=",m03);
+m03: hfactor(m03);
+print("C code:");
+cform(m03);
+print("----------------------------------------------------------------");
+
+m11: (x - xc)*(x - xc);
+print("m11=",m11);
+m11: hfactor(m11);
+print("C code:");
+cform(m11);
+print("----------------------------------------------------------------");
+
+m22: (y - yc)*(y - yc);
+print("m22=",m22);
+m22: hfactor(m22);
+print("C code:");
+cform(m22);
+print("----------------------------------------------------------------");
+
+m13: (x - xc)*(x - xc)*(y - yc);
+print("m13=",m13);
+m13: hfactor(m13);
+print("C code:");
+cform(m13);
+print("----------------------------------------------------------------");
+
+m23: (x - xc)*(y - yc)*(y - yc);
+print("m23=",m23);
+m23: hfactor(m23);
+print("C code:");
+cform(m23);
+print("----------------------------------------------------------------");
+
+m33: (x - xc)*(x - xc)*(y - yc)*(y - yc);
+print("m33=",m33);
+m33: hfactor(m33);
+print("C code:");
+cform(m33);
+print("----------------------------------------------------------------");
+
+/* Only recenter the H coefficients using (xc,yc) if we are looking at
+   the absolute height */
+
+H1: (x-xc)*z;
+print("H1=",H1);
+H1: hfactor(H1);
+print("C code:");
+cform(H1);
+print("----------------------------------------------------------------");
+
+H2: (y-yc)*z;
+print("H2=",H2);
+H2: hfactor(H2);
+print("C code:");
+cform(H2);
+print("----------------------------------------------------------------");
+
+H3: (x-xc)*(y-yc)*z;
+print("H3=",H3);
+H3: hfactor(H3);
+print("C code:");
+cform(H3);
+print("----------------------------------------------------------------");
+
+H4: z^2;
+print("H4=",H4);
+H4: hfactor(H4);
+print("C code:");
+cform(H4);
+print("----------------------------------------------------------------");
