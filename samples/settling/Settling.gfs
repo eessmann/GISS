@@ -1,0 +1,76 @@
+Define Mu 1.
+Define Mass 71.0148
+Define FDLV 6
+Define ADLV 8
+Define SDLV 10
+Define buff 5
+Define GRAVITY -9.81
+
+2 1 GfsSimulationMoving GfsBox GfsGEdge {} {
+
+  GfsTime { end=4 step=1e-4}
+
+  PhysicalParams { L=10 alpha=1./1000.}
+
+  ProjectionParams { tolerance = 1e-6 }
+
+  ApproxProjectionParams { tolerance = 1e-6 }
+
+  GfsRefine FDLV
+
+  GfsRefineSolid SDLV
+
+  GModule ode
+
+  GfsSolidMovingODE  Bundle.gts { sx=0.1 sy=0.1 sz=0.1 flip = 1} {level=SDLV} {
+
+  #initial mass centre of the solid
+  	cx=0. cy=0. cz=0.
+  #initial angular position
+  	ex=0. ey=0. ez=0.
+  #initial linear velocity of the mass centre
+  	vx=0. vy=0. vz=0.
+  #initial angular velocity
+  	ox=0. oy=0. oz=0.
+  #mass of the solid
+		mass=Mass
+  	I11=41.031
+		I22=41.031
+		I33=77.6311
+    cradius=0.5
+
+    #initial linear acceleration
+		ax=0. ay=GRAVITY az=0.
+#initial angular acceleration
+	 	mx=0. my=0. mz=0.
+#Switcher for degree of translational freedom
+	  f_tx= 1 f_ty= 1 f_tz= 1
+#Switcher for degree of rotational freedom
+	  f_rx= 1 f_ry= 1 f_rz= 1
+
+    K=buff
+		BUFF=buff
+  }
+  GfsSourceViscosity Mu
+  #gravity source for fluid
+  Source {} V GRAVITY
+
+  AdaptVorticity { istep = 1 } { maxlevel = ADLV cmax=1e-2}
+  GfsOutputTime { istep = 1 } stdout
+  GfsOutputSolidMovingODE {istep = 1} output
+  GfsOutputSimulation {istep=10} G_%4.2f.gfs
+  GfsOutputSimulation {istep=10} T_%4.2f.dat { format = Tecplot }
+}
+GfsBox {
+top = BoundaryOutflow
+}
+
+GfsBox {
+bottom = Boundary {
+  BcDirichlet U 0
+  BcDirichlet V 0
+  BcDirichlet W 0
+}
+}
+
+2 1 top

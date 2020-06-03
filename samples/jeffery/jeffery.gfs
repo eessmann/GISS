@@ -1,0 +1,45 @@
+Define Mu 0.0
+Define MASS	2010.6192982975
+Define IXX	402.1238596595
+Define IYY	546.8884491369
+Define IZZ	659.4831298416
+Define FDLV 4
+Define ADLV 12
+Define SDLV 13
+Define BF 10
+1 3 GfsSimulationMoving GfsBox GfsGEdge {} {
+
+  GfsTime { end = 100 dtmax = 1e-3}
+
+  PhysicalParams { L = 512 alpha=1./1000. }
+
+  ProjectionParams { tolerance = 1e-6 }
+
+  ApproxProjectionParams { tolerance = 1e-6 }
+
+  GfsRefine FDLV
+
+  GfsRefineSolid SDLV
+
+  GModule ode
+
+  GfsSolidMovingODE Sphere.gts {sx=2 sy=1.6 sz=1.2 flip = 1} {level=SDLV} {
+		mass=MASS
+		I11=IXX I22=IYY I33=IZZ
+		vy=0.5997434862
+		oz=1.0471975512
+                cradius=1.
+		mk_x=1. mk_y=0. mk_z=0.
+		MKSWITCH=1
+		BUFF=BF
+  }
+  GfsSourceViscosity Mu
+  AdaptVorticity { istep = 1 } { maxlevel = ADLV cmax=0.01}
+  GfsOutputTime { istep = 1 } stdout
+  GfsOutputSolidMovingODE {istep = 1} data_1
+  GfsOutputSimulation {step=10} G_%ld.gfs
+}
+GfsBox {}
+1 1 top
+1 1 right
+1 1 front
