@@ -1,11 +1,9 @@
-# GISS
-GISS is a powerful and efficient 3D Direct Numerical Simulation (DNS) flow and solid solver to simulate solid-fuild flows at unprecedented detail and accuracy.
+# GISS - Gerris Immersed Solid Solver
+GISS is a powerful and efficient 3D Direct Numerical Simulation (DNS) solver to simulate solid-fuild flows at unprecedented detail.
 
+This solver has been developed by Erich Essmann (Institute for Multiscale Thermofluids (IMT), School of Engineering, University of Edinburgh), Pei Shui (IMT, Engineering, University of Edinburgh), Prashant Valluri (IMT, Engineering, University of Edinburgh), Rama Govindarajan (International Centre for Theoretical Sciences, Bangalore), Stéphane Zaleski (Jean Le Rond d'Alembert Institute, Sorbonne Université, Paris) and Stéphane Popinet, Jean le Rond d'Alembert Institute, Sorbonne Université, Paris). 
 
-This solver has been developed by Erich Essmann (IMT, University of Edinburgh),Pei Shui (IMT, University of Edinburgh), Prashant Valluri (IMT, University of Edinburgh), Rama Govindarajan (ICTS, TIRF) and  ..... This project would not have been possible without finincal support from Thermosmart
-
-The flow subsolver is based on Gerris which has been developed by Stéphane Popinet. 
-
+The GISS numerical solver comprises two sub-solvers: i) The Gerris flow solver and ii) the Immersed Solid Solver. A two-step solution strategy is used. First, the 3D flow equations around the body are solved using the Gerris Engine (developed by Stéphane Popinet) to obtain velocity and pressure fields. These are then used to calculate the hydrodynamic force field on the surface of the immersed solid.  Second, the calculated forces are passed on to the solid solver which calculates the new position of the immersed body using rigid body equations for translation and rotation. These steps allow for two-way solid-fluid coupling at every time step. The solver allows for arbitrary number of solids with arbitrary geometric features in six degree of freedom (6DOF)} motion. The solver can perform dynamical quad/octree mesh optimisation in a Cartesian framework, which greatly simplifies the procedure for mesh generation.
 
 Features
 ========
