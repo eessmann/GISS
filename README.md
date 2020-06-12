@@ -15,12 +15,7 @@ Features
 Sample Projects
 ===============
 
-![Chaotic Ellipsoid](archive/images/Symmertic_Far_field.png) {
-  width: 25%;
-  border: none;
-  background: none;
-}
-
+<img src="archive/images/Symmertic_Far_field.png" alt="Chaotic Ellipsoid" height="250"/> <img src="archive/images/Chaotic-Movie.gif" alt="Chaotic Movie" height="250"/>
 
 Installation
 ============
