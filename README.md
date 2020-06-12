@@ -15,7 +15,11 @@ Features
 Sample Projects
 ===============
 
-![Chaotic Ellipsoid](archive/images/Symmertic_Far_field.png = 300x)
+![Chaotic Ellipsoid](archive/images/Symmertic_Far_field.png) {
+  width: 25%;
+  border: none;
+  background: none;
+}
 
 
 Installation
