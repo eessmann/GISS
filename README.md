@@ -15,7 +15,7 @@ Features
 Sample Projects
 ===============
 
-<img src="archive/images/symmertic_far_field.png" alt="Chaotic Ellipsoid" height="300"/> <img src="archive/images/chaotic-movie.gif" alt="Chaotic Movie" height="300"/> <img src="archive/images/mixing-movie.gif" alt="Mixing Movie" height="300"/>
+<img src="archive/images/Symmertic_Far_field.png" alt="Chaotic Ellipsoid" height="300"/> <img src="archive/images/Chaotic-Movie.gif" alt="Chaotic Movie" height="300"/> <img src="archive/images/mixing-movie.gif" alt="Mixing Movie" height="300"/>
 
 Installation
 ============
