@@ -1,12 +1,25 @@
 cmake_minimum_required(VERSION 3.15...3.17)
 
-# Set the project name to your project name, my project isn't very descriptive
+# Temporary Pretty printing module
+include(CMakePrintHelpers)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+
+# Based on Gerris Version numbers for compatibility
+set(GFS_MAJOR_VERSION 2)
+set(GFS_MINOR_VERSION 0)
+set(GFS_MICRO_VERSION 1)
+set(GFS_INTERFACE_AGE 0)
+set(GFS_BINARY_AGE 0)
+set(GFS_VERSION
+        ${GFS_MAJOR_VERSION}.${GFS_MINOR_VERSION}.${GFS_MICRO_VERSION})
+
 project(GISS
-        VERSION 0.0.1
-        LANGUAGES C CXX FORTRAN)
+        VERSION ${GFS_VERSION}
+        LANGUAGES C CXX)
 include(cmake/StandardProjectSettings.cmake)
 
-# Link this 'library' to set the c++ standard / compile-time options requested
+# Link this 'library' to set the c standard
 add_library(project_options INTERFACE)
 target_compile_features(project_options INTERFACE c_std_11 cxx_std_17)
 
@@ -39,67 +52,58 @@ enable_doxygen()
 include(cmake/StaticAnalyzers.cmake)
 
 option(BUILD_SHARED_LIBS "Enable compilation of shared libraries" OFF)
-option(ENABLE_TESTING "Enable Test Builds" ON)
-option(ENABLE_FUZZING "Enable Fuzzing Builds" OFF)
-
-# Very basic PCH example
-option(ENABLE_PCH "Enable Precompiled Headers" OFF)
-if (ENABLE_PCH)
-  # This sets a global PCH parameter, each project will build its own PCH, which
-  # is a good idea if any #define's change
-  # 
-  # consider breaking this out per project as necessary 
-  target_precompile_headers(project_options INTERFACE <vector> <string> <map> <utility>)
-endif()
+option(ENABLE_TESTING "Enable Test Builds" OFF)
+option(ENABLE_DOCS "Enable Documentation Builds" OFF)
+option(GISS_USE_MPI "Enable compilation with MPI" OFF)
+option(GISS_USE_BULLET "Enable Bullet Physic Library" OFF)
 
 
-# Set up some extra Conan dependencies based on our needs
+
+# Setting up Conan dependencies based on our needs
 # before loading Conan
 set(CONAN_EXTRA_REQUIRES "")
 set(CONAN_EXTRA_OPTIONS "")
 
-if(CPP_STARTER_USE_IMGUI)
+# Bullet Physics Library Potential ODE Replacement
+if(GISS_USE_BULLET)
   set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-                           imgui-sfml/2.1@bincrafters/stable)
-
-  # set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS} sfml:shared=False
-  # sfml:graphics=True sfml:audio=False sfml:window=True
-  # libalsa:disable_python=True)
+          bullet3/2.87@bincrafters/stable)
 endif()
 
-if(CPP_STARTER_USE_SDL)
-  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-                           sdl2/2.0.10@bincrafters/stable)
-  # set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS} sdl2:wayland=True)
-endif()
+# Fast Fourier Transform Library
+set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+        fftw/3.3.8@bincrafters/stable)
 
+set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS}
+        fftw:openmp=True fftw:threads=True fftw:combinedthreads=True)
 
 include(cmake/Conan.cmake)
 run_conan()
 
+# Finding OpenMPI
+if(GISS_USE_MPI)
+  find_package(MPI REQUIRED)
+  message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
+endif()
+
 if(ENABLE_TESTING)
   enable_testing()
   message(
-    "Building Tests. Be sure to check out test/constexpr_tests for constexpr testing"
+    "Building Tests and running Test-cases. This might take some time"
   )
   add_subdirectory(test)
 endif()
 
-if(ENABLE_FUZZING)
+if(ENABLE_DOCS)
   message(
-    "Building Fuzz Tests, using fuzzing sanitizer https://www.llvm.org/docs/LibFuzzer.html"
+    "Building Documentation"
   )
-  add_subdirectory(fuzz_test)
+  add_subdirectory(doc)
 endif()
 
-
+# Core Gerris Solver
 add_subdirectory(src)
 
-
-option(ENABLE_UNITY "Enable Unity builds of projects" OFF)
-if (ENABLE_UNITY)
-  # Add for any project you want to apply unity builds for
-  set_target_properties(intro PROPERTIES UNITY_BUILD ON)
-endif()
-
+# Modules including GISS
+add_subdirectory(modules)
 

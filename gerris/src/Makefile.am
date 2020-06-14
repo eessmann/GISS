@@ -104,7 +104,7 @@ SRC = \
 	moving.c \
 	balance.c \
 	metric.c \
-        particle.c \
+    particle.c \
 	$(GFS_HDS) \
 	$(MEMSTREAM)
 
