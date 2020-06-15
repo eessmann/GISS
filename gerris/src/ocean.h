@@ -1,5 +1,5 @@
 /* Gerris - The GNU Flow Solver
- * Copyright (C) 2004 Stéphane Popinet
+ * Copyright (C) 2004 StÃ©phane Popinet
  * National Institute of Water and Atmospheric Research
  *
  * This program is free software; you can redistribute it and/or
