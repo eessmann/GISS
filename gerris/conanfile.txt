@@ -1,0 +1,14 @@
+[requires]
+glib/2.64.0@bincrafters/stable
+m4/1.4.18
+fftw/3.3.8@bincrafters/stable
+bullet3/2.87@bincrafters/stable
+
+[generators]
+cmake_find_package
+cmake_paths
+
+[options]
+fftw:openmp=True
+fftw:threads=True
+fftw:combinedthreads=True

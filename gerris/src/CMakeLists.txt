@@ -90,7 +90,7 @@ target_sources(gfs
         PUBLIC ${gfs_headers})
 
 target_link_libraries(gfs
-        PUBLIC CONAN_PKG::glib)
+        PUBLIC glib::glib)
 
 if(GISS_USE_MPI)
     target_link_libraries(gfs

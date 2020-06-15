@@ -61,21 +61,6 @@ option(GISS_USE_BULLET "Enable Bullet Physic Library" OFF)
 
 # Setting up Conan dependencies based on our needs
 # before loading Conan
-set(CONAN_EXTRA_REQUIRES "")
-set(CONAN_EXTRA_OPTIONS "")
-
-# Bullet Physics Library Potential ODE Replacement
-if(GISS_USE_BULLET)
-  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-          bullet3/2.87@bincrafters/stable)
-endif()
-
-# Fast Fourier Transform Library
-set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-        fftw/3.3.8@bincrafters/stable)
-
-set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS}
-        fftw:openmp=True fftw:threads=True fftw:combinedthreads=True)
 
 include(cmake/Conan.cmake)
 run_conan()
@@ -84,6 +69,12 @@ run_conan()
 if(GISS_USE_MPI)
   find_package(MPI REQUIRED)
   message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
+endif()
+
+# Finding glib
+find_package(glib REQUIRED)
+if(glib_FOUND)
+  message(STATUS "GLIB library found: ${glib_LIBRARIES}")
 endif()
 
 if(ENABLE_TESTING)
