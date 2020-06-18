@@ -86,6 +86,31 @@ find_package(GTS REQUIRED)
 
 cmake_print_variables(GTS_LIBRARIES CMAKE_GTS_CXX_FLAGS GTS_INCLUDE_DIR GTS_LINK_DIRECTORIES GTS_EXE_LINKER_FLAGS GTS_DEFINITIONS)
 
+
+group 1 = "ftt.c", "ftt.h", "moving.c", "advection.h", "moving.h", "utils.h", \
+"timestep.h", "poisson.h", "domain.h", "variable.h", "fluid.c", \
+"fluid.h", "surface.c", "boundary.h", "ftt_internal.h", "surface.h", \
+"ftt_internal.c", "moving2.h", "moving2.c"
+
+group 2 = "river.h", "init.c", "map.h", "metric.c", "metric.h", "source.h", \
+"refine.h", "simulation.c", "ocean.h", "ocean.c", "timestep.c", \
+"tension.h", "poisson.c", "advection.c", "map.c", "particle.h", \
+"particle.c"
+
+group 3 = "domain.c", "mpi_boundary.h", "config.h", "solid.c", "version.h", \
+"balance.c", "balance.h", "unstructured.h", "boundary.c", \
+"open_memstream.c", "graphic.c", "isocube.h", "unstructured.c", \
+"mpi_boundary.c", "verify.h"
+
+group 4 = "adaptive.h", "river.c", "wave.h", "init.h", "simulation.h", \
+"refine.c", "output.c", "solid.h", "event.h", "event.c", \
+"adaptive.c", "graphic.h", "source.c", "wave.c", "output.h"
+
+group 5 = "vof.h", "variable.c", "vof.c", "levelset.h", "tension.c", "myc.h", \
+"levelset.c", "myc2d.h"
+
+group 6 = "cartesian.c", "cartesian.h", "utils.c"
+
 add_library(gfs)
 target_sources(gfs
         PRIVATE ${gfs_sources} config.h
