@@ -35,6 +35,7 @@
 #include "metric.h"
 #include "version.h"
 #include "init.h"
+#include "ftt_internal.h"
 
 #include "config.h"
 
@@ -1698,8 +1699,6 @@ guint gfs_domain_depth (GfsDomain * domain)
   gfs_all_reduce (domain, depth, MPI_UNSIGNED, MPI_MAX);
   return depth;
 }
-
-#include "ftt_internal.c"
 
 /**
  * gfs_domain_face_traverse:

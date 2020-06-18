@@ -35,8 +35,8 @@
 #include "surface.h"
 #include "advection.h"
 #include "source.h"
+#include "moving2.h"
 
-#define OLD_SOLID(c) (*((GfsSolidVector **) &(GFS_VALUE (c, old_solid_v))))
 
 typedef struct {
   GfsDomain * domain;
@@ -45,8 +45,6 @@ typedef struct {
   GfsVariable * div;
   GfsVariable * v;
 } DivergenceData;
-
-#include "moving2.c"
 
 /* GfsNumberedVertex: Object */
 

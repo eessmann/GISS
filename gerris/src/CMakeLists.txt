@@ -39,6 +39,8 @@ set(gfs_headers
         myc2d.h
         spatial.h
         function.h
+        ftt_internal.h
+        moving2.h
         version.h)
 
 set(gfs_sources

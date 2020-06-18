@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include "ftt.h"
+#include "ftt_internal.h"
 
 #define  FTT_CELL_IS_DESTROYED(c) (((c)->flags & FTT_FLAG_DESTROYED) != 0)
 
@@ -2125,8 +2126,6 @@ FttCell * ftt_cell_copy (const FttCell * root,
 
   return root_copy;
 }
-
-#include "ftt_internal.c"
 
 /**
  * ftt_face_traverse:
