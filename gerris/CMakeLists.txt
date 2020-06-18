@@ -74,7 +74,7 @@ endif()
 # Finding glib
 find_package(glib REQUIRED)
 if(glib_FOUND)
-  message(STATUS "GLIB library found: ${glib_LIBRARIES}")
+  message(STATUS "GLIB library found: ${glib_LIBRARIES_TARGETS}")
 endif()
 
 if(ENABLE_TESTING)

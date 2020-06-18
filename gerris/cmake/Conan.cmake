@@ -12,6 +12,4 @@ macro(run_conan)
 
   conan_add_remote(NAME bincrafters URL
           https://api.bintray.com/conan/bincrafters/public-conan)
-
-  conan_cmake_run(BASIC_SETUP)
 endmacro()
