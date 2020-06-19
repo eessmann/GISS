@@ -1,5 +1,7 @@
 [requires]
-glib/2.64.0@bincrafters/stable
+glib/2.56.1@bincrafters/stable
+gts/0.7.6@eessmann/conan-gts
+proj/7.0.1
 m4/1.4.18
 fftw/3.3.8@bincrafters/stable
 bullet3/2.87@bincrafters/stable

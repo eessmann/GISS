@@ -672,6 +672,7 @@ static GModule * compile (GtsFile * fp, const gchar * dirname, const gchar * fin
 #endif
 		   " \"%s\""
 		   , dirname, GFS_DATA_DIR, pwd);
+
   g_string_append (build_command, " > log 2>&1");
   gint status = system (build_command->str);
   g_string_free (build_command, TRUE);

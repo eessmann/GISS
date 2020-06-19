@@ -1,6 +1,8 @@
 # Setting up GFS library
 # Gerris headers
 
+
+
 set(gfs_headers
         adaptive.h
         advection.h
@@ -41,6 +43,7 @@ set(gfs_headers
         utils.h
         variable.h
         version.h
+        #verify.h
         vof.h
         wave.h)
 
@@ -64,7 +67,7 @@ set(gfs_sources
         moving2.c
         mpi_boundary.c
         ocean.c
-        open_memstream.c
+        #open_memstream.c
         output.c
         particle.c
         poisson.c
@@ -79,14 +82,54 @@ set(gfs_sources
         unstructured.c
         utils.c
         variable.c
-        verify.h
         vof.c
         wave.c)
 
-add_library(gfs_base)
-target_sources(gfs_base
-        PRIVATE ${gfs_sources}
-        PUBLIC ${gfs_headers})
+set(pkgdatadir ${CMAKE_INSTALL_DATADIR}/gerris)
+set(moduledir ${CMAKE_INSTALL_LIBDIR}/gerris)
 
-target_link_libraries(gfs_base
-        PUBLIC glib::glib)
+# Gerris 3D library
+add_library(gfs3D)
+target_sources(gfs3D
+        PUBLIC config.h ${gfs_headers} ${gfs_sources})
+
+target_link_libraries(gfs3D
+        INTERFACE project_options #project_warnings
+        PUBLIC glib::glib GTS::GTS m)
+
+if(MPI_FOUND)
+    target_link_libraries(gfs3D PUBLIC MPI::MPI_CXX)
+endif()
+
+target_compile_definitions(gfs3D
+        PUBLIC GFS_DATA_DIR="${pkgdatadir}" GFS_MODULES_DIR="${moduledir}")
+
+
+# Gerris 2D library
+add_library(gfs2D)
+target_sources(gfs2D
+        PUBLIC config.h ${gfs_headers} ${gfs_sources})
+
+target_link_libraries(gfs2D
+        INTERFACE project_options #project_warnings
+        PUBLIC glib::glib GTS::GTS m)
+
+if(MPI_FOUND)
+    target_link_libraries(gfs2D PUBLIC MPI::MPI_CXX)
+endif()
+
+target_compile_definitions(gfs2D
+        PUBLIC GFS_DATA_DIR="${pkgdatadir}" GFS_MODULES_DIR="${moduledir}" FTT_2D=1)
+
+# Gerris 3D executable
+add_executable(gerris3D gerris.c)
+target_link_libraries(gerris3D
+        INTERFACE project_options #project_warnings
+        PRIVATE gfs3D)
+
+# Gerris 2D executable
+add_executable(gerris2D gerris.c)
+target_link_libraries(gerris2D
+        INTERFACE project_options #project_warnings
+        PRIVATE gfs2D)
+

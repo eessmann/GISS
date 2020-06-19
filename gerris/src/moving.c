@@ -38,13 +38,7 @@
 #include "moving2.h"
 
 
-typedef struct {
-  GfsDomain * domain;
-  gdouble dt;
-  FttComponent c;
-  GfsVariable * div;
-  GfsVariable * v;
-} DivergenceData;
+
 
 /* GfsNumberedVertex: Object */
 

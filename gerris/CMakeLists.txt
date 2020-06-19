@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.15...3.17)
 
 # Temporary Pretty printing module
 include(CMakePrintHelpers)
+include(GNUInstallDirs)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
@@ -21,7 +22,7 @@ include(cmake/StandardProjectSettings.cmake)
 
 # Link this 'library' to set the c standard
 add_library(project_options INTERFACE)
-target_compile_features(project_options INTERFACE c_std_11 cxx_std_17)
+target_compile_features(project_options INTERFACE c_std_11)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
   option(ENABLE_BUILD_WITH_TIME_TRACE "Enable -ftime-trace to generate time tracing .json files on clang" OFF)
@@ -54,7 +55,7 @@ include(cmake/StaticAnalyzers.cmake)
 option(BUILD_SHARED_LIBS "Enable compilation of shared libraries" OFF)
 option(ENABLE_TESTING "Enable Test Builds" OFF)
 option(ENABLE_DOCS "Enable Documentation Builds" OFF)
-option(GISS_USE_MPI "Enable compilation with MPI" OFF)
+option(GISS_USE_MPI "Enable compilation with MPI" ON)
 option(GISS_USE_BULLET "Enable Bullet Physic Library" OFF)
 
 
@@ -74,7 +75,13 @@ endif()
 # Finding glib
 find_package(glib REQUIRED)
 if(glib_FOUND)
-  message(STATUS "GLIB library found: ${glib_LIBRARIES_TARGETS}")
+  message(STATUS "GLIB library found: ${glib_LIBRARIES}")
+endif()
+
+# Finding gts
+find_package(GTS REQUIRED)
+if(GTS_FOUND)
+  message(STATUS "GTS library found: ${GTS_LIBRARIES}")
 endif()
 
 if(ENABLE_TESTING)

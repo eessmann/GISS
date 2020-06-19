@@ -20,11 +20,10 @@
  * \brief Graphical utility functions.
  */
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#  ifdef HAVE_MPI
-#    include <mpi.h>
-#  endif
+
+#include "config.h"
+#ifdef HAVE_MPI
+#  include <mpi.h>
 #endif
 
 #include <stdlib.h>

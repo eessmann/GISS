@@ -28,11 +28,10 @@ extern "C" {
 
 typedef struct _GfsBoundaryMpi         GfsBoundaryMpi;
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#  ifdef HAVE_MPI
-#    include <mpi.h>
-#  endif
+#include "config.h"
+#ifdef HAVE_MPI
+#  include <mpi.h>
+#endif
 
 struct _GfsBoundaryMpi {
   /*< private >*/
@@ -46,7 +45,6 @@ struct _GfsBoundaryMpi {
 #endif /* HAVE_MPI */
 };
 
-#endif /* HAVE_CONFIG_H */
 
 #define GFS_BOUNDARY_MPI(obj)            GTS_OBJECT_CAST (obj,\
 					           GfsBoundaryMpi,\

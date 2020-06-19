@@ -28,10 +28,9 @@ extern "C" {
 #include <gmodule.h>
 #include "ftt.h"
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
-#  ifdef HAVE_MPI
-#    include <mpi.h>
+#include "config.h"
+#ifdef HAVE_MPI
+#  include <mpi.h>
 
 # define gfs_all_reduce(domain, p, type, op) {			        \
     if ((domain)->pid >= 0) {						\
@@ -58,12 +57,11 @@ extern "C" {
     }                                                                   \
   }
 
-#  else /* doesn't HAVE_MPI */
+#else /* doesn't HAVE_MPI */
     /* gfs_all_reduce() defaults to nothing without MPI */
 #    define gfs_all_reduce(domain, p, type, op)
 #    define gfs_error(pid, ...) fprintf(stderr, __VA_ARGS__)
-#  endif /* doesn't HAVE_MPI */
-#endif /* HAVE_CONFIG_H */
+#endif /* doesn't HAVE_MPI */
 
 #if !HAVE_G_MKDTEMP
 gchar * g_mkdtemp (gchar * tmpl);

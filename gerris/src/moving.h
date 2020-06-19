@@ -32,6 +32,14 @@ extern "C" {
 
 /* GfsNumberedVertex: Header */
 
+typedef struct {
+    GfsDomain * domain;
+    gdouble dt;
+    FttComponent c;
+    GfsVariable * div;
+    GfsVariable * v;
+} DivergenceData;
+
 #define OLD_SOLID(c) (*((GfsSolidVector **) &(GFS_VALUE (c, old_solid_v))))
 
 typedef struct _GfsNumberedVertex GfsNumberedVertex;
