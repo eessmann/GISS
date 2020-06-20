@@ -17,7 +17,7 @@
  * 02111-1307, USA.  
  */
 
-#include "particle.h"
+#include "../src/particle.h"
 
 /* GfsParticulate: Header */
 
