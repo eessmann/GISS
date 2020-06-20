@@ -54,7 +54,10 @@ static gint get_tmp_file (gchar            *tmpl,
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   static const int NLETTERS = sizeof (letters) - 1;
   glong value;
-  GTimeVal tv;
+  gint64 tv = g_get_real_time();
+  gint64 t_sec = tv / 1000000;
+  gint64 t_micro = tv - (t_sec*1000000);
+
   static int counter = 0;
 
   g_return_val_if_fail (tmpl != NULL, -1);
@@ -69,8 +72,7 @@ static gint get_tmp_file (gchar            *tmpl,
     }
 
   /* Get some more or less random data.  */
-  g_get_current_time (&tv);
-  value = (tv.tv_usec ^ tv.tv_sec) + getpid () + counter++;
+  value = (t_micro ^ t_sec) + getpid () + counter++;
 
   for (count = 0; count < 100; value += 7777, ++count)
     {
@@ -650,9 +652,10 @@ static void gfs_module_new (GfsFunction * f, guint line)
 
 static double current_time (void)
 {
-  GTimeVal r;
-  g_get_current_time (&r);
-  return r.tv_sec + 1e-6*r.tv_usec;
+    gint64 tv = g_get_real_time();
+    gint64 tv_sec = tv / 1000000;
+    gint64 tv_micro = tv - (tv_sec*1000000);
+  return tv_sec + 1e-6*tv_micro ;
 }
 
 static GModule * compile (GtsFile * fp, const gchar * dirname, const gchar * finname)

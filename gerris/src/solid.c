@@ -790,7 +790,7 @@ static void paint_mixed_leaf (FttCell * cell, GfsVariable * status)
 		GFS_STATE (child.c[j])->solid->s[FTT_OPPOSITE_DIRECTION (i)];
 	  if (w/k <= 0. || w/k >= 1.)
 	    g_warning ("file %s: line %d (%s): w/k=%g solid->s[%d]=%g",
-		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		       __FILE__, __LINE__, G_STRFUNC,
 		       w/k, i, solid->s[i]);
 	  solid->s[i] = w/k;
 	}
@@ -1004,7 +1004,7 @@ static gboolean check_area_fractions (const FttCell * root)
     ftt_cell_bbox (root, &bb);
     if (!gts_bbox_point_is_inside (&bb, &solid->cm)) {
       g_warning ("file %s: line %d (%s): cm (%g,%g,%g)/%d is not inside cell [(%g,%g,%g),(%g,%g,%g)]",
-		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		 __FILE__, __LINE__, G_STRFUNC,
 		 solid->cm.x, solid->cm.y, solid->cm.z, ftt_cell_level (root),
 		 bb.x1, bb.y1, bb.z1, 
 		 bb.x2, bb.y2, bb.z2);
@@ -1013,7 +1013,7 @@ static gboolean check_area_fractions (const FttCell * root)
     }
     if (!gts_bbox_point_is_inside (&bb, &solid->ca)) {
       g_warning ("file %s: line %d (%s): ca (%g,%g,%g)/%d is not inside cell [(%g,%g,%g),(%g,%g,%g)]",
-		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		 __FILE__, __LINE__, G_STRFUNC,
 		 solid->ca.x, solid->ca.y, solid->ca.z, ftt_cell_level (root),
 		 bb.x1, bb.y1, bb.z1, 
 		 bb.x2, bb.y2, bb.z2);
@@ -1034,7 +1034,7 @@ static gboolean check_area_fractions (const FttCell * root)
 	      FttVector p;
 	      ftt_cell_pos (root, &p);
 	      g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
-			 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+			 __FILE__, __LINE__, G_STRFUNC,
 			 p.x, p.y, p.z, ftt_cell_level (root),
 			 oi, nsolid->s[oi]);
 	      ret = FALSE;
@@ -1047,7 +1047,7 @@ static gboolean check_area_fractions (const FttCell * root)
 	    FttVector p;
 	    ftt_cell_pos (root, &p);
 	    g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g neighbor->s[%d]: %g",
-		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		       __FILE__, __LINE__, G_STRFUNC,
 		       p.x, p.y, p.z, ftt_cell_level (root),
 		       i, solid->s[i],
 		       oi, nsolid->s[oi]);
@@ -1060,7 +1060,7 @@ static gboolean check_area_fractions (const FttCell * root)
 	    FttVector p;
 	    ftt_cell_pos (root, &p);
 	    g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
-		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		       __FILE__, __LINE__, G_STRFUNC,
 		       p.x, p.y, p.z, ftt_cell_level (root),
 		       i, solid->s[i]);
 	    ret = FALSE;
@@ -1076,7 +1076,7 @@ static gboolean check_area_fractions (const FttCell * root)
 	      FttVector p;
 	      ftt_cell_pos (root, &p);
 	      g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
-			 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+			 __FILE__, __LINE__, G_STRFUNC,
 			 p.x, p.y, p.z, ftt_cell_level (root),
 			 i, solid->s[i]);
 	      ret = FALSE;
@@ -1090,7 +1090,7 @@ static gboolean check_area_fractions (const FttCell * root)
 	    FttVector p;
 	    ftt_cell_pos (root, &p);
 	    g_warning ("file %s: line %d (%s): (%g,%g,%g)/%d: s[%d]: %g",
-		       __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		       __FILE__, __LINE__, G_STRFUNC,
 		       p.x, p.y, p.z, ftt_cell_level (root),
 		       i, solid->s[i]);
 	    ret = FALSE;
@@ -1123,7 +1123,7 @@ static void check_solid_fractions (FttCell * cell, gboolean * ret)
       if (children.c[n] && GFS_IS_MIXED (children.c[n])) {
 	g_warning ("file %s: line %d (%s): children[%d] is mixed (%g)"
 		   " parent is not",
-                   __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+                   __FILE__, __LINE__, G_STRFUNC,
 		   n, GFS_STATE (children.c[n])->solid->a);
 	*ret = FALSE;
       }
@@ -1141,7 +1141,7 @@ static void check_solid_fractions (FttCell * cell, gboolean * ret)
     a /= FTT_CELLS;
     if (fabs (GFS_STATE (cell)->solid->a - a) >= 1e-10) {
       g_warning ("file %s: line %d (%s): children->a: %g parent->a: %g",
-		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		 __FILE__, __LINE__, G_STRFUNC,
 		 a, GFS_STATE (cell)->solid->a);
 	*ret = FALSE;
     }

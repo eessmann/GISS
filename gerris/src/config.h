@@ -1,5 +1,5 @@
 /* config.h.  Generated from config.h.in by configure.  */
-/* config.h.in.  Generated from configure.in by autoheader.  */
+/* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to dummy `main' function (if any) required to link to the Fortran
    libraries. */
@@ -42,14 +42,20 @@
 /* Define to 1 if you have the <fenv.h> header file. */
 #define HAVE_FENV_H 1
 
+/* Define to 1 if you have the `funopen' function. */
+/* #undef HAVE_FUNOPEN */
+
 /* Define to 1 if you have the <getopt.h> header file. */
 #define HAVE_GETOPT_H 1
 
 /* Define to 1 if you have the `getopt_long' function. */
 #define HAVE_GETOPT_LONG 1
 
+/* Define to 1 if you have the `g_mkdtemp' function. */
+#define HAVE_G_MKDTEMP 1
+
 /* Define to 1 if you have the <HYPRE.h> header file. */
-#define HAVE_HYPRE_H 1
+/* #undef HAVE_HYPRE_H */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
@@ -63,14 +69,14 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
 
-/* Define to 1 if you have the `mkdtemp' function. */
-#define HAVE_MKDTEMP 1
-
 /* Define to 1 if you have MPI */
-#define HAVE_MPI 0
+#define HAVE_MPI 1
 
 /* Define to 1 if you have the <netcdf.h> header file. */
 #define HAVE_NETCDF_H 1
+
+/* Define to 1 if you have the `open_memstream' function. */
+#define HAVE_OPEN_MEMSTREAM 1
 
 /* Define to 1 if GModule are supported and if you have pkg-config. */
 #define HAVE_PKG_CONFIG 1
@@ -99,8 +105,7 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
 
 /* Options for m4 */
@@ -108,9 +113,6 @@
 
 /* Dynamic module suffix */
 /* #undef MODULES_SUFFIX */
-
-/* Define to 1 if your C compiler doesn't accept -c and -o together. */
-/* #undef NO_MINUS_C_MINUS_O */
 
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT ""

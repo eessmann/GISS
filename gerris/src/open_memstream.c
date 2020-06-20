@@ -16,6 +16,8 @@
 
 /* Written by Eric Blake <address@hidden>, 2010.  */
 
+#include "config.h"
+
 /* Specification.  */
 #include <stdio.h>
 
@@ -26,6 +28,9 @@
 
 #include "verify.h"
 
+#if !HAVE_FUNOPEN
+# error Sorry, not ported to your platform yet
+#else
 
 # define INITIAL_ALLOC 64
 

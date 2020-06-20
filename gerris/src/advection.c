@@ -659,7 +659,7 @@ static void set_merged (FttCell * cell)
       }
     if (abest == 0.)
       g_warning ("file %s: line %d (%s): cannot merge small cell: %g",
-		 __FILE__, __LINE__, G_GNUC_PRETTY_FUNCTION,
+		 __FILE__, __LINE__, G_STRFUNC,
 		 solid->a);
   }
 }

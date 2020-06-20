@@ -12,6 +12,7 @@ cmake_find_package
 cmake_paths
 
 [options]
+glib:shared=False
 fftw:openmp=True
 fftw:threads=True
 fftw:combinedthreads=True

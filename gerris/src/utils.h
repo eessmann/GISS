@@ -276,7 +276,7 @@ gboolean           gfs_read_function_vector (GtsFile * fp,
                "file %s: line %d (%s): assertion failed: (%s)",	\
 	       __FILE__,    			                \
 	       __LINE__,	      			        \
-	       __PRETTY_FUNCTION__,	      	                \
+	       __func__,	      	                \
 	       #expr);		                                \
         abort ();} }G_STMT_END
 
