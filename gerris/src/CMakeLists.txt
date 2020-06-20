@@ -91,11 +91,12 @@ set(moduledir ${CMAKE_INSTALL_LIBDIR}/gerris)
 # Gerris 3D library
 add_library(gfs3D)
 target_sources(gfs3D
-        PUBLIC config.h ${gfs_headers} ${gfs_sources})
+        PRIVATE ${gfs_sources}
+        PUBLIC config.h ${gfs_headers})
 
 target_link_libraries(gfs3D
-        INTERFACE project_options #project_warnings
-        PUBLIC glib::glib GTS::GTS m)
+        INTERFACE project_options project_warnings
+        PUBLIC glib::glib GTS::GTS GSL::GSL m)
 
 if(MPI_FOUND)
     target_link_libraries(gfs3D PUBLIC MPI::MPI_CXX)
@@ -108,11 +109,12 @@ target_compile_definitions(gfs3D
 # Gerris 2D library
 add_library(gfs2D)
 target_sources(gfs2D
-        PUBLIC config.h ${gfs_headers} ${gfs_sources})
+        PRIVATE ${gfs_sources}
+        PUBLIC config.h ${gfs_headers})
 
 target_link_libraries(gfs2D
-        INTERFACE project_options #project_warnings
-        PUBLIC glib::glib GTS::GTS m)
+        INTERFACE project_options project_warnings
+        PUBLIC glib::glib GTS::GTS GSL::GSL m)
 
 if(MPI_FOUND)
     target_link_libraries(gfs2D PUBLIC MPI::MPI_CXX)
@@ -124,12 +126,12 @@ target_compile_definitions(gfs2D
 # Gerris 3D executable
 add_executable(gerris3D gerris.c)
 target_link_libraries(gerris3D
-        INTERFACE project_options #project_warnings
+        INTERFACE project_options project_warnings
         PRIVATE gfs3D)
 
 # Gerris 2D executable
 add_executable(gerris2D gerris.c)
 target_link_libraries(gerris2D
-        INTERFACE project_options #project_warnings
+        INTERFACE project_options project_warnings
         PRIVATE gfs2D)
 

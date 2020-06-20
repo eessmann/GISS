@@ -22,7 +22,7 @@
  */
 #include "moving2.h"
 
-static void sold2_fine_init(FttCell *parent, GfsVariable *v) {
+void sold2_fine_init(FttCell *parent, GfsVariable *v) {
     FttCellChildren child;
     guint n;
 
@@ -32,7 +32,7 @@ static void sold2_fine_init(FttCell *parent, GfsVariable *v) {
             GFS_VALUE(child.c[n], v) = 1.;
 }
 
-static int cell_is_corner(FttCell *cell) {
+int cell_is_corner(FttCell *cell) {
     FttDirection d, d1, d2;
     gdouble norm;
     FttCellNeighbors neighbors;
@@ -98,7 +98,7 @@ static int cell_is_corner(FttCell *cell) {
     }
 }
 
-static int cell_was_corner(FttCell *cell, GfsVariable *old_solid_v, GfsVariable **sold2) {
+int cell_was_corner(FttCell *cell, GfsVariable *old_solid_v, GfsVariable **sold2) {
     FttDirection d, d1, d2;
 
     g_assert(cell);
@@ -153,7 +153,7 @@ static int cell_was_corner(FttCell *cell, GfsVariable *old_solid_v, GfsVariable 
     }
 }
 
-static double new_fluid_old_solid(FttCell *cell, FttDirection d1,
+double new_fluid_old_solid(FttCell *cell, FttDirection d1,
                                   GfsVariable *old_solid,
                                   GfsVariable **sold2) {
     FttDirection d;
@@ -180,7 +180,7 @@ static double new_fluid_old_solid(FttCell *cell, FttDirection d1,
     return -1.;
 }
 
-static double new_solid_old_fluid(FttCell *cell, FttDirection d1,
+double new_solid_old_fluid(FttCell *cell, FttDirection d1,
                                   GfsVariable *old_solid,
                                   GfsVariable **sold2) {
     FttDirection d;
@@ -206,7 +206,7 @@ static double new_solid_old_fluid(FttCell *cell, FttDirection d1,
     return -1.;
 }
 
-static double new_solid_old_solid(FttCell *cell, FttDirection d1,
+double new_solid_old_solid(FttCell *cell, FttDirection d1,
                                   GfsVariable *old_solid,
                                   GfsVariable **sold2) {
     FttDirection d;
@@ -237,7 +237,7 @@ static double new_solid_old_solid(FttCell *cell, FttDirection d1,
     return -1.;
 }
 
-static void second_order_face_fractions(FttCell *cell, GfsSimulationMoving *sim) {
+void second_order_face_fractions(FttCell *cell, GfsSimulationMoving *sim) {
 #ifndef FTT_2D /* 3D */
     g_assert_not_implemented();
 #endif
@@ -461,7 +461,7 @@ static void second_order_face_fractions(FttCell *cell, GfsSimulationMoving *sim)
                 OLD_SOLID(cell)->s[d] = -1. + dto1 + dto2;
 }
 
-static void set_sold2(FttCell *cell, GfsSimulationMoving *sim) {
+void set_sold2(FttCell *cell, GfsSimulationMoving *sim) {
     GfsVariable *old_solid_v = sim->old_solid;
     GfsVariable **sold2 = sim->sold2;
     FttDirection d;
@@ -474,7 +474,7 @@ static void set_sold2(FttCell *cell, GfsSimulationMoving *sim) {
             SOLD2 (cell, d) = 1.;
 }
 
-static void redistribute_old_face_in_merged(FttCell *cell,
+void redistribute_old_face_in_merged(FttCell *cell,
                                             FttCell *merged, FttDirection d,
                                             GfsVariable *old_solid_v) {
     gint i;
@@ -537,7 +537,7 @@ static void redistribute_old_face_in_merged(FttCell *cell,
         }
 }
 
-static void redistribute_old_face(FttCell *cell, FttCell *merged, GfsVariable *old_solid) {
+void redistribute_old_face(FttCell *cell, FttCell *merged, GfsVariable *old_solid) {
     FttCellNeighbors neighbors;
     FttDirection d;
 
@@ -547,7 +547,7 @@ static void redistribute_old_face(FttCell *cell, FttCell *merged, GfsVariable *o
             redistribute_old_face_in_merged(cell, neighbors.c[d], d, old_solid);
 }
 
-static double face_fraction_half(const FttCellFace *face, const GfsAdvectionParams *par) {
+double face_fraction_half(const FttCellFace *face, const GfsAdvectionParams *par) {
     GfsVariable *old_solid_v = GFS_SIMULATION_MOVING(par->v->domain)->old_solid;
     if (face->cell && OLD_SOLID(face->cell))
         return OLD_SOLID(face->cell)->s[face->d];
@@ -555,7 +555,7 @@ static double face_fraction_half(const FttCellFace *face, const GfsAdvectionPara
 }
 
 /* see gfs_face_advection_flux() for the initial implementation with static boundaries */
-static void moving_face_advection_flux(const FttCellFace *face,
+void moving_face_advection_flux(const FttCellFace *face,
                                        const GfsAdvectionParams *par) {
     gdouble flux;
 
@@ -579,7 +579,7 @@ static void moving_face_advection_flux(const FttCellFace *face,
 }
 
 /* see gfs_face_velocity_advection_flux() for the initial implementation with static boundaries */
-static void moving_face_velocity_advection_flux(const FttCellFace *face,
+void moving_face_velocity_advection_flux(const FttCellFace *face,
                                                 const GfsAdvectionParams *par) {
     gdouble flux;
     FttComponent c = par->v->component;
@@ -614,7 +614,7 @@ static void moving_face_velocity_advection_flux(const FttCellFace *face,
     }
 }
 
-static void swap_fractions(FttCell *cell, GfsVariable *old_solid_v) {
+void swap_fractions(FttCell *cell, GfsVariable *old_solid_v) {
     FttDirection c;
 
     g_assert(cell);
@@ -701,7 +701,7 @@ static void swap_fractions(FttCell *cell, GfsVariable *old_solid_v) {
             }
 }
 
-static void old_solid_fractions_from_children(FttCell *cell) {
+void old_solid_fractions_from_children(FttCell *cell) {
     if (!FTT_CELL_IS_LEAF(cell)) {
         FttCellChildren child;
         guint i;
@@ -715,11 +715,11 @@ static void old_solid_fractions_from_children(FttCell *cell) {
     }
 }
 
-static void foreach_box(GfsBox *box, gpointer data) {
+void foreach_box(GfsBox *box, gpointer data) {
     old_solid_fractions_from_children(box->root);
 }
 
-static void swap_face_fractions(GfsSimulation *sim) {
+void swap_face_fractions(GfsSimulation *sim) {
     GfsDomain *domain = GFS_DOMAIN(sim);
     gfs_domain_cell_traverse(domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
                              (FttCellTraverseFunc) swap_fractions,
@@ -727,7 +727,7 @@ static void swap_face_fractions(GfsSimulation *sim) {
     gts_container_foreach(GTS_CONTAINER(domain), (GtsFunc) foreach_box, NULL);
 }
 
-static void swap_fractions_back(FttCell *cell, GfsVariable *old_solid_v) {
+void swap_fractions_back(FttCell *cell, GfsVariable *old_solid_v) {
     if (OLD_SOLID(cell))
         if (GFS_STATE(cell)->solid) {
             GfsSolidVector *tmp = OLD_SOLID(cell);
@@ -744,13 +744,13 @@ static void swap_fractions_back(FttCell *cell, GfsVariable *old_solid_v) {
     }
 }
 
-static void swap_face_fractions_back(GfsSimulation *sim) {
+void swap_face_fractions_back(GfsSimulation *sim) {
     gfs_domain_cell_traverse(GFS_DOMAIN(sim), FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
                              (FttCellTraverseFunc) swap_fractions_back,
                              GFS_SIMULATION_MOVING(sim)->old_solid);
 }
 
-static void moving_divergence_distribution_second_order(GSList *merged, DivergenceData *p) {
+void moving_divergence_distribution_second_order(GSList *merged, DivergenceData *p) {
     if (merged->next != NULL && merged->next->data != merged->data) {
         gdouble total_volume = 0., total_div = 0.;
         GfsVariable *old_solid_v = GFS_SIMULATION_MOVING(p->domain)->old_solid;

@@ -74,15 +74,13 @@ endif()
 
 # Finding glib
 find_package(glib REQUIRED)
-if(glib_FOUND)
-  message(STATUS "GLIB library found: ${glib_LIBRARIES}")
-endif()
+
 
 # Finding gts
 find_package(GTS REQUIRED)
-if(GTS_FOUND)
-  message(STATUS "GTS library found: ${GTS_LIBRARIES}")
-endif()
+
+# Finding gsl
+find_package(GSL REQUIRED)
 
 if(ENABLE_TESTING)
   enable_testing()

@@ -28,55 +28,55 @@
 
 #define SOLD2(c, d)  (GFS_VALUE (c, sold2[d]))
 
-static void sold2_fine_init(FttCell *parent, GfsVariable *v);
+void sold2_fine_init(FttCell *parent, GfsVariable *v);
 
-static int cell_is_corner(FttCell *cell);
+int cell_is_corner(FttCell *cell);
 
-static int cell_was_corner(FttCell *cell, GfsVariable *old_solid_v, GfsVariable **sold2);
+int cell_was_corner(FttCell *cell, GfsVariable *old_solid_v, GfsVariable **sold2);
 
-static double new_fluid_old_solid(FttCell *cell, FttDirection d1,
+double new_fluid_old_solid(FttCell *cell, FttDirection d1,
                                   GfsVariable *old_solid,
                                   GfsVariable **sold2);
 
-static double new_solid_old_fluid(FttCell *cell, FttDirection d1,
+double new_solid_old_fluid(FttCell *cell, FttDirection d1,
                                   GfsVariable *old_solid,
                                   GfsVariable **sold2);
 
-static double new_solid_old_solid(FttCell *cell, FttDirection d1,
+double new_solid_old_solid(FttCell *cell, FttDirection d1,
                                   GfsVariable *old_solid,
                                   GfsVariable **sold2);
 
-static void second_order_face_fractions(FttCell *cell, GfsSimulationMoving *sim);
+void second_order_face_fractions(FttCell *cell, GfsSimulationMoving *sim);
 
-static void set_sold2(FttCell *cell, GfsSimulationMoving *sim);
+void set_sold2(FttCell *cell, GfsSimulationMoving *sim);
 
-static void redistribute_old_face_in_merged(FttCell *cell,
+void redistribute_old_face_in_merged(FttCell *cell,
                                             FttCell *merged, FttDirection d,
                                             GfsVariable *old_solid_v);
 
-static void redistribute_old_face(FttCell *cell, FttCell *merged, GfsVariable *old_solid);
+void redistribute_old_face(FttCell *cell, FttCell *merged, GfsVariable *old_solid);
 
-static double face_fraction_half(const FttCellFace *face, const GfsAdvectionParams *par);
+double face_fraction_half(const FttCellFace *face, const GfsAdvectionParams *par);
 
-static void moving_face_advection_flux(const FttCellFace *face,
+void moving_face_advection_flux(const FttCellFace *face,
                                        const GfsAdvectionParams *par);
 
-static void moving_face_velocity_advection_flux(const FttCellFace *face,
+void moving_face_velocity_advection_flux(const FttCellFace *face,
                                                 const GfsAdvectionParams *par);
 
-static void swap_fractions(FttCell *cell, GfsVariable *old_solid_v);
+void swap_fractions(FttCell *cell, GfsVariable *old_solid_v);
 
-static void old_solid_fractions_from_children(FttCell *cell);
+void old_solid_fractions_from_children(FttCell *cell);
 
-static void foreach_box(GfsBox *box, gpointer data);
+void foreach_box(GfsBox *box, gpointer data);
 
-static void swap_face_fractions(GfsSimulation *sim);
+void swap_face_fractions(GfsSimulation *sim);
 
-static void swap_fractions_back(FttCell *cell, GfsVariable *old_solid_v);
+void swap_fractions_back(FttCell *cell, GfsVariable *old_solid_v);
 
-static void swap_face_fractions_back(GfsSimulation *sim);
+void swap_face_fractions_back(GfsSimulation *sim);
 
-static void moving_divergence_distribution_second_order(GSList *merged, DivergenceData *p);
+void moving_divergence_distribution_second_order(GSList *merged, DivergenceData *p);
 
 
 

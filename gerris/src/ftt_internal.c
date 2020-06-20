@@ -1,6 +1,6 @@
 #include "ftt_internal.h"
 
-static void traverse_face(FttCell *cell, gpointer *datum) {
+ void traverse_face(FttCell *cell, gpointer *datum) {
     FttDirection *d = datum[0];
     gint max_depth = *((gint *) datum[1]);
     FttFaceTraverseFunc func = (FttFaceTraverseFunc) datum[2];
@@ -35,7 +35,7 @@ static void traverse_face(FttCell *cell, gpointer *datum) {
         (*func)(&face, data);
 }
 
-static void traverse_all_faces(FttCell *cell, gpointer *datum) {
+void traverse_all_faces(FttCell *cell, gpointer *datum) {
     FttDirection d;
 
     datum[0] = &d;
@@ -44,7 +44,7 @@ static void traverse_all_faces(FttCell *cell, gpointer *datum) {
     cell->flags |= FTT_FLAG_TRAVERSED;
 }
 
-static void traverse_all_direct_faces(FttCell *cell, gpointer *datum) {
+void traverse_all_direct_faces(FttCell *cell, gpointer *datum) {
     FttDirection d;
 
     datum[0] = &d;
@@ -53,12 +53,12 @@ static void traverse_all_direct_faces(FttCell *cell, gpointer *datum) {
     cell->flags |= FTT_FLAG_TRAVERSED;
 }
 
-static void traverse_face_direction(FttCell *cell, gpointer *datum) {
+void traverse_face_direction(FttCell *cell, gpointer *datum) {
     traverse_face(cell, datum);
     cell->flags |= FTT_FLAG_TRAVERSED;
 }
 
-static void traverse_face_component(FttCell *cell, gpointer *datum) {
+void traverse_face_component(FttCell *cell, gpointer *datum) {
     FttComponent *c = datum[0];
     FttDirection d;
 
@@ -71,6 +71,6 @@ static void traverse_face_component(FttCell *cell, gpointer *datum) {
     datum[0] = c;
 }
 
-static void reset_flag(FttCell *cell) {
+void reset_flag(FttCell *cell) {
     cell->flags &= ~FTT_FLAG_TRAVERSED;
 }
