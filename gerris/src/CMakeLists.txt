@@ -22,7 +22,6 @@ set(gfs_headers
         map.h
         metric.h
         moving.h
-        moving2.h
         mpi_boundary.h
         myc.h
         myc2d.h
@@ -64,7 +63,6 @@ set(gfs_sources
         map.c
         metric.c
         moving.c
-        moving2.c
         mpi_boundary.c
         ocean.c
         #open_memstream.c

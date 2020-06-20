@@ -12,4 +12,15 @@ macro(run_conan)
 
   conan_add_remote(NAME bincrafters URL
           https://api.bintray.com/conan/bincrafters/public-conan)
+
+  conan_cmake_run(
+          REQUIRES
+          m4/1.4.18
+          ${CONAN_EXTRA_REQUIRES}
+          OPTIONS
+          ${CONAN_EXTRA_OPTIONS}
+          BASIC_SETUP
+          CMAKE_TARGETS # individual targets to link to
+          BUILD
+          missing)
 endmacro()

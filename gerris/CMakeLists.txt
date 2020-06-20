@@ -60,27 +60,57 @@ option(GISS_USE_BULLET "Enable Bullet Physic Library" OFF)
 
 
 
-# Setting up Conan dependencies based on our needs
+# Set up some extra Conan dependencies based on our needs
 # before loading Conan
+set(CONAN_EXTRA_REQUIRES "")
+set(CONAN_EXTRA_OPTIONS "")
+
+# Finding glib
+set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+        glib/2.64.0@bincrafters/stable)
+
+set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS}
+        glib:shared=False)
+
+# Finding gts
+set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+        gts/0.7.6@eessmann/conan-gts)
+
+# Finding gsl
+set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+        gsl/2.6@eessmann/conan-gsl)
+
+# FFTW Library
+if(GISS_USE_FFTW)
+  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+          fftw/3.3.8@bincrafters/stable)
+  set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS}
+          fftw:openmp=True
+          fftw:threads=True
+          fftw:combinedthreads=True)
+endif()
+
+# PROJ Library
+if(GISS_USE_PROJ)
+  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+          proj/7.0.1)
+endif()
+
+# PROJ Library
+if(GISS_USE_BULLET)
+  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+          bullet3/2.87@bincrafters/stable)
+endif()
 
 include(cmake/Conan.cmake)
 run_conan()
 
-# Finding OpenMPI
+# Setting up OpenMPI
 if(GISS_USE_MPI)
   find_package(MPI REQUIRED)
   message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
 endif()
 
-# Finding glib
-find_package(glib REQUIRED)
-
-
-# Finding gts
-find_package(GTS REQUIRED)
-
-# Finding gsl
-find_package(GSL REQUIRED)
 
 if(ENABLE_TESTING)
   enable_testing()
