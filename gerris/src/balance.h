@@ -28,21 +28,21 @@ extern "C" {
 
 /* GfsEventBalance: Header */
 
-typedef struct _GfsEventBalance         GfsEventBalance;
+typedef struct _GfsEventBalance GfsEventBalance;
 
 struct _GfsEventBalance {
-  GfsEvent parent;
+    GfsEvent parent;
 
-  gdouble max;
+    gdouble max;
 };
 
 #define GFS_EVENT_BALANCE(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsEventBalance,\
-					         gfs_event_balance_class ())
+                             GfsEventBalance,\
+                             gfs_event_balance_class ())
 #define GFS_IS_EVENT_BALANCE(obj)         (gts_object_is_from_class (obj,\
-						 gfs_event_balance_class ()))
+                         gfs_event_balance_class ()))
 
-GfsEventClass * gfs_event_balance_class  (void);
+GfsEventClass *gfs_event_balance_class(void);
 
 #ifdef __cplusplus
 }

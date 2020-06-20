@@ -28,35 +28,38 @@ extern "C" {
 
 /* GfsCartesianGrid: Header */
 
-typedef struct _GfsCartesianGrid      GfsCartesianGrid;
+typedef struct _GfsCartesianGrid GfsCartesianGrid;
 
 struct _GfsCartesianGrid {
-  /*< private >*/
-  GtsObject parent;
-  guint N;       /* Number of dimensions */
-  guint * n;     /* Size of each dimension */
-  gdouble ** x;  /* Position of each point in the grid */
-  gdouble * v;   /* Data */
-  gchar ** name; /* Name of each dimension */
+    /*< private >*/
+    GtsObject parent;
+    guint N;       /* Number of dimensions */
+    guint *n;     /* Size of each dimension */
+    gdouble **x;  /* Position of each point in the grid */
+    gdouble *v;   /* Data */
+    gchar **name; /* Name of each dimension */
 
 
-  /*< public >*/
-  /* add extra data here (if public) */
+    /*< public >*/
+    /* add extra data here (if public) */
 };
 
 #define GFS_CARTESIAN_GRID(obj)            GTS_OBJECT_CAST (obj,\
-							    GfsCartesianGrid, \
-							    gfs_cartesian_grid_class ())
+                                GfsCartesianGrid, \
+                                gfs_cartesian_grid_class ())
 #define GFS_IS_CARTESIAN_GRID(obj)         (gts_object_is_from_class (obj,\
-								      gfs_cartesian_grid_class ()))
+                                      gfs_cartesian_grid_class ()))
 
-GtsObjectClass *    gfs_cartesian_grid_class         (void);
-GfsCartesianGrid *  gfs_cartesian_grid_new           (GtsObjectClass * klass);
-GfsCartesianGrid *  gfs_cartesian_grid_read          (const gchar * name, 
-						      GtsFile * fp);
-gboolean            gfs_cartesian_grid_interpolate   (GfsCartesianGrid * g, 
-						      gdouble * p, 
-						      gdouble * val);
+GtsObjectClass *gfs_cartesian_grid_class(void);
+
+GfsCartesianGrid *gfs_cartesian_grid_new(GtsObjectClass *klass);
+
+GfsCartesianGrid *gfs_cartesian_grid_read(const gchar *name,
+                                          GtsFile *fp);
+
+gboolean gfs_cartesian_grid_interpolate(GfsCartesianGrid *g,
+                                        gdouble *p,
+                                        gdouble *val);
 
 #ifdef __cplusplus
 }

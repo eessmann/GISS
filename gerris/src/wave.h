@@ -31,47 +31,48 @@ extern "C" {
 #define GFS_WAVE_GAMMA 1.1
 #define GFS_WAVE_F0 0.04
 
-typedef struct _GfsWave    GfsWave;
+typedef struct _GfsWave GfsWave;
 
 struct _GfsWave {
-  /*< private >*/
-  GfsSimulation parent;
-  guint ik, ith;
-  void (* source) (GfsWave * wave);
+    /*< private >*/
+    GfsSimulation parent;
+    guint ik, ith;
 
-  /*< public >*/
-  guint nk, ntheta;
-  gdouble alpha_s;
-  GfsVariable *** F;
+    void (*source)(GfsWave *wave);
+
+    /*< public >*/
+    guint nk, ntheta;
+    gdouble alpha_s;
+    GfsVariable ***F;
 };
 
 #define GFS_WAVE(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsWave,\
-					           gfs_wave_class ())
+                               GfsWave,\
+                               gfs_wave_class ())
 #define GFS_IS_WAVE(obj)         (gts_object_is_from_class (obj,\
-							    gfs_wave_class ()))
+                                gfs_wave_class ()))
 
-GfsSimulationClass * gfs_wave_class        (void);
+GfsSimulationClass *gfs_wave_class(void);
 
 /* GfsInitWave: Header */
 
-typedef struct _GfsInitWave         GfsInitWave;
+typedef struct _GfsInitWave GfsInitWave;
 
 struct _GfsInitWave {
-  /*< private >*/
-  GfsGenericInit parent;
+    /*< private >*/
+    GfsGenericInit parent;
 
-  /*< public >*/
-  GfsFunction * d, * hs;
+    /*< public >*/
+    GfsFunction *d, *hs;
 };
 
 #define GFS_INIT_WAVE(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsInitWave,\
-					         gfs_init_wave_class ())
+                             GfsInitWave,\
+                             gfs_init_wave_class ())
 #define GFS_IS_INIT_WAVE(obj)         (gts_object_is_from_class (obj,\
-						 gfs_init_wave_class ()))
+                         gfs_init_wave_class ()))
 
-GfsGenericInitClass * gfs_init_wave_class  (void);
+GfsGenericInitClass *gfs_init_wave_class(void);
 
 #ifdef __cplusplus
 }

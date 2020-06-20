@@ -27,22 +27,24 @@
 extern "C" {
 #endif /* __cplusplus */
 
-void gfs_domain_write_vtk     (GfsDomain * domain, 
-			       gint max_depth, 
-			       GSList * variables, 
-			       const gchar * precision,
-			       FILE * fp);
-void gfs_domain_write_tecplot (GfsDomain * domain, 
-			       gint max_depth, 
-			       GSList * variables, 
-			       const gchar * precision,
-			       FILE * fp);
-#if !FTT_2D 
+void gfs_domain_write_vtk(GfsDomain *domain,
+                          gint max_depth,
+                          GSList *variables,
+                          const gchar *precision,
+                          FILE *fp);
+
+void gfs_domain_write_tecplot(GfsDomain *domain,
+                              gint max_depth,
+                              GSList *variables,
+                              const gchar *precision,
+                              FILE *fp);
+
+#if !FTT_2D
 void gfs_domain_write_tecplot_surface (GfsDomain * domain, 
-				       gint max_depth, 
-				       GSList * variables, 
-				       const gchar * precision,
-				       FILE * fp);
+                       gint max_depth,
+                       GSList * variables,
+                       const gchar * precision,
+                       FILE * fp);
 #endif
 
 

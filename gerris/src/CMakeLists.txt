@@ -1,8 +1,5 @@
 # Setting up GFS library
 # Gerris headers
-
-
-
 set(gfs_headers
         adaptive.h
         advection.h
@@ -94,7 +91,7 @@ target_sources(gfs3D
 
 target_link_libraries(gfs3D
         INTERFACE project_options project_warnings
-        PUBLIC glib::glib GTS::GTS GSL::GSL m)
+        PUBLIC CONAN_PKG::glib CONAN_PKG::gts CONAN_PKG::gsl m)
 
 if(MPI_FOUND)
     target_link_libraries(gfs3D PUBLIC MPI::MPI_CXX)
@@ -112,7 +109,7 @@ target_sources(gfs2D
 
 target_link_libraries(gfs2D
         INTERFACE project_options project_warnings
-        PUBLIC glib::glib GTS::GTS GSL::GSL m)
+        PUBLIC CONAN_PKG::glib CONAN_PKG::gts CONAN_PKG::gsl m)
 
 if(MPI_FOUND)
     target_link_libraries(gfs2D PUBLIC MPI::MPI_CXX)
@@ -127,9 +124,17 @@ target_link_libraries(gerris3D
         INTERFACE project_options project_warnings
         PRIVATE gfs3D)
 
+if(MPI_FOUND)
+    target_link_libraries(gerris3D PUBLIC MPI::MPI_CXX)
+endif()
+
 # Gerris 2D executable
 add_executable(gerris2D gerris.c)
 target_link_libraries(gerris2D
         INTERFACE project_options project_warnings
         PRIVATE gfs2D)
+
+if(MPI_FOUND)
+    target_link_libraries(gerris2D PUBLIC MPI::MPI_CXX)
+endif()
 

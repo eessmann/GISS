@@ -29,82 +29,86 @@ extern "C" {
 
 /* GfsMap: Header */
 
-typedef struct _GfsMap         GfsMap;
+typedef struct _GfsMap GfsMap;
 
 struct _GfsMap {
-  /*< private >*/
-  GtsSListContainee parent;
+    /*< private >*/
+    GtsSListContainee parent;
 
-  void (* transform)           (GfsMap * map, const FttVector * src, FttVector * dest);
-  void (* inverse)             (GfsMap * map, const FttVector * src, FttVector * dest);
-  void (* transform_vector)    (GfsMap * map, const FttVector * p,
-				const FttVector * src, FttVector * dest);
-  void (* inverse_vector)      (GfsMap * map, const FttVector * p,
-				const FttVector * src, FttVector * dest);
-  void (* inverse_cell)        (GfsMap * map, const FttVector * src, FttVector * dest);
-  /*< public >*/
+    void (*transform)(GfsMap *map, const FttVector *src, FttVector *dest);
+
+    void (*inverse)(GfsMap *map, const FttVector *src, FttVector *dest);
+
+    void (*transform_vector)(GfsMap *map, const FttVector *p,
+                             const FttVector *src, FttVector *dest);
+
+    void (*inverse_vector)(GfsMap *map, const FttVector *p,
+                           const FttVector *src, FttVector *dest);
+
+    void (*inverse_cell)(GfsMap *map, const FttVector *src, FttVector *dest);
+    /*< public >*/
 };
 
-typedef struct _GfsMapClass    GfsMapClass;
+typedef struct _GfsMapClass GfsMapClass;
 
 struct _GfsMapClass {
-  /*< private >*/
-  GtsSListContaineeClass parent_class;
+    /*< private >*/
+    GtsSListContaineeClass parent_class;
 
-  /*< public >*/
+    /*< public >*/
 };
 
 #define GFS_MAP(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsMap,\
-					         gfs_map_class ())
+                             GfsMap,\
+                             gfs_map_class ())
 #define GFS_MAP_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
-						 GfsMapClass,\
-						 gfs_map_class())
+                         GfsMapClass,\
+                         gfs_map_class())
 #define GFS_IS_MAP(obj)         (gts_object_is_from_class (obj,\
-						 gfs_map_class ()))
+                         gfs_map_class ()))
 
-GfsMapClass * gfs_map_class      (void);
+GfsMapClass *gfs_map_class(void);
 
 /* GfsMapFunction: Header */
 
-typedef struct _GfsMapFunction         GfsMapFunction;
+typedef struct _GfsMapFunction GfsMapFunction;
 
 struct _GfsMapFunction {
-  /*< private >*/
-  GfsMap parent;
+    /*< private >*/
+    GfsMap parent;
 
-  /*< public >*/
-  GfsFunction * x, * y, * z;
+    /*< public >*/
+    GfsFunction *x, *y, *z;
 };
 
 #define GFS_MAP_FUNCTION(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsMapFunction,\
-					         gfs_map_function_class ())
+                             GfsMapFunction,\
+                             gfs_map_function_class ())
 #define GFS_IS_MAP_FUNCTION(obj)         (gts_object_is_from_class (obj,\
-						 gfs_map_function_class ()))
+                         gfs_map_function_class ()))
 
-GfsMapClass * gfs_map_function_class      (void);
+GfsMapClass *gfs_map_function_class(void);
 
 /* GfsMapTransform: Header */
 
-typedef struct _GfsMapTransform         GfsMapTransform;
+typedef struct _GfsMapTransform GfsMapTransform;
 
 struct _GfsMapTransform {
-  /*< private >*/
-  GfsMap parent;
-  GtsMatrix * m, * im;
+    /*< private >*/
+    GfsMap parent;
+    GtsMatrix *m, *im;
 
-  /*< public >*/
-  GtsVector translate, rotate;
+    /*< public >*/
+    GtsVector translate, rotate;
 };
 
 #define GFS_MAP_TRANSFORM(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsMapTransform,\
-					         gfs_map_transform_class ())
+                             GfsMapTransform,\
+                             gfs_map_transform_class ())
 #define GFS_IS_MAP_TRANSFORM(obj)         (gts_object_is_from_class (obj,\
-						 gfs_map_transform_class ()))
+                         gfs_map_transform_class ()))
 
-GfsMapClass * gfs_map_transform_class      (void);
+GfsMapClass *gfs_map_transform_class(void);
 
 #ifdef __cplusplus
 }

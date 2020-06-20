@@ -28,25 +28,25 @@ extern "C" {
 
 /* GfsVariableDistance: header */
 
-typedef struct _GfsVariableDistance                GfsVariableDistance;
+typedef struct _GfsVariableDistance GfsVariableDistance;
 
 struct _GfsVariableDistance {
-  /*< private >*/
-  GfsVariable parent;
-  gboolean first_done;
+    /*< private >*/
+    GfsVariable parent;
+    gboolean first_done;
 
-  /*< public >*/
-  GfsVariable * v;
-  gboolean stencil;
+    /*< public >*/
+    GfsVariable *v;
+    gboolean stencil;
 };
 
 #define GFS_VARIABLE_DISTANCE(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsVariableDistance,\
-					           gfs_variable_distance_class ())
+                               GfsVariableDistance,\
+                               gfs_variable_distance_class ())
 #define GFS_IS_VARIABLE_DISTANCE(obj)         (gts_object_is_from_class (obj,\
-					     gfs_variable_distance_class ()))
+                         gfs_variable_distance_class ()))
 
-GfsVariableClass * gfs_variable_distance_class  (void);
+GfsVariableClass *gfs_variable_distance_class(void);
 
 #ifdef __cplusplus
 }

@@ -70,11 +70,14 @@ set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
         glib/2.64.0@bincrafters/stable)
 
 set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS}
-        glib:shared=False)
+        glib:shared=True)
 
 # Finding gts
 set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
         gts/0.7.6@eessmann/conan-gts)
+
+set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS}
+        gts:shared=True)
 
 # Finding gsl
 set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}

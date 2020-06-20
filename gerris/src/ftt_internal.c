@@ -1,6 +1,6 @@
 #include "ftt_internal.h"
 
- void traverse_face(FttCell *cell, gpointer *datum) {
+void traverse_face(FttCell *cell, gpointer *datum) {
     FttDirection *d = datum[0];
     gint max_depth = *((gint *) datum[1]);
     FttFaceTraverseFunc func = (FttFaceTraverseFunc) datum[2];

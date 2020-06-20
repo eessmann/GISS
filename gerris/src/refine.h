@@ -34,82 +34,83 @@ extern "C" {
 
 /* GfsRefine: Header */
 
-typedef struct _GfsRefine             GfsRefine;
-typedef struct _GfsRefineClass        GfsRefineClass;
+typedef struct _GfsRefine GfsRefine;
+typedef struct _GfsRefineClass GfsRefineClass;
 
 struct _GfsRefine {
-  GtsSListContainee parent;
+    GtsSListContainee parent;
 
-  GfsFunction * maxlevel;
+    GfsFunction *maxlevel;
 };
 
 struct _GfsRefineClass {
-  GtsSListContaineeClass parent_class;
+    GtsSListContaineeClass parent_class;
 
-  void (* refine) (GfsRefine * refine, GfsSimulation * simulation);
+    void (*refine)(GfsRefine *refine, GfsSimulation *simulation);
 };
 
 #define GFS_REFINE(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsRefine,\
-					           gfs_refine_class ())
+                               GfsRefine,\
+                               gfs_refine_class ())
 #define GFS_REFINE_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
-						   GfsRefineClass,\
-						   gfs_refine_class())
+                           GfsRefineClass,\
+                           gfs_refine_class())
 #define GFS_IS_REFINE(obj)         (gts_object_is_from_class (obj,\
-						   gfs_refine_class ()))
-     
-GfsRefineClass * gfs_refine_class  (void);
-GfsRefine *      gfs_refine_new    (GfsRefineClass * klass);
+                           gfs_refine_class ()))
+
+GfsRefineClass *gfs_refine_class(void);
+
+GfsRefine *gfs_refine_new(GfsRefineClass *klass);
 
 /* GfsRefineSolid: Header */
 
 #define GFS_IS_REFINE_SOLID(obj)         (gts_object_is_from_class (obj,\
-						   gfs_refine_solid_class ()))
-     
-GfsRefineClass * gfs_refine_solid_class  (void);
+                           gfs_refine_solid_class ()))
+
+GfsRefineClass *gfs_refine_solid_class(void);
 
 /* GfsRefineSurface: Header */
 
-typedef struct _GfsRefineSurface         GfsRefineSurface;
+typedef struct _GfsRefineSurface GfsRefineSurface;
 
 struct _GfsRefineSurface {
-  GfsRefine parent;
+    GfsRefine parent;
 
-  GfsGenericSurface * surface;
+    GfsGenericSurface *surface;
 };
 
 #define GFS_REFINE_SURFACE(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsRefineSurface,\
-					           gfs_refine_surface_class ())
+                               GfsRefineSurface,\
+                               gfs_refine_surface_class ())
 #define GFS_IS_REFINE_SURFACE(obj)         (gts_object_is_from_class (obj,\
-						   gfs_refine_surface_class ()))
-     
-GfsRefineClass * gfs_refine_surface_class  (void);
+                           gfs_refine_surface_class ()))
+
+GfsRefineClass *gfs_refine_surface_class(void);
 
 /* GfsRefineDistance: Header */
 
-typedef struct _GfsRefineDistance         GfsRefineDistance;
+typedef struct _GfsRefineDistance GfsRefineDistance;
 
 struct _GfsRefineDistance {
-  GfsRefineSurface parent;
+    GfsRefineSurface parent;
 
-  GNode * stree;
+    GNode *stree;
 };
 
 #define GFS_REFINE_DISTANCE(obj)            GTS_OBJECT_CAST (obj,\
-					          GfsRefineDistance,\
-					          gfs_refine_distance_class ())
+                              GfsRefineDistance,\
+                              gfs_refine_distance_class ())
 #define GFS_IS_REFINE_DISTANCE(obj)         (gts_object_is_from_class (obj,\
-						  gfs_refine_distance_class ()))
-     
-GfsRefineClass * gfs_refine_distance_class  (void);
+                          gfs_refine_distance_class ()))
+
+GfsRefineClass *gfs_refine_distance_class(void);
 
 /* GfsRefineHeight: Header */
 
 #define GFS_IS_REFINE_HEIGHT(obj)         (gts_object_is_from_class (obj,\
-						  gfs_refine_height_class ()))
-     
-GfsRefineClass * gfs_refine_height_class  (void);
+                          gfs_refine_height_class ()))
+
+GfsRefineClass *gfs_refine_height_class(void);
 
 #ifdef __cplusplus
 }

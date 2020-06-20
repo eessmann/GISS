@@ -24,9 +24,9 @@
  * http://gfs.sourceforge.net/wiki/index.php/GfsSurface
  */
 
-#define intersection(a,b) MAX(a, b)
-#define union(a,b)        MIN(a, b)
-#define difference(a,b)   MAX(a, -(b))
+#define intersection(a, b) MAX(a, b)
+#define union(a, b)        MIN(a, b)
+#define difference(a, b)   MAX(a, -(b))
 
 #define X _x
 #define Y _y
@@ -37,25 +37,22 @@
 
 static double _x = 0., _y = 0., _z = 0.;
 
-static double ellipse (double xc, double yc, double a, double b)
-{
-  g_return_val_if_fail (a != 0. && b != 0., 0.);
-  return (_x - xc)*(_x - xc)/(a*a) + (_y - yc)*(_y - yc)/(b*b) - 1.;
+static double ellipse(double xc, double yc, double a, double b) {
+    g_return_val_if_fail(a != 0. && b != 0., 0.);
+    return (_x - xc) * (_x - xc) / (a * a) + (_y - yc) * (_y - yc) / (b * b) - 1.;
 }
 
-static double sphere (double xc, double yc, double zc, double r)
-{
-  return (_x - xc)*(_x - xc) + (_y - yc)*(_y - yc) + (_z - zc)*(_z - zc) - r*r;
+static double sphere(double xc, double yc, double zc, double r) {
+    return (_x - xc) * (_x - xc) + (_y - yc) * (_y - yc) + (_z - zc) * (_z - zc) - r * r;
 }
 
-static double cube (double xc, double yc, double zc, double h)
-{
-  double vmax = (_x - xc)*(_x - xc) - h*h/4.;
-  double v = (_y - yc)*(_y - yc) - h*h/4.;
-  if (v > vmax) vmax = v;
-  v = (_z - zc)*(_z - zc) - h*h/4.;
-  if (v > vmax) vmax = v;
-  return vmax;
+static double cube(double xc, double yc, double zc, double h) {
+    double vmax = (_x - xc) * (_x - xc) - h * h / 4.;
+    double v = (_y - yc) * (_y - yc) - h * h / 4.;
+    if (v > vmax) vmax = v;
+    v = (_z - zc) * (_z - zc) - h * h / 4.;
+    if (v > vmax) vmax = v;
+    return vmax;
 }
 
 #endif /* __SPATIAL_H__ */

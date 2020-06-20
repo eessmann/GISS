@@ -26,366 +26,376 @@ extern "C" {
 
 #include <gts.h>
 
-typedef struct _GfsEvent                GfsEvent;
-typedef struct _GfsEventClass           GfsEventClass;
+typedef struct _GfsEvent GfsEvent;
+typedef struct _GfsEventClass GfsEventClass;
 
 struct _GfsEvent {
-  GtsSListContainee parent;
+    GtsSListContainee parent;
 
-  gdouble t, start, end, step;
-  guint i, istart, iend, istep;
-  
-  guint n;
-  gboolean end_event, realised, redo;
-  gchar * name;
+    gdouble t, start, end, step;
+    guint i, istart, iend, istep;
+
+    guint n;
+    gboolean end_event, realised, redo;
+    gchar *name;
 };
 
-typedef struct _GfsSimulation           GfsSimulation;
+typedef struct _GfsSimulation GfsSimulation;
 
 struct _GfsEventClass {
-  GtsSListContaineeClass parent_class;
+    GtsSListContaineeClass parent_class;
 
-  gboolean (* event)      (GfsEvent * event, GfsSimulation * sim);
-  void     (* post_event) (GfsEvent * event, GfsSimulation * sim);
-  void     (* event_half) (GfsEvent * event, GfsSimulation * sim);
+    gboolean (*event)(GfsEvent *event, GfsSimulation *sim);
+
+    void (*post_event)(GfsEvent *event, GfsSimulation *sim);
+
+    void (*event_half)(GfsEvent *event, GfsSimulation *sim);
 };
 
 #include "simulation.h"
 
 #define GFS_EVENT(obj)            GTS_OBJECT_CAST (obj,\
-					           GfsEvent,\
-					           gfs_event_class ())
+                               GfsEvent,\
+                               gfs_event_class ())
 #define GFS_EVENT_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
-						   GfsEventClass,\
-						   gfs_event_class())
+                           GfsEventClass,\
+                           gfs_event_class())
 #define GFS_IS_EVENT(obj)         (gts_object_is_from_class (obj,\
-						   gfs_event_class ()))
+                           gfs_event_class ()))
 
-GfsEventClass * gfs_event_class       (void);
-GfsEvent *      gfs_event_new         (GfsEventClass * klass);
-void            gfs_event_set         (GfsEvent * e, 
-				       gdouble start, 
-				       gdouble end, 
-				       gdouble step,
-				       gint istart, 
-				       gint iend, 
-				       gint istep);
-void            gfs_event_init        (GfsEvent * event,
-				       GfsSimulation * sim);
-void            gfs_event_do          (GfsEvent * event, 
-				       GfsSimulation * sim);
-void            gfs_event_redo        (GfsEvent * event, 
-				       GfsSimulation * sim);
-gdouble         gfs_event_next        (GfsEvent * event, 
-				       GfsSimulation * sim);
-void            gfs_event_half_do     (GfsEvent * event, 
-				       GfsSimulation * sim);
+GfsEventClass *gfs_event_class(void);
+
+GfsEvent *gfs_event_new(GfsEventClass *klass);
+
+void gfs_event_set(GfsEvent *e,
+                   gdouble start,
+                   gdouble end,
+                   gdouble step,
+                   gint istart,
+                   gint iend,
+                   gint istep);
+
+void gfs_event_init(GfsEvent *event,
+                    GfsSimulation *sim);
+
+void gfs_event_do(GfsEvent *event,
+                  GfsSimulation *sim);
+
+void gfs_event_redo(GfsEvent *event,
+                    GfsSimulation *sim);
+
+gdouble gfs_event_next(GfsEvent *event,
+                       GfsSimulation *sim);
+
+void gfs_event_half_do(GfsEvent *event,
+                       GfsSimulation *sim);
+
 #define         gfs_event_is_repetitive(e) ((e)->step < G_MAXDOUBLE || (e)->istep < G_MAXINT)
 
 /* GfsGenericInit: Header */
 
-typedef struct _GfsEvent      GfsGenericInit;
+typedef struct _GfsEvent GfsGenericInit;
 typedef struct _GfsEventClass GfsGenericInitClass;
 
 #define GFS_IS_GENERIC_INIT(obj)         (gts_object_is_from_class (obj,\
-						 gfs_generic_init_class ()))
+                         gfs_generic_init_class ()))
 
-GfsEventClass * gfs_generic_init_class         (void);
+GfsEventClass *gfs_generic_init_class(void);
 
 /* GfsInit: Header */
 
-typedef struct _GfsInit         GfsInit;
+typedef struct _GfsInit GfsInit;
 
 struct _GfsInit {
-  /*< private >*/
-  GfsGenericInit parent;
-  GSList * f;
+    /*< private >*/
+    GfsGenericInit parent;
+    GSList *f;
 };
 
 #define GFS_INIT(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsInit,\
-					         gfs_init_class ())
+                             GfsInit,\
+                             gfs_init_class ())
 #define GFS_IS_INIT(obj)         (gts_object_is_from_class (obj,\
-						 gfs_init_class ()))
+                         gfs_init_class ()))
 
-GfsGenericInitClass * gfs_init_class  (void);
+GfsGenericInitClass *gfs_init_class(void);
 
 /* GfsInitMask: Header */
 
-typedef struct _GfsInitMask         GfsInitMask;
+typedef struct _GfsInitMask GfsInitMask;
 
 struct _GfsInitMask {
-  /*< private >*/
-  GfsGenericInit parent;
-  GSList * masked_boxes;
+    /*< private >*/
+    GfsGenericInit parent;
+    GSList *masked_boxes;
 
-  /*< public >*/
-  GfsFunction * mask;
+    /*< public >*/
+    GfsFunction *mask;
 };
 
 #define GFS_INIT_MASK(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsInitMask,\
-					         gfs_init_mask_class ())
+                             GfsInitMask,\
+                             gfs_init_mask_class ())
 #define GFS_IS_INIT_MASK(obj)         (gts_object_is_from_class (obj,\
-						 gfs_init_mask_class ()))
+                         gfs_init_mask_class ()))
 
-GfsGenericInitClass * gfs_init_mask_class  (void);
+GfsGenericInitClass *gfs_init_mask_class(void);
 
 /* GfsInitFlowConstant: Header */
 
-GfsEventClass * gfs_init_flow_constant_class  (void);
+GfsEventClass *gfs_init_flow_constant_class(void);
 
 /* GfsInitVorticity: Header */
 
-typedef struct _GfsInitVorticity         GfsInitVorticity;
+typedef struct _GfsInitVorticity GfsInitVorticity;
 
 struct _GfsInitVorticity {
-  /*< private >*/
-  GfsGenericInit parent;
-  GfsVariable * vort, ** u;
+    /*< private >*/
+    GfsGenericInit parent;
+    GfsVariable *vort, **u;
 #if FTT_2D
-  GfsVariable * stream;
+    GfsVariable * stream;
 #else
-  GfsVariable * stream[3];
+    GfsVariable *stream[3];
 #endif
 
-  /*< public >*/
-  GfsFunction * f;
+    /*< public >*/
+    GfsFunction *f;
 #if !FTT_2D
-  GfsFunction * fv[3];
+    GfsFunction *fv[3];
 #endif
 };
 
 #define GFS_INIT_VORTICITY(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsInitVorticity,\
-					         gfs_init_vorticity_class ())
+                             GfsInitVorticity,\
+                             gfs_init_vorticity_class ())
 #define GFS_IS_INIT_VORTICITY(obj)         (gts_object_is_from_class (obj,\
-						 gfs_init_vorticity_class ()))
+                         gfs_init_vorticity_class ()))
 
-GfsGenericInitClass * gfs_init_vorticity_class  (void);
+GfsGenericInitClass *gfs_init_vorticity_class(void);
 
 /* GfsEventSum: Header */
 
-typedef struct _GfsEventSum         GfsEventSum;
+typedef struct _GfsEventSum GfsEventSum;
 
 struct _GfsEventSum {
-  GfsEvent parent;
+    GfsEvent parent;
 
-  GfsFunction * v;
-  GfsVariable * sv;
-  FttCellTraverseFunc sum;
-  gdouble last, dt;
+    GfsFunction *v;
+    GfsVariable *sv;
+    FttCellTraverseFunc sum;
+    gdouble last, dt;
 };
 
 #define GFS_EVENT_SUM(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsEventSum,\
-					         gfs_event_sum_class ())
+                             GfsEventSum,\
+                             gfs_event_sum_class ())
 #define GFS_IS_EVENT_SUM(obj)         (gts_object_is_from_class (obj,\
-						 gfs_event_sum_class ()))
+                         gfs_event_sum_class ()))
 
-GfsEventClass * gfs_event_sum_class  (void);
+GfsEventClass *gfs_event_sum_class(void);
 
 /* GfsEventSumDirection: Header */
 
-typedef struct _GfsEventSumDirection         GfsEventSumDirection;
+typedef struct _GfsEventSumDirection GfsEventSumDirection;
 
 struct _GfsEventSumDirection {
-  GfsEventSum parent;
+    GfsEventSum parent;
 
-  FttDirection d;
+    FttDirection d;
 };
 
 #define GFS_EVENT_SUM_DIRECTION(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsEventSumDirection,\
-					         gfs_event_sum_direction_class ())
+                             GfsEventSumDirection,\
+                             gfs_event_sum_direction_class ())
 #define GFS_IS_EVENT_SUM_DIRECTION(obj)         (gts_object_is_from_class (obj,\
-						 gfs_event_sum_direction_class ()))
+                         gfs_event_sum_direction_class ()))
 
-GfsEventClass * gfs_event_sum_direction_class  (void);
+GfsEventClass *gfs_event_sum_direction_class(void);
 
 /* GfsEventHarmonic: Header */
 
-typedef struct _GfsEventHarmonic         GfsEventHarmonic;
+typedef struct _GfsEventHarmonic GfsEventHarmonic;
 
 struct _GfsEventHarmonic {
-  GfsEvent parent;
+    GfsEvent parent;
 
-  GArray * omega;
-  GfsVariable * v, * z, * e, ** A, ** B;
-  gdouble * vsin, * vcos, ** M, ** iM, ** Mn, * x, * a;
-  gchar * Aname, * Bname;
-  gboolean invertible;
+    GArray *omega;
+    GfsVariable *v, *z, *e, **A, **B;
+    gdouble *vsin, *vcos, **M, **iM, **Mn, *x, *a;
+    gchar *Aname, *Bname;
+    gboolean invertible;
 };
 
 #define GFS_EVENT_HARMONIC(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsEventHarmonic,\
-					         gfs_event_harmonic_class ())
+                             GfsEventHarmonic,\
+                             gfs_event_harmonic_class ())
 #define GFS_IS_EVENT_HARMONIC(obj)         (gts_object_is_from_class (obj,\
-						 gfs_event_harmonic_class ()))
+                         gfs_event_harmonic_class ()))
 
-GfsEventClass * gfs_event_harmonic_class  (void);
+GfsEventClass *gfs_event_harmonic_class(void);
 
 /* GfsEventStop: Header */
 
-typedef struct _GfsEventStop         GfsEventStop;
+typedef struct _GfsEventStop GfsEventStop;
 
 struct _GfsEventStop {
-  GfsEvent parent;
+    GfsEvent parent;
 
-  GfsVariable * v, * oldv, * diff;
-  gdouble last, max;
-  gboolean relative;
+    GfsVariable *v, *oldv, *diff;
+    gdouble last, max;
+    gboolean relative;
 };
 
 #define GFS_EVENT_STOP(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsEventStop,\
-					         gfs_event_stop_class ())
+                             GfsEventStop,\
+                             gfs_event_stop_class ())
 #define GFS_IS_EVENT_STOP(obj)         (gts_object_is_from_class (obj,\
-						 gfs_event_stop_class ()))
+                         gfs_event_stop_class ()))
 
-GfsEventClass * gfs_event_stop_class  (void);
+GfsEventClass *gfs_event_stop_class(void);
 
 /* GfsEventScript: Header */
 
-FILE * gfs_popen (GfsSimulation * sim, 
-		  const char * command, 
-		  const char * type);
+FILE *gfs_popen(GfsSimulation *sim,
+                const char *command,
+                const char *type);
 
-typedef struct _GfsEventScript         GfsEventScript;
+typedef struct _GfsEventScript GfsEventScript;
 
 struct _GfsEventScript {
-  GfsEvent parent;
+    GfsEvent parent;
 
-  gchar * script;
+    gchar *script;
 };
 
 #define GFS_EVENT_SCRIPT(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsEventScript,\
-					         gfs_event_script_class ())
+                             GfsEventScript,\
+                             gfs_event_script_class ())
 #define GFS_IS_EVENT_SCRIPT(obj)         (gts_object_is_from_class (obj,\
-						 gfs_event_script_class ()))
+                         gfs_event_script_class ()))
 #define GFS_EVENT_SCRIPT_STOP            64
 
-GfsEventClass * gfs_event_script_class  (void);
+GfsEventClass *gfs_event_script_class(void);
 
 /* GfsInitFraction: Header */
 
-typedef struct _GfsInitFraction         GfsInitFraction;
+typedef struct _GfsInitFraction GfsInitFraction;
 
 struct _GfsInitFraction {
-  /*< private >*/
-  GfsGenericInit parent;
+    /*< private >*/
+    GfsGenericInit parent;
 
-  GfsVariable * c;
-  GfsGenericSurface * surface;
+    GfsVariable *c;
+    GfsGenericSurface *surface;
 };
 
-typedef struct _GfsInitFractionClass    GfsInitFractionClass;
+typedef struct _GfsInitFractionClass GfsInitFractionClass;
 
 struct _GfsInitFractionClass {
-  /*< private >*/
-  GfsGenericInitClass parent_class;
+    /*< private >*/
+    GfsGenericInitClass parent_class;
 
-  /*< public >*/
+    /*< public >*/
 };
 
 #define GFS_INIT_FRACTION(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsInitFraction,\
-					         gfs_init_fraction_class ())
+                             GfsInitFraction,\
+                             gfs_init_fraction_class ())
 #define GFS_INIT_FRACTION_CLASS(klass)    GTS_OBJECT_CLASS_CAST (klass,\
-						 GfsInitFractionClass,\
-						 gfs_init_fraction_class())
+                         GfsInitFractionClass,\
+                         gfs_init_fraction_class())
 #define GFS_IS_INIT_FRACTION(obj)         (gts_object_is_from_class (obj,\
-						 gfs_init_fraction_class ()))
+                         gfs_init_fraction_class ()))
 
-GfsInitFractionClass * gfs_init_fraction_class  (void);
+GfsInitFractionClass *gfs_init_fraction_class(void);
 
 /* GfsRemoveDroplets: Header */
 
-typedef struct _GfsRemoveDroplets         GfsRemoveDroplets;
+typedef struct _GfsRemoveDroplets GfsRemoveDroplets;
 
 struct _GfsRemoveDroplets {
-  /*< private >*/
-  GfsEvent parent;
-  GfsVariable * v;
+    /*< private >*/
+    GfsEvent parent;
+    GfsVariable *v;
 
-  /*< public >*/
-  GfsFunction * fc;
-  GfsVariable * c;
-  gint min;
-  gdouble val;
+    /*< public >*/
+    GfsFunction *fc;
+    GfsVariable *c;
+    gint min;
+    gdouble val;
 };
 
 #define GFS_REMOVE_DROPLETS(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsRemoveDroplets,\
-					         gfs_remove_droplets_class ())
+                             GfsRemoveDroplets,\
+                             gfs_remove_droplets_class ())
 #define GFS_IS_REMOVE_DROPLETS(obj)         (gts_object_is_from_class (obj,\
-						 gfs_remove_droplets_class ()))
+                         gfs_remove_droplets_class ()))
 
-GfsEventClass * gfs_remove_droplets_class  (void);
+GfsEventClass *gfs_remove_droplets_class(void);
 
 /* GfsRemovePonds: Header */
 
-typedef struct _GfsRemovePonds         GfsRemovePonds;
+typedef struct _GfsRemovePonds GfsRemovePonds;
 
 struct _GfsRemovePonds {
-  /*< private >*/
-  GfsGenericInit parent;
+    /*< private >*/
+    GfsGenericInit parent;
 
-  /*< public >*/
-  gint min;
+    /*< public >*/
+    gint min;
 };
 
 #define GFS_REMOVE_PONDS(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsRemovePonds,\
-					         gfs_remove_ponds_class ())
+                             GfsRemovePonds,\
+                             gfs_remove_ponds_class ())
 #define GFS_IS_REMOVE_PONDS(obj)         (gts_object_is_from_class (obj,\
-						 gfs_remove_ponds_class ()))
+                         gfs_remove_ponds_class ()))
 
-GfsEventClass * gfs_remove_ponds_class  (void);
+GfsEventClass *gfs_remove_ponds_class(void);
 
 /* GfsEventFilter: Header */
 
-typedef struct _GfsEventFilter         GfsEventFilter;
+typedef struct _GfsEventFilter GfsEventFilter;
 
 struct _GfsEventFilter {
-  /*< private >*/
-  GfsEvent parent;
-  GfsVariable * tmp;
+    /*< private >*/
+    GfsEvent parent;
+    GfsVariable *tmp;
 
-  /*< public >*/
-  GfsVariable * v;
-  gdouble scale;
+    /*< public >*/
+    GfsVariable *v;
+    gdouble scale;
 };
 
 #define GFS_EVENT_FILTER(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsEventFilter,\
-					         gfs_event_filter_class ())
+                             GfsEventFilter,\
+                             gfs_event_filter_class ())
 #define GFS_IS_EVENT_FILTER(obj)         (gts_object_is_from_class (obj,\
-						 gfs_event_filter_class ()))
+                         gfs_event_filter_class ()))
 
-GfsEventClass * gfs_event_filter_class  (void);
+GfsEventClass *gfs_event_filter_class(void);
 
 /* GfsEventList: Header */
 
-typedef struct _GfsEventList         GfsEventList;
+typedef struct _GfsEventList GfsEventList;
 
 struct _GfsEventList {
-  /*< private >*/
-  GfsEvent parent;
+    /*< private >*/
+    GfsEvent parent;
 
-  /*< public >*/
-  GtsObjectClass * klass;
-  GtsSListContainer * list;
+    /*< public >*/
+    GtsObjectClass *klass;
+    GtsSListContainer *list;
 };
 
 #define GFS_EVENT_LIST(obj)            GTS_OBJECT_CAST (obj,\
-					         GfsEventList,\
-					         gfs_event_list_class ())
+                             GfsEventList,\
+                             gfs_event_list_class ())
 #define GFS_IS_EVENT_LIST(obj)         (gts_object_is_from_class (obj,\
-						 gfs_event_list_class ()))
+                         gfs_event_list_class ()))
 
-GfsEventClass * gfs_event_list_class  (void);
+GfsEventClass *gfs_event_list_class(void);
 
 #ifdef __cplusplus
 }
