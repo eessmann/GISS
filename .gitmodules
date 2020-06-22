@@ -1,0 +1,9 @@
+[submodule "conan/conan-gts"]
+	path = conan/conan-gts
+	url = git@github.com:eessmann/conan-gts.git
+[submodule "conan/conan-netcdf-c"]
+	path = conan/conan-netcdf-c
+	url = git@github.com:eessmann/conan-netcdf-c.git
+[submodule "conan/conan-gsl"]
+	path = conan/conan-gsl
+	url = git@github.com:eessmann/conan-gsl.git
