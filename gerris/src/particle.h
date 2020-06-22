@@ -31,16 +31,15 @@ extern "C" {
 typedef struct _GfsParticle GfsParticle;
 
 struct _GfsParticle {
-    GfsEvent parent;
-    FttVector pos;
-    guint id;
+  GfsEvent  parent;
+  FttVector pos;
+  guint     id;
 };
 
-#define GFS_PARTICLE(obj)            GTS_OBJECT_CAST (obj,\
-                             GfsParticle,\
-                             gfs_particle_class ())
-#define GFS_IS_PARTICLE(obj)         (gts_object_is_from_class (obj,\
-                         gfs_particle_class ()))
+#define GFS_PARTICLE(obj)                                                      \
+  GTS_OBJECT_CAST(obj, GfsParticle, gfs_particle_class())
+#define GFS_IS_PARTICLE(obj)                                                   \
+  (gts_object_is_from_class(obj, gfs_particle_class()))
 
 GfsEventClass *gfs_particle_class(void);
 

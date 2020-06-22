@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.  
+ * 02111-1307, USA.
  */
 
 #ifndef __LEVELSET_H__
@@ -31,20 +31,19 @@ extern "C" {
 typedef struct _GfsVariableDistance GfsVariableDistance;
 
 struct _GfsVariableDistance {
-    /*< private >*/
-    GfsVariable parent;
-    gboolean first_done;
+  /*< private >*/
+  GfsVariable parent;
+  gboolean    first_done;
 
-    /*< public >*/
-    GfsVariable *v;
-    gboolean stencil;
+  /*< public >*/
+  GfsVariable *v;
+  gboolean     stencil;
 };
 
-#define GFS_VARIABLE_DISTANCE(obj)            GTS_OBJECT_CAST (obj,\
-                               GfsVariableDistance,\
-                               gfs_variable_distance_class ())
-#define GFS_IS_VARIABLE_DISTANCE(obj)         (gts_object_is_from_class (obj,\
-                         gfs_variable_distance_class ()))
+#define GFS_VARIABLE_DISTANCE(obj)                                             \
+  GTS_OBJECT_CAST(obj, GfsVariableDistance, gfs_variable_distance_class())
+#define GFS_IS_VARIABLE_DISTANCE(obj)                                          \
+  (gts_object_is_from_class(obj, gfs_variable_distance_class()))
 
 GfsVariableClass *gfs_variable_distance_class(void);
 

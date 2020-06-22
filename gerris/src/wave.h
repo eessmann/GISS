@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.  
+ * 02111-1307, USA.
  */
 
 #ifndef __WAVE_H__
@@ -29,28 +29,25 @@ extern "C" {
 /* GfsWave: Header */
 
 #define GFS_WAVE_GAMMA 1.1
-#define GFS_WAVE_F0 0.04
+#define GFS_WAVE_F0    0.04
 
 typedef struct _GfsWave GfsWave;
 
 struct _GfsWave {
-    /*< private >*/
-    GfsSimulation parent;
-    guint ik, ith;
+  /*< private >*/
+  GfsSimulation parent;
+  guint         ik, ith;
 
-    void (*source)(GfsWave *wave);
+  void (*source)(GfsWave *wave);
 
-    /*< public >*/
-    guint nk, ntheta;
-    gdouble alpha_s;
-    GfsVariable ***F;
+  /*< public >*/
+  guint          nk, ntheta;
+  gdouble        alpha_s;
+  GfsVariable ***F;
 };
 
-#define GFS_WAVE(obj)            GTS_OBJECT_CAST (obj,\
-                               GfsWave,\
-                               gfs_wave_class ())
-#define GFS_IS_WAVE(obj)         (gts_object_is_from_class (obj,\
-                                gfs_wave_class ()))
+#define GFS_WAVE(obj)    GTS_OBJECT_CAST(obj, GfsWave, gfs_wave_class())
+#define GFS_IS_WAVE(obj) (gts_object_is_from_class(obj, gfs_wave_class()))
 
 GfsSimulationClass *gfs_wave_class(void);
 
@@ -59,18 +56,17 @@ GfsSimulationClass *gfs_wave_class(void);
 typedef struct _GfsInitWave GfsInitWave;
 
 struct _GfsInitWave {
-    /*< private >*/
-    GfsGenericInit parent;
+  /*< private >*/
+  GfsGenericInit parent;
 
-    /*< public >*/
-    GfsFunction *d, *hs;
+  /*< public >*/
+  GfsFunction *d, *hs;
 };
 
-#define GFS_INIT_WAVE(obj)            GTS_OBJECT_CAST (obj,\
-                             GfsInitWave,\
-                             gfs_init_wave_class ())
-#define GFS_IS_INIT_WAVE(obj)         (gts_object_is_from_class (obj,\
-                         gfs_init_wave_class ()))
+#define GFS_INIT_WAVE(obj)                                                     \
+  GTS_OBJECT_CAST(obj, GfsInitWave, gfs_init_wave_class())
+#define GFS_IS_INIT_WAVE(obj)                                                  \
+  (gts_object_is_from_class(obj, gfs_init_wave_class()))
 
 GfsGenericInitClass *gfs_init_wave_class(void);
 

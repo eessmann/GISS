@@ -19,4 +19,4 @@ void traverse_face_component(FttCell *cell, gpointer *datum);
 
 void reset_flag(FttCell *cell);
 
-#endif //GISS_FTT_INTERNAL_H
+#endif // GISS_FTT_INTERNAL_H

@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.  
+ * 02111-1307, USA.
  */
 
 #ifndef __UNSTRUCTURED_H__
@@ -27,26 +27,18 @@
 extern "C" {
 #endif /* __cplusplus */
 
-void gfs_domain_write_vtk(GfsDomain *domain,
-                          gint max_depth,
-                          GSList *variables,
-                          const gchar *precision,
-                          FILE *fp);
+void gfs_domain_write_vtk(GfsDomain *domain, gint max_depth, GSList *variables,
+                          const gchar *precision, FILE *fp);
 
-void gfs_domain_write_tecplot(GfsDomain *domain,
-                              gint max_depth,
-                              GSList *variables,
-                              const gchar *precision,
+void gfs_domain_write_tecplot(GfsDomain *domain, gint max_depth,
+                              GSList *variables, const gchar *precision,
                               FILE *fp);
 
 #if !FTT_2D
-void gfs_domain_write_tecplot_surface (GfsDomain * domain, 
-                       gint max_depth,
-                       GSList * variables,
-                       const gchar * precision,
-                       FILE * fp);
+void gfs_domain_write_tecplot_surface(GfsDomain *domain, gint max_depth,
+                                      GSList *variables, const gchar *precision,
+                                      FILE *fp);
 #endif
-
 
 #ifdef __cplusplus
 }

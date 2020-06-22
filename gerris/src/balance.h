@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.  
+ * 02111-1307, USA.
  */
 
 #ifndef __BALANCE_H__
@@ -31,16 +31,15 @@ extern "C" {
 typedef struct _GfsEventBalance GfsEventBalance;
 
 struct _GfsEventBalance {
-    GfsEvent parent;
+  GfsEvent parent;
 
-    gdouble max;
+  gdouble max;
 };
 
-#define GFS_EVENT_BALANCE(obj)            GTS_OBJECT_CAST (obj,\
-                             GfsEventBalance,\
-                             gfs_event_balance_class ())
-#define GFS_IS_EVENT_BALANCE(obj)         (gts_object_is_from_class (obj,\
-                         gfs_event_balance_class ()))
+#define GFS_EVENT_BALANCE(obj)                                                 \
+  GTS_OBJECT_CAST(obj, GfsEventBalance, gfs_event_balance_class())
+#define GFS_IS_EVENT_BALANCE(obj)                                              \
+  (gts_object_is_from_class(obj, gfs_event_balance_class()))
 
 GfsEventClass *gfs_event_balance_class(void);
 

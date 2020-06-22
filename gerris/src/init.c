@@ -30,7 +30,7 @@
 #include "config.h"
 
 #ifdef HAVE_FENV_H
-# define _GNU_SOURCE
+#define _DEFAULT_SOURCE
 
 # include <fenv.h>
 

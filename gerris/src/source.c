@@ -20,13 +20,13 @@
  * \brief Source terms.
  */
 
-#include <stdlib.h>
-#include <math.h>
 #include "source.h"
+#include "init.h"
 #include "simulation.h"
 #include "solid.h"
-#include "init.h"
 #include "vof.h"
+#include <math.h>
+#include <stdlib.h>
 
 /**
  * gfs_variable_mac_source:

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.  
+ * 02111-1307, USA.
  */
 /*! \file
  * \brief Surfaces.
@@ -113,11 +113,11 @@ static void cell_traverse_cut(FttCell *cell,
  * @root: the root #FttCell of the tree to traverse.
  * @s: a #GfsGenericSurface.
  * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
- * %FTT_POST_ORDER. 
+ * %FTT_POST_ORDER.
  * @flags: which types of children are to be visited.
  * @func: the function to call for each visited #FttCell.
  * @data: user data to pass to @func.
- * 
+ *
  * Traverses a cell tree starting at the given root #FttCell. Calls
  * the given function for each cell cut by @s.
  */
@@ -139,11 +139,11 @@ void gfs_cell_traverse_cut(FttCell *root,
  * @root: the root #FttCell of the tree to traverse.
  * @s: a #GfsGenericSurface.
  * @order: the order in which the cells are visited - %FTT_PRE_ORDER,
- * %FTT_POST_ORDER. 
+ * %FTT_POST_ORDER.
  * @flags: which types of children are to be visited.
  * @func: the function to call for each visited #FttCell.
  * @data: user data to pass to @func.
- * 
+ *
  * Traverses a cell tree starting at the given root #FttCell. Calls
  * the given function for each cell cut by @s.
  *
@@ -167,7 +167,7 @@ void gfs_cell_traverse_cut_2D(FttCell *root,
  * @s: a #GfsGenericSurface.
  * @sim: a #GfsSimulation.
  * @fp: a #GtsFile.
- * 
+ *
  * Calls the read() method of @s.
  */
 void gfs_generic_surface_read(GfsGenericSurface *s, gpointer sim, GtsFile *fp) {
@@ -185,7 +185,7 @@ void gfs_generic_surface_read(GfsGenericSurface *s, gpointer sim, GtsFile *fp) {
  * @s: a #GfsGenericSurface.
  * @sim: a #GfsSimulation.
  * @fp: a file pointer.
- * 
+ *
  * Calls the write() method of @s.
  */
 void gfs_generic_surface_write(GfsGenericSurface *s, gpointer sim, FILE *fp) {
@@ -268,11 +268,11 @@ gint gfs_surface_point_is_inside(GfsGenericSurface *s,
  * gfs_surface_transformation:
  * @surface: a #GtsSurface
  * @rotate: a #GtsVector
- * @translate: a #GtsVector 
+ * @translate: a #GtsVector
  * @scale: a #GtsVector
  * @flip: a #gboolean
  * @matrix: a pointer on a #GtsMatrix
- * 
+ *
  * Translates, rotates, scales and flips @surface.
  */
 void gfs_surface_transformation(GtsSurface *surface,

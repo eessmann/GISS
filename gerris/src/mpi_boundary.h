@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.  
+ * 02111-1307, USA.
  */
 
 #ifndef __MPI_BOUNDARY_H__
@@ -32,36 +32,31 @@ typedef struct _GfsBoundaryMpi GfsBoundaryMpi;
 
 #ifdef HAVE_MPI
 
-#  include <mpi.h>
+#include <mpi.h>
 
 #endif
 
 struct _GfsBoundaryMpi {
-    /*< private >*/
-    GfsBoundaryPeriodic parent;
-    gint process, id;
+  /*< private >*/
+  GfsBoundaryPeriodic parent;
+  gint                process, id;
 
 #ifdef HAVE_MPI
-    MPI_Comm comm;
-    MPI_Request request[2];
-    guint nrequest;
+  MPI_Comm    comm;
+  MPI_Request request[2];
+  guint       nrequest;
 #endif /* HAVE_MPI */
 };
 
-
-#define GFS_BOUNDARY_MPI(obj)            GTS_OBJECT_CAST (obj,\
-                               GfsBoundaryMpi,\
-                               gfs_boundary_mpi_class ())
-#define GFS_IS_BOUNDARY_MPI(obj)         (gts_object_is_from_class (obj,\
-                           gfs_boundary_mpi_class ()))
+#define GFS_BOUNDARY_MPI(obj)                                                  \
+  GTS_OBJECT_CAST(obj, GfsBoundaryMpi, gfs_boundary_mpi_class())
+#define GFS_IS_BOUNDARY_MPI(obj)                                               \
+  (gts_object_is_from_class(obj, gfs_boundary_mpi_class()))
 
 GfsBoundaryClass *gfs_boundary_mpi_class(void);
 
-GfsBoundaryMpi *gfs_boundary_mpi_new(GfsBoundaryClass *klass,
-                                     GfsBox *box,
-                                     FttDirection d,
-                                     gint process,
-                                     gint id);
+GfsBoundaryMpi *gfs_boundary_mpi_new(GfsBoundaryClass *klass, GfsBox *box,
+                                     FttDirection d, gint process, gint id);
 
 #ifdef __cplusplus
 }

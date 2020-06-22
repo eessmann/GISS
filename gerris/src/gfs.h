@@ -14,34 +14,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
- * 02111-1307, USA.  
+ * 02111-1307, USA.
  */
 
 #ifndef __GFS_H__
 #define __GFS_H__
 
-#include <gerris/ftt.h>
-#include <gerris/fluid.h>
-#include <gerris/output.h>
-#include <gerris/solid.h>
-#include <gerris/poisson.h>
+#include <gerris/adaptive.h>
 #include <gerris/advection.h>
 #include <gerris/boundary.h>
-#include <gerris/timestep.h>
-#include <gerris/domain.h>
-#include <gerris/init.h>
-#include <gerris/refine.h>
-#include <gerris/event.h>
-#include <gerris/simulation.h>
-#include <gerris/graphic.h>
-#include <gerris/adaptive.h>
-#include <gerris/source.h>
-#include <gerris/vof.h>
 #include <gerris/cartesian.h>
-#include <gerris/surface.h>
-#include <gerris/unstructured.h>
+#include <gerris/domain.h>
+#include <gerris/event.h>
+#include <gerris/fluid.h>
+#include <gerris/ftt.h>
+#include <gerris/graphic.h>
+#include <gerris/init.h>
 #include <gerris/map.h>
+#include <gerris/output.h>
 #include <gerris/particle.h>
+#include <gerris/poisson.h>
+#include <gerris/refine.h>
+#include <gerris/simulation.h>
+#include <gerris/solid.h>
+#include <gerris/source.h>
+#include <gerris/surface.h>
+#include <gerris/timestep.h>
+#include <gerris/unstructured.h>
 #include <gerris/version.h>
+#include <gerris/vof.h>
 
 #endif /* GFS_H */

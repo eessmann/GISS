@@ -16,10 +16,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  * 02111-1307, USA.  
  */
-
+#define ACCEPT_USE_OF_DEPRECATED_PROJ_API_H
 #include <proj_api.h>
-#include "simulation.h"
-#include "map.h"
+#include "../src/simulation.h"
+#include "../src/map.h"
 
 /* GfsMapProjection: Header */
 
