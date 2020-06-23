@@ -19,13 +19,11 @@
 
 #include <stdlib.h>
 #include <glob.h>
-#if GSL
-# include <gsl/gsl_linalg.h>
-#endif
-#include "refine.h"
-#include "solid.h"
+#include <gsl/gsl_linalg.h>
+#include "../src/refine.h"
+#include "../src/solid.h"
 #include "kdt/kdt.h"
-#include "river.h"
+#include "../src/river.h"
 
 static gchar * default_path = ".";
 

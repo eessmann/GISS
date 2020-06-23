@@ -347,7 +347,7 @@ void SetCheckData(RSTREE R, boolean creation)
     if ((*par).SIZEinfo != sizeof(typinfo)) {
       fprintf(stderr,"\n%s\n","FATAL ERROR:");
       fprintf(stderr,"%s %d\n","Size of an info part:",(*par).SIZEinfo);
-      fprintf(stderr,"%s %d\n","           Expecting:",sizeof(typinfo));
+      fprintf(stderr,"%s %lu\n","           Expecting:",sizeof(typinfo));
     }
   }
   

@@ -116,7 +116,9 @@ if(MPI_FOUND)
 endif()
 
 target_compile_definitions(gfs2D
-        PUBLIC GFS_DATA_DIR="${pkgdatadir}" GFS_MODULES_DIR="${moduledir}" FTT_2D=1)
+        PUBLIC  GFS_DATA_DIR="${pkgdatadir}"
+                GFS_MODULES_DIR="${moduledir}"
+                FTT_2D=1)
 
 # Gerris 3D executable
 add_executable(gerris3D gerris.c)

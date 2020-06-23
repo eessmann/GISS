@@ -18,9 +18,9 @@
  * 02111-1307, USA.  
  */
 
-#include "solid.h"
-#include "output.h"
-#include "vof.h"
+#include "../src/solid.h"
+#include "../src/output.h"
+#include "../src/vof.h"
 
 /* This implementation of submarine landslide initial condition is directly
    inpsired from the software TOPICS developped by P. Watts.

@@ -18,12 +18,12 @@
  */
 #include <stdlib.h>
 #include <math.h>
-#include "event.h"
-#include "solid.h"
-#include "config.h"
+#include "../src/event.h"
+#include "../src/solid.h"
+#include "FC.h"
 
-#define CW260_F77 F77_FUNC (cw260, CW260)
-#define KMTS_F77 F77_FUNC (kmts, KMTS)
+#define CW260_F77 FC_GLOBAL(cw260, CW260)
+#define KMTS_F77 FC_GLOBAL(kmts, KMTS)
 
 void CW260_F77 (const float * zd,
 		const float * zt, 

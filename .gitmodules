@@ -7,3 +7,6 @@
 [submodule "conan/conan-gsl"]
 	path = conan/conan-gsl
 	url = git@github.com:eessmann/conan-gsl.git
+[submodule "conan/conan-lis"]
+	path = conan/conan-lis
+	url = git@github.com:eessmann/conan-lis.git

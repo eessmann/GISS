@@ -18,10 +18,10 @@
  */
 
 #include <stdlib.h>
-#include "simulation.h"
-#include "map.h"
-#include "output.h"
-#include "init.h"
+#include "../src/simulation.h"
+#include "../src/map.h"
+#include "../src/output.h"
+#include "../src/init.h"
 
 typedef struct Vector_ {
   gint x, y, z;

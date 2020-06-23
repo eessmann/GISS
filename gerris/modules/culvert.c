@@ -17,7 +17,7 @@
  * 02111-1307, USA.  
  */
 
-#include "river.h"
+#include "../src/river.h"
 #include "culvert/boyd87.h"
 
 /* GfsSourceCulvert: Header */

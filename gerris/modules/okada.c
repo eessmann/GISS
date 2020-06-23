@@ -17,8 +17,8 @@
  * 02111-1307, USA.  
  */
 
-#include "event.h"
-#include "solid.h"
+#include "../src/event.h"
+#include "../src/solid.h"
 
 /* Implementation of the formulae of Okada, 1985, "Surface deformation
    due to shear and tensile faults in a half-space", Bulletin of the

@@ -19,7 +19,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(ENABLE_IPO
        "Enable Interprocedural Optimization, aka Link Time Optimization (LTO)"
-       ON)
+       OFF)
 
 if(ENABLE_IPO)
   include(CheckIPOSupported)

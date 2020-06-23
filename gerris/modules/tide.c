@@ -22,7 +22,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include "fes2004/fes2004_lib.h"
-#include "variable.h"
+#include "../src/variable.h"
 
 /* Heavily based on GfsBcFlather */
 
@@ -383,7 +383,7 @@ void gfs_module_read (GtsFile * fp)
       struct tm timeref;
       time_t tref, t0;
       memset (&timeref, 0, sizeof(struct tm));
-      strptime ("1950/01/01-00:00:00-UTC", TIME_FORMAT, &timeref);
+      strptime("1950/01/01-00:00:00-UTC", TIME_FORMAT, &timeref);
       tref = mktime (&timeref);
       memset (&timeref, 0, sizeof(struct tm));
       if (!strptime (reference, TIME_FORMAT, &timeref)) {

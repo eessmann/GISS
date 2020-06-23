@@ -21,6 +21,5 @@ macro(run_conan)
           ${CONAN_EXTRA_OPTIONS}
           BASIC_SETUP
           CMAKE_TARGETS # individual targets to link to
-          BUILD
-          missing)
+          BUILD missing)
 endmacro()

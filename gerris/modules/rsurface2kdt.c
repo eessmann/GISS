@@ -27,10 +27,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "config.h"
-#ifdef HAVE_GETOPT_H
-#  include <getopt.h>
-#endif /* HAVE_GETOPT_H */
+
+#include <getopt.h>
+
 
 #include "kdt/kdt.h"
 #include "rsurface.h"
