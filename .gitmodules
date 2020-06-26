@@ -10,3 +10,6 @@
 [submodule "conan/conan-lis"]
 	path = conan/conan-lis
 	url = git@github.com:eessmann/conan-lis.git
+[submodule "conan/conan-ode"]
+	path = conan/conan-ode
+	url = git@github.com:eessmann/conan-ode.git

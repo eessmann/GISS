@@ -24,9 +24,9 @@
 #include <HYPRE.h>
 #include <HYPRE_parcsr_ls.h>
 
-#include "variable.h"
-#include "poisson.h"
-#include "mpi_boundary.h"
+#include "../src/variable.h"
+#include "../src/poisson.h"
+#include "../src/mpi_boundary.h"
 
 /*#define DEBUG*/
 

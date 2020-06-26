@@ -281,3 +281,20 @@ if(GISS_USE_STOKES)
             INTERFACE project_options project_warnings
             PUBLIC gfs2D)
 endif()
+
+# hypre
+if(GISS_USE_HYPRE)
+    # 3D hypre
+    add_library(hypre3D SHARED)
+    target_sources(hypre3D PRIVATE hypre.c)
+    target_link_libraries(hypre3D
+            INTERFACE project_options project_warnings
+            PUBLIC gfs3D HYPRE::HYPRE m)
+
+    # 2D hypre
+    add_library(hypre2D SHARED)
+    target_sources(hypre2D PRIVATE hypre.c)
+    target_link_libraries(hypre2D
+            INTERFACE project_options project_warnings
+            PUBLIC gfs2D HYPRE::HYPRE m)
+endif()

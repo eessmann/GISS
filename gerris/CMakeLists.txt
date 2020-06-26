@@ -77,7 +77,7 @@ if(GISS_USE_MODULES)
   option(GISS_USE_LAYERED "Enable Layered Module" ON)
   option(GISS_USE_CULVERT "Enable Culvert Module" ON)
   option(GISS_USE_STOKES "Enable Stokes Module" ON)
-  option(GISS_USE_HYPRE "Enable HYPRE Module" OFF)
+  option(GISS_USE_HYPRE "Enable HYPRE Module" ON)
 endif()
 
 # Enabling Fortran for modules
