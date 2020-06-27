@@ -175,6 +175,9 @@ if(GISS_USE_MODULES)
   add_subdirectory(modules)
 endif()
 
+# Gerris Utilities
+add_subdirectory(tools)
+
 if(ENABLE_TESTING)
   enable_testing()
   message(

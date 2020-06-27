@@ -19,17 +19,17 @@
 
 #include <stdlib.h>
 #include <unistd.h>
-#include "config.h"
+#include "../src/config.h"
 #ifdef HAVE_GETOPT_H
 #  include <getopt.h>
 #endif /* HAVE_GETOPT_H */
 
-#include "init.h"
-#include "simulation.h"
+#include "../src/init.h"
+#include "../src/simulation.h"
 
 #ifdef HAVE_MPI
 # include <mpi.h>
-# include "mpi_boundary.h"
+# include "../src/mpi_boundary.h"
 #endif /* HAVE_MPI */
 
 static void add_box (GfsBox * box, GfsSimulation * sim)

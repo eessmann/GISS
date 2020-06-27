@@ -39,9 +39,9 @@ set(gfs_headers
         utils.h
         variable.h
         version.h
-        #verify.h
         vof.h
         wave.h)
+#verify.h
 
 set(gfs_sources
         adaptive.c
@@ -80,8 +80,8 @@ set(gfs_sources
         vof.c
         wave.c)
 
-set(pkgdatadir ${CMAKE_INSTALL_DATADIR}/gerris)
-set(moduledir ${CMAKE_INSTALL_LIBDIR}/gerris)
+set(pkgdatadir ${CMAKE_INSTALL_DATADIR}/gerris PARENT_SCOPE)
+set(moduledir ${CMAKE_INSTALL_LIBDIR}/gerris PARENT_SCOPE)
 
 # Gerris 3D library
 add_library(gfs3D)
@@ -99,7 +99,7 @@ endif()
 
 target_compile_definitions(gfs3D
         PUBLIC GFS_DATA_DIR="${pkgdatadir}" GFS_MODULES_DIR="${moduledir}")
-
+set_target_properties(gfs3D PROPERTIES PUBLIC_HEADER gfs.h)
 
 # Gerris 2D library
 add_library(gfs2D)
@@ -119,12 +119,14 @@ target_compile_definitions(gfs2D
         PUBLIC  GFS_DATA_DIR="${pkgdatadir}"
                 GFS_MODULES_DIR="${moduledir}"
                 FTT_2D=1)
+set_target_properties(gfs2D PROPERTIES PUBLIC_HEADER gfs.h)
 
 # Gerris 3D executable
 add_executable(gerris3D gerris.c)
 target_link_libraries(gerris3D
         INTERFACE project_options project_warnings
         PRIVATE gfs3D)
+set_target_properties(gerris3D PROPERTIES PUBLIC_HEADER gfs.h)
 
 if(MPI_FOUND)
     target_link_libraries(gerris3D PUBLIC MPI::MPI_CXX)
@@ -135,8 +137,21 @@ add_executable(gerris2D gerris.c)
 target_link_libraries(gerris2D
         INTERFACE project_options project_warnings
         PRIVATE gfs2D)
+set_target_properties(gerris2D
+        PROPERTIES  PUBLIC_HEADER gfs.h)
+
 
 if(MPI_FOUND)
     target_link_libraries(gerris2D PUBLIC MPI::MPI_CXX)
 endif()
 
+install(TARGETS gerris2D gerris3D gfs2D gfs3D
+        EXPORT GISS
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        )
+
+install(FILES ${gfs_headers}
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gerris)

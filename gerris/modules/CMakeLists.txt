@@ -54,7 +54,7 @@ if(GISS_USE_PART)
 
     install(TARGETS particulates3D particulates2D
             EXPORT GISS::particulates
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 
 endif()
@@ -78,7 +78,7 @@ if(GISS_USE_BUBBLES)
 
     install(TARGETS bubbles3D bubbles2D
             EXPORT GISS::bubbles
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -100,7 +100,7 @@ if(GISS_USE_MAPS)
 
     install(TARGETS map3D map2D
             EXPORT GISS::maps
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -122,7 +122,7 @@ if(GISS_USE_FFTW)
 
     install(TARGETS fft3D fft2D
             EXPORT GISS::fft
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -144,7 +144,7 @@ if(GISS_USE_TERRA)
 
     install(TARGETS terrain3D terrain2D
             EXPORT GISS::terrain
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -169,7 +169,7 @@ if(GISS_USE_TIDE)
 
     install(TARGETS tide3D tide2D
             EXPORT GISS::tide
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -191,7 +191,7 @@ if(GISS_USE_OKADA)
 
     install(TARGETS okada3D okada3D
             EXPORT GISS::okada
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -206,7 +206,7 @@ if(GISS_USE_DF3)
 
     install(TARGETS df33D
             EXPORT GISS::df3
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -228,7 +228,7 @@ if(GISS_USE_ELECTRO)
 
     install(TARGETS electrohydro3D electrohydro2D
             EXPORT GISS::electrohydro
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -250,7 +250,7 @@ if(GISS_USE_SKEW)
 
     install(TARGETS skewsymmetric3D skewsymmetric2D
             EXPORT GISS::skewsymmetric
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -272,7 +272,7 @@ if(GISS_USE_TOPICS)
 
     install(TARGETS topics3D topics2D
             EXPORT GISS::topics
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -294,7 +294,7 @@ if(GISS_USE_LAYERED)
 
     install(TARGETS layered3D layered2D
             EXPORT GISS::layered
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -319,7 +319,7 @@ if(GISS_USE_CULVERT)
 
     install(TARGETS culvert3D culvert3D
             EXPORT GISS::culvert
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -350,7 +350,7 @@ if(GISS_USE_STOKES)
 
     install(TARGETS stokes3D stokes2D
             EXPORT GISS::stokes
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -372,7 +372,7 @@ if(GISS_USE_HYPRE)
 
     install(TARGETS hypre3D hypre2D
             EXPORT GISS::hypre
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
 
@@ -394,6 +394,6 @@ if(GISS_USE_ODE)
 
     install(TARGETS ode3D ode2D
             EXPORT GISS::ode
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            LIBRARY DESTINATION ${moduledir}
             )
 endif()
