@@ -28,3 +28,6 @@ target_sources(kdtquery PRIVATE kdtquery.c)
 target_link_libraries(kdtquery
         PRIVATE kdt m
         INTERFACE project_options project_warnings)
+
+install(TARGETS xyz2kdt kdt2kdt kdtquery
+        DESTINATION ${CMAKE_INSTALL_BINDIR})

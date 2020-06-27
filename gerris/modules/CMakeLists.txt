@@ -15,6 +15,7 @@ target_sources(rsurface2kdt
         PRIVATE rsurface2kdt.c rsurface.c rsurface.h)
 target_link_libraries(rsurface2kdt
         PRIVATE cSmRST kdt m)
+install(TARGETS rsurface2kdt DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # particulate_common
 add_library(particulate_common3D)
@@ -50,6 +51,12 @@ if(GISS_USE_PART)
     target_link_libraries(particulates2D
             INTERFACE project_options project_warnings
             PUBLIC particulate_common2D)
+
+    install(TARGETS particulates3D particulates2D
+            EXPORT GISS::particulates
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
+
 endif()
 
 
@@ -68,6 +75,11 @@ if(GISS_USE_BUBBLES)
     target_link_libraries(bubbles2D
             INTERFACE project_options project_warnings
             PUBLIC particulate_common2D)
+
+    install(TARGETS bubbles3D bubbles2D
+            EXPORT GISS::bubbles
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # maps
@@ -85,6 +97,11 @@ if(GISS_USE_MAPS)
     target_link_libraries(map2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D CONAN_PKG::proj)
+
+    install(TARGETS map3D map2D
+            EXPORT GISS::maps
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # fftw
@@ -102,6 +119,11 @@ if(GISS_USE_FFTW)
     target_link_libraries(fft2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D CONAN_PKG::fftw)
+
+    install(TARGETS fft3D fft2D
+            EXPORT GISS::fft
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # terrain
@@ -119,6 +141,11 @@ if(GISS_USE_TERRA)
     target_link_libraries(terrain2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D kdt CONAN_PKG::gsl)
+
+    install(TARGETS terrain3D terrain2D
+            EXPORT GISS::terrain
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # tide
@@ -139,6 +166,11 @@ if(GISS_USE_TIDE)
     target_link_libraries(tide2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D fes)
+
+    install(TARGETS tide3D tide2D
+            EXPORT GISS::tide
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # okada
@@ -156,6 +188,11 @@ if(GISS_USE_OKADA)
     target_link_libraries(okada2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D)
+
+    install(TARGETS okada3D okada3D
+            EXPORT GISS::okada
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # df3
@@ -166,6 +203,11 @@ if(GISS_USE_DF3)
     target_link_libraries(df33D
             INTERFACE project_options project_warnings
             PUBLIC gfs3D)
+
+    install(TARGETS df33D
+            EXPORT GISS::df3
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # electrohydro
@@ -183,6 +225,11 @@ if(GISS_USE_ELECTRO)
     target_link_libraries(electrohydro2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D)
+
+    install(TARGETS electrohydro3D electrohydro2D
+            EXPORT GISS::electrohydro
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # skewsymmetric
@@ -200,6 +247,11 @@ if(GISS_USE_SKEW)
     target_link_libraries(skewsymmetric2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D)
+
+    install(TARGETS skewsymmetric3D skewsymmetric2D
+            EXPORT GISS::skewsymmetric
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # topics
@@ -217,6 +269,11 @@ if(GISS_USE_TOPICS)
     target_link_libraries(topics2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D)
+
+    install(TARGETS topics3D topics2D
+            EXPORT GISS::topics
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # layered
@@ -234,6 +291,11 @@ if(GISS_USE_LAYERED)
     target_link_libraries(layered2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D)
+
+    install(TARGETS layered3D layered2D
+            EXPORT GISS::layered
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # culvert
@@ -254,6 +316,11 @@ if(GISS_USE_CULVERT)
     target_link_libraries(culvert2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D boyd87 m)
+
+    install(TARGETS culvert3D culvert3D
+            EXPORT GISS::culvert
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # stokes
@@ -280,6 +347,11 @@ if(GISS_USE_STOKES)
             PRIVATE CW263
             INTERFACE project_options project_warnings
             PUBLIC gfs2D)
+
+    install(TARGETS stokes3D stokes2D
+            EXPORT GISS::stokes
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()
 
 # hypre
@@ -297,4 +369,31 @@ if(GISS_USE_HYPRE)
     target_link_libraries(hypre2D
             INTERFACE project_options project_warnings
             PUBLIC gfs2D HYPRE::HYPRE m)
+
+    install(TARGETS hypre3D hypre2D
+            EXPORT GISS::hypre
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
+endif()
+
+# ode
+if(GISS_USE_ODE)
+    # 3D ode
+    add_library(ode3D SHARED)
+    target_sources(ode3D PRIVATE ode.c)
+    target_link_libraries(ode3D
+            INTERFACE project_options project_warnings
+            PUBLIC gfs3D CONAN_PKG::ode m)
+
+    # 2D ode
+    add_library(ode2D SHARED)
+    target_sources(ode2D PRIVATE ode.c)
+    target_link_libraries(ode2D
+            INTERFACE project_options project_warnings
+            PUBLIC gfs2D CONAN_PKG::ode m)
+
+    install(TARGETS ode3D ode2D
+            EXPORT GISS::ode
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            )
 endif()

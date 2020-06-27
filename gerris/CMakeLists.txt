@@ -78,6 +78,7 @@ if(GISS_USE_MODULES)
   option(GISS_USE_CULVERT "Enable Culvert Module" ON)
   option(GISS_USE_STOKES "Enable Stokes Module" ON)
   option(GISS_USE_HYPRE "Enable HYPRE Module" ON)
+  option(GISS_USE_ODE "Enable ODE Module" ON)
 endif()
 
 # Enabling Fortran for modules
@@ -140,7 +141,13 @@ if(GISS_USE_TIDE)
           netcdf-c/4.7.4@eessmann/conan-netcdf-c)
 endif()
 
-    include(cmake/Conan.cmake)
+# ODE Library
+if(GISS_USE_ODE)
+  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+          ode/0.16.1@eessmann/conan-ode)
+endif()
+
+include(cmake/Conan.cmake)
 run_conan()
 
 # Setting up OpenMPI
