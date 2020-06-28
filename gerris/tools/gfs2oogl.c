@@ -24,11 +24,11 @@
 #include <getopt.h>
 #include <unistd.h>
 
-#include "../src/adaptive.h"
-#include "../src/graphic.h"
-#include "../src/init.h"
-#include "../src/simulation.h"
-#include "../src/solid.h"
+#include "adaptive.h"
+#include "graphic.h"
+#include "init.h"
+#include "simulation.h"
+#include "solid.h"
 
 #define DEBUG 0
 

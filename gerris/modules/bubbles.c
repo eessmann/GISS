@@ -18,7 +18,7 @@
  */
 
 #include "particulatecommon.h"
-#include "../src/ftt.h"
+#include "ftt.h"
 
 #include <stdlib.h>
 #include <gsl/gsl_errno.h>

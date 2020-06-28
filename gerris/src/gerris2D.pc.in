@@ -5,7 +5,7 @@ includedir=@CMAKE_INSTALL_FULL_INCLUDEDIR@
 
 Name: Gerris2D
 Description: Gerris Flow Solver Library (2D)
-Version: @VERSION@
+Version: @GFS_VERSION@
 Requires: gts >= 0.7.3
-Libs: -L${libdir} -lgfs2D -lgts -lm
-Cflags: -I${includedir} -DFTT_2D=1
+Libs: -L@CMAKE_INSTALL_LIBDIR@ -lgfs2D -lgts -lm
+Cflags: -I@CMAKE_INSTALL_INCLUDEDIR@ -DFTT_2D=1

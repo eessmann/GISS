@@ -18,8 +18,8 @@
  */
 #define ACCEPT_USE_OF_DEPRECATED_PROJ_API_H
 #include <proj_api.h>
-#include "../src/simulation.h"
-#include "../src/map.h"
+#include "simulation.h"
+#include "map.h"
 
 /* GfsMapProjection: Header */
 

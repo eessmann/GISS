@@ -1,4 +1,4 @@
-#include "../src/config.h"
+#include "config.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,8 +9,8 @@
 #include <unistd.h>
 #endif /* HAVE_UNISTD_H */
 
-#include "../src/init.h"
-#include "../src/simulation.h"
+#include "init.h"
+#include "simulation.h"
 
 typedef struct {
   GfsSimulation *s1, *s2;

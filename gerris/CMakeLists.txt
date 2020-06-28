@@ -54,6 +54,7 @@ enable_doxygen()
 # allow for static analysis options
 include(cmake/StaticAnalyzers.cmake)
 
+
 option(BUILD_SHARED_LIBS "Enable compilation of shared libraries" OFF)
 option(ENABLE_TESTING "Enable Test Builds" OFF)
 option(ENABLE_DOCS "Enable Documentation Builds" OFF)
@@ -166,6 +167,8 @@ if(GISS_USE_HYPRE)
   endif()
 endif()
 
+# generating config header
+include(cmake/ConfigHeader.cmake)
 
 # Core Gerris Solver
 add_subdirectory(src)

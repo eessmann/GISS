@@ -20,10 +20,10 @@
 #include <stdlib.h>
 #include <glob.h>
 #include <gsl/gsl_linalg.h>
-#include "../src/refine.h"
-#include "../src/solid.h"
+#include "refine.h"
+#include "solid.h"
 #include "kdt/kdt.h"
-#include "../src/river.h"
+#include "river.h"
 
 static gchar * default_path = ".";
 

@@ -17,11 +17,11 @@
  * 02111-1307, USA.  
  */
 
-#include "../src/simulation.h"
-#include "../src/source.h"
-#include "../src/adaptive.h"
-#include "../src/output.h"
-#include "../src/solid.h"
+#include "simulation.h"
+#include "source.h"
+#include "adaptive.h"
+#include "output.h"
+#include "solid.h"
 
 /* LayeredVariable: Header */
 

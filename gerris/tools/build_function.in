@@ -1,0 +1,56 @@
+#!/bin/sh
+# file generated automatically by configure from 'build_function_gcc'
+
+DIMENSION=$1  # gerris2D or gerris3D
+WDIR=$2       # simulation directory
+
+CC=gcc
+LD=gcc
+CFLAGS="-O3 -march=native -fpic -Wall -Wno-unused -Werror"
+LDFLAGS="-O3 -march=native -fpic -shared"
+
+touch links
+if sed 's/@/#/g' < function.c | awk '{
+      if ($1 == "#" && $2 == "link") {
+        for (i = 3; i <= NF; i++)
+          printf ("%s ", $i) >> "links";
+        print "";
+      } else if ($1 == "#link") {
+        for (i = 2; i <= NF; i++)
+          printf ("%s ", $i) >> "links";
+        print "";
+      } else print $0;
+    }' > module.c; then :
+else
+    exit 1
+fi
+
+if [ "$DIMENSION" = "gerris2D" ]; then
+    GFSFLAGS="-DGFS_DATA_DIR=@CMAKE_INSTALL_FULL_DATADIR@/gerris -DGFS_MODULES_DIR=@CMAKE_INSTALL_FULL_LIBDIR@/gerris -DFTT_2D=1"
+    if $CC $CFLAGS $GFSFLAGS -I"$WDIR" -I@CMAKE_INSTALL_FULL_INCLUDEDIR@ -I@SH_INCLUDE_STR@ \
+      -c -o module.o module.c; then
+      if $LD $LDFLAGS -L@CMAKE_INSTALL_FULL_LIBDIR@ -L@CMAKE_INSTALL_FULL_LIBDIR@/gerris -L@SH_LIBS_STR@ -o module.so \
+      `cat links` module.o; then :
+      else
+	      exit 1
+      fi
+    else
+      exit 1
+    fi;
+elif [ "$DIMENSION" = "gerris3D" ]; then
+    GFSFLAGS="-DGFS_DATA_DIR=@CMAKE_INSTALL_FULL_DATADIR@/gerris -DGFS_MODULES_DIR=@CMAKE_INSTALL_FULL_LIBDIR@/gerris"
+    if $CC $CFLAGS $GFSFLAGS -I"$WDIR" -I@CMAKE_INSTALL_FULL_INCLUDEDIR@ -I@SH_INCLUDE_STR@ \
+      -c -o module.o module.c; then
+      if $LD $LDFLAGS -L@CMAKE_INSTALL_FULL_LIBDIR@ -L@CMAKE_INSTALL_FULL_LIBDIR@/gerris -L@SH_LIBS_STR@ -o module.so \
+      `cat links` module.o; then :
+      else
+	      exit 1
+      fi
+    else
+      exit 1
+    fi;
+else
+    exit 1
+fi
+
+

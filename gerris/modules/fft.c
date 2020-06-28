@@ -20,8 +20,8 @@
 #include <fftw3.h>
 #include <stdlib.h>
 
-#include "../src/output.h"
-#include "../src/cartesian.h"
+#include "output.h"
+#include "cartesian.h"
 
 /* GfsOutputSpectra: header */
 

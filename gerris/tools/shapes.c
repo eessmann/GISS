@@ -17,7 +17,7 @@
  * 02111-1307, USA.
  */
 
-#include "../src/config.h"
+#include "config.h"
 #include <gts.h>
 #include <math.h>
 #include <stdlib.h>

@@ -26,7 +26,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "../../src/config.h"
+#include "config.h"
 #ifdef HAVE_GETOPT_H
 #  include <getopt.h>
 #endif /* HAVE_GETOPT_H */

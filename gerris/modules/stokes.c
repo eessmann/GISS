@@ -18,8 +18,8 @@
  */
 #include <stdlib.h>
 #include <math.h>
-#include "../src/event.h"
-#include "../src/solid.h"
+#include "event.h"
+#include "solid.h"
 #include "FC.h"
 
 #define CW260_F77 FC_GLOBAL(cw260, CW260)

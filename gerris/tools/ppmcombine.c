@@ -23,7 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../src/graphic.h"
+#include "graphic.h"
 
 int main(int argc, char *argv[]) {
   int      c       = 0;

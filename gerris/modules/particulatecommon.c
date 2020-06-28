@@ -20,7 +20,7 @@
 #include <stdlib.h>
 
 #include "particulatecommon.h"
-#include "../src/source.h"
+#include "source.h"
 
 /* Forces on the Particle */
 

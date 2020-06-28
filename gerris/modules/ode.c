@@ -17,7 +17,7 @@
  * 02111-1307, USA.
  */
 
-#include "../src/moving.h"
+#include "moving.h"
 #include <ode/ode.h>
 
 static dWorldID world = 0;

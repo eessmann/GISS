@@ -7,6 +7,8 @@ target_link_libraries(kdt
         INTERFACE project_options project_warnings)
 target_compile_definitions(kdt
         PUBLIC FILE_OFFSET_BITS=64)
+target_include_directories(kdt PRIVATE ${CMAKE_BINARY_DIR}/config)
+
 
 # xyz2kdt Executable
 add_executable(xyz2kdt)
@@ -14,6 +16,8 @@ target_sources(xyz2kdt PRIVATE xyz2kdt.c)
 target_link_libraries(xyz2kdt
         PRIVATE kdt m
         INTERFACE project_options project_warnings)
+target_include_directories(xyz2kdt PRIVATE ${CMAKE_BINARY_DIR}/config)
+
 
 # kdt2kdt Executable
 add_executable(kdt2kdt)
@@ -21,6 +25,7 @@ target_sources(kdt2kdt PRIVATE kdt2kdt.c)
 target_link_libraries(kdt2kdt
         PRIVATE kdt m
         INTERFACE project_options project_warnings)
+target_include_directories(kdt2kdt PRIVATE ${CMAKE_BINARY_DIR}/config)
 
 # kdtquery Executable
 add_executable(kdtquery)
@@ -28,6 +33,8 @@ target_sources(kdtquery PRIVATE kdtquery.c)
 target_link_libraries(kdtquery
         PRIVATE kdt m
         INTERFACE project_options project_warnings)
+target_include_directories(kdtquery PRIVATE ${CMAKE_BINARY_DIR}/config)
+
 
 install(TARGETS xyz2kdt kdt2kdt kdtquery
         DESTINATION ${CMAKE_INSTALL_BINDIR})

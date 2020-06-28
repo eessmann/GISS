@@ -1,48 +1,5 @@
 # Setting up GFS library
 # Gerris headers
-set(gfs_headers
-        adaptive.h
-        advection.h
-        balance.h
-        boundary.h
-        cartesian.h
-        domain.h
-        event.h
-        fluid.h
-        ftt.h
-        ftt_internal.h
-        function.h
-        graphic.h
-        init.h
-        isocube.h
-        levelset.h
-        map.h
-        metric.h
-        moving.h
-        mpi_boundary.h
-        myc.h
-        myc2d.h
-        ocean.h
-        output.h
-        particle.h
-        poisson.h
-        refine.h
-        river.h
-        simulation.h
-        solid.h
-        source.h
-        spatial.h
-        surface.h
-        tension.h
-        timestep.h
-        unstructured.h
-        utils.h
-        variable.h
-        version.h
-        vof.h
-        wave.h)
-#verify.h
-
 set(gfs_sources
         adaptive.c
         advection.c
@@ -84,49 +41,50 @@ set(pkgdatadir ${CMAKE_INSTALL_DATADIR}/gerris PARENT_SCOPE)
 set(moduledir ${CMAKE_INSTALL_LIBDIR}/gerris PARENT_SCOPE)
 
 # Gerris 3D library
-add_library(gfs3D)
-target_sources(gfs3D
-        PRIVATE ${gfs_sources}
-        PUBLIC config.h ${gfs_headers})
+add_library(gfs3D ${gfs_sources})
 
 target_link_libraries(gfs3D
         INTERFACE project_options project_warnings
         PUBLIC CONAN_PKG::glib CONAN_PKG::gts CONAN_PKG::gsl m)
+
+target_include_directories(gfs3D
+        PUBLIC ${CMAKE_SOURCE_DIR}/include/gerris ${CMAKE_BINARY_DIR}/config)
 
 if(MPI_FOUND)
     target_link_libraries(gfs3D PUBLIC MPI::MPI_CXX)
 endif()
 
 target_compile_definitions(gfs3D
-        PUBLIC GFS_DATA_DIR="${pkgdatadir}" GFS_MODULES_DIR="${moduledir}")
-set_target_properties(gfs3D PROPERTIES PUBLIC_HEADER gfs.h)
+        PUBLIC GFS_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/gerris"
+               GFS_MODULES_DIR="${CMAKE_INSTALL_FULL_LIBDIR}/gerris")
+set_target_properties(gfs3D PROPERTIES PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/gfs.h)
 
 # Gerris 2D library
-add_library(gfs2D)
-target_sources(gfs2D
-        PRIVATE ${gfs_sources}
-        PUBLIC config.h ${gfs_headers})
+add_library(gfs2D ${gfs_sources})
 
 target_link_libraries(gfs2D
         INTERFACE project_options project_warnings
         PUBLIC CONAN_PKG::glib CONAN_PKG::gts CONAN_PKG::gsl m)
+
+target_include_directories(gfs2D
+        PUBLIC ${CMAKE_SOURCE_DIR}/include/gerris ${CMAKE_BINARY_DIR}/config)
 
 if(MPI_FOUND)
     target_link_libraries(gfs2D PUBLIC MPI::MPI_CXX)
 endif()
 
 target_compile_definitions(gfs2D
-        PUBLIC  GFS_DATA_DIR="${pkgdatadir}"
-                GFS_MODULES_DIR="${moduledir}"
+        PUBLIC  GFS_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/gerris"
+                GFS_MODULES_DIR="${CMAKE_INSTALL_FULL_LIBDIR}/gerris"
                 FTT_2D=1)
-set_target_properties(gfs2D PROPERTIES PUBLIC_HEADER gfs.h)
+set_target_properties(gfs2D PROPERTIES PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/gfs.h)
 
 # Gerris 3D executable
 add_executable(gerris3D gerris.c)
 target_link_libraries(gerris3D
         INTERFACE project_options project_warnings
         PRIVATE gfs3D)
-set_target_properties(gerris3D PROPERTIES PUBLIC_HEADER gfs.h)
+target_include_directories(gerris3D PRIVATE ${CMAKE_BINARY_DIR}/config)
 
 if(MPI_FOUND)
     target_link_libraries(gerris3D PUBLIC MPI::MPI_CXX)
@@ -137,14 +95,18 @@ add_executable(gerris2D gerris.c)
 target_link_libraries(gerris2D
         INTERFACE project_options project_warnings
         PRIVATE gfs2D)
-set_target_properties(gerris2D
-        PROPERTIES  PUBLIC_HEADER gfs.h)
 
+target_include_directories(gerris2D PRIVATE ${CMAKE_BINARY_DIR}/config)
 
 if(MPI_FOUND)
     target_link_libraries(gerris2D PUBLIC MPI::MPI_CXX)
 endif()
 
+# Generating PC files
+configure_file(gerris2D.pc.in ${CMAKE_CURRENT_BINARY_DIR}/gerris2D.pc)
+configure_file(gerris3D.pc.in ${CMAKE_CURRENT_BINARY_DIR}/gerris3D.pc)
+
+# Installing Gerris Solver and Library
 install(TARGETS gerris2D gerris3D gfs2D gfs3D
         EXPORT GISS
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -153,5 +115,9 @@ install(TARGETS gerris2D gerris3D gfs2D gfs3D
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         )
 
-install(FILES ${gfs_headers}
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gerris)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/gerris
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gerris2D.pc ${CMAKE_CURRENT_BINARY_DIR}/gerris3D.pc
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+install(PROGRAMS m4.awk
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/gerris)

@@ -23,9 +23,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "../src/graphic.h"
-#include "../src/init.h"
-#include "../src/simulation.h"
+#include "graphic.h"
+#include "init.h"
+#include "simulation.h"
 
 static void streamline_draw(GList *s, FILE *fp) {
   guint np = g_list_length(s);

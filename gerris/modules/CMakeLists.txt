@@ -16,6 +16,8 @@ target_sources(rsurface2kdt
 target_link_libraries(rsurface2kdt
         PRIVATE cSmRST kdt m)
 install(TARGETS rsurface2kdt DESTINATION ${CMAKE_INSTALL_BINDIR})
+target_include_directories(rsurface2kdt PRIVATE ${CMAKE_BINARY_DIR}/config)
+
 
 # particulate_common
 add_library(particulate_common3D)
@@ -384,6 +386,7 @@ if(GISS_USE_ODE)
     target_link_libraries(ode3D
             INTERFACE project_options project_warnings
             PUBLIC gfs3D CONAN_PKG::ode m)
+
 
     # 2D ode
     add_library(ode2D SHARED)
