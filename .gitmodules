@@ -1,15 +1,18 @@
 [submodule "conan/conan-gts"]
 	path = conan/conan-gts
-	url = git@github.com:eessmann/conan-gts.git
+	url = https://github.com/eessmann/conan-gts.git
 [submodule "conan/conan-netcdf-c"]
 	path = conan/conan-netcdf-c
-	url = git@github.com:eessmann/conan-netcdf-c.git
+	url = https://github.com/eessmann/conan-netcdf-c.git
 [submodule "conan/conan-gsl"]
 	path = conan/conan-gsl
-	url = git@github.com:eessmann/conan-gsl.git
+	url = https://github.com/eessmann/conan-gsl.git
 [submodule "conan/conan-lis"]
 	path = conan/conan-lis
-	url = git@github.com:eessmann/conan-lis.git
+	url = https://github.com/eessmann/conan-lis.git
 [submodule "conan/conan-ode"]
 	path = conan/conan-ode
-	url = git@github.com:eessmann/conan-ode.git
+	url = https://github.com/eessmann/conan-ode.git
+[submodule "conan/conan-hypre"]
+	path = conan/conan-hypre
+	url = https://github.com/eessmann/conan-hypre.git
