@@ -105,14 +105,14 @@ set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS}
 
 # Finding gts
 set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-        gts/0.7.6@eessmann/conan-gts)
+        gts/0.7.6@eessmann/testing)
 
 set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS}
         gts:shared=False)
 
 # Finding gsl
 set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-        gsl/2.6@eessmann/conan-gsl)
+        gsl/2.6@eessmann/testing)
 
 # FFTW Library
 if(GISS_USE_FFTW)
@@ -139,13 +139,22 @@ endif()
 # NETCDF Library
 if(GISS_USE_TIDE)
   set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-          netcdf-c/4.7.4@eessmann/conan-netcdf-c)
+          netcdf-c/4.7.4@eessmann/testing)
 endif()
 
 # ODE Library
 if(GISS_USE_ODE)
   set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-          ode/0.16.1@eessmann/conan-ode)
+          ode/0.16.1@eessmann/testing)
+endif()
+
+# HYPRE library
+if(GISS_USE_HYPRE)
+  set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+          hypre/2.19.0@eessmann/testing)
+
+  set(CONAN_EXTRA_OPTIONS ${CONAN_EXTRA_OPTIONS}
+          hypre:openmp=True)
 endif()
 
 include(cmake/Conan.cmake)
@@ -155,16 +164,6 @@ run_conan()
 if(GISS_USE_MPI)
   find_package(MPI REQUIRED)
   message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
-endif()
-
-# HYPRE library
-if(GISS_USE_HYPRE)
-  if(MPI_FOUND)
-    find_package(HYPRE REQUIRED)
-  else()
-    set(GISS_USE_MPI ON)
-    message(WARNING "HYPRE Requires MPI")
-  endif()
 endif()
 
 # generating config header

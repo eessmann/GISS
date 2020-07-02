@@ -20,6 +20,8 @@
  * \brief GfsFunction and various utility functions.
  */
 
+#define G_MODULE_SUFFIX "so"
+
 #include "cartesian.h"
 #include "config.h"
 #include "simulation.h"
