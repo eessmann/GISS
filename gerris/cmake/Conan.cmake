@@ -15,11 +15,14 @@ macro(run_conan)
 
   conan_cmake_run(
           REQUIRES
-          m4/1.4.18
           ${CONAN_EXTRA_REQUIRES}
           OPTIONS
           ${CONAN_EXTRA_OPTIONS}
           BASIC_SETUP
-          CMAKE_TARGETS # individual targets to link to
+          CMAKE_TARGETS
           BUILD missing)
+          #GENERATORS cmake_find_package cmake_paths)
+
+  #include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+
 endmacro()

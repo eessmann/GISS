@@ -1,6 +1,3 @@
-# Setting up Libtool files
-include(LibtoolFile)
-
 # Setting Fortran Linking Macros
 if(ENABLE_FORTRAN)
     include(FortranCInterface)
@@ -59,8 +56,6 @@ if(GISS_USE_PART)
 
     install(TARGETS particulates3D particulates2D
             LIBRARY DESTINATION ${moduledir})
-
-    create_libtool_file(particulates3D ${moduledir})
 endif()
 
 
@@ -332,7 +327,7 @@ if(GISS_USE_STOKES)
 
     # Fortran Library
     add_library(CW263)
-    target_sources(CW263 PUBLIC CW263.f)
+    target_sources(CW263 PUBLIC CW263.f90)
 
     # 3D stokes
     add_library(stokes3D SHARED)
