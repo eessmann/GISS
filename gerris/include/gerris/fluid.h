@@ -59,13 +59,13 @@ struct _GfsSolidVector {
 };
 
 typedef enum {
-  GFS_FLAG_USED              = 1 << FTT_FLAG_USER,
-  GFS_FLAG_BOUNDARY          = 1 << (FTT_FLAG_USER + 1),
-  GFS_FLAG_DIRICHLET         = 1 << (FTT_FLAG_USER + 2),
-  GFS_FLAG_GRADIENT_BOUNDARY = 1 << (FTT_FLAG_USER + 3),
-  GFS_FLAG_PERMANENT         = 1 << (FTT_FLAG_USER + 4),
-  GFS_FLAG_THIN              = 1 << (FTT_FLAG_USER + 5),
-  GFS_FLAG_USER              = FTT_FLAG_USER + 6 /* user flags start here */
+  GFS_FLAG_USED              = 1U << FTT_FLAG_USER,
+  GFS_FLAG_BOUNDARY          = 1U << (FTT_FLAG_USER + 1U),
+  GFS_FLAG_DIRICHLET         = 1U << (FTT_FLAG_USER + 2U),
+  GFS_FLAG_GRADIENT_BOUNDARY = 1U << (FTT_FLAG_USER + 3U),
+  GFS_FLAG_PERMANENT         = 1U << (FTT_FLAG_USER + 4U),
+  GFS_FLAG_THIN              = 1U << (FTT_FLAG_USER + 5U),
+  GFS_FLAG_USER              = FTT_FLAG_USER + 6U /* user flags start here */
 } GfsFlags;
 
 #define GFS_STATE(cell)         ((GfsStateVector *)(cell)->data)
@@ -84,12 +84,14 @@ typedef enum {
        ? GFS_STATE((fa)->neighbor)->solid->s[FTT_OPPOSITE_DIRECTION((fa)->d)]  \
        : 1.)
 
-#define GFS_IS_FLUID(cell)          ((cell) != NULL && GFS_STATE(cell)->solid == NULL)
-#define GFS_IS_MIXED(cell)          ((cell) != NULL && GFS_STATE(cell)->solid != NULL)
-#define GFS_CELL_IS_BOUNDARY(cell)  (((cell)->flags & GFS_FLAG_BOUNDARY) != 0)
-#define GFS_CELL_IS_PERMANENT(cell) (((cell)->flags & GFS_FLAG_PERMANENT) != 0)
+#define GFS_IS_FLUID(cell) ((cell) != NULL && GFS_STATE(cell)->solid == NULL)
+#define GFS_IS_MIXED(cell) ((cell) != NULL && GFS_STATE(cell)->solid != NULL)
+#define GFS_CELL_IS_BOUNDARY(cell)                                             \
+  (((uint)((cell)->flags) & (uint)GFS_FLAG_BOUNDARY) != 0)
+#define GFS_CELL_IS_PERMANENT(cell)                                            \
+  (((uint)((cell)->flags) & (uint)GFS_FLAG_PERMANENT) != 0)
 #define GFS_CELL_IS_GRADIENT_BOUNDARY(cell)                                    \
-  (((cell)->flags & GFS_FLAG_GRADIENT_BOUNDARY) != 0)
+  (((uint)((cell)->flags) & (uint)GFS_FLAG_GRADIENT_BOUNDARY) != 0)
 
 FttCellFace gfs_cell_face(FttCell *cell, FttDirection d);
 

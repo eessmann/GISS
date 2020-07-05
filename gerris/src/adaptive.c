@@ -41,7 +41,7 @@
  * cells.
  */
 void gfs_cell_coarse_init(FttCell *cell, GfsDomain *domain) {
-  GSList *i;
+  GSList *i = NULL;
 
   g_return_if_fail(cell != NULL);
   g_return_if_fail(!FTT_CELL_IS_LEAF(cell));
@@ -81,10 +81,12 @@ static void none(FttCell *cell, GfsVariable *v) {}
 static void gfs_adapt_read(GtsObject **o, GtsFile *fp) {
   GfsAdapt *a = GFS_ADAPT(*o);
 
-  if (GTS_OBJECT_CLASS(gfs_adapt_class())->parent_class->read)
+  if (GTS_OBJECT_CLASS(gfs_adapt_class())->parent_class->read) {
     (*GTS_OBJECT_CLASS(gfs_adapt_class())->parent_class->read)(o, fp);
-  if (fp->type == GTS_ERROR)
+  }
+  if (fp->type == GTS_ERROR) {
     return;
+  }
   if (fp->type != '{') {
     gts_file_error(fp, "expecting an opening brace");
     return;
@@ -150,8 +152,9 @@ static void gfs_adapt_read(GtsObject **o, GtsFile *fp) {
       }
       gts_file_next_token(fp);
       a->cmax = gfs_read_constant(fp, gfs_object_simulation(*o));
-      if (fp->type == GTS_ERROR)
+      if (fp->type == GTS_ERROR) {
         return;
+      }
     } else if (!strcmp(fp->token->str, "weight")) {
       gts_file_next_token(fp);
       if (fp->type != '=') {
@@ -160,8 +163,9 @@ static void gfs_adapt_read(GtsObject **o, GtsFile *fp) {
       }
       gts_file_next_token(fp);
       a->weight = gfs_read_constant(fp, gfs_object_simulation(*o));
-      if (fp->type == GTS_ERROR)
+      if (fp->type == GTS_ERROR) {
         return;
+      }
     } else if (!strcmp(fp->token->str, "cfactor")) {
       gts_file_next_token(fp);
       if (fp->type != '=') {
@@ -170,10 +174,11 @@ static void gfs_adapt_read(GtsObject **o, GtsFile *fp) {
       }
       gts_file_next_token(fp);
       a->cfactor = gfs_read_constant(fp, gfs_object_simulation(*o));
-      if (fp->type == GTS_ERROR)
+      if (fp->type == GTS_ERROR) {
         return;
+      }
     } else if (!strcmp(fp->token->str, "c")) {
-      GfsDomain *domain;
+      GfsDomain *domain = NULL;
 
       gts_file_next_token(fp);
       if (fp->type != '=') {
@@ -199,8 +204,9 @@ static void gfs_adapt_read(GtsObject **o, GtsFile *fp) {
       return;
     }
   }
-  if (fp->type == GTS_ERROR)
+  if (fp->type == GTS_ERROR) {
     return;
+  }
   if (fp->type != '}') {
     gts_file_error(fp, "expecting a closing brace");
     return;
@@ -210,32 +216,40 @@ static void gfs_adapt_read(GtsObject **o, GtsFile *fp) {
 
   /* make sure that adaptivity is applied in gfs_simulation_init() if required
    */
-  if (GFS_EVENT(a)->start == 0. || GFS_EVENT(a)->istart == 0)
+  if (GFS_EVENT(a)->start == 0. || GFS_EVENT(a)->istart == 0) {
     GFS_EVENT(a)->start = -1;
+  }
 }
 
 static void gfs_adapt_write(GtsObject *o, FILE *fp) {
   GfsAdapt *a = GFS_ADAPT(o);
 
-  if (GTS_OBJECT_CLASS(gfs_adapt_class())->parent_class->write)
+  if (GTS_OBJECT_CLASS(gfs_adapt_class())->parent_class->write) {
     (*GTS_OBJECT_CLASS(gfs_adapt_class())->parent_class->write)(o, fp);
+  }
   fputs(" { minlevel =", fp);
   gfs_function_write(a->minlevel, fp);
   fputs(" maxlevel =", fp);
   gfs_function_write(a->maxlevel, fp);
   fputc(' ', fp);
-  if (a->mincells > 0)
+  if (a->mincells > 0) {
     fprintf(fp, "mincells = %u ", a->mincells);
-  if (a->maxcells < G_MAXINT)
+  }
+  if (a->maxcells < G_MAXINT) {
     fprintf(fp, "maxcells = %u ", a->maxcells);
-  if (a->cmax > 0.)
+  }
+  if (a->cmax > 0.) {
     fprintf(fp, "cmax = %g ", a->cmax);
-  if (a->weight != 1.)
+  }
+  if (a->weight != 1.) {
     fprintf(fp, "weight = %g ", a->weight);
-  if (a->cfactor != 4.)
+  }
+  if (a->cfactor != 4.) {
     fprintf(fp, "cfactor = %g ", a->cfactor);
-  if (a->c != NULL)
+  }
+  if (a->c != NULL) {
     fprintf(fp, "c = %s ", a->c->name);
+  }
   fputc('}', fp);
 }
 
@@ -259,9 +273,10 @@ static void save_cost(FttCell *cell, GfsAdapt *a) {
 
 static void gfs_adapt_post_event(GfsEvent *event, GfsSimulation *sim) {
   GfsAdapt *a = GFS_ADAPT(event);
-  if (a->active && a->c)
+  if (a->active && a->c) {
     gfs_domain_cell_traverse(GFS_DOMAIN(sim), FTT_PRE_ORDER, FTT_TRAVERSE_ALL,
                              -1, (FttCellTraverseFunc)save_cost, a);
+  }
 }
 
 static void gfs_adapt_class_init(GfsEventClass *klass) {
@@ -327,8 +342,9 @@ static void gfs_adapt_vorticity_class_init(GfsEventClass *klass) {
 }
 
 static gdouble cost_vorticity(FttCell *cell, GfsAdaptVorticity *a) {
-  if (a->maxa <= 0.)
+  if (a->maxa <= 0.) {
     return 0.;
+  }
   return fabs(gfs_vorticity(cell, a->u)) * ftt_cell_size(cell) / a->maxa;
 }
 
@@ -400,8 +416,9 @@ static void gfs_adapt_function_destroy(GtsObject *o) {
 
 static void gfs_adapt_function_read(GtsObject **o, GtsFile *fp) {
   (*GTS_OBJECT_CLASS(gfs_adapt_function_class())->parent_class->read)(o, fp);
-  if (fp->type == GTS_ERROR)
+  if (fp->type == GTS_ERROR) {
     return;
+  }
 
   gfs_function_read(GFS_ADAPT_FUNCTION(*o)->f, gfs_object_simulation(*o), fp);
 }
@@ -454,21 +471,24 @@ GfsEventClass *gfs_adapt_function_class(void) {
 
 static void gfs_adapt_gradient_destroy(GtsObject *o) {
   if (GFS_ADAPT_GRADIENT(o)->v &&
-      !gfs_function_get_variable(GFS_ADAPT_FUNCTION(o)->f))
+      !gfs_function_get_variable(GFS_ADAPT_FUNCTION(o)->f)) {
     gts_object_destroy(GTS_OBJECT(GFS_ADAPT_GRADIENT(o)->v));
+  }
 
   (*GTS_OBJECT_CLASS(gfs_adapt_gradient_class())->parent_class->destroy)(o);
 }
 
 static void gfs_adapt_gradient_read(GtsObject **o, GtsFile *fp) {
   (*GTS_OBJECT_CLASS(gfs_adapt_gradient_class())->parent_class->read)(o, fp);
-  if (fp->type == GTS_ERROR)
+  if (fp->type == GTS_ERROR) {
     return;
+  }
 
   GfsAdaptGradient *a = GFS_ADAPT_GRADIENT(*o);
   a->v                = gfs_function_get_variable(GFS_ADAPT_FUNCTION(a)->f);
-  if (a->v == NULL)
+  if (a->v == NULL) {
     a->v = gfs_temporary_variable(GFS_DOMAIN(gfs_object_simulation(a)));
+  }
 }
 
 static void update_f(FttCell *cell, GfsAdaptFunction *a) {
@@ -504,9 +524,9 @@ static void gfs_adapt_gradient_class_init(GfsEventClass *klass) {
 }
 
 static gdouble gradient_cost(FttCell *cell, GfsAdaptGradient *a) {
-  FttComponent c;
-  gdouble      sum2 = 0;
-  gdouble *    lambda;
+  FttComponent c      = 0;
+  gdouble      sum2   = 0;
+  gdouble *    lambda = NULL;
 
   lambda = (gdouble *)&GFS_DOMAIN(gfs_object_simulation(a))->lambda;
   for (c = 0; c < FTT_DIMENSION; c++) {
@@ -549,16 +569,18 @@ GfsEventClass *gfs_adapt_gradient_class(void) {
  */
 
 static void gfs_adapt_error_destroy(GtsObject *o) {
-  if (GFS_ADAPT_ERROR(o)->v != GFS_ADAPT(o)->c)
+  if (GFS_ADAPT_ERROR(o)->v != GFS_ADAPT(o)->c) {
     gts_object_destroy(GTS_OBJECT(GFS_ADAPT_ERROR(o)->v));
+  }
 
   (*GTS_OBJECT_CLASS(gfs_adapt_error_class())->parent_class->destroy)(o);
 }
 
 static void gfs_adapt_error_read(GtsObject **o, GtsFile *fp) {
   (*GTS_OBJECT_CLASS(gfs_adapt_error_class())->parent_class->read)(o, fp);
-  if (fp->type == GTS_ERROR)
+  if (fp->type == GTS_ERROR) {
     return;
+  }
 
   GFS_ADAPT_ERROR(*o)->v =
       GFS_ADAPT(*o)->c
@@ -575,12 +597,13 @@ static void compute_gradient(FttCell *cell, GfsAdaptError *a) {
 
 static void add_hessian_norm(FttCell *cell, GfsAdaptError *a) {
   /* off-diagonal */
-  FttComponent j;
-  for (j = 0; j < FTT_DIMENSION; j++)
+  FttComponent j = 0;
+  for (j = 0; j < FTT_DIMENSION; j++) {
     if (j != a->c) {
       gdouble g = gfs_center_regular_gradient(cell, j, a->dv[a->c]);
       GFS_VALUE(cell, a->v) += g * g;
     }
+  }
   /* diagonal */
   gdouble g =
       gfs_center_regular_2nd_derivative(cell, a->c, GFS_ADAPT_GRADIENT(a)->v);
@@ -614,8 +637,9 @@ static gboolean gfs_adapt_error_event(GfsEvent *event, GfsSimulation *sim) {
     }
     gfs_domain_cell_traverse(domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
                              (FttCellTraverseFunc)scale, a);
-    for (a->c = 0; a->c < FTT_DIMENSION; a->c++)
+    for (a->c = 0; a->c < FTT_DIMENSION; a->c++) {
       gts_object_destroy(GTS_OBJECT(a->dv[a->c]));
+    }
     return TRUE;
   }
   return FALSE;
@@ -663,16 +687,18 @@ GfsEventClass *gfs_adapt_error_class(void) {
  */
 
 static void gfs_adapt_thickness_destroy(GtsObject *o) {
-  if (GFS_ADAPT_THICKNESS(o)->c)
+  if (GFS_ADAPT_THICKNESS(o)->c) {
     gts_object_destroy(GTS_OBJECT(GFS_ADAPT_THICKNESS(o)->c));
+  }
 
   (*GTS_OBJECT_CLASS(gfs_adapt_thickness_class())->parent_class->destroy)(o);
 }
 
 static void gfs_adapt_thickness_read(GtsObject **o, GtsFile *fp) {
   (*GTS_OBJECT_CLASS(gfs_adapt_thickness_class())->parent_class->read)(o, fp);
-  if (fp->type == GTS_ERROR)
+  if (fp->type == GTS_ERROR) {
     return;
+  }
 
   if (fp->type != GTS_STRING) {
     gts_file_error(fp, "expecting a variable name");
@@ -705,21 +731,23 @@ static void gfs_adapt_thickness_write(GtsObject *o, FILE *fp) {
 static void update_thickness(FttCell *cell, GfsAdapt *a) {
   GfsVariable *v = GFS_ADAPT_THICKNESS(a)->c;
   GfsVariable *f = GFS_ADAPT_THICKNESS(a)->v;
-  if (GFS_VALUE(cell, f) <= 0. || GFS_VALUE(cell, f) >= 1.)
+  if (GFS_VALUE(cell, f) <= 0. || GFS_VALUE(cell, f) >= 1.) {
     GFS_VALUE(cell, v) = G_MAXDOUBLE;
-  else {
+  } else {
     GfsVariableTracerVOFHeight *t      = GFS_VARIABLE_TRACER_VOF_HEIGHT(f);
     FttCell *                   parent = ftt_cell_parent(cell);
     gdouble thickness = (!parent || GFS_VALUE(parent, v) == G_MAXDOUBLE)
                             ? G_MAXDOUBLE
                             : 2. * GFS_VALUE(parent, v);
-    FttComponent c;
-    for (c = 0; c < FTT_DIMENSION; c++)
+
+    for (FttComponent c = 0; c < FTT_DIMENSION; c++) {
       if (GFS_HAS_DATA(cell, t->hb[c]) && GFS_HAS_DATA(cell, t->ht[c])) {
         gdouble d = fabs(GFS_VALUE(cell, t->hb[c]) + GFS_VALUE(cell, t->ht[c]));
-        if (d < thickness)
+        if (d < thickness) {
           thickness = d;
+        }
       }
+    }
     GFS_VALUE(cell, v) = thickness;
   }
 }
@@ -774,8 +802,9 @@ GfsEventClass *gfs_adapt_thickness_class(void) {
 /** \endobject{GfsAdaptThickness} */
 
 static void refine_cell_corner(FttCell *cell, GfsDomain *domain) {
-  if (FTT_CELL_IS_LEAF(cell) && ftt_refine_corner(cell))
+  if (FTT_CELL_IS_LEAF(cell) && ftt_refine_corner(cell)) {
     ftt_cell_refine_single(cell, domain->cell_init, domain->cell_init_data);
+  }
 }
 
 /**
@@ -787,13 +816,14 @@ static void refine_cell_corner(FttCell *cell, GfsDomain *domain) {
  * conditions for all variables.
  */
 void gfs_domain_reshape(GfsDomain *domain, guint depth) {
-  gint l;
+  gint l = 0;
 
   g_return_if_fail(domain != NULL);
 
-  for (l = depth - 2; l >= 0; l--)
+  for (l = depth - 2; l >= 0; l--) {
     gfs_domain_cell_traverse(domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
                              (FttCellTraverseFunc)refine_cell_corner, domain);
+  }
   gfs_domain_match(domain);
   gfs_set_merged(domain);
   GSList *i = domain->variables;
@@ -817,12 +847,14 @@ static FttCell *remove_top_coarse(GtsEHeap *h, gdouble *cost,
                                   GfsVariable *hcoarse) {
   FttCell *cell = gts_eheap_remove_top(h, cost);
 
-  if (cell)
+  if (cell) {
     GFS_VALUE(cell, hcoarse) = 0.;
+  }
   while (cell && !FTT_CELL_IS_LEAF(cell)) {
     cell = gts_eheap_remove_top(h, cost);
-    if (cell)
+    if (cell) {
       GFS_VALUE(cell, hcoarse) = 0.;
+    }
   }
   return cell;
 }
@@ -831,12 +863,14 @@ static FttCell *remove_top_fine(GtsEHeap *h, gdouble *cost,
                                 GfsVariable *hfine) {
   FttCell *cell = gts_eheap_remove_top(h, cost);
 
-  if (cell)
+  if (cell) {
     GFS_VALUE(cell, hfine) = 0.;
+  }
   while (cell && ftt_cell_depth(cell) - ftt_cell_level(cell) != 1) {
     cell = gts_eheap_remove_top(h, cost);
-    if (cell)
+    if (cell) {
       GFS_VALUE(cell, hfine) = 0.;
+    }
   }
   return cell;
 }
@@ -848,8 +882,9 @@ static gdouble refine_cost(FttCell *cell, GfsSimulation *sim) {
   while (i) {
     GfsAdapt *a = i->data;
 
-    if (a->active && a->cost)
+    if (a->active && a->cost) {
       cost += a->weight * (*a->cost)(cell, a);
+    }
     i = i->next;
   }
 
@@ -860,29 +895,36 @@ static void compute_cost(FttCell *cell, AdaptParams *p) {
   gdouble cost = refine_cost(cell, p->sim);
 
   GFS_VALUE(cell, p->hcoarsev) = GFS_VALUE(cell, p->hfinev) = 0.;
-  if (FTT_CELL_IS_LEAF(cell))
+  if (FTT_CELL_IS_LEAF(cell)) {
     CELL_COST(cell) = cost;
-  else {
+  } else {
     FttCellChildren  child;
     FttCellNeighbors n;
-    guint            i, level = ftt_cell_level(cell);
-    FttCell *        parent;
-    gdouble          cmax = 0.;
+    guint            i      = 0;
+    guint            level  = ftt_cell_level(cell);
+    FttCell *        parent = NULL;
+    gdouble          cmax   = 0.;
 
     ftt_cell_children(cell, &child);
-    for (i = 0; i < FTT_CELLS; i++)
-      if (child.c[i] && CELL_COST(child.c[i]) > cmax)
+    for (i = 0; i < FTT_CELLS; i++) {
+      if (child.c[i] && CELL_COST(child.c[i]) > cmax) {
         cmax = CELL_COST(child.c[i]);
-    if (cmax > cost)
+      }
+    }
+    if (cmax > cost) {
       cost = cmax;
-    if (cost > CELL_COST(cell))
+    }
+    if (cost > CELL_COST(cell)) {
       CELL_COST(cell) = cost;
+    }
 
     ftt_cell_neighbors(cell, &n);
-    for (i = 0; i < FTT_NEIGHBORS; i++)
+    for (i = 0; i < FTT_NEIGHBORS; i++) {
       if (n.c[i] && ftt_cell_level(n.c[i]) == level &&
-          (parent = ftt_cell_parent(n.c[i])) && cmax > CELL_COST(parent))
+          (parent = ftt_cell_parent(n.c[i])) && cmax > CELL_COST(parent)) {
         CELL_COST(parent) = cmax;
+      }
+    }
   }
   p->nc++;
 }
@@ -897,10 +939,11 @@ static guint minlevel(FttCell *cell, GfsSimulation *sim) {
 
   while (i) {
     GfsAdapt *a = i->data;
-    guint     l;
+    guint     l = 0;
 
-    if (a->active && (l = gfs_function_value(a->minlevel, cell)) > minlevel)
+    if (a->active && (l = gfs_function_value(a->minlevel, cell)) > minlevel) {
       minlevel = l;
+    }
     i = i->next;
   }
   return minlevel;
@@ -912,10 +955,11 @@ static guint maxlevel(FttCell *cell, GfsSimulation *sim) {
 
   while (i) {
     GfsAdapt *a = i->data;
-    guint     l;
+    guint     l = 0;
 
-    if (a->active && (l = gfs_function_value(a->maxlevel, cell)) < maxlevel)
+    if (a->active && (l = gfs_function_value(a->maxlevel, cell)) < maxlevel) {
       maxlevel = l;
+    }
     i = i->next;
   }
   return maxlevel;
@@ -925,38 +969,47 @@ static void fill_heaps(FttCell *cell, AdaptParams *p) {
   guint    level  = ftt_cell_level(cell);
   FttCell *parent = ftt_cell_parent(cell);
 
-  if (level < maxlevel(cell, p->sim))
+  if (level < maxlevel(cell, p->sim)) {
     GFS_DOUBLE_TO_POINTER(GFS_VALUE(cell, p->hcoarsev)) =
         gts_eheap_insert_with_key(p->hcoarse, cell, -CELL_COST(cell));
+  }
   if (parent && !GFS_CELL_IS_PERMANENT(parent) &&
-      GFS_VALUE(parent, p->hfinev) == 0. && level > minlevel(parent, p->sim))
+      GFS_VALUE(parent, p->hfinev) == 0. && level > minlevel(parent, p->sim)) {
     GFS_DOUBLE_TO_POINTER(GFS_VALUE(parent, p->hfinev)) =
         gts_eheap_insert_with_key(p->hfine, parent, CELL_COST(parent));
+  }
 }
 
 static gboolean fine_cell_coarsenable(FttCell *cell, AdaptParams *p) {
-  if (GFS_CELL_IS_BOUNDARY(cell))
+  if (GFS_CELL_IS_BOUNDARY(cell)) {
     return TRUE;
-  if (GFS_CELL_IS_PERMANENT(cell))
+  }
+  if (GFS_CELL_IS_PERMANENT(cell)) {
     return FALSE;
-  if (CELL_COST(cell) >= -p->clim)
+  }
+  if (CELL_COST(cell) >= -p->clim) {
     return FALSE;
-  if (ftt_cell_level(cell) < minlevel(cell, p->sim))
+  }
+  if (ftt_cell_level(cell) < minlevel(cell, p->sim)) {
     return FALSE;
-  if (ftt_refine_corner(cell))
+  }
+  if (ftt_refine_corner(cell)) {
     return FALSE;
+  }
   return TRUE;
 }
 
 static void fine_cell_cleanup(FttCell *cell, AdaptParams *p) {
   if (!GFS_CELL_IS_BOUNDARY(cell)) {
-    gpointer o;
+    gpointer o = NULL;
 
     p->nc--;
-    if ((o = CELL_HCOARSE(cell)))
+    if ((o = CELL_HCOARSE(cell))) {
       gts_eheap_remove(p->hcoarse, o);
-    if ((o = CELL_HFINE(cell)))
+    }
+    if ((o = CELL_HFINE(cell))) {
       gts_eheap_remove(p->hfine, o);
+    }
   }
   gfs_cell_cleanup(cell, GFS_DOMAIN(p->sim));
 }
@@ -964,25 +1017,31 @@ static void fine_cell_cleanup(FttCell *cell, AdaptParams *p) {
 static void cell_fine_init(FttCell *cell, AdaptParams *p) {
   FttCellChildren child;
   GfsDomain *     domain = GFS_DOMAIN(p->sim);
-  guint           n;
+  guint           n      = 0;
 
   (*domain->cell_init)(cell, domain->cell_init_data);
   ftt_cell_children(cell, &child);
-  for (n = 0; n < FTT_CELLS; n++)
-    if (child.c[n])
+  for (n = 0; n < FTT_CELLS; n++) {
+    if (child.c[n]) {
       CELL_COST(child.c[n]) = G_MAXDOUBLE;
-  if (!GFS_CELL_IS_BOUNDARY(cell))
+    }
+  }
+  if (!GFS_CELL_IS_BOUNDARY(cell)) {
     p->nc += FTT_CELLS;
+  }
 }
 
 static gboolean adapt_global(GfsSimulation *simulation, guint *depth,
                              GfsAdaptStats *s, guint mincells, guint maxcells,
                              GfsVariable *c, gdouble cmax) {
-  GfsDomain * domain = GFS_DOMAIN(simulation);
-  gint        l;
-  gdouble     ccoarse = 0., cfine = 0.;
-  FttCell *   coarse, *fine;
-  gboolean    changed = TRUE, global_changed = FALSE;
+  GfsDomain * domain         = GFS_DOMAIN(simulation);
+  gint        l              = 0;
+  gdouble     ccoarse        = 0.;
+  gdouble     cfine          = 0.;
+  FttCell *   coarse         = NULL;
+  FttCell *   fine           = NULL;
+  gboolean    changed        = TRUE;
+  gboolean    global_changed = FALSE;
   AdaptParams apar;
 
   apar.sim      = simulation;
@@ -996,12 +1055,14 @@ static gboolean adapt_global(GfsSimulation *simulation, guint *depth,
 
   gfs_domain_cell_traverse(domain, FTT_POST_ORDER, FTT_TRAVERSE_NON_LEAFS, -1,
                            (FttCellTraverseFunc)gfs_cell_reset, apar.costv);
-  for (l = *depth; l >= 0; l--)
+  for (l = *depth; l >= 0; l--) {
     gfs_domain_cell_traverse(domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEVEL, l,
                              (FttCellTraverseFunc)compute_cost, &apar);
-  if (apar.c)
+  }
+  if (apar.c) {
     gfs_domain_cell_traverse(domain, FTT_PRE_ORDER, FTT_TRAVERSE_ALL, -1,
                              (FttCellTraverseFunc)store_cost, &apar);
+  }
   gts_eheap_freeze(apar.hcoarse);
   gts_eheap_freeze(apar.hfine);
   gfs_domain_cell_traverse(domain, FTT_PRE_ORDER, FTT_TRAVERSE_LEAFS, -1,
@@ -1034,12 +1095,14 @@ static gboolean adapt_global(GfsSimulation *simulation, guint *depth,
     }
     if (coarse && ((-ccoarse > cfine && apar.nc < mincells) ||
                    (-ccoarse > cmax && apar.nc <= maxcells))) {
-      guint level = ftt_cell_level(coarse), n = apar.nc;
+      guint level = ftt_cell_level(coarse);
+      guint n     = apar.nc;
 
       ftt_cell_refine_corners(coarse, (FttCellInitFunc)cell_fine_init, &apar);
       ftt_cell_refine_single(coarse, (FttCellInitFunc)cell_fine_init, &apar);
-      if (level + 1 > *depth)
+      if (level + 1 > *depth) {
         *depth = level + 1;
+      }
 #ifdef DEBUG
       fprintf(stderr, "refine: %d\n", apar.nc);
 #endif /* DEBUG */
@@ -1072,10 +1135,12 @@ typedef struct {
 #define COARSENABLE(cell, p) (GFS_VALUE(cell, (p)->c))
 
 static gboolean coarsen_cell(FttCell *cell, AdaptLocalParams *p) {
-  if (GFS_CELL_IS_BOUNDARY(cell))
+  if (GFS_CELL_IS_BOUNDARY(cell)) {
     return COARSENABLE(cell, p);
-  if (ftt_refine_corner(cell))
+  }
+  if (ftt_refine_corner(cell)) {
     return FALSE;
+  }
   return COARSENABLE(cell, p);
 }
 
@@ -1108,8 +1173,9 @@ static void refine_cell(FttCell *cell, AdaptLocalParams *p) {
 
     ftt_cell_refine_corners(cell, (FttCellInitFunc)local_cell_fine_init, p);
     ftt_cell_refine_single(cell, (FttCellInitFunc)local_cell_fine_init, p);
-    if (level + 1 > p->depth)
+    if (level + 1 > p->depth) {
       p->depth = level + 1;
+    }
     p->changed = TRUE;
   }
 }
@@ -1135,33 +1201,37 @@ static void refine_cell_mark(FttCell *cell, AdaptLocalParams *p) {
         return;
       }
       if (level < minlevel ||
-          (level < maxlevel && (*a->cost)(cell, a) > a->cmax / a->cfactor))
+          (level < maxlevel && (*a->cost)(cell, a) > a->cmax / a->cfactor)) {
         COARSENABLE(cell, p) = FALSE;
+      }
     }
     i = i->next;
   }
   if (!FTT_CELL_IS_LEAF(cell)) {
     FttCell *parent = ftt_cell_parent(cell);
-    if (parent)
+    if (parent) {
       COARSENABLE(parent, p) = FALSE;
+    }
   }
 }
 
 static void check_periodic(FttCellFace *f, AdaptLocalParams *p) {
   g_assert(ftt_face_type(f) == FTT_FINE_FINE);
-  if (!COARSENABLE(f->cell, p))
+  if (!COARSENABLE(f->cell, p)) {
     COARSENABLE(f->neighbor, p) = FALSE;
+  }
 }
 
 static void enforce_periodic(GfsBox *box, AdaptLocalParams *p) {
-  FttDirection d;
-  for (d = 0; d < FTT_NEIGHBORS; d++)
+  FttDirection d = 0;
+  for (d = 0; d < FTT_NEIGHBORS; d++) {
     if (GFS_IS_BOUNDARY_PERIODIC(box->neighbor[d])) {
       GfsBoundary *b = GFS_BOUNDARY(box->neighbor[d]);
       ftt_face_traverse_boundary(b->root, b->d, FTT_PRE_ORDER,
                                  FTT_TRAVERSE_NON_LEAFS, -1,
                                  (FttFaceTraverseFunc)check_periodic, p);
     }
+  }
 }
 
 static gboolean adapt_local(GfsSimulation *sim, guint *depth,
@@ -1207,10 +1277,11 @@ static gboolean adapt_local(GfsSimulation *sim, guint *depth,
  */
 gboolean gfs_simulation_adapt(GfsSimulation *simulation) {
   gboolean     active   = FALSE;
-  guint        mincells = 0, maxcells = G_MAXINT;
-  GfsDomain *  domain;
-  gdouble      cmax = 0.;
-  GfsVariable *c    = NULL;
+  guint        mincells = 0;
+  guint        maxcells = G_MAXINT;
+  GfsDomain *  domain   = NULL;
+  gdouble      cmax     = 0.;
+  GfsVariable *c        = NULL;
 
   g_return_val_if_fail(simulation != NULL, FALSE);
 
@@ -1223,27 +1294,32 @@ gboolean gfs_simulation_adapt(GfsSimulation *simulation) {
     GfsAdapt *a = i->data;
 
     if (a->active) {
-      if (a->maxcells < maxcells)
+      if (a->maxcells < maxcells) {
         maxcells = a->maxcells;
-      if (a->mincells > mincells)
+      }
+      if (a->mincells > mincells) {
         mincells = a->mincells;
+      }
       cmax += a->cmax;
       active = TRUE;
-      if (a->c)
+      if (a->c) {
         c = a->c;
+      }
     }
     i = i->next;
   }
 
   gboolean changed = FALSE;
   if (active) {
-    guint depth = gfs_domain_depth(domain), depth_before = depth;
+    guint depth        = gfs_domain_depth(domain);
+    guint depth_before = depth;
 
-    if (maxcells < G_MAXINT)
+    if (maxcells < G_MAXINT) {
       changed = adapt_global(simulation, &depth, &simulation->adapts_stats,
                              mincells, maxcells, c, cmax);
-    else
+    } else {
       changed = adapt_local(simulation, &depth, &simulation->adapts_stats);
+    }
 
     gfs_all_reduce(domain, changed, MPI_INT, MPI_MAX);
     if (changed) {
@@ -1251,13 +1327,14 @@ gboolean gfs_simulation_adapt(GfsSimulation *simulation) {
       gfs_all_reduce(domain, depth, MPI_UNSIGNED, MPI_MAX);
       simulation->adapts_stats.depth_increase = depth - depth_before;
       /* hydrostatic pressure */
-      GSList *i = domain->variables;
-      while (i) {
-        if (GTS_OBJECT(i->data)->klass ==
-            GTS_OBJECT_CLASS(gfs_hydrostatic_pressure_class()))
-          gfs_hydrostatic_pressure_update(i->data,
+      GSList *pList = domain->variables;
+      while (pList) {
+        if (GTS_OBJECT(pList->data)->klass ==
+            GTS_OBJECT_CLASS(gfs_hydrostatic_pressure_class())) {
+          gfs_hydrostatic_pressure_update(pList->data,
                                           simulation->physical_params.alpha);
-        i = i->next;
+        }
+        pList = pList->next;
       }
     }
   }

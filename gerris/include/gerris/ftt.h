@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "math.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -63,12 +65,12 @@ struct _FttVector {
 #endif /* 3D */
 
 typedef enum {
-  FTT_TRAVERSE_LEAFS          = 1 << 0,
-  FTT_TRAVERSE_NON_LEAFS      = 1 << 1,
-  FTT_TRAVERSE_LEVEL          = 1 << 2,
-  FTT_TRAVERSE_BOUNDARY_FACES = 1 << 3,
-  FTT_TRAVERSE_DESTROYED      = 1 << 4,
-  FTT_TRAVERSE_ALL            = FTT_TRAVERSE_LEAFS | FTT_TRAVERSE_NON_LEAFS
+  FTT_TRAVERSE_LEAFS          = 1U << 0U,
+  FTT_TRAVERSE_NON_LEAFS      = 1U << 1U,
+  FTT_TRAVERSE_LEVEL          = 1U << 2U,
+  FTT_TRAVERSE_BOUNDARY_FACES = 1U << 3U,
+  FTT_TRAVERSE_DESTROYED      = 1U << 4U,
+  FTT_TRAVERSE_ALL = (uint)FTT_TRAVERSE_LEAFS | (uint)FTT_TRAVERSE_NON_LEAFS
 } FttTraverseFlags;
 
 typedef enum { FTT_PRE_ORDER, FTT_POST_ORDER } FttTraverseType;
@@ -106,11 +108,11 @@ typedef enum {
 } FttComponent;
 
 typedef enum {
-  FTT_FLAG_ID        = 7,
-  FTT_FLAG_DESTROYED = 1 << 3,
-  FTT_FLAG_LEAF      = 1 << 4,        /* used only for I/O operations */
+  FTT_FLAG_ID        = 7U,
+  FTT_FLAG_DESTROYED = 1U << 3U,
+  FTT_FLAG_LEAF      = 1U << 4U,      /* used only for I/O operations */
   FTT_FLAG_TRAVERSED = FTT_FLAG_LEAF, /* used for face traversal */
-  FTT_FLAG_USER      = 5              /* user flags start here */
+  FTT_FLAG_USER      = 5U             /* user flags start here */
 } FttCellFlags;
 
 typedef void (*FttCellTraverseFunc)(FttCell *cell, gpointer data);
@@ -158,11 +160,12 @@ struct _FttCellFace {
   FttDirection d;
 };
 
-#define FTT_ROOT_CELL(c)         ((struct _FttRootCell *)c)
-#define FTT_CELL_ID(c)           ((c)->flags & FTT_FLAG_ID)
-#define FTT_CELL_IS_LEAF(c)      ((c)->children == NULL)
-#define FTT_CELL_IS_ROOT(c)      ((c)->parent == NULL)
-#define FTT_CELL_IS_DESTROYED(c) (((c)->flags & FTT_FLAG_DESTROYED) != 0)
+#define FTT_ROOT_CELL(c)    ((struct _FttRootCell *)(c))
+#define FTT_CELL_ID(c)      ((uint)((c)->flags) & (uint)FTT_FLAG_ID)
+#define FTT_CELL_IS_LEAF(c) ((c)->children == NULL)
+#define FTT_CELL_IS_ROOT(c) ((c)->parent == NULL)
+#define FTT_CELL_IS_DESTROYED(c)                                               \
+  (((uint)((c)->flags) & (uint)FTT_FLAG_DESTROYED) != 0)
 
 typedef enum { FTT_BOUNDARY, FTT_FINE_FINE, FTT_FINE_COARSE } FttFaceType;
 
@@ -209,7 +212,7 @@ gint ftt_opposite_direction[FTT_NEIGHBORS];
 FttCell *ftt_cell_new(FttCellInitFunc init, gpointer data);
 
 #define ftt_cell_level(c)                                                      \
-  ((c)->parent ? (c)->parent->level + 1 : ((struct _FttRootCell *)c)->level)
+  ((c)->parent ? (c)->parent->level + 1 : ((struct _FttRootCell *)(c))->level)
 #define ftt_cell_parent(c) ((c)->parent ? (c)->parent->parent : NULL)
 #define ftt_cell_dz(c)     (1.)
 
@@ -249,7 +252,7 @@ static inline gdouble ftt_cell_size(const FttCell *cell) {
  * Returns: the volume (area in 2D) of @cell.
  */
 static inline gdouble ftt_cell_volume(const FttCell *cell) {
-  gdouble size;
+  gdouble size = 0.0;
 
   g_return_val_if_fail(cell != NULL, 0.);
 
@@ -272,17 +275,18 @@ static inline gdouble ftt_cell_volume(const FttCell *cell) {
  */
 static inline void ftt_cell_children(const FttCell *  cell,
                                      FttCellChildren *children) {
-  struct _FttOct *oct;
-  guint           i;
+  struct _FttOct *oct = NULL;
+  guint           i   = 0;
 
   g_return_if_fail(cell != NULL);
   g_return_if_fail(!FTT_CELL_IS_LEAF(cell));
   g_return_if_fail(children != NULL);
 
   oct = cell->children;
-  for (i = 0; i < FTT_CELLS; i++)
+  for (i = 0; i < FTT_CELLS; i++) {
     children->c[i] =
         FTT_CELL_IS_DESTROYED(&(oct->cell[i])) ? NULL : &(oct->cell[i]);
+  }
 }
 
 /**
@@ -301,8 +305,8 @@ static inline void ftt_cell_children(const FttCell *  cell,
 static inline guint ftt_cell_children_direction(const FttCell *  cell,
                                                 FttDirection     d,
                                                 FttCellChildren *children) {
-  struct _FttOct *oct;
-  guint           i;
+  struct _FttOct *oct = NULL;
+  guint           i   = 0;
 #if FTT_2D
   static gint index[FTT_NEIGHBORS_2D][FTT_CELLS / 2] = {
       {1, 3}, {0, 2}, {0, 1}, {2, 3}};
@@ -319,10 +323,11 @@ static inline guint ftt_cell_children_direction(const FttCell *  cell,
 
   oct = cell->children;
 
-  for (i = 0; i < FTT_CELLS / 2; i++)
+  for (i = 0; i < FTT_CELLS / 2; i++) {
     children->c[i] = FTT_CELL_IS_DESTROYED(&(oct->cell[index[d][i]]))
                          ? NULL
                          : &(oct->cell[index[d][i]]);
+  }
   return FTT_CELLS / 2;
 }
 
@@ -335,12 +340,13 @@ static inline guint ftt_cell_children_direction(const FttCell *  cell,
  *
  * Returns: the children of @cell in the corner defined by directions @d.
  */
-static inline FttCell *ftt_cell_child_corner(const FttCell *cell,
-                                             FttDirection   d[FTT_DIMENSION]) {
+static inline FttCell *
+ftt_cell_child_corner(const FttCell *    cell,
+                      const FttDirection d[FTT_DIMENSION]) {
 #if FTT_2D
   static gint index[FTT_NEIGHBORS_2D][FTT_NEIGHBORS_2D] = {
       {-1, -1, 1, 3}, {-1, -1, 0, 2}, {1, 0, -1, -1}, {3, 2, -1, -1}};
-  gint i;
+  gint i = 0;
 
   g_return_val_if_fail(cell != NULL, NULL);
   g_return_val_if_fail(!FTT_CELL_IS_LEAF(cell), NULL);
@@ -424,8 +430,9 @@ static inline void ftt_cell_neighbors_not_cached(const FttCell *   cell,
          {-3, -4, 0, 1, -7, -8, 4, 5}, {2, 3, -1, -2, 6, 7, -5, -6},
          {-5, -6, -7, -8, 0, 1, 2, 3}, {4, 5, 6, 7, -1, -2, -3, -4}};
 #endif /* FTT_3D */
-  guint           n, d;
-  struct _FttOct *parent;
+  guint           n      = 0;
+  guint           d      = 0;
+  struct _FttOct *parent = NULL;
 
   g_return_if_fail(cell != NULL);
   g_return_if_fail(neighbors != NULL);
@@ -440,19 +447,21 @@ static inline void ftt_cell_neighbors_not_cached(const FttCell *   cell,
   n      = FTT_CELL_ID(cell);
   for (d = 0; d < FTT_NEIGHBORS; d++) {
     gint     nn = neighbor_index[d][n];
-    FttCell *c;
+    FttCell *c  = NULL;
 
-    if (nn >= 0) /* neighbor belongs to same Oct */
+    if (nn >= 0) { /* neighbor belongs to same Oct */
       c = &(parent->cell[nn]);
-    else { /* neighbor belongs to neighboring Cell or Oct */
+    } else { /* neighbor belongs to neighboring Cell or Oct */
       c = parent->neighbors.c[d];
-      if (c != NULL && c->children != NULL)
+      if (c != NULL && c->children != NULL) {
         c = &(c->children->cell[-nn - 1]);
+      }
     }
-    if (c == NULL || FTT_CELL_IS_DESTROYED(c))
+    if (c == NULL || FTT_CELL_IS_DESTROYED(c)) {
       neighbors->c[d] = NULL;
-    else
+    } else {
       neighbors->c[d] = c;
+    }
   }
 }
 
@@ -475,27 +484,29 @@ static inline FttCell *ftt_cell_neighbor_not_cached(const FttCell *cell,
          {-3, -4, 0, 1, -7, -8, 4, 5}, {2, 3, -1, -2, 6, 7, -5, -6},
          {-5, -6, -7, -8, 0, 1, 2, 3}, {4, 5, 6, 7, -1, -2, -3, -4}};
 #endif /* FTT_3D */
-  gint     n;
-  FttCell *c;
+  gint     n = 0;
+  FttCell *c = NULL;
 
   g_return_val_if_fail(cell != NULL, NULL);
   g_return_val_if_fail(d < FTT_NEIGHBORS, NULL);
 
-  if (FTT_CELL_IS_ROOT(cell))
+  if (FTT_CELL_IS_ROOT(cell)) {
     return ((struct _FttRootCell *)cell)->neighbors.c[d];
+  }
 
   n = neighbor_index[d][FTT_CELL_ID(cell)];
-  if (n >= 0) /* neighbor belongs to same Oct */
+  if (n >= 0) { /* neighbor belongs to same Oct */
     c = &(cell->parent->cell[n]);
-  else { /* neighbor belongs to neighboring Cell or Oct */
+  } else { /* neighbor belongs to neighboring Cell or Oct */
     c = cell->parent->neighbors.c[d];
-    if (c != NULL && c->children != NULL)
+    if (c != NULL && c->children != NULL) {
       c = &(c->children->cell[-n - 1]);
+    }
   }
-  if (c == NULL || FTT_CELL_IS_DESTROYED(c))
+  if (c == NULL || FTT_CELL_IS_DESTROYED(c)) {
     return NULL;
-  else
-    return c;
+  }
+  return c;
 }
 
 /**
@@ -530,8 +541,9 @@ static inline FttCell *ftt_cell_neighbor(const FttCell *cell, FttDirection d) {
   g_return_val_if_fail(cell != NULL, NULL);
   g_return_val_if_fail(d < FTT_NEIGHBORS, NULL);
 
-  if (!FTT_CELL_IS_LEAF(cell))
+  if (!FTT_CELL_IS_LEAF(cell)) {
     return cell->children->neighbors.c[d];
+  }
 
   return ftt_cell_neighbor_not_cached(cell, d);
 }
@@ -560,10 +572,12 @@ static inline FttCellFace ftt_cell_face(FttCell *cell, FttDirection d) {
 static inline FttFaceType ftt_face_type(const FttCellFace *face) {
   g_return_val_if_fail(face != NULL, 0);
 
-  if (face->neighbor == NULL)
+  if (face->neighbor == NULL) {
     return FTT_BOUNDARY;
-  if (ftt_cell_level(face->cell) > ftt_cell_level(face->neighbor))
+  }
+  if (ftt_cell_level(face->cell) > ftt_cell_level(face->neighbor)) {
     return FTT_FINE_COARSE;
+  }
   g_assert(ftt_cell_level(face->cell) == ftt_cell_level(face->neighbor));
   return FTT_FINE_FINE;
 }
@@ -598,8 +612,9 @@ static inline gboolean ftt_cell_neighbor_is_brother(FttCell *    cell,
 
   g_return_val_if_fail(cell != NULL, FALSE);
 
-  if (FTT_CELL_IS_ROOT(cell))
+  if (FTT_CELL_IS_ROOT(cell)) {
     return FALSE;
+  }
   return b[FTT_CELL_ID(cell)][d];
 }
 
