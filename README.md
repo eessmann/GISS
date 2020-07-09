@@ -1,5 +1,5 @@
 # GISS - Gerris Immersed Solid Solver
-GISS is a powerful and efficient 3D Direct Numerical Simulation (DNS) solver to simulate solid-fuild flows at unprecedented detail.
+GISS is a powerful and efficient 3D Direct Numerical Simulation (DNS) solver to simulate solid-fluid flows with immersed solids in unprecedented detail.
 
 This solver has been developed by Erich Essmann (Institute for Multiscale Thermofluids (IMT), School of Engineering, University of Edinburgh), Pei Shui (IMT, Engineering, University of Edinburgh), Prashant Valluri (IMT, Engineering, University of Edinburgh), Rama Govindarajan (International Centre for Theoretical Sciences, Bangalore), Stéphane Zaleski (Jean Le Rond d'Alembert Institute, Sorbonne Université, Paris) and Stéphane Popinet (Jean le Rond d'Alembert Institute, Sorbonne Université, Paris). 
 
