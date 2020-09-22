@@ -9,7 +9,7 @@ The theory behind the solver can be found within the following theses:
 * [Novel immersed boundary method for direct numerical simulations of solid-fluid flows - by P. Shui](https://era.ed.ac.uk/bitstream/handle/1842/10050/Shui2015.pdf?sequence=4&isAllowed=y).
 * [Complex dynamics of solid-fluid systems - by E. Essmann](https://era.ed.ac.uk/bitstream/handle/1842/37085/Essmann2020.pdf?sequence=1&isAllowed=y).
 
-Additionally, data produced from this solver can be found within the publication "Chaotic orbits of tumbling ellipsoids" (2020), available at https://doi.org/10.1017/jfm.2020.595ble.
+Additionally, data produced from this solver can be found within the publication "Chaotic orbits of tumbling ellipsoids" (2020), available at https://doi.org/10.1017/jfm.2020.595.
 
 Features
 ========
