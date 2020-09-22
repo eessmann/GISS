@@ -5,6 +5,12 @@ This solver has been developed by Erich Essmann (Institute for Multiscale Thermo
 
 The GISS numerical solver comprises two sub-solvers: i) The Gerris flow solver and ii) the Immersed Solid Solver. A two-step solution strategy is used. First, the 3D flow equations around the body are solved using the [Gerris Engine](http://gfs.sourceforge.net/wiki/index.php/Main_Page) (developed by Stéphane Popinet) to obtain velocity and pressure fields. These are then used to calculate the hydrodynamic force field on the surface of the immersed solid.  Second, the calculated forces are passed on to the solid solver which calculates the new position of the immersed body using rigid body equations for translation and rotation. These steps allow for two-way solid-fluid coupling at every time step. The solver allows for arbitrary number of solids with arbitrary geometric features in six degree of freedom (6DOF)} motion. The solver can perform dynamical quad/octree mesh optimisation in a Cartesian framework, which greatly simplifies the procedure for mesh generation.
 
+The theory behind the solver can be found within the following theses:
+* [Novel immersed boundary method for direct numerical simulations of solid-fluid flows - by P. Shui](https://era.ed.ac.uk/bitstream/handle/1842/10050/Shui2015.pdf?sequence=4&isAllowed=y).
+* [Complex dynamics of solid-fluid systems - by E. Essmann](https://era.ed.ac.uk/bitstream/handle/1842/37085/Essmann2020.pdf?sequence=1&isAllowed=y).
+
+Additionally, data produced from this solver can be found within the publication "Chaotic orbits of tumbling ellipsoids" (2020), available at https://doi.org/10.1017/jfm.2020.595ble.
+
 Features
 ========
 * Highly accurate DNS solver using Gerris 
